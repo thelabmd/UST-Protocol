@@ -1,0 +1,42 @@
+{
+  "name": "ust-mcp",
+  "version": "1.0.0-rc.1",
+  "description": "Model Context Protocol (MCP) server for UST — agent-facing verbs over ust-protocol: verify, build/create, combine, resolve name-authority, anchor. An agent needs only this server plus its own key.",
+  "type": "module",
+  "main": "./index.mjs",
+  "exports": {
+    ".": "./index.mjs"
+  },
+  "bin": {
+    "ust-mcp": "./server.mjs"
+  },
+  "files": [
+    "index.mjs",
+    "server.mjs",
+    "LICENSE",
+    "README.md"
+  ],
+  "keywords": [
+    "ust",
+    "mcp",
+    "model-context-protocol",
+    "agent",
+    "verification",
+    "trust-infrastructure"
+  ],
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "ust-protocol": "^1.0.0-rc.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thelabmd/UST.git",
+    "directory": "packages/ust-mcp"
+  },
+  "homepage": "https://github.com/thelabmd/UST/tree/main/packages/ust-mcp#readme",
+  "bugs": "https://github.com/thelabmd/UST/issues"
+}

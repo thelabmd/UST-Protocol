@@ -1,0 +1,34 @@
+{
+  "ust": "1.0",
+  "state": {
+    "id": {
+      "domain_shard": "noosphere.md",
+      "ust_id": "ust:20260704.14",
+      "key_id": "sha256:c0d235e2e69cd6d4a829af6761374d18e7a2e264c3548ba2452c7ffe74e260d9",
+      "class": "observation"
+    },
+    "time": {
+      "generated_at": "2026-07-04T08:00:00Z",
+      "valid_from": "2026-07-04T08:00:00Z",
+      "valid_to": "2036-07-04T08:00:00Z"
+    },
+    "data": {
+      "space_weather": {
+        "kind": "captured",
+        "value": {
+          "kp": "4.33",
+          "bz": "-4.10"
+        }
+      }
+    },
+    "hashes": {
+      "space_weather": "sha256:4140a506fba5e5b01089dd6449792afd9ff3d17512cf860b9c9a822c635f011f"
+    }
+  },
+  "sig": {
+    "alg": "Ed25519",
+    "key_id": "sha256:c0d235e2e69cd6d4a829af6761374d18e7a2e264c3548ba2452c7ffe74e260d9",
+    "pub": "9oYgr3n5UG6zFeP-HioD0Q2ed3lGW0dNGpBf0BU_79s",
+    "sig": "lGtw99BIV62TGCkO2pBSDR4n3RXEG9IGIPLZlHRKNmuL7gxI1g2zPIUm2rHo0e1NBaRwEB5VDySS4aLK4jHsBg"
+  }
+}

@@ -1,4 +1,17 @@
-INTERNAL-*
-rnd/
+# dependencies
+node_modules/
+packages/*/node_modules/
+package-lock.json
 
+# private — operator toolkit (never published, not part of the public standard)
+packages/ustate/
+packages/ust-mcp/conformance.mjs
+packages/ust-mcp/demo-all.mjs
+packages/ust-mcp/demo-mcp-ladder.mjs
+
+# private — internal research / red-team / spec drafts
+rnd/
+INTERNAL-*
+
+# os
 .DS_Store
