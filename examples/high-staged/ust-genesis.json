@@ -2,33 +2,33 @@
   "ust": "1.0",
   "state": {
     "id": {
-      "domain_shard": "noosphere.md",
-      "ust_id": "ust:20260704.08",
-      "key_id": "sha256:23535a2205f9768d213d685035807da69f7deb1c8b49a5057b0c3ec4494d9923",
+      "domain_shard": "helioradar.com",
+      "ust_id": "ust:20260101.00",
+      "key_id": "sha256:712c636863c162a195770987aa676e6942f6fe85e0dce33140b917547979d23a",
       "class": "genesis"
     },
     "time": {
-      "generated_at": "2026-07-04T08:00:00Z",
-      "valid_from": "2026-07-04T08:00:00Z",
-      "valid_to": "2036-07-04T08:00:00Z"
+      "generated_at": "2026-04-24T15:03:12Z",
+      "valid_from": "2026-04-24T15:00:00Z",
+      "valid_to": "2026-04-24T16:00:00Z"
     },
     "data": {
       "genesis": {
         "kind": "captured",
         "value": {
-          "pub": "B0SmD0q9j1ukXWTBgw7Jqrz5ahnsJD-3Cxd-zoGs1dA",
+          "pub": "tTPYrZ_Pvd4LSBwbM03cPFNBL9YUVk5-Wv0CA2jTgsM",
           "role": "name-binding-root"
         }
       }
     },
     "hashes": {
-      "genesis": "sha256:60173c18ecbdd371a9546b5c67d1307c74f898e25ccb3d22f0ed00b70da02e79"
+      "genesis": "sha256:ecbcd1842ed0b9cbe2bc71f574ae919fd125497821b0f2d4c2fa1b667f022bc7"
     }
   },
   "sig": {
     "alg": "Ed25519",
-    "key_id": "sha256:23535a2205f9768d213d685035807da69f7deb1c8b49a5057b0c3ec4494d9923",
-    "pub": "B0SmD0q9j1ukXWTBgw7Jqrz5ahnsJD-3Cxd-zoGs1dA",
-    "sig": "z8dqB_Jlmfc8MLyU5V9Rjy9gFxvgKRSGjynja14TfD3-pWxOpNPvlkkqhSX5uKOn1QK-Gz19ZK4WIRn-BO6tCQ"
+    "key_id": "sha256:712c636863c162a195770987aa676e6942f6fe85e0dce33140b917547979d23a",
+    "pub": "tTPYrZ_Pvd4LSBwbM03cPFNBL9YUVk5-Wv0CA2jTgsM",
+    "sig": "Ut_s4ejU-SVo5x-Wpj2Qy5WfMwJ2mO5yntQtff4B1vRmTKahmTbxHhc8XVVgH2ilCQQz3m-xNPuuoraOI_ffCg"
   }
 }

@@ -1,7 +1,7 @@
 # Universal State Transcript (UST) — Protocol Specification, Version 1.0
 
-> **Release candidate — `1.0.0-rc.1`.** This specification has been extensively red-teamed; an independent
-> external cryptographic audit is pending. It is subject to change until `1.0.0` final. Pin exact versions.
+> **Release candidate — `1.0.0-rc.2`.** This specification has been extensively red-teamed; an independent
+> external cryptographic audit is pending. It is subject to change until `1.0.0` final (rc.2 folded in two external reviews — 6 impl findings + spec edge cases + removed the domain-less `computed` mode). Pin exact versions.
 
 **UST is trust infrastructure.** It gives any machine-published statement about the state of the world its own
 VERIFIABLE trust — WHO asserted it, WHAT exact bytes, for WHICH time-frame, WHEN, and FROM WHAT — checkable
@@ -164,7 +164,7 @@ Transcript := {
 `ust` announces the protocol (like a media type / magic marker) and is SIGNED (part of the signed content, §7 —
 so no downgrade). `state` + `ust` are the inputs to identity/integrity; `proof` (when present) supplies time.
 There is NO unsigned human-rendered field: a renderer derives display from the SIGNED `state` only. A verifier
-ignores unknown top-level members. (`view` was DELETED — an unsigned, human-authoritative surface is a
+REJECTS unknown top-level members (E-MALFORMED, fail-closed). (`view` was DELETED — an unsigned, human-authoritative surface is a
 presentation-layer two-truths injection with no security benefit, N3.)
 
 ### 4.2 State (unit of authority — everything asserted, all signed)
@@ -205,20 +205,22 @@ Partition := { "kind":"captured"|"computed", "value": { <string leaves> } }     
             | { "kind":"captured"|"computed", "privacy":"blinded"|"encrypted"|"secret-url",
                 "commit": ContentHash [, "enc": {"alg":string,"key_id":string,"ct":b64url}] }  // PRIVATE
 ```
-**Per-partition hashing (RESTORED).** Each partition has its OWN hash in the signed `hashes` map; scope set by `kind`:
-- **captured** (the publisher WITNESSED it) → `H_shard(canon({domain_shard, ust_id, <p>: value}))` — binds
-  `domain_shard`, so each publisher's hash differs ("what *I* observed").
-- **computed** (derived from time/formula — ephemeris, astronomy) → `H_shard(canon({ust_id, <p>: value}))` —
-  WITHOUT `domain_shard`, so it is IDENTICAL across every honest publisher for the same `ust_id`: for computed
-  data we are not the owner of the truth, anyone recomputes and agrees (cross-engine — but agreement ≠
-  independence, a publisher may COPY: hash proves the value is canonical + who signs it, not independent
-  computation, AND N agreeing publishers may be ONE actor with N `domain_shard`s — UST has NO Sybil resistance,
-  so cross-engine AGREEMENT is never INDEPENDENCE; that is an out-of-band social assumption, §18). A private partition's hash is over its `commit`.
+**Per-partition hashing (UNIFORM).** Each partition has its OWN hash in the signed `hashes` map. The preimage is
+the SAME for every partition — it ALWAYS binds `domain_shard`, and the partition NAME is carried as a VALUE
+(`partition:`), never as a key, so a partition name can never overwrite a protocol field:
+`H_shard(canon({domain_shard, ust_id, partition: <name>, value}))`.
+- `kind` (`captured` = witnessed · `computed` = derived) is a DESCRIPTIVE tag and does NOT change the hash.
+- The old domain-less `computed` mode (hashing WITHOUT `domain_shard`, so independent engines got an IDENTICAL
+  hash for "cross-engine corroboration") was REMOVED in rc.2: that agreement was FORGEABLE (a publisher COPIES the
+  domain-less hash to fake agreement — as this spec already noted) and FRAGILE (a `"3.14"` vs `"3.140"`
+  string-format divergence breaks it though the values are equal). Real corroboration compares two
+  publisher-BOUND values a layer up (each bound to its own domain — non-forgeable), never a shared hash.
+- A private partition's hash is over its `commit`.
 - The `hashes` map is inside the signed State (I1), is an EXACT bijection with `data` (one entry per
   partition — §14 step 2, G19), and is RECOMPUTED by the verifier (a stored copy is never trusted).
-**Mixed OPEN + CLOSED in ONE shard.** kind and visibility are per-partition, so one derived shard MAY carry an
-OPEN computed partition (sun position — domain-less hash, anyone recomputes) AND a CLOSED computed partition (a
-proprietary BSI value — `privacy:"blinded"`) at once. The canon covers BOTH variants of a computed part.
+**Mixed OPEN + CLOSED in ONE shard.** visibility is per-partition, so one derived shard MAY carry an OPEN
+partition (sun position — plain value, anyone can independently recompute and compare) AND a CLOSED partition
+(a proprietary BSI value — `privacy:"blinded"`) at once.
 
 ### 4.5 What a UST looks like — a complete annotated example
 A minimal public **observation** Transcript (a space-weather reading). Note: every leaf is a STRING (§5),
@@ -301,7 +303,7 @@ following REQUIRED tightenings. A value violating any rule is malformed (E-CANON
 **Pinned value encodings (M9) — VALUE-MODEL conventions, NOT canon rules (ustate-finding).** `canon` is
 FIELD-AGNOSTIC: it serializes strings faithfully and cannot know a string is a timestamp or binary, so these are
 enforced where the field TYPE is known (§14 step 5 shape), not inside `canon`: timestamps MUST be RFC 3339 UTC
-with a literal `Z`, no fractional seconds, no numeric offset (e.g. `2026-07-04T08:06:30Z`) — any other form ⇒
+with a literal `Z`, no fractional seconds, no numeric offset, NO leap seconds (`:60`), and valid ranges only (month 01-12, day 01-31, hour 00-23, minute/second 00-59; publishers MUST smear leap seconds to `:59` so two conforming verifiers ALWAYS agree, I4) (e.g. `2026-07-04T08:06:30Z`) — any other form ⇒
 **E-MALFORMED** (§14.5), not E-CANON; all binary values (nonces, signatures, ciphertext) MUST be unpadded
 base64url. A producer MUST emit these forms; a verifier rejects a non-conforming timestamp at shape. (`canon`
 itself is deterministic on any string — the encoding pinning removes cross-producer ambiguity, but the CHECK is
@@ -319,9 +321,10 @@ everything asserted — protocol version, identity, time, data, hashes, provenan
 only the signature itself and the detachable time-`proof` are outside). The **content_hash** `= H_state(S)` is
 the UNIQUE descriptor of this signed document: anchors (§11), chain references (`prev`/`constituents`/
 `based_on`/`seed`, §9) and revocation (§12) all key on it, so two documents differing in ANY signed field
-(signer, time, a data value) get DIFFERENT `content_hash`es — no anchor/chain aliasing. **Cross-engine
-corroboration is a separate, PER-PARTITION mechanism** (§4.4): a computed partition's `H_shard` omits
-`domain_shard`, so independent publishers agree on that partition's hash — at the partition layer, never the document layer.
+(signer, time, a data value) get DIFFERENT `content_hash`es — no anchor/chain aliasing. (There is no
+"cross-engine corroboration via an identical hash": the domain-less `computed` mode was REMOVED in rc.2 as
+forgeable + fragile, §4.4. Every partition hash binds `domain_shard`; real corroboration compares two
+publisher-bound values a layer up.)
 
 - **Content hash (domain-separated, M6/P8):** every hash in UST is typed —
   `H_t(x) = "sha256:" || lowerhex( SHA-256( ascii(t) || 0x00 || x ) )`. **Exact byte layout (P8):** `ascii(t)`
@@ -331,8 +334,8 @@ corroboration is a separate, PER-PARTITION mechanism** (§4.4): a computed parti
   `ust:node`→`left_hash_ascii || right_hash_ascii` (both `sha256:`-prefixed, concatenated); `ust:seed`→
   `utf8(canon([content_hash,…]))`; `ust:source`→the source bytes. Distinct tags make a bytes-equal collision across object kinds impossible. `content_hash = H_state(S)` where
   `S = canon({ust, state})` (the signed content) is the document's UNIQUE reference (chains §9, anchors §11,
-  revocation §12); the PER-PARTITION hashes `H_shard(...)` in `state.hashes` (§4.4) are the SEPARATE
-  cross-engine mechanism. Both are domain-separated; the vectors are normative (§16). `content_hash` is derived
+  revocation §12); the PER-PARTITION hashes `H_shard(...)` in `state.hashes` (§4.4) are publisher-scoped (each
+  binds `domain_shard`). Both are domain-separated; the vectors are normative (§16). `content_hash` is derived
   — a verifier recomputes it and MUST NOT trust a transmitted copy.
 - **Signature (REQUIRED):**
   ```
@@ -370,7 +373,11 @@ commitment grinding (§10, Y1).
 A finer-tier shard MAY name `id.parent_ust` = the coarser frame it refines (a second-precision shard → its
 hour). It is navigation/lineage AND the anchor for **hour-close timing**: as an hour frame "closes," finer
 shards keep arriving across the internet-lag boundary (the v0.27 grace); `parent_ust` links them to the hour so
-a verifier assembles/closes the coarse frame correctly. It is inside the signed content `canon({ust,state})`, so it is authentic AND part of the `content_hash` (§7 —
+a verifier assembles/closes the coarse frame correctly. **Hour-close at LIGHT/HIGH is HEURISTIC (timeout-based),
+NOT a completeness guarantee:** a verifier can never be cryptographically certain the hour is "closed" — the
+publisher may have skipped a tick, undetectable without a TOP sequenced-stream + anchor (§11.3). Consumers
+(and MCP/clients) MUST NOT read a `parent_ust`-assembled hour as PROVEN-complete at HIGH; proven completeness is
+a TOP property only. It is inside the signed content `canon({ust,state})`, so it is authentic AND part of the `content_hash` (§7 —
 the document hash covers the whole signed content). It is navigation/lineage metadata (it does not affect any
 PER-PARTITION hash, §4.4).
 
@@ -434,7 +441,7 @@ WEAKEST → strongest (do NOT conflate — E5):
   stakes sharing only. Its participation in a public frame is proven by the chain/layer `seed` (§9.5), never by
   exposing the URL.
 - **blinded (cryptographic)** — the partition's `value` is replaced by
-  `commit = H_shard( canon({ domain_shard, ust_id, "nonce": <b64url ≥128-bit>, <p>: value }) )` — FRAME-BOUND
+  `commit = H_shard( canon({ domain_shard, ust_id, "nonce": <b64url ≥128-bit>, "partition": <name>, value }) )` — FRAME-BOUND
   like public partitions (G23: without `domain_shard`/`ust_id` the same commit is replayable into any other
   frame/publisher); the
   nonce MUST be FRESHLY RANDOM and UNIQUE per commitment (≥128 bit; never reused, never derived from the value —
@@ -706,7 +713,7 @@ unresolved dependency ⇒ the corresponding error (never `VALID`).
 
 1. **Structural admission.** Parse `X`. Require top-level `X.ust` (="1.0"), `X.state`, and `X.sig`. Reject unknown/duplicate reserved
    keys; verify namespace isolation (§4.2) and value model (§5) and bounds (§13). On failure → E-MALFORMED /
-   E-CANON / E-BOUNDS. Unknown top-level members (other than `state`/`sig`/`proof`) are ignored (there is no unsigned `view`, N3).
+   E-CANON / E-BOUNDS. Unknown top-level members (other than `state`/`sig`/`proof`) are REJECTED — E-MALFORMED, fail-closed (no unsigned surface next to a VALID verdict; there is no `view`, N3).
 2. **Canonical & hashes.** Compute the signed content `S = canon({ust, state})`, `content_hash = H_state(S)`.
    The `hashes` map MUST be an EXACT bijection with `data` (`hashes.keys == data.keys`; a missing OR extra entry
    ⇒ E-MALFORMED — G19: no partition may dodge its per-partition hash). Recompute each `hashes.<p>` (§4.4); a
@@ -829,7 +836,7 @@ Independent re-implementation is expected; the vectors make "verify without trus
   (`Locator = {substrate:"bitcoin-ots", ots:b64url, block_height:int}`; OTS attestation → Bitcoin header;
   finality = ≥6 confirmations). Future substrates register the same way — the protocol is substrate-agnostic.
   AnchorProof keys `root,path,anchor`.
-- **partition kind:** `captured` (binds domain_shard) · `computed` (domain-less). **partition privacy:** `secret-url` · `blinded` · `encrypted`.
+- **partition kind:** `captured` · `computed` — BOTH bind `domain_shard` (descriptive tag only; the domain-less `computed` mode was REMOVED in rc.2). **partition privacy:** `secret-url` · `blinded` · `encrypted`.
 - **alg (signatures):** `Ed25519` (strict, §7). **hash:** `sha256:` domain-separated (§7). **enc.alg (AEAD):**
   `XChaCha20-Poly1305`, `AES-256-GCM`. **hash domain tags:** `ust:state` (whole-State `content_hash`) | `ust:shard` (a per-partition hash, §4.4) | `ust:keylog|ust:checkpoint|ust:node|ust:leaf|ust:seed|ust:source`.
   All algorithm-tagged for agility (§19).
@@ -986,7 +993,7 @@ existence+time; only a holder of the nonce reproduces the commitment.
   "state": {
     "id": { "domain_shard":"acme-trading.com", "ust_id":"ust:20260424.153000", "key_id":"sha256:c3…", "class":"observation" },
     "time": { "generated_at":"2026-04-24T15:30:01Z", "valid_from":"2026-04-24T15:30:00Z", "valid_to":"2026-04-24T15:30:30Z" },
-    "data": { "position": { "kind":"observation", "privacy":"blinded", "commit":"sha256:<H_shard({domain_shard,ust_id,nonce,value})>" } },
+    "data": { "position": { "kind":"captured", "privacy":"blinded", "commit":"sha256:<H_shard({domain_shard,ust_id,nonce,partition,value})>" } },
     "hashes": { "position":"sha256:<over the commit>" } },
   "sig": { "alg":"Ed25519", "key_id":"sha256:c3…", "pub":"b64url", "sig":"…" } }
 ```
@@ -1010,7 +1017,7 @@ commits to (decryption and commitment can never diverge).
   "state": {
     "id": { "domain_shard":"acme-trading.com", "ust_id":"ust:20260424.153000", "key_id":"sha256:c3…", "class":"observation" },
     "time": { "generated_at":"2026-04-24T15:30:01Z", "valid_from":"2026-04-24T15:30:00Z", "valid_to":"2026-04-24T15:30:30Z" },
-    "data": { "book": { "kind":"observation", "privacy":"encrypted", "commit":"sha256:<H_shard({domain_shard,ust_id,nonce,value})>",
+    "data": { "book": { "kind":"captured", "privacy":"encrypted", "commit":"sha256:<H_shard({domain_shard,ust_id,nonce,partition,value})>",
                            "enc": { "alg":"XChaCha20-Poly1305", "key_id":"sha256:kk…", "ct":"base64url(ciphertext)" } } },
     "hashes": { "book":"sha256:<over the commit>" } },
   "sig": { "alg":"Ed25519", "key_id":"sha256:c3…", "pub":"b64url", "sig":"…" } }

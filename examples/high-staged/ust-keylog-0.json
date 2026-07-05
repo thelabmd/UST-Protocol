@@ -2,37 +2,37 @@
   "ust": "1.0",
   "state": {
     "id": {
-      "domain_shard": "noosphere.md",
-      "ust_id": "ust:20260704.0801",
-      "key_id": "sha256:23535a2205f9768d213d685035807da69f7deb1c8b49a5057b0c3ec4494d9923",
+      "domain_shard": "helioradar.com",
+      "ust_id": "ust:20260101.0001",
+      "key_id": "sha256:712c636863c162a195770987aa676e6942f6fe85e0dce33140b917547979d23a",
       "class": "key"
     },
     "time": {
-      "generated_at": "2026-07-04T08:00:00Z",
-      "valid_from": "2026-07-04T08:00:00Z",
-      "valid_to": "2036-07-04T08:00:00Z"
+      "generated_at": "2026-04-24T15:03:12Z",
+      "valid_from": "2026-04-24T15:00:00Z",
+      "valid_to": "2026-04-24T16:00:00Z"
     },
     "data": {
       "key_op": {
         "kind": "captured",
         "value": {
           "op": "add",
-          "pub": "9oYgr3n5UG6zFeP-HioD0Q2ed3lGW0dNGpBf0BU_79s",
-          "new_key_id": "sha256:c0d235e2e69cd6d4a829af6761374d18e7a2e264c3548ba2452c7ffe74e260d9"
+          "pub": "Zr5-Myx6RTMyvZ0Kf32wVfXF7xoGraZtmLOftoEMRzo",
+          "new_key_id": "sha256:8247b532b21272db5b83f86298bb476bfedf796229eecf1c962c13db3f808515"
         }
       }
     },
     "hashes": {
-      "key_op": "sha256:731d635080ec5083ada834d2c4c7403af0b215ea755a964a804de9d38c5abe15"
+      "key_op": "sha256:44c414213015358662f574ba390a3ce1a032c262a68a6b2f22f8bec0a31b47f7"
     },
     "provenance": {
-      "prev": "sha256:b472a1fec6f9f247112ecc98acc30a31bf49b2a015b94a69d91fc5e9c0d2e815"
+      "prev": "sha256:acfc44b6108e39df01ec60e0e4b0afff1d1578d9d08125b67b76c47fac049ad3"
     }
   },
   "sig": {
     "alg": "Ed25519",
-    "key_id": "sha256:23535a2205f9768d213d685035807da69f7deb1c8b49a5057b0c3ec4494d9923",
-    "pub": "B0SmD0q9j1ukXWTBgw7Jqrz5ahnsJD-3Cxd-zoGs1dA",
-    "sig": "c_vebvHysAeMNAoB9KI56XgQJD1yM3TOhLRzvL7iiZpb0BYM0gghv0syONz0m4sUZb5eJrsKoyEXo2J8xgtCCg"
+    "key_id": "sha256:712c636863c162a195770987aa676e6942f6fe85e0dce33140b917547979d23a",
+    "pub": "tTPYrZ_Pvd4LSBwbM03cPFNBL9YUVk5-Wv0CA2jTgsM",
+    "sig": "2zrlpKh9LQge0ivNRK4ZCk53TQ21hsq3BmgoWKIpK0n_5KdTHgtYGZUvfJlA8PXuA3wrQUIlwpHyxrIt2bOAAA"
   }
 }

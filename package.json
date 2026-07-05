@@ -1,10 +1,13 @@
 {
   "name": "ust",
-  "version": "1.0.0-rc.1",
+  "version": "1.0.0-rc.2",
   "private": true,
   "description": "UST (Universal State Transcript) — specification, conformance vectors, and reference implementations. Trust infrastructure for machine-readable state.",
   "license": "Apache-2.0",
-  "workspaces": ["packages/ust-protocol", "packages/ust-mcp"],
+  "workspaces": [
+    "packages/ust-protocol",
+    "packages/ust-mcp"
+  ],
   "scripts": {
     "test": "node packages/ust-protocol/conformance.mjs"
   }

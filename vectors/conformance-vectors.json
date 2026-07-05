@@ -1,6 +1,6 @@
 {
-  "version": "UST 1.0 conformance vectors (REV 25 + TOP)",
-  "note": "Deterministic + reproducible. Keypairs from fixed seeds (A=0011..eeff, B=ffee..1100). canon=JCS tightened; H(tag,x)=sha256(ascii(tag)||0x00||x); content_hash=H(\"ust:state\",canon({ust,state})); key_id=H(\"ust:keylog\",raw_pub). Each vector states the SPEC rule it pins.",
+  "version": "UST 1.0 conformance vectors (rc.2 — uniform preimage, no domain-less computed)",
+  "note": "Deterministic + reproducible. Keypairs from fixed seeds (A=0011..eeff, B=ffee..1100). canon=JCS tightened; H(tag,x)=sha256(ascii(tag)||0x00||x); content_hash=H(\"ust:state\",canon({ust,state})); key_id=H(\"ust:keylog\",raw_pub); partition_hash=H(\"ust:shard\",canon({domain_shard,ust_id,partition,value})) — UNIFORM, every partition binds domain_shard, name is a VALUE (non-colliding), no domain-less computed. Each vector states the SPEC rule it pins.",
   "seeds": {
     "A": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
     "B": "ffeeddccbbaa99887766554433221100ffeeddccbbaa99887766554433221100"
@@ -86,60 +86,48 @@
     },
     {
       "id": "canon-reject-ts-fractional",
-      "kind": "shape-reject",
-      "rule": "S14.5 (not S6 canon — field-agnostic) pinned RFC3339 UTC-Z, no fractional",
+      "kind": "canon-reject",
+      "rule": "S6 pinned RFC3339 UTC-Z, no fractional",
       "input_desc": "generated_at \"2026-06-28T14:03:09.500Z\"",
-      "expect": "E-MALFORMED"
+      "expect": "E-CANON"
     },
     {
       "id": "canon-reject-ts-offset",
-      "kind": "shape-reject",
-      "rule": "S14.5 (not S6 canon — field-agnostic) pinned literal Z, no numeric offset",
+      "kind": "canon-reject",
+      "rule": "S6 pinned literal Z, no numeric offset",
       "input_desc": "generated_at \"2026-06-28T14:03:09+00:00\"",
-      "expect": "E-MALFORMED"
+      "expect": "E-CANON"
     },
     {
-      "id": "hash-captured-A",
+      "id": "hash-partition-A",
       "kind": "hash",
-      "rule": "S4.4 captured binds domain_shard",
+      "rule": "S4.4 partition hash binds domain_shard; name is a VALUE (non-colliding)",
       "tag": "ust:shard",
       "input": {
         "domain_shard": "a.example",
         "ust_id": "ust:20260628.14",
-        "obs": {
+        "partition": "obs",
+        "value": {
           "kp": "4.33"
         }
       },
-      "expect": "sha256:9ad5ba632d9737f38d42e1fd417aa702ecb04c352d37927c1f1ac0c7119d7a4a"
+      "expect": "sha256:d5ef224b85691d389b61ad8432068b2c04a0d9ef3352aec8749a952c98c18611"
     },
     {
-      "id": "hash-captured-B-differs",
+      "id": "hash-partition-B-differs",
       "kind": "hash",
-      "rule": "S4.4 captured: other domain -> DIFFERENT hash",
+      "rule": "S4.4 other domain -> DIFFERENT hash (no domain-less collapse)",
       "tag": "ust:shard",
       "input": {
         "domain_shard": "b.example",
         "ust_id": "ust:20260628.14",
-        "obs": {
+        "partition": "obs",
+        "value": {
           "kp": "4.33"
         }
       },
-      "expect": "sha256:2c266bfaa1e474e07fe889bb99965c54ea92d48adc525cd77f23e0066540c531",
-      "note": "MUST differ from hash-captured-A (true)"
-    },
-    {
-      "id": "hash-computed-crossengine",
-      "kind": "hash",
-      "rule": "S4.4 computed omits domain_shard -> IDENTICAL across publishers",
-      "tag": "ust:shard",
-      "input": {
-        "ust_id": "ust:20260628.14",
-        "det": {
-          "subsolar_lat": "22.86"
-        }
-      },
-      "expect": "sha256:fb45c1bfb7802d6e1c9f815dd960413293117d23c6200ab5f72b7a9b78609ab8",
-      "note": "two independent engines get the SAME hash (true) — cross-engine corroboration"
+      "expect": "sha256:bf2eb81392a3ca1f91bcb7f171c29c6f7d02983da931211954e4007ea04d82fd",
+      "note": "MUST differ from hash-partition-A (true)"
     },
     {
       "id": "domainsep-shard",
@@ -173,16 +161,17 @@
     {
       "id": "commit-blinded",
       "kind": "commit",
-      "rule": "S10 blinded commit = H_shard(canon({domain_shard,ust_id,nonce,value}))",
+      "rule": "S10 blinded commit = H_shard(canon({domain_shard,ust_id,nonce,partition,value}))",
       "input": {
         "domain_shard": "a.example",
         "ust_id": "ust:20260628.14",
         "nonce": "AAAAAAAAAAAAAAAAAAAAAA",
-        "secret": {
+        "partition": "secret",
+        "value": {
           "v": "LONG"
         }
       },
-      "expect": "sha256:24dc7b2c0748cca5b473c33c7c03d27a9e8e02b62a89163ae83fd55112e25e3c"
+      "expect": "sha256:c5256bca60345780220f11240b2489a5110228794a6feb87288411b23ecabaaa"
     },
     {
       "id": "commit-framebound",
@@ -192,11 +181,12 @@
         "domain_shard": "a.example",
         "ust_id": "ust:20260628.15",
         "nonce": "AAAAAAAAAAAAAAAAAAAAAA",
-        "secret": {
+        "partition": "secret",
+        "value": {
           "v": "LONG"
         }
       },
-      "expect": "sha256:1b6d411665104136defb474df6c02b0d131d768f803a41b902fa6524f3197a19",
+      "expect": "sha256:8c6beec8aeaae3effd0116c410754ac2aa3bf4f96eb878586bd155656dc742da",
       "note": "MUST differ from commit-blinded (true)"
     },
     {
@@ -254,8 +244,8 @@
       "id": "sig-valid",
       "kind": "signature",
       "rule": "S7 Ed25519 over canon({ust,state})",
-      "signed_content": "{\"state\":{\"data\":{\"space_weather\":{\"kind\":\"captured\",\"value\":{\"bz\":\"-4.10\",\"kp\":\"4.33\"}}},\"hashes\":{\"space_weather\":\"sha256:566d0cf27e3cb7d04e97adbcea94cc6751621659c5b7f3cb5ff8238afe3cd161\"},\"id\":{\"class\":\"observation\",\"domain_shard\":\"helioradar.com\",\"key_id\":\"sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb\",\"ust_id\":\"ust:20260628.14\"},\"time\":{\"generated_at\":\"2026-06-28T14:03:12Z\",\"valid_from\":\"2026-06-28T14:00:00Z\",\"valid_to\":\"2026-06-28T15:00:00Z\"}},\"ust\":\"1.0\"}",
-      "sig": "FtsnBl7p6RmNmk05qEHAq8X2Rrg35S70OWPmtZxTHaorb3mCNIxTvJNPgI4bg0oG5Bs5OkU1l4zMZedxKeKdAg",
+      "signed_content": "{\"state\":{\"data\":{\"space_weather\":{\"kind\":\"captured\",\"value\":{\"bz\":\"-4.10\",\"kp\":\"4.33\"}}},\"hashes\":{\"space_weather\":\"sha256:1a78778a1b91eb0af8727566f7fda767cd816da36d481b2ef87739f8f19a45d1\"},\"id\":{\"class\":\"observation\",\"domain_shard\":\"helioradar.com\",\"key_id\":\"sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb\",\"ust_id\":\"ust:20260628.14\"},\"time\":{\"generated_at\":\"2026-06-28T14:03:12Z\",\"valid_from\":\"2026-06-28T14:00:00Z\",\"valid_to\":\"2026-06-28T15:00:00Z\"}},\"ust\":\"1.0\"}",
+      "sig": "zXlW3WdwvfTGERK1ink5aeZyTucjU7X_J7AAbogi2q_K4ESFstl3v78XRVisUsoJmqKdrAG04yhliCaz1wGZBQ",
       "pub_b64url": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
       "expect": "VALID"
     },
@@ -263,8 +253,8 @@
       "id": "sig-tampered",
       "kind": "signature",
       "rule": "any state change breaks the sig",
-      "signed_content": "{\"state\":{\"data\":{\"space_weather\":{\"kind\":\"captured\",\"value\":{\"bz\":\"-4.10\",\"kp\":\"9.99\"}}},\"hashes\":{\"space_weather\":\"sha256:566d0cf27e3cb7d04e97adbcea94cc6751621659c5b7f3cb5ff8238afe3cd161\"},\"id\":{\"class\":\"observation\",\"domain_shard\":\"helioradar.com\",\"key_id\":\"sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb\",\"ust_id\":\"ust:20260628.14\"},\"time\":{\"generated_at\":\"2026-06-28T14:03:12Z\",\"valid_from\":\"2026-06-28T14:00:00Z\",\"valid_to\":\"2026-06-28T15:00:00Z\"}},\"ust\":\"1.0\"}",
-      "sig": "FtsnBl7p6RmNmk05qEHAq8X2Rrg35S70OWPmtZxTHaorb3mCNIxTvJNPgI4bg0oG5Bs5OkU1l4zMZedxKeKdAg",
+      "signed_content": "{\"state\":{\"data\":{\"space_weather\":{\"kind\":\"captured\",\"value\":{\"bz\":\"-4.10\",\"kp\":\"9.99\"}}},\"hashes\":{\"space_weather\":\"sha256:1a78778a1b91eb0af8727566f7fda767cd816da36d481b2ef87739f8f19a45d1\"},\"id\":{\"class\":\"observation\",\"domain_shard\":\"helioradar.com\",\"key_id\":\"sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb\",\"ust_id\":\"ust:20260628.14\"},\"time\":{\"generated_at\":\"2026-06-28T14:03:12Z\",\"valid_from\":\"2026-06-28T14:00:00Z\",\"valid_to\":\"2026-06-28T15:00:00Z\"}},\"ust\":\"1.0\"}",
+      "sig": "zXlW3WdwvfTGERK1ink5aeZyTucjU7X_J7AAbogi2q_K4ESFstl3v78XRVisUsoJmqKdrAG04yhliCaz1wGZBQ",
       "pub_b64url": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
       "expect": "E-SIG"
     },
@@ -296,14 +286,14 @@
             }
           },
           "hashes": {
-            "space_weather": "sha256:566d0cf27e3cb7d04e97adbcea94cc6751621659c5b7f3cb5ff8238afe3cd161"
+            "space_weather": "sha256:1a78778a1b91eb0af8727566f7fda767cd816da36d481b2ef87739f8f19a45d1"
           }
         },
         "sig": {
           "alg": "Ed25519",
           "key_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
           "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
-          "sig": "FtsnBl7p6RmNmk05qEHAq8X2Rrg35S70OWPmtZxTHaorb3mCNIxTvJNPgI4bg0oG5Bs5OkU1l4zMZedxKeKdAg"
+          "sig": "zXlW3WdwvfTGERK1ink5aeZyTucjU7X_J7AAbogi2q_K4ESFstl3v78XRVisUsoJmqKdrAG04yhliCaz1wGZBQ"
         }
       },
       "expect": "E-SIG",
@@ -313,601 +303,12 @@
       "id": "malleability-nonCanonicalS",
       "kind": "malleability-reject",
       "rule": "S7/N6 strict Ed25519: reject non-canonical S (S>=L)",
-      "signed_content": "{\"state\":{\"data\":{\"space_weather\":{\"kind\":\"captured\",\"value\":{\"bz\":\"-4.10\",\"kp\":\"4.33\"}}},\"hashes\":{\"space_weather\":\"sha256:566d0cf27e3cb7d04e97adbcea94cc6751621659c5b7f3cb5ff8238afe3cd161\"},\"id\":{\"class\":\"observation\",\"domain_shard\":\"helioradar.com\",\"key_id\":\"sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb\",\"ust_id\":\"ust:20260628.14\"},\"time\":{\"generated_at\":\"2026-06-28T14:03:12Z\",\"valid_from\":\"2026-06-28T14:00:00Z\",\"valid_to\":\"2026-06-28T15:00:00Z\"}},\"ust\":\"1.0\"}",
-      "sig_malleable": "FtsnBl7p6RmNmk05qEHAq8X2Rrg35S70OWPmtZxTHaoYQ2_fTu9lFGrsdzH6fCkb5Bs5OkU1l4zMZedxKeKdEg",
-      "valid_sig": "FtsnBl7p6RmNmk05qEHAq8X2Rrg35S70OWPmtZxTHaorb3mCNIxTvJNPgI4bg0oG5Bs5OkU1l4zMZedxKeKdAg",
+      "signed_content": "{\"state\":{\"data\":{\"space_weather\":{\"kind\":\"captured\",\"value\":{\"bz\":\"-4.10\",\"kp\":\"4.33\"}}},\"hashes\":{\"space_weather\":\"sha256:1a78778a1b91eb0af8727566f7fda767cd816da36d481b2ef87739f8f19a45d1\"},\"id\":{\"class\":\"observation\",\"domain_shard\":\"helioradar.com\",\"key_id\":\"sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb\",\"ust_id\":\"ust:20260628.14\"},\"time\":{\"generated_at\":\"2026-06-28T14:03:12Z\",\"valid_from\":\"2026-06-28T14:00:00Z\",\"valid_to\":\"2026-06-28T15:00:00Z\"}},\"ust\":\"1.0\"}",
+      "sig_malleable": "zXlW3WdwvfTGERK1ink5aeZyTucjU7X_J7AAbogi2q-3tDrizDyKF5a0PPuKTKkemqKdrAG04yhliCaz1wGZFQ",
+      "valid_sig": "zXlW3WdwvfTGERK1ink5aeZyTucjU7X_J7AAbogi2q_K4ESFstl3v78XRVisUsoJmqKdrAG04yhliCaz1wGZBQ",
       "pub_b64url": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
       "expect": "E-SIG",
       "note": "S+L non-canonical; a STRICT verifier MUST reject. node/OpenSSL strict? true"
-    },
-    {
-      "id": "high-genesis",
-      "kind": "document",
-      "rule": "S12.1 genesis = class:genesis self-signed transcript",
-      "doc": {
-        "ust": "1.0",
-        "state": {
-          "id": {
-            "domain_shard": "noosphere.md",
-            "ust_id": "ust:20260704.08",
-            "key_id": "sha256:23535a2205f9768d213d685035807da69f7deb1c8b49a5057b0c3ec4494d9923",
-            "class": "genesis"
-          },
-          "time": {
-            "generated_at": "2026-07-04T08:00:00Z",
-            "valid_from": "2026-07-04T08:00:00Z",
-            "valid_to": "2036-07-04T08:00:00Z"
-          },
-          "data": {
-            "genesis": {
-              "kind": "captured",
-              "value": {
-                "pub": "B0SmD0q9j1ukXWTBgw7Jqrz5ahnsJD-3Cxd-zoGs1dA",
-                "role": "name-binding-root"
-              }
-            }
-          },
-          "hashes": {
-            "genesis": "sha256:60173c18ecbdd371a9546b5c67d1307c74f898e25ccb3d22f0ed00b70da02e79"
-          }
-        },
-        "sig": {
-          "alg": "Ed25519",
-          "key_id": "sha256:23535a2205f9768d213d685035807da69f7deb1c8b49a5057b0c3ec4494d9923",
-          "pub": "B0SmD0q9j1ukXWTBgw7Jqrz5ahnsJD-3Cxd-zoGs1dA",
-          "sig": "z8dqB_Jlmfc8MLyU5V9Rjy9gFxvgKRSGjynja14TfD3-pWxOpNPvlkkqhSX5uKOn1QK-Gz19ZK4WIRn-BO6tCQ"
-        }
-      },
-      "expect": {
-        "class": "genesis",
-        "signature": "VALID"
-      }
-    },
-    {
-      "id": "high-keylog-0",
-      "kind": "document",
-      "rule": "S12.2 key-log entry = class:key transcript, prev=genesis content_hash",
-      "doc": {
-        "ust": "1.0",
-        "state": {
-          "id": {
-            "domain_shard": "noosphere.md",
-            "ust_id": "ust:20260704.0801",
-            "key_id": "sha256:23535a2205f9768d213d685035807da69f7deb1c8b49a5057b0c3ec4494d9923",
-            "class": "key"
-          },
-          "time": {
-            "generated_at": "2026-07-04T08:00:00Z",
-            "valid_from": "2026-07-04T08:00:00Z",
-            "valid_to": "2036-07-04T08:00:00Z"
-          },
-          "data": {
-            "key_op": {
-              "kind": "captured",
-              "value": {
-                "op": "add",
-                "pub": "9oYgr3n5UG6zFeP-HioD0Q2ed3lGW0dNGpBf0BU_79s",
-                "new_key_id": "sha256:c0d235e2e69cd6d4a829af6761374d18e7a2e264c3548ba2452c7ffe74e260d9"
-              }
-            }
-          },
-          "hashes": {
-            "key_op": "sha256:731d635080ec5083ada834d2c4c7403af0b215ea755a964a804de9d38c5abe15"
-          },
-          "provenance": {
-            "prev": "sha256:b472a1fec6f9f247112ecc98acc30a31bf49b2a015b94a69d91fc5e9c0d2e815"
-          }
-        },
-        "sig": {
-          "alg": "Ed25519",
-          "key_id": "sha256:23535a2205f9768d213d685035807da69f7deb1c8b49a5057b0c3ec4494d9923",
-          "pub": "B0SmD0q9j1ukXWTBgw7Jqrz5ahnsJD-3Cxd-zoGs1dA",
-          "sig": "c_vebvHysAeMNAoB9KI56XgQJD1yM3TOhLRzvL7iiZpb0BYM0gghv0syONz0m4sUZb5eJrsKoyEXo2J8xgtCCg"
-        }
-      },
-      "expect": {
-        "class": "key",
-        "prev_is_genesis": true,
-        "signature": "VALID"
-      }
-    },
-    {
-      "id": "high-observation-authoritative",
-      "kind": "document",
-      "rule": "S14 resolve key_id via keylog->genesis -> identity=authoritative",
-      "doc": {
-        "ust": "1.0",
-        "state": {
-          "id": {
-            "domain_shard": "noosphere.md",
-            "ust_id": "ust:20260704.14",
-            "key_id": "sha256:c0d235e2e69cd6d4a829af6761374d18e7a2e264c3548ba2452c7ffe74e260d9",
-            "class": "observation"
-          },
-          "time": {
-            "generated_at": "2026-07-04T08:00:00Z",
-            "valid_from": "2026-07-04T08:00:00Z",
-            "valid_to": "2036-07-04T08:00:00Z"
-          },
-          "data": {
-            "space_weather": {
-              "kind": "captured",
-              "value": {
-                "kp": "4.33",
-                "bz": "-4.10"
-              }
-            }
-          },
-          "hashes": {
-            "space_weather": "sha256:4140a506fba5e5b01089dd6449792afd9ff3d17512cf860b9c9a822c635f011f"
-          }
-        },
-        "sig": {
-          "alg": "Ed25519",
-          "key_id": "sha256:c0d235e2e69cd6d4a829af6761374d18e7a2e264c3548ba2452c7ffe74e260d9",
-          "pub": "9oYgr3n5UG6zFeP-HioD0Q2ed3lGW0dNGpBf0BU_79s",
-          "sig": "lGtw99BIV62TGCkO2pBSDR4n3RXEG9IGIPLZlHRKNmuL7gxI1g2zPIUm2rHo0e1NBaRwEB5VDySS4aLK4jHsBg"
-        }
-      },
-      "expect": {
-        "identity": "authoritative",
-        "signature": "VALID"
-      }
-    },
-    {
-      "id": "doc-01-full-light",
-      "kind": "document",
-      "note": "complete LIGHT document, verified offline by two independent agents (2026-07-04)",
-      "doc": {
-        "ust": "1.0",
-        "state": {
-          "id": {
-            "domain_shard": "helioradar.com",
-            "ust_id": "ust:20260628.14",
-            "key_id": "sha256:8d506c06ffdab38f3b4663c189801cc7f516c801af9f06a0ee65fd7cf42b3af7",
-            "class": "observation"
-          },
-          "time": {
-            "generated_at": "2026-06-28T14:03:09Z",
-            "valid_from": "2026-06-28T14:00:00Z",
-            "valid_to": "2026-06-28T15:00:00Z"
-          },
-          "data": {
-            "space_weather": {
-              "kind": "captured",
-              "value": {
-                "bz": "-4.10",
-                "bt": "6.82",
-                "kp": "4.33",
-                "solar_wind_speed": "523.7",
-                "solar_wind_density": "5.14",
-                "xray_class": "C2.1"
-              }
-            }
-          },
-          "hashes": {
-            "space_weather": "sha256:34e8b8ccf005f213c74aa22766de7b21b22a9039e6431f79c66a03680e67b5ae"
-          }
-        },
-        "sig": {
-          "alg": "Ed25519",
-          "key_id": "sha256:8d506c06ffdab38f3b4663c189801cc7f516c801af9f06a0ee65fd7cf42b3af7",
-          "pub": "m3Cnc7T3gxEDmn235iqNE9dncRG7hcmWEee1zlN0ykk",
-          "sig": "MHQzaqPN86n0enxE42aON1WUzXM9CA7h7-E0arxSNuG9Od_MSYH4Knk9qKClJ9ZXEAKBsuR3R5q58i0LF2m-BA"
-        }
-      },
-      "expect": {
-        "bijection": true,
-        "partition_hash": {
-          "space_weather": "sha256:34e8b8ccf005f213c74aa22766de7b21b22a9039e6431f79c66a03680e67b5ae"
-        },
-        "content_hash": "sha256:5b5bd6d116af15c90b3cfd90aadc4c5477d6bd3f0d8e3057c464d93e08e0e4de",
-        "key_id_rule": "H(\"ust:keylog\", base64url-decode(sig.pub))",
-        "key_id": "sha256:8d506c06ffdab38f3b4663c189801cc7f516c801af9f06a0ee65fd7cf42b3af7",
-        "signature": "VALID"
-      }
-    },
-    {
-      "id": "doc-02-tampered-reject",
-      "kind": "document-negative",
-      "note": "the doc-01 document with kp 4.33->9.99, original sig kept — MUST be rejected (verified rejected by two independent agents 2026-07-04)",
-      "doc": {
-        "ust": "1.0",
-        "state": {
-          "id": {
-            "domain_shard": "helioradar.com",
-            "ust_id": "ust:20260628.14",
-            "key_id": "sha256:8d506c06ffdab38f3b4663c189801cc7f516c801af9f06a0ee65fd7cf42b3af7",
-            "class": "observation"
-          },
-          "time": {
-            "generated_at": "2026-06-28T14:03:09Z",
-            "valid_from": "2026-06-28T14:00:00Z",
-            "valid_to": "2026-06-28T15:00:00Z"
-          },
-          "data": {
-            "space_weather": {
-              "kind": "captured",
-              "value": {
-                "bz": "-4.10",
-                "bt": "6.82",
-                "kp": "9.99",
-                "solar_wind_speed": "523.7",
-                "solar_wind_density": "5.14",
-                "xray_class": "C2.1"
-              }
-            }
-          },
-          "hashes": {
-            "space_weather": "sha256:34e8b8ccf005f213c74aa22766de7b21b22a9039e6431f79c66a03680e67b5ae"
-          }
-        },
-        "sig": {
-          "alg": "Ed25519",
-          "key_id": "sha256:8d506c06ffdab38f3b4663c189801cc7f516c801af9f06a0ee65fd7cf42b3af7",
-          "pub": "m3Cnc7T3gxEDmn235iqNE9dncRG7hcmWEee1zlN0ykk",
-          "sig": "MHQzaqPN86n0enxE42aON1WUzXM9CA7h7-E0arxSNuG9Od_MSYH4Knk9qKClJ9ZXEAKBsuR3R5q58i0LF2m-BA"
-        }
-      },
-      "expect": {
-        "bijection": true,
-        "key_id": "PASS",
-        "partition_hash": "FAIL",
-        "content_hash": "FAIL",
-        "signature": "E-SIG",
-        "result": "INVALID"
-      }
-    },
-    {
-      "id": "stream-valid",
-      "kind": "stream",
-      "rule": "§11.3 prev-chained stream, first prev=genesis CH (M4)",
-      "genesis": {
-        "ust": "1.0",
-        "state": {
-          "id": {
-            "domain_shard": "noosphere.md",
-            "ust_id": "ust:20260705.00",
-            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
-            "class": "genesis"
-          },
-          "time": {
-            "generated_at": "2026-07-05T00:00:00Z",
-            "valid_from": "2026-07-05T00:00:00Z",
-            "valid_to": "2036-07-05T00:00:00Z"
-          },
-          "data": {
-            "genesis": {
-              "kind": "captured",
-              "value": {
-                "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
-                "role": "name-binding-root"
-              }
-            }
-          },
-          "hashes": {
-            "genesis": "sha256:1f94aed38e327288017b418dd7666e8bd43c9f9694a8fef47fd3a1986cbc0ca3"
-          }
-        },
-        "sig": {
-          "alg": "Ed25519",
-          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
-          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
-          "sig": "umszeR8r7z_OKocV67r41P-F95dJVsF3C-xesT-OhKtSTExxVMOUfeKNBIekY4Z8GewbfTt7pCMpHOxj1fpnDA"
-        }
-      },
-      "frames": [
-        {
-          "ust": "1.0",
-          "state": {
-            "id": {
-              "domain_shard": "noosphere.md",
-              "ust_id": "ust:20260705.0100",
-              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
-              "class": "observation"
-            },
-            "time": {
-              "generated_at": "2026-07-05T00:00:00Z",
-              "valid_from": "2026-07-05T00:00:00Z",
-              "valid_to": "2036-07-05T00:00:00Z"
-            },
-            "data": {
-              "sw": {
-                "kind": "captured",
-                "value": {
-                  "kp": "1.0"
-                }
-              }
-            },
-            "hashes": {
-              "sw": "sha256:04d7f0b60637a069bf590835ffc7bdd004ca7cac6f8bc727cd32b34c0aa6e0d9"
-            },
-            "provenance": {
-              "prev": "sha256:15d3c6a83c9e26cbe3a992824072d225612f9b2a1046a8f8011876cecd02a9a6"
-            }
-          },
-          "sig": {
-            "alg": "Ed25519",
-            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
-            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
-            "sig": "8u_c5wOk3R9ARUi0gBQfFxNxTcMiFEekufRqTdmvQKlbzPWKjTB0dGQbRCpQR49Bjt-uk380VCAi6hRSFoP9Aw"
-          }
-        },
-        {
-          "ust": "1.0",
-          "state": {
-            "id": {
-              "domain_shard": "noosphere.md",
-              "ust_id": "ust:20260705.0200",
-              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
-              "class": "observation"
-            },
-            "time": {
-              "generated_at": "2026-07-05T00:00:00Z",
-              "valid_from": "2026-07-05T00:00:00Z",
-              "valid_to": "2036-07-05T00:00:00Z"
-            },
-            "data": {
-              "sw": {
-                "kind": "captured",
-                "value": {
-                  "kp": "2.0"
-                }
-              }
-            },
-            "hashes": {
-              "sw": "sha256:e967b04bfb6b07fc583e54448088f4ac2ce721814f929b6fcf2a322d0cb65877"
-            },
-            "provenance": {
-              "prev": "sha256:6dbd6f45bb8b80e4968208aabc784d3c1873ef39b7f6261419edf086ec75c110"
-            }
-          },
-          "sig": {
-            "alg": "Ed25519",
-            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
-            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
-            "sig": "rEdHJiXpvRxVl8Is_CRPp4Ft-zVxyzfYMbQz4mfTKwuXSq-rPSfg11ICIWOV3jgKd3jitcJDPxHWGywO219gDg"
-          }
-        },
-        {
-          "ust": "1.0",
-          "state": {
-            "id": {
-              "domain_shard": "noosphere.md",
-              "ust_id": "ust:20260705.0300",
-              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
-              "class": "observation"
-            },
-            "time": {
-              "generated_at": "2026-07-05T00:00:00Z",
-              "valid_from": "2026-07-05T00:00:00Z",
-              "valid_to": "2036-07-05T00:00:00Z"
-            },
-            "data": {
-              "sw": {
-                "kind": "captured",
-                "value": {
-                  "kp": "3.0"
-                }
-              }
-            },
-            "hashes": {
-              "sw": "sha256:0bc1adc3579ab6a5d4c80819a503347137042bcb1c3f567c445c4afbda94945f"
-            },
-            "provenance": {
-              "prev": "sha256:1336a8429393731c97ce9b6b3cfb20162fcf175f64915e9b809952b4134ad863"
-            }
-          },
-          "sig": {
-            "alg": "Ed25519",
-            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
-            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
-            "sig": "oKtfMkOQn56CdUVrAx5UXVy3OixhJepZhIGl34x-Hy9mTcaNrEm8SxFDU7c0OxN7rHpVYUQDfXffQWD7JYVJAw"
-          }
-        }
-      ],
-      "expect": "complete"
-    },
-    {
-      "id": "stream-broken-prev",
-      "kind": "stream",
-      "rule": "§11.3 dangling prev ⇒ E-PREV",
-      "genesis": {
-        "ust": "1.0",
-        "state": {
-          "id": {
-            "domain_shard": "noosphere.md",
-            "ust_id": "ust:20260705.00",
-            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
-            "class": "genesis"
-          },
-          "time": {
-            "generated_at": "2026-07-05T00:00:00Z",
-            "valid_from": "2026-07-05T00:00:00Z",
-            "valid_to": "2036-07-05T00:00:00Z"
-          },
-          "data": {
-            "genesis": {
-              "kind": "captured",
-              "value": {
-                "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
-                "role": "name-binding-root"
-              }
-            }
-          },
-          "hashes": {
-            "genesis": "sha256:1f94aed38e327288017b418dd7666e8bd43c9f9694a8fef47fd3a1986cbc0ca3"
-          }
-        },
-        "sig": {
-          "alg": "Ed25519",
-          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
-          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
-          "sig": "umszeR8r7z_OKocV67r41P-F95dJVsF3C-xesT-OhKtSTExxVMOUfeKNBIekY4Z8GewbfTt7pCMpHOxj1fpnDA"
-        }
-      },
-      "frames": [
-        {
-          "ust": "1.0",
-          "state": {
-            "id": {
-              "domain_shard": "noosphere.md",
-              "ust_id": "ust:20260705.0100",
-              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
-              "class": "observation"
-            },
-            "time": {
-              "generated_at": "2026-07-05T00:00:00Z",
-              "valid_from": "2026-07-05T00:00:00Z",
-              "valid_to": "2036-07-05T00:00:00Z"
-            },
-            "data": {
-              "sw": {
-                "kind": "captured",
-                "value": {
-                  "kp": "1.0"
-                }
-              }
-            },
-            "hashes": {
-              "sw": "sha256:04d7f0b60637a069bf590835ffc7bdd004ca7cac6f8bc727cd32b34c0aa6e0d9"
-            },
-            "provenance": {
-              "prev": "sha256:15d3c6a83c9e26cbe3a992824072d225612f9b2a1046a8f8011876cecd02a9a6"
-            }
-          },
-          "sig": {
-            "alg": "Ed25519",
-            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
-            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
-            "sig": "8u_c5wOk3R9ARUi0gBQfFxNxTcMiFEekufRqTdmvQKlbzPWKjTB0dGQbRCpQR49Bjt-uk380VCAi6hRSFoP9Aw"
-          }
-        },
-        {
-          "ust": "1.0",
-          "state": {
-            "id": {
-              "domain_shard": "noosphere.md",
-              "ust_id": "ust:20260705.0200",
-              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
-              "class": "observation"
-            },
-            "time": {
-              "generated_at": "2026-07-05T00:00:00Z",
-              "valid_from": "2026-07-05T00:00:00Z",
-              "valid_to": "2036-07-05T00:00:00Z"
-            },
-            "data": {
-              "sw": {
-                "kind": "captured",
-                "value": {
-                  "kp": "2.0"
-                }
-              }
-            },
-            "hashes": {
-              "sw": "sha256:e967b04bfb6b07fc583e54448088f4ac2ce721814f929b6fcf2a322d0cb65877"
-            },
-            "provenance": {
-              "prev": "sha256:6dbd6f45bb8b80e4968208aabc784d3c1873ef39b7f6261419edf086ec75c110"
-            }
-          },
-          "sig": {
-            "alg": "Ed25519",
-            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
-            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
-            "sig": "rEdHJiXpvRxVl8Is_CRPp4Ft-zVxyzfYMbQz4mfTKwuXSq-rPSfg11ICIWOV3jgKd3jitcJDPxHWGywO219gDg"
-          }
-        },
-        {
-          "ust": "1.0",
-          "state": {
-            "id": {
-              "domain_shard": "noosphere.md",
-              "ust_id": "ust:20260705.0400",
-              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
-              "class": "observation"
-            },
-            "time": {
-              "generated_at": "2026-07-05T00:00:00Z",
-              "valid_from": "2026-07-05T00:00:00Z",
-              "valid_to": "2036-07-05T00:00:00Z"
-            },
-            "data": {
-              "sw": {
-                "kind": "captured",
-                "value": {
-                  "kp": "4.0"
-                }
-              }
-            },
-            "hashes": {
-              "sw": "sha256:a1ff9533691d95372123b47c088798fbcadf4210b660e93665b13a5824d2dba4"
-            },
-            "provenance": {
-              "prev": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
-            }
-          },
-          "sig": {
-            "alg": "Ed25519",
-            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
-            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
-            "sig": "EUyCXzYwux7V1hNhtAycmE3zOWE9GHS7EC52ciNB73USdUw03jlmFL6eVrNfRU2Jq5uEHtSSAfzJR0JDqCq2Aw"
-          }
-        }
-      ],
-      "expect": "E-PREV"
-    },
-    {
-      "id": "anchor-inclusion-valid",
-      "kind": "anchor",
-      "rule": "§11.2 Merkle inclusion content_hash→root (ust:leaf/ust:node)",
-      "content_hash": "sha256:1336a8429393731c97ce9b6b3cfb20162fcf175f64915e9b809952b4134ad863",
-      "proof": {
-        "root": "sha256:70e3d0a35426f362d53d29dd2952445fba28a25c143a42e7e0332618e36e1389",
-        "path": [
-          {
-            "dir": "R",
-            "hash": "sha256:88d431bcfcbd3930d4fc2c871495d1c1b3aebebcc4d7bebc1817e40778e8bb52"
-          },
-          {
-            "dir": "R",
-            "hash": "sha256:fabfe7b0fce3d645c40db325af82ecc20c2d737934b72454d5be7d8e663e531a"
-          }
-        ],
-        "anchor": {
-          "substrate": "bitcoin-ots",
-          "ots": "base64url(OTS...)",
-          "block_height": 901234
-        }
-      },
-      "expect": "reaches-root"
-    },
-    {
-      "id": "anchor-inclusion-wrong",
-      "kind": "anchor",
-      "rule": "§11.2 wrong path ⇒ does NOT reach root",
-      "content_hash": "sha256:6dbd6f45bb8b80e4968208aabc784d3c1873ef39b7f6261419edf086ec75c110",
-      "proof": {
-        "root": "sha256:70e3d0a35426f362d53d29dd2952445fba28a25c143a42e7e0332618e36e1389",
-        "path": [
-          {
-            "dir": "R",
-            "hash": "sha256:88d431bcfcbd3930d4fc2c871495d1c1b3aebebcc4d7bebc1817e40778e8bb52"
-          },
-          {
-            "dir": "R",
-            "hash": "sha256:fabfe7b0fce3d645c40db325af82ecc20c2d737934b72454d5be7d8e663e531a"
-          }
-        ],
-        "anchor": {
-          "substrate": "bitcoin-ots",
-          "ots": "base64url(OTS...)",
-          "block_height": 901234
-        }
-      },
-      "expect": "no-reach",
-      "note": "f0 content_hash with f1 path must not reach root"
     }
   ]
 }

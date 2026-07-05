@@ -28,11 +28,14 @@ export const Hbytes = (tag, rawBuf) => sha(Buffer.concat([Buffer.from(tag, 'asci
 // ─── §12.2/§17 key_id = H("ust:keylog", raw_pub_bytes) — raw = base64url-decode(pub), NOT plain SHA256(pub)
 export const keyId = (pubB64url) => Hbytes('ust:keylog', Buffer.from(pubB64url, 'base64url'));
 
-// ─── §4.4 per-partition hash. captured binds domain_shard; computed omits it (cross-engine); private = over commit
-export function partitionHash({ domain_shard, ust_id, name, value, kind, commit }) {
+// ─── §4.4 per-partition hash — UNIFORM: EVERY partition binds its publisher (domain_shard). The partition NAME
+//     is carried as a VALUE (`partition:`), never as a key, so it can never overwrite a protocol field (closes the
+//     reserved-name collision). The old domain-less `computed` mode is REMOVED: its "cross-engine corroboration"
+//     was forgeable (anyone copies a domain-less hash to fake agreement) — real corroboration compares two
+//     publisher-BOUND values a layer up. `kind` is now descriptive metadata only and does NOT affect the hash.
+export function partitionHash({ domain_shard, ust_id, name, value, commit }) {
   if (commit !== undefined) return Hbytes('ust:shard', Buffer.from(commit, 'utf8')); // §4.4 private: hash over its commit
-  const scope = kind === 'computed' ? { ust_id, [name]: value } : { domain_shard, ust_id, [name]: value };
-  return H('ust:shard', canon(scope));
+  return H('ust:shard', canon({ domain_shard, ust_id, partition: name, value }));
 }
 
 // ─── §7 content_hash = H("ust:state", canon({ust, state})) — the unique document descriptor ─────────────
@@ -55,7 +58,7 @@ export function merkleRoot(contentHashes) {                                     
 // ─── §10 PRIVACY — blinded commitment (frame-bound, G23; nonce MUST be fresh & unique per commit, Z2) ────
 // commit = H_shard(canon({domain_shard, ust_id, nonce, <name>: value}))  — verifier reproduces from a disclosure.
 export const blindedCommit = ({ domain_shard, ust_id, name, value, nonce }) =>
-  H('ust:shard', canon({ domain_shard, ust_id, nonce, [name]: value }));
+  H('ust:shard', canon({ domain_shard, ust_id, nonce, partition: name, value }));   // name as VALUE, non-colliding
 // producer helper: build a blinded PRIVATE partition envelope + its hashes entry (§4.4 private hash = H over commit).
 export function blindPartition(name, value, { domain_shard, ust_id, nonce, kind = 'captured' }) {
   const commit = blindedCommit({ domain_shard, ust_id, name, value, nonce });
@@ -93,7 +96,7 @@ export function buildState(id, time, data, provenance) {
   const hashes = {};
   for (const [name, part] of Object.entries(data))
     hashes[name] = part.commit !== undefined ? partitionHash({ commit: part.commit })
-      : partitionHash({ domain_shard: id.domain_shard, ust_id: id.ust_id, name, value: part.value, kind: part.kind });
+      : partitionHash({ domain_shard: id.domain_shard, ust_id: id.ust_id, name, value: part.value });
   const state = { id, time, data, hashes };
   if (provenance) state.provenance = provenance;
   return state;
@@ -111,9 +114,15 @@ export const buildCheckpoint = (id, time, head, frameCount, prev) =>            
 
 // ─── reserved-key sets (§3/§4.2/§17) ─────────────────────────────────────────────────────────────────
 const RESERVED = { transcript: ['ust','state','sig','proof'], state: ['id','time','data','hashes','provenance'],
-  id: ['domain_shard','ust_id','key_id','class','parent_ust'], envelope: ['kind','value','privacy','commit','enc'] };
+  id: ['domain_shard','ust_id','key_id','class','parent_ust'], envelope: ['kind','value','privacy','commit','enc'],
+  sig: ['alg','key_id','pub','sig'] };
+const RES_PARTITION_NAMES = new Set([...RESERVED.state, ...RESERVED.id, 'partition', 'nonce', '__proto__', 'constructor', 'prototype']);
+const KINDS = ['captured', 'computed'], PRIVACY = ['blinded', 'encrypted'];
 const CLASSES = ['observation','attestation','derivation','genesis','key'];
-const TS = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;                       // §6 pinned RFC3339 UTC-Z
+// §6 pinned RFC3339 UTC-Z with VALID RANGES — month 01-12, day 01-31, hour 00-23, min/sec 00-59.
+// Rejects leap seconds (:60) and out-of-range (:99, hour 99) so two conforming verifiers ALWAYS agree (I4).
+// Publishers MUST smear leap seconds to :59 (there is no representable :60).
+const TS = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])T([01]\d|2[0-3]):[0-5]\d:[0-5]\dZ$/;
 const USTID = /^ust:\d{8}\.\d{2}(\d{2}(\d{2})?)?$/;                        // §8
 
 // ─── §13 structural bounds — hard ceilings; exceed ⇒ E-BOUNDS ─────────────────────────────────────────
@@ -141,15 +150,21 @@ export function verify(doc, opts = {}) {
     if (typeof doc !== 'object' || doc === null) return bad('E-MALFORMED', 'not an object');
     if (doc.ust === undefined || doc.state === undefined || doc.sig === undefined) return bad('E-MALFORMED', 'missing ust/state/sig');
     if (doc.ust !== '1.0') return bad('E-MALFORMED', 'unknown version ' + doc.ust);   // §19 (this verifier is 1.0)
+    // §4.1 top-level is EXACTLY {ust,state,sig,proof} — REJECT unknown members (fail-closed). An "ignore unknown"
+    // rule would reopen the K1/F2 class: an unsigned member riding next to a VALID verdict.
+    for (const k of Object.keys(doc)) if (!RESERVED.transcript.includes(k)) return bad('E-MALFORMED', 'unknown top-level member: ' + k);
     const bnd = checkBounds(doc); if (bnd) return bad('E-BOUNDS', bnd);               // §13 bounds
     const st = doc.state;
     for (const k of Object.keys(st)) if (!RESERVED.state.includes(k)) return bad('E-MALFORMED', 'reserved-key: state.' + k);
     if (!st.id || !st.time || !st.data || !st.hashes) return bad('E-MALFORMED', 'state missing id/time/data/hashes');
     for (const k of Object.keys(st.id)) if (!RESERVED.id.includes(k)) return bad('E-MALFORMED', 'reserved-key: id.' + k);
-    // §I3 partition names must be non-reserved-envelope, non-collide
+    // §I3 partition NAME non-reserved (defense-in-depth) + envelope-key + kind/privacy registry (§4.4)
     for (const name of Object.keys(st.data)) {
+      if (RES_PARTITION_NAMES.has(name)) return bad('E-MALFORMED', 'reserved partition name: ' + name);
       const part = st.data[name];
       for (const k of Object.keys(part)) if (!RESERVED.envelope.includes(k)) return bad('E-MALFORMED', 'reserved-key: data.' + name + '.' + k);
+      if (part.privacy === undefined) { if (!KINDS.includes(part.kind)) return bad('E-MALFORMED', 'unknown partition kind: ' + name + '.' + part.kind); }
+      else if (!PRIVACY.includes(part.privacy)) return bad('E-MALFORMED', 'unknown privacy mode: ' + name + '.' + part.privacy);
     }
     // step 2 — canonical, content_hash, bijection, per-partition hashes (§14.2, G19, §4.4)
     let S; try { S = signedContent(doc); } catch (e) { return bad('E-CANON', e.detail || 'canon'); }
@@ -162,7 +177,7 @@ export function verify(doc, opts = {}) {
       try {
         recomputed = part.commit !== undefined
           ? partitionHash({ commit: part.commit })
-          : partitionHash({ domain_shard: st.id.domain_shard, ust_id: st.id.ust_id, name, value: part.value, kind: part.kind });
+          : partitionHash({ domain_shard: st.id.domain_shard, ust_id: st.id.ust_id, name, value: part.value });
       } catch (e) { return bad('E-CANON', 'partition canon: ' + name); }
       if (recomputed !== st.hashes[name]) return bad('E-CANON', 'partition hash mismatch: ' + name);
     }
@@ -179,7 +194,10 @@ export function verify(doc, opts = {}) {
     }
     // W3 class-context: a data verify must not accept a key-log/genesis transcript as data
     if (opts.context === 'data' && (st.id.class === 'key' || st.id.class === 'genesis')) return bad('E-MALFORMED', 'class ' + st.id.class + ' not valid in data context (W3)');
-    // step 4 — authenticity (§14.4): key_id consistency + strict Ed25519 over S
+    // step 4 — authenticity (§14.4): closed sig schema + declared alg + key_id consistency + strict Ed25519 over S
+    if (typeof doc.sig !== 'object' || doc.sig === null) return bad('E-SIG', 'sig missing');
+    for (const k of Object.keys(doc.sig)) if (!RESERVED.sig.includes(k)) return bad('E-SIG', 'unknown sig member: ' + k);
+    if (doc.sig.alg !== 'Ed25519') return bad('E-SIG', 'sig.alg must be Ed25519');
     if (doc.sig.key_id !== st.id.key_id) return bad('E-SIG', 'sig.key_id != state.id.key_id');
     if (doc.sig.pub === undefined) return bad('E-KEY', 'no carried pub (LIGHT)');
     if (keyId(doc.sig.pub) !== st.id.key_id) return bad('E-SIG', 'key_id != H(ust:keylog, pub)');
@@ -203,7 +221,7 @@ export function verify(doc, opts = {}) {
       if (reproduced !== part.commit) return bad('E-COMMIT', 'blinded commit mismatch: ' + name);
       if (part.privacy === 'encrypted' && part.enc && opts.decKeys?.[part.enc.key_id]) {
         const pt = aeadDecrypt(part.enc, opts.decKeys[part.enc.key_id]);  // → canon({nonce,<p>:value}) plaintext
-        if (pt === null || pt !== canon({ nonce: disc.nonce, [name]: disc.value })) return bad('E-COMMIT', 'AEAD↔commit mismatch: ' + name);
+        if (pt === null || pt !== canon({ nonce: disc.nonce, partition: name, value: disc.value })) return bad('E-COMMIT', 'AEAD↔commit mismatch: ' + name);
       }
       disclosed.push(name);
     }
@@ -275,6 +293,12 @@ export function resolveAuthority(doc, { genesis, keylog = [], noForkConfirmed = 
 //     ust:leaf/ust:node). The SUBSTRATE check (e.g. bitcoin-ots) is DELEGATED to opts.substrateVerify (needs
 //     external Bitcoin access — the caller/ustate's job). Returns { inclusion, time, status, anchorTime? }.
 export function verifyAnchor(contentHash, proof, opts = {}) {
+  // fail-closed on a malformed proof: validate shape BEFORE recomputing (no TypeError, no dir!=L ⇒ R fallthrough).
+  const HASH = /^sha256:[0-9a-f]{64}$/;
+  if (!proof || typeof proof !== 'object' || !Array.isArray(proof.path) || !HASH.test(proof.root || ''))
+    return { inclusion: false, time: 'unproven', status: 'verified', error: 'E-ANCHOR', detail: 'malformed anchor proof' };
+  for (const s of proof.path) if (!s || (s.dir !== 'L' && s.dir !== 'R') || !HASH.test(s.hash || ''))
+    return { inclusion: false, time: 'unproven', status: 'verified', error: 'E-ANCHOR', detail: 'malformed path entry (dir must be "L"|"R", hash sha256:hex)' };
   let node = Hbytes('ust:leaf', Buffer.from(contentHash, 'utf8'));
   for (const s of proof.path) node = Hbytes('ust:node', Buffer.from(s.dir === 'L' ? s.hash + node : node + s.hash, 'utf8'));
   const inclusion = node === proof.root;
@@ -292,9 +316,11 @@ export function verifyAnchor(contentHash, proof, opts = {}) {
 export function verifyStream(frames, { genesis, checkpoint, requirePerFrameValid = true } = {}) {
   if (!Array.isArray(frames) || !frames.length) return { complete: 'none' };
   let prevHash = genesis ? contentHash(genesis) : null;
+  const authority = frames[0].state.id.domain_shard;                   // §11.3: a stream belongs to ONE authority
   const seenUstId = new Set(), seenPrev = new Set();
   for (const [i, f] of frames.entries()) {
     if (requirePerFrameValid) { const v = verify(f, { context: 'data' }); if (v.result !== 'VALID') return { error: 'E-SIG', detail: 'frame ' + i + ' invalid: ' + v.error }; } // X2
+    if (f.state.id.domain_shard !== authority) return { error: 'E-AUTHORITY', detail: 'frame ' + i + ' domain_shard != stream authority (' + authority + ') — mixed-authority stream' };
     if (seenUstId.has(f.state.id.ust_id)) return { error: 'E-PREV', detail: 'duplicate ust_id (fork, Y1): ' + f.state.id.ust_id };
     seenUstId.add(f.state.id.ust_id);
     const p = f.state.provenance?.prev;
@@ -308,6 +334,7 @@ export function verifyStream(frames, { genesis, checkpoint, requirePerFrameValid
   if (checkpoint) {
     const cv = verify(checkpoint, { context: 'data' });
     if (cv.result !== 'VALID' || checkpoint.state.id.class !== 'attestation') return { error: 'E-PREV', detail: 'invalid checkpoint' };
+    if (checkpoint.state.id.domain_shard !== authority) return { error: 'E-AUTHORITY', detail: 'checkpoint not from the stream authority (' + authority + ') — TOP completeness cannot cross authority' };
     const a = checkpoint.state.data.checkpoint?.value;
     if (!a || a.head !== prevHash || String(a.frame_count) !== String(frames.length))
       return { error: 'E-PREV', detail: 'checkpoint contradicts observed set (M5)' };
