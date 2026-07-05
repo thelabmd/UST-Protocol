@@ -6,7 +6,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { listTools, dispatch } from './index.mjs';
 
-const server = new Server({ name: 'ust-mcp', version: '1.0.0-rc.3' }, { capabilities: { tools: {} } });
+const server = new Server({ name: 'ust-mcp', version: '1.0.0-rc.4' }, { capabilities: { tools: {} } });
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: listTools() }));
 server.setRequestHandler(CallToolRequestSchema, async (req) => {
   const r = dispatch(req.params.name, req.params.arguments || {});

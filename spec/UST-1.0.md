@@ -1,7 +1,7 @@
 # Universal State Transcript (UST) — Protocol Specification, Version 1.0
 
-> **Release candidate — `1.0.0-rc.2`.** This specification has been extensively red-teamed; an independent
-> external cryptographic audit is pending. It is subject to change until `1.0.0` final (rc.2 folded in two external reviews — 6 impl findings + spec edge cases + removed the domain-less `computed` mode). Pin exact versions.
+> **Release candidate — `1.0.0-rc.3`.** This specification has been extensively red-teamed; an independent
+> external cryptographic audit is pending. It is subject to change until `1.0.0` final (rc.2 folded in two external reviews — 6 impl findings + spec edge cases + removed domain-less `computed`; rc.3 aligned the reference impl to §3.1 `pinned` (TOFU) + Y3 name epistemics — NO normative spec change). Pin exact versions.
 
 **UST is trust infrastructure.** It gives any machine-published statement about the state of the world its own
 VERIFIABLE trust — WHO asserted it, WHAT exact bytes, for WHICH time-frame, WHEN, and FROM WHAT — checkable

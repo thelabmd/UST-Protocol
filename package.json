@@ -1,6 +1,6 @@
 {
   "name": "ust",
-  "version": "1.0.0-rc.3",
+  "version": "1.0.0-rc.4",
   "private": true,
   "description": "UST (Universal State Transcript) — specification, conformance vectors, and reference implementations. Trust infrastructure for machine-readable state.",
   "license": "Apache-2.0",

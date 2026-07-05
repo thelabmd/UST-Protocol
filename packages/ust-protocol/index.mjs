@@ -202,9 +202,15 @@ export function verify(doc, opts = {}) {
     if (doc.sig.pub === undefined) return bad('E-KEY', 'no carried pub (LIGHT)');
     if (keyId(doc.sig.pub) !== st.id.key_id) return bad('E-SIG', 'key_id != H(ust:keylog, pub)');
     if (!edVerifyStrict(doc.sig.pub, S, doc.sig.sig)) return bad('E-SIG', 'Ed25519 verify failed');
-    // step 3 — name authority (HIGH, §12/§14.3): resolved ONLY if the caller supplies genesis+keylog.
-    const identity = opts.genesis ? resolveAuthority(doc, opts) : { strength: 'self-asserted', status: 'verified' };
-    if (identity.error) return bad(identity.error, identity.detail);              // forked genesis / broken key-log
+    // step 3 — name authority (§14.3): HIGH resolves genesis+key-log; else a PINNED key (TOFU, §3.1) if the caller
+    // supplies pinnedKeys — a key NOT in the pin set is INVALID (that is what pinning means); else self-asserted.
+    let identity;
+    if (opts.genesis) identity = resolveAuthority(doc, opts);
+    else if (opts.pinnedKeys) identity = opts.pinnedKeys.includes(st.id.key_id)
+      ? { strength: 'pinned', status: 'verified' }
+      : { error: 'E-KEY', detail: 'key_id not in the pinned set (§3.1 TOFU)' };
+    else identity = { strength: 'self-asserted', status: 'verified' };
+    if (identity.error) return bad(identity.error, identity.detail);              // forked genesis / broken key-log / not pinned
     if (opts.requireAuthoritative && !(identity.strength === 'authoritative' && identity.status === 'verified'))
       return identity.status === 'unavailable'
         ? { result: 'INDETERMINATE', reason: 'unavailable', identity, detail: identity.detail }   // W1: retry, NOT failure
@@ -236,8 +242,12 @@ export function verify(doc, opts = {}) {
     // §14.9 attestation: recompute the Merkle root from constituents (⇒ E-ROOT on mismatch).
     if (st.id.class === 'attestation' && st.provenance?.constituents && st.provenance?.root !== undefined)
       if (merkleRoot(st.provenance.constituents) !== st.provenance.root) return bad('E-ROOT', 'attestation root mismatch');
-    return { result: 'VALID', identity, disclosed, sources,
-      publisher: st.id.domain_shard, ust_id: st.id.ust_id, class: st.id.class, content_hash: ch,
+    // §Y3: `domain_shard` is surfaced as `publisher` ONLY at `authoritative` strength; otherwise it is a
+    // self-asserted/pinned LABEL — `publisher_claimed` — so a consumer that never read Y3 cannot over-attribute.
+    // (Pinning authenticates the KEY, not the name.)
+    const nameField = identity.strength === 'authoritative' ? { publisher: st.id.domain_shard } : { publisher_claimed: st.id.domain_shard };
+    return { result: 'VALID', identity, disclosed, sources, ...nameField,
+      ust_id: st.id.ust_id, class: st.id.class, content_hash: ch,
       time: { strength: 'unproven', status: doc.proof ? 'present' : 'none' } };
   } catch (e) {
     return bad(e.code || 'E-MALFORMED', e.detail || String(e));         // fail-closed (§14/I10)
