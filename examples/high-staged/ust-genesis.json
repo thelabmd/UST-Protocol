@@ -1,0 +1,34 @@
+{
+  "ust": "1.0",
+  "state": {
+    "id": {
+      "domain_shard": "noosphere.md",
+      "ust_id": "ust:20260704.08",
+      "key_id": "sha256:23535a2205f9768d213d685035807da69f7deb1c8b49a5057b0c3ec4494d9923",
+      "class": "genesis"
+    },
+    "time": {
+      "generated_at": "2026-07-04T08:00:00Z",
+      "valid_from": "2026-07-04T08:00:00Z",
+      "valid_to": "2036-07-04T08:00:00Z"
+    },
+    "data": {
+      "genesis": {
+        "kind": "captured",
+        "value": {
+          "pub": "B0SmD0q9j1ukXWTBgw7Jqrz5ahnsJD-3Cxd-zoGs1dA",
+          "role": "name-binding-root"
+        }
+      }
+    },
+    "hashes": {
+      "genesis": "sha256:60173c18ecbdd371a9546b5c67d1307c74f898e25ccb3d22f0ed00b70da02e79"
+    }
+  },
+  "sig": {
+    "alg": "Ed25519",
+    "key_id": "sha256:23535a2205f9768d213d685035807da69f7deb1c8b49a5057b0c3ec4494d9923",
+    "pub": "B0SmD0q9j1ukXWTBgw7Jqrz5ahnsJD-3Cxd-zoGs1dA",
+    "sig": "z8dqB_Jlmfc8MLyU5V9Rjy9gFxvgKRSGjynja14TfD3-pWxOpNPvlkkqhSX5uKOn1QK-Gz19ZK4WIRn-BO6tCQ"
+  }
+}

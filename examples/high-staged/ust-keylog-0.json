@@ -1,0 +1,38 @@
+{
+  "ust": "1.0",
+  "state": {
+    "id": {
+      "domain_shard": "noosphere.md",
+      "ust_id": "ust:20260704.0801",
+      "key_id": "sha256:23535a2205f9768d213d685035807da69f7deb1c8b49a5057b0c3ec4494d9923",
+      "class": "key"
+    },
+    "time": {
+      "generated_at": "2026-07-04T08:00:00Z",
+      "valid_from": "2026-07-04T08:00:00Z",
+      "valid_to": "2036-07-04T08:00:00Z"
+    },
+    "data": {
+      "key_op": {
+        "kind": "captured",
+        "value": {
+          "op": "add",
+          "pub": "9oYgr3n5UG6zFeP-HioD0Q2ed3lGW0dNGpBf0BU_79s",
+          "new_key_id": "sha256:c0d235e2e69cd6d4a829af6761374d18e7a2e264c3548ba2452c7ffe74e260d9"
+        }
+      }
+    },
+    "hashes": {
+      "key_op": "sha256:731d635080ec5083ada834d2c4c7403af0b215ea755a964a804de9d38c5abe15"
+    },
+    "provenance": {
+      "prev": "sha256:b472a1fec6f9f247112ecc98acc30a31bf49b2a015b94a69d91fc5e9c0d2e815"
+    }
+  },
+  "sig": {
+    "alg": "Ed25519",
+    "key_id": "sha256:23535a2205f9768d213d685035807da69f7deb1c8b49a5057b0c3ec4494d9923",
+    "pub": "B0SmD0q9j1ukXWTBgw7Jqrz5ahnsJD-3Cxd-zoGs1dA",
+    "sig": "c_vebvHysAeMNAoB9KI56XgQJD1yM3TOhLRzvL7iiZpb0BYM0gghv0syONz0m4sUZb5eJrsKoyEXo2J8xgtCCg"
+  }
+}

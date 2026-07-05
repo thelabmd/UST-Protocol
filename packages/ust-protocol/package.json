@@ -1,0 +1,40 @@
+{
+  "name": "ust-protocol",
+  "version": "1.0.0-rc.1",
+  "description": "Universal State Transcript (UST) — the stateless reference base: canonical hashing (JCS), Ed25519 signing, three-tier verification (LIGHT/HIGH/TOP), privacy commitments, chains, and anchoring. Trust infrastructure for machine-readable state.",
+  "author": "THE LAB (https://thelab.md)",
+  "type": "module",
+  "main": "./index.mjs",
+  "exports": {
+    ".": "./index.mjs"
+  },
+  "files": [
+    "index.mjs",
+    "LICENSE",
+    "README.md"
+  ],
+  "keywords": [
+    "ust",
+    "trust-infrastructure",
+    "verification",
+    "ed25519",
+    "canonical",
+    "jcs",
+    "merkle",
+    "provenance",
+    "attestation",
+    "notarization"
+  ],
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=18"
+  },
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thelabmd/UST.git",
+    "directory": "packages/ust-protocol"
+  },
+  "homepage": "https://github.com/thelabmd/UST/tree/main/packages/ust-protocol#readme",
+  "bugs": "https://github.com/thelabmd/UST/issues"
+}
