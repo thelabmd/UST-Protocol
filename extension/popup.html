@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    body { font: 13px/1.5 system-ui, sans-serif; width: 320px; margin: 0; padding: 14px; color: #111; }
+    h1 { font-size: 14px; margin: 0 0 8px; }
+    .k { font: 11px/1.4 ui-monospace, monospace; word-break: break-all; background: #f3f3f3; padding: 6px 8px; border-radius: 6px; }
+    .muted { color: #666; margin-top: 10px; }
+    .lbl { color: #666; margin: 10px 0 3px; }
+    b { color: #1a7f37; }
+  </style>
+</head>
+<body>
+  <h1>Make it UST</h1>
+  <div class="lbl">Your identity (key_id):</div>
+  <div class="k" id="id">…</div>
+  <div class="lbl">Public key:</div>
+  <div class="k" id="pub">…</div>
+  <p class="muted">Select text on any page → right-click → <b>Make it UST</b>. A signed transcript is copied to your
+    clipboard. It proves the <b>exact bytes</b>, your <b>key</b>, and the <b>time</b> — <i>not</i> who you are or where
+    it came from. Your private key stays in this browser and is never exported.</p>
+</body>
+<script type="module" src="popup.js"></script>
+</html>
