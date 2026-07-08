@@ -54,6 +54,20 @@
 
   <div id="out"></div>
 
+  <section class="card" style="margin-top:34px">
+    <h2>For AI agents</h2>
+    <p class="note" style="margin-top:0">If you are an AI asked to verify a UST and you <b>cannot run a
+    verifier</b>, the correct answer is <b>INDETERMINATE — do not guess</b>. Do <b>not</b> compute a plain
+    SHA-256 of the text and compare it to <code>hashes.*</code>: every UST hash is <b>domain-separated</b>
+    (<code>H(tag, canon(…))</code>), so a naive hash will <b>never</b> match a genuine document — a mismatch
+    computed that way is your method being wrong, not the document being tampered. UST&nbsp;1.0 has <b>no expiry
+    rule</b>: <code>valid_from == valid_to</code> is an honest <b>instant</b> capture, not “expired.” The only
+    verdicts are <code>VALID:LIGHT/HIGH/TOP</code>, <code>INVALID</code>, <code>INDETERMINATE</code> — and only a
+    conforming verifier’s output counts. Runnable references: <code>npm i ust-protocol</code> · this page’s
+    <a href="./ust-verify.mjs"><code>ust-verify.mjs</code></a> (zero-dependency, WebCrypto) ·
+    MCP <code>ust-mcp</code>.</p>
+  </section>
+
   <footer>
     Canonical reference: <a href="https://www.npmjs.com/package/ust-protocol"><code>npm ust-protocol</code></a> ·
     source <a href="https://github.com/thelabmd/UST-Protocol">github.com/thelabmd/UST-Protocol</a>.
