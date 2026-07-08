@@ -18,20 +18,23 @@ It is the reference consumer of [`ust-web-signer`](../packages/ust-web-signer) (
 ```
 Source: https://example.com/article  (claimed by sender — NOT verified)
 Verified by UST (LIGHT): the exact bytes below · the signing key · the capture time. The source URL is not part of the proof.
-———UST———
-{"ust":"1.0","state":{…},"sig":{…}}
+———UST(base64)———
+eyJ1c3QiOiIxLjAiLCJzdGF0ZSI6eyJpZCI6ey…
 ```
 
-The line before `———UST———` is a **plain-text, unsigned** note for humans — the page URL is the sender's *claim*,
-deliberately kept **outside** the signature. Everything after `———UST———` is the signed document.
+The lines before `———UST(base64)———` are a **plain-text, unsigned** note for humans — the page URL is the
+sender's *claim*, deliberately kept **outside** the signature. The token after the delimiter is the signed
+document, **base64-encoded** so its exact bytes survive any paste channel (chat / terminal / apps often normalize
+whitespace + unicode inside raw JSON, which would silently break the signature — a real capture failed exactly
+this way).
 
 ## Verify a copied transcript
 
-Take the JSON after `———UST———` and verify it with the reference verifier:
+Take the base64 after `———UST(base64)———`, decode it, and verify with the reference verifier:
 
 ```
 npm i ust-protocol@rc
-node -e "import('ust-protocol').then(P => console.log(P.verify(JSON.parse(process.argv[1]), {context:'data'})))" '<paste the UST json>'
+node -e "import('ust-protocol').then(P=>console.log(P.verify(JSON.parse(Buffer.from(process.argv[1],'base64').toString('utf8')),{context:'data'})))" '<paste the base64>'
 ```
 
 Expected: `result: "VALID:LIGHT"`, `identity.strength: "self-asserted"`, `publisher_claimed` = your `key_id`

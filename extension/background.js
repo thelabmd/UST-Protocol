@@ -32,14 +32,22 @@ async function getSigner() {
   return W.signerFromKeys(kp.privateKey, kp.publicKey);
 }
 
+// UTF-8-safe base64 — the signed UST rides as base64 (pure ASCII) so it survives ANY paste channel. Raw JSON in
+// the clipboard gets whitespace/unicode-normalized by chat/terminal/some apps → the signature breaks (a real
+// capture failed exactly this way). base64 preserves the EXACT bytes end-to-end.
+function b64utf8(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = ''; for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
 // ── the clipboard blob: honest UNSIGNED preamble (positive framing of what IS proven) + the signed UST (l43v) ──
 function clipboardBlob(doc, pageUrl) {
   const src = pageUrl ? 'Source: ' + pageUrl + '  (claimed by sender — NOT verified)\n' : '';
   return src +
     'Verified by UST (LIGHT): the exact bytes below · the signing key · the capture time. ' +
     'The source URL is not part of the proof.\n' +
-    '———UST———\n' +
-    JSON.stringify(doc);
+    '———UST(base64)———\n' +
+    b64utf8(JSON.stringify(doc));
 }
 
 // ── write to the clipboard by injecting into the active tab (activeTab is granted by the context-menu gesture) ──
