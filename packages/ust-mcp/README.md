@@ -6,8 +6,9 @@
 [Model Context Protocol](https://modelcontextprotocol.io) tools, so any MCP-capable agent can check that a piece
 of state is what it claims — who published it, when, unchanged — without trusting whoever served the bytes.
 
-> **Release candidate — `1.0.0-rc.1`.** The specification has been extensively red-teamed; an independent
-> external cryptographic audit is pending. Suitable for evaluation. Pin exact versions.
+> **Release candidate.** The specification is at `1.0.0-rc.5`; this package pins its own rc on npm. Extensively
+> red-teamed; four external AI reviews folded in; an independent human cryptographic audit is pending. Suitable
+> for evaluation. Pin exact versions.
 
 ## Run
 
@@ -62,7 +63,7 @@ the root on-chain.
 This is the **protocol MCP** — universal, publisher-agnostic. A separate **product MCP** (pricing, receipts,
 archive depth) is operated by publishers such as noosphere; the two are never mixed.
 
-Depends on [`ust-protocol`](https://www.npmjs.com/package/ust-protocol). Spec: **https://github.com/thelabmd/UST/blob/main/spec/UST-1.0.md**
+Depends on [`ust-protocol`](https://www.npmjs.com/package/ust-protocol). Spec: **https://github.com/thelabmd/UST-Protocol/blob/main/spec/UST-1.0.md**
 
 ## License
 

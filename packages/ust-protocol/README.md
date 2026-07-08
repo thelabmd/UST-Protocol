@@ -11,8 +11,9 @@ travels *with* the data.
 verification, privacy commitments, chains, and anchoring. Zero-dependency (`node:crypto`; a WebCrypto/`@noble`
 adapter for browsers and Workers — same rules, same results).
 
-> **Release candidate — `1.0.0-rc.1`.** The specification has been extensively red-teamed; an independent
-> external cryptographic audit is pending. Suitable for evaluation and integration testing. Pin exact versions.
+> **Release candidate.** The specification is at `1.0.0-rc.5`; this package pins its own rc on npm. Extensively
+> red-teamed; four external AI reviews folded in; an independent human cryptographic audit is pending. Suitable
+> for evaluation and integration testing. Pin exact versions.
 
 ## Install
 
@@ -85,7 +86,7 @@ confused with failure.
 
 ## Spec & conformance
 
-- Specification and a client-side verifier: **https://github.com/thelabmd/UST/blob/main/spec/UST-1.0.md**
+- Specification and a client-side verifier: **https://github.com/thelabmd/UST-Protocol/blob/main/spec/UST-1.0.md**
 - This library is validated against a suite of deterministic conformance vectors (the same vectors any
   independent implementation should pass).
 

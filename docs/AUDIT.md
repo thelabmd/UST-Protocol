@@ -1,4 +1,4 @@
-# UST 1.0.0-rc.4 — External Audit Brief
+# UST 1.0.0-rc.5 — External Audit Brief
 
 _For an independent cryptographic-protocol reviewer._
 
@@ -36,12 +36,14 @@ We have already done extensive **self**-review (§6). We are buying the thing se
 
 ```
 npm     npm i ust-protocol@rc          # the reference verifier + producer (Apache-2.0, zero-dep, node:crypto)
-        npx -y ust-mcp@rc              # the MCP server (8 tools)
-git     github.com/thelabmd/UST        # monorepo — everything below in one clone
+        npx -y ust-mcp@rc              # the MCP server (9 tools)
+        npm i ust-web-signer@rc        # the WebCrypto browser signer (producer side)
+git     github.com/thelabmd/UST-Protocol   # monorepo — everything below in one clone
           spec/UST-1.0.md              # the normative specification (this is the source of truth)
-          vectors/conformance-vectors.json   # deterministic test vectors (36)
+          vectors/conformance-vectors.json   # deterministic test vectors (26; the runner adds behavioral checks — 56 total)
           packages/ust-protocol/       # reference impl + its conformance runner
           examples/                    # sample docs (valid + tampered) + verify recipes
+web     thelabmd.github.io/UST-Protocol # in-browser verifier (client-side) + llms.txt (machine instructions)
 ```
 On request (kept out of the public repo): the **second, clean-room implementation** (`ust-verify-web`, WebCrypto,
 written from the spec without importing `ust-protocol`) and the **red-team dossier** (the six passes below, in full).
@@ -49,7 +51,7 @@ written from the spec without importing `ust-protocol`) and the **red-team dossi
 ## 4. How to test
 
 ```
-git clone github.com/thelabmd/UST && cd UST && npm install
+git clone github.com/thelabmd/UST-Protocol && cd UST-Protocol && npm install
 npm test                               # runs ust-protocol against all conformance vectors
 ```
 - **Cross-examine two implementations.** Run `ust-protocol` and the clean-room `ust-verify-web` against the same
@@ -115,7 +117,8 @@ each and, more importantly, find a **seventh** we didn't think of.
   revocation, I14 bounded verification (depth-0 default).
 - **Outcome vocabulary (E-codes):** E-MALFORMED, E-CANON, E-SIG, E-KEY, E-COMMIT, E-ROOT, E-PREV, E-GENESIS,
   E-AUTHORITY, E-ANCHOR, E-BOUNDS, E-CYCLE, E-BINDING, E-MODEL. Verification is fail-closed and returns one of
-  three verdicts: **VALID / INVALID / INDETERMINATE** (availability is never confused with failure).
+  three outcomes: **VALID:LIGHT | VALID:HIGH | VALID:TOP / INVALID / INDETERMINATE** — the verdict CARRIES its
+  tier; a bare `VALID` is never emitted (availability is never confused with failure).
 - The six red-team passes + the v0.29 passes are available in full (with every finding and how it was closed
   STRUCTURALLY) so you can judge the fixes rather than re-derive the findings.
 
@@ -136,10 +139,10 @@ residual risk, and what would you require before a `1.0.0` final tag?
 ## 9. What we have already done (so you go deeper, not sideways)
 
 - **Six adversarial red-team passes** on the v1.0 final form + four on the v0.29 predecessor — all self-review.
-- **36 deterministic conformance vectors**, and the reference impl passes them (one known note: duplicate-key
+- **26 deterministic conformance vectors** plus a behavioral conformance runner (56 checks total), and the reference impl passes them (one known note: duplicate-key
   rejection needs a raw-bytes JSON parser — `JSON.parse` collapses dups — a harness limitation, not an impl flaw).
 - **Two independent implementations** (`ust-protocol` node + `ust-verify-web` clean-room WebCrypto) cross-checked: **32/32 agree, 0 divergence**.
-- **rc.2 review round complete:** four preliminary reviews (ChatGPT code + Gemini spec + Gemini 3.1 architecture + ChatGPT 5.5 Max adversarial) produced the changes; all folded in (details in the on-request `FINDINGS-rc1-to-rc2.md`).
+- **Four external AI reviews folded in (rc.1 → rc.5):** ChatGPT code + Gemini spec + Gemini 3.1 architecture + ChatGPT 5.5 Max adversarial (details in the on-request `FINDINGS-rc1-to-rc5.md`).
 - **Honest disclosure:** all of the above is one team's work → correlated blind spots. That is precisely the gap
   an external adversarial review closes. Please assume the design is wrong somewhere and find it.
 ```

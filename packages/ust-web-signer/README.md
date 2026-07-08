@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 # ust-web-signer
 
-The **browser-side signer** for [UST (Universal State Transcript)](https://github.com/thelabmd/UST). It is the
+The **browser-side signer** for [UST (Universal State Transcript)](https://github.com/thelabmd/UST-Protocol). It is the
 one piece [`ust-protocol`](https://www.npmjs.com/package/ust-protocol) deliberately leaves out: a **private key
 never enters the verifier library**. This package generates an Ed25519 key with WebCrypto, signs, and produces the
 full `{ ust, state, sig }` document. Its `canon`/hash/preimage code is byte-identical to `ust-protocol`, so what

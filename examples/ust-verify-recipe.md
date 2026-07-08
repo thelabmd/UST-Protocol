@@ -65,19 +65,20 @@ the tag from the input (domain separation). `x` is UTF-8 bytes for a string, or 
    NOT plain SHA-256(pub) and NOT the base64url string. It MUST equal BOTH `sig.key_id` and `state.id.key_id`.
    *(Note: `key_id` is NOT plain `SHA256(pub)` — it is domain-separated with the `ust:keylog` tag and a 0x00 byte.)*
 
-`VALID` iff steps 3–7 all pass.
+`VALID:LIGHT` iff steps 3–7 all pass. (The verdict **carries its tier** — `VALID:LIGHT | VALID:HIGH | VALID:TOP`;
+a conforming verifier never emits a bare `VALID`.)
 
 ## Expected result
 
 ```
 content_hash = sha256:5b5bd6d116af15c90b3cfd90aadc4c5477d6bd3f0d8e3057c464d93e08e0e4de
 key_id       = sha256:8d506c06ffdab38f3b4663c189801cc7f516c801af9f06a0ee65fd7cf42b3af7   (= H("ust:keylog", raw_pubkey_bytes), matches sig.key_id & id.key_id)
-signature    = VALID
+signature    = verifies   →  document verdict: VALID:LIGHT
 ```
 
 Change any character in `state` (e.g. `kp` 4.33 → 9.99) and the signature FAILS — the bytes are tamper-evident.
 
-## What a VALID result means (and does not)
+## What a VALID:LIGHT result means (and does not)
 
 - **Means:** the holder of this key signed **exactly these bytes** — this observation, for `ust:20260628.14`,
   sealed at `generated_at`. Integrity + who-key + key_id-consistency: proven, offline.
