@@ -20,7 +20,7 @@ construction, no stored-hash footgun), with ALL v0.29 FEATURES merged IN (not a 
 captured/computed hashing (cross-engine corroboration for computed parts), `parent_ust` (hour-close timing),
 per-partition privacy incl. mixed open+closed in one shard, shard-chain LAYERS + selective disclosure.
 Features are capabilities orthogonal to wire shape; this keeps the structure's security AND every retained
-029 function (secret-URL was removed as a privacy mode in rc.4 — see §10). Flat-wire attempt archived (`UST-1.0-flat-evo-archive.md`); feature audit `rnd/feature-audit-029-vs-v1.0.md`.
+029 function (secret-URL was removed as a privacy mode in rc.4 — see §10). Flat-wire attempt archived (`UST-1.0-flat-evo-archive.md`); feature audit `rnd/feature-audit-029-vs-v1.0.md`. A measure-theoretic semantics (NON-NORMATIVE) is in `UST-1.0-formal-model.md`.
 Model (tiered): the LIGHT floor mandates only a signed, canonical, addressable State (identity+
 integrity, self-contained); NAME-AUTHORITY (genesis/key-log), TIME (anchoring) and COMPLETENESS are HIGH/TOP
 operator tiers, verified when present and reported as verification STRENGTHS — never a floor gate (§3.1). The
