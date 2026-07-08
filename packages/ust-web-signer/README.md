@@ -13,7 +13,7 @@ Runs in browsers, Web Workers / service workers, and Node ≥ 20 (global `crypto
 import { generateSigner, signObservation, nowFrame } from 'ust-web-signer';
 
 const signer = await generateSigner();                 // Ed25519, private key NON-EXTRACTABLE (stays in WebCrypto)
-const { ust_id, time } = nowFrame();                   // current UTC hour
+const { ust_id, time } = nowFrame();                   // hour frame for addressing; time = an INSTANT (valid_from = valid_to = generated_at)
 const doc = await signObservation(signer, {
   ust_id, time,
   data: { capture: { kind: 'captured', value: { text: 'the exact bytes I saw' } } },

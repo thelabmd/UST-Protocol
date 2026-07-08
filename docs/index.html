@@ -5,6 +5,42 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Verify a UST — Universal State Transcript</title>
 <meta name="description" content="Paste a UST 1.0 transcript. The canonical reference verifier runs in your browser — nothing is uploaded. Returns VALID:LIGHT/HIGH/TOP, INVALID, or INDETERMINATE.">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "@id": "https://thelabmd.github.io/UST-Protocol/#verifier",
+      "name": "UST Verifier",
+      "alternateName": "Universal State Transcript Verifier",
+      "url": "https://thelabmd.github.io/UST-Protocol/",
+      "applicationCategory": "SecurityApplication",
+      "operatingSystem": "Any (runs in the browser; nothing is uploaded)",
+      "description": "The canonical web verifier for UST 1.0 (Universal State Transcript) — paste a transcript, get VALID:LIGHT/HIGH/TOP, INVALID, or INDETERMINATE. Client-side WebCrypto; the only reliable verdict is a conforming verifier's output.",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "isBasedOn": { "@id": "https://github.com/thelabmd/UST-Protocol#repo" },
+      "publisher": { "@id": "https://thelab.md/#org" }
+    },
+    {
+      "@type": "SoftwareSourceCode",
+      "@id": "https://github.com/thelabmd/UST-Protocol#repo",
+      "name": "UST — Universal State Transcript (specification + reference implementations)",
+      "codeRepository": "https://github.com/thelabmd/UST-Protocol",
+      "programmingLanguage": "JavaScript",
+      "license": ["https://www.apache.org/licenses/LICENSE-2.0", "https://creativecommons.org/licenses/by/4.0/"],
+      "sameAs": [
+        "https://www.npmjs.com/package/ust-protocol",
+        "https://www.npmjs.com/package/ust-mcp",
+        "https://www.npmjs.com/package/ust-web-signer"
+      ],
+      "publisher": { "@id": "https://thelab.md/#org" }
+    },
+    { "@type": "Organization", "@id": "https://thelab.md/#org", "name": "THE LAB", "url": "https://thelab.md" }
+  ]
+}
+</script>
+<link rel="alternate" type="text/plain" href="./llms.txt" title="llms.txt — machine instructions for AI agents">
 <style>
   :root { --bg:#f7f6f2; --fg:#141414; --dim:#6b6b6b; --line:#dcdad2; --ok:#0a7d34; --bad:#b3261e; --wait:#8a6d00; --box:#fffffe; }
   @media (prefers-color-scheme: dark) { :root { --bg:#12130f; --fg:#e9e8e2; --dim:#8f8f86; --line:#2b2c26; --ok:#5fd68a; --bad:#ff6b60; --wait:#e3c04a; --box:#191a15; } }

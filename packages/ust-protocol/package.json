@@ -32,9 +32,9 @@
   "sideEffects": false,
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/thelabmd/UST.git",
+    "url": "git+https://github.com/thelabmd/UST-Protocol.git",
     "directory": "packages/ust-protocol"
   },
-  "homepage": "https://github.com/thelabmd/UST/tree/main/packages/ust-protocol#readme",
+  "homepage": "https://github.com/thelabmd/UST-Protocol/tree/main/packages/ust-protocol#readme",
   "bugs": "https://github.com/thelabmd/UST/issues"
 }
