@@ -76,10 +76,12 @@ export async function signObservation(signer, { ust_id, time, data }) {
   return seal(state, signer);
 }
 
-// helper: current UTC hour → ust_id + a matching time window (valid_from = generated_at = now, valid_to = +1h).
+// helper: current instant → ust_id (hour frame, for addressing) + an INSTANT time. A capture is a POINT
+// observation ("I saw these exact bytes at this moment"), so valid_from = valid_to = generated_at — a degenerate
+// window. A real validity INTERVAL (valid_from < valid_to) is meaningful for a forecast or an hourly state that
+// persists, NOT a snapshot — build `time` yourself in those cases. Don't invent a window a capture doesn't have.
 export function nowFrame(date = new Date()) {
   const iso = date.toISOString().replace(/\.\d{3}Z$/, 'Z');
-  const to = new Date(date.getTime() + 3_600_000).toISOString().replace(/\.\d{3}Z$/, 'Z');
   const ust_id = 'ust:' + iso.slice(0, 10).replace(/-/g, '') + '.' + iso.slice(11, 13);
-  return { ust_id, time: { generated_at: iso, valid_from: iso, valid_to: to } };
+  return { ust_id, time: { generated_at: iso, valid_from: iso, valid_to: iso } };
 }
