@@ -6,7 +6,8 @@
   "license": "Apache-2.0",
   "workspaces": [
     "packages/ust-protocol",
-    "packages/ust-mcp"
+    "packages/ust-mcp",
+    "packages/ust-web-signer"
   ],
   "scripts": {
     "test": "node packages/ust-protocol/conformance.mjs"
