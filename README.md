@@ -35,10 +35,40 @@ Trust is **graduated, and the verdict carries its tier** — a conforming verifi
 
 One signal the protocol never emits: **"true."** UST proves *fixation, not truth* — a publisher committed to
 these bytes at this time and cannot silently rewrite them. Whether the reading was *correct* is out of scope by
-construction; you learn whom to hold accountable and that nothing was tampered. The same discipline extends to
-composition: a state can be published in **layers** with different visibility (public observation → blinded
-commitment → encrypted detail → a partner's derived shard), each layer independently signed and provable to
-exist, while its content is disclosed only to whom it is meant for.
+construction; you learn whom to hold accountable and that nothing was tampered.
+
+## Chains and layered shards — one state, graduated visibility
+
+The part that makes UST more than "signed JSON": a single connected state does not have to be one document.
+It can be a **chain of independently signed layers**, each a full transcript with its own key, time frame and
+provenance — linked by content hashes (`based_on` + a recomputed `seed`), so the **existence, order and lineage
+of every layer are publicly provable while each layer's content is disclosed only to whom it is meant for**:
+
+```
+L1  public observation            "geomagnetic activity: elevated"           anyone verifies
+L2  blinded commitment            proof a value was fixed — value hidden      existence is public
+L3  encrypted shard               AEAD ciphertext + commitment                key holders read & verify
+L4  partner's derived shard       another publisher, another key, based_on →  cross-party, provable lineage
+```
+
+- **Blinded** (`privacy: "blinded"`): the value is replaced by a frame-bound commitment
+  (`H(domain_shard, ust_id, nonce, name, value)`). Publish now, reveal later — and the revealed `{nonce, value}`
+  provably reproduces the *original* commitment: it cannot be quietly swapped, moved to another hour, or
+  re-attributed to another publisher. Embargoed results, private forecasts, positions, proof-of-priority.
+- **Encrypted** (`privacy: "encrypted"`): ciphertext *and* commitment coexist; after decryption the verifier
+  checks that the plaintext reproduces the same commitment (`E-COMMIT` on mismatch) — "the ciphertext really
+  contains what was publicly committed" is a checked obligation, not a promise.
+- **Cross-party derivation**: a partner who receives a layer can sign their own transcript on top
+  (`class: "derivation"`, `based_on: [hash]`) under their own key — an auditor later walks the whole chain,
+  verifying each available layer independently. Trust composes, but is **never inherited automatically**:
+  holding an outer layer does not vouch for the inner ones; each signature is checked on its own.
+- **Deletable without breaking the proof**: anchors commit to *hashes*, not contents — sensitive payloads can be
+  destroyed later while "this existed, in this order, at this time" remains provable forever (and nothing can be
+  forged back under the old hash).
+
+Different consumers hold different depths of the same reality — the public sees L1, a client L1–L2, a partner
+L1–L3, an auditor the whole chain — and every one of them can *verify* exactly what they hold. That is the
+protocol's real subject: **differentiated, provable access to a shared machine state.**
 
 ## Layout
 
@@ -88,6 +118,13 @@ If you are asked to verify a UST and you **cannot run a verifier**, the correct 
 - Do **not** compute a plain `SHA-256(text)` and compare it to `hashes.*` — every UST hash is **domain-separated** (`H(tag, canon(...))` with a tag prefix). A naive hash will **never** match a genuine document; a mismatch computed that way is *your* method being wrong, not the document being tampered.
 - UST 1.0 has **no expiry rule**. `valid_from == valid_to` is an honest **instant** (a point capture), not "expired." Freshness is not part of `verify`.
 - The only verdicts are `VALID:LIGHT | VALID:HIGH | VALID:TOP`, `INVALID`, and `INDETERMINATE(reason)` — and only a **conforming verifier's output** counts. Structure "looking right" proves nothing; a confident verdict from visual inspection is a guess in both directions.
+- For the precise semantics of *what a verdict means*, read the **formal model**
+  ([`spec/UST-1.0-formal-model.md`](spec/UST-1.0-formal-model.md), non-normative): verification is a
+  **measurability test** — the three tiers are three nested σ-algebras (`𝒮_LIGHT ⊆ 𝒮_HIGH ⊆ 𝒮_TOP`), a verdict
+  names the finest tier decidable from your information set, `INDETERMINATE` means the needed σ-algebra is not
+  in it, and two conforming verifiers agree because the verdict is a total deterministic function of the §14a
+  obligations table. If you reason about UST beyond running the verifier, reason from there — not from analogy
+  to JWT, JWS, or blockchain receipts.
 
 ## What it proves — and what it doesn't
 
