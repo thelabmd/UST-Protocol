@@ -1,42 +1,20 @@
 // SPDX-License-Identifier: Apache-2.0
-import * as W from './lib/ust-web-signer.mjs';
+// LITERAL copy of the Pages verifier script (docs/index.html) + two extension extras at the bottom
+// (identity display, context-menu handoff). Regenerate by re-running the mirror step — do not hand-edit the copy.
+
 import { verify } from './lib/ust-verify.mjs';
+import * as W from './lib/ust-web-signer.mjs';
 
-function openDB() {
-  return new Promise((res, rej) => {
-    const r = indexedDB.open('ust-signer', 1);
-    r.onupgradeneeded = () => r.result.createObjectStore('keys');
-    r.onsuccess = () => res(r.result);
-    r.onerror = () => rej(r.error);
-  });
-}
-async function idbGet(key) {
-  const db = await openDB();
-  return new Promise((res) => { const t = db.transaction('keys').objectStore('keys').get(key); t.onsuccess = () => res(t.result ?? null); t.onerror = () => res(null); });
-}
-
-(async () => {
-  const stored = await idbGet('ed25519');
-  if (!stored?.publicKey) {
-    document.getElementById('id').textContent = 'no identity yet — use "Make it UST" once to create it';
-    document.getElementById('pub').textContent = '—';
-    return;
-  }
-  const s = await W.signerFromKeys(stored.privateKey, stored.publicKey);
-  document.getElementById('id').textContent = s.key_id;
-  document.getElementById('pub').textContent = s.pub;
-})();
-
-// ── Verify mode: the extension is the RECIPIENT'S trusted verifier. It regenerates everything it shows from the
-// SIGNED bytes — the sender's preamble (Source:, header) is never displayed as truth. Runs locally; nothing leaves
-// the browser. Same extraction as the web verifier: full blob / bare base64 / raw JSON. ──
-const vin = document.getElementById('vin'), vout = document.getElementById('vout');
-const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const $ = (id) => document.getElementById(id);
+const inEl = $('in'), outEl = $('out');
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 
 function b64decodeUtf8(b64) {
   const bin = atob(b64.replace(/\s+/g, ''));
   return new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
 }
+
+// Accept: full blob (header + ———UST(base64)——— + base64), bare base64, or raw JSON.
 function extractDoc(input) {
   let s = input.trim();
   const marker = '———UST(base64)———';
@@ -44,14 +22,17 @@ function extractDoc(input) {
   if (s.startsWith('{')) return JSON.parse(s);
   return JSON.parse(b64decodeUtf8(s));
 }
-// ── DISPLAY-ONLY markdown (ported from the web verifier): escape-first, links http(s)-only, images never
-// fetched, no raw-HTML passthrough. MD is the default view; RAW is the exact signed string, one click away. ──
+
+// Human view REGENERATED from the signed document (never the sender's preamble).
+// DISPLAY-ONLY markdown: the signed bytes are untouched — the toggle re-renders the SAME string. Escape-first:
+// nothing from the document reaches the DOM unescaped; links restricted to http(s); no images are fetched
+// (an untrusted document must not make this page load remote resources); no raw HTML passthrough.
 const partVals = [];
 function mdSafe(src) {
   let t = esc(src);
   t = t.replace(/```([\s\S]*?)```/g, (m, code) => '<pre>' + code.replace(/^\n|\n$/g, '') + '</pre>');
-  t = t.replace(/^######\s?(.+)$/gm, '<h3>$1</h3>').replace(/^#####\s?(.+)$/gm, '<h3>$1</h3>')
-       .replace(/^####\s?(.+)$/gm, '<h3>$1</h3>').replace(/^###\s?(.+)$/gm, '<h3>$1</h3>')
+  t = t.replace(/^######\s?(.+)$/gm, '<h4>$1</h4>').replace(/^#####\s?(.+)$/gm, '<h4>$1</h4>')
+       .replace(/^####\s?(.+)$/gm, '<h4>$1</h4>').replace(/^###\s?(.+)$/gm, '<h3>$1</h3>')
        .replace(/^##\s?(.+)$/gm, '<h2>$1</h2>').replace(/^#\s?(.+)$/gm, '<h1>$1</h1>');
   t = t.replace(/^(?:---|\*\*\*)\s*$/gm, '<hr>');
   t = t.replace(/^&gt;\s?(.+)$/gm, '<blockquote>$1</blockquote>');
@@ -63,23 +44,25 @@ function mdSafe(src) {
   t = t.split(/\n{2,}/).map((b) => /^\s*<(?:h\d|ul|pre|blockquote|hr)/.test(b.trim()) ? b : (b.trim() ? '<p>' + b.replace(/\n/g, '<br>') + '</p>' : '')).join('');
   return t;
 }
+// A structured value renders as a reader card: string fields become serif prose (markdown-safe), everything
+// else stays JSON code. Same escape-first discipline — display-only, the verified bytes never change.
 function objectMd(v) {
   return Object.entries(v).map(([k, val]) => {
     if (typeof val === 'string') {
       const rich = val.length > 80 || /[\n#*`]/.test(val);
       const looksId = /^(sha256:|ust:|https?:)/.test(val) && !/\s/.test(val);
-      const body = looksId ? '<span class="fv mono">' + esc(val) + '</span>'
-        : rich ? '<div class="fv md">' + mdSafe(val) + '</div>' : '<span class="fv">' + esc(val) + '</span>';
-      return '<div class="fld"><span class="fk">' + esc(k) + '</span>' + body + '</div>';
+      const body = looksId ? `<span class="fv mono">${esc(val)}</span>`
+        : rich ? `<div class="fv md">${mdSafe(val)}</div>` : `<span class="fv">${esc(val)}</span>`;
+      return `<div class="fld"><span class="fk">${esc(k)}</span>${body}</div>`;
     }
-    return '<div class="fld"><span class="fk">' + esc(k) + '</span><pre style="margin:0">' + esc(JSON.stringify(val, null, 2)) + '</pre></div>';
+    return `<div class="fld"><span class="fk">${esc(k)}</span><pre style="margin:0">${esc(JSON.stringify(val, null, 2))}</pre></div>`;
   }).join('');
 }
-const rawOf = (e) => e.kind === 'text' ? e.v : JSON.stringify(e.v, null, 2);
-const mdOf = (e) => e.kind === 'text' ? mdSafe(e.v) : objectMd(e.v);
+function rawOf(entry) { return entry.kind === 'text' ? entry.v : JSON.stringify(entry.v, null, 2); }
+function mdOf(entry) { return entry.kind === 'text' ? mdSafe(entry.v) : objectMd(entry.v); }
 function renderContent(data) {
   partVals.length = 0;
-  return Object.entries(data || {}).map(([name, part]) => {
+  const parts = Object.entries(data || {}).map(([name, part]) => {
     if (part && part.value !== undefined) {
       const v = part.value;
       const isText = v && typeof v === 'object' && typeof v.text === 'string';
@@ -87,63 +70,125 @@ function renderContent(data) {
       const entry = isText ? { kind: 'text', v: v.text } : { kind: isObj ? 'obj' : 'text', v: isObj ? v : JSON.stringify(v, null, 2) };
       const i = partVals.push(entry) - 1;
       const toggle = (isText || isObj)
-        ? '<span class="viewtoggle" data-ci="' + i + '"><button class="vt on" data-mode="md">md</button><button class="vt" data-mode="raw">raw</button></span>'
+        ? `<span class="viewtoggle" data-ci="${i}"><button class="vt on" data-mode="md">md</button><button class="vt" data-mode="raw">raw</button></span>`
         : '';
-      return '<div class="pblock"><div class="phead"><span class="plabel">' + esc(name) + (part.kind ? ' · ' + esc(part.kind) : '') + '</span>' + toggle + '</div><div class="content mdview md" data-ci="' + i + '">' + mdOf(entry) + '</div></div>';
+      return `<div class="pblock"><div class="phead"><span class="plabel">${esc(name)}${part.kind ? ' · ' + esc(part.kind) : ''}</span>${toggle}</div><div class="content mdview md" data-ci="${i}">${mdOf(entry)}</div></div>`;
     }
-    return '<div class="pblock"><div class="phead"><span class="plabel">' + esc(name) + ' · ' + esc(part && part.privacy || 'private') + '</span></div><div class="content">' + esc(part && part.commit || '(private — committed, not revealed)') + '</div></div>';
-  }).join('');
+    return `<div class="pblock"><div class="phead"><span class="plabel">${esc(name)} · ${esc(part && part.privacy || 'private')}</span></div><div class="content">${esc(part && part.commit || '(private — committed, not revealed)')}</div></div>`;
+  });
+  return parts.join('');
 }
-vout.addEventListener('click', (e) => {
+// raw ⇄ md toggle (display-only; the verified bytes never change)
+outEl.addEventListener('click', (e) => {
   const btn = e.target.closest('.vt');
   if (!btn) return;
   const wrap = btn.closest('.viewtoggle');
   const ci = wrap.dataset.ci;
-  const box = vout.querySelector('.content[data-ci="' + ci + '"]');
+  const box = outEl.querySelector(`.content[data-ci="${ci}"]`);
   if (!box) return;
   wrap.querySelectorAll('.vt').forEach((b) => b.classList.toggle('on', b === btn));
   if (btn.dataset.mode === 'md') { box.classList.add('mdview', 'md'); box.innerHTML = mdOf(partVals[ci]); }
   else { box.classList.remove('mdview', 'md'); box.innerHTML = esc(rawOf(partVals[ci])); }
 });
 
-async function runVerify() {
-  const raw = vin.value.trim();
-  vout.innerHTML = '';
+function run() {
+  const raw = inEl.value.trim();
+  outEl.innerHTML = '';
   if (!raw) return;
 
   let doc;
   try { doc = extractDoc(raw); }
-  catch { vout.innerHTML = '<div class="verdict bad">UNREADABLE</div><div class="err">Not a UST blob, base64, or JSON.</div>'; return; }
+  catch (e) { outEl.innerHTML = `<div class="verdict bad"><span class="dot"></span>UNREADABLE</div><div class="err">Could not decode a UST document from that input (${esc(e.message)}). Paste the whole blob, the base64, or the JSON.</div>`; return; }
 
-  try {
-    const r = await verify(doc, { context: 'data' });
+  verify(doc, { context: 'data' }).then((r) => {
     const valid = typeof r.result === 'string' && r.result.slice(0, 6) === 'VALID:';
-    const st = doc.state || {}, id = st.id || {};
-    if (valid) {
-      vout.innerHTML = '<div class="verdict ok">' + esc(r.result) + '</div>' +
-        renderContent(st.data) +
-        '<div class="kv"><span>key</span> ' + esc(id.key_id || '') + '<br><span>time</span> ' + esc(st.time && st.time.generated_at || '') + ' · <span>frame</span> ' + esc(id.ust_id || '') + '</div>' +
-        '<p class="note">Proven: the exact bytes above · the signing key · the claimed time. <b>Not</b> proven: who published it, or where it came from — a <i>Source:</i> line in the pasted text is the sender\'s unverified claim.</p>';
-    } else {
-      vout.innerHTML = '<div class="verdict bad">' + esc(r.result || 'INVALID') + '</div>' +
-        '<div class="err">' + esc(r.error || '') + (r.detail ? ' — ' + esc(r.detail) : '') + '</div>' +
-        '<p class="note">The bytes, hashes, or signature are inconsistent — a genuine UST edited in transit fails exactly here.</p>';
-    }
-  } catch (e) {
-    vout.innerHTML = '<div class="verdict bad">ERROR</div><div class="err">' + esc(e.message || String(e)) + '</div>';
-  }
-}
-vin.addEventListener('input', runVerify);
+    const indet = r.result === 'INDETERMINATE';
+    const cls = valid ? 'ok' : indet ? 'wait' : 'bad';
+    const st = doc.state || {};
+    const id = st.id || {};
 
-// ── "Verify UST" context menu handoff: the selection arrives via storage.session — fill the box and verify. ──
+    let html = `<div class="verdict ${cls}"><span class="dot"></span>${esc(r.result || 'INVALID')}</div>`;
+
+    if (valid) {
+      html += `<div class="card"><h2>What the signature proves</h2>${renderContent(st.data)}
+        <dl class="kv" style="margin-top:14px">
+          <dt>signing key</dt><dd>${esc(id.key_id || r.publisher_claimed || '')}</dd>
+          <dt>capture time</dt><dd>${esc(st.time && st.time.generated_at || '')}</dd>
+          <dt>frame (ust_id)</dt><dd>${esc(id.ust_id || '')}</dd>
+          <dt>class</dt><dd>${esc(id.class || '')}</dd>
+        </dl>
+        <div class="tierfoot">
+          <p class="tierwhy">Why this is <b>LIGHT</b> — the floor tier, decided from the document alone:</p>
+          <div class="tierlists">
+            <div>
+              <p class="cap">Proven</p>
+              <ul class="proved">
+                <li>the exact bytes above — unaltered since signing</li>
+                <li>the signing key — the identity <em>is</em> this key</li>
+                <li>the claimed capture time, as the publisher wrote it</li>
+              </ul>
+            </div>
+            <div>
+              <p class="cap">Not proven</p>
+              <ul class="notproved">
+                <li>who the publisher is — a verified <em>name</em> is HIGH (genesis + key log)</li>
+                <li>independently proven time — an anchor is TOP</li>
+                <li>where the bytes came from — a &ldquo;Source:&rdquo; line is the sender&rsquo;s unverified claim</li>
+              </ul>
+            </div>
+          </div>
+        </div></div>`;
+    } else if (indet) {
+      html += `<p class="note">The verifier <b>cannot decide</b> at the requested tier — information it needs
+        (e.g. an anchor or a name-authority witness) was not available. This is <b>not</b> INVALID; it is an honest
+        "cannot confirm." ${r.reason ? '<br>Reason: <code>' + esc(r.reason) + '</code>' : ''}</p>`;
+    } else {
+      html += `<div class="err">${esc(r.error || 'INVALID')}${r.detail ? ' — ' + esc(r.detail) : ''}</div>
+        <p class="note">The document did <b>not</b> verify: its bytes, hashes, or signature are inconsistent. A
+        genuine UST that was edited in transit fails exactly here.</p>`;
+    }
+    outEl.innerHTML = html;
+  }).catch((e) => {
+    outEl.innerHTML = `<div class="verdict bad"><span class="dot"></span>ERROR</div><div class="err">${esc(e.message || String(e))}</div>`;
+  });
+}
+
+$('go').addEventListener('click', run);
+$('clear').addEventListener('click', () => { inEl.value = ''; outEl.innerHTML = ''; inEl.focus(); });
+inEl.addEventListener('input', () => { if (inEl.value.trim()) run(); else outEl.innerHTML = ''; });
+
+// ── extension extras (the ONLY additions to the page script) ──────────────────────────────────────────
+function openDB() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open('ust-signer', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('keys');
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+const idbGet = (key) => openDB().then((db) => new Promise((res) => {
+  const t = db.transaction('keys').objectStore('keys').get(key);
+  t.onsuccess = () => res(t.result ?? null); t.onerror = () => res(null);
+}));
+(async () => {
+  const stored = await idbGet('ed25519');
+  if (!stored?.publicKey) {
+    document.getElementById('id').textContent = 'no identity yet — use "Make it UST" once to create it';
+    document.getElementById('pub').textContent = '—';
+    return;
+  }
+  const s = await W.signerFromKeys(stored.privateKey, stored.publicKey);
+  document.getElementById('id').textContent = s.key_id;
+  document.getElementById('pub').textContent = s.pub;
+})();
 (async () => {
   try {
     const { pendingVerify } = await chrome.storage.session.get('pendingVerify');
     if (pendingVerify) {
       await chrome.storage.session.remove('pendingVerify');
-      chrome.action.setBadgeText({ text: '' });            // clear the fallback badge, if any
-      vin.value = pendingVerify;
-      runVerify();
+      chrome.action.setBadgeText({ text: '' });
+      inEl.value = pendingVerify;
+      run();
     }
-  } catch { /* storage unavailable (e.g. opened as a plain page) — paste still works */ }
+  } catch { /* opened outside the extension — paste still works */ }
 })();
