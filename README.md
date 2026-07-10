@@ -70,6 +70,34 @@ Different consumers hold different depths of the same reality — the public see
 L1–L3, an auditor the whole chain — and every one of them can *verify* exactly what they hold. That is the
 protocol's real subject: **differentiated, provable access to a shared machine state.**
 
+## The time coordinate — `ust_id`
+
+Before anything else, a UST is an address on **one shared time axis**. Every transcript carries a frame id,
+`ust:YYYYMMDD.HH[MM[SS]]` (UTC): `ust:20260710.14` is an hour frame, `ust:20260710.1429` a minute,
+`ust:20260710.142900` a second. This is not metadata — it is part of the document's *identity*, and the
+per-partition hashes **bind** it: a signed value cannot be replayed into another hour or re-attributed to
+another frame.
+
+One coordinate system, shared by every publisher on Earth by construction (UTC), buys things no per-vendor
+timestamp field can:
+
+- **"What was the world doing at 14:29Z?" is a query, not a metaphor.** Transcripts from unrelated publishers
+  carrying the same coordinate are claims about the *same moment*. Collect them and you hold a signed
+  cross-section of the world at `t` — each slice independently verifiable.
+- **Correlation without coordination.** Publishers never agree on anything except the grid. Space weather ×
+  grid frequency × market state × an agent's decision — joinable *after the fact* by coordinate, across
+  organizations that have never heard of each other. Pattern mining over independent signed sources, no shared
+  platform required.
+- **Containment is literal string prefixing.** A second nests in its minute, the minute in its hour:
+  `ust:20260710.14` ⊃ `ust:20260710.1429` ⊃ `ust:20260710.142900`. Roll-ups and drill-downs are prefix scans;
+  a parent frame can *attest* its children (attestation + Merkle root over their content hashes), so "the hour"
+  becomes a signed aggregate of its seconds — provably complete over a closed range (`verifyStream`).
+- **Sortable = streamable.** Fixed-width UTC fields sort lexicographically in time order; a time range is a
+  string range. Storage keys, feeds and archives inherit chronology for free.
+
+Honesty holds on this axis too: at LIGHT the coordinate is the publisher's **claimed** frame; a TOP anchor
+proves the document existed **by** a real point in time (and `generated_at` may not postdate its own anchor).
+
 ## Layout
 
 | Path | What |
