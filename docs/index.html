@@ -97,6 +97,10 @@
   .md li { margin:3px 0; }
   .md hr { border:0; border-top:1px solid var(--line); margin:14px 0; }
   .md a { color:var(--accent); }
+  .fld { margin:0 0 12px; }
+  .fk { display:block; font:500 10.5px/1 var(--mono); letter-spacing:0.14em; text-transform:uppercase; color:var(--muted); margin:0 0 4px; }
+  .fv { font:400 14.5px/1.6 var(--serif); color:var(--ink); }
+  .fv.mono { font:400 12.5px/1.5 var(--mono); word-break:break-all; }
   .tierfoot { border-top:1px solid var(--line); margin-top:18px; padding-top:14px; }
   .tierwhy { font:400 13.5px/1.55 var(--serif); color:var(--muted2); margin:0 0 10px; }
   .tierwhy b { color:var(--ink); }
@@ -179,7 +183,7 @@ function extractDoc(input) {
 // DISPLAY-ONLY markdown: the signed bytes are untouched — the toggle re-renders the SAME string. Escape-first:
 // nothing from the document reaches the DOM unescaped; links restricted to http(s); no images are fetched
 // (an untrusted document must not make this page load remote resources); no raw HTML passthrough.
-const partTexts = [];
+const partVals = [];
 function mdSafe(src) {
   let t = esc(src);
   t = t.replace(/```([\s\S]*?)```/g, (m, code) => '<pre>' + code.replace(/^\n|\n$/g, '') + '</pre>');
@@ -196,18 +200,35 @@ function mdSafe(src) {
   t = t.split(/\n{2,}/).map((b) => /^\s*<(?:h\d|ul|pre|blockquote|hr)/.test(b.trim()) ? b : (b.trim() ? '<p>' + b.replace(/\n/g, '<br>') + '</p>' : '')).join('');
   return t;
 }
+// A structured value renders as a reader card: string fields become serif prose (markdown-safe), everything
+// else stays JSON code. Same escape-first discipline — display-only, the verified bytes never change.
+function objectMd(v) {
+  return Object.entries(v).map(([k, val]) => {
+    if (typeof val === 'string') {
+      const rich = val.length > 80 || /[\n#*`]/.test(val);
+      const looksId = /^(sha256:|ust:|https?:)/.test(val) && !/\s/.test(val);
+      const body = looksId ? `<span class="fv mono">${esc(val)}</span>`
+        : rich ? `<div class="fv md">${mdSafe(val)}</div>` : `<span class="fv">${esc(val)}</span>`;
+      return `<div class="fld"><span class="fk">${esc(k)}</span>${body}</div>`;
+    }
+    return `<div class="fld"><span class="fk">${esc(k)}</span><pre style="margin:0">${esc(JSON.stringify(val, null, 2))}</pre></div>`;
+  }).join('');
+}
+function rawOf(entry) { return entry.kind === 'text' ? entry.v : JSON.stringify(entry.v, null, 2); }
+function mdOf(entry) { return entry.kind === 'text' ? mdSafe(entry.v) : objectMd(entry.v); }
 function renderContent(data) {
-  partTexts.length = 0;
+  partVals.length = 0;
   const parts = Object.entries(data || {}).map(([name, part]) => {
     if (part && part.value !== undefined) {
       const v = part.value;
       const isText = v && typeof v === 'object' && typeof v.text === 'string';
-      const text = isText ? v.text : JSON.stringify(v, null, 2);
-      const i = partTexts.push(text) - 1;
-      const toggle = isText
+      const isObj = !isText && v && typeof v === 'object' && !Array.isArray(v);
+      const entry = isText ? { kind: 'text', v: v.text } : { kind: isObj ? 'obj' : 'text', v: isObj ? v : JSON.stringify(v, null, 2) };
+      const i = partVals.push(entry) - 1;
+      const toggle = (isText || isObj)
         ? `<span class="viewtoggle" data-ci="${i}"><button class="vt on" data-mode="raw">raw</button><button class="vt" data-mode="md">md</button></span>`
         : '';
-      return `<div class="pblock"><div class="phead"><span class="plabel">${esc(name)}${part.kind ? ' · ' + esc(part.kind) : ''}</span>${toggle}</div><div class="content" data-ci="${i}">${esc(text)}</div></div>`;
+      return `<div class="pblock"><div class="phead"><span class="plabel">${esc(name)}${part.kind ? ' · ' + esc(part.kind) : ''}</span>${toggle}</div><div class="content" data-ci="${i}">${esc(rawOf(entry))}</div></div>`;
     }
     return `<div class="pblock"><div class="phead"><span class="plabel">${esc(name)} · ${esc(part && part.privacy || 'private')}</span></div><div class="content">${esc(part && part.commit || '(private — committed, not revealed)')}</div></div>`;
   });
@@ -222,8 +243,8 @@ outEl.addEventListener('click', (e) => {
   const box = outEl.querySelector(`.content[data-ci="${ci}"]`);
   if (!box) return;
   wrap.querySelectorAll('.vt').forEach((b) => b.classList.toggle('on', b === btn));
-  if (btn.dataset.mode === 'md') { box.classList.add('mdview', 'md'); box.innerHTML = mdSafe(partTexts[ci]); }
-  else { box.classList.remove('mdview', 'md'); box.innerHTML = esc(partTexts[ci]); }
+  if (btn.dataset.mode === 'md') { box.classList.add('mdview', 'md'); box.innerHTML = mdOf(partVals[ci]); }
+  else { box.classList.remove('mdview', 'md'); box.innerHTML = esc(rawOf(partVals[ci])); }
 });
 
 function run() {
