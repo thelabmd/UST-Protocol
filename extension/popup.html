@@ -1,71 +1,141 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <style>
-    /* the UST Concept language — paper, serif prose, mono data, teal. LOCAL fonts only: a key-holding
-       extension makes ZERO network requests (no webfonts, no images, nothing). */
-    :root { --paper:#f4f2ec; --card:#fcfbf7; --ink:#1e1c1a; --line:#d6d2c9; --accent:#0c7c78; --accent2:#2eb2ad;
-            --muted:#8f8a7e; --muted2:#6f6b63; --bad:#5c2b2e;
-            --serif:'Iowan Old Style',Georgia,serif; --mono:ui-monospace,'SF Mono',Menlo,monospace; }
-    * { box-sizing:border-box; }
-    body { width:420px; margin:0; padding:16px; background:var(--paper); color:var(--ink); font:13px/1.5 var(--mono); }
-    .kicker { font:600 9.5px/1 var(--mono); letter-spacing:0.2em; text-transform:uppercase; color:var(--accent); margin:0 0 6px; }
-    h1 { font:600 20px/1.2 var(--serif); margin:0 0 12px; }
-    h2 { font:600 10px/1 var(--mono); text-transform:uppercase; letter-spacing:0.16em; color:var(--muted); margin:18px 0 8px; }
-    .k { font:400 10.5px/1.45 var(--mono); word-break:break-all; background:var(--card); border:1px solid var(--line); border-radius:2px; padding:6px 8px; }
-    .muted { font:400 12.5px/1.55 var(--serif); color:var(--muted2); margin-top:10px; }
-    .muted b, .note b { color:var(--ink); }
-    .lbl { font:400 10px/1 var(--mono); letter-spacing:0.08em; color:var(--muted); margin:8px 0 3px; text-transform:uppercase; }
-    textarea { width:100%; min-height:76px; resize:vertical; background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:2px; padding:8px 10px; font:11px/1.5 var(--mono); }
-    textarea:focus { outline:none; border-color:var(--accent); }
-    textarea::placeholder { color:var(--muted); }
-    .verdict { font:600 16px/1.2 var(--mono); letter-spacing:0.03em; margin:10px 0 6px; }
-    .verdict.ok { color:var(--accent); }
-    .verdict.bad { color:var(--bad); }
-    .pblock { margin:8px 0; }
-    .phead { display:flex; align-items:center; justify-content:space-between; margin:0 0 3px; }
-    .plabel { font:400 10.5px/1 var(--mono); color:var(--muted); }
-    .viewtoggle { display:inline-flex; border:1px solid var(--line); border-radius:2px; overflow:hidden; }
-    .vt { background:var(--card); color:var(--muted); border:0; padding:3px 8px; font:600 9px/1 var(--mono); letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; }
-    .vt + .vt { border-left:1px solid var(--line); }
-    .vt.on { background:var(--accent); color:var(--paper); }
-    .content { white-space:pre-wrap; word-break:break-word; font:400 11px/1.55 var(--mono); background:var(--card); border:1px solid var(--line); border-left:2px solid var(--accent); border-radius:2px; padding:8px 10px; max-height:180px; overflow:auto; }
-    .content.mdview { white-space:normal; font:400 13px/1.55 var(--serif); }
-    .md h1,.md h2,.md h3 { font-family:var(--serif); margin:8px 0 4px; letter-spacing:0; text-transform:none; color:var(--ink); }
-    .md h1 { font-size:16px; } .md h2 { font-size:14px; } .md h3 { font-size:13px; }
-    .md p { margin:6px 0; }
-    .md code { font:400 10.5px var(--mono); background:var(--paper); border:1px solid var(--line); padding:0 4px; }
-    .md pre { font:400 10.5px/1.5 var(--mono); background:var(--paper); border:1px solid var(--line); padding:6px 8px; overflow:auto; white-space:pre; margin:6px 0; }
-    .md blockquote { margin:6px 0; padding-left:8px; border-left:2px solid var(--accent); color:var(--muted2); }
-    .md ul { margin:6px 0; padding-left:18px; }
-    .md a { color:var(--accent); }
-    .fld { margin:0 0 8px; }
-    .fk { display:block; font:600 8.5px/1 var(--mono); letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); margin:0 0 2px; }
-    .fv { font:400 12.5px/1.5 var(--serif); color:var(--ink); }
-    .fv.mono { font:400 10.5px/1.45 var(--mono); word-break:break-all; }
-    .kv { font:400 10.5px/1.5 var(--mono); color:var(--muted2); word-break:break-all; margin-top:6px; }
-    .kv span { color:var(--muted); }
-    .note { font:400 12px/1.55 var(--serif); color:var(--muted2); margin-top:8px; }
-    .err { color:var(--bad); font:400 11px/1.4 var(--mono); margin-top:4px; }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verify a UST — Universal State Transcript</title>
+<meta name="description" content="Paste a UST 1.0 transcript. The canonical reference verifier runs in your browser — nothing is uploaded. Returns VALID:LIGHT/HIGH/TOP, INVALID, or INDETERMINATE.">
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+  :root { --paper:#f4f2ec; --card:#fcfbf7; --ink:#1e1c1a; --line:#d6d2c9; --accent:#0c7c78; --accent2:#2eb2ad;
+          --muted:#8f8a7e; --muted2:#6f6b63; --bad:#5c2b2e; --wait:#8a6d1f;
+          --serif:'IBM Plex Serif',Georgia,serif; --mono:'IBM Plex Mono',ui-monospace,monospace; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink); font:14px/1.6 var(--mono); }
+  main { max-width:780px; margin:0 auto; padding:56px 22px 90px; }
+  .kicker { font:500 11px/1 var(--mono); letter-spacing:0.22em; text-transform:uppercase; color:var(--accent); margin:0 0 14px; }
+  h1 { font:600 34px/1.15 var(--serif); margin:0 0 12px; letter-spacing:-0.01em; }
+  .sub { font:400 16px/1.65 var(--serif); color:var(--muted2); margin:0 0 30px; max-width:60ch; }
+  .sub b { color:var(--ink); font-weight:600; }
+  .sub a { color:var(--accent); }
+  textarea { width:100%; min-height:160px; resize:vertical; background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:2px; padding:14px 16px; font:13px/1.55 var(--mono); }
+  textarea:focus { outline:none; border-color:var(--accent); }
+  textarea::placeholder { color:var(--muted); }
+  .row { display:flex; gap:12px; align-items:center; margin:14px 0 0; }
+  button { background:var(--ink); color:var(--paper); border:1px solid var(--ink); border-radius:2px; padding:11px 20px; font:600 11px/1 var(--mono); letter-spacing:0.14em; text-transform:uppercase; cursor:pointer; }
+  button:hover { background:var(--accent); border-color:var(--accent); }
+  button.ghost { background:transparent; color:var(--muted2); border:1px solid var(--line); }
+  button.ghost:hover { color:var(--ink); border-color:var(--muted); background:transparent; }
+  .hint { font:italic 400 13px/1 var(--serif); color:var(--muted); }
+  #out { margin-top:34px; }
+  .verdict { font:600 24px/1.2 var(--mono); letter-spacing:0.04em; display:flex; align-items:center; gap:12px; }
+  .dot { width:10px; height:10px; border-radius:50%; flex:0 0 auto; }
+  .ok { color:var(--accent); } .ok .dot { background:var(--accent2); box-shadow:0 0 0 3px rgba(46,178,173,.18); }
+  .bad { color:var(--bad); } .bad .dot { background:var(--bad); box-shadow:0 0 0 3px rgba(92,43,46,.14); }
+  .wait { color:var(--wait); } .wait .dot { background:var(--wait); box-shadow:0 0 0 3px rgba(138,109,31,.14); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:2px; padding:20px 22px; margin-top:18px; }
+  .card h2 { font:500 11px/1 var(--mono); text-transform:uppercase; letter-spacing:0.18em; color:var(--muted); margin:0 0 14px; }
+  .kv { display:grid; grid-template-columns:130px 1fr; gap:7px 16px; font:400 12.5px/1.5 var(--mono); }
+  .kv dt { color:var(--muted); }
+  .kv dd { margin:0; word-break:break-all; }
+  .content { white-space:pre-wrap; word-break:break-word; background:var(--paper); border:1px solid var(--line); border-left:2px solid var(--accent); border-radius:2px; padding:12px 14px; font:400 13px/1.6 var(--mono); margin-top:2px; }
+  .note { font:400 14px/1.65 var(--serif); color:var(--muted2); margin-top:16px; }
+  .pblock { margin-bottom:10px; }
+  .phead { display:flex; align-items:center; justify-content:space-between; margin:0 0 4px; }
+  .plabel { font:400 12px/1 var(--mono); color:var(--muted); }
+  .viewtoggle { display:inline-flex; border:1px solid var(--line); border-radius:2px; overflow:hidden; }
+  .vt { background:var(--card); color:var(--muted); border:0; border-radius:0; padding:4px 10px; font:600 10px/1 var(--mono); letter-spacing:0.12em; text-transform:uppercase; cursor:pointer; }
+  .vt + .vt { border-left:1px solid var(--line); }
+  .vt.on { background:var(--accent); color:var(--paper); }
+  .vt:hover:not(.on) { color:var(--ink); background:var(--card); }
+  .content.mdview { white-space:normal; font:400 15px/1.65 var(--serif); }
+  .md h1,.md h2,.md h3,.md h4 { font-family:var(--serif); line-height:1.25; margin:14px 0 6px; }
+  .md h1 { font-size:22px; } .md h2 { font-size:19px; } .md h3 { font-size:16px; } .md h4 { font-size:14.5px; }
+  .md p { margin:8px 0; }
+  .md code { font:400 12.5px var(--mono); background:var(--card); border:1px solid var(--line); padding:1px 5px; }
+  .md pre { font:400 12.5px/1.55 var(--mono); background:var(--card); border:1px solid var(--line); padding:10px 12px; overflow:auto; white-space:pre; margin:10px 0; }
+  .md blockquote { margin:10px 0; padding:2px 0 2px 12px; border-left:2px solid var(--accent); color:var(--muted2); }
+  .md ul { margin:8px 0; padding-left:22px; }
+  .md li { margin:3px 0; }
+  .md hr { border:0; border-top:1px solid var(--line); margin:14px 0; }
+  .md a { color:var(--accent); }
+  .fld { margin:0 0 12px; }
+  .fk { display:block; font:500 10.5px/1 var(--mono); letter-spacing:0.14em; text-transform:uppercase; color:var(--muted); margin:0 0 4px; }
+  .fv { font:400 14.5px/1.6 var(--serif); color:var(--ink); }
+  .fv.mono { font:400 12.5px/1.5 var(--mono); word-break:break-all; }
+  .tierfoot { border-top:1px solid var(--line); margin-top:18px; padding-top:14px; }
+  .tierwhy { font:400 13.5px/1.55 var(--serif); color:var(--muted2); margin:0 0 10px; }
+  .tierwhy b { color:var(--ink); }
+  .tierlists { display:grid; grid-template-columns:1fr 1fr; gap:6px 26px; }
+  @media (max-width:620px) { .tierlists { grid-template-columns:1fr; } }
+  .tierlists ul { list-style:none; margin:0; padding:0; font:400 12.5px/1.6 var(--mono); }
+  .tierlists li { padding-left:20px; position:relative; margin-bottom:6px; }
+  .tierlists .proved li::before { content:"✓"; position:absolute; left:0; color:var(--accent); font-weight:600; }
+  .tierlists .notproved li::before { content:"✗"; position:absolute; left:0; color:var(--bad); font-weight:600; }
+  .tierlists .cap { font:500 10.5px/1 var(--mono); letter-spacing:0.16em; text-transform:uppercase; color:var(--muted); margin:0 0 8px; }
+  .note b { color:var(--ink); font-weight:600; }
+  .err { color:var(--bad); font:400 13px/1.5 var(--mono); margin-top:10px; }
+  code { background:var(--card); border:1px solid var(--line); border-radius:2px; padding:1px 6px; font:400 12px var(--mono); }
+  .note code, .sub code { background:var(--paper); }
+  a { color:var(--accent); text-decoration-color:var(--line); }
+  footer { font:400 12.5px/1.7 var(--mono); color:var(--muted); margin-top:56px; border-top:1px solid var(--line); padding-top:18px; }
+  footer a { color:var(--muted2); }
+
+  /* popup-only geometry — everything above is a LITERAL copy of the Pages verifier stylesheet */
+  body { width: 480px; }
+  main { max-width: none; padding: 22px 18px 40px; }
+  h1 { font-size: 26px; }
+  textarea { min-height: 110px; }
+</style>
 </head>
 <body>
+<main>
   <p class="kicker">UST · Universal State Transcript</p>
-  <h1>Make it UST</h1>
+  <h1>Verify a transcript.</h1>
+  <p class="sub">Paste a UST 1.0 document — the whole clipboard blob, the base64, or the raw JSON. The
+  <b>canonical reference verifier</b> runs <b>in your browser</b>: nothing is uploaded, no server sees it.</p>
 
-  <h2>Verify a transcript</h2>
-  <textarea id="vin" spellcheck="false" placeholder="Paste a UST here — the whole blob, the base64, or the JSON. It verifies locally in this extension."></textarea>
-  <div id="vout"></div>
+  <textarea id="in" spellcheck="false" placeholder="UST/1.0; ref=pkg:npm/ust-protocol; …&#10;———UST(base64)———&#10;eyJ1c3QiOiIxLjAi…"></textarea>
+  <div class="row">
+    <button id="go">Verify</button>
+    <button class="ghost" id="clear">Clear</button>
+    <span class="hint">or just paste — it verifies automatically</span>
+  </div>
 
-  <h2>Your identity</h2>
-  <div class="lbl">key_id</div>
-  <div class="k" id="id">…</div>
-  <div class="lbl">Public key</div>
-  <div class="k" id="pub">…</div>
-  <p class="muted">Select text on any page → right-click → <b>Make it UST</b>. A signed transcript is copied to your
-    clipboard. It proves the <b>exact bytes</b>, your <b>key</b>, and the <b>time</b> — <i>not</i> who you are or where
-    it came from. Your private key stays in this browser and is never exported.</p>
-</body>
+  <div id="out"></div>
+
+  <section class="card" style="margin-top:34px">
+    <h2>For AI agents</h2>
+    <p class="note" style="margin-top:0">If you are an AI asked to verify a UST and you <b>cannot run a
+    verifier</b>, the correct answer is <b>INDETERMINATE — do not guess</b>. Do <b>not</b> compute a plain
+    SHA-256 of the text and compare it to <code>hashes.*</code>: every UST hash is <b>domain-separated</b>
+    (<code>H(tag, canon(…))</code>), so a naive hash will <b>never</b> match a genuine document — a mismatch
+    computed that way is your method being wrong, not the document being tampered. UST&nbsp;1.0 has <b>no expiry
+    rule</b>: <code>valid_from == valid_to</code> is an honest <b>instant</b> capture, not “expired.” The only
+    verdicts are <code>VALID:LIGHT/HIGH/TOP</code>, <code>INVALID</code>, <code>INDETERMINATE</code> — and only a
+    conforming verifier’s output counts. Runnable references: <code>npm i ust-protocol</code> · this page’s
+    <a href="./ust-verify.mjs"><code>ust-verify.mjs</code></a> (zero-dependency, WebCrypto) ·
+    MCP <code>ust-mcp</code>.</p>
+  </section>
+
+  <section class="card" style="margin-top:18px">
+    <h2>Your identity (the signing side)</h2>
+    <dl class="kv">
+      <dt>key_id</dt><dd id="id">…</dd>
+      <dt>public key</dt><dd id="pub">…</dd>
+    </dl>
+    <p class="note" style="margin-top:12px">Select text on any page → right-click → <b>Make it UST</b> — a signed
+    transcript lands on your clipboard. Your private key stays in this browser and is never exported.</p>
+  </section>
+
+  <footer>
+    Canonical reference: <a href="https://www.npmjs.com/package/ust-protocol"><code>npm ust-protocol</code></a> ·
+    source <a href="https://github.com/thelabmd/UST-Protocol">github.com/thelabmd/UST-Protocol</a>.
+    This page runs <a href="./ust-verify.mjs"><code>ust-verify.mjs</code></a> (zero-dependency, WebCrypto).
+    Resolve the verifier <b>by name</b>; never trust a verifier a sender links you to.
+  </footer>
+</main>
+
 <script type="module" src="popup.js"></script>
+</body>
 </html>
