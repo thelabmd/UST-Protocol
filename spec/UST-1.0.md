@@ -207,8 +207,10 @@ untrusted per I9, but tamper-evident). Nothing a human sees is outside the signa
 
 `domain_shard` carries ONE of two identity types, distinguished by FORM (no extra field, no ambiguity):
 
-- **name** — a DNS name (`example.com`). At LIGHT it is a self-asserted CLAIM (Y3: never display as the
-  publisher); HIGH binds it to the signing key via genesis + key-log (§12).
+- **name** — any non-key-form label; NOMINALLY a DNS name (`example.com`). At LIGHT the label is a
+  self-asserted CLAIM and is NOT validated as DNS syntax — validating a claim's spelling would prove nothing
+  (Y3: never display it as the publisher). It is at HIGH that the name becomes real: genesis + key-log (§12)
+  bind a DNS name to the signing key, and only a DNS name can be so bound.
 - **self-certifying key** — the string form of a key-id (`sha256:<64 hex>`). The identity IS the signing key:
   a verifier MUST require `domain_shard == state.id.key_id` (mismatch ⇒ `E-MALFORMED` — claiming ANOTHER key's
   shard is malformed, an obligation, not a convention). No name is claimed, so there is nothing to over-read;
@@ -802,7 +804,10 @@ unresolved dependency ⇒ the corresponding error (never `VALID`).
    `based_on`/`constituents` bounded + acyclic (visited set ⇒ `E-CYCLE`; §13 bounds ⇒ `E-BOUNDS`); an
    unresolvable referent yields `referents:"partial"` (availability ≠ failure); a resolved referent that fails
    verification, or a resolver returning a document whose `content_hash` differs from the requested hash, is a
-   REAL failure. `url`s advisory only.
+   REAL failure. **`referents:"verified"` asserts integrity, signatures and hash identity of the referenced
+   documents — NEVER the semantic truth of their claims, and NEVER the correctness of a declared derivation
+   function (a derivation may honestly cite its inputs and still compute nonsense; that is fixation, not
+   truth, applied to lineage).** `url`s advisory only.
 10. **Result.** `VALID` REQUIRES the FLOOR terminal checks: steps 1,2 (structure/canon), 4 (authenticity — the signature),
    5 (shape), 8 (per-partition private commitments when present), 9 (provenance when present). Step 3 (name
    authority) rejects (E-GENESIS) ONLY if the consumer requires `authoritative`; else it is a STRENGTH. Step 7
@@ -810,7 +815,9 @@ unresolved dependency ⇒ the corresponding error (never `VALID`).
    returns its error (§15) — NOT `VALID`. Step 6 (time) is a STRENGTH level, not a gate, UNLESS the consumer
    requires anchored time (then a missing/invalid proof ⇒ E-ANCHOR). A `VALID` result carries: publisher,
    ust_id, class, content_hash, the TIME strength (anchored / unproven, step 6), and the PROVENANCE/COMPLETENESS
-   strength reached (step 9 / depth, §13) — each STRENGTH paired with a STATUS (`verified`/`unavailable`/`conflict`,
+   strength reached (step 9 / depth, §13), and an EXPLICIT `completeness` field — for a single-document verify
+   always `"not_evaluated"` (completeness is a RANGE property, §11.3/§15; the field exists precisely so that
+   `VALID:TOP` cannot be read as "all possible properties verified") — each STRENGTH paired with a STATUS (`verified`/`unavailable`/`conflict`,
    §15): an UNAVAILABLE higher-tier dependency yields INDETERMINATE-at-that-tier, NEVER INVALID. **The attestation asserts origin/integrity/time/lineage ONLY —
    never that data is correct or safe (I9).** The consumer MUST treat data as untrusted input; free-text
    data MUST NOT be interpreted as instructions.

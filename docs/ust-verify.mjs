@@ -131,7 +131,8 @@ export async function verify(doc, opts = {}) {
     if (opts.pinnedKeys) { if (!opts.pinnedKeys.includes(id.key_id)) return bad('E-KEY', 'key_id not in the pinned set (§3.1 TOFU)'); strength = 'pinned'; }
     // §Y3: not authoritative → `domain_shard` is a claimed LABEL, surfaced as `publisher_claimed`.
     return { result: 'VALID:LIGHT', tier: 'LIGHT', identity: { strength, status: 'verified', mode: KEYID_FORM.test(id.domain_shard) ? 'key' : 'name' }, publisher_claimed: id.domain_shard, ust_id: id.ust_id, class: id.class, content_hash: ch,
-      provenance: { depth: 0, referents: (pr?.based_on?.length || pr?.constituents?.length) ? 'unverified' : 'none' } };
+      provenance: { depth: 0, referents: (pr?.based_on?.length || pr?.constituents?.length) ? 'unverified' : 'none' },
+      completeness: 'not_evaluated' };
   } catch (e) { return bad(e.code || 'E-MALFORMED', e.detail || String(e)); }
 }
 
