@@ -78,6 +78,25 @@
   .kv dd { margin:0; word-break:break-all; }
   .content { white-space:pre-wrap; word-break:break-word; background:var(--paper); border:1px solid var(--line); border-left:2px solid var(--accent); border-radius:2px; padding:12px 14px; font:400 13px/1.6 var(--mono); margin-top:2px; }
   .note { font:400 14px/1.65 var(--serif); color:var(--muted2); margin-top:16px; }
+  .pblock { margin-bottom:10px; }
+  .phead { display:flex; align-items:center; justify-content:space-between; margin:0 0 4px; }
+  .plabel { font:400 12px/1 var(--mono); color:var(--muted); }
+  .viewtoggle { display:inline-flex; border:1px solid var(--line); border-radius:2px; overflow:hidden; }
+  .vt { background:var(--card); color:var(--muted); border:0; border-radius:0; padding:4px 10px; font:600 10px/1 var(--mono); letter-spacing:0.12em; text-transform:uppercase; cursor:pointer; }
+  .vt + .vt { border-left:1px solid var(--line); }
+  .vt.on { background:var(--accent); color:var(--paper); }
+  .vt:hover:not(.on) { color:var(--ink); background:var(--card); }
+  .content.mdview { white-space:normal; font:400 15px/1.65 var(--serif); }
+  .md h1,.md h2,.md h3,.md h4 { font-family:var(--serif); line-height:1.25; margin:14px 0 6px; }
+  .md h1 { font-size:22px; } .md h2 { font-size:19px; } .md h3 { font-size:16px; } .md h4 { font-size:14.5px; }
+  .md p { margin:8px 0; }
+  .md code { font:400 12.5px var(--mono); background:var(--card); border:1px solid var(--line); padding:1px 5px; }
+  .md pre { font:400 12.5px/1.55 var(--mono); background:var(--card); border:1px solid var(--line); padding:10px 12px; overflow:auto; white-space:pre; margin:10px 0; }
+  .md blockquote { margin:10px 0; padding:2px 0 2px 12px; border-left:2px solid var(--accent); color:var(--muted2); }
+  .md ul { margin:8px 0; padding-left:22px; }
+  .md li { margin:3px 0; }
+  .md hr { border:0; border-top:1px solid var(--line); margin:14px 0; }
+  .md a { color:var(--accent); }
   .tierfoot { border-top:1px solid var(--line); margin-top:18px; padding-top:14px; }
   .tierwhy { font:400 13.5px/1.55 var(--serif); color:var(--muted2); margin:0 0 10px; }
   .tierwhy b { color:var(--ink); }
@@ -140,7 +159,7 @@ import { verify } from './ust-verify.mjs';
 
 const $ = (id) => document.getElementById(id);
 const inEl = $('in'), outEl = $('out');
-const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[c]));
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 
 function b64decodeUtf8(b64) {
   const bin = atob(b64.replace(/\s+/g, ''));
@@ -157,17 +176,55 @@ function extractDoc(input) {
 }
 
 // Human view REGENERATED from the signed document (never the sender's preamble).
+// DISPLAY-ONLY markdown: the signed bytes are untouched — the toggle re-renders the SAME string. Escape-first:
+// nothing from the document reaches the DOM unescaped; links restricted to http(s); no images are fetched
+// (an untrusted document must not make this page load remote resources); no raw HTML passthrough.
+const partTexts = [];
+function mdSafe(src) {
+  let t = esc(src);
+  t = t.replace(/```([\s\S]*?)```/g, (m, code) => '<pre>' + code.replace(/^\n|\n$/g, '') + '</pre>');
+  t = t.replace(/^######\s?(.+)$/gm, '<h4>$1</h4>').replace(/^#####\s?(.+)$/gm, '<h4>$1</h4>')
+       .replace(/^####\s?(.+)$/gm, '<h4>$1</h4>').replace(/^###\s?(.+)$/gm, '<h3>$1</h3>')
+       .replace(/^##\s?(.+)$/gm, '<h2>$1</h2>').replace(/^#\s?(.+)$/gm, '<h1>$1</h1>');
+  t = t.replace(/^(?:---|\*\*\*)\s*$/gm, '<hr>');
+  t = t.replace(/^&gt;\s?(.+)$/gm, '<blockquote>$1</blockquote>');
+  t = t.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+  t = t.replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>').replace(/\*([^*\n]+)\*/g, '<i>$1</i>');
+  t = t.replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" rel="noopener nofollow" target="_blank">$1</a>');
+  t = t.replace(/^[-*]\s+(.+)$/gm, '<li>$1</li>');
+  t = t.replace(/(?:<li>[\s\S]*?<\/li>\n?)+/g, (m) => '<ul>' + m + '</ul>');
+  t = t.split(/\n{2,}/).map((b) => /^\s*<(?:h\d|ul|pre|blockquote|hr)/.test(b.trim()) ? b : (b.trim() ? '<p>' + b.replace(/\n/g, '<br>') + '</p>' : '')).join('');
+  return t;
+}
 function renderContent(data) {
+  partTexts.length = 0;
   const parts = Object.entries(data || {}).map(([name, part]) => {
     if (part && part.value !== undefined) {
       const v = part.value;
-      const text = (v && typeof v === 'object' && typeof v.text === 'string') ? v.text : JSON.stringify(v, null, 2);
-      return `<div style="margin-bottom:8px"><span class="sub" style="margin:0">${esc(name)}${part.kind ? ' · ' + esc(part.kind) : ''}</span><div class="content">${esc(text)}</div></div>`;
+      const isText = v && typeof v === 'object' && typeof v.text === 'string';
+      const text = isText ? v.text : JSON.stringify(v, null, 2);
+      const i = partTexts.push(text) - 1;
+      const toggle = isText
+        ? `<span class="viewtoggle" data-ci="${i}"><button class="vt on" data-mode="raw">raw</button><button class="vt" data-mode="md">md</button></span>`
+        : '';
+      return `<div class="pblock"><div class="phead"><span class="plabel">${esc(name)}${part.kind ? ' · ' + esc(part.kind) : ''}</span>${toggle}</div><div class="content" data-ci="${i}">${esc(text)}</div></div>`;
     }
-    return `<div style="margin-bottom:8px"><span class="sub" style="margin:0">${esc(name)} · ${esc(part && part.privacy || 'private')}</span><div class="content">${esc(part && part.commit || '(private — committed, not revealed)')}</div></div>`;
+    return `<div class="pblock"><div class="phead"><span class="plabel">${esc(name)} · ${esc(part && part.privacy || 'private')}</span></div><div class="content">${esc(part && part.commit || '(private — committed, not revealed)')}</div></div>`;
   });
   return parts.join('');
 }
+// raw ⇄ md toggle (display-only; the verified bytes never change)
+outEl.addEventListener('click', (e) => {
+  const btn = e.target.closest('.vt');
+  if (!btn) return;
+  const wrap = btn.closest('.viewtoggle');
+  const ci = wrap.dataset.ci;
+  const box = outEl.querySelector(`.content[data-ci="${ci}"]`);
+  if (!box) return;
+  wrap.querySelectorAll('.vt').forEach((b) => b.classList.toggle('on', b === btn));
+  if (btn.dataset.mode === 'md') { box.classList.add('mdview', 'md'); box.innerHTML = mdSafe(partTexts[ci]); }
+  else { box.classList.remove('mdview', 'md'); box.innerHTML = esc(partTexts[ci]); }
+});
 
 function run() {
   const raw = inEl.value.trim();
