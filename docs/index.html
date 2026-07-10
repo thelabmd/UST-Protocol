@@ -226,9 +226,9 @@ function renderContent(data) {
       const entry = isText ? { kind: 'text', v: v.text } : { kind: isObj ? 'obj' : 'text', v: isObj ? v : JSON.stringify(v, null, 2) };
       const i = partVals.push(entry) - 1;
       const toggle = (isText || isObj)
-        ? `<span class="viewtoggle" data-ci="${i}"><button class="vt on" data-mode="raw">raw</button><button class="vt" data-mode="md">md</button></span>`
+        ? `<span class="viewtoggle" data-ci="${i}"><button class="vt on" data-mode="md">md</button><button class="vt" data-mode="raw">raw</button></span>`
         : '';
-      return `<div class="pblock"><div class="phead"><span class="plabel">${esc(name)}${part.kind ? ' · ' + esc(part.kind) : ''}</span>${toggle}</div><div class="content" data-ci="${i}">${esc(rawOf(entry))}</div></div>`;
+      return `<div class="pblock"><div class="phead"><span class="plabel">${esc(name)}${part.kind ? ' · ' + esc(part.kind) : ''}</span>${toggle}</div><div class="content mdview md" data-ci="${i}">${mdOf(entry)}</div></div>`;
     }
     return `<div class="pblock"><div class="phead"><span class="plabel">${esc(name)} · ${esc(part && part.privacy || 'private')}</span></div><div class="content">${esc(part && part.commit || '(private — committed, not revealed)')}</div></div>`;
   });
