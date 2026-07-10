@@ -31,7 +31,7 @@ async function idbGet(key) {
 // SIGNED bytes — the sender's preamble (Source:, header) is never displayed as truth. Runs locally; nothing leaves
 // the browser. Same extraction as the web verifier: full blob / bare base64 / raw JSON. ──
 const vin = document.getElementById('vin'), vout = document.getElementById('vout');
-const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 function b64decodeUtf8(b64) {
   const bin = atob(b64.replace(/\s+/g, ''));
@@ -44,16 +44,67 @@ function extractDoc(input) {
   if (s.startsWith('{')) return JSON.parse(s);
   return JSON.parse(b64decodeUtf8(s));
 }
+// ── DISPLAY-ONLY markdown (ported from the web verifier): escape-first, links http(s)-only, images never
+// fetched, no raw-HTML passthrough. MD is the default view; RAW is the exact signed string, one click away. ──
+const partVals = [];
+function mdSafe(src) {
+  let t = esc(src);
+  t = t.replace(/```([\s\S]*?)```/g, (m, code) => '<pre>' + code.replace(/^\n|\n$/g, '') + '</pre>');
+  t = t.replace(/^######\s?(.+)$/gm, '<h3>$1</h3>').replace(/^#####\s?(.+)$/gm, '<h3>$1</h3>')
+       .replace(/^####\s?(.+)$/gm, '<h3>$1</h3>').replace(/^###\s?(.+)$/gm, '<h3>$1</h3>')
+       .replace(/^##\s?(.+)$/gm, '<h2>$1</h2>').replace(/^#\s?(.+)$/gm, '<h1>$1</h1>');
+  t = t.replace(/^(?:---|\*\*\*)\s*$/gm, '<hr>');
+  t = t.replace(/^&gt;\s?(.+)$/gm, '<blockquote>$1</blockquote>');
+  t = t.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+  t = t.replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>').replace(/\*([^*\n]+)\*/g, '<i>$1</i>');
+  t = t.replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" rel="noopener nofollow" target="_blank">$1</a>');
+  t = t.replace(/^[-*]\s+(.+)$/gm, '<li>$1</li>');
+  t = t.replace(/(?:<li>[\s\S]*?<\/li>\n?)+/g, (m) => '<ul>' + m + '</ul>');
+  t = t.split(/\n{2,}/).map((b) => /^\s*<(?:h\d|ul|pre|blockquote|hr)/.test(b.trim()) ? b : (b.trim() ? '<p>' + b.replace(/\n/g, '<br>') + '</p>' : '')).join('');
+  return t;
+}
+function objectMd(v) {
+  return Object.entries(v).map(([k, val]) => {
+    if (typeof val === 'string') {
+      const rich = val.length > 80 || /[\n#*`]/.test(val);
+      const looksId = /^(sha256:|ust:|https?:)/.test(val) && !/\s/.test(val);
+      const body = looksId ? '<span class="fv mono">' + esc(val) + '</span>'
+        : rich ? '<div class="fv md">' + mdSafe(val) + '</div>' : '<span class="fv">' + esc(val) + '</span>';
+      return '<div class="fld"><span class="fk">' + esc(k) + '</span>' + body + '</div>';
+    }
+    return '<div class="fld"><span class="fk">' + esc(k) + '</span><pre style="margin:0">' + esc(JSON.stringify(val, null, 2)) + '</pre></div>';
+  }).join('');
+}
+const rawOf = (e) => e.kind === 'text' ? e.v : JSON.stringify(e.v, null, 2);
+const mdOf = (e) => e.kind === 'text' ? mdSafe(e.v) : objectMd(e.v);
 function renderContent(data) {
+  partVals.length = 0;
   return Object.entries(data || {}).map(([name, part]) => {
     if (part && part.value !== undefined) {
       const v = part.value;
-      const text = (v && typeof v === 'object' && typeof v.text === 'string') ? v.text : JSON.stringify(v, null, 2);
-      return '<div class="lbl">' + esc(name) + (part.kind ? ' · ' + esc(part.kind) : '') + '</div><div class="content">' + esc(text) + '</div>';
+      const isText = v && typeof v === 'object' && typeof v.text === 'string';
+      const isObj = !isText && v && typeof v === 'object' && !Array.isArray(v);
+      const entry = isText ? { kind: 'text', v: v.text } : { kind: isObj ? 'obj' : 'text', v: isObj ? v : JSON.stringify(v, null, 2) };
+      const i = partVals.push(entry) - 1;
+      const toggle = (isText || isObj)
+        ? '<span class="viewtoggle" data-ci="' + i + '"><button class="vt on" data-mode="md">md</button><button class="vt" data-mode="raw">raw</button></span>'
+        : '';
+      return '<div class="pblock"><div class="phead"><span class="plabel">' + esc(name) + (part.kind ? ' · ' + esc(part.kind) : '') + '</span>' + toggle + '</div><div class="content mdview md" data-ci="' + i + '">' + mdOf(entry) + '</div></div>';
     }
-    return '<div class="lbl">' + esc(name) + ' · ' + esc(part && part.privacy || 'private') + '</div><div class="content">' + esc(part && part.commit || '(private — committed, not revealed)') + '</div>';
+    return '<div class="pblock"><div class="phead"><span class="plabel">' + esc(name) + ' · ' + esc(part && part.privacy || 'private') + '</span></div><div class="content">' + esc(part && part.commit || '(private — committed, not revealed)') + '</div></div>';
   }).join('');
 }
+vout.addEventListener('click', (e) => {
+  const btn = e.target.closest('.vt');
+  if (!btn) return;
+  const wrap = btn.closest('.viewtoggle');
+  const ci = wrap.dataset.ci;
+  const box = vout.querySelector('.content[data-ci="' + ci + '"]');
+  if (!box) return;
+  wrap.querySelectorAll('.vt').forEach((b) => b.classList.toggle('on', b === btn));
+  if (btn.dataset.mode === 'md') { box.classList.add('mdview', 'md'); box.innerHTML = mdOf(partVals[ci]); }
+  else { box.classList.remove('mdview', 'md'); box.innerHTML = esc(rawOf(partVals[ci])); }
+});
 
 async function runVerify() {
   const raw = vin.value.trim();
