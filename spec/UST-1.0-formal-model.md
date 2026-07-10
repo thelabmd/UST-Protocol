@@ -161,12 +161,13 @@ deterministic — `0/1` — so the probability is degenerate.** The genuinely lo
 measure. Rigor demands saying so plainly: UST has no randomness of its own.
 
 Probability becomes non-degenerate at **exactly one boundary** — the measurement gap of §F.2. Modelling
-`ε = M − Y` as a random variable is where a real (non-`0/1`) measure lives. UST deliberately does **not** model it:
+the deviation `ε` (with `M = m(Y, ε)`, §F.2 — no subtraction exists on strings) as a random variable is where a
+real (non-`0/1`) measure lives. UST deliberately does **not** model it:
 it fixes `M` (with `ε` baked in) and stops. So the honest scoping is:
 
 - **filtration ⇒ verification** (deterministic, the heart of UST);
 - **probability ⇒ measurement error only** (downstream of UST, in whatever application reasons about how far a
-  publisher's `M` might be from `Y`).
+  publisher's measurement `M` might deviate from the truth `Y`).
 
 Conflating the two — reading `P(...) = 1` as if UST asserted something probabilistic about *reality* — is the
 formal shape of the "signed = true" over-read the whole protocol exists to forbid.

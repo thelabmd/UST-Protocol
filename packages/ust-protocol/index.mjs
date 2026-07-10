@@ -333,8 +333,12 @@ export function verify(doc, opts = {}) {
     // §3.1/§15 — the DOCUMENT tier: TOP = authoritative identity + anchored time. Stream COMPLETENESS is a RANGE
     // verdict (verifyStream → complete:'proven'), never a single-document claim (audit E, H-02/F-07).
     const tier = authoritative ? (timeField.strength === 'anchored' ? 'TOP' : 'HIGH') : 'LIGHT';
+    // `completeness` is EXPLICIT and, for a single-document verify, always "not_evaluated": completeness is a
+    // RANGE property (§11.3 verifyStream → proven/provisional/none) — the field exists so VALID:TOP can never be
+    // read as "all possible properties verified" (audit E follow-up, P1-2).
     return { result: 'VALID:' + tier, tier, identity: { ...identity, mode: shardMode }, disclosed, sources, ...nameField,
-      ust_id: st.id.ust_id, class: st.id.class, content_hash: ch, time: timeField, provenance: provenanceReport };
+      ust_id: st.id.ust_id, class: st.id.class, content_hash: ch, time: timeField, provenance: provenanceReport,
+      completeness: 'not_evaluated' };
   } catch (e) {
     return bad(e.code || 'E-MALFORMED', e.detail || String(e));         // fail-closed (§14/I10)
   }
