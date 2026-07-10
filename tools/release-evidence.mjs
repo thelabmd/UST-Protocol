@@ -58,6 +58,9 @@ const mode = process.argv[2];
 if (mode === 'generate') {
   const basedOn = (process.argv.indexOf('--based-on') > -1) ? process.argv[process.argv.indexOf('--based-on') + 1] : null;
   if (!/^sha256:[0-9a-f]{64}$/.test(basedOn || '')) { console.error('need --based-on sha256:<content_hash of the audit lineage head>'); process.exit(1); }
+  // release HISTORY lives in the chain: --prev links the PREVIOUS release evidence (tree holds only the head)
+  const prev = (process.argv.indexOf('--prev') > -1) ? process.argv[process.argv.indexOf('--prev') + 1] : null;
+  if (prev && !/^sha256:[0-9a-f]{64}$/.test(prev)) { console.error('--prev must be sha256:<content_hash>'); process.exit(1); }
   const { commit, npm, vectorsSha } = collect();
   const t = runTests();
   mkdirSync(dir, { recursive: true });
@@ -76,8 +79,9 @@ if (mode === 'generate') {
       conformance_vectors_sha256: vectorsSha,
       test_report_sha256: sha256(t.out),
       test_result: `${t.counts} (conformance runner; asserts spec == package == vectors version)`,
+      ...(prev ? { previous_release_evidence: prev } : {}),
     } },
-  }, [{ hash: basedOn }]);
+  }, [{ hash: basedOn }, ...(prev ? [{ hash: prev }] : [])]);
   const doc = await W.seal(state, signer);
   const r1 = P.verify(doc, { context: 'data' });
   const r2 = await cleanRoom(doc, { context: 'data' });
