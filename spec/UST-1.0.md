@@ -3,8 +3,8 @@
 
 *This specification text is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](../LICENSE-SPEC). Reference code in this repository is licensed Apache-2.0. Use of the name **UST** / **Universal State Transcript** and the **UST-compatible** claim: see [TRADEMARK.md](../TRADEMARK.md).*
 
-> **Release candidate — `1.0.0-rc.5`.** This specification has been extensively red-teamed; an independent
-> external cryptographic audit is pending. It is subject to change until `1.0.0` final (rc.2 folded in two external reviews — 6 impl findings + spec edge cases + removed domain-less `computed`; rc.3 aligned impl to §3.1 pinned + Y3; rc.4 closed a 4th external audit (ChatGPT 5.5 Max): key-binding by KEY not string, TOP needs a genesis origin, embedded proofs fail-closed, class↔schema enforced, canon strict on names too, raw-bytes verify boundary, ust_id valid frames, and REMOVED secret-url as a privacy mode). Pin exact versions.
+> **Release candidate — `1.0.0-rc.6`.** This specification has been extensively red-teamed; an independent
+> external cryptographic audit is pending. It is subject to change until `1.0.0` final (rc.2 folded in two external reviews — 6 impl findings + spec edge cases + removed domain-less `computed`; rc.3 aligned impl to §3.1 pinned + Y3; rc.4 closed a 4th external audit (ChatGPT 5.5 Max): key-binding by KEY not string, TOP needs a genesis origin, embedded proofs fail-closed, class↔schema enforced, canon strict on names too, raw-bytes verify boundary, ust_id valid frames, and REMOVED secret-url as a privacy mode; rc.6 closed a 5th external audit STRUCTURALLY — the §14a obligations table (every commitment-bearing member recomputed: +`E-SEED`), a typed identity namespace (dns-name | self-certifying key-id), real-calendar semantic consistency, document-tier vs range-completeness separation, MTI registry discipline, one version source). Pin exact versions.
 
 **UST is trust infrastructure.** It gives any machine-published statement about the state of the world its own
 VERIFIABLE trust — WHO asserted it, WHAT exact bytes, for WHICH time-frame, WHEN, and FROM WHAT — checkable
@@ -175,7 +175,8 @@ presentation-layer two-truths injection with no security benefit, N3.)
 ```
 State := {                                   // the top-level `ust` (§4.1) is signed alongside this object
   "id": {                                    // REQUIRED — identity & address
-     "domain_shard": string,                 // publisher identity (a DNS name); authority anchor
+     "domain_shard": string,                 // publisher identity — a TYPED namespace (§4.3a): a dns name, or a
+                                             // self-certifying key-id (`sha256:<hex64>`) that MUST equal `key_id`
      "ust_id":       string,                 // time-frame address (§8)
      "key_id":       string,                 // the signing key's identifier in the publisher key log (§12)
      "class":        "observation"|"attestation"|"derivation",  // intent tag; does NOT alter §6/§7 rules
@@ -200,6 +201,21 @@ collide with an identity or provenance slot (I3).
 There is no unsigned convenience field (N3). Any human/agent rendering is COMPUTED from the signed `state`
 by the consumer. If a display hint is genuinely needed it goes in a SIGNED partition (then it is data —
 untrusted per I9, but tamper-evident). Nothing a human sees is outside the signature.
+
+
+### 4.3a Identity namespace (typed `domain_shard`)
+
+`domain_shard` carries ONE of two identity types, distinguished by FORM (no extra field, no ambiguity):
+
+- **name** — a DNS name (`example.com`). At LIGHT it is a self-asserted CLAIM (Y3: never display as the
+  publisher); HIGH binds it to the signing key via genesis + key-log (§12).
+- **self-certifying key** — the string form of a key-id (`sha256:<64 hex>`). The identity IS the signing key:
+  a verifier MUST require `domain_shard == state.id.key_id` (mismatch ⇒ `E-MALFORMED` — claiming ANOTHER key's
+  shard is malformed, an obligation, not a convention). No name is claimed, so there is nothing to over-read;
+  this is the native LIGHT identity for keys with no domain (browser signers, ephemeral agents).
+
+A verifier reports the mode (`identity.mode: "name" | "key"`) alongside the strength. A key-form shard never
+resolves genesis (there is no name to bind); name authority (§12) applies to `name` mode only.
 
 ### 4.4 Data — per-partition kind, visibility & hashing (029 feature, in the namespaced shape)
 `data` is a map of one or more **partitions**; names are operator-schema, unique, non-reserved (I3 — names
@@ -748,7 +764,9 @@ unresolved dependency ⇒ the corresponding error (never `VALID`).
 5. **Well-formed identity/time/shape.** Validate `ust_id` shape (§8), RFC 3339 times, `valid_from ≤ valid_to`,
    `class` in registry (§17) AND appropriate for the verification CONTEXT (W3: a key-log walk accepts ONLY `class:"key"`/`"genesis"`; a data/observation verify MUST NOT accept a `class:"key"`/`"genesis"` transcript as data, and vice-versa — a class-mismatch for the role ⇒ E-MALFORMED); ≥1 partition; each private partition (§4.4) carries a valid `commit` (+ `enc` if encrypted), and
    class↔provenance consistency (`derivation`/`attestation` REQUIRE `provenance`; `observation` MUST NOT
-   carry `constituents`/`root`) (N10). On failure ⇒ E-MALFORMED.
+   carry `constituents`/`root`) (N10). SEMANTIC consistency is part of shape: every date MUST exist on the REAL
+   calendar (range-valid strings like `Feb 31` are NOT dates — regex ranges alone are insufficient); a key-form
+   `domain_shard` MUST equal `key_id` (§4.3a). On failure ⇒ E-MALFORMED.
 6. **Time (self-contained, I12).** If `X.proof` is present, recompute the Merkle path from `content_hash` to
    `proof.root` and confirm `proof.root` at `proof.anchor` against the append-only log the verifier already
    trusts (§11.2); a proof that is PRESENT-but-WRONG (bad path/commitment) ⇒ E-ANCHOR (a failure). A MISSING,
@@ -763,9 +781,28 @@ unresolved dependency ⇒ the corresponding error (never `VALID`).
    from the disclosed `{nonce,value}` + the document's `domain_shard`/`ust_id` (frame-bound, G23), and for `encrypted` verify `AEAD-Decrypt(enc.ct)` reproduces exactly that
    `{nonce,value}` → `commit` (E-COMMIT on mismatch). (A non-guessable delivery URL is an out-of-band channel, not a verified mode.) The
    layer seed (§9.5/§10a). Never brute-force.
-9. **Provenance.** For each source verify `src_sig` (§9.1); unauthenticated ⇒ mark, never attribute. For
-   attestations recompute `root` from constituents when available (⇒ E-ROOT on mismatch). Walk
-   `based_on`/constituents bounded + acyclic (§9.5); E-BOUNDS/E-CYCLE on violation. `url`s advisory only.
+9. **Provenance — the OBLIGATIONS TABLE (§14a).** Every commitment-bearing provenance member carries a
+   RECOMPUTE obligation; a member may never be present-but-unchecked (the checked-root/unchecked-seed asymmetry
+   class is abolished):
+
+   | member | shape obligation | recompute obligation | on mismatch |
+   |---|---|---|---|
+   | `hashes.<p>` | — | per-partition hash (§4.4) | `E-CANON` |
+   | `provenance.root` | `sha256:<hex64>` | `merkleRoot(constituents)` (§9.2) | `E-ROOT` |
+   | `provenance.seed` | `sha256:<hex64>` | `H(ust:seed, canon(based_on[].hash))` (§9.4) | `E-SEED` |
+   | `provenance.constituents[]` | each `sha256:<hex64>` | (referent walk, below) | `E-MALFORMED` |
+   | `provenance.based_on[].hash` | `sha256:<hex64>` | (referent walk, below) | `E-MALFORMED` |
+   | `provenance.prev` | `sha256:<hex64>` | chain link (§11.3, when a stream is verified) | `E-PREV` |
+   | `commit` (private) | `sha256:<hex64>` | reproduce from disclosure (§10) | `E-COMMIT` |
+
+   For each source verify `src_sig` (§9.1); unauthenticated ⇒ mark, never attribute. REFERENT WALK: depth-0 is
+   the default (I14); the RESULT always reports how deep verification went (`provenance.depth`,
+   `provenance.referents: "none" | "unverified" | "partial" | "verified"`) — a consumer can see the chain was
+   NOT walked instead of assuming it was. With a caller-supplied resolver and a depth budget the verifier walks
+   `based_on`/`constituents` bounded + acyclic (visited set ⇒ `E-CYCLE`; §13 bounds ⇒ `E-BOUNDS`); an
+   unresolvable referent yields `referents:"partial"` (availability ≠ failure); a resolved referent that fails
+   verification, or a resolver returning a document whose `content_hash` differs from the requested hash, is a
+   REAL failure. `url`s advisory only.
 10. **Result.** `VALID` REQUIRES the FLOOR terminal checks: steps 1,2 (structure/canon), 4 (authenticity — the signature),
    5 (shape), 8 (per-partition private commitments when present), 9 (provenance when present). Step 3 (name
    authority) rejects (E-GENESIS) ONLY if the consumer requires `authoritative`; else it is a STRENGTH. Step 7
@@ -787,7 +824,9 @@ Verification MUST NOT branch on `X.ust` beyond selecting the single 1.x algorith
 A verifier returns one of THREE OUTCOME KINDS — **availability is distinct from failure**:
 - **VALID:LIGHT · VALID:HIGH · VALID:TOP** — verified, and the verdict CARRIES ITS TIER (the highest
   fully-satisfied rung, §3.1) so a consumer cannot read "valid" without reading valid-AT-WHAT: LIGHT = integrity +
-  a claimed key; HIGH = + authoritative name; TOP = + anchored time (and completeness for streams). Per-axis
+  a claimed key; HIGH = + authoritative name; TOP = + anchored time. Stream COMPLETENESS is a RANGE verdict
+  (§11.3 `verifyStream` → `complete: proven`), never a single-document claim — a document tier asserts the
+  document's own axes only. Per-axis
   strengths (identity / time / completeness) remain below for detail. A BARE `VALID` is never emitted — that is
   the point (it forecloses the over-read "THIS is valid" when only the floor is).
 - **INVALID** — a DEFINITE, deterministic negative (the document/chain is bad), terminal + fail-closed:
@@ -795,9 +834,11 @@ A verifier returns one of THREE OUTCOME KINDS — **availability is distinct fro
   (size/depth/breadth), `E-CYCLE` (chain cycle), `E-SIG` (signature invalid / key_id mismatch), `E-KEY`
   (key-log chain BROKEN or entry unauthorized), `E-GENESIS` (FORKED / conflicting name-binding root — a rival
   genesis exists), `E-ANCHOR` (inclusion proof PRESENT-but-WRONG), `E-COMMIT` (commit ↔ decryption mismatch),
-  `E-ROOT` (attestation root mismatch), `E-PREV` (broken sequence link / checkpoint contradiction).
-- **INDETERMINATE (`unavailable`)** — a higher-tier check could NOT COMPLETE because a dependency was
-  UNREACHABLE (genesis / key-log / anchor mirror down): NOT a negative. The document keeps its LIGHT verdict;
+  `E-ROOT` (attestation root mismatch), `E-SEED` (derivation seed ≠ recomputed seed over `based_on` hashes),
+  `E-PREV` (broken sequence link / checkpoint contradiction).
+- **INDETERMINATE (`unavailable` | `unsupported_alg`)** — a check could NOT COMPLETE: a dependency was
+  UNREACHABLE (genesis / key-log / anchor mirror down), or an OPTIONAL registry algorithm (§17 MTI) is not
+  implemented by this verifier (`unsupported_alg`): NOT a negative. The document keeps its LIGHT verdict;
   the affected strength is reported `unavailable` (retry). Fail-closed means "never CLAIM a strength you did not
   verify" — it does NOT mean "call it INVALID." A verifier/MCP MUST NOT report an unreachable authority as a
   failed document.
@@ -848,7 +889,9 @@ Independent re-implementation is expected; the vectors make "verify without trus
   AnchorProof keys `root,path,anchor`.
 - **partition kind:** `captured` · `computed` — BOTH bind `domain_shard` (descriptive tag only; the domain-less `computed` mode was REMOVED in rc.2). **partition privacy:** `blinded` · `encrypted` (both cryptographic — what is HIDDEN in the signed state). A "secret URL" is a DISCLOSURE CHANNEL (§out-of-scope, G18), not a privacy mode; removed from the registry in rc.4.
 - **alg (signatures):** `Ed25519` (strict, §7). **hash:** `sha256:` domain-separated (§7). **enc.alg (AEAD):**
-  `XChaCha20-Poly1305`, `AES-256-GCM`. **hash domain tags:** `ust:state` (whole-State `content_hash`) | `ust:shard` (a per-partition hash, §4.4) | `ust:keylog|ust:checkpoint|ust:node|ust:leaf|ust:seed|ust:source`.
+  `AES-256-GCM` (**MTI — mandatory to implement**: every conforming verifier implements it),
+  `XChaCha20-Poly1305` (OPTIONAL: a verifier that does not implement it MUST return
+  `INDETERMINATE(unsupported_alg)` for a disclosure it cannot decrypt — never a silent skip, never INVALID). **hash domain tags:** `ust:state` (whole-State `content_hash`) | `ust:shard` (a per-partition hash, §4.4) | `ust:keylog|ust:checkpoint|ust:node|ust:leaf|ust:seed|ust:source`.
   All algorithm-tagged for agility (§19).
 - **reserved keys:** transcript: `ust,state,sig,proof`; State: `id,time,data,hashes,provenance`; id: `domain_shard,ust_id,key_id,class,parent_ust`;
   partition-envelope: `kind,value,privacy,commit,enc` (enc: `alg,key_id,ct`); provenance: `sources,constituents,based_on,root,seed,prev`;

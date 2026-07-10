@@ -23,8 +23,8 @@ This repository is the specification, the conformance vectors, and the reference
 
 ## Status
 
-Release candidate — the specification is at **`1.0.0-rc.5`** (each package pins its own rc on npm). Extensively
-red-teamed; four external AI reviews folded in (see the spec changelog); an independent human cryptographic audit
+Release candidate — the specification is at **`1.0.0-rc.6`** (each package pins its own rc on npm). Extensively
+red-teamed; five external AI reviews folded in (see the spec changelog); an independent human cryptographic audit
 is pending. Suitable for evaluation and integration testing. Pin exact versions.
 
 ## Quickstart

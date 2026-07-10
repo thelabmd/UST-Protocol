@@ -127,10 +127,50 @@ check('F8 impossible ust_id→E-MALFORMED', P.verify(mk({ r: { kind: 'captured',
   const topR = P.verify({ ...docK, proof: topProof }, { genesis: gen, keylog: [add], noForkConfirmed: true, context: 'data', substrateVerify: () => ({ final: true, time: '2027-01-01T00:00:00Z' }) });
   check('TOP authoritative+anchored→VALID:TOP', topR.result === 'VALID:TOP');
   check('tier ladder distinct: LIGHT vs TOP', P.verify(mk(), { context: 'data' }).result === 'VALID:LIGHT' && topR.tier === 'TOP');
+  // rc.6 N9 — a document cannot postdate its own anchor: substrate time BEFORE generated_at ⇒ E-ANCHOR.
+  const n9 = P.verify({ ...docK, proof: topProof }, { genesis: gen, keylog: [add], noForkConfirmed: true, context: 'data', substrateVerify: () => ({ final: true, time: '2020-01-01T00:00:00Z' }) });
+  check('N9 generated_at after anchorTime → E-ANCHOR', n9.error === 'E-ANCHOR');
+  // rc.6 M-05 — the anchor availability STATUS is carried through (substrate unreachable ⇒ status unavailable, doc stays LIGHT-time-unproven).
+  const un = P.verify({ ...docK, proof: topProof }, { genesis: gen, keylog: [add], noForkConfirmed: true, context: 'data', substrateVerify: () => null });
+  check('anchor substrate unreachable → time.status unavailable (not flattened)', P.isValid(un) && un.time.status === 'unavailable' && un.time.strength === 'unproven');
+}
+
+// ─── rc.6 — the OBLIGATIONS TABLE (§14a): every commitment-bearing member recomputed; semantic consistency;
+//     typed identity; MTI registry; honest provenance report. One check per obligation (audit E regression).
+{
+  const obsA = mk(); const hA = P.contentHash(obsA);
+  const stBadSeed = P.buildState({ ...ID, class: 'derivation' }, T, { d: { kind: 'computed', value: { x: '1' } } },
+    { based_on: [{ hash: hA }], seed: P.seed(['sha256:' + 'ab'.repeat(32)]) });
+  check('E-SEED derivation seed mismatch → INVALID', P.verify(P.seal(stBadSeed, A.priv, A.pubB64), { context: 'data' }).error === 'E-SEED');
+  const goodDeriv = P.seal(P.buildDerivation(ID, T, { d: { kind: 'computed', value: { x: '1' } } }, [{ hash: hA }]), A.priv, A.pubB64);
+  const rd = P.verify(goodDeriv, { context: 'data' });
+  check('correct seed → VALID + depth-0 reports referents unverified', rd.result === 'VALID:LIGHT' && rd.provenance.depth === 0 && rd.provenance.referents === 'unverified');
+  const rw = P.verify(goodDeriv, { context: 'data', provenanceDepth: 1, resolveRef: (h) => (h === hA ? obsA : null) });
+  check('depth-1 walk resolves referent → referents verified', rw.provenance.depth >= 1 && rw.provenance.referents === 'verified');
+  const rp = P.verify(goodDeriv, { context: 'data', provenanceDepth: 1, resolveRef: () => null });
+  check('depth-1 unresolvable referent → partial (availability ≠ failure)', P.isValid(rp) && rp.provenance.referents === 'partial');
+  const rz = P.verify(goodDeriv, { context: 'data', provenanceDepth: 1, resolveRef: () => mk({ zz: { kind: 'captured', value: { q: '9' } } }) });
+  check('resolver returning a DIFFERENT document → INVALID', rz.error === 'E-MALFORMED');
+  check('ust_id Feb-31 → INVALID (real calendar)', P.verify(mk(undefined, { ...ID, ust_id: 'ust:20260231.09' }), { context: 'data' }).error === 'E-MALFORMED');
+  check('generated_at Feb-30 → INVALID (real calendar)', P.verify(mk(undefined, ID, { ...T, generated_at: '2026-02-30T10:00:00Z' }), { context: 'data' }).error === 'E-MALFORMED');
+  const noKind = P.seal(P.buildState(ID, T, { p: { privacy: 'blinded', commit: 'sha256:' + 'cd'.repeat(32) } }), A.priv, A.pubB64);
+  check('private partition without kind → INVALID (closed per-mode schema)', P.verify(noKind, { context: 'data' }).error === 'E-MALFORMED');
+  const rsc = P.verify(mk(undefined, { ...ID, domain_shard: A.key_id }), { context: 'data' });
+  check('key-form shard == key_id → VALID + identity.mode key (self-certifying)', rsc.result === 'VALID:LIGHT' && rsc.identity.mode === 'key');
+  check('name shard → identity.mode name', P.verify(mk(), { context: 'data' }).identity.mode === 'name');
+  check('key-form shard != key_id → INVALID', P.verify(mk(undefined, { ...ID, domain_shard: 'sha256:' + '12'.repeat(32) }), { context: 'data' }).error === 'E-MALFORMED');
+  const nonce = 'n-' + 'a'.repeat(16);
+  const commit = P.blindedCommit({ domain_shard: ID.domain_shard, ust_id: ID.ust_id, name: 'e', value: { v: '1' }, nonce });
+  const encDoc = P.seal(P.buildState(ID, T, { e: { kind: 'captured', privacy: 'encrypted', commit, enc: { alg: 'XChaCha20-Poly1305', key_id: 'k1', ct: 'AAAA' } } }), A.priv, A.pubB64);
+  const re = P.verify(encDoc, { context: 'data', disclosures: { e: { nonce, value: { v: '1' } } }, decKeys: { k1: 'AAAA' } });
+  check('OPTIONAL AEAD not implemented → INDETERMINATE(unsupported_alg)', re.result === 'INDETERMINATE' && re.reason === 'unsupported_alg');
+  const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
+  check('version gate: package.json == VERSION.spec', pkg.version === P.VERSION.spec);
+  check('version gate: vectors tagged with the same rc', V.version.includes(P.VERSION.spec.slice(P.VERSION.spec.indexOf('rc'))));
 }
 
 console.log('\n════════════════════════════════════════════');
-console.log('  ust-protocol rc.2 conformance vs ' + V.version);
+console.log('  ust-protocol ' + P.VERSION.spec + ' conformance vs ' + V.version);
 console.log('  PASS ' + pass + '   FAIL ' + fail + '   NOTES ' + note);
 if (fails.length) { console.log('\n  FAILURES:'); fails.forEach(f => console.log('    ✗ ' + f)); }
 else console.log('  ✓ all exercised checks pass (primitives + 6 findings + Gemini-B + HIGH + TOP)');

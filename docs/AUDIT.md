@@ -1,4 +1,4 @@
-# UST 1.0.0-rc.5 — External Audit Brief
+# UST 1.0.0-rc.6 — External Audit Brief
 
 _For an independent cryptographic-protocol reviewer._
 

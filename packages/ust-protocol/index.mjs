@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-// ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 24), LIGHT floor first.
+// ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
+// §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.6' };
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -66,11 +68,13 @@ export function blindPartition(name, value, { domain_shard, ust_id, nonce, kind 
   const commit = blindedCommit({ domain_shard, ust_id, name, value, nonce });
   return { partition: { kind, privacy: 'blinded', commit }, hash: partitionHash({ commit }) };
 }
-// §10 encrypted: AEAD-decrypt to recover the committed plaintext canon({nonce,<name>:value}). AES-256-GCM here
-// (node:crypto); XChaCha20-Poly1305 needs @noble/ciphers (browsers/Workers). enc.ct = b64url(iv12 || ct || tag16).
+// §10/§17 encrypted: AEAD-decrypt to recover the committed plaintext canon({nonce,<name>:value}).
+// Registry discipline (MTI): AES-256-GCM is MANDATORY-to-implement (node:crypto, zero-dep); XChaCha20-Poly1305 is
+// OPTIONAL — a conforming verifier that does not implement it returns INDETERMINATE(unsupported_alg), NEVER a
+// silent null/INVALID (the document may be honest; the verifier just cannot decide). 'unsupported' marks that.
 function aeadDecrypt(enc, keyRawB64url) {
+  if (enc.alg !== 'AES-256-GCM') return 'unsupported';                  // optional alg not implemented here (§17 MTI)
   try {
-    if (enc.alg !== 'AES-256-GCM') return null;                         // XChaCha20-Poly1305: use @noble/ciphers
     const raw = Buffer.from(enc.ct, 'base64url'), key = Buffer.from(keyRawB64url, 'base64url');
     const iv = raw.subarray(0, 12), tag = raw.subarray(raw.length - 16), body = raw.subarray(12, raw.length - 16);
     const d = createDecipheriv('aes-256-gcm', key, iv); d.setAuthTag(tag);
@@ -131,6 +135,17 @@ const CLASSES = ['observation','attestation','derivation','genesis','key'];
 const TS = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])T([01]\d|2[0-3]):[0-5]\d:[0-5]\dZ$/;
 // §8 ust_id = ust:YYYYMMDD.HH[MM[SS]] as a VALID UTC frame — month 01-12, day 01-31, hour 00-23, min/sec 00-59 (F8).
 const USTID = /^ust:\d{4}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\.([01]\d|2[0-3])(([0-5]\d)([0-5]\d)?)?$/;
+// §14.5 semantic-consistency: a date must exist on the REAL calendar (Feb 31 / Apr 31 pass the range regex but are
+// not dates). Round-trip through Date.UTC and require the components to survive — deterministic on every engine.
+function calendarValid(y, mo, d) {
+  const t = new Date(Date.UTC(+y, +mo - 1, +d));
+  return t.getUTCFullYear() === +y && t.getUTCMonth() === +mo - 1 && t.getUTCDate() === +d;
+}
+const tsCalendarOk = (ts) => calendarValid(ts.slice(0, 4), ts.slice(5, 7), ts.slice(8, 10));
+const ustIdCalendarOk = (u) => calendarValid(u.slice(4, 8), u.slice(8, 10), u.slice(10, 12));
+// §4/§12 typed identity namespace: `domain_shard` is a NAME (dns) or a self-certifying KEY-ID. A key-form shard
+// MUST equal `state.id.key_id` — the identity IS the signing key, and that equality is a checked obligation.
+const KEYID_FORM = /^sha256:[0-9a-f]{64}$/;
 
 // ─── §13 structural bounds — hard ceilings; exceed ⇒ E-BOUNDS ─────────────────────────────────────────
 const BOUNDS = { depth: 8, array: 4096, partitions: 64, breadth: 64, sizeBytes: 1048576 };
@@ -170,8 +185,10 @@ export function verify(doc, opts = {}) {
       if (RES_PARTITION_NAMES.has(name)) return bad('E-MALFORMED', 'reserved partition name: ' + name);
       const part = st.data[name];
       for (const k of Object.keys(part)) if (!RESERVED.envelope.includes(k)) return bad('E-MALFORMED', 'reserved-key: data.' + name + '.' + k);
-      if (part.privacy === undefined) { if (!KINDS.includes(part.kind)) return bad('E-MALFORMED', 'unknown partition kind: ' + name + '.' + part.kind); }
-      else if (!PRIVACY.includes(part.privacy)) return bad('E-MALFORMED', 'unknown privacy mode: ' + name + '.' + part.privacy);
+      // §4.4 CLOSED per-mode schema: `kind` (captured|computed) is REQUIRED for EVERY partition — a private value
+      // was still captured-or-computed; a partition with no kind is malformed, not "private enough to skip."
+      if (!KINDS.includes(part.kind)) return bad('E-MALFORMED', 'unknown partition kind: ' + name + '.' + part.kind);
+      if (part.privacy !== undefined && !PRIVACY.includes(part.privacy)) return bad('E-MALFORMED', 'unknown privacy mode: ' + name + '.' + part.privacy);
     }
     // step 2 — canonical, content_hash, bijection, per-partition hashes (§14.2, G19, §4.4)
     let S; try { S = signedContent(doc); } catch (e) { return bad('E-CANON', e.detail || 'canon'); }
@@ -188,10 +205,18 @@ export function verify(doc, opts = {}) {
       } catch (e) { return bad('E-CANON', 'partition canon: ' + name); }
       if (recomputed !== st.hashes[name]) return bad('E-CANON', 'partition hash mismatch: ' + name);
     }
-    // step 5 — well-formed shape (§14.5)
+    // step 5 — well-formed shape + SEMANTIC consistency (§14.5): shape regex AND real-calendar existence AND
+    // cross-field invariants — local shape alone let "Feb 31" through (audit E, M-02).
     if (!USTID.test(st.id.ust_id)) return bad('E-MALFORMED', 'ust_id shape');
+    if (!ustIdCalendarOk(st.id.ust_id)) return bad('E-MALFORMED', 'ust_id date not on the calendar');
     if (!TS.test(st.time.generated_at) || !TS.test(st.time.valid_from) || !TS.test(st.time.valid_to)) return bad('E-MALFORMED', 'timestamp not pinned RFC3339-Z');
+    for (const t of [st.time.generated_at, st.time.valid_from, st.time.valid_to])
+      if (!tsCalendarOk(t)) return bad('E-MALFORMED', 'timestamp date not on the calendar: ' + t);
     if (st.time.valid_from > st.time.valid_to) return bad('E-MALFORMED', 'valid_from > valid_to');
+    // §4/§12 typed identity: a key-form domain_shard is SELF-CERTIFYING and MUST equal the signing key_id —
+    // claiming ANOTHER key's shard is malformed (the identity IS the key; the equality is an obligation).
+    const shardMode = KEYID_FORM.test(st.id.domain_shard) ? 'key' : 'name';
+    if (shardMode === 'key' && st.id.domain_shard !== st.id.key_id) return bad('E-MALFORMED', 'key-form domain_shard != key_id (self-certifying identity must be the signing key)');
     if (!CLASSES.includes(st.id.class)) return bad('E-MALFORMED', 'unknown class ' + st.id.class);
     if (dk.length < 1) return bad('E-MALFORMED', 'no partition');
     const HASH = /^sha256:[0-9a-f]{64}$/;
@@ -249,6 +274,8 @@ export function verify(doc, opts = {}) {
       if (reproduced !== part.commit) return bad('E-COMMIT', 'blinded commit mismatch: ' + name);
       if (part.privacy === 'encrypted' && part.enc && opts.decKeys?.[part.enc.key_id]) {
         const pt = aeadDecrypt(part.enc, opts.decKeys[part.enc.key_id]);  // → canon({nonce,<p>:value}) plaintext
+        if (pt === 'unsupported')                                          // §17 MTI: optional alg ⇒ cannot decide, NOT invalid
+          return { result: 'INDETERMINATE', reason: 'unsupported_alg', detail: 'AEAD ' + part.enc.alg + ' is OPTIONAL and not implemented by this verifier: ' + name };
         if (pt === null || pt !== canon({ nonce: disc.nonce, partition: name, value: disc.value })) return bad('E-COMMIT', 'AEAD↔commit mismatch: ' + name);
       }
       disclosed.push(name);
@@ -261,32 +288,82 @@ export function verify(doc, opts = {}) {
       const key = opts.sourceKeys?.[sid];
       sources[sid] = (key && s.src_sig && edVerifyStrict(key, s.addr, s.src_sig)) ? 'authenticated' : 'unauthenticated';
     }
-    // §14.9 attestation: recompute the Merkle root from constituents (⇒ E-ROOT on mismatch).
-    if (st.id.class === 'attestation' && st.provenance?.constituents && st.provenance?.root !== undefined)
-      if (merkleRoot(st.provenance.constituents) !== st.provenance.root) return bad('E-ROOT', 'attestation root mismatch');
+    // §14.9/§14a OBLIGATIONS TABLE — every commitment-bearing provenance member carries a RECOMPUTE obligation.
+    // No member may be "present but unchecked" (audit E: the root was checked while the seed was not — the
+    // asymmetry class this table abolishes). Shapes first, then recomputes:
+    const HASHREF = /^sha256:[0-9a-f]{64}$/;
+    if (pr?.constituents !== undefined) {
+      if (!Array.isArray(pr.constituents) || pr.constituents.some((h) => !HASHREF.test(h))) return bad('E-MALFORMED', 'constituents must be sha256:hex content_hashes');
+      if (pr.root !== undefined && merkleRoot(pr.constituents) !== pr.root) return bad('E-ROOT', 'attestation root mismatch');
+    }
+    if (pr?.based_on !== undefined) {
+      if (!Array.isArray(pr.based_on) || pr.based_on.some((b) => !b || !HASHREF.test(b.hash || ''))) return bad('E-MALFORMED', 'based_on entries must carry sha256:hex `hash`');
+      if (seed(pr.based_on.map((b) => b.hash)) !== pr.seed) return bad('E-SEED', 'derivation seed != H(ust:seed, canon(based_on hashes))');
+    }
+    if (pr?.prev !== undefined && !HASHREF.test(pr.prev)) return bad('E-MALFORMED', 'prev must be a sha256:hex content_hash');
+    // §14.9 bounded referent walk (I14: depth-0 default). The RESULT always reports how deep verification went —
+    // a consumer can see `referents:'unverified'` instead of assuming the chain was walked (audit E, H-04).
+    let provenanceReport = { depth: 0, referents: (pr?.based_on?.length || pr?.constituents?.length) ? 'unverified' : 'none' };
+    if (opts.provenanceDepth > 0 && typeof opts.resolveRef === 'function') {
+      const walked = walkReferents(st, opts, Math.min(opts.provenanceDepth, BOUNDS.depth), new Set([ch]));
+      if (walked.error) return bad(walked.error, walked.detail);
+      provenanceReport = { depth: walked.depth, referents: walked.referents };
+    }
     // §Y3: `domain_shard` is surfaced as `publisher` ONLY at `authoritative` strength; otherwise it is a
     // self-asserted/pinned LABEL — `publisher_claimed` — so a consumer that never read Y3 cannot over-attribute.
     // (Pinning authenticates the KEY, not the name.)
     const nameField = identity.strength === 'authoritative' ? { publisher: st.id.domain_shard } : { publisher_claimed: st.id.domain_shard };
     // §S3/F3 — an EMBEDDED proof MUST verify. present-but-bad ⇒ E-ANCHOR (never a VALID doc next to an unchecked
-    // "present" proof). `time.status:"present"` is reported ONLY for a proof whose inclusion actually verified.
+    // "present" proof). The anchor's availability STATUS is carried through, never flattened (audit E, M-05).
     let timeField = { strength: 'unproven', status: 'none' };
     if (doc.proof !== undefined) {
       const a = verifyAnchor(ch, doc.proof, opts);
       if (!a.inclusion) return bad('E-ANCHOR', a.detail || 'embedded proof does not verify');
-      timeField = { strength: a.time, status: 'present', inclusion: true };
+      // §14.6 N9 — real time is the anchor: a document cannot be generated AFTER the anchor that contains it.
+      // Pinned RFC3339-Z strings compare lexicographically as instants.
+      if (a.time === 'anchored' && a.anchorTime && st.time.generated_at > a.anchorTime)
+        return bad('E-ANCHOR', 'generated_at after the anchor time (N9: the document postdates its own anchor)');
+      timeField = { strength: a.time, status: a.status, inclusion: true, ...(a.anchorTime ? { anchorTime: a.anchorTime } : {}) };
     }
     // The verdict CARRIES ITS SCOPE: `VALID:LIGHT|HIGH|TOP`, so a consumer cannot read "valid" without reading
     // valid-AT-WHAT (a bare `=== 'VALID'` no longer matches — the same forcing function as publisher_claimed).
     // tier = the highest fully-satisfied rung (monotonic, §3.1): TOP = authoritative + anchored; HIGH =
     // authoritative; else LIGHT (self-asserted or pinned). Per-axis strengths stay below for detail.
     const authoritative = identity.strength === 'authoritative' && identity.status === 'verified';
+    // §3.1/§15 — the DOCUMENT tier: TOP = authoritative identity + anchored time. Stream COMPLETENESS is a RANGE
+    // verdict (verifyStream → complete:'proven'), never a single-document claim (audit E, H-02/F-07).
     const tier = authoritative ? (timeField.strength === 'anchored' ? 'TOP' : 'HIGH') : 'LIGHT';
-    return { result: 'VALID:' + tier, tier, identity, disclosed, sources, ...nameField,
-      ust_id: st.id.ust_id, class: st.id.class, content_hash: ch, time: timeField };
+    return { result: 'VALID:' + tier, tier, identity: { ...identity, mode: shardMode }, disclosed, sources, ...nameField,
+      ust_id: st.id.ust_id, class: st.id.class, content_hash: ch, time: timeField, provenance: provenanceReport };
   } catch (e) {
     return bad(e.code || 'E-MALFORMED', e.detail || String(e));         // fail-closed (§14/I10)
   }
+}
+
+// ─── §14.9 bounded referent walk (I14): resolve each based_on/constituents hash via the caller's resolver,
+//     verify each referent (context:'data'), recurse to `depth`, visited-set ⇒ E-CYCLE, bounds ⇒ E-BOUNDS.
+//     A hash the resolver cannot supply leaves referents:'partial' (availability ≠ failure); a resolved referent
+//     that verifies INVALID is a REAL failure. Returns {depth, referents} or {error, detail}.
+function walkReferents(st, opts, depth, visited) {
+  const refs = [...(st.provenance?.constituents ?? []), ...(st.provenance?.based_on ?? []).map((b) => b.hash)];
+  if (!refs.length) return { depth: 0, referents: 'none' };
+  let sawUnresolved = false, reached = 1;
+  for (const h of refs) {
+    if (visited.has(h)) return { error: 'E-CYCLE', detail: 'referent cycle at ' + h };
+    if (visited.size > BOUNDS.array) return { error: 'E-BOUNDS', detail: 'referent walk exceeds bounds (§13)' };
+    const refDoc = opts.resolveRef(h);
+    if (!refDoc) { sawUnresolved = true; continue; }
+    const rv = verify(refDoc, { ...opts, provenanceDepth: 0 });          // verify the referent itself (one level)
+    if (!isValid(rv)) return { error: rv.error || 'E-SIG', detail: 'referent ' + h + ' invalid: ' + (rv.detail || rv.error) };
+    if (rv.content_hash !== h) return { error: 'E-MALFORMED', detail: 'resolver returned a different document for ' + h };
+    if (depth > 1) {
+      const sub = walkReferents(refDoc.state, opts, depth - 1, new Set([...visited, h]));
+      if (sub.error) return sub;
+      if (sub.referents === 'partial') sawUnresolved = true;
+      reached = Math.max(reached, 1 + sub.depth);
+    }
+  }
+  return { depth: reached, referents: sawUnresolved ? 'partial' : 'verified' };
 }
 
 // ─── §12 HIGH name-authority resolution. STATELESS: the caller (ustate/engine) supplies the genesis +

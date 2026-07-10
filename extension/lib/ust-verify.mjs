@@ -24,6 +24,16 @@ async function digest(tag, body) { return 'sha256:' + hex(await crypto.subtle.di
 export const H = (tag, str) => digest(tag, te(str));
 export const Hbytes = (tag, bytes) => digest(tag, bytes);
 export const keyId = (pub) => Hbytes('ust:keylog', b64url(pub));               // §12.2 over RAW pubkey bytes
+export async function merkleRoot(contentHashes) {                       // §9.2 byte-ascending, ust:leaf/ust:node
+  let lvl = await Promise.all(contentHashes.slice().sort().map((h) => Hbytes('ust:leaf', te(h))));
+  while (lvl.length > 1) {
+    const nx = [];
+    for (let i = 0; i < lvl.length; i += 2)
+      nx.push(i + 1 < lvl.length ? await Hbytes('ust:node', te(lvl[i] + lvl[i + 1])) : lvl[i]);
+    lvl = nx;
+  }
+  return lvl[0];
+}
 export async function partitionHash({ domain_shard, ust_id, name, value, commit }) {
   if (commit !== undefined) return H('ust:shard', commit);                     // §10 private
   return H('ust:shard', canon({ domain_shard, ust_id, partition: name, value }));  // uniform; name as VALUE (non-colliding), no domain-less
@@ -47,6 +57,11 @@ export const edVerifyStrict = async (pub, msg, sig) => canonicalS(sig) && (await
 
 const bad = (code, detail) => ({ result: 'INVALID', error: code, detail });
 const TS = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])T([01]\d|2[0-3]):[0-5]\d:[0-5]\dZ$/;  // valid ranges, reject leap :60
+// §14.5 semantic consistency — dates must exist on the REAL calendar (Feb 31 passes the range regex, is not a date).
+const calOk = (y, mo, d) => { const t = new Date(Date.UTC(+y, +mo - 1, +d)); return t.getUTCFullYear() === +y && t.getUTCMonth() === +mo - 1 && t.getUTCDate() === +d; };
+const tsCal = (ts) => calOk(ts.slice(0, 4), ts.slice(5, 7), ts.slice(8, 10));
+const idCal = (u) => calOk(u.slice(4, 8), u.slice(8, 10), u.slice(10, 12));
+const KEYID_FORM = /^sha256:[0-9a-f]{64}$/;   // §4/§12 typed identity: key-form shard MUST equal key_id
 const USTID = /^ust:\d{4}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\.([01]\d|2[0-3])(([0-5]\d)([0-5]\d)?)?$/;  // F8 valid UTC frame
 const CLASSES = ['observation', 'attestation', 'derivation', 'genesis', 'key'];
 const TRANSCRIPT = ['ust', 'state', 'sig', 'proof'], SIGK = ['alg', 'key_id', 'pub', 'sig'];
@@ -62,8 +77,11 @@ export async function verify(doc, opts = {}) {
     const st = doc.state; if (!st || !st.id || !st.time || !st.data || !st.hashes) return bad('E-MALFORMED', 'missing state members');
     const id = st.id;
     if (!USTID.test(id.ust_id || '')) return bad('E-MALFORMED', 'bad ust_id');
+    if (!idCal(id.ust_id)) return bad('E-MALFORMED', 'ust_id date not on the calendar');
     if (!CLASSES.includes(id.class)) return bad('E-MALFORMED', 'bad class');
     if (!TS.test(st.time.generated_at || '') || !TS.test(st.time.valid_from || '') || !TS.test(st.time.valid_to || '')) return bad('E-MALFORMED', 'bad timestamp (not ISO-Z)');
+    for (const t of [st.time.generated_at, st.time.valid_from, st.time.valid_to]) if (!tsCal(t)) return bad('E-MALFORMED', 'timestamp date not on the calendar');
+    if (KEYID_FORM.test(id.domain_shard) && id.domain_shard !== id.key_id) return bad('E-MALFORMED', 'key-form domain_shard != key_id (self-certifying)');
     if (opts.context === 'data' && (id.class === 'key' || id.class === 'genesis')) return bad('E-MALFORMED', 'class ' + id.class + ' not valid in data context (W3)');
     // step 2 — content_hash + bijection + per-partition
     const ch = await contentHash(doc);
@@ -74,7 +92,8 @@ export async function verify(doc, opts = {}) {
     for (const name of dk) {
       if (RES_NAMES.has(name)) return bad('E-MALFORMED', 'reserved partition name: ' + name);
       const part = st.data[name];
-      if (part.privacy === undefined) { if (!KINDS.includes(part.kind)) return bad('E-MALFORMED', 'unknown kind: ' + name); if (part.value === undefined) return bad('E-MALFORMED', 'public partition without value: ' + name); }
+      if (!KINDS.includes(part.kind)) return bad('E-MALFORMED', 'unknown kind: ' + name);
+      if (part.privacy === undefined) { if (part.value === undefined) return bad('E-MALFORMED', 'public partition without value: ' + name); }
       else {
         if (!PRIVACY.includes(part.privacy)) return bad('E-MALFORMED', 'unknown privacy: ' + name);
         if (!HASH.test(part.commit || '')) return bad('E-MALFORMED', 'private commit not sha256:hex: ' + name);       // F5
@@ -87,6 +106,16 @@ export async function verify(doc, opts = {}) {
     const pr = st.provenance;
     if (id.class === 'observation' && (pr?.constituents !== undefined || pr?.root !== undefined)) return bad('E-MALFORMED', 'observation MUST NOT carry constituents/root');
     if (id.class === 'derivation' && (pr?.based_on === undefined || pr?.seed === undefined)) return bad('E-MALFORMED', 'derivation MUST carry based_on + seed');
+    // §14a obligations: every commitment-bearing provenance member is RECOMPUTED (no present-but-unchecked).
+    const HASHREF = /^sha256:[0-9a-f]{64}$/;
+    if (pr?.based_on !== undefined) {
+      if (!Array.isArray(pr.based_on) || pr.based_on.some((b) => !b || !HASHREF.test(b.hash || ''))) return bad('E-MALFORMED', 'based_on entries must carry sha256:hex hash');
+      if ((await H('ust:seed', canon(pr.based_on.map((b) => b.hash)))) !== pr.seed) return bad('E-SEED', 'derivation seed mismatch');
+    }
+    if (pr?.constituents !== undefined) {
+      if (!Array.isArray(pr.constituents) || pr.constituents.some((h) => !HASHREF.test(h))) return bad('E-MALFORMED', 'constituents must be sha256:hex');
+      if (pr.root !== undefined && (await merkleRoot(pr.constituents)) !== pr.root) return bad('E-ROOT', 'attestation root mismatch');
+    }
     if (id.class === 'attestation') { const isGap = pr?.prev !== undefined && (pr?.constituents === undefined || pr.constituents.length === 0); if (!isGap && (pr?.constituents === undefined || pr?.root === undefined)) return bad('E-MALFORMED', 'attestation MUST carry constituents + root'); }
     // step 4 — authenticity: closed sig schema + alg + key_id consistency + strict Ed25519 over canon({ust,state})
     const S = canon({ ust: doc.ust, state: st });
@@ -101,7 +130,8 @@ export async function verify(doc, opts = {}) {
     let strength = 'self-asserted';
     if (opts.pinnedKeys) { if (!opts.pinnedKeys.includes(id.key_id)) return bad('E-KEY', 'key_id not in the pinned set (§3.1 TOFU)'); strength = 'pinned'; }
     // §Y3: not authoritative → `domain_shard` is a claimed LABEL, surfaced as `publisher_claimed`.
-    return { result: 'VALID:LIGHT', tier: 'LIGHT', identity: { strength, status: 'verified' }, publisher_claimed: id.domain_shard, ust_id: id.ust_id, class: id.class, content_hash: ch };
+    return { result: 'VALID:LIGHT', tier: 'LIGHT', identity: { strength, status: 'verified', mode: KEYID_FORM.test(id.domain_shard) ? 'key' : 'name' }, publisher_claimed: id.domain_shard, ust_id: id.ust_id, class: id.class, content_hash: ch,
+      provenance: { depth: 0, referents: (pr?.based_on?.length || pr?.constituents?.length) ? 'unverified' : 'none' } };
   } catch (e) { return bad(e.code || 'E-MALFORMED', e.detail || String(e)); }
 }
 
