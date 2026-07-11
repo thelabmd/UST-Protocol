@@ -56,7 +56,7 @@ name-authority-at-scale are operator GUARANTEES surfaced as verification STRENGT
 ### 1.2 Layering
 The protocol fixes the **mechanism** (§4–§14). Operator choices (partition schema, substrate, cadence, bounds
 within ceilings) live in an **operator profile** (§20). The LIGHT floor's security (I1/I3/I4/I5/I6/I9/I10) is
-never operator-optional; name-authority/time/completeness are HIGH/TOP tiers (§3.1).
+never operator-optional; name-authority (HIGH) and anchored time (TOP) are document tiers; completeness is a SEPARATE range verdict over a stream, not a document tier (§3.1/§11.3).
 
 ---
 
@@ -506,8 +506,8 @@ existed and was signed/anchored at that time — NEVER that it was the ONLY comm
 protocol allows multiple transcripts per `(domain_shard, ust_id)` (§8), a publisher can commit to N outcomes
 and reveal only the winner (multi-commit grinding), fabricating a track record — the direct attack on a
 prediction notary. A "pre-registered prediction" claim is verifiable ONLY inside a sequenced stream (§11.3)
-that enforces ONE authoritative document per frame slot (a second ⇒ E-PREV fork). Below the completeness (TOP)
-tier, a revealed commitment carries existence+time, NOT uniqueness or pre-registration.
+that enforces ONE authoritative document per frame slot (a second ⇒ E-PREV fork). WITHOUT a verified-complete
+stream (the range verdict, §11.3), a revealed commitment carries existence+time, NOT uniqueness or pre-registration.
 
 ---
 
@@ -615,8 +615,8 @@ exists) ⇒ E-PREV. This forecloses "orphan a new stream to hide prior frames."
 
 **Frame-slot uniqueness (Y1).** Within a sequenced stream the `prev`-chain is LINEAR: exactly ONE authoritative
 document per `(domain_shard, ust_id, tier)`; a second document for an occupied slot is a fork ⇒ E-PREV
-(checkpoint-detected). This is precisely what makes a committed prediction NON-grindable (§10) — and it exists
-ONLY at the completeness tier; one-off LIGHT/HIGH documents carry no slot-uniqueness.
+(checkpoint-detected). This is precisely what makes a committed prediction NON-grindable (§10) — and it holds
+ONLY when the stream is verified complete (the range verdict, §11.3); one-off documents carry no slot-uniqueness.
 
 **Checkpoints (M5).** Checkpoints are themselves `prev`-chained frames (`class:"attestation"`) that assert the
 stream head + frame count over an interval. The operator profile declares a REQUIRED checkpoint cadence; a
@@ -864,7 +864,8 @@ Producers/MCPs SHOULD map the three kinds distinctly (INVALID ≈ 4xx determinis
 
 Conformance is TIERED (§3). The FLOOR (LIGHT) MANDATES only: a well-formed, string-only, bounded,
 domain-separated, SIGNED, addressable State (§4–§10, §13) with the pubkey carried in `sig.pub`. HIGH adds
-name authority (genesis/key-log); TOP adds time (anchoring) + completeness. Every verifier REPORTS the tier
+name authority (genesis/key-log); TOP adds anchored time. Stream **completeness** is a SEPARATE RANGE
+verdict (`verifyStream` → `complete:proven`), NEVER part of a single document's tier (§11.3/§15). Every verifier REPORTS the tier
 reached; a document does NOT change format across tiers OR roles — even genesis and key-log entries are UST transcripts (`class:"genesis"`/`"key"`, §12): ONE wire shape, universally, so a single §14 verifier checks the data AND the trust layer.
 
 - **Conforming producer — LIGHT (the floor):** sign your canonical addressable JSON — emit a document per
