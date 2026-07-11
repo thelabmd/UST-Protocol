@@ -13,11 +13,11 @@ ust genesis --domain <d>     run the HIGH genesis ceremony
 ```
 ust genesis --domain noosphere.md --profile silver --dns cf-api
 ```
-- `--profile bronze|silver|gold` — capacity/rigor ladder (gold forces a passphrase-encrypted root-key backup)
-- `--dns manual` prints the `_ust` TXT to paste; `--dns cf-api` writes it via the Cloudflare API (needs a **zone-scoped** `CF_TOKEN`, never account-wide) — Vercel-style one click
+- `--profile bronze|silver|gold` — capacity/rigor ladder (gold forces a passphrase-encrypted backup + warns `ASSURANCE LIMIT: software-generated extractable root` unless `--signer` supplies a hardware root)
+- `--dns manual` prints the `_ust` TXT to paste; `--dns cf-api` upserts it via the Cloudflare API (zone-scoped `CF_TOKEN`, never account-wide) and **confirms it with a DNS-over-HTTPS readback** before proceeding — Vercel-style, idempotent
 - `--max-partitions N` — the signed capacity in the genesis (bounds earned by ceremony)
 - `--witness url,url` — witnesses to fetch + byte-match
 
-The ceremony: generate the root key → build the self-signed genesis + a key-log adding an operational key → back up the root (split + cold) → publish `.well-known/ust-genesis` (the CLI fetches it and byte-matches, **fail-closed**) → witnesses + anchor. Outputs `ust-genesis`, `ust-keylog-0`, and the encrypted key backup — all UST, re-verifiable with `ust verify`.
+The ceremony: generate the root key → build the self-signed genesis + a key-log adding an operational key → back up the root (split + cold) → publish `.well-known/ust-genesis` (the CLI fetches it, **verifies it, and matches its content_hash** — fail-closed) → then PREPARES the witness + anchor stage (the operator executes those). Outputs: **two verifiable UST** (`ust-genesis`, `ust-keylog-0` — `ust verify` them) + an **encrypted PKCS#8 root-key backup** (`genesis-key.enc.b64` — NOT a UST) for operator-managed split cold storage. The CLI self-verifies its outputs before finishing.
 
 The MCP holds no key; this CLI signs locally with a key that stays on your machine.
