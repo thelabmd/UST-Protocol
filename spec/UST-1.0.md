@@ -314,7 +314,8 @@ bytes identical across every implementation and removes the number/string equivo
 following REQUIRED tightenings. A value violating any rule is malformed (E-CANON).
 
 1. **Objects:** member names MUST be unique (duplicate ⇒ E-CANON). Names sorted ascending by UTF-16 code
-   unit. Members joined `"name":value` with `,`; no whitespace anywhere. Members with absent values do not
+   unit — FULL-LENGTH comparison (a name compares to its last unit at any admitted length; truncated
+   comparison is non-conforming). Members joined `"name":value` with `,`; no whitespace anywhere. Members with absent values do not
    occur (§5).
 2. **Strings** (names and leaves): MUST be Unicode NFC (non-NFC ⇒ E-CANON). Escaped per RFC 8259 §7 minimal
    escaping (control chars, `"`, `\`; no gratuitous escapes).
@@ -343,7 +344,10 @@ everything asserted — protocol version, identity, time, data, hashes, provenan
 only the signature itself and the detachable time-`proof` are outside). The **content_hash** `= H_state(S)` is
 the UNIQUE descriptor of this signed document: anchors (§11), chain references (`prev`/`constituents`/
 `based_on`/`seed`, §9) and revocation (§12) all key on it, so two documents differing in ANY signed field
-(signer, time, a data value) get DIFFERENT `content_hash`es — no anchor/chain aliasing. (There is no
+(signer, time, a data value) get DIFFERENT `content_hash`es — no anchor/chain aliasing. Domain-separation
+tags are NUL-free ASCII, so the `0x00` separator makes tag boundaries unambiguous — registry growth cannot
+create cross-tag collisions. Ed25519 verification is STRICT per RFC 8032 §5.1.7: a non-canonical `R`/`S`/`A`
+encoding ⇒ E-SIG. (There is no
 "cross-engine corroboration via an identical hash": the domain-less `computed` mode was REMOVED in rc.2 as
 forgeable + fragile, §4.4. Every partition hash binds `domain_shard`; real corroboration compares two
 publisher-bound values a layer up.)
@@ -452,6 +456,8 @@ not re-sorted (M8). Proves participation/order without inlining referents (usefu
 (E-MALFORMED, §14 step 5): citing a referent twice has no composite meaning, and a duplicated constituent
 double-counts a leaf in the Merkle root. Verifiers recompute the seed over the signed array VERBATIM either
 way, so conforming verifiers cannot diverge on order or multiplicity — the rule pins admissibility, not math.
+If a State carries BOTH `constituents`+`root` AND `based_on`+`seed`, each pair is verified INDEPENDENTLY —
+`root` binds the constituents (E-ROOT), `seed` binds the based_on list (E-SEED); one never waives the other.
 
 ### 9.5 Chain walking (bounded, acyclic — I5)
 Chain resolution is governed by the verification-depth model (§13): DEFAULT depth-0 leaves referents
@@ -505,7 +511,8 @@ opaquely (a pseudonym, not `position`). The protocol does not claim to hide the 
 its job to confirm, not conceal.
 
 **Metadata minimization (profile-declared, MAY):** a confidential publisher MAY additionally collapse
-`provenance.sources` to a single opaque `root` and pad ciphertext to a size bucket, to limit topology/size
+`provenance.sources` to a single opaque `root` and SHOULD pad ciphertext to a size bucket (powers-of-two; the profile declares its padding policy, §20 —
+an unpadded ciphertext reveals plaintext length), to limit topology/size
 leakage. Key management is out of scope; the protocol fixes only the commitment/blinding rules.
 
 **Commitment ≠ pre-registration (Y1 — the grinding guard).** A REVEALED commitment proves only that THIS value
@@ -573,7 +580,7 @@ example; another operator MAY register a different public append-only log). Time
 - **Signed timing is an ASSERTION, upper-bounded only (N9).** The anchor guarantees "not later than" its log
   commitment; NOTHING bounds "not earlier than". `generated_at`/`valid_*` are signed but publisher-asserted;
   a verifier MUST derive freshness/ordering from the ANCHOR, treat `generated_at` as advisory-though-signed,
-  and MUST reject `generated_at` later than the anchor time (no future-sealing the anchor contradicts).
+  and MUST reject `generated_at` later than the anchor time with E-ANCHOR (no future-sealing the anchor contradicts).
 - Only hashes are anchored, never raw or ciphertext data.
 
 ### 11.2 Self-contained time — the anchor proof (I12, N4)
@@ -629,14 +636,18 @@ document per `(domain_shard, ust_id, tier)`; a second document for an occupied s
 ONLY when the stream is verified complete (the range verdict, §11.3); one-off documents carry no slot-uniqueness.
 
 **Checkpoints (M5).** Checkpoints are themselves `prev`-chained frames (`class:"attestation"`) that assert the
-stream head + frame count over an interval. The operator profile declares a REQUIRED checkpoint cadence; a
+stream head + frame count over an interval. The asserted `frame_count` is CUMULATIVE from the stream origin, so
+a later covering checkpoint proves every earlier interval transitively — a missing intermediate checkpoint
+delays proof but cannot hide frames (an absent frame breaks `prev`). The operator profile declares a REQUIRED checkpoint cadence; a
 consumer requiring completeness MUST have a covering checkpoint whose asserted head hash-links to the frames it
 sees — a missing or contradicting checkpoint ⇒ E-PREV (fail closed).
 
 **Completeness scope (P5).** Completeness is PROVEN only for CLOSED intervals (those with a covering
 checkpoint). The open tail after the last checkpoint is provable only up to `head`; the profile declares a
 MAXIMUM checkpoint LAG, so the unprovable tail is bounded in time and a consumer treats post-last-checkpoint
-frames as PROVISIONAL. Withholding a checkpoint past the max lag is itself a detectable violation.
+frames as PROVISIONAL. Withholding a checkpoint past the max lag is itself a detectable violation. The range VERDICT consumes ONLY
+signed inputs (the frames + the covering checkpoint); declared cadence/max-lag are accountability expectations
+for consumers — a profile change can never change any verdict (I4).
 
 **Cross-tier & resumption (P6).** Each declared tier `(domain_shard, tier)` has its own `prev` stream; the
 SET of tiers a publisher runs is declared in the profile, so a silently-absent tier is detectable against the
@@ -687,7 +698,7 @@ necessary but NOT sufficient for name authority; domain control is the arbiter.
   `state.id.class = "key"`, carrying the operation in its data and the chain link in its provenance:
   ```
   state.data.key_op.value = { "op":"add"|"rotate"|"revoke", "pub":b64url,
-                              ["reason":"retired"|"compromised", "compromised_since":RFC3339-Z] }
+                              ["reason":"retired"|"compromised", "compromised_since":RFC3339-Z — STRICT `YYYY-MM-DDTHH:MM:SSZ`; an offset or fractional form ⇒ E-MALFORMED (lexicographic comparison is then chronologically correct)] }
   state.provenance.prev   = <content_hash of the previous entry>   // first entry's prev = genesis content_hash (§12.1)
   ```
   The added key's identifier `key_id` = `H("ust:keylog", pub_raw)` where `pub_raw` = the RAW public-key octets
@@ -739,7 +750,9 @@ Cycle detection in chain walks is REQUIRED (§9.5). **Aggregate verification bud
 of one State can fan out (key-log + genesis + anchor + each referent's own key-log/anchor/...). The verification-depth model: **DEFAULT depth-0** — the local State is fully verified; referents are present
 but UNVERIFIED (the chain is not walked). **Depth-k** (caller opt-in) — referents verified up to k hops (hard
 max 32, §9.5), under a caller-supplied budget of max fully-verified nodes and max external fetches; exceeding
-either ⇒ fail-closed (E-BOUNDS). This forecloses fan-out DoS. **External-resolution bounds (N8):** key-log walk ≤ 256
+either ⇒ fail-closed (E-BOUNDS): the reference default is 256 VERIFIED nodes (`refBudget`), and exhaustion
+fails the WHOLE walk — never a partial success — so traversal order cannot affect any verdict (I4). This
+forecloses fan-out DoS. **External-resolution bounds (N8):** key-log walk ≤ 256
 events per resolution (use checkpointed heads + caching); anchor lookups are eliminated by the carried
 inclusion proof (§11.2). A verifier MUST fail closed with E-BOUNDS on exceeding a resolution bound (the same
 code as every §13 ceiling) — the resolution graph cannot be used to DoS verification. The key-log ceiling is
@@ -870,7 +883,9 @@ A verifier returns one of THREE OUTCOME KINDS — **availability is distinct fro
   implemented by this verifier (`unsupported_alg`): NOT a negative. The document keeps its LIGHT verdict;
   the affected strength is reported `unavailable` (retry). Fail-closed means "never CLAIM a strength you did not
   verify" — it does NOT mean "call it INVALID." A verifier/MCP MUST NOT report an unreachable authority as a
-  failed document.
+  failed document. The reason set is CLOSED — {`unavailable`, `unsupported_alg`}: a fetch timeout IS
+  `unavailable`; a verification-budget overrun is INVALID `E-BOUNDS` (§13); a fetched-but-WRONG dependency is
+  its own definite error. A verifier MUST NOT mint new INDETERMINATE reasons.
 Producers/MCPs SHOULD map the three kinds distinctly (INVALID ≈ 4xx deterministic; INDETERMINATE ≈ 503 retry).
 
 ---
@@ -1001,6 +1016,12 @@ verification STRENGTHS (§16). A small operator onboards at the floor and adds g
 security floor is always mandatory, the strengths are the gradual on-ramp. (The "heavy machinery" concern of
 H11 was really me counting operator guarantees as protocol conformance — same class as the Bitcoin/substrate
 layering fix, REV6.)
+
+- **Y5 — equal commitments leak equality (bounded).** Two blinded/encrypted partitions committing the SAME
+  (value, nonce) pair produce identical commitments/ciphertexts across documents; a verifier cannot detect
+  producer nonce reuse (Z2, §10). The leak is bounded to EQUALITY, never content. Producers MUST use fresh
+  nonces (I6); operators SHOULD keep a nonce log (§20). Within one document this cannot occur at all — the
+  commitment binds the partition NAME, so two partitions never share a commit.
 
 ---
 

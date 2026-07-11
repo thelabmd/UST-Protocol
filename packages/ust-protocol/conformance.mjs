@@ -134,6 +134,13 @@ check('F8 impossible ust_id→E-MALFORMED', P.verify(mk({ r: { kind: 'captured',
   // rc.6 M-05 — the anchor availability STATUS is carried through (substrate unreachable ⇒ status unavailable, doc stays LIGHT-time-unproven).
   const un = P.verify({ ...docK, proof: topProof }, { genesis: gen, keylog: [add], noForkConfirmed: true, context: 'data', substrateVerify: () => null });
   check('anchor substrate unreachable → time.status unavailable (not flattened)', P.isValid(un) && un.time.status === 'unavailable' && un.time.strength === 'unproven');
+  // rc.9 (11th audit 7.1/B): revocation boundary U==C is INVALID; a non-strict-Z compromised_since is E-MALFORMED.
+  const C = '2026-06-28T15:00:00Z';
+  const rev = signG(P.buildKeyLogEntry({ domain_shard: 'noosphere.md', ust_id: 'ust:20260628.1902', key_id: G.key_id }, T, { op: 'revoke', pub: K.pubB64, reason: 'compromised', compromised_since: C }, P.contentHash(add)));
+  check('revocation boundary U == C → E-KEY (X1: VALID only if U < C)', P.resolveAuthority(docK, { genesis: gen, keylog: [add, rev], anchorTime: C }).error === 'E-KEY');
+  check('revocation U < C → pre-compromise accepted', P.resolveAuthority(docK, { genesis: gen, keylog: [add, rev], anchorTime: '2026-06-28T14:59:59Z' }).strength === 'authoritative');
+  const revBad = signG(P.buildKeyLogEntry({ domain_shard: 'noosphere.md', ust_id: 'ust:20260628.1903', key_id: G.key_id }, T, { op: 'revoke', pub: K.pubB64, reason: 'compromised', compromised_since: '2026-06-28T15:00:00.5Z' }, P.contentHash(add)));
+  check('fractional compromised_since → E-MALFORMED (strict-Z, §12.2)', P.resolveAuthority(docK, { genesis: gen, keylog: [add, revBad], anchorTime: C }).error === 'E-MALFORMED');
 }
 
 // ─── rc.6 — the OBLIGATIONS TABLE (§14a): every commitment-bearing member recomputed; semantic consistency;
@@ -159,6 +166,22 @@ check('F8 impossible ust_id→E-MALFORMED', P.verify(mk({ r: { kind: 'captured',
   check('duplicate hash in constituents → E-MALFORMED (§9.4)', P.verify(P.seal(P.buildAttestation(ID, T, {}, [hA, hA]), A.priv, A.pubB64), { context: 'data' }).error === 'E-MALFORMED');
   const gen257 = P.seal(P.buildGenesis({ domain_shard: ID.domain_shard, ust_id: ID.ust_id, key_id: A.key_id }, T, A.pubB64), A.priv, A.pubB64);
   check('key-log > 256 → E-BOUNDS at resolution, log never truncates (§13 N8)', P.resolveAuthority(mk(), { genesis: gen257, keylog: Array.from({ length: 257 }, () => mk()) }).error === 'E-BOUNDS');
+  // rc.9 edge pass (11th audit): full reserved-name registry · coexistence · verified-node budget · long/emoji names
+  check('partition named "kind" → E-MALFORMED (§17 full registry)', P.verify(mk({ kind: { kind: 'captured', value: { x: '1' } } }), { context: 'data' }).error === 'E-MALFORMED');
+  check('partition named "prev" → E-MALFORMED (§17 full registry)', P.verify(mk({ prev: { kind: 'captured', value: { x: '1' } } }), { context: 'data' }).error === 'E-MALFORMED');
+  check('2000-unit partition name → VALID (full-length sort, §6)', P.isValid(P.verify(mk({ ['n'.repeat(2000)]: { kind: 'captured', value: { x: '1' } } }), { context: 'data' })));
+  check('emoji partition name → VALID (NFC-stable)', P.isValid(P.verify(mk({ '🌞': { kind: 'captured', value: { x: '1' } } }), { context: 'data' })));
+  const coexist = P.buildState({ ...ID, class: 'derivation' }, T, { d: { kind: 'computed', value: { x: '1' } } },
+    { based_on: [{ hash: hA }], seed: P.seed([hA]), constituents: [hA], root: P.merkleRoot([hA]) });
+  check('based_on+seed AND constituents+root coexist, both verified → VALID (§9.4)', P.isValid(P.verify(P.seal(coexist, A.priv, A.pubB64), { context: 'data' })));
+  const coexistBad = P.buildState({ ...ID, class: 'derivation' }, T, { d: { kind: 'computed', value: { x: '1' } } },
+    { based_on: [{ hash: hA }], seed: P.seed([hA]), constituents: [hA], root: 'sha256:' + 'ee'.repeat(32) });
+  check('coexistence: wrong root still E-ROOT (one never waives the other)', P.verify(P.seal(coexistBad, A.priv, A.pubB64), { context: 'data' }).error === 'E-ROOT');
+  const five = Array.from({ length: 5 }, (_, i) => mk({ ['v' + i]: { kind: 'captured', value: { x: String(i) } } })); const fiveMap = new Map(five.map((d) => [P.contentHash(d), d]));
+  const wideDeriv = P.seal(P.buildDerivation(ID, T, { d: { kind: 'computed', value: { x: '1' } } }, [...fiveMap.keys()].map((h) => ({ hash: h }))), A.priv, A.pubB64);
+  check('verified-node budget exceeded → E-BOUNDS whole walk (§13 P4)', P.verify(wideDeriv, { context: 'data', provenanceDepth: 1, resolveRef: (h) => fiveMap.get(h), refBudget: 2 }).error === 'E-BOUNDS');
+  const wideOk = P.verify(wideDeriv, { context: 'data', provenanceDepth: 1, resolveRef: (h) => fiveMap.get(h) });
+  check('default budget (256) suffices → referents verified', P.isValid(wideOk) && wideOk.provenance.referents === 'verified');
   check('ust_id Feb-31 → INVALID (real calendar)', P.verify(mk(undefined, { ...ID, ust_id: 'ust:20260231.09' }), { context: 'data' }).error === 'E-MALFORMED');
   check('generated_at Feb-30 → INVALID (real calendar)', P.verify(mk(undefined, ID, { ...T, generated_at: '2026-02-30T10:00:00Z' }), { context: 'data' }).error === 'E-MALFORMED');
   const noKind = P.seal(P.buildState(ID, T, { p: { privacy: 'blinded', commit: 'sha256:' + 'cd'.repeat(32) } }), A.priv, A.pubB64);

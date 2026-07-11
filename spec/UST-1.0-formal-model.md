@@ -181,6 +181,17 @@ in this language, a controlled enlargement of a particular consumer's `ℐ` — 
 change; what changes is who holds which generators. A fuller treatment of multi-party layer graphs (who can
 prove membership of which layer to whom) is future work and NOT claimed by this appendix.
 
+## F.7b Ω, concretely (instantiation note)
+
+Ω is the space of complete world-histories: each ω is one full assignment of timestamped events — physical
+readings, computations, publications. The model needs only a MEASURABLE space (σ-algebras of information),
+never a probability measure (F.7): the realized history is a single ω, and the filtration `F_t` is generated
+by the anchor journal — a PARTIAL observation of ω up to `t`. UST records fix the publisher's MEASUREMENT `M`
+of coordinates of ω, never the true `Y` (F.2). Implementations never instantiate Ω in code; it exists so that
+"verification is a measurability test" is precise. Two conforming verifiers agree not because they share an
+interpretation of Ω but because they evaluate the same TOTAL function of the same record (I4) — Ω-independence
+is the point, not a gap.
+
 ## F.8 What this model does NOT claim
 
 - It does not claim `M = Y` (truth); only that `M` is fixed and attributable (§F.2).

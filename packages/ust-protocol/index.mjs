@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.8' };
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.9' };
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -121,8 +121,11 @@ export const buildCheckpoint = (id, time, head, frameCount, prev) =>            
 // ─── reserved-key sets (§3/§4.2/§17) ─────────────────────────────────────────────────────────────────
 const RESERVED = { transcript: ['ust','state','sig','proof'], state: ['id','time','data','hashes','provenance'],
   id: ['domain_shard','ust_id','key_id','class','parent_ust'], envelope: ['kind','value','privacy','commit','enc'],
-  sig: ['alg','key_id','pub','sig'] };
-const RES_PARTITION_NAMES = new Set([...RESERVED.state, ...RESERVED.id, 'partition', 'nonce', '__proto__', 'constructor', 'prototype']);
+  provenance: ['sources','constituents','based_on','root','seed','prev'], sig: ['alg','key_id','pub','sig'] };
+// §17: "Reserved names MUST NOT be used as partition or source names" — the FULL registry, every level
+// (the 11th audit found the old set enforced only state+id keys — a spec-impl mismatch).
+const RES_PARTITION_NAMES = new Set([...RESERVED.transcript, ...RESERVED.state, ...RESERVED.id,
+  ...RESERVED.envelope, ...RESERVED.provenance, ...RESERVED.sig, 'partition', 'nonce', '__proto__', 'constructor', 'prototype']);
 const KINDS = ['captured', 'computed'], PRIVACY = ['blinded', 'encrypted'];   // §S4/D1: secret-url is a disclosure CHANNEL (§out-of-scope), not a privacy mode
 const AEAD_ALGS = ['AES-256-GCM', 'XChaCha20-Poly1305'], B64URL = /^[A-Za-z0-9_-]+$/;
 // the verdict is tier-scoped (`VALID:LIGHT|HIGH|TOP`); this is the ONE place code should test "did it verify" —
@@ -307,7 +310,10 @@ export function verify(doc, opts = {}) {
     // a consumer can see `referents:'unverified'` instead of assuming the chain was walked (audit E, H-04).
     let provenanceReport = { depth: 0, referents: (pr?.based_on?.length || pr?.constituents?.length) ? 'unverified' : 'none' };
     if (opts.provenanceDepth > 0 && typeof opts.resolveRef === 'function') {
-      const walked = walkReferents(st, opts, Math.min(opts.provenanceDepth, BOUNDS.depth), new Set([ch]));
+      // §13 P4: a GLOBAL verified-node budget (default 256, opts.refBudget) — exhaustion fails the WHOLE
+      // walk (E-BOUNDS), never a partial success, so traversal order cannot affect any verdict (I4).
+      const refBudget = { left: Number(opts.refBudget) > 0 ? Math.floor(Number(opts.refBudget)) : 256 };
+      const walked = walkReferents(st, opts, Math.min(opts.provenanceDepth, BOUNDS.depth), new Set([ch]), refBudget);
       if (walked.error) return bad(walked.error, walked.detail);
       provenanceReport = { depth: walked.depth, referents: walked.referents };
     }
@@ -350,7 +356,7 @@ export function verify(doc, opts = {}) {
 //     verify each referent (context:'data'), recurse to `depth`, visited-set ⇒ E-CYCLE, bounds ⇒ E-BOUNDS.
 //     A hash the resolver cannot supply leaves referents:'partial' (availability ≠ failure); a resolved referent
 //     that verifies INVALID is a REAL failure. Returns {depth, referents} or {error, detail}.
-function walkReferents(st, opts, depth, visited) {
+function walkReferents(st, opts, depth, visited, budget) {
   const refs = [...(st.provenance?.constituents ?? []), ...(st.provenance?.based_on ?? []).map((b) => b.hash)];
   if (!refs.length) return { depth: 0, referents: 'none' };
   let sawUnresolved = false, reached = 1;
@@ -359,11 +365,12 @@ function walkReferents(st, opts, depth, visited) {
     if (visited.size > BOUNDS.array) return { error: 'E-BOUNDS', detail: 'referent walk exceeds bounds (§13)' };
     const refDoc = opts.resolveRef(h);
     if (!refDoc) { sawUnresolved = true; continue; }
+    if (--budget.left < 0) return { error: 'E-BOUNDS', detail: 'referent walk exceeds the verified-node budget (§13 P4 — default 256, opts.refBudget)' };
     const rv = verify(refDoc, { ...opts, provenanceDepth: 0 });          // verify the referent itself (one level)
     if (!isValid(rv)) return { error: rv.error || 'E-SIG', detail: 'referent ' + h + ' invalid: ' + (rv.detail || rv.error) };
     if (rv.content_hash !== h) return { error: 'E-MALFORMED', detail: 'resolver returned a different document for ' + h };
     if (depth > 1) {
-      const sub = walkReferents(refDoc.state, opts, depth - 1, new Set([...visited, h]));
+      const sub = walkReferents(refDoc.state, opts, depth - 1, new Set([...visited, h]), budget);
       if (sub.error) return sub;
       if (sub.referents === 'partial') sawUnresolved = true;
       reached = Math.max(reached, 1 + sub.depth);
@@ -397,7 +404,11 @@ export function resolveAuthority(doc, { genesis, keylog = [], noForkConfirmed = 
       const derived = keyId(op.pub);                                             // F1: derive, do NOT trust op.new_key_id
       if (op.new_key_id !== undefined && op.new_key_id !== derived) return { error: 'E-KEY', detail: 'entry ' + i + ' new_key_id != H(ust:keylog, pub)' };
       validKeys.set(derived, op.pub);
-    } else if (op.op === 'revoke') revoked.set(keyId(op.pub), { reason: op.reason, compromised_since: op.compromised_since, at: e.state.time.generated_at });
+    } else if (op.op === 'revoke') {
+      // §12.2: strict RFC3339-Z ONLY — a fractional/offset timestamp breaks lexicographic ordering ("…00.5Z" < "…00Z").
+      if (op.compromised_since !== undefined && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(op.compromised_since)) return { error: 'E-MALFORMED', detail: 'compromised_since not strict RFC3339-Z (§12.2)' };
+      revoked.set(keyId(op.pub), { reason: op.reason, compromised_since: op.compromised_since, at: e.state.time.generated_at });
+    }
     prevHash = contentHash(e);
   }
   // authority is granted ONLY if the doc's key_id maps to the doc's ACTUAL signing pub (binding, not membership).

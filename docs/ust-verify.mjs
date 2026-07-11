@@ -65,7 +65,7 @@ const KEYID_FORM = /^sha256:[0-9a-f]{64}$/;   // §4/§12 typed identity: key-fo
 const USTID = /^ust:\d{4}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\.([01]\d|2[0-3])(([0-5]\d)([0-5]\d)?)?$/;  // F8 valid UTC frame
 const CLASSES = ['observation', 'attestation', 'derivation', 'genesis', 'key'];
 const TRANSCRIPT = ['ust', 'state', 'sig', 'proof'], SIGK = ['alg', 'key_id', 'pub', 'sig'];
-const RES_NAMES = new Set(['id', 'time', 'data', 'hashes', 'provenance', 'domain_shard', 'ust_id', 'key_id', 'class', 'parent_ust', 'partition', 'nonce', '__proto__', 'constructor', 'prototype']);
+const RES_NAMES = new Set(['ust', 'state', 'sig', 'proof', 'id', 'time', 'data', 'hashes', 'provenance', 'domain_shard', 'ust_id', 'key_id', 'class', 'parent_ust', 'kind', 'value', 'privacy', 'commit', 'enc', 'sources', 'constituents', 'based_on', 'root', 'seed', 'prev', 'alg', 'pub', 'partition', 'nonce', '__proto__', 'constructor', 'prototype']);
 const KINDS = ['captured', 'computed'], PRIVACY = ['blinded', 'encrypted'];
 
 // §14 LIGHT floor verify (from the spec). Async. Returns {result, identity, publisher, ust_id, class, content_hash}.
