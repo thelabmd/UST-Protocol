@@ -65,8 +65,11 @@ async function cmdGenesis() {
   const ask = (q) => rl.question(q);
   console.log(`\n  ust genesis — ceremony for ${domain} (profile: ${profile})\n`);
 
-  // 1. root key
-  console.log('  1/5  generating the ROOT key…' + (profile === 'gold' ? '  [gold: use hardware/air-gapped in production]' : ''));
+  // 1. root key. gold WITHOUT an external signer is honestly labelled software-grade (9th audit #5): a
+  // software-generated extractable key is NOT a hardware/air-gapped root. --signer <ref> is the future hook.
+  const signerRef = arg('signer', null);
+  if (profile === 'gold' && !signerRef) console.log('  ⚠  ASSURANCE LIMIT: software-generated extractable root (not a hardware ceremony). For a true gold root use --signer pkcs11:… / an air-gapped device.');
+  console.log('  1/5  generating the ROOT key…');
   const root = await W.generateSigner({ extractable: true });
   const pkcs8 = Buffer.from(await crypto.subtle.exportKey('pkcs8', root.privateKey));
 
@@ -89,44 +92,67 @@ async function cmdGenesis() {
   writeFileSync(`${outDir}/ust-keylog-0`, JSON.stringify(keylog0));
   console.log(`       wrote ${outDir}/ust-genesis + ust-keylog-0 + genesis-key${pass ? '.enc' : ''}.b64  (COLD-STORE the key)`);
 
-  // 3. DNS (profile A) — manual or CF one-click
+  // SELF-CHECK (fail-closed): a ceremony tool must verify its OWN outputs before proceeding (9th audit #6).
+  if (!P.isValid(P.verify(genesis))) die('self-check FAILED: genesis does not verify');
+  if (!P.isValid(P.verify(keylog0, { context: 'key' }))) die('self-check FAILED: key-log[0] does not verify');
+  console.log('       self-check: genesis + key-log verify ✓');
+
+  // 3. DNS (profile A) — manual or CF one-click (upsert + DoH readback, 9th audit #7)
   const txt = `ust-genesis=${genHash}`;
   if (dns === 'cf-api') {
     const tok = process.env.CF_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
     if (!tok) die('--dns cf-api needs CF_TOKEN (a ZONE-scoped DNS:edit token — never account-wide)');
-    console.log('  3/5  writing _ust.' + domain + ' TXT via Cloudflare API…');
-    const z = await fetch(`https://api.cloudflare.com/client/v4/zones?name=${domain}`, { headers: { Authorization: 'Bearer ' + tok } }).then((r) => r.json());
-    const zone = z.result?.[0]; if (!zone) die('CF zone not found / token cannot see ' + domain);
-    const w = await fetch(`https://api.cloudflare.com/client/v4/zones/${zone.id}/dns_records`, { method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'content-type': 'application/json' }, body: JSON.stringify({ type: 'TXT', name: '_ust.' + domain, content: txt, ttl: 300 }) }).then((r) => r.json());
+    console.log('  3/5  writing _ust.' + domain + ' TXT via Cloudflare API (upsert)…');
+    const cf = (path, init) => fetch('https://api.cloudflare.com/client/v4' + path, { ...init, headers: { Authorization: 'Bearer ' + tok, 'content-type': 'application/json', ...(init?.headers) } }).then((r) => r.json());
+    const z = await cf(`/zones?name=${domain}`); const zone = z.result?.[0]; if (!zone) die('CF zone not found / token cannot see ' + domain);
+    const rec = `_ust.${domain}`;
+    const existing = (await cf(`/zones/${zone.id}/dns_records?type=TXT&name=${rec}`)).result?.[0];   // idempotent: update if present
+    const body = JSON.stringify({ type: 'TXT', name: rec, content: txt, ttl: 300 });
+    const w = existing
+      ? await cf(`/zones/${zone.id}/dns_records/${existing.id}`, { method: 'PUT', body })
+      : await cf(`/zones/${zone.id}/dns_records`, { method: 'POST', body });
     if (!w.success) die('CF write failed: ' + (w.errors?.[0]?.message || '?'));
-    console.log('       ✓ _ust.' + domain + ' TXT written (one-click, Vercel-style)');
+    console.log('       ' + (existing ? 'updated' : 'created') + ' _ust TXT; verifying via DNS-over-HTTPS readback…');
+    let seen = false;
+    for (let i = 0; i < 6 && !seen; i++) {                                                           // DoH readback, fail-closed
+      const doh = await fetch(`https://cloudflare-dns.com/dns-query?name=${rec}&type=TXT`, { headers: { accept: 'application/dns-json' } }).then((r) => r.json()).catch(() => ({}));
+      seen = (doh.Answer || []).some((a) => (a.data || '').replace(/"/g, '').includes(genHash));
+      if (!seen) await new Promise((r) => setTimeout(r, 3000));
+    }
+    if (!seen) die('CF wrote the record but DoH readback did not confirm it (propagation) — re-run or verify manually');
+    console.log('       ✓ _ust TXT confirmed by DoH readback (Vercel-style, idempotent)');
   } else {
     console.log('  3/5  DNS (profile A, DNSSEC): add this TXT record, or skip for profile B (TLS-witness):');
     console.log('       _ust.' + domain + '  TXT  "' + txt + '"');
   }
 
-  // 4. publish well-known + fail-closed byte-match
+  // 4. publish well-known + fail-closed CONTENT-HASH match (semantic UST match, not transport bytes — 9th audit #1)
   console.log('  4/5  publish this file at  https://' + domain + '/.well-known/ust-genesis');
-  console.log('       (the exact bytes of ' + outDir + '/ust-genesis)');
+  console.log('       (the exact document in ' + outDir + '/ust-genesis)');
   await ask('       press Enter once it is live… ');
   try {
     const live = await fetch(`https://${domain}/.well-known/ust-genesis`, { signal: AbortSignal.timeout(10000) }).then((r) => r.text());
     const liveDoc = decodeInput(live);
-    if (P.contentHash(liveDoc) !== genHash) die('published bytes do NOT match the genesis (content_hash differs) — republish exactly ' + outDir + '/ust-genesis');
-    console.log('       ✓ well-known matches byte-for-byte (fail-closed check passed)');
-  } catch (e) { die('could not verify the published well-known: ' + e.message + '  (nothing signed as authoritative — retry)'); }
+    if (!P.isValid(P.verify(liveDoc))) die('published document does not VERIFY');
+    if (P.contentHash(liveDoc) !== genHash) die('published document is not this genesis (content_hash differs) — republish exactly ' + outDir + '/ust-genesis');
+    console.log('       ✓ well-known verifies and its content_hash matches (fail-closed)');
+  } catch (e) { die('could not confirm the published well-known: ' + e.message + '  (authoritative NOT granted — retry)'); }
 
-  // 5. witnesses + anchor
+  // 5. witnesses + anchor — this CLI PREPARES the stage; the operator executes the exchange + anchor (9th audit #2)
   const witnesses = (arg('witness', '') || '').split(',').filter(Boolean);
-  console.log('  5/5  witnesses: ' + (witnesses.length ? witnesses.join(', ') : (profile === 'bronze' ? 'self (bronze)' : 'none supplied — add --witness url,url for silver/gold')));
-  console.log('       anchor: queue ' + genHash + ' into your anchor chain → Bitcoin/OTS (operator job)');
+  console.log('  5/5  witness/anchor STAGE PREPARED (not executed by this CLI):');
+  console.log('       witnesses to contact: ' + (witnesses.length ? witnesses.join(', ') : (profile === 'bronze' ? 'self (bronze — no external witness)' : 'none supplied — add --witness url,url for silver/gold')));
+  console.log('       anchor: queue ' + genHash + ' into your anchor chain → git + OTS/Bitcoin (operator job)');
 
-  console.log('\n  ✓ GENESIS DONE');
-  console.log('    name         : ' + domain);
-  console.log('    genesis      : ' + genHash);
-  console.log('    operational  : ' + op.key_id + '  (daily key; genesis stays cold)');
-  console.log('    max_partitions: ' + (maxP ?? '(default floor 64)'));
-  console.log('    backup       : ' + outDir + '/genesis-key' + (pass ? '.enc' : '') + '.b64  → SPLIT + COLD STORE (needed ~yearly to rotate/revoke)\n');
+  console.log('\n  ✓ GENESIS PREPARED — verified locally + at well-known');
+  console.log('    name          : ' + domain);
+  console.log('    genesis        : ' + genHash);
+  console.log('    operational    : ' + op.key_id + '  (daily key; genesis stays cold)');
+  console.log('    max_partitions : ' + (maxP ?? '(default floor 64)'));
+  console.log('    outputs        : ' + outDir + '/ust-genesis + ust-keylog-0  (two verifiable UST — `ust verify` them)');
+  console.log('    key backup     : ' + outDir + '/genesis-key' + (pass ? '.enc' : '') + '.b64  (encrypted PKCS#8, NOT a UST)');
+  console.log('                     → operator-managed split + cold storage (needed ~yearly to rotate/revoke)');
+  console.log('    NEXT (operator): run the witness exchange + queue the anchor to reach VALID:HIGH/TOP\n');
   rl.close();
 }
 
