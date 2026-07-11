@@ -1,6 +1,6 @@
 {
   "name": "ust-web-signer",
-  "version": "1.0.0-rc.2",
+  "version": "1.0.0-rc.3",
   "description": "WebCrypto Ed25519 signer + producer for UST (Universal State Transcript) 1.0 — the browser-side piece that ust-protocol deliberately omits (a private key never enters the verifier). Byte-compatible; produces documents that verify VALID under ust-protocol.",
   "author": "THE LAB (https://thelab.md)",
   "type": "module",

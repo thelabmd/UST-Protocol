@@ -10,7 +10,7 @@
   "license": "Apache-2.0",
   "engines": { "node": ">=20" },
   "dependencies": {
-    "ust-protocol": "^1.0.0-rc.6",
+    "ust-protocol": "^1.0.0-rc.7",
     "ust-web-signer": "^1.0.0-rc.2"
   },
   "repository": { "type": "git", "url": "git+https://github.com/thelabmd/UST-Protocol.git", "directory": "packages/ust-cli" },
