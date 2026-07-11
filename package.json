@@ -7,9 +7,11 @@
   "workspaces": [
     "packages/ust-protocol",
     "packages/ust-mcp",
-    "packages/ust-web-signer"
+    "packages/ust-web-signer",
+    "packages/ust-cli"
   ],
   "scripts": {
-    "test": "node packages/ust-protocol/conformance.mjs"
+    "test": "node packages/ust-protocol/conformance.mjs",
+    "test:cli": "node packages/ust-cli/regression.mjs"
   }
 }
