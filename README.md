@@ -108,6 +108,7 @@ proves the document existed **by** a real point in time (and `generated_at` may 
 | `packages/ust-protocol/` | the stateless reference verifier + producer ([npm](https://www.npmjs.com/package/ust-protocol)) |
 | `packages/ust-mcp/` | an MCP server exposing UST to agents ([npm](https://www.npmjs.com/package/@ust-protocol/mcp)) |
 | `packages/ust-web-signer/` | WebCrypto browser signer ([npm](https://www.npmjs.com/package/@ust-protocol/web-signer)) |
+| `packages/ust-cli/` | the `ust` command — verify / canon / the HIGH genesis ceremony ([npm](https://www.npmjs.com/package/@ust-protocol/cli)) |
 | `extension/` | "Make it UST" — a demo Chrome extension: sign by selection, verify by selection (LIGHT) |
 | `docs/` | the [web verifier](https://thelabmd.github.io/UST-Protocol/) (client-side, GitHub Pages) + `ust-verify.mjs`, a zero-dependency verifier + `llms.txt` |
 | `examples/` | sample documents (valid + tampered) and verification recipes |
@@ -129,6 +130,19 @@ const { ust_id, time } = nowFrame();                           // instant captur
 const doc = await signObservation(s, { ust_id, time, data: { capture: { kind: 'captured', value: { text: 'exact bytes' } } } });
 console.log(verify(doc, { context: 'data' }).result);          // → VALID:LIGHT
 ```
+
+## The `ust` CLI
+
+```bash
+npm i -g @ust-protocol/cli    # installs the `ust` command
+ust verify doc.json           # exit 0 = VALID (tier in the verdict), 1 = not; auto-detects genesis/key context
+ust canon  doc.json           # canonical bytes + hash — diff any other-language implementation against this
+ust genesis --domain example.org --profile silver --dns cf-api   # the HIGH name-binding ceremony
+```
+
+One entrypoint; the planned Go binary reproduces this exact surface. The ceremony self-verifies its outputs
+(fail-closed), upserts the `_ust` DNS TXT with a DNS-over-HTTPS readback, and honestly labels the witness/anchor
+stage as PREPARED — the operator executes the exchange.
 
 ## How to verify a UST
 
