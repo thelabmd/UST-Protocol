@@ -399,7 +399,10 @@ a verifier assembles/closes the coarse frame correctly. **Hour-close at LIGHT/HI
 NOT a completeness guarantee:** a verifier can never be cryptographically certain the hour is "closed" — the
 publisher may have skipped a tick, undetectable without a TOP sequenced-stream + anchor (§11.3). Consumers
 (and MCP/clients) MUST NOT read a `parent_ust`-assembled hour as PROVEN-complete at HIGH; proven completeness is
-a TOP property only. It is inside the signed content `canon({ust,state})`, so it is authentic AND part of the `content_hash` (§7 —
+a TOP property only. The hour-close timeout itself is an OPERATOR-PROFILE declaration (§20; RECOMMENDED default:
+75 s past the frame boundary — the v0.27 ingest grace). It gates ASSEMBLY only and never enters any document's
+verdict — two verifiers with different timeouts may assemble different provisional hours but can never disagree
+on a document (I4). It is inside the signed content `canon({ust,state})`, so it is authentic AND part of the `content_hash` (§7 —
 the document hash covers the whole signed content). It is navigation/lineage metadata (it does not affect any
 PER-PARTITION hash, §4.4).
 
@@ -445,6 +448,10 @@ reference it did not itself originate, and a referent cannot control who points 
 `seed` = `H_seed( canon([ h_1, ..., h_k ]) )` (its own domain tag `ust:seed`, §7/§17) over the referenced `content_hash`es in the SAME pinned order as
 `based_on`/`constituents` appear in the (signed) State — order is meaning and is fixed by the signed array,
 not re-sorted (M8). Proves participation/order without inlining referents (useful with private constituents, §10).
+`based_on`/`constituents` MUST NOT contain duplicate `content_hash`es — a duplicate is a shape error
+(E-MALFORMED, §14 step 5): citing a referent twice has no composite meaning, and a duplicated constituent
+double-counts a leaf in the Merkle root. Verifiers recompute the seed over the signed array VERBATIM either
+way, so conforming verifiers cannot diverge on order or multiplicity — the rule pins admissibility, not math.
 
 ### 9.5 Chain walking (bounded, acyclic — I5)
 Chain resolution is governed by the verification-depth model (§13): DEFAULT depth-0 leaves referents
@@ -537,6 +544,9 @@ L4 — partner shard     (published by a third party holding the L3 key)
 - **Third-party extension (the bootstrap mechanism):** a holder of the L3 key fetches L1..L3, builds
   L4, computes L4's seed over the content_hashes of L1..L3 (its subordinate layers, §9.4), and publishes L4 — chaining ACROSS publishers (e.g. noosphere +
   helioradar + muuune → a BSI derived shard extends the chain).
+- **Layer availability:** an UNRESOLVABLE inner layer is an availability condition, not a failure — the outer
+  layer's local verification (§14 steps 1–5) stands, and a depth-k walk reports `referents:"partial"` (§14.9);
+  a missing layer is NEVER INVALID (availability ≠ failure).
 - **Layer authenticity (E4):** the seed proves participation + integrity of the layer canonicals AS FETCHED —
   it does NOT transfer authenticity. Each held layer's AUTHENTICITY requires verifying THAT layer's own `sig`
   (I2). A verifier MUST verify each held layer independently; a malicious outer publisher can seed over forged
@@ -731,8 +741,13 @@ but UNVERIFIED (the chain is not walked). **Depth-k** (caller opt-in) — refere
 max 32, §9.5), under a caller-supplied budget of max fully-verified nodes and max external fetches; exceeding
 either ⇒ fail-closed (E-BOUNDS). This forecloses fan-out DoS. **External-resolution bounds (N8):** key-log walk ≤ 256
 events per resolution (use checkpointed heads + caching); anchor lookups are eliminated by the carried
-inclusion proof (§11.2). A verifier MUST fail-closed (E-KEY/E-ANCHOR) on exceeding resolution bounds — the
-resolution graph cannot be used to DoS verification. Bounds are conformance items (§16).
+inclusion proof (§11.2). A verifier MUST fail closed with E-BOUNDS on exceeding a resolution bound (the same
+code as every §13 ceiling) — the resolution graph cannot be used to DoS verification. The key-log ceiling is
+reached by rotation history, not truncation: past 256 entries resolution fails E-BOUNDS and the publisher's
+escape is a NEW genesis epoch (§12.1 re-rooting) — a key log never truncates. **Bulk-verification note:** every
+recomputed hash is a pure function of bytes — a verifier MAY cache per-partition and content hashes keyed by
+`content_hash` across documents without affecting conformance (I4: same inputs, same verdict). Bounds are
+conformance items (§16).
 
 ---
 
@@ -999,7 +1014,10 @@ layering fix, REV6.)
 - **Crypto-agility:** hashes and signatures are algorithm-tagged (`sha256:`, `Ed25519`). On a primitive break,
   the operator RE-ANCHORS existing roots under a new algorithm, citing the OLD append-only-log commitment as
   proof of pre-break existence — a signed, dated migration event, never a silent re-hash (which would be
-  indistinguishable from forgery).
+  indistinguishable from forgery). `key_id` inherits this agility from its VALUE, not its tag: the H() output
+  self-describes its algorithm (`sha256:…` today, a future primitive yields a new prefix under the SAME
+  `ust:keylog` domain-separation string), so cross-algorithm confusion is precluded by the prefix and no
+  re-tagging is ever needed. Migrating an IDENTITY to a new primitive is the §12.1 re-rooting event.
 - **Migration from 0.x:** 1.0 re-roots identity in the mandatory whole-State signature and the namespaced
   shape; it is a clean break at a declared `ust_id`. Historical 0.x records remain verifiable under the 0.x
   algorithm and are referenced from 1.0 chains by `content_hash`.
@@ -1010,8 +1028,13 @@ layering fix, REV6.)
 
 Discoverable from `domain_shard` (`/.well-known/ust`, corroborated against the anchored key log, §12) and
 declaring the operator's choices, none of which relax §3: signature scheme + key-log location; anchoring
-substrate(s); partition schema (names + captured/computed designation); source registry; cadence; size bounds
-(within §13 ceilings); metadata-minimization policy. The protocol fixes the mechanism; the profile carries the
+substrate(s); partition schema (names + captured/computed designation); source registry; cadence; the
+hour-close timeout (§8.1); checkpoint cadence for sequenced streams (§11.3 — SHOULD for any stream that wants
+provable completeness); a private-nonce uniqueness log (§10 I6/Z2 — SHOULD: the verifier cannot detect
+cross-document nonce reuse, so the operator must); size bounds
+(within §13 ceilings); metadata-minimization policy. A profile SHOULD publish §12.1 recovery events in a
+changelog: unanchored records near a recovery boundary fail HIGH by design (X3) — consumers must be able to
+see why, not guess. The protocol fixes the mechanism; the profile carries the
 operator. Reference operator (noosphere.md) profile: `noosphere-engine/rnd/noosphere-operator-profile.md`.
 
 ---

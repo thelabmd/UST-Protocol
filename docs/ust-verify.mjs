@@ -110,10 +110,12 @@ export async function verify(doc, opts = {}) {
     const HASHREF = /^sha256:[0-9a-f]{64}$/;
     if (pr?.based_on !== undefined) {
       if (!Array.isArray(pr.based_on) || pr.based_on.some((b) => !b || !HASHREF.test(b.hash || ''))) return bad('E-MALFORMED', 'based_on entries must carry sha256:hex hash');
+      if (new Set(pr.based_on.map((b) => b.hash)).size !== pr.based_on.length) return bad('E-MALFORMED', 'duplicate hash in based_on');
       if ((await H('ust:seed', canon(pr.based_on.map((b) => b.hash)))) !== pr.seed) return bad('E-SEED', 'derivation seed mismatch');
     }
     if (pr?.constituents !== undefined) {
       if (!Array.isArray(pr.constituents) || pr.constituents.some((h) => !HASHREF.test(h))) return bad('E-MALFORMED', 'constituents must be sha256:hex');
+      if (new Set(pr.constituents).size !== pr.constituents.length) return bad('E-MALFORMED', 'duplicate hash in constituents');
       if (pr.root !== undefined && (await merkleRoot(pr.constituents)) !== pr.root) return bad('E-ROOT', 'attestation root mismatch');
     }
     if (id.class === 'attestation') { const isGap = pr?.prev !== undefined && (pr?.constituents === undefined || pr.constituents.length === 0); if (!isGap && (pr?.constituents === undefined || pr?.root === undefined)) return bad('E-MALFORMED', 'attestation MUST carry constituents + root'); }
