@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Make it UST",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Sign selected text as a UST (Universal State Transcript) — and verify any UST locally. LIGHT tier: proves the exact bytes, your key, and the time — not who you are or where it came from.",
   "permissions": [
     "contextMenus",

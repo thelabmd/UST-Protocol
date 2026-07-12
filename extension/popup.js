@@ -46,18 +46,42 @@ function mdSafe(src) {
 }
 // A structured value renders as a reader card: string fields become serif prose (markdown-safe), everything
 // else stays JSON code. Same escape-first discipline — display-only, the verified bytes never change.
-function objectMd(v) {
-  return Object.entries(v).map(([k, val]) => {
-    if (typeof val === 'string') {
-      const rich = val.length > 80 || /[\n#*`]/.test(val);
-      const looksId = /^(sha256:|ust:|https?:)/.test(val) && !/\s/.test(val);
-      const body = looksId ? `<span class="fv mono">${esc(val)}</span>`
-        : rich ? `<div class="fv md">${mdSafe(val)}</div>` : `<span class="fv">${esc(val)}</span>`;
-      return `<div class="fld"><span class="fk">${esc(k)}</span>${body}</div>`;
-    }
-    return `<div class="fld"><span class="fk">${esc(k)}</span><pre style="margin:0">${esc(JSON.stringify(val, null, 2))}</pre></div>`;
-  }).join('');
+// Recursive reader view (synced with docs/index.html): nested objects become titled indented
+// groups; hash-only groups collapse by default. Display-only — verified bytes never change.
+function scalarMd(val) {
+  if (typeof val !== 'string') return `<span class="fv">${esc(String(val))}</span>`;
+  const looksId = /^(sha256:|ust:|https?:|pack\/)/.test(val) && !/\s/.test(val);
+  const rich = val.length > 80 || /[\n#*`]/.test(val);
+  return looksId ? `<span class="fv mono">${esc(val)}</span>`
+    : rich ? `<div class="fv md">${mdSafe(val)}</div>` : `<span class="fv">${esc(val)}</span>`;
 }
+function allHashes(v) {
+  if (typeof v === 'string') return /^(sha256:|pack\/)/.test(v) && !/\s/.test(v);
+  if (Array.isArray(v)) return v.length > 0 && v.every(allHashes);
+  if (v && typeof v === 'object') { const e = Object.values(v); return e.length > 0 && e.every(allHashes); }
+  return false;
+}
+function valueMd(v) {
+  if (v === null || v === undefined) return `<span class="fv muted">—</span>`;
+  if (Array.isArray(v)) {
+    if (!v.length) return `<span class="fv muted">(none)</span>`;
+    return '<ul>' + v.map((x) => '<li>' + (x && typeof x === 'object' ? valueMd(x) : scalarMd(x)) + '</li>').join('') + '</ul>';
+  }
+  if (typeof v === 'object') {
+    return Object.entries(v).map(([k, val]) => {
+      if (val && typeof val === 'object') {
+        if (allHashes(val)) {
+          const n = Object.keys(val).length;
+          return `<details class="grp tech"><summary class="gk">${esc(k)} · ${n}</summary><div class="gv">${valueMd(val)}</div></details>`;
+        }
+        return `<div class="grp"><div class="gk">${esc(k)}</div><div class="gv">${valueMd(val)}</div></div>`;
+      }
+      return `<div class="fld inline"><span class="fk">${esc(k)}</span>${scalarMd(val)}</div>`;
+    }).join('');
+  }
+  return scalarMd(v);
+}
+function objectMd(v) { return valueMd(v); }
 function rawOf(entry) { return entry.kind === 'text' ? entry.v : JSON.stringify(entry.v, null, 2); }
 function mdOf(entry) { return entry.kind === 'text' ? mdSafe(entry.v) : objectMd(entry.v); }
 function renderContent(data) {

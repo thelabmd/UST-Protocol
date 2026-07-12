@@ -65,7 +65,7 @@ const KEYID_FORM = /^sha256:[0-9a-f]{64}$/;   // §4/§12 typed identity: key-fo
 const USTID = /^ust:\d{4}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\.([01]\d|2[0-3])(([0-5]\d)([0-5]\d)?)?$/;  // F8 valid UTC frame
 const CLASSES = ['observation', 'attestation', 'derivation', 'genesis', 'key'];
 const TRANSCRIPT = ['ust', 'state', 'sig', 'proof'], SIGK = ['alg', 'key_id', 'pub', 'sig'];
-const RES_NAMES = new Set(['id', 'time', 'data', 'hashes', 'provenance', 'domain_shard', 'ust_id', 'key_id', 'class', 'parent_ust', 'partition', 'nonce', '__proto__', 'constructor', 'prototype']);
+const RES_NAMES = new Set(['ust', 'state', 'sig', 'proof', 'id', 'time', 'data', 'hashes', 'provenance', 'domain_shard', 'ust_id', 'key_id', 'class', 'parent_ust', 'kind', 'value', 'privacy', 'commit', 'enc', 'sources', 'constituents', 'based_on', 'root', 'seed', 'prev', 'alg', 'pub', 'partition', 'nonce', '__proto__', 'constructor', 'prototype']);
 const KINDS = ['captured', 'computed'], PRIVACY = ['blinded', 'encrypted'];
 
 // §14 LIGHT floor verify (from the spec). Async. Returns {result, identity, publisher, ust_id, class, content_hash}.
@@ -85,6 +85,23 @@ export async function verify(doc, opts = {}) {
     if (opts.context === 'data' && (id.class === 'key' || id.class === 'genesis')) return bad('E-MALFORMED', 'class ' + id.class + ' not valid in data context (W3)');
     // step 2 — content_hash + bijection + per-partition
     const ch = await contentHash(doc);
+    // §13 structural bounds — the SAME hard ceilings as the reference verifier (I4:
+    // two conforming verifiers must never disagree; the 2026-07-12 boundary probe
+    // caught this file admitting 65+ partitions the reference rejects).
+    {
+      if (JSON.stringify(doc).length > 1_048_576) return bad('E-BOUNDS', 'transcript > 1 MiB');
+      const depthOf = (v, d = 0) => (v && typeof v === 'object'
+        ? (d > 8 ? d : Math.max(d, ...Object.values(v).map((x) => depthOf(x, d + 1))))
+        : d);
+      if (depthOf(st) > 8) return bad('E-BOUNDS', 'nesting depth > 8');
+      const arrTooLong = (v) => Array.isArray(v) ? (v.length > 4096 || v.some(arrTooLong))
+        : (v && typeof v === 'object' ? Object.values(v).some(arrTooLong) : false);
+      if (arrTooLong(st)) return bad('E-BOUNDS', 'array length > 4096');
+      if (Object.keys(st.data).length > 64) return bad('E-BOUNDS', 'partitions > 64');
+      const pr0 = st.provenance;
+      for (const f of ['based_on', 'constituents'])
+        if (pr0 && Array.isArray(pr0[f]) && pr0[f].length > 64) return bad('E-BOUNDS', f + ' breadth > 64');
+    }
     const dk = Object.keys(st.data), hk = Object.keys(st.hashes);
     if (dk.length === 0) return bad('E-MALFORMED', 'no partitions');
     if (dk.length !== hk.length || !dk.every((k) => k in st.hashes)) return bad('E-MALFORMED', 'data⇄hashes bijection broken');
@@ -110,10 +127,12 @@ export async function verify(doc, opts = {}) {
     const HASHREF = /^sha256:[0-9a-f]{64}$/;
     if (pr?.based_on !== undefined) {
       if (!Array.isArray(pr.based_on) || pr.based_on.some((b) => !b || !HASHREF.test(b.hash || ''))) return bad('E-MALFORMED', 'based_on entries must carry sha256:hex hash');
+      if (new Set(pr.based_on.map((b) => b.hash)).size !== pr.based_on.length) return bad('E-MALFORMED', 'duplicate hash in based_on');
       if ((await H('ust:seed', canon(pr.based_on.map((b) => b.hash)))) !== pr.seed) return bad('E-SEED', 'derivation seed mismatch');
     }
     if (pr?.constituents !== undefined) {
       if (!Array.isArray(pr.constituents) || pr.constituents.some((h) => !HASHREF.test(h))) return bad('E-MALFORMED', 'constituents must be sha256:hex');
+      if (new Set(pr.constituents).size !== pr.constituents.length) return bad('E-MALFORMED', 'duplicate hash in constituents');
       if (pr.root !== undefined && (await merkleRoot(pr.constituents)) !== pr.root) return bad('E-ROOT', 'attestation root mismatch');
     }
     if (id.class === 'attestation') { const isGap = pr?.prev !== undefined && (pr?.constituents === undefined || pr.constituents.length === 0); if (!isGap && (pr?.constituents === undefined || pr?.root === undefined)) return bad('E-MALFORMED', 'attestation MUST carry constituents + root'); }
