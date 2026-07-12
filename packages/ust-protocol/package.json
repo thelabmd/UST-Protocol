@@ -1,6 +1,6 @@
 {
   "name": "ust-protocol",
-  "version": "1.0.0-rc.11",
+  "version": "1.0.0-rc.12",
   "description": "Universal State Transcript (UST) — the stateless reference base: canonical hashing (JCS), Ed25519 signing, three-tier verification (LIGHT/HIGH/TOP), privacy commitments, chains, and anchoring. Trust infrastructure for machine-readable state.",
   "author": "THE LAB (https://thelab.md)",
   "type": "module",

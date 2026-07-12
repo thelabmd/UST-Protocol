@@ -669,8 +669,10 @@ shape even for the root of trust; it is verified by §14 like any document. The 
 this `domain_shard` — the §13 ladder admits above-floor documents against it; absent ⇒ the 64 floor applies.
 The value MAY likewise carry `max_transcript_bytes` (a string integer, 1..67108864): the declared transcript
 size capacity — same ladder, same rules, floor 1 MiB (§13).
-The declaration is signed and ceremony-rooted; a verifier consults it only from a genesis supplied/resolved for
-the SAME `domain_shard` — a document can never expand its own budget.
+The declaration is signed and ceremony-rooted; it becomes usable capacity ONLY as a TRUSTED GRANT — the
+output of authority resolution (`resolveAuthority` returns the declared `capacity`) or the caller's explicit
+pin/policy, passed to verification as the grant. A document can never expand its own budget, and a raw
+caller-attached genesis is NOT a grant (rc.12): a self-signed genesis would be a self-issued budget.
 Anchoring is permissionless (anyone can commit any bytes), so "an anchored key log for noosphere.md" does NOT
 by itself confer authority over the NAME — an attacker could anchor a rival log, even earlier. The **authoritative** genesis MUST be established by a NAME-BINDING root, one of (profile declares which):
 1. **DNSSEC-bound genesis** — the genesis key's `content_hash` in a DNSSEC-signed record for `domain_shard`;
@@ -750,7 +752,7 @@ A verifier MUST reject (E-BOUNDS) any transcript exceeding, and a producer MUST 
 | array length | 4096 |
 | partitions per data | 64 anonymous floor · genesis-declared ≤ 4096 (name-form, §12.1) · ABS 4096 |
 | `based_on`/`constituents` breadth per node | 64 |
-| chain depth a verifier walks | 32 |
+| per-call walk depth (chain resolution) | 32 |
 | ciphertext size | operator-declared, ≤ profile ceiling |
 Cycle detection in chain walks is REQUIRED (§9.5). **Aggregate verification budget (P4):** full verification
 of one State can fan out (key-log + genesis + anchor + each referent's own key-log/anchor/...). The verification-depth model: **DEFAULT depth-0** — the local State is fully verified; referents are present
@@ -777,19 +779,28 @@ its law (E-BOUNDS). A name-form document above the floor verified WITHOUT its ca
 is honest: INDETERMINATE → VALID as the genesis context arrives, never VALID → INVALID across tiers (I4: the
 verdict is a total function of the document plus the supplied information set). The check runs at the §14
 shape step, where the identity FORM is known. A tooling DEFAULT for `max_partitions` is a suggestion, never a
-ceiling. **The SAME ladder governs transcript SIZE (rc.11):** the 1 MiB floor exists so a LIGHT document fits
-anywhere — an agent's context window, a clipboard, a chat paste (the guarantee travels with the data); closed
-corporate HIGH/TOP networks expand it by ceremony via `max_transcript_bytes` (§12.1), ABS 64 MiB (2^26 — every
-mainstream runtime holds it; 4096 declared partitions at realistic value sizes fit, so the two declarations
-COMPOSE). The byte length is known BEFORE parsing, so this rung is the strongest anti-DoS point: a raw input
-above the floor with no supplied genesis is INDETERMINATE with ZERO parse work, and a light/embedded verifier
-stays conformant by answering on length alone. Bulk beyond the ABS belongs OUTSIDE the transcript — a State
-carries state and COMMITMENTS, never blobs: content-address the payload and reference it (§9.1 sources /
-`source_anchors`). **§13 classification:** VOLUME bounds (partitions, transcript size) scale with a publisher's
-legitimate data and are ceremony-declarable — floor / declared / ABS; STRUCTURE bounds (nesting depth, array
-length, breadth, chain depth, key-log length) protect EVERY verifier's implementation regardless of trust and
-are absolute laws — their escapes are structural: chunking, attestation TREES (64² = 4096 in two levels),
-re-genesis epochs — never declarations.
+ceiling. **The SAME ladder governs transcript SIZE (rc.11/rc.12):** the NORMATIVE size metric is the UTF-8
+byte length of the canonical SIGNED CONTENT `canon({ust, state})` — the exact string every verifier already
+computes for the hash, so the measurement is free and transport formatting (whitespace, base64 wrapping) can
+NEVER flip a verdict. The 1 MiB floor is the portable general-purpose floor for standard software verifiers and
+ordinary message/file transport (NOT "fits in any context" — encodings and context economics vary); closed
+corporate HIGH/TOP networks expand it by ceremony via `max_transcript_bytes` (§12.1), ABS 64 MiB — the maximum
+size of a protocol OBJECT, not a mandatory memory capability of every verifier. **Three independent ceilings
+(rc.12):** the protocol ABS (exceed ⇒ E-BOUNDS) · the publisher's TRUSTED GRANT (exceed ⇒ E-BOUNDS; absent
+above the floor ⇒ INDETERMINATE `unavailable`) · the VERIFIER's own capability (protocol-valid but beyond this
+implementation ⇒ INDETERMINATE `resource_limit`, never INVALID). TRANSPORT ADMISSION is separate from all
+three: an implementation MAY refuse an over-budget raw input before decoding (measured on bytes, before any
+materialization) as INDETERMINATE `resource_limit` — a refusal to start, never a verdict about the document.
+Capacity is a TRUSTED GRANT, not a caller-attached genesis: the grant flows FROM authority resolution
+(`resolveAuthority` surfaces the ceremony's declarations) or from the caller's pin/policy — a self-signed
+genesis is a self-issued budget and expands nothing. Bulk beyond the ABS belongs OUTSIDE the transcript — a
+State carries state and COMMITMENTS, never blobs: content-address the payload and reference it (§9.1 sources /
+`source_anchors`). **§13 classification:** VOLUME bounds (partitions, canonical transcript bytes, ciphertext
+bytes — a per-partition ciphertext cap keeps one encrypted shard from consuming the whole budget) scale with a
+publisher's legitimate data and are ceremony-declarable — floor / declared / ABS; STRUCTURE bounds (nesting
+depth, array length, breadth, per-call walk depth, key-log length) protect EVERY verifier's implementation
+regardless of trust and are absolute laws — their escapes are structural: chunking, attestation TREES
+(64² = 4096 in two levels), re-genesis epochs — never declarations.
 
 ---
 
@@ -914,8 +925,11 @@ A verifier returns one of THREE OUTCOME KINDS — **availability is distinct fro
   verify" — it does NOT mean "call it INVALID." A verifier/MCP MUST NOT report an unreachable authority as a
   failed document. The reason set is CLOSED — {`unavailable`, `unsupported_alg`}: a fetch timeout IS
   `unavailable`; a verification-budget overrun is INVALID `E-BOUNDS` (§13); a fetched-but-WRONG dependency is
-  its own definite error; an above-floor document whose capacity-bearing genesis was not supplied is
-  `unavailable` (§13 ladder). A verifier MUST NOT mint new INDETERMINATE reasons.
+  its own definite error; an above-floor document without a TRUSTED capacity grant is `unavailable` (§13
+  ladder). **`resource_limit`** (rc.12) is the third and last member: the document may be protocol-valid but
+  exceeds THIS verifier's declared capability, or the raw input exceeds the transport admission budget —
+  verification was refused or could not complete on THIS implementation; retry on a bigger verifier. A verifier
+  MUST NOT mint new INDETERMINATE reasons.
 Producers/MCPs SHOULD map the three kinds distinctly (INVALID ≈ 4xx deterministic; INDETERMINATE ≈ 503 retry).
 
 ---

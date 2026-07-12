@@ -219,13 +219,16 @@ check('F8 impossible ust_id→E-MALFORMED', P.verify(mk({ r: { kind: 'captured',
   check('ladder: 65 name-form NO genesis → INDETERMINATE(unavailable) in BOTH', r65.result === 'INDETERMINATE' && r65.reason === 'unavailable' && c65.result === 'INDETERMINATE' && c65.reason === 'unavailable');
   const d65k = mkN(65, { domain_shard: A.key_id, ust_id: 'ust:20260628.15', key_id: A.key_id, class: 'observation' });
   check('ladder: 65 KEY-form → E-BOUNDS (no ceremony can exist)', P.verify(d65k, { context: 'data' }).error === 'E-BOUNDS' && (await cleanRoom(d65k, { context: 'data' })).error === 'E-BOUNDS');
-  const genCap = (mp) => P.seal(P.buildGenesis({ domain_shard: ID.domain_shard, ust_id: 'ust:20260628.01', key_id: A.key_id }, T, A.pubB64, mp), A.priv, A.pubB64);
-  const g128 = genCap(128), g1024 = genCap(1024);
-  check('ladder: 65 + genesis(128) → ADMITTED VALID:LIGHT', P.verify(d65, { context: 'data', genesis: g128 }).result === 'VALID:LIGHT');
-  check('ladder: 65 + genesis declaring only 64 → E-BOUNDS (over declared)', P.verify(d65, { context: 'data', genesis: genCap(64) }).error === 'E-BOUNDS');
+  const genCap = (mp, mb) => P.seal(P.buildGenesis({ domain_shard: ID.domain_shard, ust_id: 'ust:20260628.01', key_id: A.key_id }, T, A.pubB64, mp, mb), A.priv, A.pubB64);
+  // rc.12 P0-4: capacity = TRUSTED GRANT via opts.capacity; a raw self-signed genesis is a
+  // self-issued budget and NO LONGER expands anything.
+  check('grant: 65 + capacity{128} → ADMITTED VALID:LIGHT', P.verify(d65, { context: 'data', capacity: { maxPartitions: 128 } }).result === 'VALID:LIGHT');
+  check('grant: 65 + capacity{64} → E-BOUNDS (over granted)', P.verify(d65, { context: 'data', capacity: { maxPartitions: 64 } }).error === 'E-BOUNDS');
   const d1000 = mkN(1000);
-  check('ladder: ceremony may declare 1024 — 1000 partitions ADMITTED (default ≠ ceiling)', P.verify(d1000, { context: 'data', genesis: g1024 }).result === 'VALID:LIGHT');
-  check('ladder: genesis without max_partitions → floor applies, E-BOUNDS', P.verify(d65, { context: 'data', genesis: genCap(undefined) }).error === 'E-BOUNDS');
+  check('grant: 1024 granted — 1000 partitions ADMITTED (default ≠ ceiling)', P.verify(d1000, { context: 'data', capacity: { maxPartitions: 1024 } }).result === 'VALID:LIGHT');
+  check('P0-4 pinned: raw self-signed genesis ALONE no longer expands → INDETERMINATE', P.verify(d65, { context: 'data', genesis: genCap(128) }).result === 'INDETERMINATE');
+  const auth = P.resolveAuthority(mk(), { genesis: genCap(512, 4_000_000), keylog: [], noForkConfirmed: true });
+  check('resolveAuthority surfaces the ceremony capacity (grant flows FROM resolution)', auth.capacity?.maxPartitions === 512 && auth.capacity?.maxTranscriptBytes === 4_000_000 && auth.strength === 'authoritative');
   const fake4097 = { state: { data: Object.fromEntries(Array.from({ length: 4097 }, (_, i) => ['p' + i, '1'])) } };
   check('ABS: 4097 partitions → structural E-BOUNDS precheck', P.checkBounds(fake4097) === 'partitions > 4096');
   let guardThrew = false; try { P.buildState(ID, T, Object.fromEntries(Array.from({ length: 65 }, (_, i) => ['p' + i, { kind: 'captured', value: { x: '1' } }]))); } catch (e) { guardThrew = e.code === 'E-BOUNDS'; }
@@ -236,17 +239,31 @@ check('F8 impossible ust_id→E-MALFORMED', P.verify(mk({ r: { kind: 'captured',
     P.seal(P.buildState(id, T, { blob: { kind: 'captured', value: { x: bigVal } } }, undefined, opts), A.priv, A.pubB64);
   const dBig = mkBig();
   const rBigNo = P.verify(dBig, { context: 'data' });
-  check('size: 1.2 MiB name-form NO genesis → INDETERMINATE(unavailable)', rBigNo.result === 'INDETERMINATE' && rBigNo.reason === 'unavailable');
+  check('size: >floor name-form NO grant → INDETERMINATE(unavailable)', rBigNo.result === 'INDETERMINATE' && rBigNo.reason === 'unavailable');
   const cBigNo = await cleanRoom(dBig, { context: 'data' });
-  check('size parity: clean-room 1.2 MiB name-form → INDETERMINATE', cBigNo.result === 'INDETERMINATE');
-  const gBytes = P.seal(P.buildGenesis({ domain_shard: ID.domain_shard, ust_id: 'ust:20260628.02', key_id: A.key_id }, T, A.pubB64, 4096, 4_000_000), A.priv, A.pubB64);
-  check('size: 1.2 MiB + genesis(max_transcript_bytes=4M) → ADMITTED VALID:LIGHT', P.verify(dBig, { context: 'data', genesis: gBytes }).result === 'VALID:LIGHT');
-  const gSmall = P.seal(P.buildGenesis({ domain_shard: ID.domain_shard, ust_id: 'ust:20260628.03', key_id: A.key_id }, T, A.pubB64, 4096, 1_048_576), A.priv, A.pubB64);
-  check('size: 1.2 MiB + genesis declaring only 1 MiB → E-BOUNDS (over declared)', P.verify(dBig, { context: 'data', genesis: gSmall }).error === 'E-BOUNDS');
+  check('size parity: clean-room >floor name-form → INDETERMINATE', cBigNo.result === 'INDETERMINATE');
+  check('size: >floor + capacity grant → ADMITTED VALID:LIGHT', P.verify(dBig, { context: 'data', capacity: { maxTranscriptBytes: 4_000_000 } }).result === 'VALID:LIGHT');
+  check('size: >floor + grant smaller than doc → E-BOUNDS', P.verify(dBig, { context: 'data', capacity: { maxTranscriptBytes: 1_048_576 } }).error === 'E-BOUNDS');
   const dBigK = mkBig({ domain_shard: A.key_id, ust_id: 'ust:20260628.16', key_id: A.key_id, class: 'observation' });
-  check('size: 1.2 MiB KEY-form → E-BOUNDS (no ceremony can exist)', P.verify(dBigK, { context: 'data' }).error === 'E-BOUNDS');
-  check('size: verifyJson PRE-PARSE — >64 MiB raw → E-BOUNDS without parsing', P.verifyJson('x'.repeat(67_108_865)).error === 'E-BOUNDS');
-  check('size: verifyJson PRE-PARSE — >1 MiB raw, no genesis → INDETERMINATE without parsing', P.verifyJson('{'.repeat(2_000_000)).result === 'INDETERMINATE');
+  check('size: >floor KEY-form → E-BOUNDS (no ceremony can exist)', P.verify(dBigK, { context: 'data' }).error === 'E-BOUNDS');
+  // rc.12 P0-1: UTF-8 vs UTF-16 parity — Cyrillic doc (700k units = 1.4M bytes) must agree in BOTH
+  const cyr = P.seal(P.buildState({ ...ID, ust_id: 'ust:20260628.17' }, T, { txt: { kind: 'captured', value: { body: 'ж'.repeat(700_000) } } }, undefined, { maxTranscriptBytes: 4_000_000 }), A.priv, A.pubB64);
+  const rCyr = P.verify(cyr, { context: 'data' }), cCyr = await cleanRoom(cyr, { context: 'data' });
+  check('P0-1 pinned: Cyrillic 1.4 MB UTF-8 — SAME verdict in both verifiers (UTF-8 metric)', rCyr.result === 'INDETERMINATE' && cCyr.result === 'INDETERMINATE');
+  // rc.12 P0-3: formatting can never flip a verdict — pretty-printed raw > floor, canonical ≤ floor ⇒ VALID
+  const small = mk();
+  const pretty = JSON.stringify(small, null, 8) + ' '.repeat(1_200_000);
+  check('P0-3 pinned: transport whitespace never flips the verdict (canonical metric)', P.verifyJson(pretty, { context: 'data' }).result === 'VALID:LIGHT');
+  // rc.12 P0-2/P1-7: transport admission is resource_limit, decided on BYTES before decode
+  const rTrans = P.verifyJson(Buffer.alloc(67_108_865, 120));
+  check('transport: over-budget Buffer → INDETERMINATE(resource_limit) BEFORE decode', rTrans.result === 'INDETERMINATE' && rTrans.reason === 'resource_limit');
+  // rc.12 capability ceiling: protocol-valid but beyond THIS verifier
+  const rCapb = P.verify(mk(), { context: 'data', maxSupportedBytes: 100 });
+  check('capability: valid doc beyond verifier budget → INDETERMINATE(resource_limit)', rCapb.result === 'INDETERMINATE' && rCapb.reason === 'resource_limit');
+  // rc.12 P1-6: ACCURATE producer guard — hashes map counted (old {id,time,data}+512 missed it)
+  const manyData = Object.fromEntries(Array.from({ length: 4000 }, (_, i) => ['p' + i, { kind: 'captured', value: { v: 'x'.repeat(180) } }]));
+  let hashGuard = false; try { P.buildState(ID, T, manyData, undefined, { maxPartitions: 4096 }); } catch (e) { hashGuard = e.code === 'E-BOUNDS'; }
+  check('P1-6 pinned: 4000×180B — hashes map pushes over floor, guard THROWS (accurate metric)', hashGuard);
   let sizeGuard = false; try { P.buildState(ID, T, { b: { kind: 'captured', value: { x: bigVal } } }); } catch (e) { sizeGuard = e.code === 'E-BOUNDS'; }
   check('producer guard: 1.2 MiB without {maxTranscriptBytes} THROWS E-BOUNDS', sizeGuard);
   const good = mk(); const rg = P.verify(good, { context: 'data' }); const cg = await cleanRoom(good, { context: 'data' });

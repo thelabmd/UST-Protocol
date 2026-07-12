@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.11' };
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.12' };
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -91,6 +91,12 @@ export function edVerifyStrict(pubB64url, msgUtf8, sigB64url) {
 
 // ─── producer: §7 seal — sign canon({ust,state}) with an Ed25519 private key ─────────────────────────
 export function seal(state, privKeyObj, pubB64url) {
+  // final protocol-law check (rc.12): a sealed transcript may NEVER exceed the ABS — fail closed
+  // at the producer, not only at verifiers.
+  {
+    const sBytes = Buffer.byteLength(canon({ ust: '1.0', state }), 'utf8');
+    if (sBytes > BOUNDS.sizeBytes) throw Object.assign(new Error(`E-BOUNDS: canonical transcript ${sBytes} B > ABS ${BOUNDS.sizeBytes}`), { code: 'E-BOUNDS' });
+  }
   const doc = { ust: '1.0', state };
   const sig = edSign(null, Buffer.from(signedContent(doc), 'utf8'), privKeyObj).toString('base64url');
   return { ust: '1.0', state, sig: { alg: 'Ed25519', key_id: state.id.key_id, pub: pubB64url, sig } };
@@ -106,17 +112,19 @@ export function buildState(id, time, data, provenance, opts) {
   if (n > cap) throw Object.assign(
     new Error(`E-BOUNDS: ${n} partitions > ${cap} — declare {maxPartitions} matching your genesis max_partitions (§12.1; ABS ${BOUNDS.partitions})`),
     { code: 'E-BOUNDS' });
-  const approxBytes = Buffer.byteLength(JSON.stringify({ ust: '1.0', state: { id, time, data } }), 'utf8') + 512;
-  const capB = Math.min(Number(opts?.maxTranscriptBytes ?? BOUNDS.floorSizeBytes), BOUNDS.sizeBytes);
-  if (approxBytes > capB) throw Object.assign(
-    new Error(`E-BOUNDS: ~${approxBytes} B > ${capB} — declare {maxTranscriptBytes} matching your genesis max_transcript_bytes (§12.1; ABS ${BOUNDS.sizeBytes})`),
-    { code: 'E-BOUNDS' });
   const hashes = {};
   for (const [name, part] of Object.entries(data))
     hashes[name] = part.commit !== undefined ? partitionHash({ commit: part.commit })
       : partitionHash({ domain_shard: id.domain_shard, ust_id: id.ust_id, name, value: part.value });
   const state = { id, time, data, hashes };
   if (provenance) state.provenance = provenance;
+  // ACCURATE size guard (rc.12, P1-6): measured on the FULL canonical state — the hashes map alone
+  // adds ~90 B × partitions (≈370 KB at 4096) that the old {id,time,data}+512 estimate missed.
+  const stBytes = Buffer.byteLength(canon({ ust: '1.0', state }), 'utf8') + 300; // + sig envelope pad
+  const capB = Math.min(Number(opts?.maxTranscriptBytes ?? BOUNDS.floorSizeBytes), BOUNDS.sizeBytes);
+  if (stBytes > capB) throw Object.assign(
+    new Error(`E-BOUNDS: canonical state ~${stBytes} B > ${capB} — declare {maxTranscriptBytes} matching your genesis max_transcript_bytes (§12.1; ABS ${BOUNDS.sizeBytes})`),
+    { code: 'E-BOUNDS' });
   return state;
 }
 export const buildAttestation = (id, time, data, constituents, prev) =>            // §9.2 constituents + Merkle root
@@ -241,27 +249,32 @@ export function verify(doc, opts = {}) {
     // max_partitions (≤ ABS 4096). A key-form identity can hold no ceremony → the floor is its law.
     // Without the capacity-bearing genesis the question cannot complete → INDETERMINATE('unavailable'),
     // never INVALID (violation unprovable) and never VALID (floor unpassable) — the honest tier ladder.
-    const docBytes = Buffer.byteLength(JSON.stringify(doc), 'utf8');
-    if (dk.length > BOUNDS.floorPartitions || docBytes > BOUNDS.floorSizeBytes) {
+    // §13 NORMATIVE size metric (rc.12): UTF-8 bytes of the SIGNED CONTENT canon({ust,state}) — the
+    // string S already computed for the hash. Transport formatting can never flip a verdict (P0-3).
+    const sBytes = Buffer.byteLength(S, 'utf8');
+    if (sBytes > BOUNDS.sizeBytes) return bad('E-BOUNDS', `canonical transcript ${sBytes} B > 64 MiB ABS`);
+    // verifier CAPABILITY ceiling (rc.12): protocol-valid but beyond THIS verifier ⇒ honest refusal.
+    if (opts.maxSupportedBytes && sBytes > Number(opts.maxSupportedBytes))
+      return { result: 'INDETERMINATE', reason: 'resource_limit', detail: `canonical transcript ${sBytes} B > this verifier's capability ${opts.maxSupportedBytes} B` };
+    if (dk.length > BOUNDS.floorPartitions || sBytes > BOUNDS.floorSizeBytes) {
       const over = dk.length > BOUNDS.floorPartitions
-        ? `partitions ${dk.length} > ${BOUNDS.floorPartitions}` : `size ${docBytes} B > 1 MiB`;
+        ? `partitions ${dk.length} > ${BOUNDS.floorPartitions}` : `canonical size ${sBytes} B > 1 MiB`;
       if (shardMode === 'key') return bad('E-BOUNDS', `${over} anonymous floor (key-form identity cannot declare capacity)`);
-      const g = opts.genesis;
-      const gPlausible = g && g.state?.id?.class === 'genesis' && g.state?.id?.domain_shard === st.id.domain_shard;
-      if (!gPlausible || !isValid(verify(g)))
-        return { result: 'INDETERMINATE', reason: 'unavailable', detail: `${over} floor — capacity is genesis-declared and no valid genesis for ${st.id.domain_shard} was supplied` };
-      const gv = g.state?.data?.genesis?.value ?? {};
+      // Capacity is a TRUSTED GRANT (rc.12, P0-4): the caller passes opts.capacity AFTER establishing
+      // authority (resolveAuthority → .capacity, or a pin/policy). A raw caller-supplied genesis no
+      // longer expands anything — a self-signed genesis was a self-issued budget.
+      const cap = opts.capacity ?? {};
       if (dk.length > BOUNDS.floorPartitions) {
-        const declared = Number(gv.max_partitions ?? NaN);
-        if (!Number.isInteger(declared) || declared < 1 || declared > BOUNDS.partitions)
-          return bad('E-BOUNDS', `genesis declares no usable max_partitions — the ${BOUNDS.floorPartitions} floor applies`);
-        if (dk.length > declared) return bad('E-BOUNDS', `partitions ${dk.length} > genesis-declared ${declared}`);
+        const granted = Number(cap.maxPartitions ?? NaN);
+        if (!Number.isInteger(granted) || granted < 1 || granted > BOUNDS.partitions)
+          return { result: 'INDETERMINATE', reason: 'unavailable', detail: `${over} floor — no trusted capacity grant for ${st.id.domain_shard} (resolve authority, then pass opts.capacity)` };
+        if (dk.length > granted) return bad('E-BOUNDS', `partitions ${dk.length} > granted ${granted}`);
       }
-      if (docBytes > BOUNDS.floorSizeBytes) {
-        const declaredB = Number(gv.max_transcript_bytes ?? NaN);
-        if (!Number.isInteger(declaredB) || declaredB < 1 || declaredB > BOUNDS.sizeBytes)
-          return bad('E-BOUNDS', 'genesis declares no usable max_transcript_bytes — the 1 MiB floor applies');
-        if (docBytes > declaredB) return bad('E-BOUNDS', `size ${docBytes} B > genesis-declared ${declaredB}`);
+      if (sBytes > BOUNDS.floorSizeBytes) {
+        const grantedB = Number(cap.maxTranscriptBytes ?? NaN);
+        if (!Number.isInteger(grantedB) || grantedB < 1 || grantedB > BOUNDS.sizeBytes)
+          return { result: 'INDETERMINATE', reason: 'unavailable', detail: `canonical size ${sBytes} B > 1 MiB floor — no trusted capacity grant for ${st.id.domain_shard}` };
+        if (sBytes > grantedB) return bad('E-BOUNDS', `canonical size ${sBytes} B > granted ${grantedB}`);
       }
     }
     if (!CLASSES.includes(st.id.class)) return bad('E-MALFORMED', 'unknown class ' + st.id.class);
@@ -433,6 +446,13 @@ export function resolveAuthority(doc, { genesis, keylog = [], noForkConfirmed = 
   if (genesis.sig.key_id !== genesis.state.id.key_id) return { error: 'E-GENESIS', detail: 'genesis not self-signed' };
   if (genesis.state.id.domain_shard !== doc.state.id.domain_shard) return { error: 'E-GENESIS', detail: 'genesis domain mismatch' };
   if (keylog.length > 256) return { error: 'E-BOUNDS', detail: 'key-log > 256 (§13)' };
+  // rc.12: surface the ceremony-declared CAPACITY so callers can pass it as opts.capacity to verify()
+  // once authority is established — the grant flows FROM resolution, never from a raw genesis.
+  const gvCap = genesis.state?.data?.genesis?.value ?? {};
+  const capacity = {
+    ...(gvCap.max_partitions !== undefined ? { maxPartitions: Number(gvCap.max_partitions) } : {}),
+    ...(gvCap.max_transcript_bytes !== undefined ? { maxTranscriptBytes: Number(gvCap.max_transcript_bytes) } : {}),
+  };
   let prevHash = contentHash(genesis);
   // key_id is DERIVED from the pub (H(ust:keylog,pub)), never a free string — authority binds the KEY, not a label.
   const validKeys = new Map([[genesis.state.id.key_id, genesis.sig.pub]]);         // key_id → pub
@@ -471,9 +491,9 @@ export function resolveAuthority(doc, { genesis, keylog = [], noForkConfirmed = 
       return { strength: 'self-asserted', status: 'expired', detail: 'signed after hygienic retirement (X1)' };
   }
   // W1 — authoritative REQUIRES a positive no-fork confirmation (the witness), the caller/ustate's job.
-  if (!noForkConfirmed) return { strength: 'authoritative', status: 'unavailable',
+  if (!noForkConfirmed) return { strength: 'authoritative', status: 'unavailable', capacity,
     detail: 'no-fork not confirmed (W1: witness check is the caller job) → authoritative DENIED, retry' };
-  return { strength: 'authoritative', status: suspect ? 'suspect' : 'verified' };
+  return { strength: 'authoritative', status: suspect ? 'suspect' : 'verified', capacity };
 }
 
 // ─── TOP §11.2 anchor-proof: recompute the Merkle inclusion path content_hash→root (RFC 6962, domain-sep
@@ -536,14 +556,17 @@ export function verifyStream(frames, { genesis, checkpoint, requirePerFrameValid
 //     silently collapses duplicate keys. `verifyJson` scans the raw bytes for duplicate member names BEFORE
 //     constructing the object, then verifies. Untrusted transcripts from the network/storage MUST enter here.
 export function verifyJson(rawBytes, opts = {}) {
-  const raw = typeof rawBytes === 'string' ? rawBytes : Buffer.from(rawBytes).toString('utf8');
-  // §13 size ladder PRE-PARSE (rc.11): the byte length is known before any work — the strongest
-  // anti-DoS point. > ABS ⇒ E-BOUNDS; > floor without a supplied genesis ⇒ INDETERMINATE with
-  // ZERO parse work (a light/embedded verifier stays conformant by answering on length alone).
-  const rawLen = Buffer.byteLength(raw, 'utf8');
-  if (rawLen > BOUNDS.sizeBytes) return bad('E-BOUNDS', 'size > 64 MiB');
-  if (rawLen > BOUNDS.floorSizeBytes && !opts.genesis)
-    return { result: 'INDETERMINATE', reason: 'unavailable', detail: `size ${rawLen} B > 1 MiB floor — capacity is genesis-declared and no genesis was supplied` };
+  // §13 TRANSPORT ADMISSION (rc.12) — distinct from the document verdict. Byte length is read
+  // from the buffer BEFORE any decode/materialization (P0-2); an over-budget input is REFUSED as
+  // INDETERMINATE('resource_limit') — verification never started, so it is never called INVALID.
+  // The default input budget equals the protocol ABS; raw whitespace/base64 padding never flips a
+  // verdict because the NORMATIVE size is measured on the canonical signed content inside verify.
+  const isStr = typeof rawBytes === 'string';
+  const byteLen = isStr ? Buffer.byteLength(rawBytes, 'utf8') : (rawBytes.byteLength ?? Buffer.from(rawBytes).length);
+  const inputBudget = Number(opts.maxInputBytes ?? BOUNDS.sizeBytes);
+  if (byteLen > inputBudget)
+    return { result: 'INDETERMINATE', reason: 'resource_limit', detail: `raw input ${byteLen} B > input budget ${inputBudget} B — transport admission refused, verification not started` };
+  const raw = isStr ? rawBytes : Buffer.from(rawBytes).toString('utf8');
   const dup = scanDuplicateKeys(raw);
   if (dup) return bad('E-CANON', dup);
   let obj; try { obj = JSON.parse(raw); } catch { return bad('E-MALFORMED', 'not valid JSON'); }
