@@ -667,6 +667,8 @@ UST transcript with `state.id.class = "genesis"`, SELF-SIGNED by the genesis key
 shape even for the root of trust; it is verified by §14 like any document. The value MAY carry
 `max_partitions` (a string integer, 1..4096): the publisher's DECLARED partition capacity for documents under
 this `domain_shard` — the §13 ladder admits above-floor documents against it; absent ⇒ the 64 floor applies.
+The value MAY likewise carry `max_transcript_bytes` (a string integer, 1..67108864): the declared transcript
+size capacity — same ladder, same rules, floor 1 MiB (§13).
 The declaration is signed and ceremony-rooted; a verifier consults it only from a genesis supplied/resolved for
 the SAME `domain_shard` — a document can never expand its own budget.
 Anchoring is permissionless (anyone can commit any bytes), so "an anchored key log for noosphere.md" does NOT
@@ -744,7 +746,7 @@ A verifier MUST reject (E-BOUNDS) any transcript exceeding, and a producer MUST 
 | bound | ceiling |
 |---|---|
 | State nesting depth | 8 |
-| total Transcript size | operator-declared, ≤ 1 MiB |
+| total Transcript size | 1 MiB anonymous floor · genesis-declared ≤ 64 MiB (name-form, §12.1) · ABS 64 MiB |
 | array length | 4096 |
 | partitions per data | 64 anonymous floor · genesis-declared ≤ 4096 (name-form, §12.1) · ABS 4096 |
 | `based_on`/`constituents` breadth per node | 64 |
@@ -775,7 +777,19 @@ its law (E-BOUNDS). A name-form document above the floor verified WITHOUT its ca
 is honest: INDETERMINATE → VALID as the genesis context arrives, never VALID → INVALID across tiers (I4: the
 verdict is a total function of the document plus the supplied information set). The check runs at the §14
 shape step, where the identity FORM is known. A tooling DEFAULT for `max_partitions` is a suggestion, never a
-ceiling.
+ceiling. **The SAME ladder governs transcript SIZE (rc.11):** the 1 MiB floor exists so a LIGHT document fits
+anywhere — an agent's context window, a clipboard, a chat paste (the guarantee travels with the data); closed
+corporate HIGH/TOP networks expand it by ceremony via `max_transcript_bytes` (§12.1), ABS 64 MiB (2^26 — every
+mainstream runtime holds it; 4096 declared partitions at realistic value sizes fit, so the two declarations
+COMPOSE). The byte length is known BEFORE parsing, so this rung is the strongest anti-DoS point: a raw input
+above the floor with no supplied genesis is INDETERMINATE with ZERO parse work, and a light/embedded verifier
+stays conformant by answering on length alone. Bulk beyond the ABS belongs OUTSIDE the transcript — a State
+carries state and COMMITMENTS, never blobs: content-address the payload and reference it (§9.1 sources /
+`source_anchors`). **§13 classification:** VOLUME bounds (partitions, transcript size) scale with a publisher's
+legitimate data and are ceremony-declarable — floor / declared / ABS; STRUCTURE bounds (nesting depth, array
+length, breadth, chain depth, key-log length) protect EVERY verifier's implementation regardless of trust and
+are absolute laws — their escapes are structural: chunking, attestation TREES (64² = 4096 in two levels),
+re-genesis epochs — never declarations.
 
 ---
 

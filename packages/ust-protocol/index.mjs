@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.10' };
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.11' };
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -106,6 +106,11 @@ export function buildState(id, time, data, provenance, opts) {
   if (n > cap) throw Object.assign(
     new Error(`E-BOUNDS: ${n} partitions > ${cap} — declare {maxPartitions} matching your genesis max_partitions (§12.1; ABS ${BOUNDS.partitions})`),
     { code: 'E-BOUNDS' });
+  const approxBytes = Buffer.byteLength(JSON.stringify({ ust: '1.0', state: { id, time, data } }), 'utf8') + 512;
+  const capB = Math.min(Number(opts?.maxTranscriptBytes ?? BOUNDS.floorSizeBytes), BOUNDS.sizeBytes);
+  if (approxBytes > capB) throw Object.assign(
+    new Error(`E-BOUNDS: ~${approxBytes} B > ${capB} — declare {maxTranscriptBytes} matching your genesis max_transcript_bytes (§12.1; ABS ${BOUNDS.sizeBytes})`),
+    { code: 'E-BOUNDS' });
   const hashes = {};
   for (const [name, part] of Object.entries(data))
     hashes[name] = part.commit !== undefined ? partitionHash({ commit: part.commit })
@@ -118,10 +123,11 @@ export const buildAttestation = (id, time, data, constituents, prev) =>         
   buildState({ ...id, class: 'attestation' }, time, data, { constituents, root: merkleRoot(constituents), ...(prev !== undefined ? { prev } : {}) });
 export const buildDerivation = (id, time, data, basedOn, prev) =>                  // §9.3/§9.4 based_on + seed
   buildState({ ...id, class: 'derivation' }, time, data, { based_on: basedOn, seed: seed(basedOn.map(b => b.hash)), ...(prev !== undefined ? { prev } : {}) });
-export const buildGenesis = (id, time, pub, maxPartitions) =>                      // §12.1 self-signed name-binding root
+export const buildGenesis = (id, time, pub, maxPartitions, maxTranscriptBytes) =>  // §12.1 self-signed name-binding root
   buildState({ ...id, class: 'genesis' }, time, { genesis: { kind: 'captured', value: {
     pub, role: 'name-binding-root',
-    ...(maxPartitions !== undefined ? { max_partitions: String(maxPartitions) } : {}),  // capacity DECLARATION (≠ ceiling; ABS 4096)
+    ...(maxPartitions !== undefined ? { max_partitions: String(maxPartitions) } : {}),           // §13 ladder (≠ ceiling; ABS 4096)
+    ...(maxTranscriptBytes !== undefined ? { max_transcript_bytes: String(maxTranscriptBytes) } : {}), // §13 ladder (≠ ceiling; ABS 64 MiB)
   } } });
 export const buildKeyLogEntry = (id, time, keyOp, prev) =>                         // §12.2 add|rotate|revoke
   buildState({ ...id, class: 'key' }, time, { key_op: { kind: 'captured', value: keyOp } }, { prev });
@@ -161,9 +167,9 @@ const ustIdCalendarOk = (u) => calendarValid(u.slice(4, 8), u.slice(8, 10), u.sl
 const KEYID_FORM = /^sha256:[0-9a-f]{64}$/;
 
 // ─── §13 structural bounds — hard ceilings; exceed ⇒ E-BOUNDS ─────────────────────────────────────────
-const BOUNDS = { depth: 8, array: 4096, partitions: 4096, floorPartitions: 64, breadth: 64, sizeBytes: 1048576 };
+const BOUNDS = { depth: 8, array: 4096, partitions: 4096, floorPartitions: 64, breadth: 64, sizeBytes: 67108864, floorSizeBytes: 1048576 };
 export function checkBounds(doc) {
-  if (Buffer.byteLength(JSON.stringify(doc), 'utf8') > BOUNDS.sizeBytes) return 'size > 1 MiB';
+  if (Buffer.byteLength(JSON.stringify(doc), 'utf8') > BOUNDS.sizeBytes) return 'size > 64 MiB';
   if (doc.state?.data && Object.keys(doc.state.data).length > BOUNDS.partitions) return 'partitions > 4096';
   let bad = null;
   (function walk(v, d) {
@@ -235,16 +241,28 @@ export function verify(doc, opts = {}) {
     // max_partitions (≤ ABS 4096). A key-form identity can hold no ceremony → the floor is its law.
     // Without the capacity-bearing genesis the question cannot complete → INDETERMINATE('unavailable'),
     // never INVALID (violation unprovable) and never VALID (floor unpassable) — the honest tier ladder.
-    if (dk.length > BOUNDS.floorPartitions) {
-      if (shardMode === 'key') return bad('E-BOUNDS', `partitions ${dk.length} > ${BOUNDS.floorPartitions} anonymous floor (key-form identity cannot declare capacity)`);
+    const docBytes = Buffer.byteLength(JSON.stringify(doc), 'utf8');
+    if (dk.length > BOUNDS.floorPartitions || docBytes > BOUNDS.floorSizeBytes) {
+      const over = dk.length > BOUNDS.floorPartitions
+        ? `partitions ${dk.length} > ${BOUNDS.floorPartitions}` : `size ${docBytes} B > 1 MiB`;
+      if (shardMode === 'key') return bad('E-BOUNDS', `${over} anonymous floor (key-form identity cannot declare capacity)`);
       const g = opts.genesis;
       const gPlausible = g && g.state?.id?.class === 'genesis' && g.state?.id?.domain_shard === st.id.domain_shard;
       if (!gPlausible || !isValid(verify(g)))
-        return { result: 'INDETERMINATE', reason: 'unavailable', detail: `partitions ${dk.length} > ${BOUNDS.floorPartitions} floor — capacity is genesis-declared and no valid genesis for ${st.id.domain_shard} was supplied` };
-      const declared = Number(g.state?.data?.genesis?.value?.max_partitions ?? NaN);
-      if (!Number.isInteger(declared) || declared < 1 || declared > BOUNDS.partitions)
-        return bad('E-BOUNDS', `genesis declares no usable max_partitions — the ${BOUNDS.floorPartitions} floor applies`);
-      if (dk.length > declared) return bad('E-BOUNDS', `partitions ${dk.length} > genesis-declared ${declared}`);
+        return { result: 'INDETERMINATE', reason: 'unavailable', detail: `${over} floor — capacity is genesis-declared and no valid genesis for ${st.id.domain_shard} was supplied` };
+      const gv = g.state?.data?.genesis?.value ?? {};
+      if (dk.length > BOUNDS.floorPartitions) {
+        const declared = Number(gv.max_partitions ?? NaN);
+        if (!Number.isInteger(declared) || declared < 1 || declared > BOUNDS.partitions)
+          return bad('E-BOUNDS', `genesis declares no usable max_partitions — the ${BOUNDS.floorPartitions} floor applies`);
+        if (dk.length > declared) return bad('E-BOUNDS', `partitions ${dk.length} > genesis-declared ${declared}`);
+      }
+      if (docBytes > BOUNDS.floorSizeBytes) {
+        const declaredB = Number(gv.max_transcript_bytes ?? NaN);
+        if (!Number.isInteger(declaredB) || declaredB < 1 || declaredB > BOUNDS.sizeBytes)
+          return bad('E-BOUNDS', 'genesis declares no usable max_transcript_bytes — the 1 MiB floor applies');
+        if (docBytes > declaredB) return bad('E-BOUNDS', `size ${docBytes} B > genesis-declared ${declaredB}`);
+      }
     }
     if (!CLASSES.includes(st.id.class)) return bad('E-MALFORMED', 'unknown class ' + st.id.class);
     if (dk.length < 1) return bad('E-MALFORMED', 'no partition');
@@ -519,6 +537,13 @@ export function verifyStream(frames, { genesis, checkpoint, requirePerFrameValid
 //     constructing the object, then verifies. Untrusted transcripts from the network/storage MUST enter here.
 export function verifyJson(rawBytes, opts = {}) {
   const raw = typeof rawBytes === 'string' ? rawBytes : Buffer.from(rawBytes).toString('utf8');
+  // §13 size ladder PRE-PARSE (rc.11): the byte length is known before any work — the strongest
+  // anti-DoS point. > ABS ⇒ E-BOUNDS; > floor without a supplied genesis ⇒ INDETERMINATE with
+  // ZERO parse work (a light/embedded verifier stays conformant by answering on length alone).
+  const rawLen = Buffer.byteLength(raw, 'utf8');
+  if (rawLen > BOUNDS.sizeBytes) return bad('E-BOUNDS', 'size > 64 MiB');
+  if (rawLen > BOUNDS.floorSizeBytes && !opts.genesis)
+    return { result: 'INDETERMINATE', reason: 'unavailable', detail: `size ${rawLen} B > 1 MiB floor — capacity is genesis-declared and no genesis was supplied` };
   const dup = scanDuplicateKeys(raw);
   if (dup) return bad('E-CANON', dup);
   let obj; try { obj = JSON.parse(raw); } catch { return bad('E-MALFORMED', 'not valid JSON'); }

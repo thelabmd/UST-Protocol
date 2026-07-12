@@ -89,7 +89,12 @@ export async function verify(doc, opts = {}) {
     // two conforming verifiers must never disagree; the 2026-07-12 boundary probe
     // caught this file admitting 65+ partitions the reference rejects).
     {
-      if (JSON.stringify(doc).length > 1_048_576) return bad('E-BOUNDS', 'transcript > 1 MiB');
+      const nBytes = JSON.stringify(doc).length;
+      if (nBytes > 67_108_864) return bad('E-BOUNDS', 'transcript > 64 MiB');
+      if (nBytes > 1_048_576) {
+        if (/^sha256:[0-9a-f]{64}$/.test(st.id.domain_shard)) return bad('E-BOUNDS', `size ${nBytes} B > 1 MiB anonymous floor (key-form)`);
+        return { result: 'INDETERMINATE', reason: 'unavailable', detail: `size ${nBytes} B > 1 MiB floor — capacity is genesis-declared; supply the publisher genesis to a genesis-aware verifier` };
+      }
       const depthOf = (v, d = 0) => (v && typeof v === 'object'
         ? (d > 8 ? d : Math.max(d, ...Object.values(v).map((x) => depthOf(x, d + 1))))
         : d);

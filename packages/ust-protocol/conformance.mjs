@@ -230,6 +230,25 @@ check('F8 impossible ust_id→E-MALFORMED', P.verify(mk({ r: { kind: 'captured',
   check('ABS: 4097 partitions → structural E-BOUNDS precheck', P.checkBounds(fake4097) === 'partitions > 4096');
   let guardThrew = false; try { P.buildState(ID, T, Object.fromEntries(Array.from({ length: 65 }, (_, i) => ['p' + i, { kind: 'captured', value: { x: '1' } }]))); } catch (e) { guardThrew = e.code === 'E-BOUNDS'; }
   check('producer guard: buildState 65 without {maxPartitions} THROWS E-BOUNDS', guardThrew);
+  // ─── §13 SIZE ladder (rc.11): floor 1 MiB · genesis-declared ≤ 64 MiB · pre-parse INDETERMINATE ───
+  const bigVal = 'x'.repeat(1_200_000);
+  const mkBig = (id = { ...ID, ust_id: 'ust:20260628.16' }, opts = { maxTranscriptBytes: 4_000_000 }) =>
+    P.seal(P.buildState(id, T, { blob: { kind: 'captured', value: { x: bigVal } } }, undefined, opts), A.priv, A.pubB64);
+  const dBig = mkBig();
+  const rBigNo = P.verify(dBig, { context: 'data' });
+  check('size: 1.2 MiB name-form NO genesis → INDETERMINATE(unavailable)', rBigNo.result === 'INDETERMINATE' && rBigNo.reason === 'unavailable');
+  const cBigNo = await cleanRoom(dBig, { context: 'data' });
+  check('size parity: clean-room 1.2 MiB name-form → INDETERMINATE', cBigNo.result === 'INDETERMINATE');
+  const gBytes = P.seal(P.buildGenesis({ domain_shard: ID.domain_shard, ust_id: 'ust:20260628.02', key_id: A.key_id }, T, A.pubB64, 4096, 4_000_000), A.priv, A.pubB64);
+  check('size: 1.2 MiB + genesis(max_transcript_bytes=4M) → ADMITTED VALID:LIGHT', P.verify(dBig, { context: 'data', genesis: gBytes }).result === 'VALID:LIGHT');
+  const gSmall = P.seal(P.buildGenesis({ domain_shard: ID.domain_shard, ust_id: 'ust:20260628.03', key_id: A.key_id }, T, A.pubB64, 4096, 1_048_576), A.priv, A.pubB64);
+  check('size: 1.2 MiB + genesis declaring only 1 MiB → E-BOUNDS (over declared)', P.verify(dBig, { context: 'data', genesis: gSmall }).error === 'E-BOUNDS');
+  const dBigK = mkBig({ domain_shard: A.key_id, ust_id: 'ust:20260628.16', key_id: A.key_id, class: 'observation' });
+  check('size: 1.2 MiB KEY-form → E-BOUNDS (no ceremony can exist)', P.verify(dBigK, { context: 'data' }).error === 'E-BOUNDS');
+  check('size: verifyJson PRE-PARSE — >64 MiB raw → E-BOUNDS without parsing', P.verifyJson('x'.repeat(67_108_865)).error === 'E-BOUNDS');
+  check('size: verifyJson PRE-PARSE — >1 MiB raw, no genesis → INDETERMINATE without parsing', P.verifyJson('{'.repeat(2_000_000)).result === 'INDETERMINATE');
+  let sizeGuard = false; try { P.buildState(ID, T, { b: { kind: 'captured', value: { x: bigVal } } }); } catch (e) { sizeGuard = e.code === 'E-BOUNDS'; }
+  check('producer guard: 1.2 MiB without {maxTranscriptBytes} THROWS E-BOUNDS', sizeGuard);
   const good = mk(); const rg = P.verify(good, { context: 'data' }); const cg = await cleanRoom(good, { context: 'data' });
   check('parity: identical verdict+hash on a valid doc', rg.result === cg.result && rg.content_hash === cg.content_hash);
 }
