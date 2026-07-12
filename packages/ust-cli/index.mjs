@@ -116,13 +116,90 @@ export default {
 `;
 }
 
-// Deploy the serving worker + route for `<domain>/.well-known/ust-genesis` — idempotent (PUT script,
-// upsert route), fail-closed (the genesis must VERIFY before ANY network write; success is never claimed
-// without a live attestation by the caller). The apex proxy flip is EXPLICIT (`flipProxy`) — turning the
-// orange cloud on changes how the WHOLE site is served, so the default only reports the required step.
-// Scopes: Workers Scripts:Edit + Zone.Workers Routes:Edit (+ DNS:Edit only when flipProxy).
+// The COMBINED-auth split (owner 2026-07-12): the two halves of publishing need DIFFERENT credentials, so
+// they are separable — worker+route can ride wrangler's OAuth (browser login, no manual token), leaving the
+// API token with the SMALLEST possible scope: Zone.DNS:Edit on one zone. Least privilege by construction.
+
+// Prefilled CF token-creation page (documented template URL): opens with DNS:Edit preselected — the user
+// only picks the zone. Exported so tests pin the deep-link shape.
+export const CF_DNS_TOKEN_URL = 'https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=' +
+  encodeURIComponent(JSON.stringify([{ key: 'dns', type: 'edit' }])) + '&name=' + encodeURIComponent('ust-ceremony (DNS only — revoke after)');
+
+// wrangler project for the OAuth path: two files, the route rides the config. Pure + testable.
+export function buildWranglerProject({ domain, genesisText }) {
+  return {
+    'worker.mjs': buildWorkerScript(genesisText),
+    'wrangler.toml': [
+      `name = "ust-genesis-${domain.replaceAll('.', '-')}"`,
+      'main = "worker.mjs"',
+      'compatibility_date = "2026-01-01"',
+      'workers_dev = false',
+      `routes = [{ pattern = "${domain}/.well-known/ust-genesis*", zone_name = "${domain}" }]`,
+    ].join('\n') + '\n',
+  };
+}
+
+// OAuth half: deploy via `npx wrangler deploy` — wrangler owns the browser-login flow (the CF OAuth client
+// is wrangler-only; a third-party CLI cannot run that flow itself, so we DELEGATE instead of imitating).
+// stdio is inherited so the user SEES the login. execImpl/writeImpl injected — testable without a network.
+export async function wranglerDeploy({ domain, genesisText, execImpl = null, writeImpl = null }) {
+  const doc = decodeInput(genesisText);
+  if (!P.isValid(P.verify(doc))) throw new Error('refusing to publish: the genesis does not VERIFY');
+  const files = buildWranglerProject({ domain, genesisText });
+  const { mkdtempSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const dir = mkdtempSync(join(tmpdir(), 'ust-cf-'));
+  const write = writeImpl ?? ((p, c) => writeFileSync(p, c));
+  for (const [name, content] of Object.entries(files)) write(join(dir, name), content);
+  const exec = execImpl ?? (async (cwd) => {
+    const { spawnSync } = await import('node:child_process');
+    const r = spawnSync('npx', ['wrangler', 'deploy'], { cwd, stdio: 'inherit' });
+    return r.status ?? 1;
+  });
+  const code = await exec(dir);
+  if (code !== 0) throw new Error('wrangler deploy failed (not logged in? run `npx wrangler login` — the browser flow — and re-run)');
+  return { genHash: P.contentHash(doc), script: `ust-genesis-${domain.replaceAll('.', '-')}`, route: `${domain}/.well-known/ust-genesis*`, dir };
+}
+
+// DNS half (small-token): apex proxy check/flip + SSL advisory. Scope needed: Zone.DNS:Edit only — the SSL
+// read degrades to a note when the token cannot see zone settings (never blocks the smaller scope).
+export async function cfApexSteps({ domain, token, flipProxy = false, fetchImpl = fetch }) {
+  if (!token) throw new Error('apex steps need a CF token with Zone.DNS:Edit for ' + domain + ' — create one prefilled: ' + CF_DNS_TOKEN_URL);
+  const cf = (path, init) => fetchImpl('https://api.cloudflare.com/client/v4' + path, { ...init, headers: { Authorization: 'Bearer ' + token, ...(init?.headers) } }).then((r) => r.json());
+  const zone = (await cf(`/zones?name=${domain}`)).result?.[0];
+  if (!zone) throw new Error('CF zone not found / token cannot see ' + domain);
+
+  const recs = (await cf(`/zones/${zone.id}/dns_records?name=${domain}`)).result || [];
+  const apex = recs.filter((r) => ['A', 'AAAA', 'CNAME'].includes(r.type));
+  const proxied = apex.some((r) => r.proxied);
+  const warnings = [];
+  let flipped = 0;
+  if (!proxied && flipProxy) {
+    for (const r of apex) {
+      const p = await cf(`/zones/${zone.id}/dns_records/${r.id}`, { method: 'PATCH', body: JSON.stringify({ proxied: true }), headers: { 'content-type': 'application/json' } });
+      if (!p.success) throw new Error(`proxy flip failed on ${r.type} record: ` + (p.errors?.[0]?.message || '?'));
+      flipped++;
+    }
+  } else if (!proxied) {
+    warnings.push(`apex ${domain} is DNS-only (grey): the route cannot fire. Re-run with --flip-proxy, or enable the proxy on the apex A/AAAA/CNAME records — NOTE this changes how the WHOLE site is served (origin behind CF; zone SSL mode must be Full/Strict).`);
+  }
+  // SSL advisory — Flexible + an https origin = redirect loops; never auto-mutate a zone-wide setting
+  if (proxied || flipped) {
+    try {
+      const ssl = (await cf(`/zones/${zone.id}/settings/ssl`)).result?.value;
+      if (ssl === 'flexible') warnings.push('zone SSL mode is FLEXIBLE — with an https origin this loops; set it to Full (strict).');
+      else if (ssl === undefined) warnings.push('SSL mode not visible to this token (DNS-only scope) — verify the zone is Full (strict) in the dashboard.');
+    } catch { warnings.push('SSL mode not visible to this token (DNS-only scope) — verify the zone is Full (strict) in the dashboard.'); }
+  }
+  return { zoneId: zone.id, proxied: proxied || flipped > 0, flipped, warnings };
+}
+
+// Full-token path (single credential, 3 scopes) — deploy worker + route via the API, then the apex steps.
+// Idempotent (PUT script, list→PUT/POST route), fail-closed (the genesis must VERIFY before ANY network
+// write; success is never claimed without a live attestation by the caller).
 export async function cfPublish({ domain, genesisText, token, flipProxy = false, fetchImpl = fetch }) {
-  if (!token) throw new Error('cf adapter needs CF_TOKEN (Workers Scripts:Edit + Workers Routes:Edit for this zone)');
+  if (!token) throw new Error('cf adapter needs CF_TOKEN (Workers Scripts:Edit + Workers Routes:Edit + DNS:Edit for this zone) — or split the scopes: `--auth wrangler` + a DNS-only token (' + CF_DNS_TOKEN_URL + ')');
   const doc = decodeInput(genesisText);
   if (!P.isValid(P.verify(doc))) throw new Error('refusing to publish: the genesis does not VERIFY');
   const genHash = P.contentHash(doc);
@@ -151,26 +228,9 @@ export async function cfPublish({ domain, genesisText, token, flipProxy = false,
     : await cf(`/zones/${zone.id}/workers/routes`, { method: 'POST', body, headers: { 'content-type': 'application/json' } });
   if (!rt.success) throw new Error('route upsert failed: ' + (rt.errors?.[0]?.message || '?'));
 
-  // 3. the route only FIRES on a proxied hostname — check the apex records, flip ONLY when asked
-  const recs = (await cf(`/zones/${zone.id}/dns_records?name=${domain}`)).result || [];
-  const apex = recs.filter((r) => ['A', 'AAAA', 'CNAME'].includes(r.type));
-  const proxied = apex.some((r) => r.proxied);
-  const warnings = [];
-  let flipped = 0;
-  if (!proxied && flipProxy) {
-    for (const r of apex) {
-      const p = await cf(`/zones/${zone.id}/dns_records/${r.id}`, { method: 'PATCH', body: JSON.stringify({ proxied: true }), headers: { 'content-type': 'application/json' } });
-      if (!p.success) throw new Error(`proxy flip failed on ${r.type} record: ` + (p.errors?.[0]?.message || '?'));
-      flipped++;
-    }
-  } else if (!proxied) {
-    warnings.push(`apex ${domain} is DNS-only (grey): the route cannot fire. Re-run with --flip-proxy, or enable the proxy on the apex A/AAAA/CNAME records — NOTE this changes how the WHOLE site is served (origin behind CF; zone SSL mode must be Full/Strict).`);
-  }
-  // SSL advisory — Flexible + an https origin = redirect loops; never auto-mutate a zone-wide setting
-  const ssl = (await cf(`/zones/${zone.id}/settings/ssl`)).result?.value;
-  if (proxied || flipped) { if (ssl === 'flexible') warnings.push('zone SSL mode is FLEXIBLE — with an https origin this loops; set it to Full (strict).'); }
-
-  return { genHash, script, route: pattern, routeAction: existing ? 'updated' : 'created', proxied: proxied || flipped > 0, flipped, warnings };
+  // 3. apex steps (same helper as the split-auth path — ONE implementation of the blast-radius policy)
+  const apex = await cfApexSteps({ domain, token, flipProxy, fetchImpl });
+  return { genHash, script, route: pattern, routeAction: existing ? 'updated' : 'created', proxied: apex.proxied, flipped: apex.flipped, warnings: apex.warnings };
 }
 
 // §20.1 compliance attestation — the four discovery-serving probes, infrastructure-agnostic (the publisher
@@ -297,17 +357,48 @@ async function cmdDiscovery() {
   process.exit(verdict === 'FAILED' ? 1 : 0);
 }
 
+// Resolve the DNS-scope token for the COMBINED flow: env first; interactively, open the PREFILLED
+// creation page (DNS:Edit preselected — the user only picks the zone) and ask for a paste. Fail-closed
+// in non-tty (an unattended run must be given the token, never prompted).
+async function resolveDnsToken(ask) {
+  const env = process.env.CF_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
+  if (env) return env;
+  if (!ask || !process.stdin.isTTY) throw new Error('no CF token: set CF_TOKEN (Zone.DNS:Edit only) — create one prefilled: ' + CF_DNS_TOKEN_URL);
+  console.log('  no CF_TOKEN — create a DNS-ONLY token (smallest scope; revoke after the ceremony):');
+  console.log('  ' + CF_DNS_TOKEN_URL);
+  const t = (await ask('  paste the token here: ')).trim();
+  if (!t) throw new Error('no token pasted');
+  return t;
+}
+
 // ─── ust publish cf --domain <d> --genesis <file> — the CF one-click serving adapter (§20.1) ──────────
 async function cmdPublish() {
   const provider = process.argv[3];
-  if (provider !== 'cf') die('usage: ust publish cf --domain <d> --genesis <ust-genesis file> [--flip-proxy] [--mirror url,url]\n  (cf is the first convenience adapter — the §20.1 contract itself is infrastructure-agnostic; `ust discovery` attests ANY stack)');
+  if (provider !== 'cf') die('usage: ust publish cf --domain <d> --genesis <ust-genesis file> [--auth wrangler] [--flip-proxy] [--mirror url,url]\n  (cf is the first convenience adapter — the §20.1 contract itself is infrastructure-agnostic; `ust discovery` attests ANY stack)');
   const domain = arg('domain'); if (!domain || domain === true) die('--domain is required');
   const genPath = arg('genesis'); if (!genPath || genPath === true) die('--genesis <path to the ust-genesis file> is required');
   const genesisText = readFileSync(genPath, 'utf8');
-  const token = process.env.CF_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
-  let r; try { r = await cfPublish({ domain, genesisText, token, flipProxy: !!arg('flip-proxy', false) }); } catch (e) { die(e.message); }
-  console.log('  ✓ worker ' + r.script + ' deployed (genesis embedded, ' + r.genHash + ')');
-  console.log('  ✓ route ' + r.route + ' ' + r.routeAction + (r.flipped ? `  (+ proxy enabled on ${r.flipped} apex record${r.flipped > 1 ? 's' : ''})` : ''));
+  const flipProxy = !!arg('flip-proxy', false);
+
+  let r;
+  if (arg('auth', null) === 'wrangler') {
+    // COMBINED flow: worker+route ride wrangler's OAuth (browser login — no workers scopes on any token);
+    // the API token shrinks to Zone.DNS:Edit for the apex steps.
+    let w; try { w = await wranglerDeploy({ domain, genesisText }); } catch (e) { die(e.message); }
+    console.log('  ✓ worker ' + w.script + ' deployed via wrangler OAuth (genesis embedded, ' + w.genHash + ')');
+    console.log('  ✓ route ' + w.route + ' (from wrangler.toml)');
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    let apex; try { apex = await cfApexSteps({ domain, token: await resolveDnsToken((q) => rl.question(q)), flipProxy }); }
+    catch (e) { rl.close(); die(e.message); }
+    rl.close();
+    r = { ...w, routeAction: 'wrangler', proxied: apex.proxied, flipped: apex.flipped, warnings: apex.warnings };
+  } else {
+    const token = process.env.CF_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
+    try { r = await cfPublish({ domain, genesisText, token, flipProxy }); } catch (e) { die(e.message); }
+    console.log('  ✓ worker ' + r.script + ' deployed (genesis embedded, ' + r.genHash + ')');
+    console.log('  ✓ route ' + r.route + ' ' + r.routeAction);
+  }
+  if (r.flipped) console.log(`  ✓ proxy enabled on ${r.flipped} apex record${r.flipped > 1 ? 's' : ''}`);
   for (const w of r.warnings) console.log('  ⚠  ' + w);
   if (!r.proxied) { console.log('\n  NOT LIVE YET — the apex is not proxied; nothing to attest.'); process.exit(1); }
   // fail-closed: deployment is only DONE when the live surface attests (§20.1 probes)
@@ -372,8 +463,17 @@ async function cmdGenesis() {
   // not a vendor) and confirms. EITHER way the live fail-closed gate below is the same.
   if (arg('publish', null) === 'cf') {
     console.log('  4/5  deploying the CF serving worker (genesis embedded, path-keyed cache)…');
-    let pub; try { pub = await cfPublish({ domain, genesisText: JSON.stringify(genesis), token: process.env.CF_TOKEN || process.env.CLOUDFLARE_API_TOKEN, flipProxy: !!arg('flip-proxy', false) }); }
-    catch (e) { rl.close(); die(e.message); }
+    let pub;
+    try {
+      if (arg('auth', null) === 'wrangler') {
+        // combined auth: worker+route via wrangler OAuth; the token below stays DNS-only (smallest scope)
+        const w = await wranglerDeploy({ domain, genesisText: JSON.stringify(genesis) });
+        const apex = await cfApexSteps({ domain, token: await resolveDnsToken(ask), flipProxy: !!arg('flip-proxy', false) });
+        pub = { ...w, routeAction: 'wrangler', proxied: apex.proxied, flipped: apex.flipped, warnings: apex.warnings };
+      } else {
+        pub = await cfPublish({ domain, genesisText: JSON.stringify(genesis), token: process.env.CF_TOKEN || process.env.CLOUDFLARE_API_TOKEN, flipProxy: !!arg('flip-proxy', false) });
+      }
+    } catch (e) { rl.close(); die(e.message); }
     console.log('       ✓ worker ' + pub.script + ' + route ' + pub.route + ' (' + pub.routeAction + (pub.flipped ? ', proxy enabled on apex' : '') + ')');
     for (const w of pub.warnings) console.log('       ⚠  ' + w);
     if (!pub.proxied) { rl.close(); die('apex is not proxied — the route cannot fire. Re-run with --flip-proxy (NOTE: puts the whole site behind CF), or enable the proxy manually and re-run.'); }

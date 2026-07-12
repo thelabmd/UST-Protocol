@@ -224,6 +224,43 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
   check('cfpublish_flexible_ssl_warns', r5.warnings.some((w) => w.toLowerCase().includes('flexible')));
 }
 
+// ── 11. combined auth (wrangler OAuth + DNS-only token) — the scope split is real: the wrangler path
+// never needs workers scopes on a token, and the small-token path degrades gracefully where it cannot see.
+{
+  const g = await C.buildCeremony({ domain: DOMAIN, profile: 'silver' });
+  const bytes = JSON.stringify(g.genesis);
+
+  // the generated project: exact worker bytes + the route riding wrangler.toml (zone-bound, no workers_dev)
+  const proj = C.buildWranglerProject({ domain: DOMAIN, genesisText: bytes });
+  check('wrangler_project_worker_is_exact', proj['worker.mjs'] === C.buildWorkerScript(bytes));
+  check('wrangler_project_route_in_toml', proj['wrangler.toml'].includes(`${DOMAIN}/.well-known/ust-genesis*`) && proj['wrangler.toml'].includes(`zone_name = "${DOMAIN}"`) && proj['wrangler.toml'].includes('workers_dev = false'));
+
+  // deploy: files written, exec runs in the project dir, hash returned; a failing exec names the login fix
+  const written = []; let ranIn = null;
+  const ok = await C.wranglerDeploy({ domain: DOMAIN, genesisText: bytes, writeImpl: (p, c) => written.push(p), execImpl: async (cwd) => { ranIn = cwd; return 0; } });
+  check('wrangler_deploy_writes_and_runs', written.length === 2 && ranIn !== null && ok.genHash === g.genHash);
+  check('wrangler_deploy_failure_names_login', await threw(() => C.wranglerDeploy({ domain: DOMAIN, genesisText: bytes, writeImpl: () => {}, execImpl: async () => 1 })));
+
+  // fail-closed: an invalid genesis never reaches disk OR exec
+  const tam = JSON.parse(bytes); tam.state.data.genesis.value.pub = 'AAAA' + tam.state.data.genesis.value.pub.slice(4);
+  const w2 = []; let ran2 = false;
+  check('wrangler_invalid_genesis_never_writes', await threw(() => C.wranglerDeploy({ domain: DOMAIN, genesisText: JSON.stringify(tam), writeImpl: (p) => w2.push(p), execImpl: async () => { ran2 = true; return 0; } })) && w2.length === 0 && !ran2);
+
+  // the prefilled token page: DNS:edit preselected — the deep-link shape is pinned
+  check('dns_token_url_is_prefilled', C.CF_DNS_TOKEN_URL.startsWith('https://dash.cloudflare.com/profile/api-tokens?') && decodeURIComponent(C.CF_DNS_TOKEN_URL).includes('"key":"dns"') && decodeURIComponent(C.CF_DNS_TOKEN_URL).includes('"type":"edit"'));
+
+  // DNS-only token cannot read zone settings → the SSL advisory DEGRADES to a note, never a throw
+  const blind = async (url, init) => {
+    const u = String(url);
+    if (u.includes('/zones?name=')) return { json: async () => ({ result: [{ id: 'z1', account: { id: 'acc1' } }] }) };
+    if (u.includes('/dns_records?name=')) return { json: async () => ({ result: [{ id: 'd1', type: 'A', proxied: true }] }) };
+    if (u.includes('/settings/ssl')) return { json: async () => ({ success: false, errors: [{ message: 'insufficient scope' }] }) };
+    return { json: async () => ({}) };
+  };
+  const apex = await C.cfApexSteps({ domain: DOMAIN, token: 'dns-only', fetchImpl: blind });
+  check('apex_steps_degrade_without_settings_scope', apex.proxied && apex.warnings.some((w) => w.includes('not visible to this token')));
+}
+
 console.log(`\nPASS ${pass} FAIL ${fail} NOTES ${note}`);
 if (fail) { console.error('\nFAILURES:\n  ' + fails.join('\n  ')); process.exit(1); }
 console.log('✓ 9th-audit regression holds — the seven points cannot silently regress');
