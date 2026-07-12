@@ -430,6 +430,34 @@ export function ceremonySummary({ domain, genHash, opKeyId, maxP, outDir, encryp
   ];
 }
 
+// The closing story every publishing flow must end with (owner: "я вообще не понимаю что мне дальше
+// делать и где мой HIGH") — what just happened, the explicit PATH TO HIGH for the publisher's own
+// documents, and the housekeeping. One source, printed by publish AND folded into the ceremony summary.
+export function whatsNextSummary({ domain, genHash }) {
+  return [
+    '',
+    '  ─── what just happened ───',
+    '  ✅ your name has a LIVE, verifiable identity:',
+    `     the genesis (${genHash.slice(0, 20)}…) is served at https://${domain}/.well-known/ust-genesis`,
+    '     and pinned in DNS (_ust TXT). Anyone in the world can verify it.',
+    '',
+    '  ─── the path to HIGH for YOUR documents ───',
+    '  ✅ 1. identity live — genesis + key-log minted, serving attested',
+    '  ⬜ 2. your producer signs with the operational key',
+    '        load operational-key.b64 as its signing-key secret, then DELETE the file',
+    '  ⬜ 3. make the key log resolvable — publish ust-keylog-0 next to the genesis',
+    '        (a verifier needs BOTH to resolve your name)',
+    '  ⬜ 4. verifiers resolve — YOUR documents then verify HIGH:',
+    `        npx @ust-protocol/cli verify <doc> --genesis ust-genesis --keylog ust-keylog-0 --no-fork-confirmed`,
+    '  ⏳ later: witness exchange (backs the no-fork assertion) · anchor the stream → TOP',
+    '',
+    '  ─── housekeeping (do these NOW) ───',
+    '  · revoke the ceremony credentials:  npx wrangler logout  + delete the DNS token in the dashboard',
+    '  · genesis-key(.enc).b64 → cold storage; the passphrase lives APART from the file',
+    `  · re-attest the serving contract anytime:  npx @ust-protocol/cli discovery ${domain}`,
+  ];
+}
+
 // The witness/anchor stage is PREPARED, never executed by this CLI (9th audit #2). Exported so the
 // regression suite asserts the wording can't silently regress to a false "witnesses verified / anchored".
 export function stageSummary({ genHash, witnesses = [], profile }) {
@@ -568,9 +596,11 @@ async function cmdPublish() {
   // fail-closed: deployment is only DONE when the live surface attests (§20.1 probes)
   const mirrors = (arg('mirror', '') || '').split(',').filter(Boolean);
   const a = await attestDiscovery({ domain, mirrors, expectHash: r.genHash });
-  const mark = { pass: '✓', fail: '✗', skip: '–' };
+  const mark = { pass: '✅', fail: '❌', skip: '⬜' };
   for (const c of a.checks) console.log(`  ${mark[c.status]}  ${c.id}${c.detail ? '  (' + c.detail + ')' : ''}`);
-  console.log(`\n  DISCOVERY CONFORMANCE (§20.1): ${a.verdict}`);
+  console.log(`\n  DISCOVERY CONFORMANCE (§20.1): ${a.verdict}${a.verdict === 'PARTIAL' ? '  — no violation; only undeclared properties left unattested (e.g. a mirror)' : ''}`);
+  // the flow must never just STOP at a verdict — close the story: what happened, the path to HIGH, housekeeping
+  if (a.verdict !== 'FAILED') for (const l of whatsNextSummary({ domain, genHash: r.genHash })) console.log(l);
   process.exit(a.verdict === 'FAILED' ? 1 : 0);
 }
 

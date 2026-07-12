@@ -346,6 +346,19 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
   check('readme_shows_tier_ladder', readme.includes('LIGHT') && readme.includes('VALID:HIGH') && readme.includes('--no-fork-confirmed'));
 }
 
+// ── 14. the closing story (owner: a flow must never STOP at a verdict) — what happened, the explicit
+// PATH TO HIGH for the publisher's documents, and the housekeeping. Pinned so publish can't regress
+// into ending on a bare verdict line again.
+{
+  const g = await C.buildCeremony({ domain: DOMAIN, profile: 'silver' });
+  const s = C.whatsNextSummary({ domain: DOMAIN, genHash: g.genHash }).join('\n');
+  check('whats_next_names_the_high_path', s.includes('path to HIGH') && s.includes('operational-key.b64') && s.includes('ust-keylog-0') && s.includes('--no-fork-confirmed'));
+  check('whats_next_names_housekeeping', s.includes('wrangler logout') && s.includes('cold storage') && s.includes('discovery ' + DOMAIN));
+  check('whats_next_steps_are_marked', s.includes('✅ 1.') && s.includes('⬜ 2.') && s.includes('⬜ 4.'));
+  check('whats_next_runnable_hints_are_npx', !/(^|\s)ust (verify|discovery)/m.test(s));
+  check('whats_next_no_overclaim', !/witnesses verified|anchored to bitcoin/i.test(s));
+}
+
 console.log(`\nPASS ${pass} FAIL ${fail} NOTES ${note}`);
 if (fail) { console.error('\nFAILURES:\n  ' + fails.join('\n  ')); process.exit(1); }
 console.log('✓ 9th-audit regression holds — the seven points cannot silently regress');
