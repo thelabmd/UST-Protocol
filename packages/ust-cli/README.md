@@ -18,14 +18,18 @@ npx @ust-protocol/cli verify doc.json    # or one-shot, no install
 | `ust genesis --domain <d>` | run the HIGH genesis ceremony (interactive; see the road below) |
 | `ust discovery <domain> [--mirror url,url] [--expect sha256:…]` | attest the §20.1 serving contract on ANY infrastructure |
 | `ust publish cf --domain <d> --genesis <f> [--auth wrangler] [--flip-proxy]` | deploy the Cloudflare serving adapter for an existing genesis |
+| `ust stream <frames…> [--genesis <f>] [--checkpoint <f>]` | the RANGE verdict — chain · forks · **completeness** (a stream property, never a single document's) |
+| `ust mirror <domain> [--publish gh --repo o/r]` | publish + attest a second-vendor mirror (§20.1 vendor-independence) |
 
 ## The tier ladder (what verify can prove)
 
 ```
 LIGHT  — a lone document: signed + intact under the key it carries (self-asserted)
 HIGH   — + name authority: the verifier RESOLVES genesis → key-log (+ no-fork witness)
-TOP    — + anchored time: the stream is provably ordered and complete (e.g. bitcoin-ots)
+TOP    — + anchored time: each document provably EXISTED by a real moment (e.g. bitcoin-ots)
 ```
+
+**Completeness is a separate RANGE verdict** (`ust stream` over frames + a covering checkpoint) — `VALID:TOP` speaks about a document's anchored time, never about a stream being complete.
 
 A lone document can only ever prove LIGHT — that is the **expected** result for a fresh `ust-genesis` file. HIGH is a property of *resolution*, not of the file:
 

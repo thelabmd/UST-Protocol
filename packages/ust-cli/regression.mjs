@@ -505,6 +505,31 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
   check('package_exports_the_core', pkg.exports === './index.mjs');
 }
 
+// ── 18. second external review (formal-model alignment) + the V8-reality pin.
+{
+  const g = await C.buildCeremony({ domain: DOMAIN, profile: 'silver' });
+  const bytes = JSON.stringify(g.genesis);
+
+  // TOP ≠ completeness (P0-doc): no CLI summary may claim completeness as a document-tier property
+  const cs = C.ceremonySummary({ domain: DOMAIN, genHash: g.genHash, opKeyId: 'k', maxP: 64, outDir: '.', encrypted: true }).join('\n');
+  check('top_never_claims_completeness', cs.includes('SEPARATE range verdict') && !/TOP[^\n]*provable completeness/.test(cs));
+  const readme = readFileSync(new URL('./README.md', import.meta.url), 'utf8');
+  check('readme_separates_completeness', readme.includes('never about a stream being complete') && !readme.includes('provably ordered and complete'));
+
+  // transport admission on a Buffer happens BEFORE any utf8 decode (F.9 refusal, not a crash/verdict)
+  const big = Buffer.from(bytes);
+  const refused = C.verifyRaw(big, { maxInputBytes: 16 });
+  check('buffer_admission_refuses_before_decode', refused.verdict.result === 'INDETERMINATE' && refused.verdict.reason === 'resource_limit' && refused.text === null);
+  check('buffer_path_verifies_normally', P.isValid(C.verifyRaw(big).verdict));
+
+  // V8 reality (Gemini): a depth bomb must yield a VERDICT, never a process crash — the parse is
+  // try/catch-bounded and the duplicate scanner is ITERATIVE (array stack, no recursion)
+  const bomb = '['.repeat(150000);
+  const bombV = C.verifyRaw(bomb);
+  check('depth_bomb_is_a_verdict_not_a_crash', bombV.verdict.result === 'INVALID');
+  check('dup_scanner_is_iteration_safe', C.scanDupes(bomb) === null);
+}
+
 console.log(`\nPASS ${pass} FAIL ${fail} NOTES ${note}`);
 if (fail) { console.error('\nFAILURES:\n  ' + fails.join('\n  ')); process.exit(1); }
 console.log('✓ 9th-audit regression holds — the seven points cannot silently regress');

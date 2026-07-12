@@ -59,6 +59,23 @@ export function scanDupes(text) {
 // Verify a SINGLE untrusted document through the normative raw path (admission + duplicate scan + parse
 // + verify). Returns { verdict, doc, text } — the caller uses doc ONLY on a valid verdict.
 export function verifyRaw(raw, opts = {}) {
+  // Buffer path: byte-length admission happens INSIDE verifyJson BEFORE any utf8 decode — the file is
+  // never materialized as a string when the transport budget refuses it (F.9 transport refusal).
+  if (Buffer.isBuffer(raw)) {
+    let i = 0; while (i < raw.length && (raw[i] === 0x20 || raw[i] === 0x09 || raw[i] === 0x0a || raw[i] === 0x0d)) i++;
+    const first = raw[i];
+    if (first === 0x7b || first === 0x5b) {   // '{' or '['
+      const verdict = P.verifyJson(raw, opts);
+      if (verdict.result === 'INDETERMINATE' && verdict.reason === 'resource_limit') return { verdict, doc: null, text: null };
+      const text = raw.toString('utf8');
+      let doc = null; try { doc = JSON.parse(text); } catch { doc = null; }
+      return { verdict, doc, text };
+    }
+    // base64/blob wrapper: bound the ENCODED length before decoding (decoded ≤ encoded)
+    const budget = Number(opts.maxInputBytes ?? 67108864);
+    if (raw.length > budget) return { verdict: { result: 'INDETERMINATE', reason: 'resource_limit', detail: `raw input ${raw.length} B > input budget ${budget} B` }, doc: null, text: null };
+    raw = raw.toString('utf8');
+  }
   const text = rawTextOf(raw);
   const verdict = P.verifyJson(text, opts);
   let doc = null; try { doc = JSON.parse(text); } catch { doc = null; }
@@ -571,7 +588,8 @@ export function ceremonySummary({ domain, genHash, opKeyId, maxP, outDir, encryp
     '  LIGHT  ✅ now   — each document verifies self-asserted: signed + intact under its carried key',
     '  HIGH   ⏳ next  — a verifier RESOLVES genesis→key-log (+ no-fork witness) and your NAME becomes',
     '                   authoritative:  npx @ust-protocol/cli verify <doc> --genesis ust-genesis --keylog ust-keylog-0 --no-fork-confirmed',
-    '  TOP    ⏳ later — anchor the stream (e.g. bitcoin-ots): provable TIME + provable completeness',
+    '  TOP    ⏳ later — anchored TIME for each document (e.g. bitcoin-ots). Stream COMPLETENESS is a',
+    '                   SEPARATE range verdict:  npx @ust-protocol/cli stream <frames…> --checkpoint <cp>',
     '',
     '  ➡️  next moves',
     "  1. operational-key.b64 → your producer's signing-key secret (an env var of YOUR naming), then DELETE the file",
@@ -712,13 +730,25 @@ export function stageSummary({ genHash, witnesses = [], profile }) {
 async function cmdVerify() {
   const src = process.argv[3];
   if (!src) die('usage: ust verify <file | - for stdin> [--context data|key] [--genesis <file> --keylog <file[,file…]> [--no-fork-confirmed]]');
-  const raw = src === '-' ? readFileSync(0, 'utf8') : readFileSync(src, 'utf8');
+  const raw = src === '-' ? readFileSync(0) : readFileSync(src);   // Buffer — admission precedes decode
   // pre-parse ONLY to pick the context — the VERDICT below comes from the normative raw path
-  let doc; try { doc = decodeInput(raw); } catch (e) { die('not a UST blob/base64/json: ' + e.message); }
+  let doc; try { doc = decodeInput(raw.toString('utf8')); } catch (e) { die('not a UST blob/base64/json: ' + e.message); }
 
   // optional HIGH resolution: every input passes the RAW boundary; the capacity grant flows FROM
-  // authority resolution (rc.12), never a raw caller-attached genesis
+  // authority resolution (rc.12), never a raw caller-attached genesis. The verifier's OWN resource
+  // envelope (ρ_v) is expressible: --max-input-bytes (transport) / --max-supported-bytes (capability).
   let opts = { context: arg('context', null) || contextFor(doc) };
+  for (const [flag, key] of [['max-input-bytes', 'maxInputBytes'], ['max-supported-bytes', 'maxSupportedBytes']]) {
+    const v = arg(flag, null);
+    if (v === true) die(`--${flag} needs a value`);
+    if (v !== null) opts[key] = Number(v);
+  }
+  // selective disclosure (F.7a): local nonce/value map + decryption keys widen what the verifier can check
+  for (const [flag, key] of [['disclosures', 'disclosures'], ['dec-keys', 'decKeys']]) {
+    const v = arg(flag, null);
+    if (v === true) die(`--${flag} needs a value (a JSON file)`);
+    if (v !== null) { try { opts[key] = JSON.parse(readFileSync(v, 'utf8')); } catch (e) { die(`could not read --${flag} ${v}: ` + e.message); } }
+  }
   const genesisPath = arg('genesis', null);
   const noFork = !!arg('no-fork-confirmed', false);
   if (genesisPath && genesisPath !== true) {
@@ -742,13 +772,14 @@ async function cmdVerify() {
     opts = { ...opts, genesis: genesisDoc, keylog: keylogDocs, noForkConfirmed: noFork, capacity: auth.capacity };
   }
 
-  const r = P.verifyJson(rawTextOf(raw), opts);
+  const { verdict: r } = verifyRaw(raw, opts);
   console.log(r.result + (r.error ? '  (' + r.error + (r.detail ? ' — ' + r.detail : '') + ')' : ''));
   if (P.isValid(r)) {
     const tier = r.result.split(':')[1] ?? 'LIGHT';
     console.log('  identity : ' + r.identity.strength + ' (mode ' + r.identity.mode + ')  ' + (r.publisher ? 'publisher ' + r.publisher : 'publisher_claimed ' + r.publisher_claimed));
     console.log('  time     : ' + r.time.strength + '/' + r.time.status + '   completeness: ' + r.completeness);
     console.log('  ust_id   : ' + r.ust_id + '   class ' + r.class + '   content_hash ' + r.content_hash);
+    if (r.provenance) console.log('  lineage  : declared' + (r.provenance.referents ? `, referents ${r.provenance.referents}` : '') + (r.provenance.depth !== undefined ? ` (walk depth ${r.provenance.depth})` : '') + ' — a declaration is not a verified derivation');
     console.log('  tier     : ' + ['LIGHT', 'HIGH', 'TOP'].map((t) => (t === tier ? `[${t}]` : ` ${t} `)).join('→'));
     if (tier === 'LIGHT' && !genesisPath) {
       console.log('\n  ✅ this is the EXPECTED result for a lone document — it proves the file is signed and');
@@ -759,10 +790,11 @@ async function cmdVerify() {
       console.log('     Once your witness exchange confirms no rival genesis exists, add: --no-fork-confirmed');
     } else if (tier === 'HIGH') {
       console.log('\n  🏛  the NAME is authoritative: genesis→key-log resolved' + (noFork ? ' (+ no-fork asserted by YOU — that assertion is your operator duty)' : ''));
-      console.log('     TOP is next: anchor the stream (provable time + completeness)');
+      console.log('     TOP is next: anchored TIME per document. Completeness is a SEPARATE range verdict (ust stream).');
     }
   }
-  process.exit(P.isValid(r) ? 0 : 1);
+  // three-valued exit contract: absence of information is NOT proven invalidity (F.5)
+  process.exit(P.isValid(r) ? 0 : r.result === 'INDETERMINATE' ? 2 : 1);
 }
 
 // ─── ust canon <file|-> — the DX diagnostic (#41): print the canonical string + hash so any-language devs diff ─
@@ -773,9 +805,18 @@ async function cmdCanon() {
   const dup = scanDupes(rawTextOf(raw));
   if (dup) die('E-CANON: ' + dup + '  (duplicate members are rejected at the RAW boundary — §6)');
   let v; try { v = JSON.parse(rawTextOf(raw)); } catch (e) { die('not JSON: ' + e.message); }
+  // a FULL transcript hashes over canon({ust,state}) — printing the hash of canon(whole doc) as if it
+  // were a content_hash mislabels the domain (external review): split the two cases honestly.
+  if (v && typeof v === 'object' && v.ust && v.state) {
+    let canonical; try { canonical = P.canon({ ust: v.ust, state: v.state }); } catch (e) { die('E-CANON: ' + (e.detail || e.message)); }
+    console.log(canonical);
+    console.error('# canonical SIGNED CONTENT of a transcript ({ust,state})');
+    console.error('# content_hash: ' + P.contentHash(v));
+    return;
+  }
   let canonical; try { canonical = P.canon(v); } catch (e) { die('E-CANON: ' + (e.detail || e.message) + '  (values must be NFC strings; no numbers/bools/nulls — §5)'); }
   console.log(canonical);
-  console.error('# sha256: ' + P.H('ust:state', canonical).slice(7));
+  console.error('# sha256 (generic canonical hash — NOT a content_hash: the input is not a {ust,state} transcript): ' + P.H('ust:state', canonical).slice(7));
 }
 
 // ─── ust discovery <domain> — §20.1 compliance attestation (any infra; properties, not mechanisms) ────
@@ -862,6 +903,30 @@ async function cmdPublish() {
   // the flow must never just STOP at a verdict — close the story: what happened, the path to HIGH, housekeeping
   if (a.verdict !== 'FAILED') for (const l of whatsNextSummary({ domain, genHash: r.genHash })) console.log(l);
   process.exit(a.verdict === 'FAILED' ? 1 : a.verdict === 'PARTIAL' ? 2 : 0);
+}
+
+// ─── ust stream <frame…> — the RANGE verdict (F.4): chain, forks, checkpoint, completeness ───────────
+// Completeness is NEVER a single document's property — this command is where it legitimately lives.
+async function cmdStream() {
+  const files = process.argv.slice(3).filter((a) => !a.startsWith('--'));
+  if (!files.length) die('usage: ust stream <frame.json…> [--genesis <f>] [--checkpoint <f>]   # range verdict: chain · forks · completeness\n  exit: 0=proven · 2=provisional/none · 1=broken');
+  const frames = [];
+  for (const f of files) {
+    const { verdict, doc } = verifyRaw(readFileSync(f));   // every frame passes the RAW boundary
+    if (!P.isValid(verdict)) die(`frame ${f} does not VERIFY (${verdict.error ?? verdict.result})`);
+    frames.push(doc);
+  }
+  const rd = (flag) => { const v = arg(flag, null); if (v === true) die(`--${flag} needs a value`); if (!v) return null;
+    const { verdict, doc } = verifyRaw(readFileSync(v)); if (!P.isValid(verdict)) die(`--${flag} file does not VERIFY (${verdict.error ?? verdict.result})`); return doc; };
+  const genesis = rd('genesis');
+  const checkpoint = rd('checkpoint');
+  const r = P.verifyStream(frames, { ...(genesis ? { genesis } : {}), ...(checkpoint ? { checkpoint } : {}) });
+  if (r.error) { console.log(`  ❌ stream BROKEN: ${r.error}${r.detail ? ' — ' + r.detail : ''}`); process.exit(1); }
+  console.log('  frames      ' + frames.length);
+  console.log('  authority   ' + (frames[0]?.state?.id?.domain_shard ?? '?') + (genesis ? '  (origin: genesis-bound)' : '  (origin: unbound — no --genesis)'));
+  console.log('  completeness ' + r.complete + (checkpoint ? '' : '   (no --checkpoint — proven is unreachable without one)'));
+  console.log('\n  completeness is a RANGE verdict over THESE frames — it never upgrades any single document\'s tier');
+  process.exit(r.complete === 'proven' ? 0 : 2);
 }
 
 // ─── ust mirror <domain> — vendor-independence on a SECOND vendor, attested never claimed ─────────────
@@ -1143,7 +1208,7 @@ async function cmdGenesis() {
 const isMain = (() => { try { return process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url); } catch { return false; } })();
 if (isMain) {
   const cmd = process.argv[2];
-  const run = { verify: cmdVerify, canon: cmdCanon, genesis: cmdGenesis, discovery: cmdDiscovery, publish: cmdPublish, mirror: cmdMirror }[cmd];
-  if (!run) { console.error('ust — verify machine-readable state\n\n  ust verify <file|->        verify a transcript (exit 0 = VALID, 1 = not)\n  ust canon  <file|->        print canonical bytes + hash (cross-language diff)\n  ust genesis --domain <d>   run the HIGH genesis ceremony (add --publish cf for one-click serving)\n  ust discovery <domain>     attest the §20.1 serving contract (any infra)\n  ust publish cf --domain <d> --genesis <f>   deploy the CF serving adapter for an existing genesis\n  ust mirror <domain>        publish + attest a SECOND-vendor mirror (§20.1 vendor-independence)\n'); process.exit(cmd ? 1 : 0); }
+  const run = { verify: cmdVerify, canon: cmdCanon, genesis: cmdGenesis, discovery: cmdDiscovery, publish: cmdPublish, mirror: cmdMirror, stream: cmdStream }[cmd];
+  if (!run) { console.error('ust — verify machine-readable state\n\n  ust verify <file|->        verify a transcript (exit 0 = VALID, 1 = not)\n  ust canon  <file|->        print canonical bytes + hash (cross-language diff)\n  ust genesis --domain <d>   run the HIGH genesis ceremony (add --publish cf for one-click serving)\n  ust discovery <domain>     attest the §20.1 serving contract (any infra)\n  ust publish cf --domain <d> --genesis <f>   deploy the CF serving adapter for an existing genesis\n  ust mirror <domain>        publish + attest a SECOND-vendor mirror (§20.1 vendor-independence)\n  ust stream <frames…>       RANGE verdict: chain · forks · completeness (needs --checkpoint for proven)\n'); process.exit(cmd ? 1 : 0); }
   run().catch((e) => die(e.message || String(e)));
 }
