@@ -593,7 +593,7 @@ async function cmdGenesis() {
     return v;
   };
 
-  console.log('\n  ⚙️  four choices, Enter accepts the [default]:');
+  console.log('\n  ⚙️  a few choices, Enter accepts the [default]:');
   console.log('\n  profile = how much ceremony rigor:');
   console.log('    bronze  quick floor (plain backup)     silver  software root + ENCRYPTED backup');
   console.log('    gold    HARDWARE root (pkcs11/air-gap) — refused honestly until this CLI can drive one');
@@ -605,7 +605,10 @@ async function cmdGenesis() {
   const defP = profile === 'gold' ? 256 : profile === 'silver' ? 64 : null;
   const maxP = await askOr('max-partitions', `  max_partitions [${defP ?? 'floor 64'}]: `, defP, (v) => v === null || (Number(v) > 0 && Number(v) <= 4096));
 
-  const outDir = await askOr('out', '\n  output directory for the 4 ceremony files [.]: ', '.');
+  // NOT a question (owner: you already chose your directory by standing in it) — the files go to the
+  // current dir; --out exists for scripted/special cases and is simply SHOWN, never asked.
+  let outDir = arg('out', '.');
+  if (outDir === true) { if (!tty) die('--out needs a value'); outDir = '.'; }
 
   // the road is a CHOICE, not a vendor default: by hand on YOUR infra (exact guidance) or one-click.
   let dnsMode = arg('dns', null);
@@ -620,7 +623,8 @@ async function cmdGenesis() {
     if (a === '2') { dnsMode = 'cf-api'; publishMode = 'cf'; authMode = authMode || 'wrangler'; }
   }
   dnsMode = dnsMode || 'manual';
-  console.log(`\n  ⚙️  profile ${profile} · max_partitions ${maxP ?? '(floor 64)'} · out ${outDir} · road ${publishMode === 'cf' ? 'cloudflare one-click' : 'by hand'}`);
+  console.log(`\n  ⚙️  profile ${profile} · max_partitions ${maxP ?? '(floor 64)'} · road ${publishMode === 'cf' ? 'cloudflare one-click' : 'by hand'}`);
+  console.log(`      files → ${outDir === '.' ? process.cwd() : outDir}  (override with --out)`);
   // one token, asked ONCE at first need — steps 3 and 4 share it (never a double paste-prompt)
   let dnsTokenMemo = null;
   const getDnsToken = async () => (dnsTokenMemo ??= await resolveDnsToken(ask));
