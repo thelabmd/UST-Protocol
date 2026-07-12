@@ -139,6 +139,11 @@ export function buildWranglerProject({ domain, genesisText }) {
   };
 }
 
+// The MINIMAL wrangler OAuth consent for this deploy — 5 scopes, not wrangler's default 28. The default
+// consent asks for wrangler's WHOLE toolbox (D1/Pages/Queues/Email/…) because OAuth scopes belong to the
+// CLIENT, not the task; `--scopes` narrows the grant to exactly what deploying a worker+route needs.
+export const WRANGLER_LOGIN_CMD = 'npx wrangler login --scopes account:read user:read workers_scripts:write workers_routes:write zone:read';
+
 // OAuth half: deploy via `npx wrangler deploy` — wrangler owns the browser-login flow (the CF OAuth client
 // is wrangler-only; a third-party CLI cannot run that flow itself, so we DELEGATE instead of imitating).
 // stdio is inherited so the user SEES the login. execImpl/writeImpl injected — testable without a network.
@@ -158,7 +163,7 @@ export async function wranglerDeploy({ domain, genesisText, execImpl = null, wri
     return r.status ?? 1;
   });
   const code = await exec(dir);
-  if (code !== 0) throw new Error('wrangler deploy failed (not logged in? run `npx wrangler login` — the browser flow — and re-run)');
+  if (code !== 0) throw new Error('wrangler deploy failed (not logged in? run the MINIMAL-scope browser login and re-run):\n  ' + WRANGLER_LOGIN_CMD + '\n  (5 scopes — not wrangler\'s default 28; `wrangler logout` revokes the grant after the ceremony)');
   return { genHash: P.contentHash(doc), script: `ust-genesis-${domain.replaceAll('.', '-')}`, route: `${domain}/.well-known/ust-genesis*`, dir };
 }
 

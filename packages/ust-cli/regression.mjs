@@ -241,6 +241,12 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
   check('wrangler_deploy_writes_and_runs', written.length === 2 && ranIn !== null && ok.genHash === g.genHash);
   check('wrangler_deploy_failure_names_login', await threw(() => C.wranglerDeploy({ domain: DOMAIN, genesisText: bytes, writeImpl: () => {}, execImpl: async () => 1 })));
 
+  // least-privilege pin: the prescribed login is the MINIMAL 5-scope consent, never the default 28 —
+  // and the failure message carries it (a user should never be steered to the broad grant).
+  check('wrangler_login_is_minimal_scoped', C.WRANGLER_LOGIN_CMD.includes('--scopes') && ['account:read', 'user:read', 'workers_scripts:write', 'workers_routes:write', 'zone:read'].every((s) => C.WRANGLER_LOGIN_CMD.includes(s)) && !C.WRANGLER_LOGIN_CMD.includes('d1:') && !C.WRANGLER_LOGIN_CMD.includes('pages:'));
+  try { await C.wranglerDeploy({ domain: DOMAIN, genesisText: bytes, writeImpl: () => {}, execImpl: async () => 1 }); }
+  catch (e) { check('wrangler_failure_message_carries_scoped_login', e.message.includes(C.WRANGLER_LOGIN_CMD)); }
+
   // fail-closed: an invalid genesis never reaches disk OR exec
   const tam = JSON.parse(bytes); tam.state.data.genesis.value.pub = 'AAAA' + tam.state.data.genesis.value.pub.slice(4);
   const w2 = []; let ran2 = false;
