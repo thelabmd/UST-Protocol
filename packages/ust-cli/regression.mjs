@@ -306,6 +306,25 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
   check('ceremony_artifacts_reach_high', high.result === 'VALID:HIGH' && high.publisher === DOMAIN);
 }
 
+// ── 13. the BY-HAND road (rc.9) — CF is a CHOICE, not the base: the manual guidance stays CONCRETE
+// (a hands-on publisher gets real instructions, not "publish this file"), and the DoH confirm is shared.
+{
+  const g = await C.buildCeremony({ domain: DOMAIN, profile: 'silver' });
+  const dns = C.manualDnsGuide(DOMAIN, `ust-genesis=${g.genHash}`).join('\n');
+  check('manual_dns_guide_is_concrete', dns.includes(`_ust.${DOMAIN}`) && dns.includes('TXT') && dns.includes('dig +short'));
+  const srv = C.manualServingGuide(DOMAIN, '.').join('\n');
+  check('manual_serving_guide_is_concrete', srv.includes('/.well-known/ust-genesis') && srv.includes('immutable') && srv.includes('cache key = path') && srv.includes('nginx') && srv.includes('GET'));
+  // shared DoH confirm: sees the record when present, returns false (never throws) when absent
+  const dohYes = async () => ({ json: async () => ({ Answer: [{ data: `"ust-genesis=${g.genHash}"` }] }) });
+  const dohNo = async () => ({ json: async () => ({}) });
+  check('doh_confirm_sees_record', await C.dohConfirmTxt({ domain: DOMAIN, genHash: g.genHash, fetchImpl: dohYes, sleep: async () => {}, attempts: 1 }) === true);
+  check('doh_confirm_absent_is_false_not_throw', await C.dohConfirmTxt({ domain: DOMAIN, genHash: g.genHash, fetchImpl: dohNo, sleep: async () => {}, attempts: 2 }) === false);
+  // the npm README carries the ceremony road + the tier ladder (the package page must explain itself)
+  const readme = readFileSync(new URL('./README.md', import.meta.url), 'utf8');
+  check('readme_shows_ceremony_road', readme.includes('1/5 🔑') && readme.includes('5/5 ⚓') && readme.includes('ust discovery'));
+  check('readme_shows_tier_ladder', readme.includes('LIGHT') && readme.includes('VALID:HIGH') && readme.includes('--no-fork-confirmed'));
+}
+
 console.log(`\nPASS ${pass} FAIL ${fail} NOTES ${note}`);
 if (fail) { console.error('\nFAILURES:\n  ' + fails.join('\n  ')); process.exit(1); }
 console.log('✓ 9th-audit regression holds — the seven points cannot silently regress');

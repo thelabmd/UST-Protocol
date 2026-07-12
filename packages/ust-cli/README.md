@@ -1,28 +1,86 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 # ust — the reference CLI
 
-One entrypoint for [UST 1.0](https://github.com/thelabmd/UST-Protocol). The Go binary reproduces this surface, so `ust` is one static, language-agnostic tool.
+One entrypoint for [UST 1.0](https://github.com/thelabmd/UST-Protocol) — verify machine-readable state, run the genesis ceremony, attest the discovery serving contract. The Go binary reproduces this surface, so `ust` is one static, language-agnostic tool.
 
 ```bash
-npm i -g @ust-protocol/cli     # installs the `ust` command
-npx @ust-protocol/cli verify doc.json   # or one-shot, no install
+npm i -g @ust-protocol/cli               # installs the `ust` command
+npx @ust-protocol/cli verify doc.json    # or one-shot, no install
 ```
 
+## Commands
+
+| command | what it does |
+|---|---|
+| `ust verify <file\|->` | verify a transcript (blob / base64 / json). exit 0 = VALID, 1 = not |
+| `ust verify <doc> --genesis <f> --keylog <f,f…> [--no-fork-confirmed]` | resolve the trust chain → **VALID:HIGH** (name becomes authoritative) |
+| `ust canon <file\|->` | print canonical bytes + hash — diff any other-language implementation against this |
+| `ust genesis --domain <d>` | run the HIGH genesis ceremony (interactive; see the road below) |
+| `ust discovery <domain> [--mirror url,url] [--expect sha256:…]` | attest the §20.1 serving contract on ANY infrastructure |
+| `ust publish cf --domain <d> --genesis <f> [--auth wrangler] [--flip-proxy]` | deploy the Cloudflare serving adapter for an existing genesis |
+
+## The tier ladder (what verify can prove)
+
 ```
-ust verify <file|->          verify a transcript (blob / base64 / json). exit 0 = VALID, 1 = not.
-ust canon  <file|->          print the canonical bytes + hash — diff your other-language impl against this
-ust genesis --domain <d>     run the HIGH genesis ceremony
+LIGHT  — a lone document: signed + intact under the key it carries (self-asserted)
+HIGH   — + name authority: the verifier RESOLVES genesis → key-log (+ no-fork witness)
+TOP    — + anchored time: the stream is provably ordered and complete (e.g. bitcoin-ots)
 ```
 
-## `ust genesis`
-```
-ust genesis --domain noosphere.md --profile silver --dns cf-api
-```
-- `--profile bronze|silver|gold` — capacity/rigor ladder (gold forces a passphrase-encrypted backup + warns `ASSURANCE LIMIT: software-generated extractable root` unless `--signer` supplies a hardware root)
-- `--dns manual` prints the `_ust` TXT to paste; `--dns cf-api` upserts it via the Cloudflare API (zone-scoped `CF_TOKEN`, never account-wide) and **confirms it with a DNS-over-HTTPS readback** before proceeding — Vercel-style, idempotent
-- `--max-partitions N` — the signed capacity in the genesis (bounds earned by ceremony)
-- `--witness url,url` — witness endpoints to PREPARE (printed for the operator; this CLI does not run the exchange)
+A lone document can only ever prove LIGHT — that is the **expected** result for a fresh `ust-genesis` file. HIGH is a property of *resolution*, not of the file:
 
-The ceremony: generate the root key → build the self-signed genesis + a key-log adding an operational key → back up the root (split + cold) → publish `.well-known/ust-genesis` (the CLI fetches it, **verifies it, and matches its content_hash** — fail-closed) → then PREPARES the witness + anchor stage (the operator executes those). Outputs: **two verifiable UST** (`ust-genesis`, `ust-keylog-0` — `ust verify` them) + an **encrypted PKCS#8 root-key backup** (`genesis-key.enc.b64` — NOT a UST) for operator-managed split cold storage. The CLI self-verifies its outputs before finishing.
+```bash
+ust verify slot.json --genesis ust-genesis --keylog ust-keylog-0 --no-fork-confirmed
+```
 
-The MCP holds no key; this CLI signs locally with a key that stays on your machine.
+## `ust genesis` — the ceremony road
+
+```
+  1/5 🔑 ROOT key          the crown of your name — signs ONLY genesis & rotations; stays cold
+  2/5 📜 genesis + key-log identity is born; a WARM operational key is added for daily signing
+  3/5 🌐 DNS binding       _ust.<domain> TXT carries the genesis hash — tamper-evident, outside HTTP
+  4/5 📡 serving + gate    https://<domain>/.well-known/ust-genesis serves EXACTLY these bytes
+                           (checked fail-closed, with propagation retries)
+  5/5 ⚓ witness / anchor  PREPARED for HIGH / TOP — the operator runs these; the CLI never claims them
+```
+
+The ceremony is **interactive**: it prints this map at every step, explains each human moment (what the passphrase protects, what each file is), and ends with a summary — identity, custody table, tier ladder, next moves.
+
+### Two roads, one contract
+
+The serving contract is infrastructure-agnostic (properties, not vendors). The ceremony asks which road you want — or preselect with flags:
+
+- **By hand on YOUR infra** (default) — exact instructions for any DNS panel and any web stack (static host, nginx, corporate cloud). The CLI then verifies fail-closed: DoH readback for the TXT, live content-hash match for the well-known.
+- **Cloudflare one-click** (`--dns cf-api --publish cf --auth wrangler`) — the combined minimal-credential flow:
+  1. `npx wrangler login --scopes account:read user:read workers_scripts:write workers_routes:write zone:read` — browser OAuth, **5 scopes, not wrangler's default 28**
+  2. a **DNS-only** API token (the CLI prints a prefilled creation link; ~1 h TTL recommended, revoke after)
+  3. the worker embeds your genesis (no bucket, no origin), the route serves `/.well-known/ust-genesis`, the edge cache key is the **path** — unknown `?query` params can never mint cache entries
+
+`--flip-proxy` is explicit because it changes how your WHOLE site is served (apex goes behind the proxy).
+
+### Outputs & custody
+
+| file | class | custody |
+|---|---|---|
+| `ust-genesis`, `ust-keylog-0` | PUBLIC | verifiable by anyone — `ust verify` them |
+| `genesis-key.enc.b64` | 🧊 COLD | crown backup — keep the file and its passphrase APART; needed ~yearly (rotate/revoke) |
+| `operational-key.b64` | 🔥 WARM | your producer's signing-key secret (an env var of YOUR naming), then **DELETE the file** |
+
+Other flags: `--profile bronze|silver|gold` (gold forces a passphrase-encrypted root backup and warns `ASSURANCE LIMIT` unless `--signer` supplies a hardware root) · `--max-partitions N` (signed capacity — bounds earned by ceremony) · `--witness url,url` (prepared, never executed).
+
+## `ust discovery` — attest any stack
+
+Four probes of the §20.1 serving contract, fail-closed, honest verdict:
+
+```
+✅ well-known verifies (§14) and matches the expected hash
+✅ _ust TXT carries the same hash        (mismatch = FAILED, absence = NOT ATTESTED)
+✅ query-robustness: a random unknown ?param returns byte-identical bytes
+⬜ vendor-independence: every declared --mirror carries the same content_hash
+```
+
+Verdict: `ATTESTED` (everything ran and passed) / `PARTIAL` (no violation, but unchecked properties remain — with targeted hints) / `FAILED` (exit 1). Conformance is never granted on unchecked properties.
+
+## Custody model
+
+The MCP holds no key; this CLI signs locally with keys that never leave your machine. The ceremony tool never emits an output it has not verified, and never claims a stage it did not run.

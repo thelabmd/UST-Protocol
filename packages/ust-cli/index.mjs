@@ -68,6 +68,19 @@ export function checkPublished(liveText, genHash) {
   return liveDoc;
 }
 
+// Independent DoH readback of the _ust TXT — shared by the cf-api path AND the by-hand path, so BOTH
+// roads get the same confirmation discipline (the record is confirmed by a resolver, never by the API
+// that wrote it). Returns seen/not — the CALLER decides whether absence is fatal (cf-api) or a warning
+// with a re-attest pointer (by-hand: registrar TTLs can be long, the ceremony must not strand the user).
+export async function dohConfirmTxt({ domain, genHash, fetchImpl = fetch, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), attempts = 6, delayMs = 3000 }) {
+  for (let i = 0; i < attempts; i++) {
+    const doh = await fetchImpl(`https://cloudflare-dns.com/dns-query?name=_ust.${domain}&type=TXT`, { headers: { accept: 'application/dns-json' } }).then((r) => r.json()).catch(() => ({}));
+    if ((doh.Answer || []).some((a) => (a.data || '').replace(/"/g, '').includes(genHash))) return true;
+    if (i < attempts - 1) await sleep(delayMs);
+  }
+  return false;
+}
+
 // Cloudflare one-click: UPSERT the _ust TXT (find → PUT if present, else POST) then CONFIRM it via a
 // DNS-over-HTTPS readback (idempotent + fail-closed, 9th audit #7). fetchImpl/sleep are injected so the
 // regression suite exercises the update-path and the readback-failure-path with no live network.
@@ -82,14 +95,34 @@ export async function cfUpsert({ domain, txt, genHash, token, fetchImpl = fetch,
     ? await cf(`/zones/${zone.id}/dns_records/${existing.id}`, { method: 'PUT', body })
     : await cf(`/zones/${zone.id}/dns_records`, { method: 'POST', body });
   if (!w.success) throw new Error('CF write failed: ' + (w.errors?.[0]?.message || '?'));
-  let seen = false;
-  for (let i = 0; i < 6 && !seen; i++) {
-    const doh = await fetchImpl(`https://cloudflare-dns.com/dns-query?name=${rec}&type=TXT`, { headers: { accept: 'application/dns-json' } }).then((r) => r.json()).catch(() => ({}));
-    seen = (doh.Answer || []).some((a) => (a.data || '').replace(/"/g, '').includes(genHash));
-    if (!seen) await sleep(3000);
-  }
+  const seen = await dohConfirmTxt({ domain, genHash, fetchImpl, sleep });
   if (!seen) throw new Error('CF wrote the record but DoH readback did not confirm it (propagation) — re-run or verify manually');
   return { action: existing ? 'updated' : 'created' };
+}
+
+// ─── the BY-HAND road (owner 2026-07-12: CF is a CHOICE, not the base) — exact, actionable guidance ────
+// A hands-on publisher gets told precisely WHAT to do on THEIR infra; the fail-closed confirmations are
+// identical on both roads. Exported so the regression suite pins that the guidance stays concrete.
+export function manualDnsGuide(domain, txt) {
+  return [
+    '  add this record at YOUR DNS provider (any registrar/panel works):',
+    `    _ust.${domain}   TXT   "${txt}"   (TTL 300–3600)`,
+    '  this is the tamper-evident DNS half of the discovery pair — it vouches for your hash outside HTTP',
+    `  self-check anytime:  dig +short TXT _ust.${domain}`,
+  ];
+}
+export function manualServingGuide(domain, outDir) {
+  return [
+    `  make  https://${domain}/.well-known/ust-genesis  return the EXACT bytes of ${outDir}/ust-genesis`,
+    '  the §20.1 serving contract — PROPERTIES, not vendors; any stack conforms:',
+    '    · methods: GET (+ HEAD) · content-type: application/json',
+    '    · immutable caching (the genesis is content-addressed):  Cache-Control: public, max-age=86400, immutable',
+    '    · unknown query params must NOT change the response or its cache key (cache key = path)',
+    '  examples:',
+    '    · static host: upload the file to  <webroot>/.well-known/ust-genesis',
+    '    · nginx:  location = /.well-known/ust-genesis { alias /srv/ust/ust-genesis;',
+    '              default_type application/json; add_header Cache-Control "public, max-age=86400, immutable"; }',
+  ];
 }
 
 // ─── CF one-click adapter (§20.1 CONVENIENCE path — the contract is infra-agnostic; this is ONE way) ───
@@ -527,9 +560,8 @@ async function cmdPublish() {
 
 // ─── ust genesis --domain <d> [--profile] [--dns] — the ceremony (#37), orchestrating the core above ──
 async function cmdGenesis() {
-  const domain = arg('domain'); if (!domain || domain === true) die('usage: ust genesis --domain <name> [--profile bronze|silver|gold] [--dns manual|cf-api] [--signer <ref>] [--witness url,url] [--max-partitions N] [--out .]');
+  const domain = arg('domain'); if (!domain || domain === true) die('usage: ust genesis --domain <name> [--profile bronze|silver|gold] [--dns manual|cf-api] [--publish cf [--auth wrangler] [--flip-proxy]] [--signer <ref>] [--witness url,url] [--max-partitions N] [--out .]');
   const profile = arg('profile', 'silver');
-  const dns = arg('dns', 'manual');
   const outDir = arg('out', '.');
   const maxP = arg('max-partitions', profile === 'gold' ? 256 : profile === 'silver' ? 64 : null);
   const signerRef = arg('signer', null);
@@ -539,6 +571,20 @@ async function cmdGenesis() {
   console.log('      One run creates your name\'s cryptographic identity and makes it publicly');
   console.log('      discoverable. Everything is verified fail-closed before it is claimed.\n');
   console.log(ceremonyMap(0));
+
+  // the road is a CHOICE, not a vendor default: by hand on YOUR infra (exact guidance) or one-click.
+  // Flags preselect; otherwise ask ONCE. Headless without flags = by-hand (never an implicit vendor).
+  let dnsMode = arg('dns', null);
+  let publishMode = arg('publish', null);
+  let authMode = arg('auth', null);
+  if (!dnsMode && !publishMode && process.stdin.isTTY) {
+    console.log('\n  How will you publish your identity? (both roads end at the same fail-closed checks)');
+    console.log('    [1] by hand on MY infra — exact instructions for any DNS panel / any web stack');
+    console.log('    [2] Cloudflare one-click — wrangler browser login (5 scopes) + a DNS-only token');
+    const a = (await ask('  choose 1 or 2: ')).trim();
+    if (a === '2') { dnsMode = 'cf-api'; publishMode = 'cf'; authMode = authMode || 'wrangler'; }
+  }
+  dnsMode = dnsMode || 'manual';
 
   // 1–2. root key + genesis + key-log[0], all self-checked (fail-closed) inside buildCeremony
   let built; try { built = await buildCeremony({ domain, profile, maxP, signerRef }); }
@@ -576,26 +622,27 @@ async function cmdGenesis() {
   // 3. DNS (profile A) — manual paste or CF one-click (upsert + DoH readback)
   console.log('\n' + ceremonyMap(2));
   const txt = `ust-genesis=${genHash}`;
-  if (dns === 'cf-api') {
+  if (dnsMode === 'cf-api') {
     console.log('\n  ⏳ 3/5 🌐 writing _ust.' + domain + ' TXT via the Cloudflare API (upsert + DoH readback)…');
     let res; try { res = await cfUpsert({ domain, txt, genHash, token: process.env.CF_TOKEN || process.env.CLOUDFLARE_API_TOKEN }); }
     catch (e) { rl.close(); die(e.message); }
     console.log('  ✅ 3/5 🌐 _ust TXT ' + res.action + ' and confirmed by an independent DoH readback');
     console.log('       DNS now vouches for your hash even if every HTTP surface lies');
   } else {
-    console.log('\n  ▶️  3/5 🌐 add this TXT record at your DNS (any provider — the protocol does not care which):');
-    console.log('       _ust.' + domain + '  TXT  "' + txt + '"');
+    console.log('\n  ▶️  3/5 🌐 the DNS half — do this on YOUR infra:');
+    for (const l of manualDnsGuide(domain, txt)) console.log('   ' + l);
+    console.log('     (I will confirm it via DoH after the serving step — propagation is allowed to lag)');
   }
 
   // 4. publish well-known + fail-closed content-hash match. With --publish cf the adapter deploys the
   // serving worker itself (one-click); otherwise the operator publishes on ANY stack (§20.1 is a contract,
   // not a vendor) and confirms. EITHER way the live fail-closed gate below is the same.
   console.log('\n' + ceremonyMap(3));
-  if (arg('publish', null) === 'cf') {
+  if (publishMode === 'cf') {
     console.log('\n  ⏳ 4/5 📡 deploying the CF serving worker (your genesis rides INSIDE it — no bucket, no origin)…');
     let pub;
     try {
-      if (arg('auth', null) === 'wrangler') {
+      if (authMode === 'wrangler') {
         // combined auth: worker+route via wrangler OAuth; the token below stays DNS-only (smallest scope)
         const w = await wranglerDeploy({ domain, genesisText: JSON.stringify(genesis) });
         const apex = await cfApexSteps({ domain, token: await resolveDnsToken(ask), flipProxy: !!arg('flip-proxy', false) });
@@ -608,9 +655,9 @@ async function cmdGenesis() {
     for (const w of pub.warnings) console.log('  ⚠️  ' + w);
     if (!pub.proxied) { rl.close(); die('apex is not proxied — the route cannot fire. Re-run with --flip-proxy (NOTE: puts the whole site behind CF), or enable the proxy manually and re-run.'); }
   } else {
-    console.log('\n  ▶️  4/5 📡 publish this file at  https://' + domain + '/.well-known/ust-genesis');
-    console.log('       (the exact document in ' + outDir + '/ust-genesis — ANY stack conforms; or one-click: --publish cf)');
-    await ask('       press Enter once it is live… ');
+    console.log('\n  ▶️  4/5 📡 the serving half — do this on YOUR infra:');
+    for (const l of manualServingGuide(domain, outDir)) console.log('   ' + l);
+    await ask('       press Enter once it is live (I will verify fail-closed, with propagation retries)… ');
   }
   // the fail-closed live gate — with propagation patience (a proxy flip needs minutes to converge)
   console.log('\n  ⏳ live gate: fetching your well-known until it serves EXACTLY this genesis (fail-closed)…');
@@ -621,6 +668,13 @@ async function cmdGenesis() {
       onAttempt: (i, n, msg) => console.log(`     ⏳ attempt ${i}/${n} — not yet (${msg.slice(0, 80)}); DNS/proxy propagation takes minutes, waiting…`),
     });
     console.log('  ✅ 4/5 📡 the live well-known verifies and its content_hash matches YOUR genesis');
+    // by-hand DNS: confirm the TXT via DoH now (same discipline as cf-api) — but WARN, never strand:
+    // a slow registrar must not kill a ceremony whose binding surface already verified fail-closed.
+    if (dnsMode !== 'cf-api') {
+      const seen = await dohConfirmTxt({ domain, genHash, attempts: 2 });
+      if (seen) console.log('  ✅ 🌐 the _ust TXT is visible via DoH and carries your hash');
+      else console.log('  ⚠️  🌐 the _ust TXT is not visible via DoH yet (registrar propagation) — re-attest later:  ust discovery ' + domain);
+    }
     // §20.1 probe (3), WARNING-level here: BINDING is fail-closed above; a serving-contract violation is
     // fixable post-hoc without redoing the ceremony. `ust discovery <domain>` re-attests all four anytime.
     try {
