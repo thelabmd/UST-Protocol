@@ -13,18 +13,51 @@ const doc1 = (state) => ({ ust: '1.0', state });
 const buildResult = (state) => ({ state, content_hash: P.contentHash(doc1(state)), signing_input: P.signedContent(doc1(state)) });
 
 // ─── PROTOCOL MCP tools (universal) ──────────────────────────────────────────────────────────────────
+
+// AUTO-RESOLUTION (owner 2026-07-12: "an agent receives a HIGH UST and by default sees LIGHT — or,
+// above the 64-partition floor, nothing at all; over MCP that is a total failure"). Resolution is the
+// DEFAULT path, not an expert action: the document carries its own name → fetch the §20.1 discovery
+// pair from that name, resolve, re-verify with the grant. Honest by construction: without an explicit
+// noForkConfirmed the name stays provisional (never silently authoritative), and `offline: true`
+// forbids the network entirely. fetchImpl injected — testable without a network.
+export async function autoResolveVerify(doc, o, { fetchImpl = fetch } = {}) {
+  const first = P.verify(doc, o);
+  const shard = doc?.state?.id?.domain_shard || '';
+  const nameForm = shard && !/^sha256:[0-9a-f]{64}$/.test(shard);
+  const worthIt = nameForm && (first.result === 'VALID:LIGHT' || (first.result === 'INDETERMINATE' && first.reason === 'unavailable'));
+  if (!worthIt) return first;
+  let genesis, keylog = [];
+  try {
+    const get = async (p) => { const r = await fetchImpl(`https://${shard}${p}`, { signal: AbortSignal.timeout(10000) }); if (!r.ok) throw new Error(`HTTP ${r.status} at ${p}`); return r.json(); };
+    genesis = await get('/.well-known/ust-genesis');
+    try { const k = await get('/.well-known/ust-keylog'); if (Array.isArray(k)) keylog = k; } catch { /* not served */ }
+  } catch (e) {
+    return { ...first, resolution: { attempted: true, error: 'discovery fetch failed: ' + (e && e.message || e), hint: 'supply genesis+keylog explicitly, or offline:true to silence this' } };
+  }
+  const auth = P.resolveAuthority(doc, { genesis, keylog, noForkConfirmed: !!o.noForkConfirmed });
+  if (auth.error) return { ...first, resolution: { attempted: true, error: auth.error + (auth.detail ? ' — ' + auth.detail : '') } };
+  const second = P.verify(doc, { ...o, genesis, keylog, capacity: auth.capacity });
+  return { ...second, resolution: { publisher: auth.publisher ?? shard, capacity: auth.capacity, noFork: o.noForkConfirmed ? 'asserted-by-caller' : 'unconfirmed — pass noForkConfirmed:true ONLY after independently checking no rival genesis exists', source: 'fetched from https://' + shard + '/.well-known/ (§20.1 discovery)' } };
+}
+
 export const tools = [
   {
     name: 'ust_verify',
-    description: 'VERIFY a UST document. The verdict CARRIES ITS TIER — VALID:LIGHT | VALID:HIGH | VALID:TOP (or INVALID / INDETERMINATE-unavailable); a bare VALID is never returned, so you cannot read the verdict without reading valid-at-what. Reports identity strength (self-asserted / pinned / authoritative), time strength, and disclosures. The domain is returned as `publisher` ONLY when authoritative; otherwise as `publisher_claimed` (a self-asserted label — never attribute it as the real publisher). Supply `pinnedKeys` (an array of trusted key_ids, TOFU) to accept only known keys; `genesis`+`keylog` for HIGH name-authority; `proof` for TOP anchored time. For UNTRUSTED transcripts from the network/storage, pass `json` (raw text) instead of `doc` — it scans for duplicate keys + non-NFC names before parsing (a JS object cannot represent those).',
-    inputSchema: { type: 'object', properties: { doc: { type: 'object' }, json: { type: 'string' }, pinnedKeys: { type: 'array' }, genesis: { type: 'object' }, keylog: { type: 'array' }, proof: { type: 'object' }, disclosures: { type: 'object' }, noForkConfirmed: { type: 'boolean' }, requireAuthoritative: { type: 'boolean' }, capacity: { type: 'object', description: 'trusted capacity grant {maxPartitions?, maxTranscriptBytes?} — pass what resolveAuthority returned as .capacity (rc.12)' }, maxSupportedBytes: { type: 'number' } } },
-    handler: ({ doc, json, pinnedKeys, genesis, keylog, proof, disclosures, noForkConfirmed, requireAuthoritative, capacity, maxSupportedBytes }) => {
+    description: 'VERIFY a UST document — ONE call, resolution included. If the document exceeds the anonymous 64-partition floor or claims a name, the tool AUTOMATICALLY fetches the publisher\'s §20.1 discovery pair (/.well-known/ust-genesis + ust-keylog) from the claimed name, resolves genesis→key-log, and re-verifies with the capacity grant — you do NOT need to pre-fetch anything. Pass offline:true to forbid the network (then supply genesis+keylog yourself). The verdict CARRIES ITS TIER — VALID:LIGHT | VALID:HIGH | VALID:TOP (or INVALID / INDETERMINATE); `publisher` is returned ONLY when authoritative, otherwise `publisher_claimed` (never attribute a claimed label as the real publisher). HIGH additionally requires noForkConfirmed:true — YOUR assertion that no rival genesis exists (check a witness/transparency source first; the result\'s `resolution.noFork` tells you its status). For UNTRUSTED transcripts pass `json` (raw text), not `doc` — it scans duplicate keys + non-NFC before parsing.',
+    inputSchema: { type: 'object', properties: { doc: { type: 'object' }, json: { type: 'string' }, offline: { type: 'boolean', description: 'true = never touch the network (no discovery auto-fetch)' }, pinnedKeys: { type: 'array' }, genesis: { type: 'object' }, keylog: { type: 'array' }, proof: { type: 'object' }, disclosures: { type: 'object' }, noForkConfirmed: { type: 'boolean' }, requireAuthoritative: { type: 'boolean' }, capacity: { type: 'object', description: 'trusted capacity grant {maxPartitions?, maxTranscriptBytes?} — pass what resolveAuthority returned as .capacity (rc.12)' }, maxSupportedBytes: { type: 'number' } } },
+    handler: async ({ doc, json, offline, pinnedKeys, genesis, keylog, proof, disclosures, noForkConfirmed, requireAuthoritative, capacity, maxSupportedBytes }) => {
       const o = { pinnedKeys, genesis, keylog, disclosures, noForkConfirmed, requireAuthoritative, capacity, maxSupportedBytes, context: 'data' };
-      // pass `json` (raw text) for the safe conformance boundary — duplicate-key + NFC scan BEFORE parse (F7).
-      if (json !== undefined) return P.verifyJson(json, o);
+      // `json` (raw text) = the safe conformance boundary — duplicate-key + NFC scan BEFORE parse (F7).
+      if (json !== undefined) {
+        const raw = P.verifyJson(json, o);
+        if (offline || genesis !== undefined || !(raw.result === 'VALID:LIGHT' || (raw.result === 'INDETERMINATE' && raw.reason === 'unavailable'))) return raw;
+        let parsed; try { parsed = JSON.parse(json); } catch { return raw; }
+        return autoResolveVerify(parsed, o);
+      }
       // an embedded doc.proof is verified INSIDE verify (present-bad ⇒ E-ANCHOR); a separately-passed proof merges in.
       const d = (proof !== undefined && doc && doc.proof === undefined) ? { ...doc, proof } : doc;
-      return P.verify(d, o);
+      if (offline || genesis !== undefined) return P.verify(d, o);
+      return autoResolveVerify(d, o);
     },
   },
   {
@@ -94,11 +127,12 @@ export const tools = [
 
 const toolMap = Object.fromEntries(tools.map(t => [t.name, t]));
 export const listTools = () => tools.map(({ name, description, inputSchema }) => ({ name, description, inputSchema }));
-// dispatch a tool call → MCP-style result. Never throws; a handler error becomes an isError result (fail-closed).
-export function dispatch(name, args = {}) {
+// dispatch a tool call → MCP-style result. ASYNC (rc.11: auto-resolution fetches the discovery pair);
+// never throws — a handler error OR rejection becomes an isError result (fail-closed).
+export async function dispatch(name, args = {}) {
   const t = toolMap[name];
   if (!t) return { isError: true, error: 'unknown tool: ' + name };
-  try { return { result: t.handler(args) }; }
+  try { return { result: await t.handler(args) }; }
   catch (e) { return { isError: true, error: e.message || String(e) }; }
 }
 

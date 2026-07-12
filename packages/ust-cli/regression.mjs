@@ -532,6 +532,17 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
   check('dup_scanner_is_iteration_safe', C.scanDupes(bomb) === null);
 }
 
+// ── 19. resolution is the DEFAULT path (owner: an agent/human sees LIGHT — or nothing — by default;
+// over MCP that is a total failure). Source pins: bare `ust verify` auto-resolves the §20.1 pair from
+// the document's own name; --offline forbids it; authority is NEVER silently granted (no-fork stays
+// the human's explicit flag).
+{
+  const src = readFileSync(new URL('./index.mjs', import.meta.url), 'utf8');
+  check('verify_auto_resolves_by_default', src.includes('resolving identity from https://') && src.includes("arg('offline', false)"));
+  check('auto_resolution_never_grants_authority_silently', /noForkConfirmed: noFork/.test(src) && src.includes('no-fork unconfirmed') === false ? true : src.includes("noFork ? 'asserted by you") );
+  check('offline_is_a_first_class_flag', src.includes('--offline'));
+}
+
 console.log(`\nPASS ${pass} FAIL ${fail} NOTES ${note}`);
 if (fail) { console.error('\nFAILURES:\n  ' + fails.join('\n  ')); process.exit(1); }
 console.log('✓ 9th-audit regression holds — the seven points cannot silently regress');

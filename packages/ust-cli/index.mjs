@@ -731,7 +731,7 @@ export function stageSummary({ genHash, witnesses = [], profile }) {
 // resolution inputs are FLAGS on the same command — the tier ladder is one tool, not tribal knowledge.
 async function cmdVerify() {
   const src = process.argv[3];
-  if (!src) die('usage: ust verify <file | - for stdin> [--context data|key] [--genesis <file> --keylog <file[,file…]> [--no-fork-confirmed]]');
+  if (!src) die('usage: ust verify <file | - for stdin> [--context data|key] [--offline] [--genesis <file> --keylog <file[,file…]> [--no-fork-confirmed]]\n  by default the tool AUTO-RESOLVES the publisher identity from its /.well-known/ discovery pair');
   const raw = src === '-' ? readFileSync(0) : readFileSync(src);   // Buffer — admission precedes decode
   // pre-parse ONLY to pick the context — the VERDICT below comes from the normative raw path
   let doc; try { doc = decodeInput(raw.toString('utf8')); } catch (e) { die('not a UST blob/base64/json: ' + e.message); }
@@ -774,8 +774,39 @@ async function cmdVerify() {
     opts = { ...opts, genesis: genesisDoc, keylog: keylogDocs, noForkConfirmed: noFork, capacity: auth.capacity };
   }
 
-  const { verdict: r } = verifyRaw(raw, opts);
+  let { verdict: r } = verifyRaw(raw, opts);
+  // AUTO-RESOLUTION by default (owner: an agent/human receives a HIGH UST and by default sees LIGHT —
+  // or, above the floor, nothing at all): the document carries its own name → fetch the §20.1 discovery
+  // pair from it, resolve, re-verify with the grant. --offline forbids the network. Honesty holds:
+  // HIGH still requires YOUR --no-fork-confirmed — auto-resolution never silently grants authority.
+  let resolution = null;
+  {
+    const shard = doc?.state?.id?.domain_shard || '';
+    const nameForm = shard && !/^sha256:[0-9a-f]{64}$/.test(shard);
+    const worthIt = !genesisPath && !arg('offline', false) && nameForm &&
+      (r.result === 'VALID:LIGHT' || (r.result === 'INDETERMINATE' && r.reason === 'unavailable'));
+    if (worthIt) {
+      console.error(`  ⏳ resolving identity from https://${shard}/.well-known/ … (--offline to skip)`);
+      try {
+        const get = async (p2) => { const res = await fetch(`https://${shard}${p2}`, { signal: AbortSignal.timeout(10000) }); if (!res.ok) throw new Error(`HTTP ${res.status} at ${p2}`); return res.text(); };
+        const g = verifyRaw(await get('/.well-known/ust-genesis'));
+        if (!P.isValid(g.verdict)) throw new Error('the published genesis does not VERIFY');
+        let entries = [];
+        try { const kl = parseKeylogRaw(await get('/.well-known/ust-keylog')); if (!kl.err) entries = kl.entries; } catch { /* not served */ }
+        const auth = P.resolveAuthority(doc, { genesis: g.doc, keylog: entries, noForkConfirmed: noFork });
+        if (auth.error) resolution = { error: auth.error + (auth.detail ? ' — ' + auth.detail : '') };
+        else {
+          resolution = { publisher: shard, capacity: auth.capacity, noFork: noFork ? 'asserted by you (--no-fork-confirmed)' : 'unconfirmed' };
+          r = verifyRaw(raw, { ...opts, genesis: g.doc, keylog: entries, noForkConfirmed: noFork, capacity: auth.capacity }).verdict;
+        }
+      } catch (e) { resolution = { error: 'discovery fetch failed: ' + e.message }; }
+    }
+  }
   console.log(r.result + (r.error ? '  (' + r.error + (r.detail ? ' — ' + r.detail : '') + ')' : ''));
+  if (resolution) {
+    if (resolution.error) console.log('  resolve  : ✗ ' + resolution.error);
+    else console.log("  resolve  : key ∈ " + resolution.publisher + "'s chain · capacity " + (resolution.capacity.maxPartitions ?? 'floor') + ' admitted · no-fork ' + resolution.noFork);
+  }
   if (P.isValid(r)) {
     const tier = r.result.split(':')[1] ?? 'LIGHT';
     console.log('  identity : ' + r.identity.strength + ' (mode ' + r.identity.mode + ')  ' + (r.publisher ? 'publisher ' + r.publisher : 'publisher_claimed ' + r.publisher_claimed));
@@ -783,7 +814,11 @@ async function cmdVerify() {
     console.log('  ust_id   : ' + r.ust_id + '   class ' + r.class + '   content_hash ' + r.content_hash);
     if (r.provenance) console.log('  lineage  : declared' + (r.provenance.referents ? `, referents ${r.provenance.referents}` : '') + (r.provenance.depth !== undefined ? ` (walk depth ${r.provenance.depth})` : '') + ' — a declaration is not a verified derivation');
     console.log('  tier     : ' + ['LIGHT', 'HIGH', 'TOP'].map((t) => (t === tier ? `[${t}]` : ` ${t} `)).join('→'));
-    if (tier === 'LIGHT' && !genesisPath) {
+    if (tier === 'LIGHT' && resolution && !resolution.error && !noFork) {
+      console.log('\n  ℹ️  the name RESOLVED (key belongs to its chain, capacity admitted) but stays provisional');
+      console.log('     without the no-fork witness. Once you have independently confirmed no rival genesis');
+      console.log('     exists, re-run with:  --no-fork-confirmed   → VALID:HIGH');
+    } else if (tier === 'LIGHT' && !genesisPath && !resolution) {
       console.log('\n  ✅ this is the EXPECTED result for a lone document — it proves the file is signed and');
       console.log('     intact under the key it carries. HIGH is a property of RESOLUTION, not of the file:');
       console.log('     npx @ust-protocol/cli verify <doc> --genesis <ust-genesis> --keylog <ust-keylog-0> --no-fork-confirmed');

@@ -23,7 +23,7 @@ try {
 const server = new Server({ name: 'ust-mcp', version: VERSION }, { capabilities: { tools: {} } });
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: listTools() }));
 server.setRequestHandler(CallToolRequestSchema, async (req) => {
-  const r = dispatch(req.params.name, req.params.arguments || {});
+  const r = await dispatch(req.params.name, req.params.arguments || {});
   return { content: [{ type: 'text', text: JSON.stringify(r.result ?? { error: r.error }, null, 2) }], isError: !!r.isError };
 });
 await server.connect(new StdioServerTransport());
