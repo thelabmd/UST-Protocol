@@ -150,6 +150,12 @@
     <span class="hint">or just paste — it verifies automatically</span>
   </div>
 
+  <details id="manual" style="margin-top:10px">
+    <summary class="hint" style="cursor:pointer">Resolve authority manually (offline) — paste the publisher's genesis + key log</summary>
+    <textarea id="gin" spellcheck="false" style="min-height:70px;margin-top:8px" placeholder='{"ust":"1.0","state":{"id":{"class":"genesis",…   (/.well-known/ust-genesis)'></textarea>
+    <textarea id="kin" spellcheck="false" style="min-height:70px;margin-top:8px" placeholder='[ {…key-log entry…} ]   (/.well-known/ust-keylog — the JSON array)'></textarea>
+  </details>
+
   <div id="out"></div>
 
   <section class="card" style="margin-top:34px">
@@ -176,6 +182,7 @@
 
 <script type="module">
 import { verify } from './ust-verify.mjs';
+import { resolveAuthority, fetchIdentity } from './ust-resolve.mjs';
 
 const $ = (id) => document.getElementById(id);
 const inEl = $('in'), outEl = $('out');
@@ -288,7 +295,24 @@ outEl.addEventListener('click', (e) => {
   else { box.classList.remove('mdview', 'md'); box.innerHTML = esc(rawOf(partVals[ci])); }
 });
 
-function run() {
+// resolution state: fetched identity is cached per domain; the no-fork assertion is the HUMAN's
+// explicit act (a checkbox), exactly like the CLI's --no-fork-confirmed — never auto-asserted.
+const identCache = new Map();
+let noForkChecked = false;
+async function getIdentity(domain) {
+  const g = $('gin')?.value.trim(), k = $('kin')?.value.trim();
+  if (g) {
+    try { return { genesis: JSON.parse(g), keylog: k ? JSON.parse(k) : [], source: 'pasted (offline)' }; }
+    catch (e) { return { error: 'manual genesis/key-log not valid JSON: ' + e.message, source: 'pasted (offline)' }; }
+  }
+  if (identCache.has(domain)) return identCache.get(domain);
+  try {
+    const ident = { ...(await fetchIdentity(domain)), source: 'fetched from https://' + domain + '/.well-known/ (§20.1 discovery)' };
+    identCache.set(domain, ident); return ident;
+  } catch (e) { return { error: 'discovery fetch failed: ' + e.message + ' — paste the genesis/key log manually below', source: 'fetch' }; }
+}
+
+async function run() {
   const raw = inEl.value.trim();
   outEl.innerHTML = '';
   if (!raw) return;
@@ -297,7 +321,21 @@ function run() {
   try { doc = extractDoc(raw); }
   catch (e) { outEl.innerHTML = `<div class="verdict bad"><span class="dot"></span>UNREADABLE</div><div class="err">Could not decode a UST document from that input (${esc(e.message)}). Paste the whole blob, the base64, or the JSON.</div>`; return; }
 
-  verify(doc, { context: 'data' }).then((r) => {
+  let resolution = null;
+  let r = await verify(doc, { context: 'data' }).catch((e) => ({ result: 'INVALID', error: 'E-MALFORMED', detail: String(e && e.message || e) }));
+  const shard = doc.state && doc.state.id && doc.state.id.domain_shard || '';
+  const nameMode = shard && !/^sha256:[0-9a-f]{64}$/.test(shard);
+  if (nameMode && (r.result === 'VALID:LIGHT' || (r.result === 'INDETERMINATE' && r.reason === 'unavailable'))) {
+    const ident = await getIdentity(shard);
+    if (ident.genesis) {
+      const auth = await resolveAuthority(doc, { genesis: ident.genesis, keylog: ident.keylog, noForkConfirmed: noForkChecked });
+      if (!auth.error) {
+        resolution = { ...auth, source: ident.source };
+        r = await verify(doc, { context: 'data', capacity: auth.capacity, ...(noForkChecked ? { authority: { publisher: auth.publisher } } : {}) });
+      } else resolution = { error: auth.error, source: ident.source };
+    } else resolution = { error: ident.error, source: ident.source };
+  }
+  Promise.resolve(r).then((r) => {
     const valid = typeof r.result === 'string' && r.result.slice(0, 6) === 'VALID:';
     const indet = r.result === 'INDETERMINATE';
     const cls = valid ? 'ok' : indet ? 'wait' : 'bad';
@@ -314,7 +352,27 @@ function run() {
           <dt>frame (ust_id)</dt><dd>${esc(id.ust_id || '')}</dd>
           <dt>class</dt><dd>${esc(id.class || '')}</dd>
         </dl>
-        <div class="tierfoot">
+        ${r.result === 'VALID:HIGH' ? `<div class="tierfoot">
+          <p class="tierwhy">Why this is <b>HIGH</b> — the name resolved through its own trust chain:</p>
+          <div class="tierlists">
+            <div>
+              <p class="cap">Proven</p>
+              <ul class="proved">
+                <li>the exact bytes above — unaltered since signing</li>
+                <li><b>publisher ${esc(r.publisher || '')}</b> — the key resolves through genesis → key log</li>
+                <li>the claimed capture time, as the publisher wrote it</li>
+              </ul>
+            </div>
+            <div>
+              <p class="cap">Not proven</p>
+              <ul class="notproved">
+                <li>independently proven time — an anchor is TOP</li>
+                <li>stream completeness — a RANGE verdict (frames + checkpoint), never one document&rsquo;s</li>
+                <li>the no-fork witness — <b>you asserted it</b>; the witness exchange is the operator&rsquo;s duty</li>
+              </ul>
+            </div>
+          </div>
+        </div>` : `<div class="tierfoot">
           <p class="tierwhy">Why this is <b>LIGHT</b> — the floor tier, decided from the document alone:</p>
           <div class="tierlists">
             <div>
@@ -334,7 +392,7 @@ function run() {
               </ul>
             </div>
           </div>
-        </div></div>`;
+        </div>`}</div>`;
     } else if (indet) {
       html += `<p class="note">The verifier <b>cannot decide</b> at the requested tier — information it needs
         (e.g. an anchor or a name-authority witness) was not available. This is <b>not</b> INVALID; it is an honest
@@ -344,7 +402,28 @@ function run() {
         <p class="note">The document did <b>not</b> verify: its bytes, hashes, or signature are inconsistent. A
         genuine UST that was edited in transit fails exactly here.</p>`;
     }
+    if (resolution) {
+      if (resolution.error) {
+        html += `<div class="card"><h2>Authority resolution</h2>
+          <p class="note" style="margin-top:0">✗ ${esc(resolution.error)}<br><span class="hint">source: ${esc(resolution.source || '')}</span></p></div>`;
+      } else {
+        html += `<div class="card"><h2>Authority resolution</h2>
+          <dl class="kv" style="margin-top:0">
+            <dt>publisher</dt><dd>${esc(resolution.publisher)} — the document key is IN this name's resolved key set</dd>
+            <dt>capacity</dt><dd>max_partitions ${esc(String(resolution.capacity.maxPartitions ?? 'floor'))}${resolution.capacity.maxTranscriptBytes ? ' · max_transcript_bytes ' + esc(String(resolution.capacity.maxTranscriptBytes)) : ''} (grant admitted)</dd>
+            <dt>revocation</dt><dd>${esc(resolution.revocation)} — X1 windows need anchored time; a browser cannot decide them</dd>
+            <dt>identity source</dt><dd>${esc(resolution.source || '')}</dd>
+          </dl>
+          <label class="note" style="display:block;margin-top:10px;cursor:pointer">
+            <input type="checkbox" id="nofork" ${noForkChecked ? 'checked' : ''}>
+            I have independently confirmed <b>no rival genesis exists</b> for ${esc(resolution.publisher)} (the no-fork witness).
+            ${noForkChecked ? '' : '<br><span class="hint">unchecked → the name stays a resolved-but-provisional claim; check it to reach VALID:HIGH (same as the CLI\'s --no-fork-confirmed)</span>'}
+          </label></div>`;
+      }
+    }
     outEl.innerHTML = html;
+    const nf = $('nofork');
+    if (nf) nf.addEventListener('change', () => { noForkChecked = nf.checked; run(); });
   }).catch((e) => {
     outEl.innerHTML = `<div class="verdict bad"><span class="dot"></span>ERROR</div><div class="err">${esc(e.message || String(e))}</div>`;
   });
@@ -352,7 +431,8 @@ function run() {
 
 $('go').addEventListener('click', run);
 $('clear').addEventListener('click', () => { inEl.value = ''; outEl.innerHTML = ''; inEl.focus(); });
-inEl.addEventListener('input', () => { if (inEl.value.trim()) run(); else outEl.innerHTML = ''; });
+inEl.addEventListener('input', () => { identCache.clear(); noForkChecked = false; if (inEl.value.trim()) run(); else outEl.innerHTML = ''; });
+for (const mid of ['gin', 'kin']) $(mid).addEventListener('input', () => { if (inEl.value.trim()) run(); });
 </script>
 </body>
 </html>

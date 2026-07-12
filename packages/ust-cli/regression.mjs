@@ -195,6 +195,8 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
   check('worker_is_stateless_no_cache_api', !src.includes('caches.default'));
   check('worker_max_age_is_bounded', src.includes('max-age=300') && !src.includes('max-age=86400'));
   check('worker_get_head_only', src.includes("allow: 'GET, HEAD'"));
+  // browser verifiers auto-resolve the discovery pair cross-origin — public identity data is CORS-open
+  check('worker_is_cors_open', src.includes("'access-control-allow-origin': '*'"));
 
   // a CF API mock: zone (with account), script PUT, routes list/POST/PUT, dns records, ssl setting
   const mkApi = ({ proxied, routeExists, ssl = 'full' } = {}) => {

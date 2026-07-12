@@ -279,8 +279,10 @@ export default {
                : null;
     if (body === null) return new Response('not found', { status: 404 });
     if (req.method !== 'GET' && req.method !== 'HEAD') return new Response('method not allowed', { status: 405, headers: { allow: 'GET, HEAD' } });
-    // §20.1 query-robustness holds trivially: identical bytes for ANY query — nothing varies, nothing is stored
-    return new Response(req.method === 'HEAD' ? null : body, { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=300' } });
+    // §20.1 query-robustness holds trivially: identical bytes for ANY query — nothing varies, nothing is stored.
+    // CORS open: the discovery pair is PUBLIC identity data — browser verifiers (the web ladder) must be
+    // able to auto-resolve it cross-origin. GET/HEAD only; opening reads costs nothing.
+    return new Response(req.method === 'HEAD' ? null : body, { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=300', 'access-control-allow-origin': '*' } });
   }
 };
 `;

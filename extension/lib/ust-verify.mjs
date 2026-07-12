@@ -102,9 +102,9 @@ export async function verify(doc, opts = {}) {
       if (arrTooLong(st)) return bad('E-BOUNDS', 'array length > 4096');
       const nParts = Object.keys(st.data).length;
       if (nParts > 4096) return bad('E-BOUNDS', 'partitions > 4096');
-      if (nParts > 64) {
-        // §13 capacity ladder (rc.10) at LIGHT: this verifier holds no genesis, so above the
-        // anonymous floor a key-form shard fails closed and a name-form shard is UNDECIDABLE here.
+      // §13 capacity ladder: a TRUSTED grant (opts.capacity — the OUTPUT of authority resolution,
+      // e.g. ./ust-resolve.mjs; never a raw caller-attached genesis) admits above the floor, ABS stays.
+      if (nParts > 64 && !(Number(opts.capacity?.maxPartitions) >= nParts)) {
         if (/^sha256:[0-9a-f]{64}$/.test(st.id.domain_shard)) return bad('E-BOUNDS', `partitions ${nParts} > 64 anonymous floor (key-form)`);
         return { result: 'INDETERMINATE', reason: 'unavailable', detail: `partitions ${nParts} > 64 floor — capacity is genesis-declared; supply the publisher genesis to a genesis-aware verifier` };
       }
@@ -154,7 +154,7 @@ export async function verify(doc, opts = {}) {
     {
       const sBytes = new TextEncoder().encode(S).byteLength;
       if (sBytes > 67_108_864) return bad('E-BOUNDS', `canonical transcript ${sBytes} B > 64 MiB ABS`);
-      if (sBytes > 1_048_576) {
+      if (sBytes > 1_048_576 && !(Number(opts.capacity?.maxTranscriptBytes) >= sBytes)) {
         if (/^sha256:[0-9a-f]{64}$/.test(st.id.domain_shard)) return bad('E-BOUNDS', `canonical size ${sBytes} B > 1 MiB anonymous floor (key-form)`);
         return { result: 'INDETERMINATE', reason: 'unavailable', detail: `canonical size ${sBytes} B > 1 MiB floor — capacity requires a trusted grant this LIGHT verifier does not take` };
       }
@@ -169,9 +169,15 @@ export async function verify(doc, opts = {}) {
     // §3.1 pinned (TOFU): a key not in the caller's pin set is INVALID; else self-asserted (LIGHT — never authoritative here).
     let strength = 'self-asserted';
     if (opts.pinnedKeys) { if (!opts.pinnedKeys.includes(id.key_id)) return bad('E-KEY', 'key_id not in the pinned set (§3.1 TOFU)'); strength = 'pinned'; }
-    // §Y3: not authoritative → `domain_shard` is a claimed LABEL, surfaced as `publisher_claimed`.
+    // §12: a TRUSTED authority result (the OUTPUT of resolution with a confirmed no-fork witness)
+    // lifts the tier — the NAME becomes the verified publisher. Without it: §Y3, claimed label only.
+    const provOut = { depth: 0, referents: (pr?.based_on?.length || pr?.constituents?.length) ? 'unverified' : 'none' };
+    if (opts.authority && opts.authority.publisher === id.domain_shard) {
+      return { result: 'VALID:HIGH', tier: 'HIGH', identity: { strength: 'authoritative', status: 'verified', mode: 'name' }, publisher: id.domain_shard, ust_id: id.ust_id, class: id.class, content_hash: ch,
+        provenance: provOut, completeness: 'not_evaluated' };
+    }
     return { result: 'VALID:LIGHT', tier: 'LIGHT', identity: { strength, status: 'verified', mode: KEYID_FORM.test(id.domain_shard) ? 'key' : 'name' }, publisher_claimed: id.domain_shard, ust_id: id.ust_id, class: id.class, content_hash: ch,
-      provenance: { depth: 0, referents: (pr?.based_on?.length || pr?.constituents?.length) ? 'unverified' : 'none' },
+      provenance: provOut,
       completeness: 'not_evaluated' };
   } catch (e) { return bad(e.code || 'E-MALFORMED', e.detail || String(e)); }
 }
