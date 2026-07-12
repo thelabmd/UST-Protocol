@@ -202,6 +202,24 @@ check('F8 impossible ust_id→E-MALFORMED', P.verify(mk({ r: { kind: 'captured',
   check('version gate: vectors tagged with the same rc', V.version.includes(P.VERSION.spec.slice(P.VERSION.spec.indexOf('rc'))));
 }
 
+// ─── verifier PARITY (I4 across OUR OWN two verifiers) — the 2026-07-12 probe found the
+//     clean-room admitting >64 partitions the reference rejects; these pin parity on the edges.
+{
+  const { verify: cleanRoom } = await import('../../docs/ust-verify.mjs');
+  const mkN = (n) => {
+    const data = {};
+    for (let i = 0; i < n; i++) data['p' + i] = { kind: 'captured', value: { x: String(i) } };
+    return P.seal(P.buildState({ ...ID, ust_id: 'ust:20260628.15' }, T, data), A.priv, A.pubB64);
+  };
+  const d64 = mkN(64), d65 = mkN(65);
+  const r64 = P.verify(d64, { context: 'data' }), c64 = await cleanRoom(d64, { context: 'data' });
+  const r65 = P.verify(d65, { context: 'data' }), c65 = await cleanRoom(d65, { context: 'data' });
+  check('parity: 64 partitions VALID in BOTH verifiers', P.isValid(r64) && P.isValid(c64));
+  check('parity: 65 partitions E-BOUNDS in BOTH verifiers', r65.error === 'E-BOUNDS' && c65.error === 'E-BOUNDS');
+  const good = mk(); const rg = P.verify(good, { context: 'data' }); const cg = await cleanRoom(good, { context: 'data' });
+  check('parity: identical verdict+hash on a valid doc', rg.result === cg.result && rg.content_hash === cg.content_hash);
+}
+
 console.log('\n════════════════════════════════════════════');
 console.log('  ust-protocol ' + P.VERSION.spec + ' conformance vs ' + V.version);
 console.log('  PASS ' + pass + '   FAIL ' + fail + '   NOTES ' + note);

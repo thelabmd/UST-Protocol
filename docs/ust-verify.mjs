@@ -85,6 +85,23 @@ export async function verify(doc, opts = {}) {
     if (opts.context === 'data' && (id.class === 'key' || id.class === 'genesis')) return bad('E-MALFORMED', 'class ' + id.class + ' not valid in data context (W3)');
     // step 2 — content_hash + bijection + per-partition
     const ch = await contentHash(doc);
+    // §13 structural bounds — the SAME hard ceilings as the reference verifier (I4:
+    // two conforming verifiers must never disagree; the 2026-07-12 boundary probe
+    // caught this file admitting 65+ partitions the reference rejects).
+    {
+      if (JSON.stringify(doc).length > 1_048_576) return bad('E-BOUNDS', 'transcript > 1 MiB');
+      const depthOf = (v, d = 0) => (v && typeof v === 'object'
+        ? (d > 8 ? d : Math.max(d, ...Object.values(v).map((x) => depthOf(x, d + 1))))
+        : d);
+      if (depthOf(st) > 8) return bad('E-BOUNDS', 'nesting depth > 8');
+      const arrTooLong = (v) => Array.isArray(v) ? (v.length > 4096 || v.some(arrTooLong))
+        : (v && typeof v === 'object' ? Object.values(v).some(arrTooLong) : false);
+      if (arrTooLong(st)) return bad('E-BOUNDS', 'array length > 4096');
+      if (Object.keys(st.data).length > 64) return bad('E-BOUNDS', 'partitions > 64');
+      const pr0 = st.provenance;
+      for (const f of ['based_on', 'constituents'])
+        if (pr0 && Array.isArray(pr0[f]) && pr0[f].length > 64) return bad('E-BOUNDS', f + ' breadth > 64');
+    }
     const dk = Object.keys(st.data), hk = Object.keys(st.hashes);
     if (dk.length === 0) return bad('E-MALFORMED', 'no partitions');
     if (dk.length !== hk.length || !dk.every((k) => k in st.hashes)) return bad('E-MALFORMED', 'data⇄hashes bijection broken');
