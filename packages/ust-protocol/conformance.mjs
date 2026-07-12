@@ -200,6 +200,14 @@ check('F8 impossible ust_id→E-MALFORMED', P.verify(mk({ r: { kind: 'captured',
   const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
   check('version gate: package.json == VERSION.spec', pkg.version === P.VERSION.spec);
   check('version gate: vectors tagged with the same rc', V.version.includes(P.VERSION.spec.slice(P.VERSION.spec.indexOf('rc'))));
+  // rc.12 residual (14th round): the spec HEADER drifted to rc.6 while the body carried rc.11/12 —
+  // one-version-source now ENFORCED end-to-end: header must name the exact current rc.
+  const specText = readFileSync(new URL('../../spec/UST-1.0.md', import.meta.url), 'utf8');
+  check('version gate: spec release header == VERSION.spec', specText.includes('`' + P.VERSION.spec + '`'));
+  // bundled-drift gate: the extension MUST carry the exact clean-room bytes (twice-in-one-day lesson).
+  const cleanRoom = readFileSync(new URL('../../docs/ust-verify.mjs', import.meta.url), 'utf8');
+  const bundled = readFileSync(new URL('../../extension/lib/ust-verify.mjs', import.meta.url), 'utf8');
+  check('bundle gate: extension clean-room is byte-identical to docs/ust-verify.mjs', bundled === cleanRoom);
 }
 
 // ─── verifier PARITY (I4 across OUR OWN two verifiers) — the 2026-07-12 probe found the
