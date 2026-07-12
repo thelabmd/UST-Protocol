@@ -118,6 +118,49 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
   check('operational_key_round_trips_as_producer_signer', signs);
 }
 
+// ── 9. discovery attestation (§20.1) — the four probes are REAL gates and the verdict is honest
+// (ATTESTED only when everything ran and passed; a skip is PARTIAL, never a silent pass).
+{
+  const g = await C.buildCeremony({ domain: DOMAIN, profile: 'silver' });
+  const bytes = JSON.stringify(g.genesis);
+  // a mock publisher: well-known + optional TXT + optional mirror; `busted` varies bytes per-query.
+  const mkPub = ({ txtHash, busted, mirrorBytes } = {}) => async (url) => {
+    const u = String(url);
+    if (u.includes('cloudflare-dns.com')) return { ok: true, json: async () => (txtHash ? { Answer: [{ data: `"ust-genesis=${txtHash}"` }] } : {}) };
+    if (u.includes('mirror.example')) return mirrorBytes ? { ok: true, text: async () => mirrorBytes } : { ok: false, status: 404, text: async () => '' };
+    if (u.includes('/.well-known/ust-genesis')) {
+      const q = u.includes('?');
+      return { ok: true, text: async () => (busted && q ? bytes + '\n' : bytes) };
+    }
+    return { ok: false, status: 404, text: async () => '' };
+  };
+
+  // full pass: TXT matches + robust + mirror matches ⇒ ATTESTED, zero skips
+  const full = await C.attestDiscovery({ domain: DOMAIN, mirrors: ['https://mirror.example/g'], fetchImpl: mkPub({ txtHash: g.genHash, mirrorBytes: bytes }) });
+  check('discovery_full_attests', full.verdict === 'ATTESTED' && full.hash === g.genHash);
+
+  // query-bust: bytes vary with an unknown ?param ⇒ FAILED (the §20.1 property is a real gate)
+  const bust = await C.attestDiscovery({ domain: DOMAIN, fetchImpl: mkPub({ txtHash: g.genHash, busted: true }) });
+  check('discovery_query_bust_fails', bust.verdict === 'FAILED' && bust.checks.some((c) => c.id.startsWith('query-robustness') && c.status === 'fail'));
+
+  // stale/hijacked TXT: a DIFFERENT hash in _ust ⇒ FAILED (never “present = fine”)
+  const stale = await C.attestDiscovery({ domain: DOMAIN, fetchImpl: mkPub({ txtHash: 'sha256:' + 'ff'.repeat(32) }) });
+  check('discovery_stale_txt_fails', stale.verdict === 'FAILED');
+
+  // absent TXT + no mirror: no violation, but PARTIAL — unchecked properties never attest
+  const partial = await C.attestDiscovery({ domain: DOMAIN, fetchImpl: mkPub({}) });
+  check('discovery_partial_is_honest', partial.verdict === 'PARTIAL' && partial.checks.filter((c) => c.status === 'skip').length === 2);
+
+  // mirror carrying a DIFFERENT genesis ⇒ FAILED (mirrors are availability, the hash decides)
+  const other = await C.buildCeremony({ domain: DOMAIN, profile: 'silver' });
+  const wrong = await C.attestDiscovery({ domain: DOMAIN, mirrors: ['https://mirror.example/g'], fetchImpl: mkPub({ txtHash: g.genHash, mirrorBytes: JSON.stringify(other.genesis) }) });
+  check('discovery_wrong_mirror_fails', wrong.verdict === 'FAILED');
+
+  // broken well-known short-circuits: nothing downstream is meaningful without (1)
+  const dead = await C.attestDiscovery({ domain: DOMAIN, fetchImpl: async () => ({ ok: false, status: 402, text: async () => '' }) });
+  check('discovery_dead_well_known_fails_closed', dead.verdict === 'FAILED' && dead.hash === null && dead.checks.length === 1);
+}
+
 console.log(`\nPASS ${pass} FAIL ${fail} NOTES ${note}`);
 if (fail) { console.error('\nFAILURES:\n  ' + fails.join('\n  ')); process.exit(1); }
 console.log('✓ 9th-audit regression holds — the seven points cannot silently regress');

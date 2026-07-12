@@ -91,6 +91,79 @@ export async function cfUpsert({ domain, txt, genHash, token, fetchImpl = fetch,
   return { action: existing ? 'updated' : 'created' };
 }
 
+// §20.1 compliance attestation — the four discovery-serving probes, infrastructure-agnostic (the publisher
+// may run ANY stack; this attests the PROPERTIES). Fail-closed on violations; what could not be checked is
+// reported as `skip` (NOT ATTESTED), never silently passed. fetchImpl injected — testable without a network.
+export async function attestDiscovery({ domain, mirrors = [], expectHash = null, fetchImpl = fetch }) {
+  const checks = [];
+  const url = `https://${domain}/.well-known/ust-genesis`;
+  const get = (u, init) => fetchImpl(u, { ...init, signal: AbortSignal.timeout(10000) });
+
+  // (1) well-known: fetch → VERIFY the transcript → content_hash (baseline bytes kept for probe 3)
+  let baseline = null, hash = null;
+  try {
+    const r = await get(url);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    baseline = await r.text();
+    const doc = decodeInput(baseline);
+    if (!P.isValid(P.verify(doc))) throw new Error('published document does not VERIFY');
+    hash = P.contentHash(doc);
+    if (expectHash && hash !== expectHash) throw new Error(`content_hash differs from --expect (${hash} ≠ ${expectHash})`);
+    checks.push({ id: 'well-known verifies (§14, fail-closed)', status: 'pass', detail: hash });
+  } catch (e) {
+    checks.push({ id: 'well-known verifies (§14, fail-closed)', status: 'fail', detail: e.message });
+    return { hash: null, checks, verdict: verdictOf(checks) }; // nothing downstream is meaningful without (1)
+  }
+
+  // (2) DNS pair: _ust TXT must carry THIS hash when present; absent = NOT ATTESTED (the pair is standard,
+  // plain-DNS absence is reported, mismatch is a hard violation)
+  try {
+    const doh = await get(`https://cloudflare-dns.com/dns-query?name=_ust.${domain}&type=TXT`, { headers: { accept: 'application/dns-json' } }).then((r) => r.json());
+    const txts = (doh.Answer || []).map((a) => (a.data || '').replace(/"/g, ''));
+    const ours = txts.filter((t) => t.startsWith('ust-genesis='));
+    if (!ours.length) checks.push({ id: 'DNS record (_ust TXT) matches', status: 'skip', detail: 'no _ust TXT found — pair NOT ATTESTED (publish ust-genesis=<content_hash>)' });
+    else if (ours.some((t) => t === 'ust-genesis=' + hash)) checks.push({ id: 'DNS record (_ust TXT) matches', status: 'pass', detail: '_ust.' + domain });
+    else checks.push({ id: 'DNS record (_ust TXT) matches', status: 'fail', detail: `TXT carries a DIFFERENT hash (${ours[0]}) — a stale or hijacked record` });
+  } catch (e) {
+    checks.push({ id: 'DNS record (_ust TXT) matches', status: 'skip', detail: 'DoH unreachable: ' + e.message });
+  }
+
+  // (3) query-robustness: a random unrecognized parameter MUST yield byte-identical content
+  try {
+    const rand = `q${randomBytes(6).toString('hex')}=${randomBytes(6).toString('hex')}`;
+    const probed = await get(`${url}?${rand}`).then((r) => (r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status} on ?query`))));
+    if (probed === baseline) checks.push({ id: 'query-robustness (cache identity ⊥ unknown query)', status: 'pass', detail: '?' + rand.slice(0, 12) + '… → byte-identical' });
+    else checks.push({ id: 'query-robustness (cache identity ⊥ unknown query)', status: 'fail', detail: 'response VARIES with an unknown query parameter — cache-key amplification is open (§20.1)' });
+  } catch (e) {
+    checks.push({ id: 'query-robustness (cache identity ⊥ unknown query)', status: 'fail', detail: e.message });
+  }
+
+  // (4) vendor-independence: every declared mirror must carry the SAME content_hash (bytes are content-
+  // addressed — the mirror is untrusted, the hash decides). No mirror declared = NOT ATTESTED, never a pass.
+  if (!mirrors.length) checks.push({ id: 'vendor-independence (≥1 independent mirror)', status: 'skip', detail: 'no --mirror declared — property NOT ATTESTED' });
+  for (const m of mirrors) {
+    try {
+      const t = await get(m).then((r) => (r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`))));
+      const d = decodeInput(t);
+      if (!P.isValid(P.verify(d))) throw new Error('mirror document does not VERIFY');
+      if (P.contentHash(d) !== hash) throw new Error('mirror carries a DIFFERENT genesis (content_hash differs)');
+      checks.push({ id: 'mirror ' + m, status: 'pass', detail: 'content_hash matches' });
+    } catch (e) {
+      checks.push({ id: 'mirror ' + m, status: 'fail', detail: e.message });
+    }
+  }
+  return { hash, checks, verdict: verdictOf(checks) };
+}
+
+// Verdict discipline (status honesty): ATTESTED only when everything ran AND passed; skips make it PARTIAL —
+// a claim of §20.1 conformance is never granted on unchecked properties.
+export function verdictOf(checks) {
+  const fail = checks.filter((c) => c.status === 'fail').length;
+  const skip = checks.filter((c) => c.status === 'skip').length;
+  if (fail) return 'FAILED';
+  return skip ? 'PARTIAL' : 'ATTESTED';
+}
+
 // The witness/anchor stage is PREPARED, never executed by this CLI (9th audit #2). Exported so the
 // regression suite asserts the wording can't silently regress to a false "witnesses verified / anchored".
 export function stageSummary({ genHash, witnesses = [], profile }) {
@@ -126,6 +199,20 @@ async function cmdCanon() {
   let canonical; try { canonical = P.canon(v); } catch (e) { die('E-CANON: ' + (e.detail || e.message) + '  (values must be NFC strings; no numbers/bools/nulls — §5)'); }
   console.log(canonical);
   console.error('# sha256: ' + P.H('ust:state', canonical).slice(7));
+}
+
+// ─── ust discovery <domain> — §20.1 compliance attestation (any infra; properties, not mechanisms) ────
+async function cmdDiscovery() {
+  const domain = process.argv[3];
+  if (!domain || domain.startsWith('--')) die('usage: ust discovery <domain> [--mirror url,url] [--expect sha256:…]   # attest the §20.1 serving contract');
+  const mirrors = (arg('mirror', '') || '').split(',').filter(Boolean);
+  const expectHash = arg('expect', null);
+  const { hash, checks, verdict } = await attestDiscovery({ domain, mirrors, expectHash });
+  const mark = { pass: '✓', fail: '✗', skip: '–' };
+  for (const c of checks) console.log(`  ${mark[c.status]}  ${c.id}${c.detail ? '  (' + c.detail + ')' : ''}`);
+  console.log(`\n  DISCOVERY CONFORMANCE (§20.1): ${verdict}${hash ? '   genesis ' + hash : ''}`);
+  if (verdict === 'PARTIAL') console.log('  PARTIAL = no violation found, but unchecked properties remain — declare --mirror / publish the _ust TXT and re-run.');
+  process.exit(verdict === 'FAILED' ? 1 : 0);
 }
 
 // ─── ust genesis --domain <d> [--profile] [--dns] — the ceremony (#37), orchestrating the core above ──
@@ -184,6 +271,14 @@ async function cmdGenesis() {
     const live = await fetch(`https://${domain}/.well-known/ust-genesis`, { signal: AbortSignal.timeout(10000) }).then((r) => r.text());
     checkPublished(live, genHash);
     console.log('       ✓ well-known verifies and its content_hash matches (fail-closed)');
+    // §20.1 probe (3), WARNING-level here: BINDING is fail-closed above; a serving-contract violation is
+    // fixable post-hoc without redoing the ceremony. `ust discovery <domain>` re-attests all four anytime.
+    try {
+      const rand = `q${randomBytes(6).toString('hex')}=${randomBytes(6).toString('hex')}`;
+      const probed = await fetch(`https://${domain}/.well-known/ust-genesis?${rand}`, { signal: AbortSignal.timeout(10000) }).then((r) => (r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`))));
+      if (probed === live) console.log('       ✓ query-robustness probe: unknown ?query → byte-identical (§20.1)');
+      else console.log('       ⚠  §20.1 SERVING: response VARIES with an unknown query parameter — cache-key amplification is open; fix the cache config, then `ust discovery ' + domain + '`');
+    } catch (e) { console.log('       ⚠  §20.1 SERVING: query-robustness probe inconclusive (' + e.message + ') — run `ust discovery ' + domain + '` later'); }
   } catch (e) { rl.close(); die('could not confirm the published well-known: ' + e.message + '  (authoritative NOT granted — retry)'); }
 
   // 5. witnesses + anchor — PREPARED here; the operator runs the exchange + anchor
@@ -210,7 +305,7 @@ async function cmdGenesis() {
 const isMain = (() => { try { return process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url); } catch { return false; } })();
 if (isMain) {
   const cmd = process.argv[2];
-  const run = { verify: cmdVerify, canon: cmdCanon, genesis: cmdGenesis }[cmd];
-  if (!run) { console.error('ust — verify machine-readable state\n\n  ust verify <file|->        verify a transcript (exit 0 = VALID, 1 = not)\n  ust canon  <file|->        print canonical bytes + hash (cross-language diff)\n  ust genesis --domain <d>   run the HIGH genesis ceremony\n'); process.exit(cmd ? 1 : 0); }
+  const run = { verify: cmdVerify, canon: cmdCanon, genesis: cmdGenesis, discovery: cmdDiscovery }[cmd];
+  if (!run) { console.error('ust — verify machine-readable state\n\n  ust verify <file|->        verify a transcript (exit 0 = VALID, 1 = not)\n  ust canon  <file|->        print canonical bytes + hash (cross-language diff)\n  ust genesis --domain <d>   run the HIGH genesis ceremony\n  ust discovery <domain>     attest the §20.1 serving contract (any infra)\n'); process.exit(cmd ? 1 : 0); }
   run().catch((e) => die(e.message || String(e)));
 }
