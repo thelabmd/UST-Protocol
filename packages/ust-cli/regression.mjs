@@ -187,8 +187,12 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
   // the generated worker: exact-bytes embedding + the two §20.1 serving properties in the source
   const src = C.buildWorkerScript(bytes);
   check('worker_embeds_exact_bytes', src.includes(JSON.stringify(bytes)));
-  check('worker_cache_key_is_path_only', src.includes('u.origin + u.pathname') && src.includes('caches.default'));
-  check('worker_is_immutable_get_head', src.includes('immutable') && src.includes("allow: 'GET, HEAD'"));
+  // STATELESS (3rd live ceremony): the Cache API survived worker redeploys and kept serving the PREVIOUS
+  // genesis for its 24 h TTL. No state ⇒ the whole staleness bug-class is gone; max-age is BOUNDED so
+  // downstream caches converge in the same window as the DNS TTL.
+  check('worker_is_stateless_no_cache_api', !src.includes('caches.default'));
+  check('worker_max_age_is_bounded', src.includes('max-age=300') && !src.includes('max-age=86400'));
+  check('worker_get_head_only', src.includes("allow: 'GET, HEAD'"));
 
   // a CF API mock: zone (with account), script PUT, routes list/POST/PUT, dns records, ssl setting
   const mkApi = ({ proxied, routeExists, ssl = 'full' } = {}) => {
@@ -303,7 +307,8 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
   let exhausted = '';
   try { await C.confirmLive({ domain: DOMAIN, genHash: g.genHash, fetchImpl: async () => ({ text: async () => 'nope' }), sleep: async () => {}, attempts: 2, delayMs: 1 }); }
   catch (e) { exhausted = e.message; }
-  check('confirm_live_exhaustion_names_reattest', exhausted.includes('ust discovery') && exhausted.includes('NOT granted'));
+  // the re-attest hint must be RUNNABLE for everyone (npx form — a global `ust` is not assumed)
+  check('confirm_live_exhaustion_names_reattest', exhausted.includes('npx @ust-protocol/cli discovery') && exhausted.includes('NOT granted'));
 
   // the closing summary: custody classes + tier ladder + NO operator-specific env name (the protocol
   // tool must not present one operator's convention as the standard)
@@ -329,7 +334,7 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
   const dns = C.manualDnsGuide(DOMAIN, `ust-genesis=${g.genHash}`).join('\n');
   check('manual_dns_guide_is_concrete', dns.includes(`_ust.${DOMAIN}`) && dns.includes('TXT') && dns.includes('dig +short'));
   const srv = C.manualServingGuide(DOMAIN, '.').join('\n');
-  check('manual_serving_guide_is_concrete', srv.includes('/.well-known/ust-genesis') && srv.includes('immutable') && srv.includes('cache key = path') && srv.includes('nginx') && srv.includes('GET'));
+  check('manual_serving_guide_is_concrete', srv.includes('/.well-known/ust-genesis') && srv.includes('max-age=300') && srv.includes('cache key = path') && srv.includes('nginx') && srv.includes('GET'));
   // shared DoH confirm: sees the record when present, returns false (never throws) when absent
   const dohYes = async () => ({ json: async () => ({ Answer: [{ data: `"ust-genesis=${g.genHash}"` }] }) });
   const dohNo = async () => ({ json: async () => ({}) });
