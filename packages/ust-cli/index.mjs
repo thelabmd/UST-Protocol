@@ -47,11 +47,15 @@ export async function buildCeremony({ domain, profile = 'silver', maxP, signerRe
   const genValue = { pub: root.pub, role: 'name-binding-root', ...(maxP ? { max_partitions: String(maxP) } : {}) };
   const genesis = await W.seal(P.buildState({ domain_shard: domain, ust_id, key_id: root.key_id, class: 'genesis' }, time, { genesis: { kind: 'captured', value: genValue } }), root);
   const genHash = P.contentHash(genesis);
-  const op = await W.generateSigner();
+  // operational key: extractable so its PKCS#8 can be exported for the daily signer
+  // (this is the WARM key that runs on the producer as UST_ENGINE_SK — the genesis
+  // root stays cold). Without exporting it the ceremony would strand the signer.
+  const op = await W.generateSigner({ extractable: true });
+  const opPkcs8 = Buffer.from(await crypto.subtle.exportKey('pkcs8', op.privateKey));
   const keylog0 = await W.seal(P.buildKeyLogEntry({ domain_shard: domain, ust_id, key_id: root.key_id }, time, { op: 'add', pub: op.pub, new_key_id: op.key_id }, genHash), root);
   if (!P.isValid(P.verify(genesis))) throw new Error('self-check FAILED: genesis does not verify');
   if (!P.isValid(P.verify(keylog0, { context: 'key' }))) throw new Error('self-check FAILED: key-log[0] does not verify');
-  return { genesis, keylog0, genHash, op, pkcs8, warnings };
+  return { genesis, keylog0, genHash, op, opPkcs8, pkcs8, warnings };
 }
 
 // Fail-closed check of the published well-known: it must VERIFY and its content_hash must MATCH the genesis
@@ -139,7 +143,7 @@ async function cmdGenesis() {
   // 1–2. root key + genesis + key-log[0], all self-checked (fail-closed) inside buildCeremony
   let built; try { built = await buildCeremony({ domain, profile, maxP, signerRef }); }
   catch (e) { rl.close(); die(e.message); }
-  const { genesis, keylog0, genHash, op, pkcs8, warnings } = built;
+  const { genesis, keylog0, genHash, op, opPkcs8, pkcs8, warnings } = built;
   for (const w of warnings) console.log('  ⚠  ' + w);
   console.log('  1/5  ROOT key generated');
   console.log('  2/5  genesis built (self-signed) + key-log[0] adds an operational key');
@@ -150,9 +154,14 @@ async function cmdGenesis() {
   if (profile === 'gold') { while (pass.length < 8) pass = await ask('       set a passphrase for the root-key backup (≥8 chars, split & cold-store): '); }
   const backup = pass ? encryptKey(pkcs8, pass) : pkcs8.toString('base64');
   writeFileSync(`${outDir}/genesis-key${pass ? '.enc' : ''}.b64`, backup);
+  // operational key = the WARM daily signer. Written PLAIN base64 PKCS#8 because the
+  // producer loads it non-interactively from env (UST_ENGINE_SK). It is NOT cold-store:
+  // move it into the producer's secret store, then delete this file — never commit it.
+  writeFileSync(`${outDir}/operational-key.b64`, opPkcs8.toString('base64'));
   writeFileSync(`${outDir}/ust-genesis`, JSON.stringify(genesis));
   writeFileSync(`${outDir}/ust-keylog-0`, JSON.stringify(keylog0));
-  console.log(`       wrote ${outDir}/ust-genesis + ust-keylog-0 + genesis-key${pass ? '.enc' : ''}.b64  (COLD-STORE the key)`);
+  console.log(`       wrote ${outDir}/ust-genesis + ust-keylog-0 + genesis-key${pass ? '.enc' : ''}.b64  (COLD-STORE the root)`);
+  console.log(`       wrote ${outDir}/operational-key.b64  → load into the producer as UST_ENGINE_SK, then DELETE (warm key, never commit)`);
   console.log('       self-check: genesis + key-log verify ✓');
 
   // 3. DNS (profile A) — manual paste or CF one-click (upsert + DoH readback)
@@ -189,8 +198,9 @@ async function cmdGenesis() {
   console.log('    operational    : ' + op.key_id + '  (daily key; genesis stays cold)');
   console.log('    max_partitions : ' + (maxP ?? '(default floor 64)'));
   console.log('    outputs        : ' + outDir + '/ust-genesis + ust-keylog-0  (two verifiable UST — `ust verify` them)');
-  console.log('    key backup     : ' + outDir + '/genesis-key' + (pass ? '.enc' : '') + '.b64  (encrypted PKCS#8, NOT a UST)');
+  console.log('    root backup    : ' + outDir + '/genesis-key' + (pass ? '.enc' : '') + '.b64  (encrypted PKCS#8, NOT a UST)');
   console.log('                     → operator-managed split + cold storage (needed ~yearly to rotate/revoke)');
+  console.log('    op key         : ' + outDir + '/operational-key.b64  → UST_ENGINE_SK on the producer, then DELETE (warm, never commit)');
   console.log('    NEXT (operator): run the witness exchange + queue the anchor to reach VALID:HIGH/TOP\n');
   rl.close();
 }

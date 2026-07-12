@@ -18,7 +18,7 @@ graduated tiers (LIGHT / HIGH / TOP, §3.1). Every mechanism below serves that s
 judged by ONE question — *how much trust does this actually earn, and does the protocol say so honestly?* A
 tier must never let a consumer read "signed" as "true," "anchored" as "correct," or "agreeing" as "independent."
 
-Status: **Normative specification — 1.0 REV 26 (2026-07-12).** The SECURELY-STRUCTURED (namespaced) base that
+Status: **Normative specification — 1.0 REV 27 (2026-07-12).** The SECURELY-STRUCTURED (namespaced) base that
 closed all red-team findings STRUCTURALLY (I3 collision unrepresentable, I1 whole-State signature by
 construction, no stored-hash footgun), with ALL v0.29 FEATURES merged IN (not a flat-wire revert): per-partition
 captured/computed hashing (cross-engine corroboration for computed parts), `parent_ust` (hour-close timing),
@@ -684,6 +684,9 @@ by itself confer authority over the NAME — an attacker could anchor a rival lo
 2. **TLS-ceremony genesis** — a one-time, signed genesis served over TLS at
    `https://<domain_shard>/.well-known/ust-genesis` and PINNED thereafter. TLS is used ONLY to bind genesis —
    a tiny, one-time trust surface — never per document.
+The standard DNS record shape for (1) — and the corroboration record for (2) — is `_ust.<domain_shard>`
+TXT `ust-genesis=<content_hash>`; the SERVING contract for both discovery surfaces (immutability,
+query-robustness, mirrors) is §20.1 — operational, and per §1 never a verification input.
 A **transparency-log witness (M2)** — the genesis gossiped to an independent CT-style log so a second genesis
 for the same name is a publicly visible conflict — is REQUIRED as CORROBORATION but is NEVER the sole root
 (TOFU alone loses the first-contact race). A verifier MUST resolve authority to a name-binding genesis (1 or 2)
@@ -1108,6 +1111,49 @@ changelog: unanchored records near a recovery boundary fail HIGH by design (X3) 
 see why, not guess. The protocol fixes the mechanism; the profile carries the
 operator. Reference operator (noosphere.md) profile: `noosphere-engine/rnd/noosphere-operator-profile.md`.
 
+### 20.1 Genesis discovery — the publisher SERVING contract
+
+How genesis bytes are SERVED is operational and infrastructure-agnostic: per §1 the fetch path MUST NOT
+affect verification — §14 is unchanged by anything here, and an unreachable root stays INDETERMINATE
+(`unavailable`, §15). Verification already handles unavailability SAFELY; this contract makes it RARE. It
+standardizes WHERE a dns-name publisher exposes its genesis and WHAT PROPERTIES that surface holds, so
+ceremonies, verifiers and tooling interoperate without prescribing any vendor or stack (shared hosting, a
+corporate cloud, any CDN, a bare nginx all conform). It applies to dns-name `domain_shard`s only (§4.3a —
+a key-form identity is self-certifying and has no name to discover under). Economic abuse of open surfaces
+is explicitly outside the §18 threat model; THIS is where it is addressed, operationally.
+
+**Standard locations (the discovery pair):**
+1. **HTTPS** — `https://<domain_shard>/.well-known/ust-genesis`: the EXACT bytes of the genesis transcript
+   (§12.1-2 binds identity at this location; this contract governs its serving).
+2. **DNS** — `_ust.<domain_shard>` TXT `ust-genesis=<content_hash>`: the standard record name and format.
+   Under DNSSEC this record IS the §12.1-1 name-binding root; WITHOUT DNSSEC it is tamper-evident
+   corroboration and mirror resolution ONLY — plain DNS proves nothing to a verifier (I7).
+
+**Serving properties — a publisher claiming discovery conformance MUST hold all four. Each is a PROPERTY;
+the mechanism is the publisher's choice:**
+- **Immutable bytes.** The genesis is content-addressed; the endpoint serves it as an immutable resource.
+  After a §12.1 supersession the endpoint serves the CURRENT genesis and the DNS record carries its hash;
+  the profile declares the propagation bound (how stale the pair may be after a supersession).
+- **Query-robustness.** The response — and the endpoint's cache identity — MUST NOT vary with unrecognized
+  query parameters: the cache key is the path (or an explicit, published allowlist). This forecloses
+  cache-key amplification — per-request forced origin work, a cost-DoS that can price the discovery
+  surface out of availability exactly when a verifier needs it. Edge-strip, origin normalization, a CDN
+  rule or a proxy cache-key map all conform; the property, not the mechanism, is normative.
+- **Vendor-independence.** Availability of the genesis bytes MUST NOT depend on ONE serving vendor: at
+  least one INDEPENDENT mirror of the exact bytes exists. Because the genesis is content-addressed, a
+  verifier MAY fetch from ANY mirror and accept the bytes iff their `content_hash` equals the expected
+  value (pinned, from the DNS record, or from the well-known root). Mirrors carry AVAILABILITY, never
+  AUTHORITY — name authority resolves ONLY per §12.1 (name-binding root + positive witness confirmation).
+- **Method floor.** Plain `GET` (SHOULD also `HEAD`). Discovery is deliberately the simplest possible HTTP
+  surface; parametrized query/verify transports are a SERVICE surface, out of scope here.
+
+**Compliance attestation (informative).** A ceremony tool or auditor checks a discovery-conformance claim
+by: (1) fetching the well-known and VERIFYING the transcript (§14, fail-closed); (2) matching its
+`content_hash` against the DNS record (when present) and the expected/pinned value; (3) probing
+query-robustness — a random unrecognized parameter MUST yield byte-identical content (and, where cache
+metadata is observable, MUST NOT key a distinct cache entry); (4) hash-matching each declared mirror. The
+reference ceremony (`ust genesis`) performs (1)–(2) fail-closed today; (3)–(4) are its natural extension.
+
 ---
 
 ## 21. Worked examples (informative)
@@ -1259,6 +1305,20 @@ provenance and will be lifted into this ledger when the spec is published.
   a raw-bytes verify boundary, `ust_id` pinned to valid frames, and `secret-url` removed (a disclosure channel,
   not a privacy mode). PLUS: the verdict now CARRIES ITS TIER — `VALID:LIGHT` / `VALID:HIGH` / `VALID:TOP`, never
   a bare `VALID` (§3.1, §15) — the `publisher_claimed` forcing function applied at the verdict level.
+- **REV 26 (2026-07-12)** — resource-bound ladders (rc.10–rc.12): partition-capacity ladder (floor 64 /
+  genesis-declared / ABS 4096), transcript-SIZE ladder (floor 1 MiB / genesis-declared / ABS 64 MiB) with the
+  VOLUME-vs-STRUCTURE classification (§13), ONE normative size metric (UTF-8 bytes of the signed content),
+  capacity as a TRUSTED GRANT (authority-resolution output, never a raw caller-attached genesis),
+  `resource_limit` as the third INDETERMINATE reason (§15), and accurate producer guards.
+- **REV 27 (2026-07-12)** — genesis discovery formalized as a publisher SERVING contract (§20.1, operational —
+  per §1 fetch never affects verification): the standard discovery pair (`/.well-known/ust-genesis` +
+  `_ust.<domain_shard>` TXT `ust-genesis=<content_hash>`, cross-pinned in §12.1), four infrastructure-agnostic
+  serving properties (immutable bytes; query-robustness — cache identity independent of unrecognized query
+  parameters, foreclosing cache-key amplification; vendor-independence — content-addressed mirrors carry
+  AVAILABILITY never AUTHORITY; GET method floor), and the compliance-attestation procedure the ceremony
+  tooling performs. Driven by a live outage: a billing-suspended front-end host took the reference operator's
+  discovery surface down while the notary path stayed healthy — the serving layer must never be a
+  single-vendor dependency.
 
 **Design principle throughout:** every normative clause answers "mechanism (protocol) or operator
 instantiation (profile)?"; operator specifics (substrate, partition schema, completeness, cadence) live in the

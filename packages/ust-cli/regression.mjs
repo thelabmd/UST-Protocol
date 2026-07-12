@@ -102,6 +102,22 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
   check('source_has_no_affirmative_overclaim', hit.length === 0, hit.join(' | '));
 }
 
+// ── 8. operational_key_is_exported_and_usable — the ceremony MUST hand back the warm
+// signer's PKCS#8 (opPkcs8), and it must round-trip exactly as the producer loads it
+// (Buffer.from(b64,'base64') → import Ed25519 → sign). A stranded op key = a dead genesis.
+{
+  const g = await C.buildCeremony({ domain: DOMAIN, profile: 'gold' });
+  check('operational_key_exported', Buffer.isBuffer(g.opPkcs8) && g.opPkcs8.length > 0);
+  let signs = false;
+  try {
+    const der = Buffer.from(g.opPkcs8.toString('base64'), 'base64'); // exactly the UST_ENGINE_SK path
+    const priv = await crypto.subtle.importKey('pkcs8', der, { name: 'Ed25519' }, false, ['sign']);
+    const s = await crypto.subtle.sign({ name: 'Ed25519' }, priv, new Uint8Array([1, 2, 3]));
+    signs = s.byteLength === 64; // Ed25519 signature width
+  } catch { signs = false; }
+  check('operational_key_round_trips_as_producer_signer', signs);
+}
+
 console.log(`\nPASS ${pass} FAIL ${fail} NOTES ${note}`);
 if (fail) { console.error('\nFAILURES:\n  ' + fails.join('\n  ')); process.exit(1); }
 console.log('✓ 9th-audit regression holds — the seven points cannot silently regress');
