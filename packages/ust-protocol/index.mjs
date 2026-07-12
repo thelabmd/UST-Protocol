@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.9' };
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.10' };
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -98,7 +98,14 @@ export function seal(state, privKeyObj, pubB64url) {
 
 // ─── producer helpers: assemble a State with the per-partition `hashes` auto-computed (§4.4). `seal` signs it.
 //     `id` = {domain_shard, ust_id, key_id[, parent_ust]}. `data` = {name: {kind,value} | {kind,privacy,commit,enc?}}.
-export function buildState(id, time, data, provenance) {
+export function buildState(id, time, data, provenance, opts) {
+  // §13 capacity guard (rc.10): a producer never SILENTLY emits past its capacity. The anonymous
+  // floor is 64; pass {maxPartitions} matching your genesis declaration to go higher (ABS 4096).
+  const n = Object.keys(data).length;
+  const cap = Math.min(Number(opts?.maxPartitions ?? BOUNDS.floorPartitions), BOUNDS.partitions);
+  if (n > cap) throw Object.assign(
+    new Error(`E-BOUNDS: ${n} partitions > ${cap} — declare {maxPartitions} matching your genesis max_partitions (§12.1; ABS ${BOUNDS.partitions})`),
+    { code: 'E-BOUNDS' });
   const hashes = {};
   for (const [name, part] of Object.entries(data))
     hashes[name] = part.commit !== undefined ? partitionHash({ commit: part.commit })
@@ -111,8 +118,11 @@ export const buildAttestation = (id, time, data, constituents, prev) =>         
   buildState({ ...id, class: 'attestation' }, time, data, { constituents, root: merkleRoot(constituents), ...(prev !== undefined ? { prev } : {}) });
 export const buildDerivation = (id, time, data, basedOn, prev) =>                  // §9.3/§9.4 based_on + seed
   buildState({ ...id, class: 'derivation' }, time, data, { based_on: basedOn, seed: seed(basedOn.map(b => b.hash)), ...(prev !== undefined ? { prev } : {}) });
-export const buildGenesis = (id, time, pub) =>                                     // §12.1 self-signed name-binding root
-  buildState({ ...id, class: 'genesis' }, time, { genesis: { kind: 'captured', value: { pub, role: 'name-binding-root' } } });
+export const buildGenesis = (id, time, pub, maxPartitions) =>                      // §12.1 self-signed name-binding root
+  buildState({ ...id, class: 'genesis' }, time, { genesis: { kind: 'captured', value: {
+    pub, role: 'name-binding-root',
+    ...(maxPartitions !== undefined ? { max_partitions: String(maxPartitions) } : {}),  // capacity DECLARATION (≠ ceiling; ABS 4096)
+  } } });
 export const buildKeyLogEntry = (id, time, keyOp, prev) =>                         // §12.2 add|rotate|revoke
   buildState({ ...id, class: 'key' }, time, { key_op: { kind: 'captured', value: keyOp } }, { prev });
 export const buildCheckpoint = (id, time, head, frameCount, prev) =>              // §11.3 M5
@@ -151,10 +161,10 @@ const ustIdCalendarOk = (u) => calendarValid(u.slice(4, 8), u.slice(8, 10), u.sl
 const KEYID_FORM = /^sha256:[0-9a-f]{64}$/;
 
 // ─── §13 structural bounds — hard ceilings; exceed ⇒ E-BOUNDS ─────────────────────────────────────────
-const BOUNDS = { depth: 8, array: 4096, partitions: 64, breadth: 64, sizeBytes: 1048576 };
+const BOUNDS = { depth: 8, array: 4096, partitions: 4096, floorPartitions: 64, breadth: 64, sizeBytes: 1048576 };
 export function checkBounds(doc) {
   if (Buffer.byteLength(JSON.stringify(doc), 'utf8') > BOUNDS.sizeBytes) return 'size > 1 MiB';
-  if (doc.state?.data && Object.keys(doc.state.data).length > BOUNDS.partitions) return 'partitions > 64';
+  if (doc.state?.data && Object.keys(doc.state.data).length > BOUNDS.partitions) return 'partitions > 4096';
   let bad = null;
   (function walk(v, d) {
     if (bad) return;
@@ -220,6 +230,22 @@ export function verify(doc, opts = {}) {
     // claiming ANOTHER key's shard is malformed (the identity IS the key; the equality is an obligation).
     const shardMode = KEYID_FORM.test(st.id.domain_shard) ? 'key' : 'name';
     if (shardMode === 'key' && st.id.domain_shard !== st.id.key_id) return bad('E-MALFORMED', 'key-form domain_shard != key_id (self-certifying identity must be the signing key)');
+    // §13 capacity ladder (rc.10): ≤64 = the anonymous floor, admissible for everyone (LIGHT-anywhere).
+    // Above it, capacity is EARNED BY CEREMONY: a name-form shard admits up to its genesis-declared
+    // max_partitions (≤ ABS 4096). A key-form identity can hold no ceremony → the floor is its law.
+    // Without the capacity-bearing genesis the question cannot complete → INDETERMINATE('unavailable'),
+    // never INVALID (violation unprovable) and never VALID (floor unpassable) — the honest tier ladder.
+    if (dk.length > BOUNDS.floorPartitions) {
+      if (shardMode === 'key') return bad('E-BOUNDS', `partitions ${dk.length} > ${BOUNDS.floorPartitions} anonymous floor (key-form identity cannot declare capacity)`);
+      const g = opts.genesis;
+      const gPlausible = g && g.state?.id?.class === 'genesis' && g.state?.id?.domain_shard === st.id.domain_shard;
+      if (!gPlausible || !isValid(verify(g)))
+        return { result: 'INDETERMINATE', reason: 'unavailable', detail: `partitions ${dk.length} > ${BOUNDS.floorPartitions} floor — capacity is genesis-declared and no valid genesis for ${st.id.domain_shard} was supplied` };
+      const declared = Number(g.state?.data?.genesis?.value?.max_partitions ?? NaN);
+      if (!Number.isInteger(declared) || declared < 1 || declared > BOUNDS.partitions)
+        return bad('E-BOUNDS', `genesis declares no usable max_partitions — the ${BOUNDS.floorPartitions} floor applies`);
+      if (dk.length > declared) return bad('E-BOUNDS', `partitions ${dk.length} > genesis-declared ${declared}`);
+    }
     if (!CLASSES.includes(st.id.class)) return bad('E-MALFORMED', 'unknown class ' + st.id.class);
     if (dk.length < 1) return bad('E-MALFORMED', 'no partition');
     const HASH = /^sha256:[0-9a-f]{64}$/;

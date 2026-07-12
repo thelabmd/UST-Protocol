@@ -664,7 +664,11 @@ Genesis/key-log is the HIGH/TOP mechanism that makes a `domain_shard` NAME autho
 NOT require it (a floor document is key-authenticated with a self-asserted name, §3.1). The genesis is itself a
 UST transcript with `state.id.class = "genesis"`, SELF-SIGNED by the genesis key (the base case of the key log,
 §12.2), whose `state.data.genesis.value` carries the genesis `pub` and `role:"name-binding-root"` — one wire
-shape even for the root of trust; it is verified by §14 like any document.
+shape even for the root of trust; it is verified by §14 like any document. The value MAY carry
+`max_partitions` (a string integer, 1..4096): the publisher's DECLARED partition capacity for documents under
+this `domain_shard` — the §13 ladder admits above-floor documents against it; absent ⇒ the 64 floor applies.
+The declaration is signed and ceremony-rooted; a verifier consults it only from a genesis supplied/resolved for
+the SAME `domain_shard` — a document can never expand its own budget.
 Anchoring is permissionless (anyone can commit any bytes), so "an anchored key log for noosphere.md" does NOT
 by itself confer authority over the NAME — an attacker could anchor a rival log, even earlier. The **authoritative** genesis MUST be established by a NAME-BINDING root, one of (profile declares which):
 1. **DNSSEC-bound genesis** — the genesis key's `content_hash` in a DNSSEC-signed record for `domain_shard`;
@@ -742,7 +746,7 @@ A verifier MUST reject (E-BOUNDS) any transcript exceeding, and a producer MUST 
 | State nesting depth | 8 |
 | total Transcript size | operator-declared, ≤ 1 MiB |
 | array length | 4096 |
-| partitions per data | 64 |
+| partitions per data | 64 anonymous floor · genesis-declared ≤ 4096 (name-form, §12.1) · ABS 4096 |
 | `based_on`/`constituents` breadth per node | 64 |
 | chain depth a verifier walks | 32 |
 | ciphertext size | operator-declared, ≤ profile ceiling |
@@ -760,7 +764,18 @@ reached by rotation history, not truncation: past 256 entries resolution fails E
 escape is a NEW genesis epoch (§12.1 re-rooting) — a key log never truncates. **Bulk-verification note:** every
 recomputed hash is a pure function of bytes — a verifier MAY cache per-partition and content hashes keyed by
 `content_hash` across documents without affecting conformance (I4: same inputs, same verdict). Bounds are
-conformance items (§16).
+conformance items (§16). **Partition-capacity ladder (rc.10 — bounds earned by ceremony):** ≤ 64 partitions is
+the ANONYMOUS FLOOR — admissible for everyone, no context needed (LIGHT-anywhere is the mass case and stays
+untouched). Above the floor, capacity is DECLARED BY THE CEREMONY: a name-form publisher whose genesis carries
+`max_partitions` (§12.1) is admitted up to that declaration, hard-capped by the unconditional ABS ceiling of
+4096 (the same number family as the array bound; a 1 MiB transcript physically holds ~8k minimal partitions, so
+4096 is the structural sanity line, rejected at step 1). A KEY-FORM identity can hold no ceremony — the floor is
+its law (E-BOUNDS). A name-form document above the floor verified WITHOUT its capacity-bearing genesis is
+**INDETERMINATE (`unavailable`)** — the violation is unprovable and the floor unpassable, so the verdict ladder
+is honest: INDETERMINATE → VALID as the genesis context arrives, never VALID → INVALID across tiers (I4: the
+verdict is a total function of the document plus the supplied information set). The check runs at the §14
+shape step, where the identity FORM is known. A tooling DEFAULT for `max_partitions` is a suggestion, never a
+ceiling.
 
 ---
 
@@ -885,7 +900,8 @@ A verifier returns one of THREE OUTCOME KINDS — **availability is distinct fro
   verify" — it does NOT mean "call it INVALID." A verifier/MCP MUST NOT report an unreachable authority as a
   failed document. The reason set is CLOSED — {`unavailable`, `unsupported_alg`}: a fetch timeout IS
   `unavailable`; a verification-budget overrun is INVALID `E-BOUNDS` (§13); a fetched-but-WRONG dependency is
-  its own definite error. A verifier MUST NOT mint new INDETERMINATE reasons.
+  its own definite error; an above-floor document whose capacity-bearing genesis was not supplied is
+  `unavailable` (§13 ladder). A verifier MUST NOT mint new INDETERMINATE reasons.
 Producers/MCPs SHOULD map the three kinds distinctly (INVALID ≈ 4xx deterministic; INDETERMINATE ≈ 503 retry).
 
 ---

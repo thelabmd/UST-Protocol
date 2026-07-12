@@ -206,16 +206,30 @@ check('F8 impossible ust_id→E-MALFORMED', P.verify(mk({ r: { kind: 'captured',
 //     clean-room admitting >64 partitions the reference rejects; these pin parity on the edges.
 {
   const { verify: cleanRoom } = await import('../../docs/ust-verify.mjs');
-  const mkN = (n) => {
+  const mkN = (n, id = { ...ID, ust_id: 'ust:20260628.15' }) => {
     const data = {};
     for (let i = 0; i < n; i++) data['p' + i] = { kind: 'captured', value: { x: String(i) } };
-    return P.seal(P.buildState({ ...ID, ust_id: 'ust:20260628.15' }, T, data), A.priv, A.pubB64);
+    return P.seal(P.buildState(id, T, data, undefined, { maxPartitions: 4096 }), A.priv, A.pubB64);
   };
   const d64 = mkN(64), d65 = mkN(65);
   const r64 = P.verify(d64, { context: 'data' }), c64 = await cleanRoom(d64, { context: 'data' });
   const r65 = P.verify(d65, { context: 'data' }), c65 = await cleanRoom(d65, { context: 'data' });
   check('parity: 64 partitions VALID in BOTH verifiers', P.isValid(r64) && P.isValid(c64));
-  check('parity: 65 partitions E-BOUNDS in BOTH verifiers', r65.error === 'E-BOUNDS' && c65.error === 'E-BOUNDS');
+  // ─── §13 capacity ladder (rc.10): floor 64 · genesis-declared ≤ 4096 · INDETERMINATE without genesis ───
+  check('ladder: 65 name-form NO genesis → INDETERMINATE(unavailable) in BOTH', r65.result === 'INDETERMINATE' && r65.reason === 'unavailable' && c65.result === 'INDETERMINATE' && c65.reason === 'unavailable');
+  const d65k = mkN(65, { domain_shard: A.key_id, ust_id: 'ust:20260628.15', key_id: A.key_id, class: 'observation' });
+  check('ladder: 65 KEY-form → E-BOUNDS (no ceremony can exist)', P.verify(d65k, { context: 'data' }).error === 'E-BOUNDS' && (await cleanRoom(d65k, { context: 'data' })).error === 'E-BOUNDS');
+  const genCap = (mp) => P.seal(P.buildGenesis({ domain_shard: ID.domain_shard, ust_id: 'ust:20260628.01', key_id: A.key_id }, T, A.pubB64, mp), A.priv, A.pubB64);
+  const g128 = genCap(128), g1024 = genCap(1024);
+  check('ladder: 65 + genesis(128) → ADMITTED VALID:LIGHT', P.verify(d65, { context: 'data', genesis: g128 }).result === 'VALID:LIGHT');
+  check('ladder: 65 + genesis declaring only 64 → E-BOUNDS (over declared)', P.verify(d65, { context: 'data', genesis: genCap(64) }).error === 'E-BOUNDS');
+  const d1000 = mkN(1000);
+  check('ladder: ceremony may declare 1024 — 1000 partitions ADMITTED (default ≠ ceiling)', P.verify(d1000, { context: 'data', genesis: g1024 }).result === 'VALID:LIGHT');
+  check('ladder: genesis without max_partitions → floor applies, E-BOUNDS', P.verify(d65, { context: 'data', genesis: genCap(undefined) }).error === 'E-BOUNDS');
+  const fake4097 = { state: { data: Object.fromEntries(Array.from({ length: 4097 }, (_, i) => ['p' + i, '1'])) } };
+  check('ABS: 4097 partitions → structural E-BOUNDS precheck', P.checkBounds(fake4097) === 'partitions > 4096');
+  let guardThrew = false; try { P.buildState(ID, T, Object.fromEntries(Array.from({ length: 65 }, (_, i) => ['p' + i, { kind: 'captured', value: { x: '1' } }]))); } catch (e) { guardThrew = e.code === 'E-BOUNDS'; }
+  check('producer guard: buildState 65 without {maxPartitions} THROWS E-BOUNDS', guardThrew);
   const good = mk(); const rg = P.verify(good, { context: 'data' }); const cg = await cleanRoom(good, { context: 'data' });
   check('parity: identical verdict+hash on a valid doc', rg.result === cg.result && rg.content_hash === cg.content_hash);
 }

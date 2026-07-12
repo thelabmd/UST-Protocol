@@ -97,7 +97,14 @@ export async function verify(doc, opts = {}) {
       const arrTooLong = (v) => Array.isArray(v) ? (v.length > 4096 || v.some(arrTooLong))
         : (v && typeof v === 'object' ? Object.values(v).some(arrTooLong) : false);
       if (arrTooLong(st)) return bad('E-BOUNDS', 'array length > 4096');
-      if (Object.keys(st.data).length > 64) return bad('E-BOUNDS', 'partitions > 64');
+      const nParts = Object.keys(st.data).length;
+      if (nParts > 4096) return bad('E-BOUNDS', 'partitions > 4096');
+      if (nParts > 64) {
+        // §13 capacity ladder (rc.10) at LIGHT: this verifier holds no genesis, so above the
+        // anonymous floor a key-form shard fails closed and a name-form shard is UNDECIDABLE here.
+        if (/^sha256:[0-9a-f]{64}$/.test(st.id.domain_shard)) return bad('E-BOUNDS', `partitions ${nParts} > 64 anonymous floor (key-form)`);
+        return { result: 'INDETERMINATE', reason: 'unavailable', detail: `partitions ${nParts} > 64 floor — capacity is genesis-declared; supply the publisher genesis to a genesis-aware verifier` };
+      }
       const pr0 = st.provenance;
       for (const f of ['based_on', 'constituents'])
         if (pr0 && Array.isArray(pr0[f]) && pr0[f].length > 64) return bad('E-BOUNDS', f + ' breadth > 64');
