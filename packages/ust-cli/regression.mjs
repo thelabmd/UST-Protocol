@@ -5,6 +5,7 @@
 import { readFileSync } from 'node:fs';
 import * as C from './index.mjs';
 import * as P from 'ust-protocol';
+import * as W from '@ust-protocol/web-signer';
 
 let pass = 0, fail = 0, note = 0; const fails = [];
 const check = (id, ok, d) => { if (ok) pass++; else { fail++; fails.push(id + (d ? ' — ' + d : '')); } };
@@ -265,6 +266,44 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
   };
   const apex = await C.cfApexSteps({ domain: DOMAIN, token: 'dns-only', fetchImpl: blind });
   check('apex_steps_degrade_without_settings_scope', apex.proxied && apex.warnings.some((w) => w.includes('not visible to this token')));
+}
+
+// ── 12. ceremony UX (rc.8) — the map/summary/gate are pinned so the STORY cannot silently regress
+// back into an opaque sequence, and the tier promise the summary makes is PROVEN reachable.
+{
+  const g = await C.buildCeremony({ domain: DOMAIN, profile: 'gold' });
+  const bytes = JSON.stringify(g.genesis);
+
+  // the road map: 5 steps, done/current/ahead marks move with progress
+  check('map_has_five_steps', C.CEREMONY_STEPS.length === 5);
+  const m2 = C.ceremonyMap(2);
+  check('map_marks_progress', m2.includes('✅ 1/5') && m2.includes('▶️ 3/5') && m2.includes('⬜ 4/5'));
+
+  // the live gate retries through propagation and narrates; exhaustion names the re-attest path
+  let attempts = 0; const narrated = [];
+  const flaky = async () => { attempts++; return attempts < 3 ? { text: async () => 'Payment required' } : { text: async () => bytes }; };
+  const doc = await C.confirmLive({ domain: DOMAIN, genHash: g.genHash, fetchImpl: flaky, sleep: async () => {}, attempts: 5, delayMs: 1, onAttempt: (i, n, m) => narrated.push(i) });
+  check('confirm_live_retries_through_propagation', attempts === 3 && narrated.length === 2 && !!doc);
+  let exhausted = '';
+  try { await C.confirmLive({ domain: DOMAIN, genHash: g.genHash, fetchImpl: async () => ({ text: async () => 'nope' }), sleep: async () => {}, attempts: 2, delayMs: 1 }); }
+  catch (e) { exhausted = e.message; }
+  check('confirm_live_exhaustion_names_reattest', exhausted.includes('ust discovery') && exhausted.includes('NOT granted'));
+
+  // the closing summary: custody classes + tier ladder + NO operator-specific env name (the protocol
+  // tool must not present one operator's convention as the standard)
+  const s = C.ceremonySummary({ domain: DOMAIN, genHash: g.genHash, opKeyId: g.op.key_id, maxP: 256, outDir: '.', encrypted: true }).join('\n');
+  check('summary_pins_custody', s.includes('COLD') && s.includes('WARM') && s.includes('DELETE') && s.includes('PUBLIC'));
+  check('summary_shows_tier_ladder', s.includes('LIGHT') && s.includes('HIGH') && s.includes('TOP') && s.includes('--no-fork-confirmed'));
+  check('summary_is_operator_neutral', !s.includes('UST_ENGINE_SK'));
+  check('summary_no_overclaim', !/witnesses verified|anchored to bitcoin/i.test(s));
+
+  // the promise is REAL: a document signed by the ceremony's op key resolves to VALID:HIGH with the
+  // ceremony's own artifacts (genesis + keylog[0] + capacity grant from authority resolution)
+  const t = (iso) => ({ generated_at: iso, valid_from: iso, valid_to: iso });
+  const obs = await W.seal(P.buildState({ domain_shard: DOMAIN, ust_id: 'ust:20260712.14', key_id: g.op.key_id, class: 'observation' }, t('2026-07-12T14:00:00Z'), { probe: { kind: 'captured', value: { ok: 'true' } } }), g.op);
+  const auth = P.resolveAuthority(obs, { genesis: g.genesis, keylog: [g.keylog0], noForkConfirmed: true });
+  const high = P.verify(obs, { context: 'data', genesis: g.genesis, keylog: [g.keylog0], noForkConfirmed: true, capacity: auth.capacity });
+  check('ceremony_artifacts_reach_high', high.result === 'VALID:HIGH' && high.publisher === DOMAIN);
 }
 
 console.log(`\nPASS ${pass} FAIL ${fail} NOTES ${note}`);
