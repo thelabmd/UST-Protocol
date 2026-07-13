@@ -3,7 +3,7 @@
 
 *This specification text is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](../LICENSE-SPEC). Reference code in this repository is licensed Apache-2.0. Use of the name **UST** / **Universal State Transcript** and the **UST-compatible** claim: see [TRADEMARK.md](../TRADEMARK.md).*
 
-> **Release candidate — `1.0.0-rc.20`.** This specification has been extensively red-teamed; an independent
+> **Release candidate — `1.0.0-rc.21`.** This specification has been extensively red-teamed; an independent
 > external cryptographic audit is pending. It is subject to change until `1.0.0` final (rc.2 folded in two external reviews — 6 impl findings + spec edge cases + removed domain-less `computed`; rc.3 aligned impl to §3.1 pinned + Y3; rc.4 closed a 4th external audit (ChatGPT 5.5 Max): key-binding by KEY not string, TOP needs a genesis origin, embedded proofs fail-closed, class↔schema enforced, canon strict on names too, raw-bytes verify boundary, ust_id valid frames, and REMOVED secret-url as a privacy mode; rc.6 closed a 5th external audit STRUCTURALLY — the §14a obligations table (every commitment-bearing member recomputed: +`E-SEED`), a typed identity namespace (dns-name | self-certifying key-id), real-calendar semantic consistency, document-tier vs range-completeness separation, MTI registry discipline, one version source; rc.7 explicit `completeness:not_evaluated`; rc.8 admissibility pins (duplicate refs, key-log
 ceiling, layer availability); rc.9 edge pass (full reserved-name registry, verified-node budget, strict-Z);
 rc.10 partition-capacity ladder (floor 64 / genesis-declared ≤ 4096); rc.11 SIZE ladder + VOLUME-vs-STRUCTURE
@@ -18,7 +18,7 @@ graduated tiers (LIGHT / HIGH / TOP, §3.1). Every mechanism below serves that s
 judged by ONE question — *how much trust does this actually earn, and does the protocol say so honestly?* A
 tier must never let a consumer read "signed" as "true," "anchored" as "correct," or "agreeing" as "independent."
 
-Status: **Normative specification — 1.0 REV 31 (2026-07-13).** The SECURELY-STRUCTURED (namespaced) base that
+Status: **Normative specification — 1.0 REV 32 (2026-07-13).** The SECURELY-STRUCTURED (namespaced) base that
 closed all red-team findings STRUCTURALLY (I3 collision unrepresentable, I1 whole-State signature by
 construction, no stored-hash footgun), with ALL v0.29 FEATURES merged IN (not a flat-wire revert): per-partition
 captured/computed hashing (cross-engine corroboration for computed parts), `parent_ust` (hour-close timing),
@@ -668,12 +668,29 @@ the checkpoint is the existing `class:"attestation"` value plus two bounds, and 
 Absent a signed cadence in the verifier's information set the range verdict is `chain-consistent`, NEVER
 `complete`.
 
-**Concrete format (normative).** The cadence is a string integer of SECONDS in `genesis.value.cadence` (a
-time-resolved parameter: a future revision may supersede it via a cadence-log entry the way §12.2 supersedes a
-key; a constant genesis cadence is the base case). The checkpoint carries `from` and `to` (the interval's first
-and last `ust_id`) in its `checkpoint` value. The verifier computes `G` deterministically from `(from, to,
-cadence)` at the precision the cadence implies (a multiple of 3600 s ⇒ hour, of 60 s ⇒ minute, else second) and
-requires every `g ∈ G` be covered by a frame or a gap. **Subtype discipline (C2) — a checkpoint and a gap are
+**Concrete format (normative).** The cadence is a string integer of SECONDS, RESOLVED at a slot's time from
+`genesis.value.cadence` (the initial value) plus an optional **cadence-log** — a genesis-rooted, `prev`-chained
+sequence of `class:"cadence"` transcripts, each carrying `cadence_op {cadence, effective_from}`, exactly the
+key-log pattern (§12.2) applied to the stream cadence. `resolveCadence(genesis, cadence_log, t)` returns the
+cadence in force at `t` (the latest `effective_from ≤ t`). The checkpoint carries `from` and `to` (the
+interval's first and last `ust_id`) in its `checkpoint` value. The verifier computes `G` deterministically from
+`(from, to, cadence)` at the precision the cadence implies (a multiple of 3600 s ⇒ hour, of 60 s ⇒ minute, else
+second) and requires every `g ∈ G` be covered by a frame or a gap.
+
+**Order & interval integrity (normative).** The `prev`-chain alone does not pin TIME order — a publisher could
+permute slots in time while keeping the chain valid and the grid-set covered. So the verifier ALSO requires the
+`ust_id` to be STRICTLY INCREASING in chain order (a reorder ⇒ E-PREV), and the covering checkpoint to FAITHFULLY
+BOUND the observed set: the first frame's `ust_id` = `from`, the last = `to` (so the checkpoint `head` is the
+hash of the frame AT `to`), and no frame lies outside `[from, to]` (else E-PREV — the checkpoint does not cover
+THIS interval).
+
+**Continuity — an operator change never invalidates old data (normative law).** A cadence CHANGE creates a new
+cadence epoch; old data is verified `complete` against the cadence that was in force AT ITS time (the cadence-log
+resolves it), so no publisher update retroactively voids history. A checkpoint interval that CROSSES a change
+(`resolveCadence(from) ≠ resolveCadence(to)`) yields `chain-consistent`, not an error — it must be SPLIT at the
+boundary, and each side verifies `complete` under its own cadence. This is the same time-resolution that makes a
+key ROTATION leave old-key signatures valid at their anchored time (§12.2): every operator parameter is resolved
+at the data's time, never applied retroactively. **Subtype discipline (C2) — a checkpoint and a gap are
 DISTINCT, not a shape coincidence:** a `class:"attestation"` with empty/absent `constituents` MUST carry
 `provenance.prev`, MUST NOT carry `root`, and MUST carry EXACTLY ONE of a `checkpoint` data partition (⇒ a
 checkpoint) or a `gap` data partition (⇒ a gap record) — never both, never neither (⇒ E-MALFORMED). A
@@ -1064,7 +1081,7 @@ Independent re-implementation is expected; the vectors make "verify without trus
 
 ## 17. Registries
 
-- **class:** `observation`, `attestation`, `derivation`, `genesis` (name-binding root, §12.1), `key` (key-log entry, §12.2). (Extensible by future 1.x; unknown ⇒ E-MALFORMED.)
+- **class:** `observation`, `attestation`, `derivation`, `genesis` (name-binding root, §12.1), `key` (key-log entry, §12.2), `cadence` (cadence-log entry, §11.3 — `state.data.cadence_op.value` keys `cadence, effective_from`; prev-chained, resolved at a slot's time; not valid in a `data` context, W3). (Extensible by future 1.x; unknown ⇒ E-MALFORMED.)
 - **attestation subtype (§11.3 C2):** `set` (constituents + Merkle `root`) · `checkpoint` (prev + a `checkpoint` data partition `{head, frame_count, from?, to?}`, no constituents/root) · `gap` (prev + a `gap` data partition, no constituents/root). A prev-only attestation MUST carry EXACTLY ONE of `checkpoint`/`gap` (never both/neither ⇒ E-MALFORMED) — the subtype is the named data partition, not a shape.
 - **genesis value (§12.1):** `pub`, `role:"name-binding-root"`, optional `max_partitions`, `max_transcript_bytes`, and `cadence` (string integer seconds — the SIGNED stream cadence that fixes the completeness grid, §11.3; resolved, never a per-checkpoint choice).
 - **key-log entry** (a `class:"key"` transcript, §12.2): `state.data.key_op.value` keys `op,pub,reason,compromised_since`; `op` ∈ `add|rotate|revoke`;
@@ -1478,6 +1495,18 @@ provenance and will be lifted into this ledger when the spec is published.
   the constant genesis cadence is the base case. Live-proven with synthetic vectors: full grid → complete,
   omission → chain-consistent (hole named), omission+gap → complete, no-cadence → chain-consistent. The name-map
   that re-earns `authoritative` (#42) is demoted to vNext (decentralization axis, not the enterprise-trust axis).
+- **REV 32 (2026-07-13)** — external rc.20 audit folded in + the continuity law. Two `verifyStream` P0s closed:
+  the `prev`-chain must ALSO be chronological (`ust_id` strictly increasing ⇒ a time-reorder is E-PREV), and the
+  covering checkpoint must FAITHFULLY BOUND the observed set (first=`from`, last=`to`, none outside `[from,to]`;
+  so `head` is the hash of the frame at `to`). **Continuity (new normative law):** cadence becomes a RESOLVED
+  parameter — `genesis.value.cadence` plus a `class:"cadence"` cadence-log (the key-log pattern), resolved at a
+  slot's time by `resolveCadence`. An operator change (cadence, key) NEVER invalidates old data: old slots
+  verify under the value in force AT THEIR time; an interval crossing a change is `chain-consistent` (split at
+  the boundary), never invalid. This closes the class of updates that would otherwise silently void history.
+  Audit honesty fix: the `mapInclusion:true` boolean shortcut to `authoritative` is REMOVED — an unverified flag
+  is not a proof; the only authoritative path until the #42 map verifier is an out-of-band caller assertion.
+  (Audit tails still open, tracked: OTS single-explorer trust, Rekor body substring-vs-schema, SSRF resolution
+  guard beyond MCP — next round.)
 
 **Design principle throughout:** every normative clause answers "mechanism (protocol) or operator
 instantiation (profile)?"; operator specifics (substrate, partition schema, completeness, cadence) live in the

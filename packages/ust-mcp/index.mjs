@@ -102,8 +102,8 @@ export const tools = [
   {
     name: 'ust_verify_stream',
     description: 'VERIFY A RANGE as one authority\'s stream — e.g. you fetched ust(001)…ust(007) from an archive: every frame LIGHT-verifies, they are prev-chained, all belong to ONE publisher (mixed publishers → E-AUTHORITY), and a covering checkpoint closes the interval. Returns { complete: "complete" | "chain-consistent" | "provisional" | "none" } or an error (E-PREV broken/forked chain · E-AUTHORITY mixed authority · E-SIG bad frame). #69 C: "chain-consistent" proves NO-DELETION over the shown chain; "complete" (no-OMISSION) is stronger and is reached ONLY when the publisher\'s genesis carries a SIGNED cadence and the covering checkpoint carries interval bounds (from,to) — then every expected grid slot must be a frame or a signed gap record (data.gap); any hole → "chain-consistent" + names the hole. The signed cadence (not a per-checkpoint choice) is what stops a publisher claiming a coarser grid to hide slots. Retrieval is NOT the protocol\'s job — pass the records you already have.',
-    inputSchema: { type: 'object', required: ['frames'], properties: { frames: { type: 'array' }, genesis: { type: 'object' }, checkpoint: { type: 'object' } } },
-    handler: ({ frames, genesis, checkpoint }) => P.verifyStream(frames, { genesis, checkpoint }),
+    inputSchema: { type: 'object', required: ['frames'], properties: { frames: { type: 'array' }, genesis: { type: 'object' }, checkpoint: { type: 'object' }, cadenceLog: { type: 'array', description: '§11.3 cadence-log entries — resolves the cadence in force at the interval so `complete` survives a cadence change (old data stays complete under its old cadence)' } } },
+    handler: ({ frames, genesis, checkpoint, cadenceLog }) => P.verifyStream(frames, { genesis, checkpoint, cadenceLog }),
   },
   {
     name: 'ust_key_id',

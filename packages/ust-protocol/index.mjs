@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.20' };
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.21' };
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -145,6 +145,8 @@ export const buildCheckpoint = (id, time, head, frameCount, prev, interval) =>  
   buildState({ ...id, class: 'attestation' }, time, { checkpoint: { kind: 'computed', value: { head, frame_count: String(frameCount), ...(interval ? { from: interval.from, to: interval.to } : {}) } } }, { prev });
 export const buildGap = (id, time, prev, reason) =>                               // §11.3 C2 — a signed gap record: this slot (id.ust_id) is HONESTLY absent
   buildState({ ...id, class: 'attestation' }, time, { gap: { kind: 'computed', value: { reason: reason || 'no-frame' } } }, { prev });
+export const buildCadenceEntry = (id, time, cadence, effectiveFrom, prev) =>      // §11.3 continuity — a signed cadence CHANGE (key-log pattern); resolved at a slot's time
+  buildState({ ...id, class: 'cadence' }, time, { cadence_op: { kind: 'computed', value: { cadence: String(cadence), effective_from: effectiveFrom } } }, { prev });
 
 // ─── reserved-key sets (§3/§4.2/§17) ─────────────────────────────────────────────────────────────────
 const RESERVED = { transcript: ['ust','state','sig','proof'], state: ['id','time','data','hashes','provenance'],
@@ -159,7 +161,7 @@ const AEAD_ALGS = ['AES-256-GCM', 'XChaCha20-Poly1305'], B64URL = /^[A-Za-z0-9_-
 // the verdict is tier-scoped (`VALID:LIGHT|HIGH|TOP`); this is the ONE place code should test "did it verify" —
 // a bare `r.result === 'VALID'` is intentionally no longer valid (it forces callers to face the tier).
 export const isValid = (r) => typeof r?.result === 'string' && r.result.slice(0, 6) === 'VALID:';
-const CLASSES = ['observation','attestation','derivation','genesis','key'];
+const CLASSES = ['observation','attestation','derivation','genesis','key','cadence'];
 // §6 pinned RFC3339 UTC-Z with VALID RANGES — month 01-12, day 01-31, hour 00-23, min/sec 00-59.
 // Rejects leap seconds (:60) and out-of-range (:99, hour 99) so two conforming verifiers ALWAYS agree (I4).
 // Publishers MUST smear leap seconds to :59 (there is no representable :60).
@@ -303,6 +305,10 @@ export function verify(doc, opts = {}) {
     const pr = st.provenance;
     if (st.id.class === 'observation' && (pr?.constituents !== undefined || pr?.root !== undefined)) return bad('E-MALFORMED', 'observation MUST NOT carry constituents/root');
     if (st.id.class === 'derivation' && (pr?.based_on === undefined || pr?.seed === undefined)) return bad('E-MALFORMED', 'derivation MUST carry based_on + seed');
+    // §11.3 continuity — a cadence entry is the key-log pattern for the stream CADENCE: prev-chained, carrying a
+    // cadence_op {cadence, effective_from}. Resolved at a slot's time, so a cadence CHANGE never invalidates old
+    // data (old slots verify under the cadence in force AT THEIR time) — the "no operator change breaks history" law.
+    if (st.id.class === 'cadence' && (pr?.prev === undefined || st.data?.cadence_op === undefined)) return bad('E-MALFORMED', 'cadence entry MUST carry provenance.prev + a cadence_op partition (§11.3)');
     if (st.id.class === 'attestation') {
       // #69 C2 — an empty-constituents attestation used to be a bare shape (prev + no constituents), which
       // COLLIDED a checkpoint with a gap record (same shape, different meaning). The subtype is now EXPLICIT via
@@ -318,7 +324,7 @@ export function verify(doc, opts = {}) {
       } else if (pr?.root === undefined) return bad('E-MALFORMED', 'a set attestation MUST carry constituents + root');
     }
     // W3 class-context: a data verify must not accept a key-log/genesis transcript as data
-    if (opts.context === 'data' && (st.id.class === 'key' || st.id.class === 'genesis')) return bad('E-MALFORMED', 'class ' + st.id.class + ' not valid in data context (W3)');
+    if (opts.context === 'data' && (st.id.class === 'key' || st.id.class === 'genesis' || st.id.class === 'cadence')) return bad('E-MALFORMED', 'class ' + st.id.class + ' not valid in data context (W3)');
     // step 4 — authenticity (§14.4): closed sig schema + declared alg + key_id consistency + strict Ed25519 over S
     if (typeof doc.sig !== 'object' || doc.sig === null) return bad('E-SIG', 'sig missing');
     for (const k of Object.keys(doc.sig)) if (!RESERVED.sig.includes(k)) return bad('E-SIG', 'unknown sig member: ' + k);
@@ -457,7 +463,7 @@ function walkReferents(st, opts, depth, visited, budget) {
 
 // ─── §12 HIGH name-authority resolution. STATELESS: the caller (ustate/engine) supplies the genesis +
 //     key-log transcripts (retrieval is the stateful layer's job) and asserts no-fork from the witness (W1).
-export function resolveAuthority(doc, { genesis, keylog = [], noForkConfirmed = false, corroborated = false, mapInclusion = false, anchorTime } = {}) {
+export function resolveAuthority(doc, { genesis, keylog = [], noForkConfirmed = false, corroborated = false, anchorTime } = {}) {
   if (!genesis) return { strength: 'self-asserted', status: 'verified' };         // LIGHT — nothing to resolve
   const gv = verify(genesis);                                                     // genesis is itself a UST transcript
   if (!isValid(gv)) return { error: 'E-GENESIS', detail: 'genesis invalid: ' + gv.error };
@@ -517,7 +523,12 @@ export function resolveAuthority(doc, { genesis, keylog = [], noForkConfirmed = 
   //     of A in the published set), but NOT independent non-membership (the publisher can omit a rival, F.5a).
   //   · no no-fork evidence at all ⇒ DENIED (status unavailable → the name-authority tier is not reached, W1).
   const st2 = suspect ? 'suspect' : 'verified';
-  if (mapInclusion || noForkConfirmed) return { strength: 'authoritative', noFork: mapInclusion ? 'map-inclusion' : 'caller-asserted', status: st2, capacity };
+  // #69 A2 P1 — `authoritative` requires INDEPENDENT non-membership. Until the name-map VERIFIER exists (#42),
+  // the ONLY authoritative path is an out-of-band caller assertion (noForkConfirmed = the caller takes
+  // responsibility, reported `caller-asserted`). There is deliberately NO `mapInclusion:true` boolean — a raw
+  // flag that is not a verified proof would be exactly the overclaim we removed. The map path returns here as
+  // `authoritative` only once a real VerifiedMapReceipt is checked (future revision).
+  if (noForkConfirmed) return { strength: 'authoritative', noFork: 'caller-asserted', status: st2, capacity };
   if (corroborated) return { strength: 'corroborated', noFork: 'served-list', status: st2, capacity };
   return { strength: 'corroborated', noFork: 'unconfirmed', status: 'unavailable', capacity,
     detail: 'no independent no-fork evidence; a served witness only corroborates (§12.1a F.5a) → authority pending, retry' };
@@ -581,20 +592,51 @@ export function ustGrid(from, to, cadenceSec) {
   return grid;
 }
 
+// §11.3 continuity — resolve the cadence IN FORCE at a slot time from the genesis value + a cadence-log (the
+// key-log pattern applied to cadence: a signed, prev-chained sequence of changes). Old data verifies under the
+// cadence signed for ITS time, so an operator changing cadence NEVER retroactively invalidates history. Each
+// entry is a normal transcript, verified by §14; the log is genesis-rooted and prev-chained. → {cadence}|{error}.
+export function resolveCadence(genesis, cadenceLog = [], atTime) {
+  let cadence = Number(genesis?.state?.data?.genesis?.value?.cadence) || null;
+  if (!Array.isArray(cadenceLog) || !cadenceLog.length) return { cadence };
+  if (cadenceLog.length > 256) return { error: 'E-BOUNDS', detail: 'cadence-log > 256 (§13)' };
+  const atE = ustToEpoch(atTime);
+  let prev = contentHash(genesis);
+  for (const [i, e] of cadenceLog.entries()) {
+    const ev = verify(e, { context: 'key' });
+    if (!isValid(ev)) return { error: 'E-KEY', detail: 'cadence entry ' + i + ' invalid: ' + (ev.error || ev.result) };
+    if (e.state.id.class !== 'cadence') return { error: 'E-MALFORMED', detail: 'cadence-log entry ' + i + ' not class:cadence' };
+    if (e.state.id.domain_shard !== genesis.state.id.domain_shard) return { error: 'E-AUTHORITY', detail: 'cadence entry ' + i + ' domain mismatch' };
+    if (e.state.provenance?.prev !== prev) return { error: 'E-PREV', detail: 'cadence entry ' + i + ' not chained' };
+    const op = e.state.data.cadence_op.value;
+    const effE = ustToEpoch(op.effective_from);
+    if (effE !== null && atE !== null && effE <= atE) cadence = Number(op.cadence);   // latest change in force at atTime wins
+    prev = contentHash(e);
+  }
+  return { cadence };
+}
+
 // ─── TOP §11.3 completeness: a sequenced stream is prev-chained; first frame's prev = genesis content_hash
 //     (M4); per-frame validity is verified too (X2 — completeness ≠ validity); duplicate ust_id / shared prev
 //     = a fork ⇒ E-PREV (Y1). A covering checkpoint (M5) proves 'chain-consistent' (no-deletion); the open tail
 //     is 'provisional'. 'complete' (no-omission, needs the signed-cadence grid, F.4) is a future rung (#69 C).
-export function verifyStream(frames, { genesis, checkpoint, requirePerFrameValid = true } = {}) {
+export function verifyStream(frames, { genesis, checkpoint, cadenceLog, requirePerFrameValid = true } = {}) {
   if (!Array.isArray(frames) || !frames.length) return { complete: 'none' };
   let prevHash = genesis ? contentHash(genesis) : null;
   const authority = frames[0].state.id.domain_shard;                   // §11.3: a stream belongs to ONE authority
   const seenUstId = new Set(), seenPrev = new Set();
+  let lastE = null;
   for (const [i, f] of frames.entries()) {
     if (requirePerFrameValid) { const v = verify(f, { context: 'data' }); if (!isValid(v)) return { error: 'E-SIG', detail: 'frame ' + i + ' invalid: ' + v.error }; } // X2
     if (f.state.id.domain_shard !== authority) return { error: 'E-AUTHORITY', detail: 'frame ' + i + ' domain_shard != stream authority (' + authority + ') — mixed-authority stream' };
     if (seenUstId.has(f.state.id.ust_id)) return { error: 'E-PREV', detail: 'duplicate ust_id (fork, Y1): ' + f.state.id.ust_id };
     seenUstId.add(f.state.id.ust_id);
+    // #69 C P0 — the prev-chain must ALSO be CHRONOLOGICAL: `ust_id` strictly increasing in chain order. Else a
+    // publisher could permute slots in TIME while keeping the chain valid and the grid-set covered (a real
+    // reordering, hidden). `ust_id` is the time coordinate; compare by epoch.
+    const fe = ustToEpoch(f.state.id.ust_id);
+    if (i > 0 && fe !== null && lastE !== null && fe <= lastE) return { error: 'E-PREV', detail: 'frame ' + i + ' ust_id ' + f.state.id.ust_id + ' not chronologically after its predecessor — reordered stream (§11.3)' };
+    lastE = fe;
     const p = f.state.provenance?.prev;
     if (i === 0) { if (genesis && p !== prevHash) return { error: 'E-PREV', detail: 'first frame prev != genesis content_hash (M4)' }; }
     else if (p !== prevHash) return { error: 'E-PREV', detail: 'frame ' + i + ' prev dangling (broken chain)' };
@@ -615,13 +657,23 @@ export function verifyStream(frames, { genesis, checkpoint, requirePerFrameValid
     const a = checkpoint.state.data.checkpoint?.value;
     if (!a || a.head !== prevHash || String(a.frame_count) !== String(frames.length))
       return { error: 'E-PREV', detail: 'checkpoint contradicts observed set (M5)' };
-    // #69 C — no-deletion is proven. no-OMISSION is decidable ONLY against the EXPECTED GRID, which needs the
-    // operator's SIGNED cadence (from the genesis value, resolved — NOT a free per-checkpoint choice) AND the
-    // checkpoint's interval bounds. With both, enumerate the grid and require every slot be a frame OR a signed
-    // gap record (§11.3 C2). Every slot covered ⇒ `complete`; any hole ⇒ `chain-consistent` (honest ceiling).
-    const cadence = Number(genesis.state?.data?.genesis?.value?.cadence);
-    if (cadence > 0 && a.from !== undefined && a.to !== undefined) {
-      const grid = ustGrid(a.from, a.to, cadence);
+    // #69 C — no-deletion is proven. no-OMISSION needs the EXPECTED GRID: the operator's SIGNED cadence
+    // (genesis value + cadence-log, RESOLVED at the interval — never a free per-checkpoint choice) AND the
+    // checkpoint's interval bounds, then every slot must be a frame OR a signed gap record (§11.3 C2).
+    if (a.from !== undefined && a.to !== undefined) {
+      // P0 — the checkpoint's interval MUST FAITHFULLY BOUND the observed set: first==from, last==to (so
+      // head==hash(frame at to)), and NO frame outside [from,to]. Else the checkpoint does not cover THIS range.
+      const fromE = ustToEpoch(a.from), toE = ustToEpoch(a.to);
+      if (frames[0].state.id.ust_id !== a.from) return { error: 'E-PREV', detail: 'first frame != checkpoint `from` (' + a.from + ')' };
+      if (frames[frames.length - 1].state.id.ust_id !== a.to) return { error: 'E-PREV', detail: 'last frame != checkpoint `to` (' + a.to + ')' };
+      for (const f of frames) { const e = ustToEpoch(f.state.id.ust_id); if (e === null || fromE === null || toE === null || e < fromE || e > toE) return { error: 'E-PREV', detail: 'frame ' + f.state.id.ust_id + ' outside the checkpoint interval [' + a.from + ',' + a.to + ']' }; }
+      // continuity — resolve the cadence at BOTH ends; a change inside the interval means the grid is not uniform,
+      // so the interval must be SPLIT at the boundary (old data stays complete under its own cadence). Never invalidate.
+      const cF = resolveCadence(genesis, cadenceLog, a.from), cT = resolveCadence(genesis, cadenceLog, a.to);
+      if (cF.error) return { error: cF.error, detail: 'cadence: ' + cF.detail };
+      if (cT.error) return { error: cT.error, detail: 'cadence: ' + cT.detail };
+      if (cF.cadence !== cT.cadence) return { complete: 'chain-consistent', head: prevHash, detail: 'interval crosses a cadence change — split it at the boundary; each side is `complete` under its own cadence (continuity)' };
+      const grid = cF.cadence > 0 ? ustGrid(a.from, a.to, cF.cadence) : null;
       if (grid) {
         const covered = new Set();
         for (const f of frames) {
@@ -630,7 +682,7 @@ export function verifyStream(frames, { genesis, checkpoint, requirePerFrameValid
         }
         const hole = grid.find((g) => !covered.has(g));
         if (hole) return { complete: 'chain-consistent', head: prevHash, hole, detail: 'grid slot ' + hole + ' has no frame and no signed gap — chain intact, not complete (§11.3 C)' };
-        return { complete: 'complete', head: prevHash, cadence: String(cadence), grid_slots: String(grid.length) };
+        return { complete: 'complete', head: prevHash, cadence: String(cF.cadence), grid_slots: String(grid.length) };
       }
     }
     return { complete: 'chain-consistent', head: prevHash };           // no signed cadence + interval → no-deletion ceiling

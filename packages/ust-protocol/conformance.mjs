@@ -425,6 +425,24 @@ console.log('\n═════════════════════�
   const nH = P.contentHash(genNo), n0 = fr('ust:20260628.142900', nH), n1 = fr('ust:20260628.142930', P.contentHash(n0)), n2 = fr('ust:20260628.143000', P.contentHash(n1));
   check('#70 no signed cadence → chain-consistent (grid undecidable, never complete)', P.verifyStream([n0, n1, n2], { genesis: genNo, checkpoint: cp(P.contentHash(n2), 3, P.contentHash(n2)) }).complete === 'chain-consistent');
   check('#70 ustGrid computes the expected slots (30s over a minute = 3)', P.ustGrid('ust:20260628.142900', 'ust:20260628.143000', 30).length === 3);
+
+  const cpI = (head, n, prev, from, to) => signC(P.buildCheckpoint({ domain_shard: dom, ust_id: 'ust:20260628.143501', key_id: C.key_id }, Tc, head, n, prev, { from, to }));
+  // rc.20-audit P0 — chronological grid ORDER: a chain valid by prev but reordered in TIME must be E-PREV.
+  const z0 = fr('ust:20260628.142900', gH), z1 = fr('ust:20260628.143000', P.contentHash(z0)), z2 = fr('ust:20260628.142930', P.contentHash(z1));
+  check('audit P0: reordered stream (chain ok, ust_id not monotonic) → E-PREV', P.verifyStream([z0, z1, z2], { genesis: gen }).error === 'E-PREV');
+  // rc.20-audit P0 — checkpoint interval must BOUND the frames: a frame past `to` → E-PREV (not silently complete).
+  const y0 = fr('ust:20260628.142900', gH), y1 = fr('ust:20260628.142930', P.contentHash(y0)), y2 = fr('ust:20260628.143000', P.contentHash(y1));
+  check('audit P0: frame outside checkpoint [from,to] → E-PREV', P.verifyStream([y0, y1, y2], { genesis: gen, checkpoint: cpI(P.contentHash(y2), 3, P.contentHash(y2), 'ust:20260628.142900', 'ust:20260628.142930') }).error === 'E-PREV');
+  // continuity — a cadence change never invalidates old data: an OLD interval verifies `complete` under the OLD
+  // cadence; an interval CROSSING the change → chain-consistent (split at the boundary), not an error, not invalid.
+  const ce = signC(P.buildCadenceEntry({ domain_shard: dom, ust_id: 'ust:20260628.1429', key_id: C.key_id }, Tc, 60, 'ust:20260628.143000', gH));
+  const o0 = fr('ust:20260628.142900', gH), o1 = fr('ust:20260628.142930', P.contentHash(o0));
+  check('continuity: old interval verifies complete under the OLD (pre-change) cadence', P.verifyStream([o0, o1], { genesis: gen, checkpoint: cpI(P.contentHash(o1), 2, P.contentHash(o1), 'ust:20260628.142900', 'ust:20260628.142930'), cadenceLog: [ce] }).complete === 'complete');
+  const x0 = fr('ust:20260628.142900', gH), x1 = fr('ust:20260628.142930', P.contentHash(x0)), x2 = fr('ust:20260628.143000', P.contentHash(x1));
+  check('continuity: interval crossing a cadence change → chain-consistent (split), never invalid', P.verifyStream([x0, x1, x2], { genesis: gen, checkpoint: cpI(P.contentHash(x2), 3, P.contentHash(x2), 'ust:20260628.142900', 'ust:20260628.143000'), cadenceLog: [ce] }).complete === 'chain-consistent');
+  check('cadence entry is a valid class:cadence transcript (key context) but E-MALFORMED in data context (W3)', (() => { const v = P.verify(ce, { context: 'key' }); const d = P.verify(ce, { context: 'data' }); return v.result === 'VALID:LIGHT' && d.error === 'E-MALFORMED'; })());
+  // rc.20-audit P1 — no `mapInclusion:true` boolean shortcut to authoritative (would be an unverified proof).
+  check('audit P1: mapInclusion:true does NOT grant authoritative (no map verifier yet)', P.resolveAuthority(gen, { genesis: gen, keylog: [], mapInclusion: true }).strength !== 'authoritative');
 }
 
 console.log('  ust-protocol ' + P.VERSION.spec + ' conformance vs ' + V.version);

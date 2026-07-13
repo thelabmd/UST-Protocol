@@ -988,7 +988,7 @@ async function cmdPublish() {
 // Completeness is NEVER a single document's property — this command is where it legitimately lives.
 async function cmdStream() {
   const files = process.argv.slice(3).filter((a) => !a.startsWith('--'));
-  if (!files.length) die('usage: ust stream <frame.json…> [--genesis <f>] [--checkpoint <f>]   # range verdict: chain · forks · completeness\n  exit: 0=chain-consistent/complete · 2=provisional/none · 1=broken');
+  if (!files.length) die('usage: ust stream <frame.json…> [--genesis <f>] [--checkpoint <f>]   [--cadence-log <f,f…>]   # range verdict: chain · forks · completeness\n  exit: 0=chain-consistent/complete · 2=provisional/none · 1=broken');
   const frames = [];
   for (const f of files) {
     const { verdict, doc } = verifyRaw(readFileSync(f));   // every frame passes the RAW boundary
@@ -999,7 +999,11 @@ async function cmdStream() {
     const { verdict, doc } = verifyRaw(readFileSync(v)); if (!P.isValid(verdict)) die(`--${flag} file does not VERIFY (${verdict.error ?? verdict.result})`); return doc; };
   const genesis = rd('genesis');
   const checkpoint = rd('checkpoint');
-  const r = P.verifyStream(frames, { ...(genesis ? { genesis } : {}), ...(checkpoint ? { checkpoint } : {}) });
+  // §11.3 continuity — an optional cadence-log (comma-separated files) so `complete` resolves the cadence in
+  // force at the interval; without it the genesis cadence (if any) is used.
+  const clRaw = arg('cadence-log', null);
+  const cadenceLog = (clRaw && clRaw !== true) ? clRaw.split(',').map((f) => { const { verdict, doc } = verifyRaw(readFileSync(f.trim())); if (!P.isValid(verdict)) die(`--cadence-log entry ${f} does not VERIFY (${verdict.error ?? verdict.result})`); return doc; }) : undefined;
+  const r = P.verifyStream(frames, { ...(genesis ? { genesis } : {}), ...(checkpoint ? { checkpoint } : {}), ...(cadenceLog ? { cadenceLog } : {}) });
   if (r.error) { console.log(`  ❌ stream BROKEN: ${r.error}${r.detail ? ' — ' + r.detail : ''}`); process.exit(1); }
   console.log('  frames      ' + frames.length);
   console.log('  authority   ' + (frames[0]?.state?.id?.domain_shard ?? '?') + (genesis ? '  (origin: genesis-bound)' : '  (origin: unbound — no --genesis)'));
