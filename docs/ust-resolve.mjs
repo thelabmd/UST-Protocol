@@ -91,10 +91,11 @@ export async function fetchIdentity(domain, fetchImpl = fetch) {
 }
 
 // ─── WITNESS auto-query (#68) — the browser half. Same honesty ladder as the CLI/MCP: fetch the witness
-// log, cross-check its Rekor anchor against the LIVE Sigstore log (RFC 6962 inclusion via WebCrypto — the
-// endpoint is only an index, the Merkle math decides). One anchored active genesis (== the resolved one)
-// ⇒ no-fork EVIDENCE ⇒ automatic HIGH, no manual checkbox. Bitcoin-OTS is left to the CLI's opt-in plugin
-// (a browser has no OTS lib); Rekor is REST-only, so it is the browser-native witness substrate.
+// log, cross-check each active genesis's anchor against its substrate — the endpoint is only an index, the
+// Merkle math decides. Two independent substrates, both browser-native: Rekor (RFC 6962 inclusion via
+// WebCrypto over the embedded proof) and Bitcoin-OTS (OpenTimestamps proof parsed to its block attestation,
+// matched against a real block header from a read-only explorer). One anchored active genesis (== the
+// resolved one) ⇒ no-fork EVIDENCE ⇒ automatic HIGH, no manual checkbox; two ⇒ a fork is visible.
 const sha256raw = async (bytes) => new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
 const teu = (s) => new TextEncoder().encode(s);
 const hexToU8 = (h) => { const b = new Uint8Array(h.length / 2); for (let i = 0; i < b.length; i++) b[i] = parseInt(h.substr(i * 2, 2), 16); return b; };
@@ -132,6 +133,62 @@ async function rekorFinal(anchorInner, rootSha) {
   return rekorInclusion({ leafHash, index: proof.logIndex, treeSize: proof.treeSize, hashes: proof.hashes || [], rootHash: proof.rootHash });
 }
 
+// ─── Bitcoin-OTS witness substrate (browser clean-room, #68) ─────────────────────────────────
+// A TRUSTLESS Bitcoin check parses the OpenTimestamps proof — a Merkle tree of ops — down to its
+// BitcoinBlockHeaderAttestation, recomputes the committed value, and matches it against a REAL block
+// header pulled from a read-only block explorer (the header is public consensus; the explorer is only a
+// mirror of it, swap freely). Canonical `Timestamp.deserialize` grammar: 0xff separates sibling branches
+// at a node, an op recurses into a sub-timestamp on the transformed message, an attestation fixes the
+// message AT its node. sha256/append/prepend only — OTS Bitcoin paths never need ripemd160; an
+// unsupported op throws and the whole parse fails CLOSED (→ null → honest "unconfirmed", never a fake).
+const OTS_BTC_TAG = new Uint8Array([0x05, 0x88, 0x96, 0x0d, 0x73, 0xd7, 0x19, 0x01]);
+const BTC_EXPLORERS = ['https://blockstream.info/api', 'https://mempool.space/api'];
+
+async function parseOtsBitcoin(ots) {
+  let pos = 31; pos++; /* major version */ pos++; /* file-hash op (sha256) */
+  const digest = ots.slice(pos, pos + 32); pos += 32;
+  const readVarint = () => { let r = 0, sh = 0; for (;;) { const b = ots[pos++]; r += (b & 0x7f) * (2 ** sh); if (!(b & 0x80)) break; sh += 7; } return r; };
+  let found = null;
+  const applyOp = async (tag, msg) => {
+    if (tag === 0xf0) { const n = readVarint(); const a = ots.slice(pos, pos + n); pos += n; return concatU8([msg, a]); }
+    if (tag === 0xf1) { const n = readVarint(); const a = ots.slice(pos, pos + n); pos += n; return concatU8([a, msg]); }
+    if (tag === 0x08) return sha256raw(msg);
+    throw new Error('ots op 0x' + tag.toString(16) + ' unsupported in browser');
+  };
+  const doOne = async (tag, msg) => {
+    if (tag === 0x00) {
+      const at = ots.slice(pos, pos + 8); pos += 8; const len = readVarint(); const payload = ots.slice(pos, pos + len); pos += len;
+      if (u8eq(at, OTS_BTC_TAG)) { let h = 0, sh = 0, p = 0; for (;;) { const b = payload[p++]; h += (b & 0x7f) * (2 ** sh); if (!(b & 0x80)) break; sh += 7; } found = { height: h, merkle: msg }; }
+    } else { await deserialize(await applyOp(tag, msg)); }
+  };
+  async function deserialize(msg) { let tag = ots[pos++]; while (tag === 0xff) { await doOne(ots[pos++], msg); tag = ots[pos++]; } await doOne(tag, msg); }
+  await deserialize(digest);
+  return found ? { height: found.height, merkle: found.merkle, digest } : null;
+}
+
+// Verify a bitcoin-ots anchor (browser): the proof starts at THIS anchor's root, and the value it commits
+// to a Bitcoin block equals that block's real merkle root (display order = internal bytes reversed).
+async function bitcoinFinal(anchorInner, rootRef, fetchImpl) {
+  try {
+    if (!anchorInner.ots) return null;
+    const ots = Uint8Array.from(atob(anchorInner.ots), (c) => c.charCodeAt(0));
+    const parsed = await parseOtsBitcoin(ots);
+    if (!parsed) return null;
+    if (u8hex(parsed.digest) !== (rootRef || '').replace(/^sha256:/, '')) return null;  // binds to this genesis root
+    const wantMerkle = u8hex(parsed.merkle.slice().reverse());
+    for (const base of BTC_EXPLORERS) {
+      try {
+        const hash = (await (await fetchImpl(`${base}/block-height/${parsed.height}`, { signal: AbortSignal.timeout(10000) })).text()).trim();
+        if (!/^[0-9a-f]{64}$/.test(hash)) continue;
+        const blk = await (await fetchImpl(`${base}/block/${hash}`, { signal: AbortSignal.timeout(10000) })).json();
+        if (blk && blk.merkle_root === wantMerkle) return { final: true, time: blk.timestamp, height: parsed.height };
+        return null;   // a definitive answer from a reachable explorer — a mismatch is a real NO, not "try another"
+      } catch { /* explorer unreachable — try the next */ }
+    }
+    return null;
+  } catch { return null; }
+}
+
 // Fetch the witness log for `domain` and decide no-fork by cross-checking each active genesis's anchors.
 export async function witnessNoFork(domain, genesisHash, fetchImpl = fetch) {
   if (!isPublicDnsShard(domain)) return { status: 'skipped' };
@@ -150,14 +207,14 @@ export async function witnessNoFork(domain, genesisHash, fetchImpl = fetch) {
     for (const a of anchors) {
       const inner = a.anchor ?? a;
       if (inner.substrate === 'rekor' && await rekorFinal(inner, a.root || g.content_hash)) { ok = true; break; }
-      // bitcoin-ots: no browser OTS lib → left to the CLI plugin; not counted here
+      if (inner.substrate === 'bitcoin-ots' && await bitcoinFinal(inner, a.root || g.content_hash, fetchImpl)) { ok = true; break; }
     }
     if (ok) anchored.push(g);
   }
   if (anchored.length >= 2) return { status: 'fork', detail: 'two anchored active genesis roots — a rival exists' };
   if (anchored.length === 1) {
     if (anchored[0].content_hash !== genesisHash) return { status: 'fork', detail: 'the anchored genesis differs from the served one' };
-    return { status: 'confirmed', detail: 'a single Rekor-anchored active genesis — no rival root' };
+    return { status: 'confirmed', detail: 'a single anchored active genesis (Rekor and/or Bitcoin) — no rival root' };
   }
-  return { status: 'pending', detail: active.length ? 'genesis in the witness log but its Rekor anchor is not verifiable here (Bitcoin-only anchors need the CLI plugin)' : 'no active genesis in the witness log' };
+  return { status: 'pending', detail: active.length ? 'genesis in the witness log but no anchor verifies here (explorer/log unreachable, or an unsupported proof)' : 'no active genesis in the witness log' };
 }

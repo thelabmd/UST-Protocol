@@ -330,8 +330,9 @@ async function run() {
     if (ident.genesis) {
       const auth = await resolveAuthority(doc, { genesis: ident.genesis, keylog: ident.keylog, noForkConfirmed: noForkChecked });
       if (!auth.error) {
-        // WITNESS auto-query (#68): cross-check the Rekor anchor against the LIVE log. A confirmed witness
-        // is no-fork EVIDENCE → automatic HIGH, no manual checkbox (same as CLI/MCP). A fork → E-GENESIS.
+        // WITNESS auto-query (#68): cross-check each anchor against its substrate (Rekor RFC 6962 inclusion
+        // and/or a Bitcoin block header). A confirmed witness is no-fork EVIDENCE → automatic HIGH, no manual
+        // checkbox (same as CLI/MCP). A fork → E-GENESIS.
         let witness = null;
         try { witness = await witnessNoFork(shard, auth.genesisHash, fetch); } catch { witness = { status: 'unreachable' }; }
         if (witness && witness.status === 'fork') {
@@ -422,7 +423,7 @@ async function run() {
           <dl class="kv" style="margin-top:0">
             <dt>publisher</dt><dd>${esc(resolution.publisher)} — the document key is IN this name's resolved key set</dd>
             <dt>capacity</dt><dd>max_partitions ${esc(String(resolution.capacity.maxPartitions ?? 'floor'))}${resolution.capacity.maxTranscriptBytes ? ' · max_transcript_bytes ' + esc(String(resolution.capacity.maxTranscriptBytes)) : ''} (grant admitted)</dd>
-            <dt>no-fork</dt><dd>${wc ? '<b>witness-confirmed</b> — a single Rekor-anchored genesis, cross-checked against the live log (RFC&nbsp;6962 inclusion) → automatic HIGH'
+            <dt>no-fork</dt><dd>${wc ? '<b>witness-confirmed</b> — a single anchored genesis, cross-checked against its substrate (Rekor RFC&nbsp;6962 inclusion and/or a Bitcoin block header) → automatic HIGH'
               : (resolution.witness && resolution.witness.status === 'pending' ? 'pending — ' + esc(resolution.witness.detail)
               : 'witness ' + esc((resolution.witness && resolution.witness.status) || 'unreachable') + (resolution.witness && resolution.witness.detail ? ' (' + esc(resolution.witness.detail) + ')' : ''))}</dd>
             <dt>revocation</dt><dd>${esc(resolution.revocation)} — X1 windows need anchored time; a browser cannot decide them</dd>
@@ -431,7 +432,7 @@ async function run() {
           ${wc ? '' : `<label class="note" style="display:block;margin-top:10px;cursor:pointer">
             <input type="checkbox" id="nofork" ${noForkChecked ? 'checked' : ''}>
             The witness did not auto-confirm — I have independently checked that <b>no rival genesis exists</b> for ${esc(resolution.publisher)}.
-            ${noForkChecked ? '' : '<br><span class="hint">unchecked → the name stays resolved-but-provisional; check it to reach VALID:HIGH (same as the CLI\'s --no-fork-confirmed). Bitcoin-only anchors confirm in the CLI with @ust-protocol/ots-verify.</span>'}
+            ${noForkChecked ? '' : '<br><span class="hint">unchecked → the name stays resolved-but-provisional; check it to reach VALID:HIGH (same as the CLI\'s --no-fork-confirmed). Reached here only if neither the Rekor nor the Bitcoin anchor could be checked (explorer/log unreachable).</span>'}
           </label>`}</div>`;
       }
     }
