@@ -477,6 +477,27 @@ console.log('\n═════════════════════�
   check('audit P1: mapInclusion:true does NOT grant authoritative (no map verifier yet)', P.resolveAuthority(gen, { genesis: gen, keylog: [], mapInclusion: true }).strength !== 'authoritative');
 }
 
+// ─── #44 AGENT-SAFETY — throw-on-non-VALID (control flow, not an advisory field) + machine-structured verdict.
+{
+  const goodDoc = mk();
+  const tampered = clone(goodDoc); tampered.state.data.sw.value.kp = '9.9';   // recomputed partition hash mismatches
+  check('#44 verifyOrThrow returns the verdict for a VALID doc', P.verifyOrThrow(goodDoc).result === 'VALID:LIGHT');
+  check('#44 verifyOrThrow THROWS UstInvalid on a tampered doc', (() => { try { P.verifyOrThrow(tampered); return false; } catch (e) { return e instanceof P.UstInvalid && e.code === 'E-CANON' && e.verdict?.error === 'E-CANON'; } })());
+  check('#44 INDETERMINATE throws UstIndeterminate, NOT UstInvalid (retry ≠ reject)', (() => { const r = P.verify(goodDoc, { maxSupportedBytes: 1 }); if (r.result !== 'INDETERMINATE') return false; try { P.assertValid(r); return false; } catch (e) { return e instanceof P.UstIndeterminate && !(e instanceof P.UstInvalid); } })());
+  check('#44 assertValid composes with verifyAsync (async verdict)', (await (async () => P.assertValid(await P.verifyAsync(goodDoc)).result === 'VALID:LIGHT')()));
+  // machine-structured failure: obligation + expected/actual, no string parsing
+  const vc = P.verify(tampered);
+  check('#44 partition mismatch → obligation §4.4 + partition + expected≠actual', vc.error === 'E-CANON' && vc.obligation === '§4.4 partition-hash' && vc.partition === 'sw' && /^sha256:/.test(vc.expected) && /^sha256:/.test(vc.actual) && vc.expected !== vc.actual);
+  const badSig = clone(goodDoc); badSig.sig.sig = badSig.sig.sig.slice(0, -4) + 'AAAA';
+  check('#44 bad signature → obligation §14.2 whole-state-signature', (r => r.error === 'E-SIG' && r.obligation === '§14.2 whole-state-signature')(P.verify(badSig)));
+  // §9.4 recompute obligations carry structured expected/actual too
+  const obsX = mk(); const hX = P.contentHash(obsX);
+  const badRoot = P.buildState({ ...ID, class: 'attestation' }, T, { a: { kind: 'computed', value: { x: '1' } } });
+  badRoot.provenance = { constituents: [hX], root: 'sha256:' + '99'.repeat(32) };
+  check('#44 E-ROOT → obligation §9.4 attestation-root + expected/actual', (r => r.error === 'E-ROOT' && r.obligation === '§9.4 attestation-root' && r.actual === P.merkleRoot([hX]) && r.expected !== r.actual)(P.verify(P.seal(badRoot, A.priv, A.pubB64), { context: 'data' })));
+  check('#44 human fields preserved beside machine fields (error+detail intact)', typeof vc.detail === 'string' && vc.detail.includes('sw'));
+}
+
 console.log('  ust-protocol ' + P.VERSION.spec + ' conformance vs ' + V.version);
 console.log('  PASS ' + pass + '   FAIL ' + fail + '   NOTES ' + note);
 if (fails.length) { console.log('\n  FAILURES:'); fails.forEach(f => console.log('    ✗ ' + f)); }

@@ -3,7 +3,7 @@
 
 *This specification text is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](../LICENSE-SPEC). Reference code in this repository is licensed Apache-2.0. Use of the name **UST** / **Universal State Transcript** and the **UST-compatible** claim: see [TRADEMARK.md](../TRADEMARK.md).*
 
-> **Release candidate — `1.0.0-rc.24`.** This specification has been extensively red-teamed; an independent
+> **Release candidate — `1.0.0-rc.25`.** This specification has been extensively red-teamed; an independent
 > external cryptographic audit is pending. It is subject to change until `1.0.0` final (rc.2 folded in two external reviews — 6 impl findings + spec edge cases + removed domain-less `computed`; rc.3 aligned impl to §3.1 pinned + Y3; rc.4 closed a 4th external audit (ChatGPT 5.5 Max): key-binding by KEY not string, TOP needs a genesis origin, embedded proofs fail-closed, class↔schema enforced, canon strict on names too, raw-bytes verify boundary, ust_id valid frames, and REMOVED secret-url as a privacy mode; rc.6 closed a 5th external audit STRUCTURALLY — the §14a obligations table (every commitment-bearing member recomputed: +`E-SEED`), a typed identity namespace (dns-name | self-certifying key-id), real-calendar semantic consistency, document-tier vs range-completeness separation, MTI registry discipline, one version source; rc.7 explicit `completeness:not_evaluated`; rc.8 admissibility pins (duplicate refs, key-log
 ceiling, layer availability); rc.9 edge pass (full reserved-name registry, verified-node budget, strict-Z);
 rc.10 partition-capacity ladder (floor 64 / genesis-declared ≤ 4096); rc.11 SIZE ladder + VOLUME-vs-STRUCTURE
@@ -404,6 +404,14 @@ publisher-bound values a layer up.)
   cofactorless verification. "One algorithm" (I4) includes ONE acceptance rule — signature-malleability vectors
   are part of the conformance suite (§16), so no two verifiers can disagree on a signature. Because the key_id and domain_shard are inside the signed
   State, a signature cannot be re-attributed to a different key or publisher (I1/I2).
+
+  **Signing nonce (audit note — no RFC 6979 clause needed).** Ed25519 (RFC 8032) is deterministic BY
+  CONSTRUCTION: the per-signature nonce is `H(prefix ‖ message)`, a hash of the secret prefix and the message,
+  with NO random number generator in the signing path. The ECDSA nonce-reuse key-recovery attack — which is why
+  ECDSA needs RFC 6979 deterministic nonces — therefore does NOT apply here; there is nothing for a caller to get
+  wrong. The ONE real entropy requirement is at KEY GENERATION (the 32-byte seed MUST come from a CSPRNG); a UST
+  producer MUST generate keys with a cryptographic RNG, and after that signing is deterministic and safe. Stated
+  here so future audits do not re-raise "require RFC 6979" against a scheme that is already deterministic.
 
 The State is signed WHOLE (I1): `sig` and `content_hash` share ONE preimage `S = canon({ust,state})`;
 nothing meaningful is unsigned. Frame-level cross-engine matching is the per-partition hash job (§4.4), not the document hash.
@@ -1049,7 +1057,7 @@ A verifier returns one of THREE OUTCOME KINDS — **availability is distinct fro
 - **VALID:LIGHT · VALID:HIGH · VALID:TOP** — verified, and the verdict CARRIES ITS TIER (the highest
   fully-satisfied rung, §3.1) so a consumer cannot read "valid" without reading valid-AT-WHAT: LIGHT = integrity +
   a claimed key; HIGH = + authoritative name; TOP = + anchored time. Stream COMPLETENESS is a RANGE verdict
-  (§11.3 `verifyStream` → `complete: proven`), never a single-document claim — a document tier asserts the
+  (§11.3 `verifyStream` → `complete` / `chain-consistent`), never a single-document claim — a document tier asserts the
   document's own axes only. Per-axis
   strengths (identity / time / completeness) remain below for detail. A BARE `VALID` is never emitted — that is
   the point (it forecloses the over-read "THIS is valid" when only the floor is).
@@ -1073,6 +1081,21 @@ A verifier returns one of THREE OUTCOME KINDS — **availability is distinct fro
   verification was refused or could not complete on THIS implementation; retry on a bigger verifier. A verifier
   MUST NOT mint new INDETERMINATE reasons.
 Producers/MCPs SHOULD map the three kinds distinctly (INVALID ≈ 4xx deterministic; INDETERMINATE ≈ 503 retry).
+
+**Machine-structured failure + agent-safety entrypoints (§15.1, agent footgun elimination).** An INVALID verdict
+carries MACHINE-BRANCHABLE fields beside the human `error`+`detail`, so a program decides WITHOUT parsing prose:
+`obligation` names the exact broken spec rule (e.g. `§4.4 partition-hash`, `§9.4 attestation-root`,
+`§9.4 derivation-seed`, `§14.2 whole-state-signature`), and a recompute mismatch adds `expected`/`actual` (plus
+`partition` where it applies). A conformant verifier MUST populate `obligation` on the recompute-obligation errors
+(`E-CANON` partition-hash, `E-ROOT`, `E-SEED`, `E-SIG`); `error` (the code) is machine-branchable everywhere.
+Because agents optimize for tokens/latency, a returned verdict is a footgun — a framework can read the data field
+and IGNORE the `error`. So the SDK offers a CONTROL-FLOW entrypoint: **`verifyOrThrow(doc, opts)`** returns the
+verdict only when `VALID:*` and otherwise THROWS — `UstInvalid` for a definite integrity failure, `UstIndeterminate`
+for "cannot decide yet" (they are DISTINCT because reject and retry are different actions); the thrown error carries
+the full structured `.verdict`. `assertValid(verdict)` is the same guard over any verdict (it composes with the
+async `verifyAsync`). An MCP verify tool MUST, BY DEFAULT, surface a non-VALID result as an ERROR response the
+agent must acknowledge (not a skippable data field); an explicit `soft` opt-in restores the advisory path. The
+rule is: **verify in the control flow, not as an advisory field.**
 
 ---
 
@@ -1572,6 +1595,19 @@ provenance and will be lifted into this ledger when the spec is published.
   + the shared anchor, so two consumers agree regardless of local fetch order — turning the dual-writer race into
   a consumer-side FUNCTION. Surfaced through `ust_verify {requireAnchored}` + `ust_fork_choice` (MCP) and
   `ust verify --require-anchored` + `ust forkchoice` (CLI). +11 conformance vectors; formal-model F.5b/F.5c.
+- **REV 36 (2026-07-13)** — #44, agent-safety (footgun elimination — don't rely on agent discipline). (1)
+  **Throw-on-non-VALID** (§15.1): `isValid(r)` is a bool an agent can ignore, so the SDK adds `verifyOrThrow(doc,
+  opts)` — returns the verdict only when `VALID:*`, else THROWS `UstInvalid` (definite integrity failure) or
+  `UstIndeterminate` (cannot-decide-yet; distinct because reject ≠ retry), the error carrying the full structured
+  `.verdict`. `assertValid(verdict)` is the same guard for any verdict (composes with `verifyAsync`). The MCP
+  `ust_verify` now returns a non-VALID result as an ERROR response (isError) the agent must acknowledge, unless
+  `soft:true` opts into the advisory path. "Verify in the control flow, not as an advisory field." (2)
+  **Machine-structured verdict** (§15.1): an INVALID result carries `obligation` (the exact broken rule) + `expected`/
+  `actual` (+ `partition`) on the recompute obligations (`E-CANON` partition-hash, `E-ROOT`, `E-SEED`, `E-SIG`), so
+  a program branches without parsing `detail`; `error`+`detail` stay for humans. (3) **Ed25519 signing-nonce note**
+  (§after the STRICT clause): RFC 8032 is deterministic BY CONSTRUCTION (nonce = `H(prefix‖message)`, no RNG in
+  signing) — the ECDSA nonce-reuse recovery does NOT apply, no RFC 6979 clause is needed; the one real requirement
+  is CSPRNG key generation. Stated so future audits don't re-raise it. +8 conformance vectors; MCP live isError.
 
 **Design principle throughout:** every normative clause answers "mechanism (protocol) or operator
 instantiation (profile)?"; operator specifics (substrate, partition schema, completeness, cadence) live in the

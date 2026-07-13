@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.24' };
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.25' };
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -240,7 +240,7 @@ export function verify(doc, opts = {}) {
           ? partitionHash({ commit: part.commit })
           : partitionHash({ domain_shard: st.id.domain_shard, ust_id: st.id.ust_id, name, value: part.value });
       } catch (e) { return bad('E-CANON', 'partition canon: ' + name); }
-      if (recomputed !== st.hashes[name]) return bad('E-CANON', 'partition hash mismatch: ' + name);
+      if (recomputed !== st.hashes[name]) return bad('E-CANON', 'partition hash mismatch: ' + name, { obligation: '§4.4 partition-hash', partition: name, expected: st.hashes[name], actual: recomputed });
     }
     // step 5 — well-formed shape + SEMANTIC consistency (§14.5): shape regex AND real-calendar existence AND
     // cross-field invariants — local shape alone let "Feb 31" through (audit E, M-02).
@@ -331,8 +331,8 @@ export function verify(doc, opts = {}) {
     if (doc.sig.alg !== 'Ed25519') return bad('E-SIG', 'sig.alg must be Ed25519');
     if (doc.sig.key_id !== st.id.key_id) return bad('E-SIG', 'sig.key_id != state.id.key_id');
     if (doc.sig.pub === undefined) return bad('E-KEY', 'no carried pub (LIGHT)');
-    if (keyId(doc.sig.pub) !== st.id.key_id) return bad('E-SIG', 'key_id != H(ust:keylog, pub)');
-    if (!edVerifyStrict(doc.sig.pub, S, doc.sig.sig)) return bad('E-SIG', 'Ed25519 verify failed');
+    if (keyId(doc.sig.pub) !== st.id.key_id) return bad('E-SIG', 'key_id != H(ust:keylog, pub)', { obligation: '§4.2 key_id-binding', expected: st.id.key_id, actual: keyId(doc.sig.pub) });
+    if (!edVerifyStrict(doc.sig.pub, S, doc.sig.sig)) return bad('E-SIG', 'Ed25519 verify failed', { obligation: '§14.2 whole-state-signature' });
     // step 3 — name authority (§14.3): HIGH resolves genesis+key-log; else a PINNED key (TOFU, §3.1) if the caller
     // supplies pinnedKeys — a key NOT in the pin set is INVALID (that is what pinning means); else self-asserted.
     let identity;
@@ -379,12 +379,12 @@ export function verify(doc, opts = {}) {
     if (pr?.constituents !== undefined) {
       if (!Array.isArray(pr.constituents) || pr.constituents.some((h) => !HASHREF.test(h))) return bad('E-MALFORMED', 'constituents must be sha256:hex content_hashes');
       if (new Set(pr.constituents).size !== pr.constituents.length) return bad('E-MALFORMED', 'duplicate hash in constituents (double-counts the Merkle root, §9.4)');
-      if (pr.root !== undefined && merkleRoot(pr.constituents) !== pr.root) return bad('E-ROOT', 'attestation root mismatch');
+      if (pr.root !== undefined && merkleRoot(pr.constituents) !== pr.root) return bad('E-ROOT', 'attestation root mismatch', { obligation: '§9.4 attestation-root', expected: pr.root, actual: merkleRoot(pr.constituents) });
     }
     if (pr?.based_on !== undefined) {
       if (!Array.isArray(pr.based_on) || pr.based_on.some((b) => !b || !HASHREF.test(b.hash || ''))) return bad('E-MALFORMED', 'based_on entries must carry sha256:hex `hash`');
       if (new Set(pr.based_on.map((b) => b.hash)).size !== pr.based_on.length) return bad('E-MALFORMED', 'duplicate hash in based_on (citing a referent twice has no composite meaning, §9.4)');
-      if (seed(pr.based_on.map((b) => b.hash)) !== pr.seed) return bad('E-SEED', 'derivation seed != H(ust:seed, canon(based_on hashes))');
+      if (seed(pr.based_on.map((b) => b.hash)) !== pr.seed) return bad('E-SEED', 'derivation seed != H(ust:seed, canon(based_on hashes))', { obligation: '§9.4 derivation-seed', expected: pr.seed, actual: seed(pr.based_on.map((b) => b.hash)) });
     }
     if (pr?.prev !== undefined && !HASHREF.test(pr.prev)) return bad('E-MALFORMED', 'prev must be a sha256:hex content_hash');
     // §14.9 bounded referent walk (I14: depth-0 default). The RESULT always reports how deep verification went —
@@ -638,6 +638,30 @@ export async function forkChoice(candidates, opts = {}) {
     losers: losers.map((l) => ({ content_hash: l.content_hash, tier: l.tier, reason: 'valid but not anchor-included for this slot (out-raced or unanchored)' })),
     ...(invalid.length ? { invalid } : {}) };
 }
+
+// ─── #44 AGENT-SAFETY: throw-on-non-VALID. `isValid(r)` returns a bool an agent can IGNORE (catch the error,
+// use the data anyway — the exact laziness the audit named). `verifyOrThrow` puts verification in the CONTROL
+// FLOW: a non-VALID verdict THROWS, so the language forces the agent to handle it — it cannot silently continue.
+// The thrown error CARRIES the full structured verdict (`.verdict`) for branching. The distinction matters:
+// UstInvalid = a real integrity failure (forged/tampered/broken chain); UstIndeterminate = "cannot decide yet"
+// (substrate unreachable, unsupported alg) — an agent must treat these DIFFERENTLY (reject vs retry), so they are
+// distinct classes, not one. The soft path (read the verdict as data) stays available: just call `verify` directly.
+export class UstInvalid extends Error {
+  constructor(verdict) { super('UST verification failed: ' + (verdict?.error || 'INVALID') + (verdict?.detail ? ' — ' + verdict.detail : '')); this.name = 'UstInvalid'; this.verdict = verdict; this.code = verdict?.error; }
+}
+export class UstIndeterminate extends Error {
+  constructor(verdict) { super('UST verification indeterminate: ' + (verdict?.reason || 'unknown') + (verdict?.detail ? ' — ' + verdict.detail : '')); this.name = 'UstIndeterminate'; this.verdict = verdict; this.reason = verdict?.reason; }
+}
+// Assert a verdict is VALID (any tier) or THROW the typed error. Works on the result of verify OR verifyAsync —
+// so an async/TOP caller does `assertValid(await verifyAsync(doc, opts))`. Returns the verdict for chaining.
+export function assertValid(verdict) {
+  if (/^VALID:/.test(verdict?.result || '')) return verdict;
+  if (verdict?.result === 'INDETERMINATE') throw new UstIndeterminate(verdict);
+  throw new UstInvalid(verdict || { error: 'E-MALFORMED', detail: 'no verdict' });
+}
+// The SYNC one-call agent entrypoint: verify + assert in the control flow. For anchored/async substrates use
+// `assertValid(await verifyAsync(doc, opts))`.
+export function verifyOrThrow(doc, opts = {}) { return assertValid(verify(doc, opts)); }
 
 // ─── #69 C — the EXPECTED GRID. `ust_id` IS the time coordinate, so the slots a cadence implies over an
 // interval are COMPUTED, not stored: parse `ust:YYYYMMDD.HH[MM[SS]]` ↔ UTC epoch, step by the cadence. The
@@ -945,4 +969,7 @@ function scanDuplicateKeys(s) {
 }
 
 function err(code, detail) { const e = new Error(code); e.code = code; e.detail = detail; return e; }
-function bad(code, detail) { return { result: 'INVALID', error: code, detail }; }
+// §14 INVALID constructor. `fields` (optional) carries MACHINE-STRUCTURED context so a program branches WITHOUT
+// parsing `detail` (audit #44 §2 — verification fatigue): `obligation` names the exact broken spec rule, and a
+// recompute mismatch adds `expected`/`actual` (and `partition` where it applies). `error`+`detail` stay for humans.
+function bad(code, detail, fields) { return { result: 'INVALID', error: code, detail, ...(fields || null) }; }

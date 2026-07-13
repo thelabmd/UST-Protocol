@@ -27,7 +27,9 @@ const server = new Server({ name: 'ust-mcp', version: VERSION }, { capabilities:
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: listTools() }));
 server.setRequestHandler(CallToolRequestSchema, async (req) => {
   const r = await dispatch(req.params.name, req.params.arguments || {});
-  return { content: [{ type: 'text', text: JSON.stringify(r.result ?? { error: r.error }, null, 2) }], isError: !!r.isError };
+  // #44: on an error, the MACHINE-STRUCTURED verdict rides along (not just the human string) so an agent branches.
+  const payload = r.result ?? { error: r.error, ...(r.verdict ? { verdict: r.verdict } : {}) };
+  return { content: [{ type: 'text', text: JSON.stringify(payload, null, 2) }], isError: !!r.isError };
 });
 await server.connect(new StdioServerTransport());
 console.error('ust-mcp ' + VERSION + ' (ust-protocol ' + protoVersion + ') — stdio server ready, ' + listTools().length + ' tools');

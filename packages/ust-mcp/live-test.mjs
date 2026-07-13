@@ -16,6 +16,7 @@ const t = { generated_at: '2026-07-05T16:00:00Z', valid_from: '2026-07-05T16:00:
 
 let pass = 0, fail = 0; const check = (id, ok, d) => { if (ok) pass++; else { fail++; console.log('  ✗ ' + id + (d ? ' — ' + d : '')); } };
 const call = async (client, name, args) => JSON.parse((await client.callTool({ name, arguments: args })).content[0].text);
+const rawCall = async (client, name, args) => { const r = await client.callTool({ name, arguments: args }); return { isError: !!r.isError, body: JSON.parse(r.content[0].text) }; };
 
 const transport = new StdioClientTransport({ command: 'node', args: ['server.mjs'] });
 const client = new Client({ name: 'ust-live-test', version: '1' }, { capabilities: {} });
@@ -31,7 +32,12 @@ const sig = edSign(null, Buffer.from(built.signing_input, 'utf8'), A.priv).toStr
 const doc = { ust: '1.0', state: built.state, sig: { alg: 'Ed25519', key_id: A.key_id, pub: A.pubB64, sig } };
 check('live:build→sign→verify = VALID', (await call(client, 'ust_verify', { doc })).result.startsWith('VALID'));
 const bad = JSON.parse(JSON.stringify(doc)); bad.state.data.sw.value.kp = '9.9';
-check('live:tampered = INVALID', (await call(client, 'ust_verify', { doc: bad })).result === 'INVALID');
+// #44 agent-safety over the wire: a tampered doc is an ERROR RESPONSE (isError) carrying the structured verdict —
+// the agent cannot skip it as a data field. `soft:true` opts into the advisory path (INVALID returned as data).
+const tRes = await rawCall(client, 'ust_verify', { doc: bad });
+check('live:tampered → isError (agent must acknowledge)', tRes.isError === true);
+check('live:tampered isError carries structured verdict', tRes.body.verdict?.error === 'E-CANON' && tRes.body.verdict.obligation === '§4.4 partition-hash');
+check('live:tampered soft:true → returned as DATA', (await rawCall(client, 'ust_verify', { doc: bad, soft: true })).body.result === 'INVALID');
 
 // ust_verify_stream over the wire — a range as one authority's chain (genesis+checkpoint, no signed cadence ⇒
 // chain-consistent: no-deletion proven; `complete` would additionally require a signed cadence + interval bounds)

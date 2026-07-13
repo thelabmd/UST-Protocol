@@ -30,9 +30,12 @@ export const tools = [
   {
     name: 'ust_verify',
     description: 'VERIFY a UST document — ONE call, resolution included. If the document exceeds the anonymous 64-partition floor or claims a name, the tool AUTOMATICALLY fetches the publisher\'s §20.1 discovery surfaces (/.well-known/ust-genesis + ust-keylog + ust-witness) from the claimed name, resolves genesis→key-log, cross-checks the witness anchors against their substrate (Rekor/Bitcoin), and re-verifies with the capacity grant — you do NOT need to pre-fetch anything, and a witness-confirmed no-fork yields VALID:HIGH automatically (the result\'s `resolution.noFork` tells you how it was established: witness-confirmed / caller-asserted / unconfirmed). Pass offline:true to forbid the network (then supply genesis+keylog yourself; noForkConfirmed:true is YOUR air-gap assertion that no rival genesis exists). The verdict CARRIES ITS TIER — VALID:LIGHT | VALID:HIGH | VALID:TOP (or INVALID / INDETERMINATE); `publisher` is returned ONLY when authoritative, otherwise `publisher_claimed` (never attribute a claimed label as the real publisher). For UNTRUSTED transcripts pass `json` (raw text), not `doc` — it scans duplicate keys + non-NFC before parsing.',
-    inputSchema: { type: 'object', properties: { doc: { type: 'object' }, json: { type: 'string' }, offline: { type: 'boolean', description: 'true = never touch the network (no discovery auto-fetch)' }, pinnedKeys: { type: 'array' }, genesis: { type: 'object' }, keylog: { type: 'array' }, proof: { type: 'object' }, disclosures: { type: 'object' }, noForkConfirmed: { type: 'boolean' }, requireAuthoritative: { type: 'boolean', description: 'floor at HIGH — reject anything not name-authoritative (E-GENESIS)' }, requireAnchored: { type: 'boolean', description: 'floor at TOP — reject anything not anchored (downgrade resistance, §3.1/F.5b): a stripped/absent anchor ⇒ E-ANCHOR, a substrate-unavailable one ⇒ INDETERMINATE, never a silent lower-tier accept' }, capacity: { type: 'object', description: 'trusted capacity grant {maxPartitions?, maxTranscriptBytes?} — pass what resolveAuthority returned as .capacity (rc.12)' }, maxSupportedBytes: { type: 'number' } } },
-    handler: async ({ doc, json, offline, pinnedKeys, genesis, keylog, proof, disclosures, noForkConfirmed, requireAuthoritative, requireAnchored, capacity, maxSupportedBytes }) => {
+    inputSchema: { type: 'object', properties: { doc: { type: 'object' }, json: { type: 'string' }, offline: { type: 'boolean', description: 'true = never touch the network (no discovery auto-fetch)' }, pinnedKeys: { type: 'array' }, genesis: { type: 'object' }, keylog: { type: 'array' }, proof: { type: 'object' }, disclosures: { type: 'object' }, noForkConfirmed: { type: 'boolean' }, requireAuthoritative: { type: 'boolean', description: 'floor at HIGH — reject anything not name-authoritative (E-GENESIS)' }, requireAnchored: { type: 'boolean', description: 'floor at TOP — reject anything not anchored (downgrade resistance, §3.1/F.5b): a stripped/absent anchor ⇒ E-ANCHOR, a substrate-unavailable one ⇒ INDETERMINATE, never a silent lower-tier accept' }, soft: { type: 'boolean', description: '#44 agent-safety: by DEFAULT an INVALID verdict is returned as an ERROR response (isError) you MUST acknowledge — you cannot skip it as a data field. Set soft:true to OPT IN to the advisory path (INVALID returned as data). The structured verdict rides the error either way.' }, capacity: { type: 'object', description: 'trusted capacity grant {maxPartitions?, maxTranscriptBytes?} — pass what resolveAuthority returned as .capacity (rc.12)' }, maxSupportedBytes: { type: 'number' } } },
+    handler: async ({ doc, json, offline, pinnedKeys, genesis, keylog, proof, disclosures, noForkConfirmed, requireAuthoritative, requireAnchored, soft, capacity, maxSupportedBytes }) => {
       const o = { pinnedKeys, genesis, keylog, disclosures, noForkConfirmed, requireAuthoritative, requireAnchored, capacity, maxSupportedBytes, context: 'data' };
+      // #44 throw-on-non-VALID: an INVALID verdict becomes an isError response (dispatch catches the throw) unless
+      // soft:true. The agent CANNOT read a data field and skip the failure — verification is in the control flow.
+      const gate = (v) => { if (!soft && typeof v?.result === 'string' && v.result.startsWith('INVALID')) throw Object.assign(new Error('UST verification failed: ' + (v.error || 'INVALID') + (v.detail ? ' — ' + v.detail : '')), { verdict: v }); return v; };
       // `json` (raw text) = the safe conformance boundary — duplicate-key + NFC scan BEFORE parse (F7).
       const ro = { ...o, offline };
       const _plugins = [];
@@ -42,16 +45,16 @@ export const tools = [
       const substrateVerify = _plugins.length ? P.combineSubstrates(_plugins) : undefined;
       if (json !== undefined) {
         const raw = P.verifyJson(json, o);
-        if (offline || genesis !== undefined || !(raw.result === 'VALID:LIGHT' || (raw.result === 'INDETERMINATE' && raw.reason === 'unavailable'))) return raw;
-        let parsed; try { parsed = JSON.parse(json); } catch { return raw; }
+        if (offline || genesis !== undefined || !(raw.result === 'VALID:LIGHT' || (raw.result === 'INDETERMINATE' && raw.reason === 'unavailable'))) return gate(raw);
+        let parsed; try { parsed = JSON.parse(json); } catch { return gate(raw); }
         const { verdict, resolution } = await P.resolveByDiscovery(parsed, ro, { substrateVerify, fetchImpl: ssrfSafeFetch });
-        return resolution ? { ...verdict, resolution } : verdict;
+        return gate(resolution ? { ...verdict, resolution } : verdict);
       }
       // an embedded doc.proof is verified INSIDE verify (present-bad ⇒ E-ANCHOR); a separately-passed proof merges in.
       const d = (proof !== undefined && doc && doc.proof === undefined) ? { ...doc, proof } : doc;
-      if (offline || genesis !== undefined) return P.verify(d, o);
+      if (offline || genesis !== undefined) return gate(P.verify(d, o));
       const { verdict, resolution } = await P.resolveByDiscovery(d, ro, { substrateVerify, fetchImpl: ssrfSafeFetch });
-      return resolution ? { ...verdict, resolution } : verdict;
+      return gate(resolution ? { ...verdict, resolution } : verdict);
     },
   },
   {
@@ -140,7 +143,7 @@ export async function dispatch(name, args = {}) {
   const t = toolMap[name];
   if (!t) return { isError: true, error: 'unknown tool: ' + name };
   try { return { result: await t.handler(args) }; }
-  catch (e) { return { isError: true, error: e.message || String(e) }; }
+  catch (e) { return { isError: true, error: e.message || String(e), ...(e.verdict ? { verdict: e.verdict } : {}) }; }   // #44: a structured verdict rides the error so the agent can branch, not just see a string
 }
 
 // ─── PRODUCT MCP (noosphere business) — separate surface, stubbed. Never mixed with the universal protocol MCP.
