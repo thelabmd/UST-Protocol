@@ -89,3 +89,75 @@ export async function fetchIdentity(domain, fetchImpl = fetch) {
   try { const k = await get('/.well-known/ust-keylog'); if (Array.isArray(k)) keylog = k; } catch { /* not served — resolution may still fail on key membership */ }
   return { genesis, keylog };
 }
+
+// ─── WITNESS auto-query (#68) — the browser half. Same honesty ladder as the CLI/MCP: fetch the witness
+// log, cross-check its Rekor anchor against the LIVE Sigstore log (RFC 6962 inclusion via WebCrypto — the
+// endpoint is only an index, the Merkle math decides). One anchored active genesis (== the resolved one)
+// ⇒ no-fork EVIDENCE ⇒ automatic HIGH, no manual checkbox. Bitcoin-OTS is left to the CLI's opt-in plugin
+// (a browser has no OTS lib); Rekor is REST-only, so it is the browser-native witness substrate.
+const sha256raw = async (bytes) => new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+const teu = (s) => new TextEncoder().encode(s);
+const hexToU8 = (h) => { const b = new Uint8Array(h.length / 2); for (let i = 0; i < b.length; i++) b[i] = parseInt(h.substr(i * 2, 2), 16); return b; };
+const u8hex = (u) => [...u].map((x) => x.toString(16).padStart(2, '0')).join('');
+const u8eq = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
+
+// RFC 6962 §2.1.1 inclusion (canonical, right-edge while-shift) — async because WebCrypto digest is async.
+async function rekorInclusion({ leafHash, index, treeSize, hashes, rootHash }) {
+  if (index >= treeSize || index < 0) return false;
+  let hash = leafHash, fn = index, sn = treeSize - 1;
+  for (const sibHex of hashes) {
+    const sib = hexToU8(sibHex);
+    if (fn === sn || (fn & 1) === 1) {
+      hash = await sha256raw(concatU8([new Uint8Array([1]), sib, hash]));
+      while (fn !== 0 && (fn & 1) === 0) { fn >>= 1; sn >>= 1; }
+    } else {
+      hash = await sha256raw(concatU8([new Uint8Array([1]), hash, sib]));
+    }
+    fn >>= 1; sn >>= 1;
+  }
+  return fn === 0 && u8hex(hash) === rootHash.replace(/^sha256:/, '');
+}
+const concatU8 = (arrs) => { const n = arrs.reduce((s, a) => s + a.length, 0); const o = new Uint8Array(n); let i = 0; for (const a of arrs) { o.set(a, i); i += a.length; } return o; };
+
+// Verify a rekor anchor (browser): the entry attests THIS root AND its inclusion proof verifies.
+async function rekorFinal(anchorInner, rootSha) {
+  const proof = anchorInner.inclusionProof, bodyB64 = anchorInner.body;
+  if (!proof || !bodyB64) return false;
+  const body = atob(bodyB64);
+  const rootHex = rootSha.replace(/^sha256:/, '');
+  const artifactHash = u8hex(await sha256raw(teu(rootHex)));   // Rekor stores sha256(root-hex)
+  if (!body.includes(artifactHash)) return false;
+  const entryBytes = Uint8Array.from(body, (c) => c.charCodeAt(0));   // NB: atob → binary string
+  const leafHash = await sha256raw(concatU8([new Uint8Array([0]), Uint8Array.from(atob(bodyB64), (c) => c.charCodeAt(0))]));
+  return rekorInclusion({ leafHash, index: proof.logIndex, treeSize: proof.treeSize, hashes: proof.hashes || [], rootHash: proof.rootHash });
+}
+
+// Fetch the witness log for `domain` and decide no-fork by cross-checking each active genesis's anchors.
+export async function witnessNoFork(domain, genesisHash, fetchImpl = fetch) {
+  if (!isPublicDnsShard(domain)) return { status: 'skipped' };
+  let log;
+  try {
+    const r = await fetchImpl(`https://${domain}/.well-known/ust-witness`, { signal: AbortSignal.timeout(10000) });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    log = await r.json();
+  } catch (e) { return { status: 'unreachable', detail: 'witness endpoint unreachable (' + (e.message || e) + ')' }; }
+  if (!log || log.domain_shard !== domain || !Array.isArray(log.genesis_log)) return { status: 'unreachable', detail: 'witness log malformed' };
+  const active = log.genesis_log.filter((g) => g && !g.superseded_by && /^sha256:[0-9a-f]{64}$/.test(g.content_hash || ''));
+  const anchored = [];
+  for (const g of active) {
+    const anchors = Array.isArray(g.anchors) ? g.anchors : (g.anchor ? [g.anchor] : []);
+    let ok = false;
+    for (const a of anchors) {
+      const inner = a.anchor ?? a;
+      if (inner.substrate === 'rekor' && await rekorFinal(inner, a.root || g.content_hash)) { ok = true; break; }
+      // bitcoin-ots: no browser OTS lib → left to the CLI plugin; not counted here
+    }
+    if (ok) anchored.push(g);
+  }
+  if (anchored.length >= 2) return { status: 'fork', detail: 'two anchored active genesis roots — a rival exists' };
+  if (anchored.length === 1) {
+    if (anchored[0].content_hash !== genesisHash) return { status: 'fork', detail: 'the anchored genesis differs from the served one' };
+    return { status: 'confirmed', detail: 'a single Rekor-anchored active genesis — no rival root' };
+  }
+  return { status: 'pending', detail: active.length ? 'genesis in the witness log but its Rekor anchor is not verifiable here (Bitcoin-only anchors need the CLI plugin)' : 'no active genesis in the witness log' };
+}

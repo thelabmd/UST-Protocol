@@ -182,7 +182,7 @@
 
 <script type="module">
 import { verify } from './ust-verify.mjs';
-import { resolveAuthority, fetchIdentity } from './ust-resolve.mjs';
+import { resolveAuthority, fetchIdentity, witnessNoFork } from './ust-resolve.mjs';
 
 const $ = (id) => document.getElementById(id);
 const inEl = $('in'), outEl = $('out');
@@ -330,8 +330,18 @@ async function run() {
     if (ident.genesis) {
       const auth = await resolveAuthority(doc, { genesis: ident.genesis, keylog: ident.keylog, noForkConfirmed: noForkChecked });
       if (!auth.error) {
-        resolution = { ...auth, source: ident.source };
-        r = await verify(doc, { context: 'data', capacity: auth.capacity, ...(noForkChecked ? { authority: { publisher: auth.publisher } } : {}) });
+        // WITNESS auto-query (#68): cross-check the Rekor anchor against the LIVE log. A confirmed witness
+        // is no-fork EVIDENCE → automatic HIGH, no manual checkbox (same as CLI/MCP). A fork → E-GENESIS.
+        let witness = null;
+        try { witness = await witnessNoFork(shard, auth.genesisHash, fetch); } catch { witness = { status: 'unreachable' }; }
+        if (witness && witness.status === 'fork') {
+          resolution = { ...auth, source: ident.source, witness, fork: true };
+          r = { result: 'INVALID', error: 'E-GENESIS', detail: witness.detail };
+        } else {
+          const grant = noForkChecked || (witness && witness.status === 'confirmed');
+          resolution = { ...auth, source: ident.source, witness, noFork: witness && witness.status === 'confirmed' ? 'witness-confirmed' : (noForkChecked ? 'asserted-by-you' : 'unconfirmed') };
+          r = await verify(doc, { context: 'data', capacity: auth.capacity, ...(grant ? { authority: { publisher: auth.publisher } } : {}) });
+        }
       } else resolution = { error: auth.error, source: ident.source };
     } else resolution = { error: ident.error, source: ident.source };
   }
@@ -407,18 +417,22 @@ async function run() {
         html += `<div class="card"><h2>Authority resolution</h2>
           <p class="note" style="margin-top:0">✗ ${esc(resolution.error)}<br><span class="hint">source: ${esc(resolution.source || '')}</span></p></div>`;
       } else {
+        const wc = resolution.witness && resolution.witness.status === 'confirmed';
         html += `<div class="card"><h2>Authority resolution</h2>
           <dl class="kv" style="margin-top:0">
             <dt>publisher</dt><dd>${esc(resolution.publisher)} — the document key is IN this name's resolved key set</dd>
             <dt>capacity</dt><dd>max_partitions ${esc(String(resolution.capacity.maxPartitions ?? 'floor'))}${resolution.capacity.maxTranscriptBytes ? ' · max_transcript_bytes ' + esc(String(resolution.capacity.maxTranscriptBytes)) : ''} (grant admitted)</dd>
+            <dt>no-fork</dt><dd>${wc ? '<b>witness-confirmed</b> — a single Rekor-anchored genesis, cross-checked against the live log (RFC&nbsp;6962 inclusion) → automatic HIGH'
+              : (resolution.witness && resolution.witness.status === 'pending' ? 'pending — ' + esc(resolution.witness.detail)
+              : 'witness ' + esc((resolution.witness && resolution.witness.status) || 'unreachable') + (resolution.witness && resolution.witness.detail ? ' (' + esc(resolution.witness.detail) + ')' : ''))}</dd>
             <dt>revocation</dt><dd>${esc(resolution.revocation)} — X1 windows need anchored time; a browser cannot decide them</dd>
             <dt>identity source</dt><dd>${esc(resolution.source || '')}</dd>
           </dl>
-          <label class="note" style="display:block;margin-top:10px;cursor:pointer">
+          ${wc ? '' : `<label class="note" style="display:block;margin-top:10px;cursor:pointer">
             <input type="checkbox" id="nofork" ${noForkChecked ? 'checked' : ''}>
-            I have independently confirmed <b>no rival genesis exists</b> for ${esc(resolution.publisher)} (the no-fork witness).
-            ${noForkChecked ? '' : '<br><span class="hint">unchecked → the name stays a resolved-but-provisional claim; check it to reach VALID:HIGH (same as the CLI\'s --no-fork-confirmed)</span>'}
-          </label></div>`;
+            The witness did not auto-confirm — I have independently checked that <b>no rival genesis exists</b> for ${esc(resolution.publisher)}.
+            ${noForkChecked ? '' : '<br><span class="hint">unchecked → the name stays resolved-but-provisional; check it to reach VALID:HIGH (same as the CLI\'s --no-fork-confirmed). Bitcoin-only anchors confirm in the CLI with @ust-protocol/ots-verify.</span>'}
+          </label>`}</div>`;
       }
     }
     outEl.innerHTML = html;

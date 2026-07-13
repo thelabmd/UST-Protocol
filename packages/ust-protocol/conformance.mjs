@@ -361,6 +361,15 @@ console.log('\n═════════════════════�
   check('router order: first non-null wins', (await P.combineSubstrates([async () => null, rekorOnly])({ substrate: 'rekor' }, 'x')).time === 'rekor');
 }
 
+// ─── rc.16 web parity: the browser clean-room verifier auto-queries the witness too (#68), so all three
+// surfaces (cli/mcp/web) reach VALID:HIGH the same way. Source-pin the witness half + its RFC6962 fix.
+{
+  const resolve = readFileSync(new URL('../../docs/ust-resolve.mjs', import.meta.url), 'utf8');
+  check('web resolver auto-queries the witness', resolve.includes('export async function witnessNoFork') && resolve.includes('rekorInclusion'));
+  check('web witness has the RFC6962 right-edge shift', resolve.includes('fn === sn || (fn & 1) === 1') && resolve.includes('while (fn !== 0'));
+  check('web witness confirmed = automatic HIGH (no checkbox)', readFileSync(new URL('../../docs/index.html', import.meta.url), 'utf8').includes("witness.status === 'confirmed'"));
+}
+
 console.log('  ust-protocol ' + P.VERSION.spec + ' conformance vs ' + V.version);
 console.log('  PASS ' + pass + '   FAIL ' + fail + '   NOTES ' + note);
 if (fails.length) { console.log('\n  FAILURES:'); fails.forEach(f => console.log('    ✗ ' + f)); }
