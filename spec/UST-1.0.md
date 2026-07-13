@@ -3,7 +3,7 @@
 
 *This specification text is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](../LICENSE-SPEC). Reference code in this repository is licensed Apache-2.0. Use of the name **UST** / **Universal State Transcript** and the **UST-compatible** claim: see [TRADEMARK.md](../TRADEMARK.md).*
 
-> **Release candidate — `1.0.0-rc.30`.** This specification has been extensively red-teamed; an independent
+> **Release candidate — `1.0.0-rc.31`.** This specification has been extensively red-teamed; an independent
 > external cryptographic audit is pending. It is subject to change until `1.0.0` final (rc.2 folded in two external reviews — 6 impl findings + spec edge cases + removed domain-less `computed`; rc.3 aligned impl to §3.1 pinned + Y3; rc.4 closed a 4th external audit (ChatGPT 5.5 Max): key-binding by KEY not string, TOP needs a genesis origin, embedded proofs fail-closed, class↔schema enforced, canon strict on names too, raw-bytes verify boundary, ust_id valid frames, and REMOVED secret-url as a privacy mode; rc.6 closed a 5th external audit STRUCTURALLY — the §14a obligations table (every commitment-bearing member recomputed: +`E-SEED`), a typed identity namespace (dns-name | self-certifying key-id), real-calendar semantic consistency, document-tier vs range-completeness separation, MTI registry discipline, one version source; rc.7 explicit `completeness:not_evaluated`; rc.8 admissibility pins (duplicate refs, key-log
 ceiling, layer availability); rc.9 edge pass (full reserved-name registry, verified-node budget, strict-Z);
 rc.10 partition-capacity ladder (floor 64 / genesis-declared ≤ 4096); rc.11 SIZE ladder + VOLUME-vs-STRUCTURE
@@ -18,7 +18,7 @@ graduated tiers (LIGHT / HIGH / TOP, §3.1). Every mechanism below serves that s
 judged by ONE question — *how much trust does this actually earn, and does the protocol say so honestly?* A
 tier must never let a consumer read "signed" as "true," "anchored" as "correct," or "agreeing" as "independent."
 
-Status: **Normative specification — 1.0 REV 41 (2026-07-13).** The SECURELY-STRUCTURED (namespaced) base that
+Status: **Normative specification — 1.0 REV 42 (2026-07-13).** The SECURELY-STRUCTURED (namespaced) base that
 closed all red-team findings STRUCTURALLY (I3 collision unrepresentable, I1 whole-State signature by
 construction, no stored-hash footgun), with ALL v0.29 FEATURES merged IN (not a flat-wire revert): per-partition
 captured/computed hashing (cross-engine corroboration for computed parts), `parent_ust` (hour-close timing),
@@ -889,7 +889,14 @@ which rejects `corroborated`.
   (§14) as any UST — the trust layer is built from the protocol's own documents.
   **Revocation semantics (P1) — decided against the anchor UPPER BOUND (X1).** The anchor gives ONLY an upper
   bound `U` ("not later than", N9); there is no lower bound, so validity is decided against `U`, fail-closed —
-  you can prove a signature is BEFORE a threshold, never AFTER it:
+  you can prove a signature is BEFORE a threshold, never AFTER it. **`U` is the PROVEN anchor time, and a verifier
+  MUST obtain it BEFORE resolving authority (#75 ROOT 1, two-phase): verify the anchor first, then judge
+  revocation / retirement / freshness against that proven `U` — NOT a caller-supplied or absent time. A proven `U`
+  takes precedence over any caller-asserted `anchorTime` (a caller cannot undercut it to evade X1).** The window
+  is two-sided — `authorized_at(key) ≤ U ≤ (retirement | compromise)`:
+  - **LOWER bound (`premature`):** a State cannot be PROVEN-anchored BEFORE its signing key was authorized. `U <`
+    the key's `authorized_at` ⇒ the key did not exist yet ⇒ NOT authoritative (self-asserted, `premature`). This is
+    the `K_n(t)` lower bound — "key present in the log" is weaker than "key active at `U`".
   - `reason:"retired"` (hygienic rotation): a K-signed State is VALID iff its anchor `U ≤` the revocation's
     anchor time (its latest possible time is at/before rotation); otherwise EXPIRED.
   - `reason:"compromised"` + `compromised_since` C: a K-signed State is VALID **only if `U < C`** — its LATEST
@@ -1733,6 +1740,18 @@ provenance and will be lifted into this ledger when the spec is published.
   a root-signed `add` + separate `revoke` (the root is not superseding itself) — spec↔code↔CLI aligned. Formal
   model gains `K_n(t)` (F.5e, MATH-04) with a realization note pinning it to `resolveKeys`; 9 executable
   `keylog-state` vectors (embedded signed docs) carry it cross-language. conformance 212/0, cli 130/0.
+- **REV 42 (2026-07-13)** — #75 ROOT 1, **two-phase verify + anchor-time threading** (closes P0-01, settles
+  MATH-05, reproduced first). `verify` used to resolve authority BEFORE it knew the proven anchor time, so a
+  retired key + a valid anchor after retirement still read `VALID:TOP` (revocation was judged against a
+  caller-supplied or absent time). `verify` is now two-phase: it verifies the anchor FIRST, then resolves
+  authority with the PROVEN upper bound `U` — revocation / retirement / freshness are judged against the chain,
+  and a proven `U` takes precedence over any caller-asserted `anchorTime` (a caller cannot undercut it to evade
+  X1). The `K_n(t)` window is now two-sided: the X1 upper bound (retired ⇒ expired, compromised ⇒ E-KEY/suspect)
+  PLUS a new LOWER bound — a document proven-anchored BEFORE its signing key's `authorized_at` is `premature`
+  (self-asserted, not authoritative): "key present in the log" ≠ "key active at `U`". Formal model F.5e updated
+  (MATH-05 done; the lower bound uses the CLAIMED authorization time — an anchored lower bound is the operator
+  manifest, ROOT 3). 5 executable `authority-at-time` vectors carry the window cross-language. conformance 217/0,
+  cli 130/0, mcp live 9/0.
 
 **Design principle throughout:** every normative clause answers "mechanism (protocol) or operator
 instantiation (profile)?"; operator specifics (substrate, partition schema, completeness, cadence) live in the

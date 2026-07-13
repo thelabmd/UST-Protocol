@@ -371,10 +371,15 @@ active` at that prefix), and conflating them is the P0-02 class (a revoked / rot
 **Realization (representation note).** `K_n` is realized by `resolveKeys(genesis, keylog)` → `{active, validKeys
 (=bind), revoked, history, head}`; the invariant is the `active.get(keyId(sig.pub)) === sig.pub` gate per entry;
 the closed per-`op` schema is the well-formedness of each event. Document authority reads `bind` (continuity) then
-the §12.2 X1 predicate judges `revoked[k]` at the document's time — a query of `K_n` at `t`. (The X1 time is the
-anchor upper bound; threading the VERIFIED anchor time into that query is ROOT 1 / MATH-05, tracked in #75.) The
-key-log vectors (`kind: keylog-state`) are executable instances of the invariant: a second implementation runs the
-same embedded events through its own `K_n` and must reach the same verdict.
+the §12.2 X1 predicate judges `revoked[k]` at the document's time — a query of `K_n` at `t`. **The query time `t`
+is the PROVEN anchor upper bound `U` (ROOT 1 / MATH-05, done): `verify` runs in two phases — it verifies the anchor
+FIRST, then resolves authority with that proven `U`, so revocation / retirement / freshness are decided against
+the chain, not a caller-supplied or absent time.** `K_n(t)` is a WINDOW, `authorized_at(k) ≤ U ≤ end(k)`: the
+lower bound is the new `premature` verdict (a document cannot be proven-anchored before its signing key was
+authorized), the upper bound is the X1 retired/compromised predicate. The `authority-at-time` vectors exercise the
+window; the `keylog-state` vectors exercise the reducer invariant — both are executable instances a second
+implementation runs through its own `K_n` and must match. (The `authorized_at` lower bound uses the key's CLAIMED
+authorization time; making it an ANCHORED lower bound is the operator manifest, ROOT 3.)
 
 ## F.6 Composition — the event algebra
 

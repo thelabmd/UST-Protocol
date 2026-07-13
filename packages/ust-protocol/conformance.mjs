@@ -52,6 +52,8 @@ for (const v of V.vectors) {
     case 'cadence': check(v.id, P.parseCadenceInt(v.value) === v.expect); break;
     // #75 ROOT 2 — the key-log state machine as a language-neutral vector: run resolveKeys over embedded signed docs.
     case 'keylog-state': { const r = P.resolveKeys(v.genesis, v.keylog); check(v.id, v.expect.error ? r.error === v.expect.error : (!r.error && r.active.size === v.expect.active_count && r.validKeys.size === v.expect.all_count)); break; }
+    // #75 ROOT 1 — K_n(t): authority resolved at a PROVEN anchor time (lower bound premature · upper bound X1).
+    case 'authority-at-time': { const r = P.resolveAuthority(v.doc, { genesis: v.genesis, keylog: v.keylog, noForkConfirmed: true, anchorTime: v.anchor_time }); check(v.id, v.expect.error ? r.error === v.expect.error : (r.strength === v.expect.strength && r.status === v.expect.status)); break; }
     default: noted(v.id, 'kind ' + v.kind + ' not exercised');
   }
 }

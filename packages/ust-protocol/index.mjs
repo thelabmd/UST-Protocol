@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.30', revision: 41 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.31', revision: 42 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -369,10 +369,25 @@ export function verify(doc, opts = {}) {
     if (strictB64url(doc.sig.sig, 64) === null) return bad('E-SIG', 'sig.sig is not canonical unpadded base64url of a 64-byte Ed25519 signature', { obligation: '§14.4 sig encoding' });
     if (keyId(doc.sig.pub) !== st.id.key_id) return bad('E-SIG', 'key_id != H(ust:keylog, pub)', { obligation: '§4.2 key_id-binding', expected: st.id.key_id, actual: keyId(doc.sig.pub) });
     if (!edVerifyStrict(doc.sig.pub, S, doc.sig.sig)) return bad('E-SIG', 'Ed25519 verify failed', { obligation: '§14.2 whole-state-signature' });
+    // #75 ROOT 1 — TWO-PHASE: verify the anchor FIRST so its PROVEN time flows INTO authority resolution below
+    // (revocation / retirement / freshness / the K_n(t) window are judged against the proven upper bound, not a
+    // caller-supplied or absent anchorTime — the P0-01 gap). §S3/F3: an EMBEDDED proof MUST verify (present-but-bad
+    // ⇒ E-ANCHOR, never a VALID doc beside an unchecked proof); the availability STATUS is carried, never flattened.
+    let timeField = { strength: 'unproven', status: 'none' };
+    if (doc.proof !== undefined) {
+      const a = verifyAnchor(ch, doc.proof, opts);
+      if (!a.inclusion) return bad('E-ANCHOR', a.detail || 'embedded proof does not verify');
+      // §14.6 N9 — a document cannot be generated AFTER the anchor that contains it (pinned RFC3339-Z compare as instants).
+      if (a.time === 'anchored' && a.anchorTime && st.time.generated_at > a.anchorTime)
+        return bad('E-ANCHOR', 'generated_at after the anchor time (N9: the document postdates its own anchor)');
+      timeField = { strength: a.time, status: a.status, inclusion: true, ...(a.anchorTime ? { anchorTime: a.anchorTime } : {}), ...(a.assurance ? { assurance: a.assurance } : {}) };
+    }
+    const provenAnchorTime = timeField.strength === 'anchored' ? timeField.anchorTime : undefined;   // the proven upper bound U (else undefined)
     // step 3 — name authority (§14.3): HIGH resolves genesis+key-log; else a PINNED key (TOFU, §3.1) if the caller
     // supplies pinnedKeys — a key NOT in the pin set is INVALID (that is what pinning means); else self-asserted.
+    // The PROVEN anchor time wins over any caller-supplied anchorTime (a caller cannot undercut it to evade X1).
     let identity;
-    if (opts.genesis) identity = resolveAuthority(doc, opts);
+    if (opts.genesis) identity = resolveAuthority(doc, { ...opts, anchorTime: provenAnchorTime ?? opts.anchorTime });
     else if (opts.pinnedKeys) identity = opts.pinnedKeys.includes(st.id.key_id)
       ? { strength: 'pinned', status: 'verified' }
       : { error: 'E-KEY', detail: 'key_id not in the pinned set (§3.1 TOFU)' };
@@ -443,18 +458,7 @@ export function verify(doc, opts = {}) {
     // self-asserted/pinned LABEL — `publisher_claimed` — so a consumer that never read Y3 cannot over-attribute.
     // (Pinning authenticates the KEY, not the name.)
     const nameField = identity.strength === 'authoritative' ? { publisher: st.id.domain_shard } : { publisher_claimed: st.id.domain_shard };
-    // §S3/F3 — an EMBEDDED proof MUST verify. present-but-bad ⇒ E-ANCHOR (never a VALID doc next to an unchecked
-    // "present" proof). The anchor's availability STATUS is carried through, never flattened (audit E, M-05).
-    let timeField = { strength: 'unproven', status: 'none' };
-    if (doc.proof !== undefined) {
-      const a = verifyAnchor(ch, doc.proof, opts);
-      if (!a.inclusion) return bad('E-ANCHOR', a.detail || 'embedded proof does not verify');
-      // §14.6 N9 — real time is the anchor: a document cannot be generated AFTER the anchor that contains it.
-      // Pinned RFC3339-Z strings compare lexicographically as instants.
-      if (a.time === 'anchored' && a.anchorTime && st.time.generated_at > a.anchorTime)
-        return bad('E-ANCHOR', 'generated_at after the anchor time (N9: the document postdates its own anchor)');
-      timeField = { strength: a.time, status: a.status, inclusion: true, ...(a.anchorTime ? { anchorTime: a.anchorTime } : {}), ...(a.assurance ? { assurance: a.assurance } : {}) };
-    }
+    // (the anchor was verified in phase 1 above; `timeField`/`provenAnchorTime` already carry its proven time.)
     // The verdict CARRIES ITS SCOPE: `VALID:LIGHT|HIGH|TOP`, so a consumer cannot read "valid" without reading
     // valid-AT-WHAT (a bare `=== 'VALID'` no longer matches — the same forcing function as publisher_claimed).
     // tier = the highest fully-satisfied rung (monotonic, §3.1). The NAME is bound to the key at both `corroborated`
@@ -539,7 +543,7 @@ export function resolveKeys(genesis, keylog = []) {
   const all = new Map([[gKid, gPub]]);
   const active = new Map([[gKid, gPub]]);
   const revoked = new Map();                                                      // key_id → {reason, compromised_since?, at}
-  const history = new Map([[gKid, { pub: gPub, from: 0, retired_at: null, revoked_at: null }]]);
+  const history = new Map([[gKid, { pub: gPub, from: 0, authorized_at: genesis.state.time.generated_at, retired_at: null, revoked_at: null }]]);  // authorized_at = K_n(t) lower bound (F.5e)
   const OP_FIELDS = { add: ['op', 'pub', 'new_key_id'], rotate: ['op', 'pub', 'new_key_id'], revoke: ['op', 'pub', 'reason', 'compromised_since'] };
   const derive = (i, pub, label) => {                                            // strict pub + derived key_id
     if (strictB64url(pub, 32) === null) return { error: { error: 'E-KEY', detail: 'entry ' + i + ' ' + label + ' pub not a 32-byte base64url key' } };
@@ -563,7 +567,7 @@ export function resolveKeys(genesis, keylog = []) {
       if (op.new_key_id !== undefined && op.new_key_id !== d.kid) return { error: 'E-KEY', detail: 'entry ' + i + ' new_key_id != H(ust:keylog, pub)' };
       if (revoked.get(d.kid)?.reason === 'compromised') return { error: 'E-KEY', detail: 'entry ' + i + ' cannot re-authorize a COMPROMISED key' };
       all.set(d.kid, op.pub); active.set(d.kid, op.pub);
-      if (!history.has(d.kid)) history.set(d.kid, { pub: op.pub, from: i + 1, retired_at: null, revoked_at: null });
+      if (!history.has(d.kid)) history.set(d.kid, { pub: op.pub, from: i + 1, authorized_at: e.state.time.generated_at, retired_at: null, revoked_at: null });
       // #75 spec §12.2 "each rotation is authorized by the key it supersedes": on rotate the SIGNER is superseded —
       // it leaves active (cannot sign later entries) and is recorded retired (its EARLIER docs stay valid, X1).
       if (op.op === 'rotate' && sKid !== d.kid) {
@@ -594,7 +598,7 @@ export function resolveAuthority(doc, { genesis, keylog = [], noForkConfirmed = 
   if (genesis.state?.id?.domain_shard !== doc.state.id.domain_shard) return { error: 'E-GENESIS', detail: 'genesis domain mismatch' };
   const rk = resolveKeys(genesis, keylog);
   if (rk.error) return { error: rk.error, detail: rk.detail };
-  const { validKeys, revoked } = rk;
+  const { validKeys, revoked, history } = rk;
   // §12.2a #40 KEY-LOG FRESHNESS (rc.28 audit fix) — "this key is still valid" is an authenticated NON-MEMBERSHIP
   // claim (no MORE RECENT revoking entry exists), the same class as no-fork (F.5a): a CACHED key-log proves only
   // "revoke ∉ my view", never "revoke does not exist". Freshness is EARNED, and — the audit catch — a raw
@@ -620,6 +624,12 @@ export function resolveAuthority(doc, { genesis, keylog = [], noForkConfirmed = 
   // authority is granted ONLY if the doc's key_id maps to the doc's ACTUAL signing pub (binding, not membership).
   if (validKeys.get(doc.state.id.key_id) !== doc.sig.pub)
     return { strength: 'self-asserted', status: 'verified', detail: 'doc key not bound in this key-log' };
+  // §12.2/#75 ROOT 1 — K_n(t) LOWER bound: a document cannot be PROVEN-anchored BEFORE its signing key was
+  // authorized. With a proven upper bound U < the key's authorized_at, the key did not exist yet ⇒ premature
+  // (self-asserted, not authoritative). Only decidable WITH a proven anchor time (else no U to compare).
+  const hk = history.get(doc.state.id.key_id);
+  if (anchorTime && hk?.authorized_at && anchorTime < hk.authorized_at)
+    return { strength: 'self-asserted', status: 'premature', detail: 'document anchored before its signing key was authorized (K_n(t) lower bound §12.2)' };
   // §12.2 X1 — revocation window, decided against the anchor UPPER BOUND (U = anchorTime, from §11.2).
   const rev = revoked.get(doc.state.id.key_id);
   let suspect = false;
