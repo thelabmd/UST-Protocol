@@ -123,6 +123,26 @@ the observed adapted process has *no missing frame* in the interval — an `F_{t
 a covering checkpoint (`M5`). "The stream is complete" = "this adapted process is fully observed up to the
 stopping time `t₁`."
 
+**Completeness is authenticated coverage of a committed grid — no-deletion is not no-omission (M5, made precise).**
+The `prev`-chain establishes a TOTAL ORDER on the observed frames and forecloses DELETION from a shown chain
+(removing frame `t` orphans `t+1`'s `prev`), but it does NOT by itself foreclose OMISSION: a publisher that never
+emits frame `t` and links `t+1.prev = t-1` yields a self-consistent chain WITH A HOLE. Chain-consistency and
+completeness are therefore different σ-algebras — the former is `σ(prev-links)`, the latter needs the EXPECTED
+index set — and by Corollary F.3.1 "no frame is missing" is exactly an **authenticated non-membership** claim on
+the frame axis, which does not follow from the positive `prev`-links alone. The missing coordinate is the
+publisher's **cadence** `c_n(t)`, modelled as a signed, time-resolved parameter — itself an adapted process,
+resolved at `t` EXACTLY as the key-log resolves the active key at `t` (§12.2), so it cannot be shrunk post-hoc to
+a coarser grid that hides slots. Then the expected grid over a closed interval is DETERMINISTIC,
+`G(n,t₀,t₁) := { the ust_id grid points of spacing c_n over [t₀,t₁] }`, and `expected_slot_count := |G|` is a
+DERIVED quantity, never stored. Define **complete over `[t₀,t₁]`**: for every `g ∈ G` the observed set contains
+either a frame with `ust_id = g` OR a signed gap record (§11.1) covering `g`, witnessed by a covering checkpoint
+committing `(t₀, t₁, head, cumulative_count)`. This event is `F_{t₁}`-measurable **only when** `c_n(t) ∈ ℐ`:
+without the signed cadence `|G|` is unknown, so `frame_count = |observed|` cannot be compared to `|G|`, and the
+honest verdict is the strictly coarser **chain-consistent** (no-deletion), never **complete**. Note what does NOT
+change: the checkpoint is the existing `class:"attestation"` with two interval bounds added to its value, the
+grid is COMPUTED not stored, and the gap record already exists (§11.1) — completeness is earned by adding the
+cadence coordinate to `ℐ`, not by any new document shape.
+
 ## F.5 Verification is a measurability test — and the tiers are nested σ-algebras
 
 This is the load-bearing section — restated in the category-correct form (16th-round rigor pass): a verifier
@@ -205,6 +225,44 @@ depends on them, so it is measurable only in the larger σ-algebra. (3)–(5) ar
 record measurable, and is it measurable-true there."* The tier ladder is literally a tower of nested information
 σ-algebras; climbing it means bringing more (external, harder-won) information into `ℐ`. `VALID:LIGHT/HIGH/TOP`
 is the honest name of *how much information the verdict rests on*.
+
+## F.5a No-fork is authenticated non-membership — `corroborated ⊊ authoritative`
+
+The name-authority coordinate `W_n` of `𝒮_HIGH` bundles TWO different facts, and honesty requires splitting
+them. Resolving the key — genesis self-signed, key-log `prev`-chained, `key_id ∈` the resolved set (§12.2) —
+binds the presented key to the name; call this event `K_n`. The **no-fork** requirement of §12.1 is a SECOND,
+strictly harder fact: that no RIVAL name-binding root is active for `n`. By Corollary F.3.1 this is an
+**authenticated non-membership** statement, `¬∃ B ≠ A : B ∈ activeGenesis(n)`, and — exactly as for backdating on
+the time axis — it does NOT follow from any collection of positive membership facts. A witness endpoint that
+serves the publisher's OWN list of bindings proves only `A ∈ served-list` (membership); the publisher can OMIT a
+rival it does not wish seen, so the served list is not in the σ-algebra that decides non-membership. Two
+distinct predicates result:
+
+- **`corroborated(n)`** — `K_n` holds AND the served witness list shows exactly one active anchored binding,
+  equal to the resolved one. Decidable in `σ(K_n, served-list)`; it is the existence fact `A ∈ published-set`.
+- **`no-fork(n)` (= `authoritative`)** — `K_n` holds AND an INDEPENDENT, anchored authority over `n`'s bindings
+  excludes every rival. The economical witness of the exclusion is a **verifiable map keyed by the name**: an
+  authenticated dictionary `n ↦ activeGenesis(n)` (a Merkle prefix tree / key-transparency structure) whose
+  signed root is itself committed to the anchor substrate, so the root enters `Fₜ` (§11/F.3). PREFIX-UNIQUENESS
+  is the whole mechanism: a key has exactly one leaf, so an inclusion proof for key `n` returning `A` IS the
+  non-membership proof for every `B ≠ A` at `n` — the universal `¬∃B` collapses to a single positive lookup.
+  Consistency proofs between successive signed roots give append-only; a monitor watching the leaf at `n` gives
+  detection (`W1`). Decidable in `σ(K_n) ∨ Fₜ`.
+
+**Proposition F.5a.** `σ(corroborated) ⊊ σ(no-fork)`. Corroboration is decidable from data the PUBLISHER serves;
+no-fork requires the map coordinate, which the publisher does not control — the same separation as membership vs
+authenticated non-membership in F.3.1, now on the NAME axis rather than the TIME axis. Consequently the honest
+verdict when `ℐ` holds only the served list is **`corroborated`** — a real, bounded fact (key-bound name, no
+rival in the publisher's own view), NOT nothing — and **`authoritative`/`no-fork`** is emitted only when `ℐ`
+contains an anchored map-inclusion for `n`. Suppressing the map removes it from *everyone's* `ℐ`, which lowers
+the verdict to `corroborated`, never forges `authoritative` (`W1`).
+
+What this does NOT touch: neither predicate enters `𝒮_LIGHT` (the document bytes). The map is a WORLD-coordinate
+whose root rides the SAME substrate `Fₜ` that TOP already trusts — no new root of trust — and the genesis,
+key-log and state documents are unchanged in shape. No-fork is the identity twin of snapshot-complete
+non-membership on the time axis: both are F.3.1 authenticated non-membership over a domain that UST's existing
+structure already commits (the frame grid for completeness, the anchored name-map for no-fork). The strong word
+is EARNED by bringing that non-membership coordinate into `ℐ`, not bought by weakening the definition.
 
 ## F.6 Composition — the event algebra
 
