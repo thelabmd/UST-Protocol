@@ -1,5 +1,5 @@
 {
-  "version": "UST 1.0 conformance vectors (rc.26 \u2014 #40 identity hardening: name-form domain_shard MUST be an A-label (homograph guard, raw Unicode \u2192 E-MALFORMED \u00a74.3a); key-log freshness (\u00a712.2a) \u2014 a stale cache REPORTS freshness:unverified, requireFreshKeylog \u2192 INDETERMINATE stale_keylog, anchoredKeylogHead \u2192 attested. Prior: #44 agent-safety, #45 downgrade resistance + fork-choice)",
+  "version": "UST 1.0 conformance vectors (rc.27 \u2014 #41 cross-language canon arbiter: +9 canon edge-case vectors (key sort, nested, array-vs-key order, object-in-array, escaping, control chars, BMP + astral Unicode kept literal UTF-8 not \\u-escaped, empties) as the objective byte-for-byte contract. Prior: #40 identity hardening, #44 agent-safety, #45 downgrade + fork-choice)",
   "note": "Deterministic + reproducible. Keypairs from fixed seeds (A=0011..eeff, B=ffee..1100). canon=JCS tightened; H(tag,x)=sha256(ascii(tag)||0x00||x); content_hash=H(\"ust:state\",canon({ust,state})); key_id=H(\"ust:keylog\",raw_pub); partition_hash=H(\"ust:shard\",canon({domain_shard,ust_id,partition,value})) \u2014 UNIFORM, every partition binds domain_shard, name is a VALUE (non-colliding), no domain-less computed. Each vector states the SPEC rule it pins. Signature-type vectors use expect: 'VALID' | 'E-SIG' for the Ed25519 PRIMITIVE check (strict, canonical-S); this is not a document verdict \u2014 a conforming verifier's document verdict is always tier-qualified (VALID:LIGHT/HIGH/TOP), never a bare VALID. Partition names inside hash/commit inputs (e.g. 'secret') are arbitrary sample names, not protocol features.",
   "seeds": {
     "A": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
@@ -43,6 +43,15 @@
       },
       "expect_canon": "{\"list\":[\"3\",\"1\",\"2\"]}"
     },
+    { "id": "canon-03-key-sort-multi", "kind": "canon", "rule": "S6 keys lexicographically sorted", "input": { "b": "2", "a": "1", "c": "3" }, "expect_canon": "{\"a\":\"1\",\"b\":\"2\",\"c\":\"3\"}" },
+    { "id": "canon-04-nested-key-sort", "kind": "canon", "rule": "S6 sort recurses into nested objects", "input": { "z": { "y": "1", "x": "2" }, "a": "3" }, "expect_canon": "{\"a\":\"3\",\"z\":{\"x\":\"2\",\"y\":\"1\"}}" },
+    { "id": "canon-05-array-order-vs-key-sort", "kind": "canon", "rule": "S6 array order significant; sibling object keys sorted", "input": { "list": ["3", "1", "2"], "k": "v" }, "expect_canon": "{\"k\":\"v\",\"list\":[\"3\",\"1\",\"2\"]}" },
+    { "id": "canon-06-object-inside-array", "kind": "canon", "rule": "S6 objects inside arrays are key-sorted; array position kept", "input": { "a": [{ "n": "2", "m": "1" }, "x"], "b": "y" }, "expect_canon": "{\"a\":[{\"m\":\"1\",\"n\":\"2\"},\"x\"],\"b\":\"y\"}" },
+    { "id": "canon-07-escape-quote-backslash", "kind": "canon", "rule": "S6 minimal JSON escaping: quote and backslash only", "input": { "s": "a\"b\\c" }, "expect_canon": "{\"s\":\"a\\\"b\\\\c\"}" },
+    { "id": "canon-08-escape-control", "kind": "canon", "rule": "S6 C0 control chars escaped (\\n, \\t), not raw", "input": { "s": "line1\nline2\ttab" }, "expect_canon": "{\"s\":\"line1\\nline2\\ttab\"}" },
+    { "id": "canon-09-unicode-bmp-not-escaped", "kind": "canon", "rule": "S6 non-ASCII kept as UTF-8 bytes, NOT \\u-escaped (the cross-language trap)", "input": { "s": "café → 日本語" }, "expect_canon": "{\"s\":\"café → 日本語\"}" },
+    { "id": "canon-10-unicode-astral-not-escaped", "kind": "canon", "rule": "S6 astral (surrogate-pair) code points kept as UTF-8, not \\u-escaped", "input": { "s": "🌍🔑" }, "expect_canon": "{\"s\":\"🌍🔑\"}" },
+    { "id": "canon-11-empty-object-and-array", "kind": "canon", "rule": "S6 canonical empty object and empty array", "input": { "o": {}, "a": [], "s": "x" }, "expect_canon": "{\"a\":[],\"o\":{},\"s\":\"x\"}" },
     {
       "id": "canon-reject-number",
       "kind": "canon-reject",

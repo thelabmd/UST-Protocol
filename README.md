@@ -104,7 +104,8 @@ proves the document existed **by** a real point in time (and `generated_at` may 
 |------|------|
 | `spec/UST-1.0.md` | the specification (normative) |
 | `spec/UST-1.0-formal-model.md` | a measure-theoretic semantics (non-normative appendix) |
-| `vectors/` | deterministic conformance vectors — any implementation should pass them |
+| `PORTING.md` | porting UST to another language — the narrowed value model, the vector arbiter, the crypto boundary |
+| `vectors/` | deterministic conformance vectors — any implementation should pass them (the cross-language canon arbiter) |
 | `packages/ust-protocol/` | the stateless reference verifier + producer ([npm](https://www.npmjs.com/package/ust-protocol)) |
 | `packages/ust-mcp/` | an MCP server exposing UST to agents ([npm](https://www.npmjs.com/package/@ust-protocol/mcp)) |
 | `packages/ust-web-signer/` | WebCrypto browser signer ([npm](https://www.npmjs.com/package/@ust-protocol/web-signer)) |

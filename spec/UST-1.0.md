@@ -3,7 +3,7 @@
 
 *This specification text is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](../LICENSE-SPEC). Reference code in this repository is licensed Apache-2.0. Use of the name **UST** / **Universal State Transcript** and the **UST-compatible** claim: see [TRADEMARK.md](../TRADEMARK.md).*
 
-> **Release candidate — `1.0.0-rc.26`.** This specification has been extensively red-teamed; an independent
+> **Release candidate — `1.0.0-rc.27`.** This specification has been extensively red-teamed; an independent
 > external cryptographic audit is pending. It is subject to change until `1.0.0` final (rc.2 folded in two external reviews — 6 impl findings + spec edge cases + removed domain-less `computed`; rc.3 aligned impl to §3.1 pinned + Y3; rc.4 closed a 4th external audit (ChatGPT 5.5 Max): key-binding by KEY not string, TOP needs a genesis origin, embedded proofs fail-closed, class↔schema enforced, canon strict on names too, raw-bytes verify boundary, ust_id valid frames, and REMOVED secret-url as a privacy mode; rc.6 closed a 5th external audit STRUCTURALLY — the §14a obligations table (every commitment-bearing member recomputed: +`E-SEED`), a typed identity namespace (dns-name | self-certifying key-id), real-calendar semantic consistency, document-tier vs range-completeness separation, MTI registry discipline, one version source; rc.7 explicit `completeness:not_evaluated`; rc.8 admissibility pins (duplicate refs, key-log
 ceiling, layer availability); rc.9 edge pass (full reserved-name registry, verified-node budget, strict-Z);
 rc.10 partition-capacity ladder (floor 64 / genesis-declared ≤ 4096); rc.11 SIZE ladder + VOLUME-vs-STRUCTURE
@@ -1657,6 +1657,18 @@ provenance and will be lifted into this ledger when the spec is published.
   `unverified` (default — reported, never silently trusted). `requireFreshKeylog` floors on it → `INDETERMINATE`
   (`reason: "stale_keylog"`, the fourth and last member of the closed reason set), the key-log twin of the F.5b
   downgrade floors. Surfaced via MCP `ust_verify`/`ust_resolve` + CLI `--require-fresh-keylog`. +7 vectors.
+- **REV 38 (2026-07-13)** — #41, cross-language portability (DX): close the JCS canonicalization trap. Our trap
+  is NARROWER than generic RFC 8785 by design — the §5 strings-only value model removes the poisonous
+  number-formatting corner entirely, leaving only key-sort + minimal escape + NFC + UTF-8-not-`\u`-escaped. The
+  vectors are the objective cross-language ARBITER: +9 `canon` edge-case vectors (key sort, nested sort,
+  array-vs-key order, object-in-array, quote/backslash + control escaping, BMP + astral Unicode kept literal
+  UTF-8, empties) so ANY-language implementation knows byte-for-byte whether it conforms. Complemented by the
+  already-shipped `ust canon` byte-diff diagnostic and `@ust-protocol/web-signer` producer helper, and a new
+  [PORTING.md](../PORTING.md) guide (narrowed value model + vector arbiter + producer crypto boundary: verify =
+  zero crypto, produce = one `Ed25519.sign` over the returned `signing_input`; the MCP holds no key). Honest note:
+  the trap is INHERENT to deterministic text-signing (the price of I4) — reduced to ~zero in practice, not
+  eliminated; passing the vectors is the definite, checkable fact. Display-safety note (bidi/zero-width in
+  untrusted VALUES is a renderer concern, byte-integrity is unaffected) folded into the guide.
 
 **Design principle throughout:** every normative clause answers "mechanism (protocol) or operator
 instantiation (profile)?"; operator specifics (substrate, partition schema, completeness, cadence) live in the

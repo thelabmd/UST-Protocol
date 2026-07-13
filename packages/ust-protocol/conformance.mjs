@@ -521,6 +521,15 @@ console.log('\n═════════════════════�
   check('#40 keylogFreshAsOf ≥ anchorTime → freshness:fresh', P.resolveAuthority(docK, { genesis: gen, keylog: [add], noForkConfirmed: true, anchorTime: Aft, keylogFreshAsOf: '2026-06-28T15:00:00Z' }).freshness === 'fresh');
 }
 
+// ─── #41 CROSS-LANGUAGE CANON ARBITER — the vectors ARE the contract; guard that the edge-case set stays present
+//     (key sort · nested · array-vs-key · object-in-array · escaping · control · BMP + astral Unicode · empties).
+{
+  const canonV = V.vectors.filter((x) => x.kind === 'canon');
+  check('#41 canon arbiter covers the cross-language edge cases (≥ 11 canon vectors)', canonV.length >= 11);
+  // the non-ASCII trap explicitly pinned: UTF-8 kept literal, NOT \u-escaped (where most JSON libs diverge)
+  check('#41 non-ASCII stays literal UTF-8 in canon (not \\u-escaped)', (v => v && P.canon(v.input) === v.expect_canon && !v.expect_canon.includes('\\u'))(canonV.find((x) => x.id === 'canon-10-unicode-astral-not-escaped')));
+}
+
 console.log('  ust-protocol ' + P.VERSION.spec + ' conformance vs ' + V.version);
 console.log('  PASS ' + pass + '   FAIL ' + fail + '   NOTES ' + note);
 if (fails.length) { console.log('\n  FAILURES:'); fails.forEach(f => console.log('    ✗ ' + f)); }
