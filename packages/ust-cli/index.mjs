@@ -1002,7 +1002,11 @@ async function cmdStream() {
   if (r.error) { console.log(`  ❌ stream BROKEN: ${r.error}${r.detail ? ' — ' + r.detail : ''}`); process.exit(1); }
   console.log('  frames      ' + frames.length);
   console.log('  authority   ' + (frames[0]?.state?.id?.domain_shard ?? '?') + (genesis ? '  (origin: genesis-bound)' : '  (origin: unbound — no --genesis)'));
-  console.log('  completeness ' + r.complete + (checkpoint ? '' : '   (no --checkpoint — chain-consistent is unreachable without one)'));
+  console.log('  completeness ' + r.complete
+    + (r.hole ? '   (grid hole at ' + r.hole + ' — no frame, no signed gap)' : '')
+    + (r.complete === 'chain-consistent' && !r.hole && checkpoint ? '   (no-deletion; `complete` needs a signed genesis cadence + checkpoint from/to)' : '')
+    + (r.complete === 'complete' ? '   (no-omission — every grid slot is a frame or a signed gap)' : '')
+    + (!checkpoint ? '   (no --checkpoint — unreachable without one)' : ''));
   console.log('\n  completeness is a RANGE verdict over THESE frames — it never upgrades any single document\'s tier');
   process.exit((r.complete === 'chain-consistent' || r.complete === 'complete') ? 0 : 2);
 }

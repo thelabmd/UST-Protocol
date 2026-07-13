@@ -1,6 +1,6 @@
 {
   "name": "@ust-protocol/mcp",
-  "version": "1.0.0-rc.19",
+  "version": "1.0.0-rc.20",
   "description": "Model Context Protocol (MCP) server for UST — agent-facing verbs over ust-protocol: verify, build/create, combine, resolve name-authority, anchor. An agent needs only this server plus its own key.",
   "author": "THE LAB (https://thelab.md)",
   "type": "module",
@@ -32,7 +32,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
-    "ust-protocol": "^1.0.0-rc.19"
+    "ust-protocol": "^1.0.0-rc.20"
   },
   "repository": {
     "type": "git",

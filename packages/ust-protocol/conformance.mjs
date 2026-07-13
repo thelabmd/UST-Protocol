@@ -393,6 +393,40 @@ console.log('\n═════════════════════�
   check('web witness confirmed = automatic HIGH (no checkbox)', readFileSync(new URL('../../docs/index.html', import.meta.url), 'utf8').includes("witness.status === 'confirmed'"));
 }
 
+// ─── #69 C (#70) — completeness against the SIGNED cadence grid: no-deletion (`chain-consistent`) is re-earned
+//     to no-omission (`complete`) only when the expected grid is covered; the cadence is signed (genesis),
+//     never a free per-checkpoint choice, so a publisher cannot claim a coarser grid to hide a slot. C2: a
+//     checkpoint and a gap are distinct SUBTYPES (data.checkpoint XOR data.gap), no longer a shape collision.
+{
+  const C = kp('c1'.repeat(32)); const dom = 'stream.example', signC = (s) => P.seal(s, C.priv, C.pubB64);
+  const Tc = { generated_at: '2026-06-28T14:29:00Z', valid_from: '2026-06-28T14:29:00Z', valid_to: '2026-06-28T14:30:00Z' };
+  const gen = signC(P.buildGenesis({ domain_shard: dom, ust_id: 'ust:20260628.1429', key_id: C.key_id }, Tc, C.pubB64, undefined, undefined, 30)); // 30s cadence
+  const genNo = signC(P.buildGenesis({ domain_shard: dom, ust_id: 'ust:20260628.1429', key_id: C.key_id }, Tc, C.pubB64));                        // no cadence
+  const gH = P.contentHash(gen);
+  const fr = (uid, prev) => signC(P.buildState({ domain_shard: dom, ust_id: uid, key_id: C.key_id, class: 'observation' }, Tc, { r: { kind: 'captured', value: { x: '1' } } }, { prev }));
+  const gp = (uid, prev) => signC(P.buildGap({ domain_shard: dom, ust_id: uid, key_id: C.key_id }, Tc, prev, 'src-down'));
+  const cp = (head, n, prev) => signC(P.buildCheckpoint({ domain_shard: dom, ust_id: 'ust:20260628.143001', key_id: C.key_id }, Tc, head, n, prev, { from: 'ust:20260628.142900', to: 'ust:20260628.143000' }));
+  // C2 — checkpoint vs gap are now distinct subtypes; a bare prev-only attestation (neither) is E-MALFORMED
+  const bare = signC(P.buildState({ domain_shard: dom, ust_id: 'ust:20260628.1430', key_id: C.key_id, class: 'attestation' }, Tc, { note: { kind: 'computed', value: { x: '1' } } }, { prev: gH }));
+  check('#70 C2: bare prev-only attestation → E-MALFORMED (checkpoint/gap collision closed)', P.verify(bare, { context: 'data' }).error === 'E-MALFORMED');
+  check('#70 C2: a signed gap record is VALID (data.gap subtype)', P.verify(gp('ust:20260628.142930', gH), { context: 'data' }).result === 'VALID:LIGHT');
+  // (1) full grid → complete
+  const f0 = fr('ust:20260628.142900', gH), f1 = fr('ust:20260628.142930', P.contentHash(f0)), f2 = fr('ust:20260628.143000', P.contentHash(f1));
+  check('#70 full grid + signed cadence → complete (no-omission)', P.verifyStream([f0, f1, f2], { genesis: gen, checkpoint: cp(P.contentHash(f2), 3, P.contentHash(f2)) }).complete === 'complete');
+  // (2) omitted slot, NO gap → chain-consistent (the honest ceiling), hole named
+  const g0 = fr('ust:20260628.142900', gH), g2 = fr('ust:20260628.143000', P.contentHash(g0));
+  const r2 = P.verifyStream([g0, g2], { genesis: gen, checkpoint: cp(P.contentHash(g2), 2, P.contentHash(g2)) });
+  check('#70 omitted slot, no gap → chain-consistent + names the hole', r2.complete === 'chain-consistent' && r2.hole === 'ust:20260628.142930');
+  // (3) omission covered by a signed gap → complete
+  const h0 = fr('ust:20260628.142900', gH), hg = gp('ust:20260628.142930', P.contentHash(h0)), h2 = fr('ust:20260628.143000', P.contentHash(hg));
+  check('#70 omission covered by a signed gap → complete', P.verifyStream([h0, hg, h2], { genesis: gen, checkpoint: cp(P.contentHash(h2), 3, P.contentHash(h2)) }).complete === 'complete');
+  // (4) no SIGNED cadence → the grid is undecidable → chain-consistent, NEVER complete (anti-lie: the cadence
+  //     is signed in the genesis, not a caller/per-checkpoint choice, so a coarser grid cannot be claimed).
+  const nH = P.contentHash(genNo), n0 = fr('ust:20260628.142900', nH), n1 = fr('ust:20260628.142930', P.contentHash(n0)), n2 = fr('ust:20260628.143000', P.contentHash(n1));
+  check('#70 no signed cadence → chain-consistent (grid undecidable, never complete)', P.verifyStream([n0, n1, n2], { genesis: genNo, checkpoint: cp(P.contentHash(n2), 3, P.contentHash(n2)) }).complete === 'chain-consistent');
+  check('#70 ustGrid computes the expected slots (30s over a minute = 3)', P.ustGrid('ust:20260628.142900', 'ust:20260628.143000', 30).length === 3);
+}
+
 console.log('  ust-protocol ' + P.VERSION.spec + ' conformance vs ' + V.version);
 console.log('  PASS ' + pass + '   FAIL ' + fail + '   NOTES ' + note);
 if (fails.length) { console.log('\n  FAILURES:'); fails.forEach(f => console.log('    ✗ ' + f)); }

@@ -3,7 +3,7 @@
 
 *This specification text is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](../LICENSE-SPEC). Reference code in this repository is licensed Apache-2.0. Use of the name **UST** / **Universal State Transcript** and the **UST-compatible** claim: see [TRADEMARK.md](../TRADEMARK.md).*
 
-> **Release candidate — `1.0.0-rc.19`.** This specification has been extensively red-teamed; an independent
+> **Release candidate — `1.0.0-rc.20`.** This specification has been extensively red-teamed; an independent
 > external cryptographic audit is pending. It is subject to change until `1.0.0` final (rc.2 folded in two external reviews — 6 impl findings + spec edge cases + removed domain-less `computed`; rc.3 aligned impl to §3.1 pinned + Y3; rc.4 closed a 4th external audit (ChatGPT 5.5 Max): key-binding by KEY not string, TOP needs a genesis origin, embedded proofs fail-closed, class↔schema enforced, canon strict on names too, raw-bytes verify boundary, ust_id valid frames, and REMOVED secret-url as a privacy mode; rc.6 closed a 5th external audit STRUCTURALLY — the §14a obligations table (every commitment-bearing member recomputed: +`E-SEED`), a typed identity namespace (dns-name | self-certifying key-id), real-calendar semantic consistency, document-tier vs range-completeness separation, MTI registry discipline, one version source; rc.7 explicit `completeness:not_evaluated`; rc.8 admissibility pins (duplicate refs, key-log
 ceiling, layer availability); rc.9 edge pass (full reserved-name registry, verified-node budget, strict-Z);
 rc.10 partition-capacity ladder (floor 64 / genesis-declared ≤ 4096); rc.11 SIZE ladder + VOLUME-vs-STRUCTURE
@@ -18,7 +18,7 @@ graduated tiers (LIGHT / HIGH / TOP, §3.1). Every mechanism below serves that s
 judged by ONE question — *how much trust does this actually earn, and does the protocol say so honestly?* A
 tier must never let a consumer read "signed" as "true," "anchored" as "correct," or "agreeing" as "independent."
 
-Status: **Normative specification — 1.0 REV 30 (2026-07-13).** The SECURELY-STRUCTURED (namespaced) base that
+Status: **Normative specification — 1.0 REV 31 (2026-07-13).** The SECURELY-STRUCTURED (namespaced) base that
 closed all red-team findings STRUCTURALLY (I3 collision unrepresentable, I1 whole-State signature by
 construction, no stored-hash footgun), with ALL v0.29 FEATURES merged IN (not a flat-wire revert): per-partition
 captured/computed hashing (cross-engine corroboration for computed parts), `parent_ust` (hour-close timing),
@@ -642,7 +642,8 @@ ONLY when the stream is verified complete (the range verdict, §11.3); one-off d
 **Checkpoints (M5).** Checkpoints are themselves `prev`-chained frames (`class:"attestation"`) that assert the
 stream head + frame count over an interval. The asserted `frame_count` is CUMULATIVE from the stream origin, so
 a later covering checkpoint proves every earlier interval transitively — a missing intermediate checkpoint
-delays proof but cannot hide frames (an absent frame breaks `prev`). The operator profile declares a REQUIRED checkpoint cadence; a
+delays proof but cannot hide a frame that WAS in the chain (deleting it orphans the next `prev`). Hiding a
+NEVER-EMITTED slot is a separate question — decided against the cadence grid below, not by `prev` alone. The operator profile declares a REQUIRED checkpoint cadence; a
 consumer requiring completeness MUST have a covering checkpoint whose asserted head hash-links to the frames it
 sees — a missing or contradicting checkpoint ⇒ E-PREV (fail closed).
 
@@ -665,8 +666,21 @@ the active key at `t`, §12.2, so it cannot be shrunk post-hoc to hide slots). T
 (never stored) and the checkpoint additionally commits the interval bounds `(from, to)` — no new document shape,
 the checkpoint is the existing `class:"attestation"` value plus two bounds, and the gap record already exists.
 Absent a signed cadence in the verifier's information set the range verdict is `chain-consistent`, NEVER
-`complete`. The signed-cadence grid is a FUTURE revision; until it is served the reference verifier emits
-`chain-consistent` (the honest ceiling), never `complete`.
+`complete`.
+
+**Concrete format (normative).** The cadence is a string integer of SECONDS in `genesis.value.cadence` (a
+time-resolved parameter: a future revision may supersede it via a cadence-log entry the way §12.2 supersedes a
+key; a constant genesis cadence is the base case). The checkpoint carries `from` and `to` (the interval's first
+and last `ust_id`) in its `checkpoint` value. The verifier computes `G` deterministically from `(from, to,
+cadence)` at the precision the cadence implies (a multiple of 3600 s ⇒ hour, of 60 s ⇒ minute, else second) and
+requires every `g ∈ G` be covered by a frame or a gap. **Subtype discipline (C2) — a checkpoint and a gap are
+DISTINCT, not a shape coincidence:** a `class:"attestation"` with empty/absent `constituents` MUST carry
+`provenance.prev`, MUST NOT carry `root`, and MUST carry EXACTLY ONE of a `checkpoint` data partition (⇒ a
+checkpoint) or a `gap` data partition (⇒ a gap record) — never both, never neither (⇒ E-MALFORMED). A
+constituents-bearing attestation is the `set` subtype (Merkle `root` REQUIRED). This closes the prior ambiguity
+where a checkpoint rode the gap exception. Because the cadence is SIGNED in the genesis and not a
+per-checkpoint choice, a publisher cannot claim a coarser grid to hide an omitted slot: a coarser cadence is a
+different (forked or supersession-visible) genesis, not a free checkpoint field.
 
 **Cross-tier & resumption (P6).** Each declared tier `(domain_shard, tier)` has its own `prev` stream; the
 SET of tiers a publisher runs is declared in the profile, so a silently-absent tier is detectable against the
@@ -1051,6 +1065,8 @@ Independent re-implementation is expected; the vectors make "verify without trus
 ## 17. Registries
 
 - **class:** `observation`, `attestation`, `derivation`, `genesis` (name-binding root, §12.1), `key` (key-log entry, §12.2). (Extensible by future 1.x; unknown ⇒ E-MALFORMED.)
+- **attestation subtype (§11.3 C2):** `set` (constituents + Merkle `root`) · `checkpoint` (prev + a `checkpoint` data partition `{head, frame_count, from?, to?}`, no constituents/root) · `gap` (prev + a `gap` data partition, no constituents/root). A prev-only attestation MUST carry EXACTLY ONE of `checkpoint`/`gap` (never both/neither ⇒ E-MALFORMED) — the subtype is the named data partition, not a shape.
+- **genesis value (§12.1):** `pub`, `role:"name-binding-root"`, optional `max_partitions`, `max_transcript_bytes`, and `cadence` (string integer seconds — the SIGNED stream cadence that fixes the completeness grid, §11.3; resolved, never a per-checkpoint choice).
 - **key-log entry** (a `class:"key"` transcript, §12.2): `state.data.key_op.value` keys `op,pub,reason,compromised_since`; `op` ∈ `add|rotate|revoke`;
   `reason` ∈ `retired|compromised`. `key_id` = `H("ust:keylog", pub_raw)` (raw public-key octets, domain-separated §7 — not plain SHA256(pub)).
 - **anchor substrate (operator choice, extensible):** an entry defines the substrate's `Locator` evidence
@@ -1449,6 +1465,19 @@ provenance and will be lifted into this ledger when the spec is published.
   strong words are EARNED by bringing the missing non-membership coordinate into the information set, not
   weakened. Reference verifier updated (served-list → corroborated; verifyStream → chain-consistent); the map +
   signed-cadence mechanisms that RE-EARN `authoritative`/`complete` are the coordinated next step.
+- **REV 31 (2026-07-13)** — #70 RE-EARNS `complete` (the C half of #69) STRUCTURALLY, reusing structure UST
+  already commits — no new document shape. The **cadence** becomes a SIGNED parameter in the genesis value
+  (`genesis.value.cadence`, seconds); the **checkpoint** commits interval bounds `(from, to)` in its existing
+  value; the verifier computes the expected grid `G` from `(from, to, cadence)` deterministically (the `ust_id`
+  IS the time coordinate) and requires every slot `g ∈ G` be a frame OR a signed gap record → `complete`; any
+  hole → `chain-consistent`, naming the hole. Because the cadence is SIGNED (not a per-checkpoint choice) a
+  publisher cannot claim a coarser grid to hide an omitted slot. **C2** splits the checkpoint/gap collision: a
+  prev-only `class:"attestation"` MUST carry EXACTLY ONE of a `checkpoint` or a `gap` data partition (the
+  subtype is the named partition, not a shape) — `set`/`checkpoint`/`gap` are registered subtypes (§17). Time-
+  varying cadence (a cadence-log superseding the genesis value like a key rotation) is the natural extension;
+  the constant genesis cadence is the base case. Live-proven with synthetic vectors: full grid → complete,
+  omission → chain-consistent (hole named), omission+gap → complete, no-cadence → chain-consistent. The name-map
+  that re-earns `authoritative` (#42) is demoted to vNext (decentralization axis, not the enterprise-trust axis).
 
 **Design principle throughout:** every normative clause answers "mechanism (protocol) or operator
 instantiation (profile)?"; operator specifics (substrate, partition schema, completeness, cadence) live in the

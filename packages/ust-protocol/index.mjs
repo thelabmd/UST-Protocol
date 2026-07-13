@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.19' };
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.20' };
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -132,16 +132,19 @@ export const buildAttestation = (id, time, data, constituents, prev) =>         
   buildState({ ...id, class: 'attestation' }, time, data, { constituents, root: merkleRoot(constituents), ...(prev !== undefined ? { prev } : {}) });
 export const buildDerivation = (id, time, data, basedOn, prev) =>                  // §9.3/§9.4 based_on + seed
   buildState({ ...id, class: 'derivation' }, time, data, { based_on: basedOn, seed: seed(basedOn.map(b => b.hash)), ...(prev !== undefined ? { prev } : {}) });
-export const buildGenesis = (id, time, pub, maxPartitions, maxTranscriptBytes) =>  // §12.1 self-signed name-binding root
+export const buildGenesis = (id, time, pub, maxPartitions, maxTranscriptBytes, cadence) =>  // §12.1 self-signed name-binding root
   buildState({ ...id, class: 'genesis' }, time, { genesis: { kind: 'captured', value: {
     pub, role: 'name-binding-root',
     ...(maxPartitions !== undefined ? { max_partitions: String(maxPartitions) } : {}),           // §13 ladder (≠ ceiling; ABS 4096)
     ...(maxTranscriptBytes !== undefined ? { max_transcript_bytes: String(maxTranscriptBytes) } : {}), // §13 ladder (≠ ceiling; ABS 64 MiB)
+    ...(cadence !== undefined ? { cadence: String(cadence) } : {}),                               // §11.3 C — SIGNED cadence (sec) → the expected grid; resolved not free-chosen (#69 C)
   } } });
 export const buildKeyLogEntry = (id, time, keyOp, prev) =>                         // §12.2 add|rotate|revoke
   buildState({ ...id, class: 'key' }, time, { key_op: { kind: 'captured', value: keyOp } }, { prev });
-export const buildCheckpoint = (id, time, head, frameCount, prev) =>              // §11.3 M5
-  buildState({ ...id, class: 'attestation' }, time, { checkpoint: { kind: 'computed', value: { head, frame_count: String(frameCount) } } }, { prev });
+export const buildCheckpoint = (id, time, head, frameCount, prev, interval) =>   // §11.3 M5 (interval = {from,to} for completeness, #69 C)
+  buildState({ ...id, class: 'attestation' }, time, { checkpoint: { kind: 'computed', value: { head, frame_count: String(frameCount), ...(interval ? { from: interval.from, to: interval.to } : {}) } } }, { prev });
+export const buildGap = (id, time, prev, reason) =>                               // §11.3 C2 — a signed gap record: this slot (id.ust_id) is HONESTLY absent
+  buildState({ ...id, class: 'attestation' }, time, { gap: { kind: 'computed', value: { reason: reason || 'no-frame' } } }, { prev });
 
 // ─── reserved-key sets (§3/§4.2/§17) ─────────────────────────────────────────────────────────────────
 const RESERVED = { transcript: ['ust','state','sig','proof'], state: ['id','time','data','hashes','provenance'],
@@ -301,8 +304,18 @@ export function verify(doc, opts = {}) {
     if (st.id.class === 'observation' && (pr?.constituents !== undefined || pr?.root !== undefined)) return bad('E-MALFORMED', 'observation MUST NOT carry constituents/root');
     if (st.id.class === 'derivation' && (pr?.based_on === undefined || pr?.seed === undefined)) return bad('E-MALFORMED', 'derivation MUST carry based_on + seed');
     if (st.id.class === 'attestation') {
-      const isGap = pr?.prev !== undefined && (pr?.constituents === undefined || pr.constituents.length === 0);
-      if (!isGap && (pr?.constituents === undefined || pr?.root === undefined)) return bad('E-MALFORMED', 'attestation MUST carry constituents + root (unless a signed gap record)');
+      // #69 C2 — an empty-constituents attestation used to be a bare shape (prev + no constituents), which
+      // COLLIDED a checkpoint with a gap record (same shape, different meaning). The subtype is now EXPLICIT via
+      // a required, named data partition (UST idiom: the partition name IS the typed content): a `set` attestation
+      // carries constituents + root; a prev-only attestation MUST be EITHER a `checkpoint` (data.checkpoint) OR a
+      // `gap` (data.gap) — never neither, never both, never with a root.
+      const empty = pr?.constituents === undefined || pr.constituents.length === 0;
+      if (empty) {
+        if (pr?.prev === undefined) return bad('E-MALFORMED', 'a no-constituents attestation MUST carry provenance.prev (checkpoint or gap, §11.3)');
+        if (pr?.root !== undefined) return bad('E-MALFORMED', 'a checkpoint/gap attestation MUST NOT carry a root');
+        const hasCp = st.data?.checkpoint !== undefined, hasGap = st.data?.gap !== undefined;
+        if (hasCp === hasGap) return bad('E-MALFORMED', 'a prev-only attestation MUST be a checkpoint (data.checkpoint) XOR a gap (data.gap) — the §11.3 subtype, never both/neither');
+      } else if (pr?.root === undefined) return bad('E-MALFORMED', 'a set attestation MUST carry constituents + root');
     }
     // W3 class-context: a data verify must not accept a key-log/genesis transcript as data
     if (opts.context === 'data' && (st.id.class === 'key' || st.id.class === 'genesis')) return bad('E-MALFORMED', 'class ' + st.id.class + ' not valid in data context (W3)');
@@ -545,6 +558,29 @@ export async function verifyAsync(doc, opts = {}) {
   return verify(doc, { ...opts, substrateVerify: () => receipt });   // receipt (or null) → sync verifyAnchor path
 }
 
+// ─── #69 C — the EXPECTED GRID. `ust_id` IS the time coordinate, so the slots a cadence implies over an
+// interval are COMPUTED, not stored: parse `ust:YYYYMMDD.HH[MM[SS]]` ↔ UTC epoch, step by the cadence. The
+// grid's precision follows the cadence (a multiple of 3600 → hour, of 60 → minute, else second).
+function ustToEpoch(ustId) {
+  const m = /^ust:(\d{4})(\d{2})(\d{2})\.(\d{2})(\d{2})?(\d{2})?$/.exec(ustId || '');
+  return m ? Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +(m[5] || 0), +(m[6] || 0)) / 1000 : null;
+}
+function epochToUst(epoch, prec) {
+  const d = new Date(epoch * 1000), p = (n) => String(n).padStart(2, '0');
+  let s = `ust:${d.getUTCFullYear()}${p(d.getUTCMonth() + 1)}${p(d.getUTCDate())}.${p(d.getUTCHours())}`;
+  if (prec !== 'hour') s += p(d.getUTCMinutes());
+  if (prec === 'second') s += p(d.getUTCSeconds());
+  return s;
+}
+export function ustGrid(from, to, cadenceSec) {
+  const e0 = ustToEpoch(from), e1 = ustToEpoch(to);
+  if (e0 === null || e1 === null || !(cadenceSec > 0) || e1 < e0) return null;
+  const prec = cadenceSec % 3600 === 0 ? 'hour' : cadenceSec % 60 === 0 ? 'minute' : 'second';
+  const grid = [];
+  for (let e = e0; e <= e1; e += cadenceSec) { grid.push(epochToUst(e, prec)); if (grid.length > 200000) return null; }  // bound (§13 discipline)
+  return grid;
+}
+
 // ─── TOP §11.3 completeness: a sequenced stream is prev-chained; first frame's prev = genesis content_hash
 //     (M4); per-frame validity is verified too (X2 — completeness ≠ validity); duplicate ust_id / shared prev
 //     = a fork ⇒ E-PREV (Y1). A covering checkpoint (M5) proves 'chain-consistent' (no-deletion); the open tail
@@ -579,7 +615,25 @@ export function verifyStream(frames, { genesis, checkpoint, requirePerFrameValid
     const a = checkpoint.state.data.checkpoint?.value;
     if (!a || a.head !== prevHash || String(a.frame_count) !== String(frames.length))
       return { error: 'E-PREV', detail: 'checkpoint contradicts observed set (M5)' };
-    return { complete: 'chain-consistent', head: prevHash };
+    // #69 C — no-deletion is proven. no-OMISSION is decidable ONLY against the EXPECTED GRID, which needs the
+    // operator's SIGNED cadence (from the genesis value, resolved — NOT a free per-checkpoint choice) AND the
+    // checkpoint's interval bounds. With both, enumerate the grid and require every slot be a frame OR a signed
+    // gap record (§11.3 C2). Every slot covered ⇒ `complete`; any hole ⇒ `chain-consistent` (honest ceiling).
+    const cadence = Number(genesis.state?.data?.genesis?.value?.cadence);
+    if (cadence > 0 && a.from !== undefined && a.to !== undefined) {
+      const grid = ustGrid(a.from, a.to, cadence);
+      if (grid) {
+        const covered = new Set();
+        for (const f of frames) {
+          const c = f.state.id.class;
+          if (c === 'observation' || c === 'derivation' || (c === 'attestation' && f.state.data?.gap !== undefined)) covered.add(f.state.id.ust_id);
+        }
+        const hole = grid.find((g) => !covered.has(g));
+        if (hole) return { complete: 'chain-consistent', head: prevHash, hole, detail: 'grid slot ' + hole + ' has no frame and no signed gap — chain intact, not complete (§11.3 C)' };
+        return { complete: 'complete', head: prevHash, cadence: String(cadence), grid_slots: String(grid.length) };
+      }
+    }
+    return { complete: 'chain-consistent', head: prevHash };           // no signed cadence + interval → no-deletion ceiling
   }
   return { complete: 'provisional', head: prevHash };                  // no checkpoint → open tail (P5)
 }
