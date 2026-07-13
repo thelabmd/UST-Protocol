@@ -1,6 +1,6 @@
 {
   "name": "@ust-protocol/cli",
-  "version": "1.0.0-rc.26",
+  "version": "1.0.0-rc.27",
   "description": "The reference `ust` CLI for UST (Universal State Transcript) 1.0 — verify a transcript, print canonical bytes for cross-language diffing, and run the HIGH genesis ceremony. One entrypoint; the Go binary reproduces this surface.",
   "author": "THE LAB (https://thelab.md)",
   "type": "module",
@@ -24,7 +24,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "@ust-protocol/rekor-verify": "file:../ust-rekor-verify",
+    "@ust-protocol/rekor-verify": "^1.0.0-rc.2",
     "@ust-protocol/web-signer": "^1.0.0-rc.3",
     "ust-protocol": "^1.0.0-rc.16"
   },

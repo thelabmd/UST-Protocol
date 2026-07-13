@@ -12,8 +12,9 @@ npx @ust-protocol/cli verify doc.json    # or one-shot, no install
 
 | command | what it does |
 |---|---|
-| `ust verify <file\|->` | verify a transcript (blob / base64 / json). exit 0 = VALID, 1 = not |
-| `ust verify <doc> --genesis <f> --keylog <f,f…> [--no-fork-confirmed]` | resolve the trust chain → **VALID:HIGH** (name becomes authoritative) |
+| `ust verify <file\|->` | verify a transcript (blob / base64 / json). exit 0 = VALID, 1 = not. Auto-resolves the publisher's discovery + witness surfaces and cross-checks witness anchors (Rekor/Bitcoin) → **VALID:HIGH out of the box** when the no-fork evidence confirms |
+| `ust verify <doc> --genesis <f> --keylog <f,f…> [--no-fork-confirmed]` | the OFFLINE road: supply the trust chain yourself; `--no-fork-confirmed` is your air-gap assertion → **VALID:HIGH** |
+| `ust witness rekor --domain <d> [--deploy]` | log the genesis to Sigstore Rekor (a fast, independent witness substrate) and, with `--deploy`, serve/refresh `/.well-known/ust-witness` |
 | `ust canon <file\|->` | print canonical bytes + hash — diff any other-language implementation against this |
 | `ust genesis --domain <d>` | run the HIGH genesis ceremony (interactive; see the road below) |
 | `ust discovery <domain> [--mirror url,url] [--expect sha256:…]` | attest the §20.1 serving contract on ANY infrastructure |
@@ -31,7 +32,11 @@ TOP    — + anchored time: each document provably EXISTED by a real moment (e.g
 
 **Completeness is a separate RANGE verdict** (`ust stream` over frames + a covering checkpoint) — `VALID:TOP` speaks about a document's anchored time, never about a stream being complete.
 
-A lone document can only ever prove LIGHT — that is the **expected** result for a fresh `ust-genesis` file. HIGH is a property of *resolution*, not of the file:
+HIGH is a property of *resolution*, not of the file — and resolution is the DEFAULT: a bare
+`ust verify slot.json` fetches the publisher's `/.well-known/ust-genesis`, `ust-keylog` and `ust-witness`,
+cross-checks the witness anchors against their substrate (Bitcoin via `@ust-protocol/ots-verify`, Rekor via
+`@ust-protocol/rekor-verify` — both auto-detected when installed), and grants HIGH only on POSITIVE no-fork
+evidence. Air-gapped, supply the chain yourself:
 
 ```bash
 ust verify slot.json --genesis ust-genesis --keylog ust-keylog-0 --no-fork-confirmed
@@ -45,7 +50,8 @@ ust verify slot.json --genesis ust-genesis --keylog ust-keylog-0 --no-fork-confi
   3/5 🌐 DNS binding       _ust.<domain> TXT carries the genesis hash — tamper-evident, outside HTTP
   4/5 📡 serving + gate    https://<domain>/.well-known/ust-genesis serves EXACTLY these bytes
                            (checked fail-closed, with propagation retries)
-  5/5 ⚓ witness / anchor  PREPARED for HIGH / TOP — the operator runs these; the CLI never claims them
+  5/5 ⚓ witness / anchor  PREPARED at ceremony time — executed for real by `ust witness rekor`
+                           (+ your Bitcoin/OTS stamp); the CLI never claims a stage it did not run
 ```
 
 The ceremony is **interactive**: it prints this map at every step, explains each human moment (what the passphrase protects, what each file is), and ends with a summary — identity, custody table, tier ladder, next moves.
@@ -78,7 +84,7 @@ The serving contract is infrastructure-agnostic (properties, not vendors). The c
 | `silver` | software | **passphrase-encrypted** (the standard operator ceremony) |
 | `gold` | **hardware** (pkcs11 / air-gapped) | — this CLI cannot drive a hardware signer yet and **refuses honestly** instead of pretending; a silver root upgrades to hardware later via a §12.1 supersession |
 
-Other flags: `--max-partitions N` (signed capacity — bounds earned by ceremony) · `--witness url,url` (prepared, never executed). Every option is also asked interactively — flags only preselect.
+Other flags: `--max-partitions N` (signed capacity — bounds earned by ceremony) · `--witness url,url` (prepared at ceremony; execute later with `ust witness rekor`). Every option is also asked interactively — flags only preselect.
 
 ## `ust discovery` — attest any stack
 

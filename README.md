@@ -3,9 +3,9 @@
 
 **Verify machine-readable state without trusting whoever handed it to you.**
 
-> **Status: `1.0.0-rc.6` — a RELEASE CANDIDATE, not a final 1.0.** Five external AI reviews are folded in; an
-> independent human cryptographic audit is pending. Suitable for evaluation and integration testing. Pin exact
-> versions. The wire format `ust: "1.0"` is stable across rc's.
+> **Status: `1.0.0-rc.17` — a RELEASE CANDIDATE, not a final 1.0.** Multiple external AI reviews are folded in
+> structurally; an independent human cryptographic audit is pending. Suitable for evaluation and integration
+> testing. Pin exact versions. The wire format `ust: "1.0"` is stable across rc's.
 
 ## What this is
 
@@ -28,7 +28,7 @@ Trust is **graduated, and the verdict carries its tier** — a conforming verifi
 | verdict | what is proven |
 |---|---|
 | `VALID:LIGHT` | the exact bytes · the signing key · the claimed time frame. Identity is the key itself (a self-certifying `sha256:` shard) or a *claimed* name — never a verified name. |
-| `VALID:HIGH` | + the publisher's **name** is provably bound to the key (genesis + key log + no-fork witness) |
+| `VALID:HIGH` | + the publisher's **name** is provably bound to the key (genesis + key log + no-fork witness). When the publisher serves the standard discovery + witness surfaces (§20.1/§12.1a), the reference verifiers collect this evidence **automatically** — HIGH is the zero-step default, not an expert dance. |
 | `VALID:TOP` | + the document provably existed **by** a point in real time (anchor inclusion, e.g. Bitcoin/OTS). Stream *completeness* is a separate **range** verdict (`verifyStream`). |
 | `INVALID` | a definite, deterministic failure (specific `E-*` codes) |
 | `INDETERMINATE` | a dependency was unreachable, or an optional algorithm is unimplemented — *cannot decide* is never conflated with *forged* |
@@ -108,7 +108,9 @@ proves the document existed **by** a real point in time (and `generated_at` may 
 | `packages/ust-protocol/` | the stateless reference verifier + producer ([npm](https://www.npmjs.com/package/ust-protocol)) |
 | `packages/ust-mcp/` | an MCP server exposing UST to agents ([npm](https://www.npmjs.com/package/@ust-protocol/mcp)) |
 | `packages/ust-web-signer/` | WebCrypto browser signer ([npm](https://www.npmjs.com/package/@ust-protocol/web-signer)) |
-| `packages/ust-cli/` | the `ust` command — verify / canon / the HIGH genesis ceremony ([npm](https://www.npmjs.com/package/@ust-protocol/cli)) |
+| `packages/ust-cli/` | the `ust` command — verify / canon / the HIGH genesis ceremony / witness ([npm](https://www.npmjs.com/package/@ust-protocol/cli)) |
+| `packages/ust-ots-verify/` | opt-in Bitcoin (OpenTimestamps) anchor-substrate plugin ([npm](https://www.npmjs.com/package/@ust-protocol/ots-verify)) |
+| `packages/ust-rekor-verify/` | opt-in Sigstore Rekor anchor-substrate plugin ([npm](https://www.npmjs.com/package/@ust-protocol/rekor-verify)) |
 | `extension/` | "Make it UST" — a demo Chrome extension: sign by selection, verify by selection (LIGHT) |
 | `docs/` | the [web verifier](https://thelabmd.github.io/UST-Protocol/) (client-side, GitHub Pages) + `ust-verify.mjs`, a zero-dependency verifier + `llms.txt` |
 | `examples/` | sample documents (valid + tampered) and verification recipes |
@@ -117,7 +119,7 @@ proves the document existed **by** a real point in time (and `generated_at` may 
 
 ```
 npm install
-npm test          # the conformance runner: 72 checks; asserts spec == package == vectors version
+npm test          # the conformance runner: 130 checks; asserts spec == package == vectors version
 ```
 
 Produce and verify a LIGHT transcript:
@@ -136,21 +138,24 @@ console.log(verify(doc, { context: 'data' }).result);          // → VALID:LIGH
 ```bash
 npm i -g @ust-protocol/cli    # installs the `ust` command
 ust verify doc.json           # exit 0 = VALID (tier in the verdict), 1 = not; auto-detects genesis/key context
+                              #   auto-resolves discovery + witness → VALID:HIGH out of the box (no-fork as EVIDENCE)
 ust canon  doc.json           # canonical bytes + hash — diff any other-language implementation against this
 ust genesis --domain example.org --profile silver --dns cf-api   # the HIGH name-binding ceremony
+ust witness rekor --domain example.org --deploy                  # log the genesis to Sigstore Rekor + serve the witness
 ```
 
 One entrypoint; the planned Go binary reproduces this exact surface. The ceremony self-verifies its outputs
-(fail-closed), upserts the `_ust` DNS TXT with a DNS-over-HTTPS readback, and honestly labels the witness/anchor
-stage as PREPARED — the operator executes the exchange.
+(fail-closed) and upserts the `_ust` DNS TXT with a DNS-over-HTTPS readback. Witness anchors are cross-checked
+against their substrate (Bitcoin via `@ust-protocol/ots-verify`, Rekor via `@ust-protocol/rekor-verify` —
+opt-in plugins; the core verifier embeds no blockchain).
 
 ## How to verify a UST
 
 Run the canonical reference — never eyeball:
 
-- **Browser (nothing is uploaded):** [thelabmd.github.io/UST-Protocol](https://thelabmd.github.io/UST-Protocol/) — paste the blob, the base64, or the JSON.
-- **Node:** `npm i ust-protocol` → `verify(doc, { context: 'data' })`
-- **Zero-dependency single file:** [`docs/ust-verify.mjs`](docs/ust-verify.mjs) (WebCrypto, clean-room, cross-checked against `ust-protocol`) — fetch it from **this** repository, never from a sender's message.
+- **Browser (nothing is uploaded):** [thelabmd.github.io/UST-Protocol](https://thelabmd.github.io/UST-Protocol/) — paste the blob, the base64, or the JSON. Resolution + witness run automatically (Rekor and Bitcoin checked natively) — a publisher serving the standard surfaces reaches `VALID:HIGH` with zero clicks.
+- **Node:** `npm i ust-protocol` → `verify(doc, { context: 'data' })`; automatic HIGH via `resolveByDiscovery(doc)`.
+- **Zero-dependency single files:** [`docs/ust-verify.mjs`](docs/ust-verify.mjs) (the LIGHT floor) + [`docs/ust-resolve.mjs`](docs/ust-resolve.mjs) (authority resolution + witness) — WebCrypto, clean-room, cross-checked against `ust-protocol`; fetch them from **this** repository, never from a sender's message.
 - **MCP:** [`@ust-protocol/mcp`](https://www.npmjs.com/package/@ust-protocol/mcp) exposes `ust_verify` to agents.
 
 ### If you are an AI agent

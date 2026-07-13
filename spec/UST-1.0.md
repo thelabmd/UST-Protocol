@@ -3,7 +3,7 @@
 
 *This specification text is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](../LICENSE-SPEC). Reference code in this repository is licensed Apache-2.0. Use of the name **UST** / **Universal State Transcript** and the **UST-compatible** claim: see [TRADEMARK.md](../TRADEMARK.md).*
 
-> **Release candidate — `1.0.0-rc.16`.** This specification has been extensively red-teamed; an independent
+> **Release candidate — `1.0.0-rc.17`.** This specification has been extensively red-teamed; an independent
 > external cryptographic audit is pending. It is subject to change until `1.0.0` final (rc.2 folded in two external reviews — 6 impl findings + spec edge cases + removed domain-less `computed`; rc.3 aligned impl to §3.1 pinned + Y3; rc.4 closed a 4th external audit (ChatGPT 5.5 Max): key-binding by KEY not string, TOP needs a genesis origin, embedded proofs fail-closed, class↔schema enforced, canon strict on names too, raw-bytes verify boundary, ust_id valid frames, and REMOVED secret-url as a privacy mode; rc.6 closed a 5th external audit STRUCTURALLY — the §14a obligations table (every commitment-bearing member recomputed: +`E-SEED`), a typed identity namespace (dns-name | self-certifying key-id), real-calendar semantic consistency, document-tier vs range-completeness separation, MTI registry discipline, one version source; rc.7 explicit `completeness:not_evaluated`; rc.8 admissibility pins (duplicate refs, key-log
 ceiling, layer availability); rc.9 edge pass (full reserved-name registry, verified-node budget, strict-Z);
 rc.10 partition-capacity ladder (floor 64 / genesis-declared ≤ 4096); rc.11 SIZE ladder + VOLUME-vs-STRUCTURE
@@ -18,7 +18,7 @@ graduated tiers (LIGHT / HIGH / TOP, §3.1). Every mechanism below serves that s
 judged by ONE question — *how much trust does this actually earn, and does the protocol say so honestly?* A
 tier must never let a consumer read "signed" as "true," "anchored" as "correct," or "agreeing" as "independent."
 
-Status: **Normative specification — 1.0 REV 27 (2026-07-12).** The SECURELY-STRUCTURED (namespaced) base that
+Status: **Normative specification — 1.0 REV 28 (2026-07-13).** The SECURELY-STRUCTURED (namespaced) base that
 closed all red-team findings STRUCTURALLY (I3 collision unrepresentable, I1 whole-State signature by
 construction, no stored-hash footgun), with ALL v0.29 FEATURES merged IN (not a flat-wire revert): per-partition
 captured/computed hashing (cross-engine corroboration for computed parts), `parent_ust` (hour-close timing),
@@ -707,6 +707,48 @@ key near/after a recovery cannot be epoch-placed and is rejected at HIGH, fail-c
 boundary anchoring is EFFECTIVELY REQUIRED for HIGH validation.)** Anchor time/order is
 necessary but NOT sufficient for name authority; domain control is the arbiter.
 
+### 12.1a Witness log — the serving shape & the verifier auto-query (M2 made mechanical)
+
+§12.1 fixes the SEMANTICS (positive no-fork confirmation REQUIRED for `authoritative`; fork ⇒ E-GENESIS;
+unreachable ⇒ `unavailable`, W1). This section fixes the WIRE SHAPE a publisher serves and the QUERY a
+verifier runs, so no-fork stops being a manual assertion and becomes COLLECTED EVIDENCE — zero manual steps.
+
+**Serving shape.** A publisher claiming witness conformance serves, at
+`https://<domain_shard>/.well-known/ust-witness`:
+```
+WitnessLog := { "domain_shard": string,            // MUST equal the serving name
+                "active":       content_hash,      // the publisher's view of the current genesis
+                "genesis_log":  [ { "content_hash": content_hash,      // of a genesis transcript (§12.1)
+                                    ["superseded_by": content_hash,]   // §12.1 recovery/supersession
+                                    "anchors": [ AnchorProof, … ] } ] }
+```
+`AnchorProof` is EXACTLY the §11.2 shape (`{root, path, anchor}`, substrate per the §17 registry; for a
+single-genesis leaf, `root = H("ust:leaf", content_hash)` and `path = []`) — one verification path, no new
+mechanism. The log is APPEND-ONLY: an existing entry's `content_hash`/`anchors` bytes never mutate (anchors
+MAY be appended); supersession is expressed by ADDING `superseded_by` and a successor entry, never by removal.
+
+**The endpoint is an INDEX, never an authority.** Every anchor is cross-checked against its substrate's
+verification profile (§11.2 inclusion + §17 finality) — the substrate, not the endpoint, is the independent
+truth. A log therefore CANNOT forge no-fork: omitting a rival genesis that is anchored on a public substrate
+does not un-anchor it (the same claim ≠ proof rule as discovery mirrors, §20.1), and an unanchored entry
+carries no weight. Self-published-but-externally-anchored sits strictly between self-attestation (weaker) and
+an independent witness NETWORK (stronger; gossip/co-signed logs are an operator evolution, out of scope here).
+
+**Verifier auto-query (normative, fail-closed).** After resolving authority (§12.2 walk), a verifier
+collecting witness evidence MUST decide as follows. Let ACTIVE = entries without `superseded_by`; an entry
+is ANCHORED iff at least one of its anchors passes BOTH the §11.2 inclusion check AND its substrate's
+finality check (§17). A substrate the verifier does not implement contributes NOTHING (never a pass, never
+a failure — `INDETERMINATE(unsupported)` discipline, §17):
+- EXACTLY ONE anchored active entry, and it equals the resolved genesis ⇒ **positive no-fork confirmation**
+  (§12.1 M2 satisfied) — `authoritative` MAY be granted.
+- TWO OR MORE anchored active entries — or one that DIFFERS from the resolved genesis ⇒ a rival
+  name-binding root is visible ⇒ `conflict` ⇒ **E-GENESIS** (a failure, not unavailability).
+- ZERO anchored active entries (endpoint unreachable, log malformed, no anchor verifiable here) ⇒
+  `unavailable` ⇒ `authoritative` is DENIED and the LIGHT floor stands (INDETERMINATE discipline, §15) —
+  reported explicitly (e.g. "HIGH pending witness"), NEVER silently dropped, NEVER guessed (W1).
+An explicit out-of-band caller assertion of no-fork MAY substitute for the query (air-gapped verification);
+it MUST be reported as caller-asserted, distinguishable from collected evidence.
+
 ### 12.2 Key log — a genesis-rooted, self-signed chain (M1)
 - A publisher's key log is a **sequenced stream (§11.3) of UST transcripts** — the SAME `{ust, state, sig,
   proof}` shape as any document (nothing changes across tier OR role, §16). Each entry is a transcript with
@@ -1036,6 +1078,11 @@ canon/DoS) are closed at LIGHT; NAME-impersonation and time attacks are closed a
 - **18.18 Commit-namespace overload (N7)** → commitment under `privacy`, data is purely partitions (I3).
 - **18.19 Resolution DoS (N8)** → §13 key-log walk bound + inclusion proof removes anchor lookup; fail-closed.
 - **18.20 Future/back-dated signed timing (N9)** → §11 timing is asserted; anchor is the only bound; `generated_at ≤ anchor`.
+- **18.21 Discovery-driven SSRF (untrusted `domain_shard` steers the verifier's fetch)** → a resolver that
+  auto-fetches discovery/witness surfaces (§12.1a/§20.1) takes its fetch TARGET from an attacker-suppliable
+  document. Before ANY discovery egress it MUST admit only public DNS names: reject IP literals,
+  localhost/reserved suffixes (`.local`, `.internal`, `.onion`, …), ports and paths — refusing to fetch
+  (⇒ `unavailable`), never fetching. An offline mode MUST disable discovery egress entirely.
 
 **Residual & honest limitations (explicitly stated, not hidden):**
 - **Data ground-truth & Sybil (Y2)** — a source may lie faithfully; mitigated SOCIALLY by NON-COLLUDING,
@@ -1133,6 +1180,14 @@ is explicitly outside the §18 threat model; THIS is where it is addressed, oper
 2. **DNS** — `_ust.<domain_shard>` TXT `ust-genesis=<content_hash>`: the standard record name and format.
    Under DNSSEC this record IS the §12.1-1 name-binding root; WITHOUT DNSSEC it is tamper-evident
    corroboration and mirror resolution ONLY — plain DNS proves nothing to a verifier (I7).
+
+**Companion surfaces (same host, same contract):** a publisher offering out-of-the-box HIGH SHOULD also
+serve `/.well-known/ust-keylog` — the §12.2 key log as a JSON array of its entry transcripts, in chain
+order — and `/.well-known/ust-witness` — the §12.1a witness log. Both are APPEND-ONLY (existing entries
+byte-stable; new entries/anchors appended); the genesis alone is fully immutable. Neither surface is a
+verification input by itself: the key log re-verifies per §12.2 (every entry is a signed transcript) and
+the witness log is an index whose anchors are substrate-checked (§12.1a) — a poisoned surface can deny
+availability, never forge authority. The serving properties below apply to all three HTTPS surfaces.
 
 **Serving properties — a publisher claiming discovery conformance MUST hold all four. Each is a PROPERTY;
 the mechanism is the publisher's choice:**
@@ -1324,6 +1379,17 @@ provenance and will be lifted into this ledger when the spec is published.
   tooling performs. Driven by a live outage: a billing-suspended front-end host took the reference operator's
   discovery surface down while the notary path stayed healthy — the serving layer must never be a
   single-vendor dependency.
+- **REV 28 (2026-07-13)** — the witness made MECHANICAL (§12.1a): a normative serving shape
+  (`/.well-known/ust-witness`, an append-only genesis log whose entries carry §11.2 `AnchorProof`s — one
+  verification path, no new mechanism) plus the verifier auto-query (exactly-one anchored active genesis ⇒
+  positive no-fork confirmation; two, or a differing one ⇒ E-GENESIS; zero verifiable ⇒ `unavailable`,
+  authoritative DENIED, W1) — no-fork becomes COLLECTED EVIDENCE and HIGH the honest zero-step default.
+  The endpoint is an INDEX, never an authority: anchors are substrate-checked (§17 — `rekor` registered
+  alongside `bitcoin-ots`; a verifier composes substrate plugins, unknown ⇒ INDETERMINATE(unsupported)).
+  §20.1 gains the companion serving surfaces (`ust-keylog`, `ust-witness`, append-only). §18.21 names the
+  discovery-driven SSRF threat: an auto-fetching resolver MUST admit only public DNS names before egress.
+  Shipped and live-proven across all three reference surfaces (CLI, MCP, web) against the reference
+  operator before this REV was written — spec text follows running code, not the reverse.
 
 **Design principle throughout:** every normative clause answers "mechanism (protocol) or operator
 instantiation (profile)?"; operator specifics (substrate, partition schema, completeness, cadence) live in the

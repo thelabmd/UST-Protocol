@@ -26,6 +26,11 @@
   the key IS the identity). HIGH adds verified name authority. TOP adds an external anchor (un-backdatable time).
   LIGHT does NOT prove who the publisher is or where the bytes came from; a `Source:` line in a transport
   preamble is the sender's unverified claim, outside the signature.
+- HIGH is automatic when the publisher serves the standard surfaces: the reference verifiers (npm, MCP, web,
+  CLI) fetch `/.well-known/ust-genesis` + `ust-keylog` + `ust-witness` from the claimed name, resolve the key
+  chain, and cross-check the witness anchors against their substrate (Sigstore Rekor / Bitcoin). HIGH is
+  granted ONLY on positive no-fork evidence — one anchored active genesis; a rival anchored genesis is
+  INVALID (E-GENESIS); an unreachable witness leaves the document at LIGHT (never a silent upgrade).
 
 ## Transport format
 
@@ -42,6 +47,9 @@ paste channels that normalize whitespace/unicode). Decode the base64 to JSON, th
 - Reference verifier + producer (Apache-2.0): https://www.npmjs.com/package/ust-protocol
 - Browser signer (WebCrypto): https://www.npmjs.com/package/@ust-protocol/web-signer
 - MCP server for agents: https://www.npmjs.com/package/@ust-protocol/mcp
+- CLI (`ust` — verify / ceremony / witness): https://www.npmjs.com/package/@ust-protocol/cli
+- Anchor-substrate plugins (opt-in): https://www.npmjs.com/package/@ust-protocol/ots-verify (Bitcoin/OTS),
+  https://www.npmjs.com/package/@ust-protocol/rekor-verify (Sigstore Rekor)
 - Conformance vectors: https://github.com/thelabmd/UST-Protocol/tree/main/vectors
 - Examples (valid + tampered + recipes): https://github.com/thelabmd/UST-Protocol/tree/main/examples
 - Trademark / naming: https://github.com/thelabmd/UST-Protocol/blob/main/TRADEMARK.md

@@ -11,9 +11,9 @@ travels *with* the data.
 verification, privacy commitments, chains, and anchoring. Zero-dependency (`node:crypto`; a WebCrypto/`@noble`
 adapter for browsers and Workers — same rules, same results).
 
-> **Release candidate.** The specification is at `1.0.0-rc.6`; this package pins its own rc on npm. Extensively
-> red-teamed; five external AI reviews folded in; an independent human cryptographic audit is pending. Suitable
-> for evaluation and integration testing. Pin exact versions.
+> **Release candidate.** The specification is at `1.0.0-rc.17`; this package pins its own rc on npm. Extensively
+> red-teamed; multiple external AI reviews folded in structurally; an independent human cryptographic audit is
+> pending. Suitable for evaluation and integration testing. Pin exact versions.
 
 ## Install
 
@@ -58,6 +58,33 @@ verify(doc, { genesis, keylog, noForkConfirmed: true, requireAuthoritative: true
 import { verifyAnchor } from 'ust-protocol';
 verifyAnchor(content_hash, proof);
 ```
+
+## Automatic HIGH — resolution + witness (the document brings its own name)
+
+A document carries its own `domain_shard`. `resolveByDiscovery` fetches that publisher's discovery pair
+(`/.well-known/ust-genesis` + `ust-keylog`) and its **witness** (`/.well-known/ust-witness`), resolves the
+chain, and re-verifies with the capacity grant — so **HIGH is automatic**, not an expert dance:
+
+```js
+import { resolveByDiscovery, combineSubstrates } from 'ust-protocol';
+import { substrateVerify as ots }   from '@ust-protocol/ots-verify';    // Bitcoin (opt-in)
+import { substrateVerify as rekor } from '@ust-protocol/rekor-verify';  // Sigstore Rekor (opt-in)
+
+const { verdict, resolution } = await resolveByDiscovery(doc, { context: 'data' },
+  { substrateVerify: combineSubstrates([ots, rekor]) });
+// verdict.result === 'VALID:HIGH' when the witness confirms no-fork (one anchored active genesis);
+// resolution.noFork = 'witness-confirmed' | 'HIGH pending' | 'unconfirmed'.  offline:true forbids the network.
+```
+
+- **no-fork is EVIDENCE, not a flag** (§12.1): the witness anchor is cross-checked against its substrate
+  (Bitcoin via `@ust-protocol/ots-verify`, Rekor via `@ust-protocol/rekor-verify`) — the endpoint is only an
+  index, the anchor is the independent truth. Two anchored genesis roots ⇒ `E-GENESIS` (fork).
+- **the verifier embeds no blockchain.** Substrate checks are an *injection* (`combineSubstrates` routes by
+  substrate; an unknown one ⇒ `INDETERMINATE`, never a faked HIGH). Zero-dep core stays portable.
+- **SSRF-guarded**: `isPublicDnsShard` runs before any discovery fetch — an untrusted document cannot point
+  the verifier at an internal address.
+- untrusted bytes go through `verifyJson(raw)` (duplicate-key + admission checks *before* parse), never
+  `JSON.parse` → `verify`.
 
 ## Create
 
