@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.17' };
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.18' };
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -118,12 +118,13 @@ export function buildState(id, time, data, provenance, opts) {
       : partitionHash({ domain_shard: id.domain_shard, ust_id: id.ust_id, name, value: part.value });
   const state = { id, time, data, hashes };
   if (provenance) state.provenance = provenance;
-  // ACCURATE size guard (rc.12, P1-6): measured on the FULL canonical state — the hashes map alone
-  // adds ~90 B × partitions (≈370 KB at 4096) that the old {id,time,data}+512 estimate missed.
-  const stBytes = Buffer.byteLength(canon({ ust: '1.0', state }), 'utf8') + 300; // + sig envelope pad
+  // #69 E2 — the EXACT normative metric: UTF-8 bytes of the signed content canon({ust, state}). The sig is
+  // NOT signed content, so no envelope pad (the old +300 over-counted → false rejects near the limit). This
+  // is byte-identical to what seal()'s final ABS guard and the verifier's checkBounds measure — one metric.
+  const stBytes = Buffer.byteLength(signedContent({ ust: '1.0', state }), 'utf8');
   const capB = Math.min(Number(opts?.maxTranscriptBytes ?? BOUNDS.floorSizeBytes), BOUNDS.sizeBytes);
   if (stBytes > capB) throw Object.assign(
-    new Error(`E-BOUNDS: canonical state ~${stBytes} B > ${capB} — declare {maxTranscriptBytes} matching your genesis max_transcript_bytes (§12.1; ABS ${BOUNDS.sizeBytes})`),
+    new Error(`E-BOUNDS: signed content ${stBytes} B > ${capB} — declare {maxTranscriptBytes} matching your genesis max_transcript_bytes (§12.1; ABS ${BOUNDS.sizeBytes})`),
     { code: 'E-BOUNDS' });
   return state;
 }
@@ -177,7 +178,11 @@ const KEYID_FORM = /^sha256:[0-9a-f]{64}$/;
 // ─── §13 structural bounds — hard ceilings; exceed ⇒ E-BOUNDS ─────────────────────────────────────────
 const BOUNDS = { depth: 8, array: 4096, partitions: 4096, floorPartitions: 64, breadth: 64, sizeBytes: 67108864, floorSizeBytes: 1048576 };
 export function checkBounds(doc) {
-  if (Buffer.byteLength(JSON.stringify(doc), 'utf8') > BOUNDS.sizeBytes) return 'size > 64 MiB';
+  // #69 E3 — the normative VOLUME metric is the signed content canon({ust, state}), NOT the transport object:
+  // sig/proof are bounded by transport admission (verifyJson maxInputBytes), never by the signed-content ABS.
+  // Counting a large anchor proof here would falsely reject a valid signed content near 64 MiB.
+  let signedBytes; try { signedBytes = Buffer.byteLength(signedContent(doc), 'utf8'); } catch { signedBytes = Buffer.byteLength(JSON.stringify(doc), 'utf8'); }
+  if (signedBytes > BOUNDS.sizeBytes) return 'signed content > 64 MiB';
   if (doc.state?.data && Object.keys(doc.state.data).length > BOUNDS.partitions) return 'partitions > 4096';
   let bad = null;
   (function walk(v, d) {
@@ -512,9 +517,23 @@ export function verifyAnchor(contentHash, proof, opts = {}) {
   if (!inclusion) return { inclusion: false, time: 'unproven', status: 'verified', detail: 'inclusion path does not reach root' };
   if (!opts.substrateVerify) return { inclusion: true, time: 'unproven', status: 'unavailable', detail: 'inclusion OK; substrate not verified (caller job)' };
   const sub = opts.substrateVerify(proof.anchor, proof.root);          // → { final, time }
+  // #69 E1 — the official substrate plugins are ASYNC; a sync verify() cannot await one. Detect the thenable
+  // and say so HONESTLY (not a silent 'unproven') — the caller must use verifyAsync / resolveByDiscovery,
+  // which pre-resolve the substrate. Fail-safe either way: a Promise is never mistaken for a final anchor.
+  if (sub && typeof sub.then === 'function') return { inclusion: true, time: 'unproven', status: 'unavailable', detail: 'substrate check is ASYNC — use verifyAsync() or resolveByDiscovery() (they await it), not sync verify()' };
   if (!sub) return { inclusion: true, time: 'unproven', status: 'unavailable', detail: 'substrate unreachable' };
   if (!sub.final) return { inclusion: true, time: 'unproven', status: 'verified', detail: 'substrate not final (e.g. <6 conf)' };
   return { inclusion: true, time: 'anchored', status: 'verified', anchorTime: sub.time };
+}
+
+// #69 E1 — the ONE async entry: verify() is deliberately sync (portable, no await in the hot path), but the
+// official substrate plugins are async. verifyAsync pre-resolves a doc.proof's substrate ONCE (await), then
+// runs the sync verifier with the resolved receipt as a sync shim — so TOP is reachable with async plugins
+// through a single contract, and verify() never has to become async. Everything else is identical to verify().
+export async function verifyAsync(doc, opts = {}) {
+  if (!doc?.proof || !opts.substrateVerify || opts.offline) return verify(doc, opts);
+  let receipt; try { receipt = await opts.substrateVerify(doc.proof.anchor, doc.proof.root); } catch { receipt = null; }
+  return verify(doc, { ...opts, substrateVerify: () => receipt });   // receipt (or null) → sync verifyAnchor path
 }
 
 // ─── TOP §11.3 completeness: a sequenced stream is prev-chained; first frame's prev = genesis content_hash
@@ -659,15 +678,26 @@ export async function resolveByDiscovery(doc, opts = {}, { fetchImpl = fetch, su
     (base.result === 'VALID:LIGHT' || (base.result === 'INDETERMINATE' && base.reason === 'unavailable'));
   if (!worth) return { verdict: base, resolution: null };
   if (!isPublicDnsShard(shard)) return { verdict: base, resolution: { skipped: 'domain_shard is not a public DNS name — discovery refused (SSRF guard)' } };
-  let genesis, keylog = [], genesisHash;
+  let genesis, keylog = [], genesisHash, gRaw, kRaw;
   try {
     const get = async (p) => { const r = await fetchImpl(`https://${shard}${p}`, { signal: AbortSignal.timeout(10000), redirect: 'error' }); if (!r.ok) throw new Error(`HTTP ${r.status} at ${p}`); return r.text(); };
-    const gRaw = await get('/.well-known/ust-genesis');
-    const gv = verifyJson(gRaw, {});
-    if (!isValid(gv)) throw new Error('published genesis does not VERIFY');
-    genesis = JSON.parse(gRaw); genesisHash = contentHash(genesis);
-    try { const kRaw = await get('/.well-known/ust-keylog'); const k = JSON.parse(kRaw); if (Array.isArray(k)) keylog = k; } catch { /* not served */ }
+    gRaw = await get('/.well-known/ust-genesis');
+    try { kRaw = await get('/.well-known/ust-keylog'); } catch { /* key-log not served — resolution may fail on key membership */ }
   } catch (e) { return { verdict: base, resolution: { error: 'discovery fetch failed: ' + (e && e.message || e) } }; }
+  // #69 Theme D — genesis AND key-log are AUTHORITY input; both MUST cross the SAME raw-byte boundary as any
+  // untrusted transcript (I4). JSON.parse silently collapses duplicate members, so the genesis goes through
+  // verifyJson and the key-log's raw bytes go through the SAME scanner (scanDuplicateKeys, which descends into
+  // every entry) BEFORE parse. A dup-key authority surface is E-CANON — never a silent downgrade to LIGHT.
+  const gv = verifyJson(gRaw, {});
+  if (!isValid(gv)) return { verdict: base, resolution: { error: 'published genesis does not VERIFY: ' + (gv.error || gv.result) } };
+  genesis = JSON.parse(gRaw); genesisHash = contentHash(genesis);
+  if (kRaw !== undefined) {
+    const kdup = scanDuplicateKeys(kRaw);
+    if (kdup) return { verdict: base, resolution: { error: 'E-CANON: published key-log fails the raw-byte check (' + kdup + ')' } };
+    let k; try { k = JSON.parse(kRaw); } catch { return { verdict: base, resolution: { error: 'E-MALFORMED: published key-log is not valid JSON' } }; }
+    if (!Array.isArray(k)) return { verdict: base, resolution: { error: 'E-MALFORMED: published key-log is not a JSON array' } };
+    keylog = k;
+  }
 
   // no-fork EVIDENCE (default): query the witness UNLESS the caller already asserts it (--no-fork-confirmed
   // = an air-gap override) or forbids the network. Witness-confirmed lifts to HIGH automatically & honestly.
@@ -680,7 +710,7 @@ export async function resolveByDiscovery(doc, opts = {}, { fetchImpl = fetch, su
   const grant = noFork === 'witness-confirmed' || opts.noForkConfirmed;
   const auth = resolveAuthority(doc, { genesis, keylog, noForkConfirmed: grant });
   if (auth.error) return { verdict: base, resolution: { error: auth.error + (auth.detail ? ' — ' + auth.detail : '') } };
-  const verdict = verify(doc, { ...opts, genesis, keylog, noForkConfirmed: grant, capacity: auth.capacity });
+  const verdict = await verifyAsync(doc, { ...opts, genesis, keylog, noForkConfirmed: grant, capacity: auth.capacity, substrateVerify });   // #69 E1 — await the doc's own anchor substrate (TOP)
   return { verdict, resolution: { publisher: auth.publisher ?? shard, capacity: auth.capacity, noFork, source: `https://${shard}/.well-known/ (§20.1 discovery + §12.1 witness)` } };
 }
 

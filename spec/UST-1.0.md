@@ -3,7 +3,7 @@
 
 *This specification text is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](../LICENSE-SPEC). Reference code in this repository is licensed Apache-2.0. Use of the name **UST** / **Universal State Transcript** and the **UST-compatible** claim: see [TRADEMARK.md](../TRADEMARK.md).*
 
-> **Release candidate — `1.0.0-rc.17`.** This specification has been extensively red-teamed; an independent
+> **Release candidate — `1.0.0-rc.18`.** This specification has been extensively red-teamed; an independent
 > external cryptographic audit is pending. It is subject to change until `1.0.0` final (rc.2 folded in two external reviews — 6 impl findings + spec edge cases + removed domain-less `computed`; rc.3 aligned impl to §3.1 pinned + Y3; rc.4 closed a 4th external audit (ChatGPT 5.5 Max): key-binding by KEY not string, TOP needs a genesis origin, embedded proofs fail-closed, class↔schema enforced, canon strict on names too, raw-bytes verify boundary, ust_id valid frames, and REMOVED secret-url as a privacy mode; rc.6 closed a 5th external audit STRUCTURALLY — the §14a obligations table (every commitment-bearing member recomputed: +`E-SEED`), a typed identity namespace (dns-name | self-certifying key-id), real-calendar semantic consistency, document-tier vs range-completeness separation, MTI registry discipline, one version source; rc.7 explicit `completeness:not_evaluated`; rc.8 admissibility pins (duplicate refs, key-log
 ceiling, layer availability); rc.9 edge pass (full reserved-name registry, verified-node budget, strict-Z);
 rc.10 partition-capacity ladder (floor 64 / genesis-declared ≤ 4096); rc.11 SIZE ladder + VOLUME-vs-STRUCTURE
@@ -18,7 +18,7 @@ graduated tiers (LIGHT / HIGH / TOP, §3.1). Every mechanism below serves that s
 judged by ONE question — *how much trust does this actually earn, and does the protocol say so honestly?* A
 tier must never let a consumer read "signed" as "true," "anchored" as "correct," or "agreeing" as "independent."
 
-Status: **Normative specification — 1.0 REV 28 (2026-07-13).** The SECURELY-STRUCTURED (namespaced) base that
+Status: **Normative specification — 1.0 REV 29 (2026-07-13).** The SECURELY-STRUCTURED (namespaced) base that
 closed all red-team findings STRUCTURALLY (I3 collision unrepresentable, I1 whole-State signature by
 construction, no stored-hash footgun), with ALL v0.29 FEATURES merged IN (not a flat-wire revert): per-partition
 captured/computed hashing (cross-engine corroboration for computed parts), `parent_ust` (hour-close timing),
@@ -1390,6 +1390,19 @@ provenance and will be lifted into this ledger when the spec is published.
   discovery-driven SSRF threat: an auto-fetching resolver MUST admit only public DNS names before egress.
   Shipped and live-proven across all three reference surfaces (CLI, MCP, web) against the reference
   operator before this REV was written — spec text follows running code, not the reverse.
+- **REV 29 (2026-07-13)** — external security audit (#69) folded in STRUCTURALLY. No normative text
+  changed: the audit found the reference IMPLEMENTATION was not enforcing requirements the spec already
+  declared, so the code caught up (one root cause — a proof of self-consistency was being accepted where
+  external anchoring is required). (A) The substrate plugins now TERMINATE at the external trust root, not a
+  self-consistent object: `@ust-protocol/rekor-verify` verifies rekor.sigstore.dev's SIGNED checkpoint with a
+  pinned log key (a fabricated `treeSize=1` tree is rejected — reproduced), `@ust-protocol/ots-verify`
+  verifies the committed root against a REAL Bitcoin block header + the §17 ≥6 confirmations (not just
+  `isTimestampComplete()`); the web verifier gained the same checkpoint check. (D) The discovered key-log
+  crosses the SAME raw-byte boundary as any authority input (I4) — a duplicate member is E-CANON, never a
+  silent LIGHT. (E) A single async anchor contract (`verifyAsync`, so TOP works with the async plugins while
+  `verify()` stays sync); the exact signed-content size metric in the producer guard (no estimate pad) and in
+  `checkBounds` (signed content, not the transport object); and a Node-side SSRF resolution guard (a public
+  NAME resolving to a private ADDRESS is refused) layered over the portable lexical floor of §18.21.
 
 **Design principle throughout:** every normative clause answers "mechanism (protocol) or operator
 instantiation (profile)?"; operator specifics (substrate, partition schema, completeness, cadence) live in the

@@ -6,6 +6,12 @@
 // registry + `dispatch()`; the stdio/SSE JSON-RPC server (via @modelcontextprotocol/sdk) is a thin shell the
 // engine/deploy wires around `listTools()` + `dispatch(name, args)`.
 import * as P from 'ust-protocol';
+import { makeSsrfSafeFetch } from './ssrf-guard.mjs';
+
+// #69 E4 — the MCP takes UNTRUSTED documents from agents and auto-fetches their domain_shard, so the discovery
+// egress is resolution-guarded (a public NAME resolving to a private ADDRESS is refused) on top of the core's
+// lexical SSRF floor. A single shared wrapper over global fetch, passed as resolveByDiscovery's fetchImpl.
+const ssrfSafeFetch = makeSsrfSafeFetch();
 
 const doc1 = (state) => ({ ust: '1.0', state });
 // build tools return the UNSIGNED state + the exact `signing_input` bytes; the caller (agent/operator) signs
@@ -38,13 +44,13 @@ export const tools = [
         const raw = P.verifyJson(json, o);
         if (offline || genesis !== undefined || !(raw.result === 'VALID:LIGHT' || (raw.result === 'INDETERMINATE' && raw.reason === 'unavailable'))) return raw;
         let parsed; try { parsed = JSON.parse(json); } catch { return raw; }
-        const { verdict, resolution } = await P.resolveByDiscovery(parsed, ro, { substrateVerify });
+        const { verdict, resolution } = await P.resolveByDiscovery(parsed, ro, { substrateVerify, fetchImpl: ssrfSafeFetch });
         return resolution ? { ...verdict, resolution } : verdict;
       }
       // an embedded doc.proof is verified INSIDE verify (present-bad ⇒ E-ANCHOR); a separately-passed proof merges in.
       const d = (proof !== undefined && doc && doc.proof === undefined) ? { ...doc, proof } : doc;
       if (offline || genesis !== undefined) return P.verify(d, o);
-      const { verdict, resolution } = await P.resolveByDiscovery(d, ro, { substrateVerify });
+      const { verdict, resolution } = await P.resolveByDiscovery(d, ro, { substrateVerify, fetchImpl: ssrfSafeFetch });
       return resolution ? { ...verdict, resolution } : verdict;
     },
   },

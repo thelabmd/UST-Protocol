@@ -308,6 +308,24 @@ console.log('\n═════════════════════�
   check('resolveByDiscovery: public LIGHT resolves (fetch fires, honest error on failure)', touched > 0 && !!r3.resolution?.error);
 }
 
+// ─── #69 Theme D — the key-log is AUTHORITY input and MUST cross the SAME raw-byte boundary as the main
+//     verify path (I4). A duplicate member in a discovered key-log entry is E-CANON, never a silent LIGHT.
+{
+  const Gd = kp('d1'.repeat(32)), Kd = kp('d2'.repeat(32));
+  const genD = P.seal(P.buildGenesis({ domain_shard: 'rawbyte.example', ust_id: 'ust:20260713.10', key_id: Gd.key_id }, T, Gd.pubB64), Gd.priv, Gd.pubB64);
+  const addD = P.seal(P.buildKeyLogEntry({ domain_shard: 'rawbyte.example', ust_id: 'ust:20260713.1001', key_id: Gd.key_id }, T, { op: 'add', pub: Kd.pubB64, new_key_id: Kd.key_id }, P.contentHash(genD)), Gd.priv, Gd.pubB64);
+  const docD = P.seal(P.buildState({ domain_shard: 'rawbyte.example', ust_id: 'ust:20260713.1010', key_id: Kd.key_id, class: 'observation' }, T, { r: { kind: 'captured', value: { x: '1' } } }), Kd.priv, Kd.pubB64);
+  const genRaw = JSON.stringify(genD);
+  const mockD = (klRaw) => async (u) => String(u).endsWith('/ust-genesis') ? { ok: true, text: async () => genRaw }
+    : String(u).endsWith('/ust-keylog') ? { ok: true, text: async () => klRaw }
+    : { ok: false, status: 404, text: async () => '' };   // witness 404 → HIGH pending, but D is decided first
+  const dupKl = '[' + JSON.stringify(addD).replace('{', '{"ust":"1.0",') + ']';   // JSON.parse would collapse the dup
+  const rDup = await P.resolveByDiscovery(docD, { context: 'data' }, { fetchImpl: mockD(dupKl) });
+  check('#69 D: dup-key discovered key-log → E-CANON (not a silent LIGHT)', /E-CANON/.test(rDup.resolution?.error || ''));
+  const rClean = await P.resolveByDiscovery(docD, { context: 'data', noForkConfirmed: true }, { fetchImpl: mockD(JSON.stringify([addD])) });
+  check('#69 D: clean key-log still resolves VALID:HIGH (honest path intact)', rClean.verdict.result === 'VALID:HIGH');
+}
+
 // ─── rc.14: witness auto-query (§12.1 M2, #68) — no-fork becomes EVIDENCE, so HIGH is the honest default.
 {
   const rootW = kp('bb'.repeat(32)), opW = kp('cc'.repeat(32));
