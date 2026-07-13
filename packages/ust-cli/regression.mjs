@@ -544,6 +544,32 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
   check('offline_is_a_first_class_flag', src.includes('--offline'));
 }
 
+// ── 20. witness endpoint (#68 Ф1b): the worker serves /.well-known/ust-witness, the genesis-log rides
+// through every publish path, and the log shape is exactly what witnessNoFork consumes.
+{
+  const g = await C.buildCeremony({ domain: DOMAIN, profile: 'silver' });
+  const bytes = JSON.stringify(g.genesis);
+  const wlog = C.buildWitnessLog(bytes);
+  const parsed = JSON.parse(wlog);
+  check('witness_log_shape', parsed.domain_shard === DOMAIN && parsed.active === g.genHash && parsed.genesis_log[0].content_hash === g.genHash && parsed.genesis_log[0].superseded_by === null);
+  check('witness_log_no_anchor_until_final', parsed.genesis_log[0].anchor === undefined);   // Ф1b attaches it
+  const wlogAnchored = JSON.parse(C.buildWitnessLog(bytes, { root: 'sha256:' + '11'.repeat(32), path: [], anchor: { substrate: 'bitcoin-ots' } }));
+  check('witness_log_carries_anchor_when_given', !!wlogAnchored.genesis_log[0].anchor);
+
+  const src = C.buildWorkerScript(bytes, JSON.stringify([g.keylog0]), wlog);
+  check('worker_serves_witness_route', src.includes('/.well-known/ust-witness') && src.includes('const WITNESS ='));
+  check('worker_no_witness_when_absent', C.buildWorkerScript(bytes).includes('const WITNESS = null'));
+  const proj = C.buildWranglerProject({ domain: DOMAIN, genesisText: bytes, keylogText: JSON.stringify([g.keylog0]), witnessText: wlog });
+  check('wrangler_project_adds_witness_route', proj['wrangler.toml'].includes('ust-witness*'));
+
+  // the served log resolves through the protocol's witnessNoFork (with a mock substrate) → confirmed
+  const P = await import('ust-protocol');
+  const anchorRoot = P.Hbytes('ust:leaf', Buffer.from(g.genHash, 'utf8'));
+  const liveLog = { domain_shard: DOMAIN, active: g.genHash, genesis_log: [{ content_hash: g.genHash, superseded_by: null, anchor: { root: anchorRoot, path: [], anchor: { substrate: 'bitcoin-ots' } } }] };
+  const w = await P.witnessNoFork(DOMAIN, g.genHash, { fetchImpl: async () => ({ ok: true, text: async () => JSON.stringify(liveLog) }), substrateVerify: () => ({ final: true, time: '2026-07-13T14:05:00Z' }) });
+  check('served_witness_log_confirms_via_protocol', w.status === 'confirmed');
+}
+
 console.log(`\nPASS ${pass} FAIL ${fail} NOTES ${note}`);
 if (fail) { console.error('\nFAILURES:\n  ' + fails.join('\n  ')); process.exit(1); }
 console.log('✓ 9th-audit regression holds — the seven points cannot silently regress');
