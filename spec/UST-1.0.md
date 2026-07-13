@@ -3,7 +3,7 @@
 
 *This specification text is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](../LICENSE-SPEC). Reference code in this repository is licensed Apache-2.0. Use of the name **UST** / **Universal State Transcript** and the **UST-compatible** claim: see [TRADEMARK.md](../TRADEMARK.md).*
 
-> **Release candidate — `1.0.0-rc.29`.** This specification has been extensively red-teamed; an independent
+> **Release candidate — `1.0.0-rc.30`.** This specification has been extensively red-teamed; an independent
 > external cryptographic audit is pending. It is subject to change until `1.0.0` final (rc.2 folded in two external reviews — 6 impl findings + spec edge cases + removed domain-less `computed`; rc.3 aligned impl to §3.1 pinned + Y3; rc.4 closed a 4th external audit (ChatGPT 5.5 Max): key-binding by KEY not string, TOP needs a genesis origin, embedded proofs fail-closed, class↔schema enforced, canon strict on names too, raw-bytes verify boundary, ust_id valid frames, and REMOVED secret-url as a privacy mode; rc.6 closed a 5th external audit STRUCTURALLY — the §14a obligations table (every commitment-bearing member recomputed: +`E-SEED`), a typed identity namespace (dns-name | self-certifying key-id), real-calendar semantic consistency, document-tier vs range-completeness separation, MTI registry discipline, one version source; rc.7 explicit `completeness:not_evaluated`; rc.8 admissibility pins (duplicate refs, key-log
 ceiling, layer availability); rc.9 edge pass (full reserved-name registry, verified-node budget, strict-Z);
 rc.10 partition-capacity ladder (floor 64 / genesis-declared ≤ 4096); rc.11 SIZE ladder + VOLUME-vs-STRUCTURE
@@ -18,7 +18,7 @@ graduated tiers (LIGHT / HIGH / TOP, §3.1). Every mechanism below serves that s
 judged by ONE question — *how much trust does this actually earn, and does the protocol say so honestly?* A
 tier must never let a consumer read "signed" as "true," "anchored" as "correct," or "agreeing" as "independent."
 
-Status: **Normative specification — 1.0 REV 40 (2026-07-13).** The SECURELY-STRUCTURED (namespaced) base that
+Status: **Normative specification — 1.0 REV 41 (2026-07-13).** The SECURELY-STRUCTURED (namespaced) base that
 closed all red-team findings STRUCTURALLY (I3 collision unrepresentable, I1 whole-State signature by
 construction, no stored-hash footgun), with ALL v0.29 FEATURES merged IN (not a flat-wire revert): per-partition
 captured/computed hashing (cross-engine corroboration for computed parts), `parent_ust` (hour-close timing),
@@ -897,9 +897,22 @@ which rejects `corroborated`.
     held the key before C), such a State is VALID-but-**SUSPECT**. If **`U ≥ C`, OR the State is UNANCHORED**
     ⇒ **INVALID** (fail-closed: an upper bound `≥ C` cannot prove the signature predates the compromise). This
     is what actually stops a back-dating thief — he cannot obtain an anchor upper-bound EARLIER than reality.
+- **The key-log is a TEMPORAL STATE MACHINE, not a growing set (#75 ROOT 2).** The walk is a reducer over an
+  explicit state, and TWO sets that a naïve "accumulate valid keys" conflates MUST be kept distinct: **`active`**
+  — the keys that may sign the NEXT log (or cadence, §11.3) entry — and the **binding set** (every key ever
+  authorized) used only to bind a document's key before the X1 time-judgment. Transitions: `add` inserts a
+  parallel active key; `rotate` is "authorized by the key it supersedes" — the SIGNER is superseded, so it leaves
+  `active` (cannot sign later entries) and is recorded retired (its EARLIER documents stay valid, X1); `revoke`
+  removes its target from `active` and records the reason. **Each entry MUST be signed by a key that is `active`
+  at that point** — a revoked, rotated-out, or never-authorized signer ⇒ E-KEY (this is what stops a
+  revoked/superseded key from authorizing a later entry or a cadence change). `key_op` has a CLOSED exact schema
+  per op (`add|rotate: {op, pub, new_key_id?}`; `revoke: {op, pub, reason, compromised_since iff compromised}`);
+  an unknown `op`, a stray field, a `retired` carrying `compromised_since`, a revoke of a never-authorized key, or
+  a re-authorization of a compromised key ⇒ E-KEY / E-MALFORMED, never a silent no-op. A compromised key can
+  never return to `active`.
 - A verifier resolves `State.id.key_id` by walking this genesis-rooted chain (bounded ≤256 entries, §13) and
-  taking the key valid at the State's anchored time; a BROKEN entry chain or an entry not signed by the
-  then-current key ⇒ E-KEY (a failure); a FORKED genesis ⇒ E-GENESIS; an UNREACHABLE key-log/genesis ⇒
+  taking the key valid at the State's anchored time; a BROKEN entry chain or an entry not signed by a
+  then-active key ⇒ E-KEY (a failure); a FORKED genesis ⇒ E-GENESIS; an UNREACHABLE key-log/genesis ⇒
   INDETERMINATE (`unavailable`), NOT a failure (W1, §14 step 3/4 — availability ≠ failure). The `.well-known/ust` profile (§20) MAY serve as a cache but
   MUST be corroborated against the anchored key log for any acceptance decision (I7 — a poisoned `.well-known`
   or DNS cannot forge identity).
@@ -1708,6 +1721,18 @@ provenance and will be lifted into this ledger when the spec is published.
   appendix (was frozen at REV 34). The heavier ROOTS (key-log temporal state machine, two-phase verify, the
   authority-signed HourManifest, attested latest-head) follow in #75, each with its own model-clause + spec-clause
   + language-neutral vectors landing together (model↔code lockstep is an acceptance gate).
+- **REV 41 (2026-07-13)** — #75 ROOT 2, the **key-log temporal state machine** (closes the whole P0-02 class,
+  reproduced first). `resolveKeys` was a growing SET that never shrank, so a revoked / rotated-out / retired key
+  kept "signing" later entries and cadence changes, and malformed / unknown ops were silent no-ops. It is now a
+  reducer over explicit state: `active` (may sign the NEXT entry — shrinks on revoke/rotate) is kept DISTINCT from
+  the binding set (`validKeys`, every key ever authorized, for document continuity + X1). Per §12.2, `rotate` is
+  "authorized by the key it supersedes" — the SIGNER leaves `active` (its earlier docs stay valid); `revoke`
+  removes its target; each entry MUST be signed by a currently-`active` key ⇒ E-KEY otherwise; `key_op` has a
+  CLOSED exact schema (unknown op / stray field / retired-with-`compromised_since` / revoke-of-unknown-key /
+  re-authorizing-a-compromised-key ⇒ E-KEY/E-MALFORMED, never a no-op). The CLI's operational-key rotation is now
+  a root-signed `add` + separate `revoke` (the root is not superseding itself) — spec↔code↔CLI aligned. Formal
+  model gains `K_n(t)` (F.5e, MATH-04) with a realization note pinning it to `resolveKeys`; 9 executable
+  `keylog-state` vectors (embedded signed docs) carry it cross-language. conformance 212/0, cli 130/0.
 
 **Design principle throughout:** every normative clause answers "mechanism (protocol) or operator
 instantiation (profile)?"; operator specifics (substrate, partition schema, completeness, cadence) live in the

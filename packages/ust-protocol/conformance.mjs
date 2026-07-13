@@ -50,6 +50,8 @@ for (const v of V.vectors) {
     case 'utf8-reject': check(v.id, P.verifyJson(Buffer.from(v.input_hex, 'hex')).error === v.expect_error); break;
     case 'b64url': check(v.id, (P.strictB64url(v.value, v.bytes) !== null) === v.expect); break;
     case 'cadence': check(v.id, P.parseCadenceInt(v.value) === v.expect); break;
+    // #75 ROOT 2 — the key-log state machine as a language-neutral vector: run resolveKeys over embedded signed docs.
+    case 'keylog-state': { const r = P.resolveKeys(v.genesis, v.keylog); check(v.id, v.expect.error ? r.error === v.expect.error : (!r.error && r.active.size === v.expect.active_count && r.validKeys.size === v.expect.all_count)); break; }
     default: noted(v.id, 'kind ' + v.kind + ' not exercised');
   }
 }

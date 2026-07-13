@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.29', revision: 40 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.30', revision: 41 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -530,28 +530,61 @@ export function resolveKeys(genesis, keylog = []) {
   if (genesis.sig.key_id !== genesis.state.id.key_id) return { error: 'E-GENESIS', detail: 'genesis not self-signed' };
   if (keylog.length > 256) return { error: 'E-BOUNDS', detail: 'key-log > 256 (§13)' };
   let prevHash = contentHash(genesis);
-  // key_id is DERIVED from the pub (H(ust:keylog,pub)), never a free string — authority binds the KEY, not a label.
-  const validKeys = new Map([[genesis.state.id.key_id, genesis.sig.pub]]);         // key_id → pub
-  const revoked = new Map();                                                      // §12.2 X1: key_id → {reason, compromised_since, at}
-  for (const [i, e] of keylog.entries()) {                                        // §12.2 walk: prev-chained, self-signed
+  const gKid = genesis.state.id.key_id, gPub = genesis.sig.pub;
+  // §12.2 #75 ROOT 2 — the key-log is a TEMPORAL STATE MACHINE (reducer), not a growing set. Two sets that used to
+  // be ONE (the bug behind P0-02): `all` = every key ever authorized (key_id→pub) for DOCUMENT BINDING (a retired
+  // key's earlier doc still binds, then X1 judges it by time — continuity); `active` = the keys that may sign the
+  // NEXT log/cadence entry (SHRINKS on revoke/rotate). `revoked` carries the §12.2 X1 end-record for every key that
+  // left active (reason retired|compromised). `history` records per-key lifecycle for the K_n(t) temporal query.
+  const all = new Map([[gKid, gPub]]);
+  const active = new Map([[gKid, gPub]]);
+  const revoked = new Map();                                                      // key_id → {reason, compromised_since?, at}
+  const history = new Map([[gKid, { pub: gPub, from: 0, retired_at: null, revoked_at: null }]]);
+  const OP_FIELDS = { add: ['op', 'pub', 'new_key_id'], rotate: ['op', 'pub', 'new_key_id'], revoke: ['op', 'pub', 'reason', 'compromised_since'] };
+  const derive = (i, pub, label) => {                                            // strict pub + derived key_id
+    if (strictB64url(pub, 32) === null) return { error: { error: 'E-KEY', detail: 'entry ' + i + ' ' + label + ' pub not a 32-byte base64url key' } };
+    return { kid: keyId(pub) };
+  };
+  for (const [i, e] of keylog.entries()) {                                        // §12.2 walk: prev-chained, signed by a CURRENTLY-ACTIVE key
     const ev = verify(e, { context: 'key' });
     if (!isValid(ev)) return { error: 'E-KEY', detail: 'key-log entry ' + i + ' invalid: ' + ev.error };
     if (e.state.id.class !== 'key') return { error: 'E-KEY', detail: 'entry ' + i + ' not class:key' };
     if (e.state.provenance?.prev !== prevHash) return { error: 'E-PREV', detail: 'entry ' + i + ' prev not chained' };
-    if (![...validKeys.values()].includes(e.sig.pub)) return { error: 'E-KEY', detail: 'entry ' + i + ' not signed by a current valid key' };
-    const op = e.state.data.key_op.value;
+    // #75 P0-02a/b — the signer MUST be ACTIVE at this point, not merely ever-seen: a revoked or rotated-out key
+    // can no longer authorize a later entry.
+    const sKid = keyId(e.sig.pub);
+    if (active.get(sKid) !== e.sig.pub) return { error: 'E-KEY', detail: 'entry ' + i + ' not signed by a currently-active key (revoked / rotated-out / never-authorized)' };
+    const op = e.state?.data?.key_op?.value;
+    // #75 P0-02d/e + P1-07 — CLOSED exact schema per op: an unknown op or a stray field is an ERROR, never a no-op.
+    if (typeof op !== 'object' || op === null || !OP_FIELDS[op.op]) return { error: 'E-KEY', detail: 'entry ' + i + ' unknown or missing key_op.op (add|rotate|revoke)' };
+    for (const k of Object.keys(op)) if (!OP_FIELDS[op.op].includes(k)) return { error: 'E-MALFORMED', detail: 'entry ' + i + ' stray field in ' + op.op + ': ' + k };
     if (op.op === 'add' || op.op === 'rotate') {
-      const derived = keyId(op.pub);                                             // F1: derive, do NOT trust op.new_key_id
-      if (op.new_key_id !== undefined && op.new_key_id !== derived) return { error: 'E-KEY', detail: 'entry ' + i + ' new_key_id != H(ust:keylog, pub)' };
-      validKeys.set(derived, op.pub);
-    } else if (op.op === 'revoke') {
-      // §12.2: strict RFC3339-Z ONLY — a fractional/offset timestamp breaks lexicographic ordering ("…00.5Z" < "…00Z").
-      if (op.compromised_since !== undefined && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(op.compromised_since)) return { error: 'E-MALFORMED', detail: 'compromised_since not strict RFC3339-Z (§12.2)' };
-      revoked.set(keyId(op.pub), { reason: op.reason, compromised_since: op.compromised_since, at: e.state.time.generated_at });
+      const d = derive(i, op.pub, op.op); if (d.error) return d.error;
+      if (op.new_key_id !== undefined && op.new_key_id !== d.kid) return { error: 'E-KEY', detail: 'entry ' + i + ' new_key_id != H(ust:keylog, pub)' };
+      if (revoked.get(d.kid)?.reason === 'compromised') return { error: 'E-KEY', detail: 'entry ' + i + ' cannot re-authorize a COMPROMISED key' };
+      all.set(d.kid, op.pub); active.set(d.kid, op.pub);
+      if (!history.has(d.kid)) history.set(d.kid, { pub: op.pub, from: i + 1, retired_at: null, revoked_at: null });
+      // #75 spec §12.2 "each rotation is authorized by the key it supersedes": on rotate the SIGNER is superseded —
+      // it leaves active (cannot sign later entries) and is recorded retired (its EARLIER docs stay valid, X1).
+      if (op.op === 'rotate' && sKid !== d.kid) {
+        active.delete(sKid);
+        revoked.set(sKid, { reason: 'retired', at: e.state.time.generated_at });
+        const h = history.get(sKid); if (h) h.retired_at = e.state.time.generated_at;
+      }
+    } else {  // revoke
+      const d = derive(i, op.pub, 'revoke'); if (d.error) return d.error;
+      if (!all.has(d.kid)) return { error: 'E-KEY', detail: 'entry ' + i + ' revoke of a never-authorized key' };
+      if (op.reason !== 'retired' && op.reason !== 'compromised') return { error: 'E-MALFORMED', detail: 'entry ' + i + ' revoke reason MUST be "retired" | "compromised"' };
+      if (op.reason === 'compromised') {
+        if (typeof op.compromised_since !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(op.compromised_since)) return { error: 'E-MALFORMED', detail: 'entry ' + i + ' compromised requires strict RFC3339-Z compromised_since (§12.2)' };
+      } else if (op.compromised_since !== undefined) return { error: 'E-MALFORMED', detail: 'entry ' + i + ' retired MUST NOT carry compromised_since' };
+      active.delete(d.kid);
+      revoked.set(d.kid, { reason: op.reason, compromised_since: op.compromised_since, at: e.state.time.generated_at });
+      const h = history.get(d.kid); if (h) h.revoked_at = e.state.time.generated_at;
     }
     prevHash = contentHash(e);
   }
-  return { validKeys, revoked, head: prevHash };                                 // #40: head = the last entry's content_hash (genesis if empty) — the freshness anchor point
+  return { validKeys: all, active, revoked, history, head: prevHash };            // validKeys = the all-ever BINDING map; head (§12.2a) = last entry content_hash (genesis if empty)
 }
 
 // ─── §12 HIGH name-authority resolution. STATELESS: the caller (ustate/engine) supplies the genesis +
@@ -758,7 +791,9 @@ export function resolveCadence(genesis, cadenceLog = [], atTime, { keylog } = {}
   // it. Without the key-log only the genesis key can authorize a change (fail-closed, not fail-open).
   const rk = resolveKeys(genesis, Array.isArray(keylog) ? keylog : []);
   if (rk.error) return { error: rk.error, detail: 'cadence authority: ' + rk.detail };
-  const authorized = new Set(rk.validKeys.values());
+  // #75 P0-02c — a cadence entry MUST be signed by a currently-ACTIVE key (not merely ever-seen): a retired or
+  // rotated-out or revoked key can no longer move the grid. `active` already excludes all of them (state machine).
+  const active = new Set(rk.active.values());
   const atE = ustToEpoch(atTime);
   let prev = contentHash(genesis), lastEff = null;
   for (const [i, e] of cadenceLog.entries()) {
@@ -767,9 +802,7 @@ export function resolveCadence(genesis, cadenceLog = [], atTime, { keylog } = {}
     if (e.state.id.class !== 'cadence') return { error: 'E-MALFORMED', detail: 'cadence-log entry ' + i + ' not class:cadence' };
     if (e.state.id.domain_shard !== genesis.state.id.domain_shard) return { error: 'E-AUTHORITY', detail: 'cadence entry ' + i + ' domain mismatch' };
     if (e.state.provenance?.prev !== prev) return { error: 'E-PREV', detail: 'cadence entry ' + i + ' not chained' };
-    if (!authorized.has(e.sig.pub)) return { error: 'E-KEY', detail: 'cadence entry ' + i + ' NOT signed by an authorized key (§12.2)' };   // ← the P0 fix
-    const revd = rk.revoked.get(keyId(e.sig.pub));
-    if (revd && revd.reason === 'compromised') return { error: 'E-KEY', detail: 'cadence entry ' + i + ' signed by a COMPROMISED key' };
+    if (!active.has(e.sig.pub)) return { error: 'E-KEY', detail: 'cadence entry ' + i + ' NOT signed by a currently-active key (retired/revoked/unauthorized, §12.2)' };
     const op = e.state.data.cadence_op.value;
     const effE = ustToEpoch(op.effective_from);
     if (effE === null) return { error: 'E-MALFORMED', detail: 'cadence entry ' + i + ' bad effective_from' };

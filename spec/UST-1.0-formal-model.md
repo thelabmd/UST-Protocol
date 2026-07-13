@@ -352,6 +352,30 @@ the head" a positive lookup that settles `¬∃` later entry, the F.5a mechanism
 `unverified` (never a forged "valid") and letting the consumer floor on it (`requireFreshKeylog`) is the F.5b
 discipline: the strong word is earned by the coordinate, not bought by assuming the cache is complete.
 
+## F.5e The key-authority process `K_n(t)` — a state machine, not a set (MATH-04, #75)
+
+`W_n` (§F.5, §F.5a) bundled several facts; one of them — WHICH key is authorized for name `n` at time `t` — is
+not a static set but a **process**. Model the key-log as a sequence of events `(e_1, …, e_m)`, each an
+`add | rotate | revoke` transition, and define the reducer
+
+  `K_n : (event prefix) ↦ ⟨active ⊆ Keys, bind ⊆ Keys, revoked : Keys ⇀ {retired, compromised}×Time⟩`,
+
+with `active` the keys that may sign the NEXT event, `bind` every key ever authorized (for document binding), and
+the transitions: `add(k)` ⇒ `active ∪ {k}`, `bind ∪ {k}`; `rotate` (signed by `s`, naming successor `k`) ⇒
+`active ∪ {k} ∖ {s}`, `bind ∪ {k}`, `revoked[s] = (retired, t)`; `revoke(k, r)` ⇒ `active ∖ {k}`, `revoked[k] =
+(r, t)`. The **admissibility invariant** is `signer(e_{i+1}) ∈ active(after e_i)` — an event is well-formed only
+if its signer was active in the state the PREVIOUS events produced. This is exactly the missing coordinate: "key
+`k` appears somewhere in the log" (`k ∈ bind`) is strictly weaker than "`k` was active when it signed" (`k ∈
+active` at that prefix), and conflating them is the P0-02 class (a revoked / rotated-out key still signing).
+
+**Realization (representation note).** `K_n` is realized by `resolveKeys(genesis, keylog)` → `{active, validKeys
+(=bind), revoked, history, head}`; the invariant is the `active.get(keyId(sig.pub)) === sig.pub` gate per entry;
+the closed per-`op` schema is the well-formedness of each event. Document authority reads `bind` (continuity) then
+the §12.2 X1 predicate judges `revoked[k]` at the document's time — a query of `K_n` at `t`. (The X1 time is the
+anchor upper bound; threading the VERIFIED anchor time into that query is ROOT 1 / MATH-05, tracked in #75.) The
+key-log vectors (`kind: keylog-state`) are executable instances of the invariant: a second implementation runs the
+same embedded events through its own `K_n` and must reach the same verdict.
+
 ## F.6 Composition — the event algebra
 
 An **anchored existence-and-commitment claim** is an event `A ∈ Fₜ`; an UNANCHORED signed claim is a document

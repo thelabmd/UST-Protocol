@@ -1416,7 +1416,10 @@ export async function rotateKeylog({ genesis, keylog, rootSigner, reason = null,
   const currentOp = [...keylog].reverse().find((e) => { const op = e.state?.data?.key_op?.value; return op && (op.op === 'add' || op.op === 'rotate'); });
   const newOp = await W.generateSigner({ extractable: true });
   const prev = keylog.length ? P.contentHash(keylog[keylog.length - 1]) : P.contentHash(genesis);
-  const rotate = await W.seal(P.buildKeyLogEntry({ domain_shard: domain, ust_id: ustId, key_id: rootSigner.key_id }, time, { op: 'rotate', pub: newOp.pub, new_key_id: newOp.key_id }, prev), rootSigner);
+  // #75 §12.2 — the ROOT signs, ADDING the new operational key: the root is NOT superseding ITSELF (that is what
+  // `rotate` means — "authorized by the key it supersedes"), so this is `add`; retiring the old operational key is
+  // the SEPARATE `revoke` below. (A key that rolls ITSELF forward would sign an `op:'rotate'`.)
+  const rotate = await W.seal(P.buildKeyLogEntry({ domain_shard: domain, ust_id: ustId, key_id: rootSigner.key_id }, time, { op: 'add', pub: newOp.pub, new_key_id: newOp.key_id }, prev), rootSigner);
   const out = [...keylog, rotate];
   if (reason) {
     if (reason !== 'retired' && reason !== 'compromised') throw new Error('--reason must be retired|compromised');
