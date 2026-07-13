@@ -1,6 +1,6 @@
 {
   "name": "@ust-protocol/ots-verify",
-  "version": "1.0.0-rc.2",
+  "version": "1.0.0-rc.3",
   "description": "Opt-in Bitcoin (OpenTimestamps) substrateVerify for UST anchors — the cross-check ust-protocol takes as an injection, so the zero-dep verifier never embeds a blockchain. #68 witness / TOP time.",
   "type": "module",
   "main": "index.mjs",

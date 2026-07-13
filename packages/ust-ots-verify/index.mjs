@@ -32,6 +32,10 @@ function bitcoinHeight(det) {
 
 export function makeSubstrateVerify({ upgrade = true } = {}) {
   return async function substrateVerify(anchor, root) {
+    // handle ONLY bitcoin-ots — return null for any other substrate so a multi-substrate router
+    // (ust-protocol combineSubstrates) can delegate to the next plugin.
+    const sub = anchor?.substrate ?? anchor?.anchor?.substrate;
+    if (sub && sub !== 'bitcoin-ots') return null;
     const otsB64 = anchor?.ots ?? anchor?.anchor?.ots;
     if (!otsB64 || typeof root !== 'string') return null;
     let det;

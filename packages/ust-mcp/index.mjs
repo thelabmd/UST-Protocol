@@ -28,7 +28,11 @@ export const tools = [
       const o = { pinnedKeys, genesis, keylog, disclosures, noForkConfirmed, requireAuthoritative, capacity, maxSupportedBytes, context: 'data' };
       // `json` (raw text) = the safe conformance boundary — duplicate-key + NFC scan BEFORE parse (F7).
       const ro = { ...o, offline };
-      let substrateVerify; try { ({ substrateVerify } = await import('@ust-protocol/ots-verify')); } catch { /* opt-in absent → witness anchor stays unproven, honest HIGH-pending */ }
+      const _plugins = [];
+      for (const pkg of ['@ust-protocol/ots-verify', '@ust-protocol/rekor-verify']) {
+        try { const m = await import(pkg); if (m.substrateVerify) _plugins.push(m.substrateVerify); } catch { /* absent */ }
+      }
+      const substrateVerify = _plugins.length ? P.combineSubstrates(_plugins) : undefined;
       if (json !== undefined) {
         const raw = P.verifyJson(json, o);
         if (offline || genesis !== undefined || !(raw.result === 'VALID:LIGHT' || (raw.result === 'INDETERMINATE' && raw.reason === 'unavailable'))) return raw;

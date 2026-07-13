@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.14' };
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.15' };
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -625,6 +625,19 @@ export async function witnessNoFork(shard, genesisHash, { fetchImpl = fetch, sub
     return { status: 'confirmed', detail: 'a single Bitcoin-anchored active genesis — no rival root' };
   }
   return { status: 'pending', detail: active.length ? 'genesis present in the witness log but its anchor is not final (Bitcoin) — no-fork not yet evidence' : 'no active genesis in the witness log' };
+}
+
+// Multi-substrate router (#68): a verifier may understand SEVERAL anchor substrates (Bitcoin-OTS, Rekor,
+// …) via injected plugins. Each plugin returns null for an anchor whose `substrate` it does not handle;
+// combineSubstrates tries them in order and returns the first non-null verdict. This is how a heterogeneous
+// witness world stays coherent — not one substrate, but one QUESTION ("is this root committed & final?")
+// answered by whichever plugin speaks that substrate. §17 registry is the shared vocabulary.
+export function combineSubstrates(verifiers) {
+  const list = (Array.isArray(verifiers) ? verifiers : [verifiers]).filter(Boolean);
+  return async (anchor, root) => {
+    for (const v of list) { const r = await v(anchor, root); if (r != null) return r; }
+    return null;   // no plugin claimed this substrate → verifyAnchor reports 'unavailable' (honest, not INVALID)
+  };
 }
 
 export async function resolveByDiscovery(doc, opts = {}, { fetchImpl = fetch, substrateVerify } = {}) {

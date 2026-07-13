@@ -3,7 +3,7 @@
 
 *This specification text is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](../LICENSE-SPEC). Reference code in this repository is licensed Apache-2.0. Use of the name **UST** / **Universal State Transcript** and the **UST-compatible** claim: see [TRADEMARK.md](../TRADEMARK.md).*
 
-> **Release candidate — `1.0.0-rc.14`.** This specification has been extensively red-teamed; an independent
+> **Release candidate — `1.0.0-rc.15`.** This specification has been extensively red-teamed; an independent
 > external cryptographic audit is pending. It is subject to change until `1.0.0` final (rc.2 folded in two external reviews — 6 impl findings + spec edge cases + removed domain-less `computed`; rc.3 aligned impl to §3.1 pinned + Y3; rc.4 closed a 4th external audit (ChatGPT 5.5 Max): key-binding by KEY not string, TOP needs a genesis origin, embedded proofs fail-closed, class↔schema enforced, canon strict on names too, raw-bytes verify boundary, ust_id valid frames, and REMOVED secret-url as a privacy mode; rc.6 closed a 5th external audit STRUCTURALLY — the §14a obligations table (every commitment-bearing member recomputed: +`E-SEED`), a typed identity namespace (dns-name | self-certifying key-id), real-calendar semantic consistency, document-tier vs range-completeness separation, MTI registry discipline, one version source; rc.7 explicit `completeness:not_evaluated`; rc.8 admissibility pins (duplicate refs, key-log
 ceiling, layer availability); rc.9 edge pass (full reserved-name registry, verified-node budget, strict-Z);
 rc.10 partition-capacity ladder (floor 64 / genesis-declared ≤ 4096); rc.11 SIZE ladder + VOLUME-vs-STRUCTURE
@@ -983,8 +983,13 @@ Independent re-implementation is expected; the vectors make "verify without trus
 - **anchor substrate (operator choice, extensible):** an entry defines the substrate's `Locator` evidence
   fields, its public-append-only-log check, and its finality parameter. Registered: **`bitcoin-ots`**
   (`Locator = {substrate:"bitcoin-ots", ots:b64url, block_height:int}`; OTS attestation → Bitcoin header;
-  finality = ≥6 confirmations). Future substrates register the same way — the protocol is substrate-agnostic.
-  AnchorProof keys `root,path,anchor`.
+  finality = ≥6 confirmations) · **`rekor`** (`Locator = {substrate:"rekor", logIndex:int, inclusionProof:{
+  logIndex, treeSize, rootHash, hashes[], checkpoint}, integratedTime:int}`; Sigstore transparency log →
+  RFC 6962 inclusion to the signed tree head; finality = logged/immutable, seconds not hours; trusts the
+  log operator's witness-cosigned tree head vs Bitcoin's trustless-but-slow). A verifier that understands
+  SEVERAL substrates composes their plugins (`combineSubstrates`) — each returns the same `{final,time}`
+  answer in its own dialect; an unknown substrate ⇒ `INDETERMINATE(unsupported)`, never INVALID. Future
+  substrates register the same way — the protocol is substrate-agnostic. AnchorProof keys `root,path,anchor`.
 - **partition kind:** `captured` · `computed` — BOTH bind `domain_shard` (descriptive tag only; the domain-less `computed` mode was REMOVED in rc.2). **partition privacy:** `blinded` · `encrypted` (both cryptographic — what is HIDDEN in the signed state). A "secret URL" is a DISCLOSURE CHANNEL (§out-of-scope, G18), not a privacy mode; removed from the registry in rc.4.
 - **alg (signatures):** `Ed25519` (strict, §7). **hash:** `sha256:` domain-separated (§7). **enc.alg (AEAD):**
   `AES-256-GCM` (**MTI — mandatory to implement**: every conforming verifier implements it),

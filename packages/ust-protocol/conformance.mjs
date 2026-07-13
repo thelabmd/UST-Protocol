@@ -348,6 +348,19 @@ console.log('\n═════════════════════�
   check('explicit --no-fork-confirmed still overrides (air-gap) without witness', r6.verdict.result === 'VALID:HIGH');
 }
 
+// ─── rc.15: combineSubstrates — heterogeneous witness substrates (#68). A verifier may speak several
+// anchor dialects (Bitcoin, Rekor, …) via plugins; each returns null for a substrate it does not handle,
+// the router tries them in order. One QUESTION, many dialects — §17 registry is the shared vocabulary.
+{
+  const bitcoinOnly = async (anchor) => (anchor.substrate === 'bitcoin-ots' ? { final: true, time: 'btc' } : null);
+  const rekorOnly = async (anchor) => (anchor.substrate === 'rekor' ? { final: true, time: 'rekor' } : null);
+  const router = P.combineSubstrates([bitcoinOnly, rekorOnly]);
+  check('router delegates by substrate: bitcoin', (await router({ substrate: 'bitcoin-ots' }, 'sha256:x')).time === 'btc');
+  check('router delegates by substrate: rekor', (await router({ substrate: 'rekor' }, 'sha256:x')).time === 'rekor');
+  check('router returns null for an unknown substrate (→ INDETERMINATE, honest)', (await router({ substrate: 'dogecoin' }, 'sha256:x')) === null);
+  check('router order: first non-null wins', (await P.combineSubstrates([async () => null, rekorOnly])({ substrate: 'rekor' }, 'x')).time === 'rekor');
+}
+
 console.log('  ust-protocol ' + P.VERSION.spec + ' conformance vs ' + V.version);
 console.log('  PASS ' + pass + '   FAIL ' + fail + '   NOTES ' + note);
 if (fails.length) { console.log('\n  FAILURES:'); fails.forEach(f => console.log('    ✗ ' + f)); }

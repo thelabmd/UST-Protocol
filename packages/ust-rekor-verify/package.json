@@ -1,0 +1,14 @@
+{
+  "name": "@ust-protocol/rekor-verify",
+  "version": "1.0.0-rc.1",
+  "description": "Opt-in Sigstore Rekor (transparency-log) substrateVerify for UST anchors — a fast, independent witness substrate next to Bitcoin. Zero-dep (REST + RFC6962 inclusion). #68 witness.",
+  "type": "module",
+  "main": "index.mjs",
+  "exports": "./index.mjs",
+  "files": ["index.mjs", "LICENSE", "README.md"],
+  "keywords": ["ust", "rekor", "sigstore", "transparency-log", "witness", "substrate-verify"],
+  "license": "Apache-2.0",
+  "engines": { "node": ">=20" },
+  "repository": { "type": "git", "url": "git+https://github.com/thelabmd/UST-Protocol.git", "directory": "packages/ust-rekor-verify" },
+  "homepage": "https://github.com/thelabmd/UST-Protocol/tree/main/packages/ust-rekor-verify#readme"
+}

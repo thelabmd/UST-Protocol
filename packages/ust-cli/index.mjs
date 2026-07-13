@@ -806,11 +806,16 @@ async function cmdVerify() {
     // the SINGLE resolver (ust-protocol resolveByDiscovery, rc.13) — SSRF guard + one-copy flow live there
     // opt-in Bitcoin cross-check: if @ust-protocol/ots-verify is installed, the witness genesis anchor is
     // verified against Bitcoin (→ live HIGH); if not, the anchor stays unproven (→ honest HIGH pending).
-    let substrateVerify;
-    try { ({ substrateVerify } = await import('@ust-protocol/ots-verify')); } catch { /* opt-in absent */ }
+    // opt-in substrate plugins: Bitcoin (ots-verify) + Rekor (rekor-verify), combined via the protocol
+    // router. Whichever are installed contribute; none installed → anchor unproven → honest HIGH-pending.
+    const plugins = [];
+    for (const pkg of ['@ust-protocol/ots-verify', '@ust-protocol/rekor-verify']) {
+      try { const m = await import(pkg); if (m.substrateVerify) plugins.push(m.substrateVerify); } catch { /* absent */ }
+    }
+    const substrateVerify = plugins.length ? P.combineSubstrates(plugins) : undefined;
     const rd = await P.resolveByDiscovery(doc, { context: opts.context, offline: !!arg('offline', false), noForkConfirmed: noFork },
       { substrateVerify, fetchImpl: async (u, init) => { console.error(`  ⏳ resolving identity from ${new URL(u).origin} … (--offline to skip)`); return fetch(u, init); } });
-    if (!substrateVerify && rd.resolution && String(rd.resolution.noFork || '').startsWith('HIGH pending')) console.error('  ℹ️  Bitcoin anchor not cross-checked — `npm i @ust-protocol/ots-verify` for automatic HIGH');
+    if (!substrateVerify && rd.resolution && String(rd.resolution.noFork || '').startsWith('HIGH pending')) console.error('  ℹ️  anchor not cross-checked — `npm i @ust-protocol/ots-verify @ust-protocol/rekor-verify` for automatic HIGH');
     if (rd.resolution) {
       r = rd.verdict;
       resolution = rd.resolution.skipped ? { error: rd.resolution.skipped }
