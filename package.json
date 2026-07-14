@@ -11,7 +11,9 @@
     "packages/ust-cli"
   ],
   "scripts": {
-    "test": "node packages/ust-protocol/conformance.mjs",
-    "test:cli": "node packages/ust-cli/regression.mjs"
+    "test": "node packages/ust-protocol/conformance.mjs && node packages/ust-protocol/run-arc-vectors.mjs",
+    "test:cli": "node packages/ust-cli/regression.mjs",
+    "test:model": "node packages/ust-protocol/model-correspondence.mjs",
+    "test:vectors": "node packages/ust-protocol/gen-arc-vectors.mjs && git diff --exit-code vectors/arc-vectors.json && node packages/ust-protocol/run-arc-vectors.mjs"
   }
 }

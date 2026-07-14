@@ -13,8 +13,12 @@ jobs:
         with:
           node-version: '20'
       - run: npm install
-      - name: protocol conformance (spec == package == vectors)
+      - name: protocol conformance + language-neutral arc contract (spec == package == vectors)
         run: npm test
+      - name: model <-> code guard (every formal theorem is a real conformance check)
+        run: npm run test:model
+      - name: language-neutral vectors in sync with the reference impl (regenerate == committed)
+        run: npm run test:vectors
       - name: CLI ceremony regression (9th-audit — the seven points cannot regress)
         run: npm run test:cli
       - name: npm-drift gate (a published version is immutable)
