@@ -1284,6 +1284,31 @@ export function capAssurance(state, ceiling) {
   return meetAssurance(s, cap);
 }
 
+// ─── #oy8 CANONICAL REGISTRY — the SINGLE SOURCE OF TRUTH for the protocol's machine-checkable STRING SETS. The spec's
+//     registry blocks (§15/§17) are GENERATED from this (tools/gen-spec-registry.mjs), and tools/spec-code-sync.mjs
+//     asserts the code's ACTUAL literal usage (H/Hbytes domains, `purpose:` strings, thrown `E-` codes) equals these
+//     sets — so spec prose, this registry, and code usage cannot silently diverge (the spec↔code drift seam). Enums
+//     that already exist as code (ASSURANCE_AXES, TIER_RANK) are REFERENCED, never re-declared.
+export const REGISTRY = {
+  // hash domain tags (§7/§17) — the tag passed to H()/Hbytes(). MEASURED against actual usage by spec-code-sync.
+  hashDomains: ['ust:state', 'ust:shard', 'ust:seed', 'ust:keylog', 'ust:leaf', 'ust:node',
+    'ust:authority-checkpoint', 'ust:checkpoint-map-key', 'ust:checkpoint-map-value', 'ust:name-map-key', 'ust:name-map-value',
+    'ust:keylog-pos', 'ust:keylog-entry', 'ust:smt-empty', 'ust:smt-node', 'ust:smt-leaf'],
+  // signed `canon` preimage purposes (§12.1a/§12.3) — domain-separated, never interchangeable.
+  purposes: ['ust:name-no-fork', 'ust:authority-checkpoint', 'ust:authority-checkpoint-signature',
+    'ust:checkpoint-authority-recovery', 'ust:genesis-epoch-transition', 'ust:checkpoint-uniqueness-attestation'],
+  // INVALID error codes (§15) — every code the verifier/API can emit. Ordered as §15 lists them.
+  errorCodes: ['E-MALFORMED', 'E-CANON', 'E-BOUNDS', 'E-CYCLE', 'E-SIG', 'E-KEY', 'E-GENESIS', 'E-ANCHOR',
+    'E-COMMIT', 'E-ROOT', 'E-SEED', 'E-PREV', 'E-AUTHORITY', 'E-SEQ', 'E-EVIDENCE', 'E-ASSURANCE'],
+  // INDETERMINATE reasons — the §14 document-verifier's CLOSED set, and the §12.3.6 authority-checkpoint set (distinct).
+  indeterminateReasons: { document: ['unavailable', 'unsupported_alg', 'resource_limit', 'stale_keylog'],
+    checkpoint: ['authority_unresolved', 'terminality_unproven', 'order_unproven'] },
+  tiers: Object.keys(TIER_RANK),                                    // NONE/LIGHT/HIGH/TOP — single-sourced from TIER_RANK
+  assuranceAxes: ASSURANCE_AXES,                                    // single-sourced from the #78 lattice (§F.5.0)
+  evidenceOrder: ['proven-after', 'not-after', 'unproven'],        // compareEvidenceOrder returns (§12.3.5)
+  verifiedEvidenceFields: { required: ['proof_kind', 'subject', 'source_id', 'facts'], optional: ['verifier_id', 'verifier_version'] },
+};
+
 // ─── TOP §11.3 completeness: a sequenced stream is prev-chained; first frame's prev = genesis content_hash
 //     (M4); per-frame validity is verified too (X2 — completeness ≠ validity); duplicate ust_id / shared prev
 //     = a fork ⇒ E-PREV (Y1). A covering checkpoint (M5) proves 'chain-consistent' (no-deletion); the open tail

@@ -19,6 +19,8 @@ jobs:
         run: npm run test:model
       - name: language-neutral vectors in sync with the reference impl (regenerate == committed)
         run: npm run test:vectors
+      - name: spec <-> code registry sync (canonical string sets — spec == REGISTRY == code)
+        run: npm run test:spec-sync
       - name: CLI ceremony regression (9th-audit — the seven points cannot regress)
         run: npm run test:cli
       - name: npm-drift gate (a published version is immutable)

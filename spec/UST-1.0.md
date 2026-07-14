@@ -1113,16 +1113,22 @@ Checkpoint freshness (`deriveCheckpointFreshness`) is EARNED, never self-declare
   basis). Uniqueness on an unauthorized/unbound checkpoint never reaches here, so `attested ⇒ corroborated ∧
   independent-uniqueness`; uniqueness ALONE never earns `attested`.
 
-The external commitment is a **`VerifiedEvidence`** record — required `{ proof_kind, subject, source_id, facts }`
-plus optional `{ verifier_id, verifier_version }` (missing `proof_kind`/`subject`/`source_id` ⇒ `E-EVIDENCE`).
-It is **facts-only**: a connector supplies raw `facts` and the CORE derives the evidence CLASS from `proof_kind`
+The external commitment is a **`VerifiedEvidence`** record whose fields are (generated from the code `REGISTRY` —
+`tools/gen-spec-registry.mjs`):
+<!-- BEGIN spec-sync:verified-evidence-fields -->
+required `proof_kind`, `subject`, `source_id`, `facts`; optional `verifier_id`, `verifier_version`
+<!-- END spec-sync:verified-evidence-fields -->
+A missing required field ⇒ `E-EVIDENCE`. It is **facts-only**: a connector supplies raw `facts` and the CORE derives the evidence CLASS from `proof_kind`
 (e.g. `transparency-log` → append-only inclusion+consistency, which is NOT non-membership; only a keyed
 `authenticated-map` proof-kind yields non-membership) — a connector that self-declares the class or independence
 by putting `assurance`, `strength`, `trust_domain`, or `independent` into `facts` ⇒ `E-EVIDENCE`.
-`compareEvidenceOrder(a, b)` returns **`proven-after`** (a same-substrate position is a total order — block height /
-log index — or an interval relation `a.not_before ≥ b.not_after`), **`not-after`**, or **`unproven`** (two upper
-bounds alone, or cross-substrate positions, prove nothing) — a structural PROOF relation, never a wall-clock
-comparison.
+`compareEvidenceOrder(a, b)` returns one of (generated from the code `REGISTRY`):
+<!-- BEGIN spec-sync:evidence-order -->
+`proven-after` | `not-after` | `unproven`
+<!-- END spec-sync:evidence-order -->
+— `proven-after` when a same-substrate position gives a total order (block height / log index) or an interval
+relation `a.not_before ≥ b.not_after` holds; `not-after` symmetrically; `unproven` when two upper bounds alone (or
+cross-substrate positions) prove nothing — a structural PROOF relation, never a wall-clock comparison.
 
 #### 12.3.6 Verdict vocabulary (distinct algorithm, distinct reason set)
 
@@ -1318,7 +1324,8 @@ A verifier returns one of THREE OUTCOME KINDS — **availability is distinct fro
   a mixed-authority stream, §11.3, or an authority-checkpoint not signed by the in-band-resolved checkpoint
   authority, §12.3.1), `E-SEQ` (authority-checkpoint sequence counter wrong — ≠ prev+1, `effective_sequence` ≠
   seq+1, or epoch-initial mismatch, §12.3), `E-EVIDENCE` (a connector self-declares an evidence class instead of
-  supplying facts-only, §12.3.5). `E-SEQ` is distinct from `E-PREV`: `E-PREV` is a broken HASH link,
+  supplying facts-only, §12.3.5), `E-ASSURANCE` (a malformed assurance-axis tuple passed to the §F.5.0 lattice
+  API — an input guard, not a §14 verdict). `E-SEQ` is distinct from `E-PREV`: `E-PREV` is a broken HASH link,
   `E-SEQ` is a wrong sequence COUNTER — the §14 document verifier folds sequence faults into `E-PREV`, the §12.3
   chain separates them.
 - **INDETERMINATE (`unavailable` | `unsupported_alg`)** — a check could NOT COMPLETE: a dependency was
@@ -1354,6 +1361,12 @@ the full structured `.verdict`. `assertValid(verdict)` is the same guard over an
 async `verifyAsync`). An MCP verify tool MUST, BY DEFAULT, surface a non-VALID result as an ERROR response the
 agent must acknowledge (not a skippable data field); an explicit `soft` opt-in restores the advisory path. The
 rule is: **verify in the control flow, not as an advisory field.**
+
+**Canonical INVALID error-code set** (generated from `index.mjs` `REGISTRY` by `tools/gen-spec-registry.mjs` — do
+not edit by hand; the `spec-code-sync` gate keeps it == the codes the implementation actually emits):
+<!-- BEGIN spec-sync:error-codes -->
+`E-MALFORMED`, `E-CANON`, `E-BOUNDS`, `E-CYCLE`, `E-SIG`, `E-KEY`, `E-GENESIS`, `E-ANCHOR`, `E-COMMIT`, `E-ROOT`, `E-SEED`, `E-PREV`, `E-AUTHORITY`, `E-SEQ`, `E-EVIDENCE`, `E-ASSURANCE`
+<!-- END spec-sync:error-codes -->
 
 ---
 
@@ -1417,6 +1430,12 @@ Independent re-implementation is expected; the vectors make "verify without trus
 - **reserved keys:** transcript: `ust,state,sig,proof`; State: `id,time,data,hashes,provenance`; id: `domain_shard,ust_id,key_id,class,parent_ust`;
   partition-envelope: `kind,value,privacy,commit,enc` (enc: `alg,key_id,ct`); provenance: `sources,constituents,based_on,root,seed,prev`;
   sig: `alg,key_id,pub,sig`. Reserved names MUST NOT be used as partition or source names.
+
+**Signed purposes — canonical set** (generated from `index.mjs` `REGISTRY`; includes the §12.1a `ust:name-no-fork`
+purpose alongside the §12.3 family; kept == code by the `spec-code-sync` gate):
+<!-- BEGIN spec-sync:purposes -->
+`ust:name-no-fork` | `ust:authority-checkpoint` | `ust:authority-checkpoint-signature` | `ust:checkpoint-authority-recovery` | `ust:genesis-epoch-transition` | `ust:checkpoint-uniqueness-attestation`
+<!-- END spec-sync:purposes -->
 
 ---
 
