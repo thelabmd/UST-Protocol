@@ -148,7 +148,7 @@ without reading valid-AT-WHAT; nothing silently claims trust it did not establis
 - **HIGH — under a product.** + a genesis-rooted, self-signed key log (§12) → real NAME AUTHORITY (identity
   strength `authoritative`), key rotation/revocation, an operator profile (§20). What a service operator runs.
 - **TOP — a product built OVER HIGH (the notary).** + a witnessed/transparency genesis + un-backdatable time
-  (anchoring, §11) + sequenced-stream completeness (§11.3). The full notary — exactly noosphere.
+  (anchoring, §11) + sequenced-stream completeness (§11.3). The full notary — the reference-operator profile.
 
 **Floor invariants (LIGHT, always MUST):** I1 (whole-State signature), I3 (namespace isolation), I4 (one
 canonical), I5 (bounds), I6 (blinded privacy when used), I9 (data untrusted), I10 (fail-closed). **Tier
@@ -612,8 +612,8 @@ L4 — partner shard     (published by a third party holding the L3 key)
   layers can extend; the older layers never vouch for the newer (no retroactive containment). A chain may use
   both: seal what you publish together, extend what grows later.
 - **Third-party extension (the bootstrap mechanism):** a holder of the L3 key fetches L1..L3, builds
-  L4, computes L4's seed over the content_hashes of L1..L3 (its subordinate layers, §9.4), and publishes L4 — chaining ACROSS publishers (e.g. noosphere +
-  helioradar + muuune → a BSI derived shard extends the chain).
+  L4, computes L4's seed over the content_hashes of L1..L3 (its subordinate layers, §9.4), and publishes L4 — chaining ACROSS publishers (e.g. a raw-data publisher +
+  a derived-index publisher → a derived shard extends the chain).
 - **Layer availability:** an UNRESOLVABLE inner layer is an availability condition, not a failure — the outer
   layer's local verification (§14 steps 1–5) stands, and a depth-k walk reports `referents:"partial"` (§14.9);
   a missing layer is NEVER INVALID (availability ≠ failure).
@@ -630,7 +630,7 @@ L4 — partner shard     (published by a third party holding the L3 key)
 
 ### 11.1 Anchoring & honest gaps
 An operator batches `content_hash`es → a Merkle `root` → commits `root` into a public append-only log
-(the substrate is an operator choice, §17/§20 — noosphere uses git + OpenTimestamps/Bitcoin + IPFS as ONE
+(the substrate is an operator choice, §17/§20 — a reference operator uses git + OpenTimestamps/Bitcoin + IPFS as ONE
 example; another operator MAY register a different public append-only log). Time semantics:
 - **Un-backdatable time** for a State is obtained by resolving its `content_hash` to an anchored `root`
   whose append-only-log commitment fixes "not later than". The verifier's trust root is the LOG commitment,
@@ -667,7 +667,7 @@ confirmation/finality parameter) and applies it; an unregistered or unverifiable
 A **not-yet-final** commitment (per the substrate's finality rule) yields UNPROVEN, NEVER `VALID`-time. No
 operator index or mutable API is consulted for the mapping — the proof IS the mapping (I12). Absent a final
 proof, identity/integrity still verify but time is UNPROVEN (fail-closed per §14 step 6). Each registered
-substrate ships normative vectors (§16). (noosphere registers/uses `bitcoin-ots` — OTS→Bitcoin header, ≥6
+substrate ships normative vectors (§16). (a reference operator registers/uses `bitcoin-ots` — OTS→Bitcoin header, ≥6
 confirmations — in its operator profile; that is one substrate, not the protocol.)
 
 ### 11.3 Sequence completeness — an operator GUARANTEE (I11, N5, M4, M5)
@@ -1211,7 +1211,7 @@ reached; a document does NOT change format across tiers OR roles — even genesi
 - **HIGH producer/verifier:** + genesis-rooted key log → `authoritative` identity, rotation/revocation
   (vectors: key-log chain, revocation window, genesis fork/recovery).
 - **TOP producer/verifier (notary):** + anchor-proof per registered substrate (time) + sequenced-stream
-  completeness. This is what noosphere runs.
+  completeness. This is the reference-operator profile.
 
 Every verifier passes the normative test-vector suite BYTE-FOR-BYTE (§App. A) for the tiers it implements:
 FLOOR vectors — canonicalization/NFC/ordering, per-partition captured-vs-computed hashing, domain separation,
@@ -1308,10 +1308,10 @@ canon/DoS) are closed at LIGHT; NAME-impersonation and time attacks are closed a
   publish that fact — the data is on the publisher.
 - **Anchored time depends on the OPERATOR's substrate, not the protocol (H8).** Identity & integrity are
   self-contained (State + key log). Verifying TIME means verifying the operator's chosen substrate (§11.2/§17)
-  — for noosphere's `bitcoin-ots`, running/trusting a Bitcoin header source. So "verify without trust" is
+  — for a reference operator's `bitcoin-ots`, running/trusting a Bitcoin header source. So "verify without trust" is
   self-contained for identity+integrity, and for time DELEGATES to whatever the operator's substrate requires.
 - **Time resolution is a SUBSTRATE property (H9).** e.g. `bitcoin-ots` finality (~1 hour at ≥6 conf) makes
-  noosphere's anchored time hour-grade and lagged; sub-hour ordering rests on the signed-but-upper-bounded
+  a reference operator's anchored time hour-grade and lagged; sub-hour ordering rests on the signed-but-upper-bounded
   `generated_at` + the `prev` chain. A different registered substrate could offer different resolution.
 - **The naming root is DNS/TLS PKI (H10).** UST removes PER-DOCUMENT transport trust (I2), but NAME authority
   bootstraps ONCE on DNSSEC/TLS + a transparency witness (§12.1). Everything bootstraps from something; UST is
@@ -1431,7 +1431,7 @@ One shape, five shorts across domains and modes. All obey §4–§10: string lea
 whole-`state` signature. (`sig`/hashes abbreviated.)
 
 ### 21.1 Derivation that CHAINS to another publisher (by content hash, not URL)
-A Muuune sound-state derived from Helioradar's reading — `based_on[].hash` is authoritative; `url` is advisory.
+A derived state (e.g. an audio rendering) built on another publisher's reading — `based_on[].hash` is authoritative; `url` is advisory.
 ```json
 { "ust": "1.0",
   "state": {
@@ -1534,7 +1534,7 @@ provenance and will be lifted into this ledger when the spec is published.
 - **REV 5** — honest cover-to-cover pass (H1–H11): fixed the VALID-condition bug and hash-tag discipline, and
   stated the honest limitations (Bitcoin-SPV for time, ~1h resolution, DNS/TLS naming root).
 - **REV 6** — layering fix 1 (owner): Bitcoin/OTS moved from protocol to an operator SUBSTRATE (registry-based,
-  like the signature scheme); `bitcoin-ots` lives in noosphere's operator profile.
+  like the signature scheme); `bitcoin-ots` lives in an operator's profile.
 - **REV 7** — layering fix 2 (owner): time + completeness + name-authority are OPERATOR GUARANTEES surfaced as
   STRENGTHS; the protocol floor is a signed well-formed State. Dissolved the tiered-conformance question (H11).
 - **REV 8** — full cover-to-cover consistency pass (Q1–Q10): propagated the REV6/7 model into §1/§3/§14/§16/§18.
