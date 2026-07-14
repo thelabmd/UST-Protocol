@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.32', revision: 44 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.33', revision: 45 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -943,13 +943,14 @@ export function resolveCadence(genesis, cadenceLog = [], atTime, { keylog } = {}
 //     signer; each Cₙ₋₁ authorizes the signer of Cₙ (its `checkpoint_authority.next_*`, effective at seq n); a
 //     checkpoint NEVER authorizes its own signer. The expected signer is resolved from PRIOR state BEFORE the
 //     signature is trusted; the carried `current_key_id` is diagnostic and MUST equal that resolved signer.
-export function buildAuthorityCheckpoint({ domain_shard, genesis_epoch, sequence, previous_checkpoint = null, active_genesis, current_key_id, next_key_id, next_pub, effective_sequence, keylog }) {
+export function buildAuthorityCheckpoint({ domain_shard, genesis_epoch, sequence, previous_checkpoint = null, previous_epoch_final_checkpoint, active_genesis, current_key_id, next_key_id, next_pub, effective_sequence, keylog }) {
   const ca = { current_key_id,
     ...(next_key_id !== undefined ? { next_key_id } : {}),
     ...(next_pub !== undefined ? { next_pub } : {}),
     ...(effective_sequence !== undefined ? { effective_sequence } : {}) };
   return { version: '1', purpose: 'ust:authority-checkpoint', domain_shard, genesis_epoch, sequence: String(sequence),
     ...(previous_checkpoint !== undefined && previous_checkpoint !== null ? { previous_checkpoint } : {}),   // C₀ is genesis-rooted: no prior
+    ...(previous_epoch_final_checkpoint !== undefined ? { previous_epoch_final_checkpoint } : {}),           // epoch-B initial: binds epoch-A final
     active_genesis, checkpoint_authority: ca, keylog };
 }
 export function sealAuthorityCheckpoint(body, privKeyObj, pubB64url) {
@@ -969,7 +970,68 @@ function authorityCheckpointSigOk(cp, expectedKeyId, expectedPub) {
 // Verify a chain of authority checkpoints. Root the FIRST element's signer in the genesis-authorized checkpoint key
 // (`genesisAuthority = {key_id, pub}`, the reference profile's dedicated key) OR a pinned prior checkpoint
 // (`pinnedPrior = {checkpoint_id, authority:{key_id, pub}, sequence}`). No root ⇒ INDETERMINATE(authority_unresolved).
-export function verifyAuthorityCheckpointChain(chain, { genesisAuthority, pinnedPrior } = {}) {
+// ─── #76 §1.7 CHECKPOINT RECOVERY — a genesis-authorized N-of-M multisig that re-authorizes the checkpoint authority
+//     after key loss WITHOUT bypassing checkpoint validation. Role-separated from data/checkpoint keys; the recovery
+//     set is genesis-fixed (immutable within the epoch). A DORMANT emergency mechanism, NOT a normal rotation: it
+//     authorizes ONLY the next checkpoint's replacement key, bound to (domain, epoch, last_accepted_checkpoint, seq).
+export function checkpointRecoveryClaim({ domain_shard, genesis_epoch, last_accepted_checkpoint, replacement_key_id, replacement_pub, reason, effective_sequence }) {
+  return { purpose: 'ust:checkpoint-authority-recovery', domain_shard, genesis_epoch, last_accepted_checkpoint,
+    replacement_authority: { key_id: replacement_key_id, pub: replacement_pub }, reason, effective_sequence: String(effective_sequence) };
+}
+export function buildRecoveryStatement(fields, privKeyObj, issuerPubB64url) {
+  const claim = checkpointRecoveryClaim(fields);
+  const sig = edSign(null, Buffer.from(canon(claim), 'utf8'), privKeyObj).toString('base64url');
+  return { claim, issuer_id: keyId(issuerPubB64url), sig: { alg: 'Ed25519', key_id: keyId(issuerPubB64url), pub: issuerPubB64url, sig } };
+}
+export function verifyCheckpointRecovery(statements, { domain_shard, genesis_epoch, last_accepted_checkpoint, effective_sequence, recoveryKeys = {}, threshold = 2 } = {}) {
+  if (!Array.isArray(statements) || statements.length === 0) return { recovered: false, detail: 'no recovery statements' };
+  let ref = null, replacement = null; const seenIssuers = new Set(), signers = [];
+  for (const s of statements) {
+    const { claim, issuer_id, sig } = s || {};
+    if (!claim || !issuer_id || !sig || !sig.sig || !sig.pub) continue;
+    if (claim.purpose !== 'ust:checkpoint-authority-recovery') continue;
+    if (claim.domain_shard !== domain_shard || claim.genesis_epoch !== genesis_epoch || claim.last_accepted_checkpoint !== last_accepted_checkpoint) continue;
+    if (String(claim.effective_sequence) !== String(effective_sequence)) continue;      // authorizes ONLY the next checkpoint
+    const ra = claim.replacement_authority;
+    if (!ra || !ra.key_id || !ra.pub || keyId(ra.pub) !== ra.key_id) continue;          // replacement well-formed (key_id = keyId(pub))
+    const cc = canon(claim);
+    if (ref === null) { ref = cc; replacement = ra; } else if (cc !== ref) continue;    // all signers sign the BYTE-IDENTICAL claim (agree on ONE replacement)
+    const pub = recoveryKeys[issuer_id];
+    if (!pub || pub !== sig.pub || keyId(sig.pub) !== issuer_id) continue;              // genesis-authorized recovery signer only
+    if (strictB64url(sig.sig, 64) === null || !edVerifyStrict(sig.pub, cc, sig.sig)) continue;
+    if (seenIssuers.has(issuer_id)) continue;                                           // one signer counts once
+    seenIssuers.add(issuer_id); signers.push(issuer_id);
+  }
+  return seenIssuers.size >= threshold
+    ? { recovered: true, replacement_authority: replacement, threshold: String(threshold), signers }
+    : { recovered: false, detail: 'recovery quorum not met: ' + seenIssuers.size + ' distinct signers < ' + threshold };
+}
+
+// ─── #76 (audit-8) GENESIS-EPOCH TRANSITION — a new genesis epoch must NOT silently reset the authority chain. The
+//     A→B transition is a typed statement SIGNED BY EPOCH A's checkpoint authority, binding A's final checkpoint and
+//     naming epoch B's initial checkpoint authority + initial sequence. Epoch B's C₀ then binds that final checkpoint.
+export function epochTransitionClaim({ domain_shard, from_genesis_epoch, from_final_checkpoint, to_genesis_epoch, to_key_id, to_pub, to_initial_sequence = '0' }) {
+  return { purpose: 'ust:genesis-epoch-transition', domain_shard, from_genesis_epoch, from_final_checkpoint, to_genesis_epoch,
+    to_checkpoint_authority: { key_id: to_key_id, pub: to_pub }, to_initial_sequence: String(to_initial_sequence) };
+}
+export function buildEpochTransition(fields, privKeyObj, issuerPubB64url) {
+  const claim = epochTransitionClaim(fields);
+  const sig = edSign(null, Buffer.from(canon(claim), 'utf8'), privKeyObj).toString('base64url');
+  return { claim, issuer_id: keyId(issuerPubB64url), sig: { alg: 'Ed25519', key_id: keyId(issuerPubB64url), pub: issuerPubB64url, sig } };
+}
+export function verifyEpochTransition(statement, { domain_shard, from_genesis_epoch, from_final_checkpoint, fromAuthority } = {}) {
+  const { claim, sig } = statement || {};
+  if (!claim || !sig || !sig.sig || !sig.pub || !fromAuthority) return { ok: false, detail: 'malformed transition or no from-authority' };
+  if (claim.purpose !== 'ust:genesis-epoch-transition') return { ok: false, detail: 'wrong purpose' };
+  if (claim.domain_shard !== domain_shard || claim.from_genesis_epoch !== from_genesis_epoch || claim.from_final_checkpoint !== from_final_checkpoint) return { ok: false, detail: 'transition not bound to this (domain, from-epoch, from-final-checkpoint)' };
+  const ta = claim.to_checkpoint_authority;
+  if (!ta || !ta.key_id || !ta.pub || keyId(ta.pub) !== ta.key_id) return { ok: false, detail: 'to_checkpoint_authority malformed' };
+  if (sig.key_id !== fromAuthority.key_id || sig.pub !== fromAuthority.pub || keyId(sig.pub) !== sig.key_id) return { ok: false, detail: 'transition not signed by epoch A checkpoint authority' };
+  if (strictB64url(sig.sig, 64) === null || !edVerifyStrict(sig.pub, canon(claim), sig.sig)) return { ok: false, detail: 'Ed25519 verify failed' };
+  return { ok: true, to_genesis_epoch: claim.to_genesis_epoch, to_checkpoint_authority: ta, to_initial_sequence: claim.to_initial_sequence };
+}
+
+export function verifyAuthorityCheckpointChain(chain, { genesisAuthority, pinnedPrior, recoveries, recoveryKeys, recoveryThreshold, epochTransitions } = {}) {
   if (!Array.isArray(chain) || chain.length === 0) return { error: 'E-MALFORMED', detail: 'empty checkpoint chain' };
   if (!genesisAuthority && !pinnedPrior) return { result: 'INDETERMINATE', reason: 'authority_unresolved', detail: 'no genesis-rooted or pinned-prior checkpoint authority to resolve the first signer' };
   let prev = pinnedPrior ? { id: pinnedPrior.checkpoint_id, authority: pinnedPrior.authority, sequence: pinnedPrior.sequence, body: null } : null;
@@ -981,20 +1043,36 @@ export function verifyAuthorityCheckpointChain(chain, { genesisAuthority, pinned
     let expected;
     if (prev === null) {
       expected = { key_id: genesisAuthority.key_id, pub: genesisAuthority.pub };       // C₀ rooted in the genesis-authorized key
+    } else if (prev.body && b.genesis_epoch !== prev.body.genesis_epoch) {
+      // GENESIS-EPOCH TRANSITION — a new epoch must NOT silently reset: it needs an authenticated A→B transition
+      // signed by epoch A's authority (prev.authority), binding A's final checkpoint (prev.id). Same domain.
+      if (b.domain_shard !== prev.body.domain_shard) return { result: 'INVALID', error: 'E-MALFORMED', detail: 'domain_shard changes within the chain' };
+      const et = epochTransitions && epochTransitions[b.genesis_epoch] ? verifyEpochTransition(epochTransitions[b.genesis_epoch], { domain_shard: b.domain_shard, from_genesis_epoch: prev.body.genesis_epoch, from_final_checkpoint: prev.id, fromAuthority: prev.authority }) : { ok: false };
+      if (!et.ok || et.to_genesis_epoch !== b.genesis_epoch) return { result: 'INVALID', error: 'E-MALFORMED', detail: 'genesis_epoch changes without an authenticated epoch transition (no silent reset)' };
+      if (b.previous_epoch_final_checkpoint !== prev.id) return { result: 'INVALID', error: 'E-PREV', detail: 'epoch-initial checkpoint does not bind the prior-epoch final checkpoint' };
+      if (b.sequence !== String(et.to_initial_sequence)) return { result: 'INVALID', error: 'E-SEQ', detail: 'epoch-initial sequence ≠ the transition to_initial_sequence' };
+      expected = { key_id: et.to_checkpoint_authority.key_id, pub: et.to_checkpoint_authority.pub };
     } else {
       const pca = prev.body ? prev.body.checkpoint_authority : null;                    // the authority Cₙ₋₁ committed for THIS sequence, else unchanged
       expected = (pca && pca.next_key_id !== undefined && pca.effective_sequence === b.sequence) ? { key_id: pca.next_key_id, pub: pca.next_pub } : prev.authority;
       if (b.previous_checkpoint !== prev.id) return { result: 'INVALID', error: 'E-PREV', detail: 'previous_checkpoint ≠ id of the prior accepted checkpoint' };
       if (b.sequence !== String(BigInt(prev.sequence) + 1n)) return { result: 'INVALID', error: 'E-SEQ', detail: 'sequence is not prev+1' };
       if (b.domain_shard !== prev.body?.domain_shard && prev.body) return { result: 'INVALID', error: 'E-MALFORMED', detail: 'domain_shard changes within the chain' };
-      if (b.genesis_epoch !== prev.body?.genesis_epoch && prev.body) return { result: 'INVALID', error: 'E-MALFORMED', detail: 'genesis_epoch changes within the chain (needs an epoch-transition)' };
     }
     if (!expected || !expected.key_id || !expected.pub) return { result: 'INDETERMINATE', reason: 'authority_unresolved', detail: 'cannot resolve the expected signer for sequence ' + b.sequence };
-    // 2) verify the signature against the RESOLVED signer (never the carried key)
-    const sv = authorityCheckpointSigOk(cp, expected.key_id, expected.pub);
-    if (!sv.ok) return { result: 'INVALID', error: 'E-AUTHORITY', detail: sv.detail };
-    // 3) the carried current_key_id is diagnostic — it must EQUAL the resolved signer, never resolve it
-    if (b.checkpoint_authority?.current_key_id !== expected.key_id) return { result: 'INVALID', error: 'E-AUTHORITY', detail: 'carried current_key_id ≠ the prior-authorized signer' };
+    // 2) the signer must be the RESOLVED authority — OR, after key loss, a genesis-recovery-threshold REPLACEMENT for
+    //    this exact sequence (bound to the prior checkpoint). Recovery re-authorizes the signer; it does NOT bypass any
+    //    later checkpoint check. Both candidates are resolved from PRIOR state before cp's signature is trusted.
+    const candidates = [expected];
+    let recoveredWith = null;
+    if (recoveries && prev && recoveries[b.sequence]) {
+      const rec = verifyCheckpointRecovery(recoveries[b.sequence], { domain_shard: b.domain_shard, genesis_epoch: b.genesis_epoch, last_accepted_checkpoint: prev.id, effective_sequence: b.sequence, recoveryKeys: recoveryKeys || {}, threshold: recoveryThreshold });
+      if (rec.recovered) { recoveredWith = rec.replacement_authority; candidates.push(recoveredWith); }
+    }
+    const matched = candidates.find((c) => c && c.key_id && c.pub && authorityCheckpointSigOk(cp, c.key_id, c.pub).ok);
+    if (!matched) return { result: 'INVALID', error: 'E-AUTHORITY', detail: 'checkpoint not signed by the authorized' + (recoveredWith ? ' (or recovery-replacement)' : '') + ' checkpoint authority' };
+    // 3) the carried current_key_id is diagnostic — it must EQUAL the matched signer, never resolve it
+    if (b.checkpoint_authority?.current_key_id !== matched.key_id) return { result: 'INVALID', error: 'E-AUTHORITY', detail: 'carried current_key_id ≠ the authorized signer' };
     // 4) rotation exactness — all-or-none; keyId(next_pub)==next_key_id; effective_sequence == seq+1 (no arbitrary future activation)
     const ca = b.checkpoint_authority || {};
     const rot = [ca.next_key_id, ca.next_pub, ca.effective_sequence].filter((x) => x !== undefined).length;
@@ -1003,7 +1081,7 @@ export function verifyAuthorityCheckpointChain(chain, { genesisAuthority, pinned
       if (keyId(ca.next_pub) !== ca.next_key_id) return { result: 'INVALID', error: 'E-KEY', detail: 'keyId(next_pub) ≠ next_key_id' };
       if (ca.effective_sequence !== String(BigInt(b.sequence) + 1n)) return { result: 'INVALID', error: 'E-SEQ', detail: 'effective_sequence ≠ sequence+1' };
     }
-    prev = { id: authorityCheckpointId(cp), authority: expected, sequence: b.sequence, body: b };
+    prev = { id: authorityCheckpointId(cp), authority: matched, sequence: b.sequence, body: b };
   }
   const lb = chain[chain.length - 1].body, lca = lb.checkpoint_authority || {};
   const activeAuthority = (lca.next_key_id !== undefined) ? { key_id: lca.next_key_id, pub: lca.next_pub, effective_sequence: lca.effective_sequence } : prev.authority;
@@ -1100,12 +1178,31 @@ export function verifyActiveGenesisUniqueness(proof, { domain_shard, active_gene
   return { authoritative: false, detail: 'active_genesis not the unique value for domain under mapRoot (a rival value is bound)' };
 }
 
+// ─── #77 STRICT KEY-LOG TERMINALITY — head is the LAST entry of a length-L log: inclusion of the entry at position
+//     L-1 AND non-membership at position L (no successor). A positioned SMT (F.5k) keyed by index — strictly stronger
+//     than the earlier `head ∈ root` membership (which a hidden successor could satisfy). keylog.root = this SMT root.
+export const keylogPosKey = (index) => H('ust:keylog-pos', canon({ i: String(index) }));
+export const keylogEntryValue = (entryHash) => H('ust:keylog-entry', canon({ h: entryHash }));
+export function buildKeylogCommitment(entryHashes) {
+  const L = entryHashes.length;
+  const map = buildVerifiableMap(entryHashes.map((h, i) => ({ key: keylogPosKey(i), value: keylogEntryValue(h) })));
+  return { root: map.root, length: String(L), head: entryHashes[L - 1],
+    headProof: map.prove(keylogPosKey(L - 1)), successorProof: map.prove(keylogPosKey(L)), map };
+}
+export function verifyKeylogTerminality({ root, length, head } = {}, proof = {}) {
+  let L; try { L = BigInt(length); } catch { return { terminal: false, detail: 'length is not an integer' }; }
+  if (L < 1n) return { terminal: false, detail: 'empty key-log' };
+  const inc = smtVerify(root, keylogPosKey(String(L - 1n)), keylogEntryValue(head), proof.headProof);   // head at position L-1
+  const noSucc = smtVerify(root, keylogPosKey(String(L)), null, proof.successorProof);                  // nothing at position L
+  return inc && noSucc ? { terminal: true } : { terminal: false, detail: !inc ? 'head not proven at position length-1' : 'a successor entry exists at position length' };
+}
+
 // ─── #76 Phase B — publisher-checkpoint CORROBORATED freshness. Compose the AUTHORIZED chain (F.5h) with the key-log
 //     head's membership in the committed root + a VERIFIED external commitment ordered AFTER the target document
 //     (F.5g `compareEvidenceOrder`, never a timestamp compare). This CLOSES the P0-05 stale-prefix overclaim by
 //     earning `corroborated`, NEVER `attested`: a single publisher cannot prove split-view absence — independent
 //     anti-equivocation is Phase C/#42. (Strict last-index terminality is the #77 refinement; here `head ∈ root`.)
-export function deriveCheckpointFreshness(chain, { genesisAuthority, pinnedPrior, target, commitment, terminalityProof, uniqueness } = {}) {
+export function deriveCheckpointFreshness(chain, { genesisAuthority, pinnedPrior, target, commitment, terminality, uniqueness } = {}) {
   const chn = verifyAuthorityCheckpointChain(chain, { genesisAuthority, pinnedPrior });
   if (chn.result !== 'VALID') return chn.result === 'INDETERMINATE' ? chn
     : { result: 'INVALID', error: chn.error, detail: 'checkpoint chain not authorized: ' + (chn.detail || chn.error), keylog_freshness: 'unverified' };
@@ -1114,8 +1211,8 @@ export function deriveCheckpointFreshness(chain, { genesisAuthority, pinnedPrior
     if (target.active_genesis !== undefined && b.active_genesis !== target.active_genesis) return { result: 'INVALID', error: 'E-GENESIS', detail: 'checkpoint active_genesis ≠ target', keylog_freshness: 'unverified' };
     if (target.domain_shard !== undefined && b.domain_shard !== target.domain_shard) return { result: 'INVALID', error: 'E-GENESIS', detail: 'checkpoint domain ≠ target', keylog_freshness: 'unverified' };
   }
-  if (!terminalityProof || verifyAnchor(b.keylog?.head, { ...terminalityProof, root: b.keylog?.root }).inclusion !== true)  // head ∈ committed key-log root
-    return { result: 'INDETERMINATE', reason: 'terminality_unproven', detail: 'key-log head not proven a member of the committed root', keylog_freshness: 'unverified' };
+  const term = verifyKeylogTerminality({ root: b.keylog?.root, length: b.keylog?.length, head: b.keylog?.head }, terminality || {});  // head = LAST entry (position L-1) AND no successor at L
+  if (!term.terminal) return { result: 'INDETERMINATE', reason: 'terminality_unproven', detail: term.detail || 'key-log head terminality not proven', keylog_freshness: 'unverified' };
   if (!commitment || commitment.subject !== headId)                                     // external commitment must be VERIFIED evidence BOUND to this checkpoint id
     return { result: 'INDETERMINATE', reason: 'unavailable', detail: 'no external-commitment evidence bound to the checkpoint id', keylog_freshness: 'unverified' };
   if (!target || !target.anchor) return { result: 'INDETERMINATE', reason: 'unavailable', detail: 'no target anchor evidence to order against', keylog_freshness: 'unverified' };

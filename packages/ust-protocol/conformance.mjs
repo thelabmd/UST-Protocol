@@ -648,9 +648,8 @@ console.log('\n═════════════════════�
   const K0 = kp('21'.repeat(32)), KX = kp('2f'.repeat(32));
   const gAuth = { key_id: K0.key_id, pub: K0.pubB64 };
   const EP = 'sha256:' + '11'.repeat(32), AG = 'sha256:' + '22'.repeat(32), D = 'noosphere.md';
-  const head = 'sha256:' + 'ab'.repeat(32), root = P.merkleRoot([head]);
-  const keylog = { length: '1', root, head };
-  const tp = { path: [] };                                                   // single-leaf key-log: head → root directly
+  const kl = P.buildKeylogCommitment(['sha256:' + 'ab'.repeat(32)]);         // strict terminality: head at position L-1 + no successor
+  const keylog = { length: kl.length, root: kl.root, head: kl.head }, term = { headProof: kl.headProof, successorProof: kl.successorProof };
   const C0 = P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: D, genesis_epoch: EP, sequence: '0', active_genesis: AG, current_key_id: K0.key_id, keylog }), K0.priv, K0.pubB64);
   const headId = P.authorityCheckpointId(C0);
   const btc = (pos, subj) => P.verifiedEvidence({ proof_kind: 'pow-header-chain', subject: subj, source_id: 'btc', facts: { substrate: 'bitcoin', position: String(pos) } });
@@ -658,15 +657,15 @@ console.log('\n═════════════════════�
   const target = { active_genesis: AG, domain_shard: D, anchor: btc(800, 'ust:target') };
   const F = (opts) => P.deriveCheckpointFreshness([C0], { genesisAuthority: gAuth, ...opts });
 
-  check('PhB all conjuncts (authorized × head∈root × proven-after) → corroborated', (r => r.result === 'VALID' && r.keylog_freshness === 'corroborated' && r.head === headId)(F({ target, commitment: commit, terminalityProof: tp })));
-  check('PhB CEILING: corroborated carries anti_equivocation:unverified and is NEVER attested', (r => r.keylog_freshness === 'corroborated' && r.anti_equivocation === 'unverified' && r.keylog_freshness !== 'attested')(F({ target, commitment: commit, terminalityProof: tp })));
-  check('PhB commitment NOT proven-after target → INDETERMINATE(order_unproven)', (r => r.result === 'INDETERMINATE' && r.reason === 'order_unproven')(F({ target, commitment: btc(700, headId), terminalityProof: tp })));
-  check('PhB two not_after upper bounds → unproven → order_unproven', (r => r.reason === 'order_unproven')(F({ target: { active_genesis: AG, domain_shard: D, anchor: P.verifiedEvidence({ proof_kind: 't', subject: 'ust:target', source_id: 'x', facts: { not_after: '2027-01-01T00:00:00Z' } }) }, commitment: P.verifiedEvidence({ proof_kind: 't', subject: headId, source_id: 'y', facts: { not_after: '2027-02-01T00:00:00Z' } }), terminalityProof: tp })));
+  check('PhB all conjuncts (authorized × head∈root × proven-after) → corroborated', (r => r.result === 'VALID' && r.keylog_freshness === 'corroborated' && r.head === headId)(F({ target, commitment: commit, terminality: term })));
+  check('PhB CEILING: corroborated carries anti_equivocation:unverified and is NEVER attested', (r => r.keylog_freshness === 'corroborated' && r.anti_equivocation === 'unverified' && r.keylog_freshness !== 'attested')(F({ target, commitment: commit, terminality: term })));
+  check('PhB commitment NOT proven-after target → INDETERMINATE(order_unproven)', (r => r.result === 'INDETERMINATE' && r.reason === 'order_unproven')(F({ target, commitment: btc(700, headId), terminality: term })));
+  check('PhB two not_after upper bounds → unproven → order_unproven', (r => r.reason === 'order_unproven')(F({ target: { active_genesis: AG, domain_shard: D, anchor: P.verifiedEvidence({ proof_kind: 't', subject: 'ust:target', source_id: 'x', facts: { not_after: '2027-01-01T00:00:00Z' } }) }, commitment: P.verifiedEvidence({ proof_kind: 't', subject: headId, source_id: 'y', facts: { not_after: '2027-02-01T00:00:00Z' } }), terminality: term })));
   check('PhB terminality missing → INDETERMINATE(terminality_unproven)', (r => r.reason === 'terminality_unproven')(F({ target, commitment: commit })));
-  check('PhB commitment not bound to checkpoint id → INDETERMINATE(unavailable)', (r => r.result === 'INDETERMINATE' && r.reason === 'unavailable')(F({ target, commitment: btc(900, 'sha256:' + '00'.repeat(32)), terminalityProof: tp })));
-  check('PhB unauthorized chain (wrong signer) → INVALID, freshness unverified', (r => r.result === 'INVALID' && r.keylog_freshness === 'unverified')(P.deriveCheckpointFreshness([P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: D, genesis_epoch: EP, sequence: '0', active_genesis: AG, current_key_id: K0.key_id, keylog }), KX.priv, KX.pubB64)], { genesisAuthority: gAuth, target, commitment: commit, terminalityProof: tp })));
-  check('PhB checkpoint active_genesis ≠ target → INVALID(E-GENESIS)', (r => r.result === 'INVALID' && r.error === 'E-GENESIS')(F({ target: { active_genesis: 'sha256:' + '99'.repeat(32), domain_shard: D, anchor: btc(800, 'ust:target') }, commitment: commit, terminalityProof: tp })));
-  check('PhB cold verifier (no root) → INDETERMINATE(authority_unresolved)', (r => r.reason === 'authority_unresolved')(P.deriveCheckpointFreshness([C0], { target, commitment: commit, terminalityProof: tp })));
+  check('PhB commitment not bound to checkpoint id → INDETERMINATE(unavailable)', (r => r.result === 'INDETERMINATE' && r.reason === 'unavailable')(F({ target, commitment: btc(900, 'sha256:' + '00'.repeat(32)), terminality: term })));
+  check('PhB unauthorized chain (wrong signer) → INVALID, freshness unverified', (r => r.result === 'INVALID' && r.keylog_freshness === 'unverified')(P.deriveCheckpointFreshness([P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: D, genesis_epoch: EP, sequence: '0', active_genesis: AG, current_key_id: K0.key_id, keylog }), KX.priv, KX.pubB64)], { genesisAuthority: gAuth, target, commitment: commit, terminality: term })));
+  check('PhB checkpoint active_genesis ≠ target → INVALID(E-GENESIS)', (r => r.result === 'INVALID' && r.error === 'E-GENESIS')(F({ target: { active_genesis: 'sha256:' + '99'.repeat(32), domain_shard: D, anchor: btc(800, 'ust:target') }, commitment: commit, terminality: term })));
+  check('PhB cold verifier (no root) → INDETERMINATE(authority_unresolved)', (r => r.reason === 'authority_unresolved')(P.deriveCheckpointFreshness([C0], { target, commitment: commit, terminality: term })));
 }
 
 // ─── #76 Phase C — `attested` via INDEPENDENT anti-equivocation (accepted-witness-quorum). attested = corroborated ∧
@@ -675,7 +674,7 @@ console.log('\n═════════════════════�
   const K0 = kp('31'.repeat(32)), KX = kp('3f'.repeat(32)), Wa = kp('41'.repeat(32)), Wb = kp('42'.repeat(32)), Wc = kp('43'.repeat(32));
   const gAuth = { key_id: K0.key_id, pub: K0.pubB64 };
   const EP = 'sha256:' + '55'.repeat(32), AG = 'sha256:' + '66'.repeat(32), D = 'noosphere.md';
-  const head = 'sha256:' + 'cd'.repeat(32), keylog = { length: '1', root: P.merkleRoot([head]), head }, tp = { path: [] };
+  const kl = P.buildKeylogCommitment(['sha256:' + 'cd'.repeat(32)]), keylog = { length: kl.length, root: kl.root, head: kl.head }, term = { headProof: kl.headProof, successorProof: kl.successorProof };
   const C0 = P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: D, genesis_epoch: EP, sequence: '0', active_genesis: AG, current_key_id: K0.key_id, keylog }), K0.priv, K0.pubB64);
   const headId = P.authorityCheckpointId(C0);
   const btc = (pos, subj) => P.verifiedEvidence({ proof_kind: 'pow-header-chain', subject: subj, source_id: 'btc', facts: { substrate: 'bitcoin', position: String(pos) } });
@@ -684,12 +683,12 @@ console.log('\n═════════════════════�
   const trustRoots = { [Wa.key_id]: Wa.pubB64, [Wb.key_id]: Wb.pubB64, [Wc.key_id]: Wc.pubB64 };
   const ua = (W, extra) => P.buildUniquenessAttestation({ domain_shard: D, genesis_epoch: EP, sequence: '0', checkpoint: headId, ...extra }, W.priv, W.pubB64);
   const uOpts = (atts) => ({ attestations: atts, trustRoots, domains, threshold: 2 });
-  const F = (uniq) => P.deriveCheckpointFreshness([C0], { genesisAuthority: gAuth, target, commitment: commit, terminalityProof: tp, uniqueness: uniq });
+  const F = (uniq) => P.deriveCheckpointFreshness([C0], { genesisAuthority: gAuth, target, commitment: commit, terminality: term, uniqueness: uniq });
   const VU = (atts) => P.verifyCheckpointUniqueness(atts, { domain_shard: D, genesis_epoch: EP, sequence: '0', checkpoint: headId, trustRoots, domains, threshold: 2 });
 
   check('PhC 2 witnesses, DISTINCT domains → attested (accepted-witness-quorum), anti_equivocation attested', (r => r.result === 'VALID' && r.keylog_freshness === 'attested' && r.basis === 'accepted-witness-quorum' && r.anti_equivocation === 'attested' && r.trust_domains.length === 2)(F(uOpts([ua(Wa), ua(Wb)]))));
   check('PhC 2 witnesses, SAME domain → quorum not met → stays corroborated', (r => r.keylog_freshness === 'corroborated')(F(uOpts([ua(Wa), ua(Wc)]))));
-  check('PhC uniqueness on an UNAUTHORIZED checkpoint → INVALID, never attested', (r => r.result === 'INVALID' && r.keylog_freshness !== 'attested')(P.deriveCheckpointFreshness([P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: D, genesis_epoch: EP, sequence: '0', active_genesis: AG, current_key_id: K0.key_id, keylog }), KX.priv, KX.pubB64)], { genesisAuthority: gAuth, target, commitment: commit, terminalityProof: tp, uniqueness: uOpts([ua(Wa), ua(Wb)]) })));
+  check('PhC uniqueness on an UNAUTHORIZED checkpoint → INVALID, never attested', (r => r.result === 'INVALID' && r.keylog_freshness !== 'attested')(P.deriveCheckpointFreshness([P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: D, genesis_epoch: EP, sequence: '0', active_genesis: AG, current_key_id: K0.key_id, keylog }), KX.priv, KX.pubB64)], { genesisAuthority: gAuth, target, commitment: commit, terminality: term, uniqueness: uOpts([ua(Wa), ua(Wb)]) })));
   check('PhC bare observation (wrong purpose) is NOT uniqueness → not admitted', VU([{ claim: { purpose: 'ust:observed', domain_shard: D, genesis_epoch: EP, sequence: '0', checkpoint: headId }, issuer_id: Wa.key_id, sig: { alg: 'Ed25519', key_id: Wa.key_id, pub: Wa.pubB64, sig: 'x' } }, ua(Wb)]).attested === false);
   check('PhC witnesses signing NON-identical claims → mismatches dropped → quorum not met', VU([ua(Wa, { observed_map_root: 'sha256:' + 'a1'.repeat(32) }), ua(Wb, { observed_map_root: 'sha256:' + 'b2'.repeat(32) })]).attested === false);
   check('PhC witness NOT in consumer trustRoots → not admitted', P.verifyCheckpointUniqueness([ua(Wa), ua(Wb)], { domain_shard: D, genesis_epoch: EP, sequence: '0', checkpoint: headId, trustRoots: { [Wa.key_id]: Wa.pubB64 }, domains, threshold: 2 }).attested === false);
@@ -703,7 +702,7 @@ console.log('\n═════════════════════�
   const K0 = kp('51'.repeat(32)), KX = kp('5f'.repeat(32));
   const gAuth = { key_id: K0.key_id, pub: K0.pubB64 };
   const EP = 'sha256:' + '77'.repeat(32), AG = 'sha256:' + '88'.repeat(32), D = 'noosphere.md';
-  const head = 'sha256:' + 'de'.repeat(32), keylog = { length: '1', root: P.merkleRoot([head]), head }, tp = { path: [] };
+  const kl = P.buildKeylogCommitment(['sha256:' + 'de'.repeat(32)]), keylog = { length: kl.length, root: kl.root, head: kl.head }, term = { headProof: kl.headProof, successorProof: kl.successorProof };
   const C0 = P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: D, genesis_epoch: EP, sequence: '0', active_genesis: AG, current_key_id: K0.key_id, keylog }), K0.priv, K0.pubB64);
   const headId = P.authorityCheckpointId(C0);
   const btc = (pos, subj) => P.verifiedEvidence({ proof_kind: 'pow-header-chain', subject: subj, source_id: 'btc', facts: { substrate: 'bitcoin', position: String(pos) } });
@@ -711,12 +710,12 @@ console.log('\n═════════════════════�
   const cpLeaf = P.checkpointMapLeaf({ domain_shard: D, genesis_epoch: EP, sequence: '0', checkpoint: headId });
   const cmap = P.buildVerifiableMap([cpLeaf, P.checkpointMapLeaf({ domain_shard: D, genesis_epoch: EP, sequence: '1', checkpoint: 'sha256:' + 'ab'.repeat(32) })]);
   const cproof = cmap.prove(cpLeaf.key);
-  const Fmap = (uniq) => P.deriveCheckpointFreshness([C0], { genesisAuthority: gAuth, target, commitment: btc(900, headId), terminalityProof: tp, uniqueness: uniq });
+  const Fmap = (uniq) => P.deriveCheckpointFreshness([C0], { genesisAuthority: gAuth, target, commitment: btc(900, headId), terminality: term, uniqueness: uniq });
 
   check('#42 checkpoint-map inclusion → attested (basis authenticated-map-uniqueness)', (r => r.keylog_freshness === 'attested' && r.basis === 'authenticated-map-uniqueness' && r.map_root === cmap.root)(Fmap({ map: { proof: cproof, mapRoot: cmap.root } })));
   const rivalMap = P.buildVerifiableMap([P.checkpointMapLeaf({ domain_shard: D, genesis_epoch: EP, sequence: '0', checkpoint: 'sha256:' + '99'.repeat(32) })]);
   check('#42 map shows a RIVAL at the same sequence → not attested → stays corroborated', (r => r.keylog_freshness === 'corroborated')(Fmap({ map: { proof: rivalMap.prove(cpLeaf.key), mapRoot: rivalMap.root } })));
-  check('#42 map uniqueness on an UNAUTHORIZED chain → INVALID, never attested', (r => r.result === 'INVALID' && r.keylog_freshness !== 'attested')(P.deriveCheckpointFreshness([P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: D, genesis_epoch: EP, sequence: '0', active_genesis: AG, current_key_id: K0.key_id, keylog }), KX.priv, KX.pubB64)], { genesisAuthority: gAuth, target, commitment: btc(900, headId), terminalityProof: tp, uniqueness: { map: { proof: cproof, mapRoot: cmap.root } } })));
+  check('#42 map uniqueness on an UNAUTHORIZED chain → INVALID, never attested', (r => r.result === 'INVALID' && r.keylog_freshness !== 'attested')(P.deriveCheckpointFreshness([P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: D, genesis_epoch: EP, sequence: '0', active_genesis: AG, current_key_id: K0.key_id, keylog }), KX.priv, KX.pubB64)], { genesisAuthority: gAuth, target, commitment: btc(900, headId), terminality: term, uniqueness: { map: { proof: cproof, mapRoot: cmap.root } } })));
 
   const G = kp('cc'.repeat(32)), K = kp('dd'.repeat(32)), signG = (s) => P.seal(s, G.priv, G.pubB64);
   const gen = signG(P.buildGenesis({ domain_shard: 'noosphere.md', ust_id: 'ust:20260628.19', key_id: G.key_id }, T, G.pubB64));
@@ -730,6 +729,75 @@ console.log('\n═════════════════════�
   check('#42 typed key spaces: a name-map proof is rejected as a checkpoint-map proof (no collision)', P.verifyCheckpointMapUniqueness(nproof, { domain_shard: 'noosphere.md', genesis_epoch: EP, sequence: '0', checkpoint: headId, mapRoot: nmap.root }).attested === false);
   check('#42 SMT non-membership: absent key → proven non-membership (absent:true), not authoritative', (r => r.authoritative === false && r.absent === true)(P.verifyActiveGenesisUniqueness(emptyMap.prove(nLeaf.key), { domain_shard: 'noosphere.md', active_genesis: P.contentHash(gen), mapRoot: emptyMap.root })));
   check('#42 SMT rival-value-bound is NOT non-membership (absent falsy) — distinct from an absent key', (r => r.authoritative === false && !r.absent)(P.verifyActiveGenesisUniqueness(nproof, { domain_shard: 'noosphere.md', active_genesis: 'sha256:' + '00'.repeat(32), mapRoot: nmap.root })));
+}
+
+// ─── #76 §1.7 CHECKPOINT RECOVERY — genesis-authorized 2-of-3 multisig re-authorizes the checkpoint authority after
+//     key loss, WITHOUT bypassing checkpoint validation. Dormant emergency mechanism, not a normal rotation.
+{
+  const K0 = kp('61'.repeat(32)), K1 = kp('62'.repeat(32)), KR = kp('6a'.repeat(32)), KR2 = kp('6b'.repeat(32));
+  const R1 = kp('71'.repeat(32)), R2 = kp('72'.repeat(32)), R3 = kp('73'.repeat(32)), RX = kp('7f'.repeat(32));
+  const gAuth = { key_id: K0.key_id, pub: K0.pubB64 };
+  const EP = 'sha256:' + '88'.repeat(32), AG = 'sha256:' + '99'.repeat(32), D = 'noosphere.md';
+  const KL = { length: '1', root: 'sha256:' + 'c0'.repeat(32), head: 'sha256:' + 'd0'.repeat(32) };
+  const bc = (seq, prev, cur, nxt) => P.buildAuthorityCheckpoint({ domain_shard: D, genesis_epoch: EP, sequence: seq, previous_checkpoint: prev, active_genesis: AG, current_key_id: cur.key_id, ...(nxt ? { next_key_id: nxt.k.key_id, next_pub: nxt.k.pubB64, effective_sequence: nxt.at } : {}), keylog: KL });
+  const C0 = P.sealAuthorityCheckpoint(bc('0', null, K0, { k: K1, at: '1' }), K0.priv, K0.pubB64); const id0 = P.authorityCheckpointId(C0);
+  const rKeys = { [R1.key_id]: R1.pubB64, [R2.key_id]: R2.pubB64, [R3.key_id]: R3.pubB64 };
+  const rf = (repl, seq = '1', last = id0) => ({ domain_shard: D, genesis_epoch: EP, last_accepted_checkpoint: last, replacement_key_id: repl.key_id, replacement_pub: repl.pubB64, reason: 'lost', effective_sequence: seq });
+  const stmt = (fields, W) => P.buildRecoveryStatement(fields, W.priv, W.pubB64);
+  const C1r = P.sealAuthorityCheckpoint(bc('1', id0, KR, null), KR.priv, KR.pubB64);          // C1 signed by the RECOVERED replacement KR
+  const chain = (recs, threshold = 2, c1 = C1r) => P.verifyAuthorityCheckpointChain([C0, c1], { genesisAuthority: gAuth, recoveries: { '1': recs }, recoveryKeys: rKeys, recoveryThreshold: threshold });
+  const VR = (recs, over = {}) => P.verifyCheckpointRecovery(recs, { domain_shard: D, genesis_epoch: EP, last_accepted_checkpoint: id0, effective_sequence: '1', recoveryKeys: rKeys, threshold: 2, ...over });
+
+  check('RECOVERY 2-of-3 (lost key K1) authorizes replacement KR → chain VALID', chain([stmt(rf(KR), R1), stmt(rf(KR), R2)]).result === 'VALID');
+  check('RECOVERY 1-of-3 (below threshold) → chain INVALID(E-AUTHORITY)', (r => r.result === 'INVALID' && r.error === 'E-AUTHORITY')(chain([stmt(rf(KR), R1)])));
+  check('RECOVERY same signer twice → counts once → quorum not met', VR([stmt(rf(KR), R1), stmt(rf(KR), R1)]).recovered === false);
+  check('RECOVERY conflicting replacements (non-identical claims) → no quorum (must agree on ONE)', VR([stmt(rf(KR), R1), stmt(rf(KR2), R2)]).recovered === false);
+  check('RECOVERY signer NOT in the genesis recovery set → not counted', VR([stmt(rf(KR), R1), stmt(rf(KR), RX)]).recovered === false);
+  check('RECOVERY replacement key_id ≠ keyId(pub) → not recovered', VR([{ claim: { ...P.checkpointRecoveryClaim(rf(KR)), replacement_authority: { key_id: K1.key_id, pub: KR.pubB64 } }, issuer_id: R1.key_id, sig: stmt(rf(KR), R1).sig }, stmt(rf(KR), R2)]).recovered === false);
+  check('RECOVERY effective_sequence ≠ last+1 → not recovered (only the next checkpoint)', VR([stmt(rf(KR, '2'), R1), stmt(rf(KR, '2'), R2)]).recovered === false);
+  check('RECOVERY stale last_accepted_checkpoint → not recovered (bound to the prior)', VR([stmt(rf(KR, '1', 'sha256:' + 'ee'.repeat(32)), R1), stmt(rf(KR, '1', 'sha256:' + 'ee'.repeat(32)), R2)]).recovered === false);
+  check('RECOVERY valid 2-of-3 → replacement_authority + threshold + 2 signers', (r => r.recovered === true && r.replacement_authority.key_id === KR.key_id && r.threshold === '2' && r.signers.length === 2)(VR([stmt(rf(KR), R1), stmt(rf(KR), R2)])));
+  // recovery re-authorizes the SIGNER only — it does NOT bypass the rest of checkpoint validation
+  const C1bad = P.sealAuthorityCheckpoint({ ...bc('1', id0, KR, null), checkpoint_authority: { current_key_id: KR.key_id, next_key_id: K1.key_id } }, KR.priv, KR.pubB64);
+  check('RECOVERY does NOT bypass checkpoint validation (recovered signer, but malformed rotation → E-MALFORMED)', (r => r.result === 'INVALID' && r.error === 'E-MALFORMED')(chain([stmt(rf(KR), R1), stmt(rf(KR), R2)], 2, C1bad)));
+}
+
+// ─── #76 (audit-8) GENESIS-EPOCH TRANSITION — a new epoch must NOT silently reset; it needs an A→B transition signed
+//     by epoch A's authority. Epoch B's C₀ binds A's final checkpoint + the transition's initial sequence.
+{
+  const KA0 = kp('a0'.repeat(32)), KB0 = kp('b0'.repeat(32)), KX = kp('af'.repeat(32));
+  const D = 'noosphere.md', EPA = 'sha256:' + 'a1'.repeat(32), EPB = 'sha256:' + 'b1'.repeat(32), AGA = 'sha256:' + 'a2'.repeat(32), AGB = 'sha256:' + 'b2'.repeat(32);
+  const KL = { length: '1', root: 'sha256:' + 'c0'.repeat(32), head: 'sha256:' + 'd0'.repeat(32) };
+  const C0a = P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: D, genesis_epoch: EPA, sequence: '0', active_genesis: AGA, current_key_id: KA0.key_id, keylog: KL }), KA0.priv, KA0.pubB64);
+  const idA = P.authorityCheckpointId(C0a), gA = { key_id: KA0.key_id, pub: KA0.pubB64 };
+  const etf = (over = {}) => ({ domain_shard: D, from_genesis_epoch: EPA, from_final_checkpoint: idA, to_genesis_epoch: EPB, to_key_id: KB0.key_id, to_pub: KB0.pubB64, to_initial_sequence: '0', ...over });
+  const et = P.buildEpochTransition(etf(), KA0.priv, KA0.pubB64);
+  const c0b = (over = {}) => P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: D, genesis_epoch: EPB, sequence: '0', previous_epoch_final_checkpoint: idA, active_genesis: AGB, current_key_id: KB0.key_id, keylog: KL, ...over }), (over._signer || KB0).priv, (over._signer || KB0).pubB64);
+  const C0b = c0b();
+  const chain = (c1, ets) => P.verifyAuthorityCheckpointChain([C0a, c1], { genesisAuthority: gA, epochTransitions: ets });
+  const VE = (stmt, over = {}) => P.verifyEpochTransition(stmt, { domain_shard: D, from_genesis_epoch: EPA, from_final_checkpoint: idA, fromAuthority: gA, ...over });
+
+  check('EPOCH A→B with authenticated transition → chain VALID (initial seq 0)', (r => r.result === 'VALID' && r.sequence === '0')(chain(C0b, { [EPB]: et })));
+  check('EPOCH silent reset (no transition supplied) → INVALID(E-MALFORMED)', (r => r.result === 'INVALID' && r.error === 'E-MALFORMED')(chain(C0b, undefined)));
+  check('EPOCH transition NOT signed by epoch A authority → INVALID(E-MALFORMED)', (r => r.error === 'E-MALFORMED')(chain(C0b, { [EPB]: P.buildEpochTransition(etf(), KX.priv, KX.pubB64) })));
+  check('EPOCH B C₀ does not bind the prior-epoch final checkpoint → INVALID(E-PREV)', (r => r.error === 'E-PREV')(chain(c0b({ previous_epoch_final_checkpoint: 'sha256:' + 'ee'.repeat(32) }), { [EPB]: et })));
+  check('EPOCH B C₀ sequence ≠ transition to_initial_sequence → INVALID(E-SEQ)', (r => r.error === 'E-SEQ')(P.verifyAuthorityCheckpointChain([C0a, P.sealAuthorityCheckpoint({ ...P.buildAuthorityCheckpoint({ domain_shard: D, genesis_epoch: EPB, sequence: '5', previous_epoch_final_checkpoint: idA, active_genesis: AGB, current_key_id: KB0.key_id, keylog: KL }) }, KB0.priv, KB0.pubB64)], { genesisAuthority: gA, epochTransitions: { [EPB]: P.buildEpochTransition(etf({ to_initial_sequence: '0' }), KA0.priv, KA0.pubB64) } })));
+  check('EPOCH verifyEpochTransition valid → to_checkpoint_authority + to_initial_sequence', (r => r.ok === true && r.to_checkpoint_authority.key_id === KB0.key_id && r.to_initial_sequence === '0')(VE(et)));
+  check('EPOCH transition bound to wrong from_final_checkpoint → not ok', VE(et, { from_final_checkpoint: 'sha256:' + '00'.repeat(32) }).ok === false);
+  check('EPOCH transition to_checkpoint_authority malformed (key_id ≠ keyId(pub)) → not ok', VE(P.buildEpochTransition({ ...etf(), to_key_id: KA0.key_id }, KA0.priv, KA0.pubB64)).ok === false);
+}
+
+// ─── #77 STRICT KEY-LOG TERMINALITY — head = LAST entry (position L-1) AND no successor at L. Strictly stronger than
+//     the earlier `head ∈ root`: a hidden successor (a lying length) is CAUGHT, which bare membership could not.
+{
+  const e0 = 'sha256:' + '01'.repeat(32), e1 = 'sha256:' + '02'.repeat(32);
+  const kl1 = P.buildKeylogCommitment([e0]);
+  check('TERM honest length-1 log (head at pos0, nothing at pos1) → terminal', P.verifyKeylogTerminality({ root: kl1.root, length: kl1.length, head: kl1.head }, kl1).terminal === true);
+  const kl2 = P.buildKeylogCommitment([e0, e1]);
+  check('TERM honest length-2 log (head at pos1, nothing at pos2) → terminal', P.verifyKeylogTerminality({ root: kl2.root, length: kl2.length, head: kl2.head }, kl2).terminal === true);
+  const lie = P.verifyKeylogTerminality({ root: kl2.root, length: '1', head: e0 }, { headProof: kl2.map.prove(P.keylogPosKey(0)), successorProof: kl2.map.prove(P.keylogPosKey(1)) });
+  check('TERM strict catches a HIDDEN SUCCESSOR (length lies) → not terminal (membership could not)', lie.terminal === false && /successor/.test(lie.detail));
+  check('TERM wrong head at position L-1 → not terminal', P.verifyKeylogTerminality({ root: kl1.root, length: '1', head: 'sha256:' + '99'.repeat(32) }, kl1).terminal === false);
 }
 
 console.log('  ust-protocol ' + P.VERSION.spec + ' conformance vs ' + V.version);

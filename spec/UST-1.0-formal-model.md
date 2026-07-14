@@ -573,15 +573,16 @@ F.5h authorized the checkpoint chain; F.5i derives the freshness verdict a targe
 proves the ceiling that closes P0-05.
 
 **The conjunction.** For a target `R` and an authorized chain `C` (head `Cₙ`), define the events
-`Authorized(C)` (F.5h: `verifyAuthorityCheckpointChain = VALID`), `HeadInRoot(C)` (`keylog.head ∈ keylog.root`, a
-membership inclusion — F.3.1), `Committed(C)` (the checkpoint `id` carried by a VERIFIED external-commitment
-evidence `e_c` with `subject(e_c) = id`), `ProvenAfter(e_c, R)` (`compareEvidenceOrder(e_c, anchor(R)) =
-proven-after`, F.5g), and `Binds(C, R)` (`active_genesis(C) = active_genesis(R)` ∧ same domain). Then
+`Authorized(C)` (F.5h: `verifyAuthorityCheckpointChain = VALID`), `Terminal(C)` (strict last-index terminality —
+`keylog.head` is the entry at position `length-1` AND no successor at `length`, F.5n), `Committed(C)` (the checkpoint
+`id` carried by a VERIFIED external-commitment evidence `e_c` with `subject(e_c) = id`), `ProvenAfter(e_c, R)`
+(`compareEvidenceOrder(e_c, anchor(R)) = proven-after`, F.5g), and `Binds(C, R)` (`active_genesis(C) =
+active_genesis(R)` ∧ same domain). Then
 
-`CorroboratedFresh(R, C) = Authorized ∧ Binds ∧ HeadInRoot ∧ Committed ∧ ProvenAfter`.
+`CorroboratedFresh(R, C) = Authorized ∧ Binds ∧ Terminal ∧ Committed ∧ ProvenAfter`.
 
 Each conjunct is separately measurable, so a MISSING coordinate names itself rather than forging the verdict:
-`¬Authorized ⇒ INVALID` (F.5h), `¬Binds ⇒ E-GENESIS`, `¬HeadInRoot ⇒ INDETERMINATE(terminality_unproven)`,
+`¬Authorized ⇒ INVALID` (F.5h), `¬Binds ⇒ E-GENESIS`, `¬Terminal ⇒ INDETERMINATE(terminality_unproven)`,
 `¬Committed ⇒ INDETERMINATE(unavailable)`, `¬ProvenAfter ⇒ INDETERMINATE(order_unproven)`. Because `ProvenAfter`
 is the F.5g proof relation, two `not_after` upper bounds give `unproven ⇒ order_unproven` — never a silent
 `corroborated` from comparing two RFC3339 fields (F.2).
@@ -594,7 +595,7 @@ Therefore `CorroboratedFresh` is STRICTLY below `AttestedFresh`, and the publish
 `corroborated` with `anti_equivocation = unverified` — it CANNOT emit `attested`. This is the P0-05 overclaim
 removed by the type of the function: the false `attested` path does not exist here; `attested` requires the
 independent coordinate of Phase C/#42 (`authenticated-map-uniqueness` or `accepted-witness-quorum`, F.5g quorum).
-(Strict last-index terminality is the #77 refinement; F.5i uses the weaker, honestly-labelled `head ∈ root`.)
+(`Terminal` is now STRICT last-index terminality — F.5n — not the earlier `head ∈ root` membership.)
 
 **Realization.** `deriveCheckpointFreshness(chain, {genesisAuthority | pinnedPrior, target, commitment,
 terminalityProof})` composing `verifyAuthorityCheckpointChain` (F.5h) × `verifyAnchor` (membership) ×
@@ -694,6 +695,111 @@ their composition into `deriveCheckpointFreshness` (map branch ⇒ `attested`) a
 - typed key-space separation: *"#42 typed key spaces: a name-map proof is rejected as a checkpoint-map proof (no collision)"*.
 
 All green at REV 44 (conformance 282/0).
+
+## F.5l Checkpoint recovery — a genesis-rooted threshold re-adapts the authority process without breaking well-foundedness (#76 §1.7)
+
+F.5h's authority process halts if the currently-authorized checkpoint key is lost: `Auth(n)` was to be committed by
+`Cₙ₋₁`, and no one can now produce it. F.5l adds a SECOND, genesis-rooted authority source that re-adapts the
+process — without self-authorization and without bypassing any other checkpoint predicate.
+
+**A second `𝓕_{n-1}`-measurable authority.** Genesis fixes a recovery key set `RK` (role-separated from data and
+checkpoint keys, immutable within the epoch) and a threshold `t`. A recovery statement for sequence `n` is authorized
+iff `≥ t` DISTINCT keys of `RK` sign the BYTE-IDENTICAL typed claim binding `(domain, genesis_epoch, last_accepted =
+id(Cₙ₋₁), effective_sequence = n, replacement_authority)`. The recovered authority `Auth_rec(n)` is then the claim's
+`replacement_authority`. Both candidate authorities are measurable in the past: normal `Auth(n)` from `Cₙ₋₁`, and
+`Auth_rec(n)` from `RK ⊆ 𝓕_0` (genesis) plus a statement bound to `id(Cₙ₋₁)`. Neither reads `Cₙ`'s own content, so
+`Auth_rec(n) ≺ Cₙ` — the F.4/F.5h adaptedness and well-foundedness hold. Recovery is NOT self-authorization: the LOST
+key does not sign; the genesis threshold does. The verifier accepts `Cₙ` iff its signature matches `Auth(n)` OR
+`Auth_rec(n)`, resolved before the signature is trusted (F.5h resolve-before-trust, extended to a two-element set).
+
+**Threshold = agreement on ONE replacement, not proof of no rival.** The byte-identical-claim rule forces the `t`
+signers to agree on the SAME `replacement_authority`; two statements naming different replacements are different
+claims, each below `t`, so neither recovers. Hence conflicting recoveries do not both succeed — but, exactly as for
+F.5j/F.5k, a threshold establishes formal AUTHORIZATION of one replacement, not the ABSENCE of a rival equivocating
+set (that remains an authority conflict, detectable, never silently resolved).
+
+**Bounded and non-bypassing.** `effective_sequence = n` binds recovery to EXACTLY the next checkpoint; it
+re-authorizes the SIGNER coordinate only. `Cₙ` still passes every other predicate — sequence, `previous_checkpoint`
+linkage, rotation exactness, terminality, consistency, external commitment, and (for `attested`) independent
+uniqueness. So recovery is a re-rooting WITHIN the F.5h chain, not an escape from it; and because `RK` is
+genesis-fixed and role-separated, a normal checkpoint key can never silently replace the dormant emergency roots.
+
+**Realization.** `checkpointRecoveryClaim`/`buildRecoveryStatement`/`verifyCheckpointRecovery` (the typed multisig)
+and the recovery branch of `verifyAuthorityCheckpointChain` (`{recoveries, recoveryKeys, recoveryThreshold}` — the
+matched signer, normal or recovered, becomes the authority in force for the next sequence).
+
+**Conformance (math ⇒ code ⇒ green vector, `packages/ust-protocol/conformance.mjs`).**
+- threshold re-authorization: *"RECOVERY 2-of-3 (lost key K1) authorizes replacement KR → chain VALID"*, *"RECOVERY 1-of-3 (below threshold) → chain INVALID(E-AUTHORITY)"*, *"RECOVERY valid 2-of-3 → replacement_authority + threshold + 2 signers"*.
+- distinct signers / agreement on one replacement: *"RECOVERY same signer twice → counts once → quorum not met"*, *"RECOVERY conflicting replacements (non-identical claims) → no quorum (must agree on ONE)"*, *"RECOVERY signer NOT in the genesis recovery set → not counted"*.
+- well-formed + bound: *"RECOVERY replacement key_id ≠ keyId(pub) → not recovered"*, *"RECOVERY effective_sequence ≠ last+1 → not recovered (only the next checkpoint)"*, *"RECOVERY stale last_accepted_checkpoint → not recovered (bound to the prior)"*.
+- non-bypass: *"RECOVERY does NOT bypass checkpoint validation (recovered signer, but malformed rotation → E-MALFORMED)"*.
+
+All green at REV 45 (conformance 293/0).
+
+## F.5m Genesis-epoch transition — a signed re-rooting that extends the adapted process across epochs (#76 audit-8)
+
+F.5h's authority process runs WITHIN one genesis epoch. A new epoch `B` succeeding `A` must re-root the authority
+without breaking the causal structure and without a self-declared reset. F.5m is the signed hand-off that does so.
+
+**Adaptedness across the boundary.** The transition `τ` is a typed statement SIGNED BY epoch A's authority — the
+authority in force at A's final checkpoint `F_A` — binding `(domain, from_epoch = A, from_final_checkpoint = id(F_A),
+to_epoch = B, to_checkpoint_authority, to_initial_sequence)`. Epoch B's initial checkpoint `C₀ᴮ` binds
+`previous_epoch_final_checkpoint = id(F_A)`, has `sequence = to_initial_sequence`, and is signed by
+`τ.to_checkpoint_authority`. So `Auth(C₀ᴮ) = τ.to_checkpoint_authority`, and `τ` is signed by `Auth(F_A)`, measurable
+in epoch A's past and bound to `id(F_A)`. Hence `Auth(C₀ᴮ) ≺ C₀ᴮ`: the F.4/F.5h adaptedness continues UNBROKEN across
+the epoch boundary — epoch A's authority CHOOSES epoch B's, exactly as `Cₙ₋₁` chooses `Cₙ`. It is a re-rooting inside
+the same well-founded process, not a new independent root.
+
+**No silent reset.** A checkpoint whose `genesis_epoch` differs from the prior WITHOUT a valid `τ` is
+`INVALID(E-MALFORMED)`: an epoch cannot re-root the authority or reset the sequence on its own say-so. The sequence
+reset (to `to_initial_sequence`) is AUTHENTICATED by `τ`, never free; `C₀ᴮ` must bind `id(F_A)` (`E-PREV`) and match
+the transition's initial sequence (`E-SEQ`). The domain never changes across `τ` (a different domain is a different
+publisher, not an epoch transition).
+
+**Composition.** Within epoch B the chain runs normally and may itself invoke recovery (F.5l). Because the map key is
+`(domain, genesis_epoch, sequence)` (F.5k), the per-epoch sequence namespace keeps checkpoint uniqueness
+well-defined across epochs — a reset to 0 in epoch B does not collide with epoch A's sequence 0.
+
+**Realization.** `epochTransitionClaim`/`buildEpochTransition`/`verifyEpochTransition` (the typed hand-off) and the
+epoch-crossing branch of `verifyAuthorityCheckpointChain` (`{epochTransitions}` keyed by `to_genesis_epoch`; the
+transition's `to_checkpoint_authority` becomes the resolved signer for `C₀ᴮ`).
+
+**Conformance (math ⇒ code ⇒ green vector, `packages/ust-protocol/conformance.mjs`).**
+- adapted re-rooting: *"EPOCH A→B with authenticated transition → chain VALID (initial seq 0)"*, *"EPOCH verifyEpochTransition valid → to_checkpoint_authority + to_initial_sequence"*.
+- no silent reset: *"EPOCH silent reset (no transition supplied) → INVALID(E-MALFORMED)"*, *"EPOCH transition NOT signed by epoch A authority → INVALID(E-MALFORMED)"*.
+- binding: *"EPOCH B C₀ does not bind the prior-epoch final checkpoint → INVALID(E-PREV)"*, *"EPOCH B C₀ sequence ≠ transition to_initial_sequence → INVALID(E-SEQ)"*, *"EPOCH transition bound to wrong from_final_checkpoint → not ok"*, *"EPOCH transition to_checkpoint_authority malformed (key_id ≠ keyId(pub)) → not ok"*.
+
+All green at REV 45 (conformance 301/0).
+
+## F.5n Strict key-log terminality — head is the LAST entry, not merely a member (#77)
+
+F.5i's `corroborated` needs the checkpoint head to be TERMINAL: the latest key-log entry, with no more-recent
+revoking successor (the P0-05 / F.5a/F.5d latest-head fact restated on the key-log). Bare membership `head ∈ root`
+is NOT terminality — a log that ALSO holds a successor still contains `head`, so membership is satisfied while the
+head is stale. F.5n proves terminality directly.
+
+**Terminality = inclusion at `L-1` ∧ non-membership at `L`.** Commit the key-log as a positioned SMT (F.5k) keyed by
+`H(index)`: leaf at position `i` binds entry `i`. For a claimed length `L`, `Terminal` is the conjunction
+`Inclusion(pos = L-1) → head` (the head sits at the LAST index) `∧ NonMembership(pos = L)` (authenticated absence of
+any entry beyond it — F.3.1 / F.5k). Membership placed `head` SOMEWHERE in the tree; the added non-membership
+coordinate proves nothing follows it. So `Terminal ⊋ HeadInRoot`: terminality strictly implies membership and adds
+the `¬∃ successor` that membership lacked.
+
+**It catches the lying-length attack.** A prover who claims length `L` over a root that actually holds an entry at
+position `L` fails the non-membership conjunct ⇒ `not terminal`. Bare `head ∈ root` could not detect this (the head
+IS present); the positioned non-membership at `L` is exactly the coordinate that exposes the hidden successor. This
+upgrades F.5i's `Terminal` conjunct from membership to true terminality, tightening `corroborated` freshness.
+
+**Realization.** `buildKeylogCommitment(entryHashes)` (positioned SMT root + `head`/`length`/`headProof`/`successorProof`)
+and `verifyKeylogTerminality({root, length, head}, {headProof, successorProof})` (inclusion at `L-1` ∧ non-membership
+at `L`), composed into `deriveCheckpointFreshness` as the `Terminal` conjunct (F.5i).
+
+**Conformance (math ⇒ code ⇒ green vector, `packages/ust-protocol/conformance.mjs`).**
+- terminality holds for honest logs: *"TERM honest length-1 log (head at pos0, nothing at pos1) → terminal"*, *"TERM honest length-2 log (head at pos1, nothing at pos2) → terminal"*.
+- the strict improvement — a hidden successor is caught: *"TERM strict catches a HIDDEN SUCCESSOR (length lies) → not terminal (membership could not)"*.
+- head must sit at the terminal index: *"TERM wrong head at position L-1 → not terminal"*.
+
+All green at REV 45 (conformance 305/0).
 
 ## F.6 Composition — the event algebra
 
