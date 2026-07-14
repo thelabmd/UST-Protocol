@@ -80,6 +80,60 @@ const add = (id, op, fields) => V.push({ id, op, ...fields });
   add('terminality-hidden-successor', 'verifyKeylogTerminality', { keylog: { root: kl2.root, length: '1', head: e0 }, proof: { headProof: kl2.map.prove(P.keylogPosKey(0)), successorProof: kl2.map.prove(P.keylogPosKey(1)) }, expect: { terminal: false } });
 }
 
+// ─── Phase A connector evidence algebra (F.5g) — order proof-relation, quorum by consumer-resolved domains, class ───
+{
+  const ev = (facts) => ({ proof_kind: 't', subject: 'ust:x', source_id: 's', facts });
+  add('order-same-substrate-after', 'compareEvidenceOrder', { a: ev({ substrate: 'bitcoin', position: '900' }), b: ev({ substrate: 'bitcoin', position: '800' }), expect: { value: 'proven-after' } });
+  add('order-two-upper-bounds-unproven', 'compareEvidenceOrder', { a: ev({ not_after: '2027-02-01T00:00:00Z' }), b: ev({ not_after: '2027-01-01T00:00:00Z' }), expect: { value: 'unproven' } });
+  add('quorum-distinct-domains', 'quorumTrustDomains', { list: [{ source_id: 'a1' }, { source_id: 'b1' }, { source_id: 'a2' }], opts: { domains: { a1: 'op-a', a2: 'op-a', b1: 'op-b' }, threshold: 2 }, expect: { count: 2, met: true } });
+  add('class-transparency-log-not-nonmembership', 'evidenceClass', { proof_kind: 'transparency-log', expect: { value: 'append-only-inclusion+consistency' } });
+  add('class-unknown-opaque', 'evidenceClass', { proof_kind: 'made-up', expect: { value: 'opaque' } });
+  add('evidence-facts-only-rejects-self-declared', 'verifiedEvidence', { fields: { proof_kind: 'k', subject: 'x', source_id: 's', facts: { assurance: 'attested' } }, expect: { error: 'E-EVIDENCE' } });
+}
+
+// ─── P0-2 name no-fork (F.5a.1) — authoritative EARNED from a consumer-trusted witness; independence never self-declared ───
+{
+  const W = kp(s(0x61));
+  const good = P.buildNoForkEvidence({ domain_shard: D, active_genesis: AG }, W.priv, W.pub);
+  add('nofork-verified-witness', 'verifyNoForkEvidence', { evidence: good, opts: { domain_shard: D, active_genesis: AG, trustRoots: { [W.key_id]: W.pub } }, expect: { ok: true, witness_id: W.key_id } });
+  add('nofork-untrusted-issuer', 'verifyNoForkEvidence', { evidence: good, opts: { domain_shard: D, active_genesis: AG, trustRoots: {} }, expect: { ok: false } });
+  add('nofork-self-declared-trust-domain', 'verifyNoForkEvidence', { evidence: { claim: { ...good.claim, trust_domain: 'independent-7' }, issuer_id: W.key_id, sig: good.sig }, opts: { domain_shard: D, active_genesis: AG, trustRoots: { [W.key_id]: W.pub } }, expect: { ok: false } });
+}
+
+// ─── uniqueness units (F.5j/F.5k) — witness quorum + map, both bases; and name-map authoritative ───
+{
+  const EPc = 'sha256:' + 'e1'.repeat(32), CP = 'sha256:' + 'ce'.repeat(32);
+  const Wa = kp(s(0x71)), Wb = kp(s(0x72)), Wc = kp(s(0x73));
+  const ua = (W) => P.buildUniquenessAttestation({ domain_shard: D, genesis_epoch: EPc, sequence: '0', checkpoint: CP }, W.priv, W.pub);
+  const domains = { [Wa.key_id]: 'op-a', [Wb.key_id]: 'op-b', [Wc.key_id]: 'op-a' }, trustRoots = { [Wa.key_id]: Wa.pub, [Wb.key_id]: Wb.pub, [Wc.key_id]: Wc.pub };
+  const uOpts = (a) => ({ attestations: a, opts: { domain_shard: D, genesis_epoch: EPc, sequence: '0', checkpoint: CP, trustRoots, domains, threshold: 2 } });
+  add('uniqueness-witness-quorum-attested', 'verifyCheckpointUniqueness', { ...uOpts([ua(Wa), ua(Wb)]), expect: { attested: true, basis: 'accepted-witness-quorum' } });
+  add('uniqueness-witness-same-domain-not-met', 'verifyCheckpointUniqueness', { ...uOpts([ua(Wa), ua(Wc)]), expect: { attested: false } });
+  const cpLeaf = P.checkpointMapLeaf({ domain_shard: D, genesis_epoch: EPc, sequence: '0', checkpoint: CP });
+  const cmap = P.buildVerifiableMap([cpLeaf, P.checkpointMapLeaf({ domain_shard: D, genesis_epoch: EPc, sequence: '1', checkpoint: 'sha256:' + 'ff'.repeat(32) })]);
+  add('uniqueness-map-attested', 'verifyCheckpointMapUniqueness', { proof: cmap.prove(cpLeaf.key), opts: { domain_shard: D, genesis_epoch: EPc, sequence: '0', checkpoint: CP, mapRoot: cmap.root }, expect: { attested: true, basis: 'authenticated-map-uniqueness' } });
+  const nLeaf = P.nameMapLeaf({ domain_shard: D, active_genesis: AG }), nmap = P.buildVerifiableMap([nLeaf]), empty = P.buildVerifiableMap([]);
+  add('name-map-authoritative', 'verifyActiveGenesisUniqueness', { proof: nmap.prove(nLeaf.key), opts: { domain_shard: D, active_genesis: AG, mapRoot: nmap.root }, expect: { authoritative: true, basis: 'authenticated-map-uniqueness' } });
+  add('name-map-absent-nonmembership', 'verifyActiveGenesisUniqueness', { proof: empty.prove(nLeaf.key), opts: { domain_shard: D, active_genesis: AG, mapRoot: empty.root }, expect: { authoritative: false, absent: true } });
+}
+
+// ─── recovery + epoch units (F.5l/F.5m) ───
+{
+  const R1 = kp(s(0x81)), R2 = kp(s(0x82)), R3 = kp(s(0x83)), KR = kp(s(0x8a));
+  const rKeys = { [R1.key_id]: R1.pub, [R2.key_id]: R2.pub, [R3.key_id]: R3.pub };
+  const last = 'sha256:' + 'ac'.repeat(32);
+  const rf = { domain_shard: D, genesis_epoch: EP, last_accepted_checkpoint: last, replacement_key_id: KR.key_id, replacement_pub: KR.pub, reason: 'lost', effective_sequence: '1' };
+  const st = (W) => P.buildRecoveryStatement(rf, W.priv, W.pub);
+  const rOpts = { domain_shard: D, genesis_epoch: EP, last_accepted_checkpoint: last, effective_sequence: '1', recoveryKeys: rKeys, threshold: 2 };
+  add('recovery-unit-2of3', 'verifyCheckpointRecovery', { statements: [st(R1), st(R2)], opts: rOpts, expect: { recovered: true } });
+  add('recovery-unit-below-threshold', 'verifyCheckpointRecovery', { statements: [st(R1)], opts: rOpts, expect: { recovered: false } });
+  const KA = kp(s(0x91)), KB = kp(s(0x92)), KXe = kp(s(0x9f)), idA = 'sha256:' + 'a5'.repeat(32), EPB = 'sha256:' + 'b5'.repeat(32);
+  const ef = { domain_shard: D, from_genesis_epoch: EP, from_final_checkpoint: idA, to_genesis_epoch: EPB, to_key_id: KB.key_id, to_pub: KB.pub, to_initial_sequence: '0' };
+  const eOpts = { domain_shard: D, from_genesis_epoch: EP, from_final_checkpoint: idA, fromAuthority: { key_id: KA.key_id, pub: KA.pub } };
+  add('epoch-unit-valid', 'verifyEpochTransition', { statement: P.buildEpochTransition(ef, KA.priv, KA.pub), opts: eOpts, expect: { ok: true } });
+  add('epoch-unit-wrong-signer', 'verifyEpochTransition', { statement: P.buildEpochTransition(ef, KXe.priv, KXe.pub), opts: eOpts, expect: { ok: false } });
+}
+
 const out = { version: 'UST 1.0 assurance-arc vectors (' + P.VERSION.spec + ')', note: 'language-neutral contract: pre-signed inputs + expected verdict, executable by any implementation (see run-arc-vectors.mjs)', count: V.length, vectors: V };
 writeFileSync(new URL('../../vectors/arc-vectors.json', import.meta.url), JSON.stringify(out, null, 2) + '\n');
 console.log('  generated vectors/arc-vectors.json — ' + V.length + ' language-neutral arc vectors (' + P.VERSION.spec + ')');
