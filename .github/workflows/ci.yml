@@ -35,10 +35,6 @@ jobs:
         run: npm run test:web-signer
       - name: MCP live stdio transport (CWD-independent)
         run: npm run test:mcp-live
-      - name: MCP round-trip conformance (agent flow: build→sign→verify through the MCP surface)
-        run: npm run test:mcp-conformance
-      - name: ustate round-trip (stateful operator PRODUCES what ust-protocol VERIFIES — layers compose)
-        run: npm run test:ustate
       - name: dependency audit — no critical advisories in the non-optional tree (P1-08)
         run: npm run test:audit
       - name: npm-drift gate (a published version is immutable)

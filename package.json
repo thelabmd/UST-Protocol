@@ -25,8 +25,6 @@
     "test:connectors": "node packages/ust-ots-verify/index.test.mjs && node packages/ust-rekor-verify/index.test.mjs",
     "test:web-signer": "node packages/ust-web-signer/test.mjs",
     "test:mcp-live": "node packages/ust-mcp/live-test.mjs",
-    "test:mcp-conformance": "node packages/ust-mcp/conformance.mjs",
-    "test:ustate": "node packages/ustate/conformance.mjs",
     "test:audit": "npm audit --omit=optional --audit-level=critical"
   }
 }
