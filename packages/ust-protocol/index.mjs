@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.36', revision: 58 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.36', revision: 59 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -190,10 +190,13 @@ export function resolveCheckpointRoots(genesis) {
 // M2 (rc.35 refactor, UST-985) — the canonical genesis_epoch is DERIVED from the active genesis; the publisher can never
 // choose the uniqueness namespace (epoch-split). Everything downstream reads this, never a body field.
 export const genesisEpoch = (activeGenesis) => H('ust:genesis-epoch', activeGenesis);
-// M2 — the ONE canonical scope identifier: every scope-bound object (context, evidence) derives it from the SAME
-// canon triple, so a publisher (or connector) can never choose the namespace two verifiers key by.
-export const authorityScopeId = ({ domain, active_genesis, genesis_epoch }) =>
-  H('ust:authority-scope', canon({ domain, active_genesis, genesis_epoch }));
+// K2 (rc.37) — the ONE authority namespace is a function of the WHOLE verified genesis: scope_id =
+// H('ust:authority-scope', contentHash(g)). Since active_genesis = contentHash(g), a single input suffices, and it
+// binds domain + genesis key + checkpoint authority + recovery + capacity + cadence at once — nothing downstream can
+// pick a namespace by choosing domain/epoch, because they are not in the preimage (and not transmitted). The old
+// canon({domain, active_genesis, genesis_epoch}) triple was redundant (all three functions of contentHash) and
+// weaker (bound 3 fields). `genesis_epoch` survives only as diagnostic metadata / the legacy wire field.
+export const authorityScopeId = (activeGenesis) => H('ust:authority-scope', activeGenesis);
 // M2 — the SOLE producer of an authority SCOPE. verifyGenesis (§2.1 design record): verify the doc, then DERIVE the
 // immutable scope {domain, active_genesis, genesis_epoch, scope_id}. Returns null iff the genesis does not verify as a
 // self-signed class:"genesis"; otherwise the context every checkpoint/uniqueness/recovery predicate is a function of.
@@ -201,8 +204,8 @@ export function verifiedGenesisContext(genesis) {
   const roots = resolveCheckpointRoots(genesis);                                   // P0-2: verifies class:genesis + self-sig
   if (!roots) return null;
   const active_genesis = contentHash(genesis), domain = genesis.state.id.domain_shard;
-  const genesis_epoch = genesisEpoch(active_genesis);
-  const scope_id = authorityScopeId({ domain, active_genesis, genesis_epoch });
+  const genesis_epoch = genesisEpoch(active_genesis);                                // diagnostic / legacy wire only
+  const scope_id = authorityScopeId(active_genesis);                                 // K2: scope binds the whole genesis
   return { scope_id, domain, active_genesis, genesis_epoch,
     checkpoint_authority: roots.genesisAuthority,
     ...(roots.recoveryKeys ? { recoveryKeys: roots.recoveryKeys, recoveryThreshold: roots.recoveryThreshold } : {}) };
@@ -796,7 +799,7 @@ export function verifyEvidenceReceipt(receipt, { subject, scope = {}, connectors
     if (!conn || conn.pub !== s.pub) return unv('issuer is not a consumer-admitted connector (admission, M3.2/5)');
     if (!Array.isArray(conn.allowed_proof_kinds) || !conn.allowed_proof_kinds.includes(c.proof_kind)) return unv(`connector is not admitted for proof_kind '${c.proof_kind}' (role, M3.2/6 — B4)`);
     const evidence = Object.freeze({ evidence_id: evidenceReceiptId(receipt),
-      authority_scope_id: authorityScopeId({ domain: scope.domain_shard, active_genesis: scope.active_genesis, genesis_epoch: scope.genesis_epoch }),
+      authority_scope_id: authorityScopeId(scope.active_genesis),                     // K2: scope = H(tag, contentHash(g))
       subject_id: c.subject, proof_kind: c.proof_kind, verified_facts: Object.freeze({ ...c.facts }), issuer_id: s.key_id,
       ...(conn.trust_domain !== undefined ? { trust_domain: conn.trust_domain } : {}), basis: 'admitted-connector-receipt' });
     VERIFIED_EVIDENCE.add(evidence);
@@ -807,7 +810,7 @@ export function verifyEvidenceReceipt(receipt, { subject, scope = {}, connectors
 // a raw {claim, sig} receipt goes through the full seam; anything else is the forge and earns nothing.
 function admitFreshnessEvidence(x, subject, scope, trust) {
   if (x && typeof x === 'object' && VERIFIED_EVIDENCE.has(x))
-    return x.authority_scope_id === authorityScopeId({ domain: scope.domain_shard, active_genesis: scope.active_genesis, genesis_epoch: scope.genesis_epoch }) && x.subject_id === subject
+    return x.authority_scope_id === authorityScopeId(scope.active_genesis) && x.subject_id === subject
       ? { evidence: x } : { detail: 'core-verified evidence is bound to a different scope/subject' };
   if (x && typeof x === 'object' && x.claim && x.sig) { const r = verifyEvidenceReceipt(x, { subject, scope, connectors: trust?.connectors }); return r.evidence ? { evidence: r.evidence } : { detail: r.detail }; }
   return { detail: 'caller-supplied evidence is neither a signed connector receipt nor core-verified (M3 — a minted look-alike earns nothing)' };

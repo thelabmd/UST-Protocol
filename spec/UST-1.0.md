@@ -1049,10 +1049,12 @@ Every scope-bound authority object (checkpoint, transition, evidence receipt) li
 carrying any other `genesis_epoch` is `E-MALFORMED`/rejected. This closes **epoch-split**: uniqueness predicates
 (§12.3.4) key by `(domain, genesis_epoch, sequence)` — with a publisher-chosen epoch, two rival C₀ over the SAME
 genesis could occupy two different map slots and BOTH earn `attested`; with the canonical epoch they collide in one
-slot, so at most one can be unique. The full scope identifier is
-`scope_id = H("ust:authority-scope", canon({domain, active_genesis, genesis_epoch}))` (`authorityScopeId`), the
-value `verifiedGenesisContext(genesis)` derives after verifying the genesis class + self-signature — the SOLE
-producer of an authority context; downstream layers take the context, never raw genesis fields.
+slot, so at most one can be unique. The authority namespace is the scope identifier
+**`scope_id = H("ust:authority-scope", contentHash(genesis))`** (`authorityScopeId`, rc.37 K2) — a function of the
+WHOLE verified genesis (domain, keys, recovery, capacity, cadence), the value `verifiedGenesisContext(genesis)`
+derives after verifying the genesis class + self-signature. It is the SOLE producer of an authority context;
+downstream layers take the context, never raw genesis fields. (`genesis_epoch` remains as diagnostic metadata / the
+legacy wire field; the earlier 3-field `canon` preimage was redundant and weaker.)
 
 #### 12.3.1 Verification (`verifyAuthorityCheckpointChain` — ordered, resolve-signer-BEFORE-trust, fail-closed)
 
@@ -2285,6 +2287,13 @@ provenance and will be lifted into this ledger when the spec is published.
   resolved as a TWO-PHASE lifecycle (FutureGenesisCommitment → activation requiring a VERIFIED destination genesis;
   `to_scope_id = scope(g_B)`, authority from verified `g_B`, never the statement). Gates: conformance 377/0,
   arc 60/0. Kernel phases K2–K9 tracked in bd `UST-znh`.
+- **REV 59 (2026-07-15, `rc.37` line)** — **kernel phase K2: one authority namespace = the whole genesis.**
+  `scope_id = H("ust:authority-scope", contentHash(genesis))` (was a 3-field `canon({domain, active_genesis,
+  genesis_epoch})` preimage — redundant, since all three are functions of `contentHash`, and weaker). Scoping on
+  `contentHash(g)` binds the ENTIRE genesis (domain, keys, recovery, capacity, cadence); a publisher cannot pick a
+  namespace by choosing `domain`/`genesis_epoch` because they are not in the preimage. `authorityScopeId` is now a
+  single-input function; `genesis_epoch` survives as diagnostic/legacy-wire only. §12.3.0a + F.5g.0 updated in
+  lockstep. Gates: conformance 377/0, model guard green.
 
 **Design principle throughout:** every normative clause answers "mechanism (protocol) or operator
 instantiation (profile)?"; operator specifics (substrate, partition schema, completeness, cadence) live in the

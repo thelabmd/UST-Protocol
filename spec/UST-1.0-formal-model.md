@@ -645,11 +645,15 @@ layer takes the derived context, never raw fields.
 (`resolveCheckpointRoots` — P0-2: verify-before-extract):
 
 ```
-active_genesis := contentHash(g)                       — never a carried field
-genesis_epoch  := H_"ust:genesis-epoch"(active_genesis) — DERIVED; a carried different value is malformed
-scope_id       := H_"ust:authority-scope"(canon({domain, active_genesis, genesis_epoch}))
+active_genesis := contentHash(g)                       — the hash of the WHOLE signed genesis; never a carried field
+scope_id       := H_"ust:authority-scope"(active_genesis)   = H_"ust:authority-scope"(contentHash(g))   (K2)
+genesis_epoch  := H_"ust:genesis-epoch"(active_genesis) — DIAGNOSTIC / legacy wire only; no longer part of the scope
 ctx            := { scope_id, domain, active_genesis, genesis_epoch, checkpoint_authority, recovery* }
 ```
+The scope is a function of `contentHash(g)`, so it binds the ENTIRE genesis (domain, keys, recovery, capacity,
+cadence). The earlier `canon({domain, active_genesis, genesis_epoch})` preimage was redundant (all three are
+functions of `contentHash(g)`) and weaker (bound only three fields). Nothing downstream can choose a namespace by
+picking `domain`/`genesis_epoch` — they are not in the preimage and, in the kernel, not transmitted.
 
 **Theorem M2 (namespace non-malleability).** Every scope parameter of every downstream predicate is a function of
 `(verified genesis, consumer config)` — a publisher cannot choose the namespace any verifier keys by: (i) a
@@ -664,7 +668,7 @@ verification roots in the CONTEXT (`authority_root: "verified-context"`) — aut
 `verifyAuthorityCheckpointChain` / `deriveCheckpointFreshness`.
 
 **Conformance (math ⇒ code ⇒ green vector, `packages/ust-protocol/conformance.mjs`).**
-- the seam derives, never copies: *"M2 verifiedGenesisContext derives canonical scope (epoch=H(active_genesis), scope_id bound)"*, *"M2 verifiedGenesisContext rejects an unsigned genesis → null (P0-2 carried)"*.
+- the seam derives, never copies: *"M2/K2 verifiedGenesisContext derives scope_id = H("ust:authority-scope", contentHash(g)) — binds the whole genesis"*, *"M2 verifiedGenesisContext rejects an unsigned genesis → null (P0-2 carried)"*.
 - downstream takes the context: *"C1 chain rooted in a VerifiedAuthorityContext → VALID (authority_root verified-context)"*, *"C1 context-rooted C₀ bound to the context scope: foreign active_genesis → INVALID(E-GENESIS)"*.
 - uniform hygiene at every scope-bound object: *"M3 receipt: non-canonical genesis_epoch → INVALID(E-EVIDENCE) (M2 hygiene is uniform)"*, *"M4.4 transition with a NON-canonical to_genesis_epoch → not ok (M2 hygiene uniform)"*.
 
