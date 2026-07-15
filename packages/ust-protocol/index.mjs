@@ -1479,7 +1479,7 @@ export function verifyStream(frames, { genesis, keylog, checkpoint, cadenceLog, 
       const cF = resolveCadence(genesis, cadenceLog, a.from, { keylog }), cT = resolveCadence(genesis, cadenceLog, a.to, { keylog });
       if (cF.error) return { error: cF.error, detail: 'cadence: ' + cF.detail };
       if (cT.error) return { error: cT.error, detail: 'cadence: ' + cT.detail };
-      if (cF.cadence !== cT.cadence) return { complete: 'chain-consistent', head: prevHash, detail: 'interval crosses a cadence change — split it at the boundary; each side is `complete` under its own cadence (continuity)' };
+      if (cF.cadence !== cT.cadence) return { complete: 'chain-consistent', head: prevHash, interval: { from: a.from, to: a.to }, detail: 'interval crosses a cadence change — split it at the boundary; each side is `complete` under its own cadence (continuity)' };
       const grid = cF.cadence > 0 ? ustGrid(a.from, a.to, cF.cadence) : null;
       if (grid) {
         const gridSet = new Set(grid);
@@ -1495,12 +1495,15 @@ export function verifyStream(frames, { genesis, keylog, checkpoint, cadenceLog, 
           covered.add(f.state.id.ust_id);
         }
         const hole = grid.find((g) => !covered.has(g));
-        if (hole) return { complete: 'chain-consistent', head: prevHash, hole, detail: 'grid slot ' + hole + ' has no frame and no signed gap — chain intact, not complete (§11.3 C)' };
+        if (hole) return { complete: 'chain-consistent', head: prevHash, interval: { from: a.from, to: a.to }, hole, detail: 'grid slot ' + hole + ' has no frame and no signed gap — chain intact, not complete (§11.3 C)' };
         // grid EQUALITY holds: every frame ∈ grid (above) ∧ every grid slot covered (here) ∧ no dup ust_id (Y1) ⇒ bijection.
-        return { complete: 'complete', head: prevHash, cadence: String(cF.cadence), grid_slots: String(grid.length) };
+        return { complete: 'complete', head: prevHash, interval: { from: a.from, to: a.to }, cadence: String(cF.cadence), grid_slots: String(grid.length) };
       }
     }
-    return { complete: 'chain-consistent', head: prevHash };           // no signed cadence + interval → no-deletion ceiling
+    // windowed checkpoint but no signed cadence (grid null) OR a checkpoint with no interval bounds. When the interval
+    // WAS validated (a.from/a.to present — first==from, last==to, no frame outside) return it so a no-event claim over
+    // it is completeness-backed; no-deletion over [from,to] is proven even without the grid (that only adds no-omission).
+    return { complete: 'chain-consistent', head: prevHash, ...(a.from !== undefined && a.to !== undefined ? { interval: { from: a.from, to: a.to } } : {}) };
   }
   return { complete: 'provisional', head: prevHash };                  // no checkpoint → open tail (P5)
 }
@@ -1510,11 +1513,13 @@ export function verifyStream(frames, { genesis, keylog, checkpoint, cadenceLog, 
 // chain-consistent (or complete) verifyStream whose covering checkpoint interval CONTAINS the claim window; otherwise
 // the negative is only the publisher's UNWITNESSED assertion. The absence DOC still verifies on its own (identity);
 // this answers the SEPARATE question "may I trust that nothing ELSE happened in this window?" — the hard half of a notary.
-export function noEventBacking(claimWindow, streamResult, checkpoint) {
+export function noEventBacking(claimWindow, streamResult) {
   if (!claimWindow || claimWindow.from === undefined || claimWindow.to === undefined) return 'not-applicable';
   if (streamResult?.complete !== 'chain-consistent' && streamResult?.complete !== 'complete') return 'publisher-asserted';
-  const iv = checkpoint?.state?.data?.checkpoint?.value;
-  if (!iv || iv.from === undefined || iv.to === undefined) return 'publisher-asserted';
+  // SECURITY (self-audit rc.35) — the interval is the range verifyStream ITSELF validated (first==from, last==to, no
+  // frame outside), returned in its result — NOT a caller-supplied checkpoint, so a spoofed checkpoint cannot forge a backing.
+  const iv = streamResult.interval;
+  if (!iv || iv.from === undefined || iv.to === undefined) return 'publisher-asserted';   // checkpoint carried no interval ⇒ no windowed completeness
   const w0 = ustToEpoch(claimWindow.from), w1 = ustToEpoch(claimWindow.to), i0 = ustToEpoch(iv.from), i1 = ustToEpoch(iv.to);
   if ([w0, w1, i0, i1].some((x) => x === null)) return 'publisher-asserted';
   return (i0 <= w0 && i1 >= w1) ? 'completeness-backed' : 'publisher-asserted';   // interval CONTAINS the claim window

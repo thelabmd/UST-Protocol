@@ -883,12 +883,13 @@ console.log('\n═════════════════════�
   const noReason = P.seal(P.buildState({ ...ID, ust_id: 'ust:20260628.1402' }, T, { x: { kind: 'absence', value: {} } }), A.priv, A.pubB64);
   check('#39 public absence WITHOUT reason → E-MALFORMED', P.verify(noReason, { context: 'data' }).error === 'E-MALFORMED');
   const window = { from: 'ust:20260628.10', to: 'ust:20260628.12' };
-  const cpCovers = { state: { data: { checkpoint: { value: { from: 'ust:20260628.10', to: 'ust:20260628.13' } } } } };
-  const cpShort = { state: { data: { checkpoint: { value: { from: 'ust:20260628.10', to: 'ust:20260628.11' } } } } };
-  check('#39 no-event + chain-consistent + covering interval ⇒ completeness-backed', P.noEventBacking(window, { complete: 'chain-consistent' }, cpCovers) === 'completeness-backed');
-  check('#39 no-event + provisional stream ⇒ publisher-asserted', P.noEventBacking(window, { complete: 'provisional' }, cpCovers) === 'publisher-asserted');
-  check('#39 no-event + interval does NOT contain the window ⇒ publisher-asserted', P.noEventBacking(window, { complete: 'chain-consistent' }, cpShort) === 'publisher-asserted');
-  check('#39 no window ⇒ not-applicable', P.noEventBacking({}, { complete: 'chain-consistent' }, cpCovers) === 'not-applicable');
+  const srCovers = { complete: 'chain-consistent', interval: { from: 'ust:20260628.10', to: 'ust:20260628.13' } };   // interval as verifyStream RETURNS it (verified)
+  const srShort = { complete: 'chain-consistent', interval: { from: 'ust:20260628.10', to: 'ust:20260628.11' } };
+  check('#39 no-event + chain-consistent + covering verified interval ⇒ completeness-backed', P.noEventBacking(window, srCovers) === 'completeness-backed');
+  check('#39 no-event + provisional stream ⇒ publisher-asserted', P.noEventBacking(window, { complete: 'provisional', interval: srCovers.interval }) === 'publisher-asserted');
+  check('#39 no-event + verified interval does NOT contain the window ⇒ publisher-asserted', P.noEventBacking(window, srShort) === 'publisher-asserted');
+  check('#39 completeness WITHOUT a verified interval ⇒ publisher-asserted (no spoofable checkpoint, rc.35 self-audit)', P.noEventBacking(window, { complete: 'complete' }) === 'publisher-asserted');
+  check('#39 no window ⇒ not-applicable', P.noEventBacking({}, srCovers) === 'not-applicable');
 }
 
 console.log('  ust-protocol ' + P.VERSION.spec + ' conformance vs ' + V.version);

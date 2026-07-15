@@ -744,9 +744,10 @@ specific event did NOT occur over a window — an SLA non-breach, a warning NOT 
 negative is only as strong as the STREAM COMPLETENESS over that window: the absence transcript verifies on its own
 (identity+integrity), but *"nothing ELSE happened"* is a NO-OMISSION claim, not a single-document property. A consumer
 therefore trusts a no-event claim over `[from,to]` **only** when a `verifyStream` over the covering interval is
-`chain-consistent` (or `complete`) **AND** the covering checkpoint's interval CONTAINS `[from,to]`; otherwise the
-negative is the publisher's UNWITNESSED assertion. `noEventBacking(window, streamResult, checkpoint)` returns
-`completeness-backed` | `publisher-asserted` | `not-applicable`. Without stream completeness a lone absence document
+`chain-consistent` (or `complete`) **AND** the interval that `verifyStream` VALIDATED and returns (`streamResult.interval`)
+CONTAINS `[from,to]`; otherwise the negative is the publisher's UNWITNESSED assertion. `noEventBacking(window, streamResult)`
+returns `completeness-backed` | `publisher-asserted` | `not-applicable` — it reads the covering interval FROM the verified
+stream result, never a caller-supplied checkpoint, so a spoofed checkpoint cannot forge a backing. Without stream completeness a lone absence document
 could hide that something DID happen by simply not publishing the positive frame — exactly the omission that
 `chain-consistent` cannot see and `complete` (the signed grid) closes.
 
