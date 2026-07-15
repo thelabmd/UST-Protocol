@@ -657,6 +657,18 @@ export function evidenceClass(proof_kind) {
     default:                  return 'opaque';                               // ⇒ INDETERMINATE(unsupported) upstream
   }
 }
+// UST-0ol Phase 2 — evidence CAPABILITY as a SET (P2-02: capabilities are not a scalar rank). A predicate is
+// satisfiable ONLY by an admissible capability; strong derivation checks this before trusting a piece of evidence,
+// so a connector can never exceed its declared power (content-addressed is not temporal; unknown ⇒ no capability).
+const EVIDENCE_CAPS = {
+  'pow-header-chain':  ['order', 'time'],
+  'transparency-log':  ['inclusion', 'consistency', 'order'],
+  'authenticated-map': ['membership', 'non-membership'],
+  'content-addressed': ['content-equality', 'availability'],
+  'rfc3161-tsa':       ['time'],
+};
+export const evidenceCaps = (proof_kind) => EVIDENCE_CAPS[proof_kind] || [];
+const temporalOrderCapable = (ev) => { const c = evidenceCaps(ev?.proof_kind); return c.includes('order') || c.includes('time'); };
 // compareEvidenceOrder(a, b): is `a` PROVEN to be after `b`? Same-substrate position (block height / log index) is a
 // total order; else an interval relation `a.not_before ≥ b.not_after` proves after, `b.not_before ≥ a.not_after`
 // proves not-after. Two `not_after` upper bounds ALONE (or cross-substrate positions) prove nothing ⇒ `unproven`.
@@ -1220,6 +1232,8 @@ export function deriveCheckpointFreshness(chain, { genesisAuthority, pinnedPrior
   if (!commitment || commitment.subject !== headId)                                     // external commitment must be VERIFIED evidence BOUND to this checkpoint id
     return { result: 'INDETERMINATE', reason: 'unavailable', detail: 'no external-commitment evidence bound to the checkpoint id', keylog_freshness: 'unverified' };
   if (!target || !target.anchor) return { result: 'INDETERMINATE', reason: 'unavailable', detail: 'no target anchor evidence to order against', keylog_freshness: 'unverified' };
+  if (!temporalOrderCapable(commitment) || !temporalOrderCapable(target.anchor))       // Phase 2: proof_kind must ESTABLISH temporal order (content-addressed / map / opaque cannot)
+    return { result: 'INDETERMINATE', reason: 'order_unproven', detail: 'commitment/anchor evidence class does not establish temporal order (capability check: ' + evidenceClass(commitment?.proof_kind) + ')', keylog_freshness: 'unverified' };
   const ord = compareEvidenceOrder(commitment, target.anchor);                          // F.5g proof relation, NOT a timestamp compare
   if (ord !== 'proven-after') return { result: 'INDETERMINATE', reason: 'order_unproven', detail: 'checkpoint commitment not proven-after the target (' + ord + ')', keylog_freshness: 'unverified' };
   // corroborated holds. Phase C — an INDEPENDENT anti-equivocation proof over THIS checkpoint upgrades to `attested`.
