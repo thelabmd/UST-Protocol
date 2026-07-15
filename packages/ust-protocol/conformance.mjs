@@ -148,6 +148,18 @@ check('F8 impossible ust_id→E-MALFORMED', P.verify(mk({ r: { kind: 'captured',
   check('#71 substrate assurance surfaces in the TOP verdict (explorer-corroborated ≠ trustless)', topA.result === 'VALID:TOP' && topA.time.assurance === 'explorer-corroborated');
   check('TOP verdict still carries completeness: not_evaluated (range property)', topR.completeness === 'not_evaluated');
   check('tier ladder distinct: LIGHT vs TOP', P.verify(mk(), { context: 'data' }).result === 'VALID:LIGHT' && topR.tier === 'TOP');
+  // UST-9op surface #1 — bind the LATTICE projection to the LIVE §14 verify path, not only the rewritten inlineTier
+  // oracle. On REAL verify() outputs across the whole tier ladder, the emitted tier MUST equal projectTier of the
+  // emitted AssuranceState, and result MUST be 'VALID:'+tier. If verify ever recomputes the tier independently
+  // (the transcription drift the audit worried about), this breaks; inlineTier stays as the INDEPENDENT oracle.
+  const liveLadder = [
+    P.verify(mk(), { context: 'data' }),                                            // LIGHT
+    P.verify(docK, { genesis: gen, keylog: [add], ...nfe(gen), context: 'data' }),  // HIGH
+    topR,                                                                            // TOP
+  ];
+  check('LATTICE (6c) LIVE verify tier == projectTier(emitted assurance) across LIGHT/HIGH/TOP (single source, no transcription gap)',
+    liveLadder.every((v) => v.assurance && P.projectTier(v.assurance) === v.tier && v.result === 'VALID:' + v.tier)
+    && new Set(liveLadder.map((v) => v.tier)).size === 3);
   // rc.6 N9 — a document cannot postdate its own anchor: substrate time BEFORE generated_at ⇒ E-ANCHOR.
   const n9 = P.verify({ ...docK, proof: topProof }, { genesis: gen, keylog: [add], noForkConfirmed: true, context: 'data', substrateVerify: () => ({ final: true, time: '2020-01-01T00:00:00Z' }) });
   check('N9 generated_at after anchorTime → E-ANCHOR', n9.error === 'E-ANCHOR');
