@@ -781,7 +781,7 @@ export function stageSummary({ genHash, witnesses = [], profile }) {
 // resolution inputs are FLAGS on the same command — the tier ladder is one tool, not tribal knowledge.
 async function cmdVerify() {
   const src = process.argv[3];
-  if (!src) die('usage: ust verify <file | - for stdin> [--context data|key] [--offline] [--genesis <file> --keylog <file[,file…]> [--no-fork-confirmed]] [--require-authoritative] [--require-anchored]\n  by default the tool AUTO-RESOLVES the publisher identity from its /.well-known/ discovery pair\n  --require-authoritative floors at HIGH · --require-anchored floors at TOP (downgrade resistance: below-floor ⇒ reject, never a silent lower tier)\n  --require-fresh-keylog rejects a possibly-stale key-log (§12.2a) · --keylog-fresh-as-of <RFC3339-Z> supplies fresh-fetch evidence (attested needs a verified head-anchor proof, API-only)');
+  if (!src) die('usage: ust verify <file | - for stdin> [--context data|key] [--offline] [--genesis <file> --keylog <file[,file…]> [--no-fork-confirmed | --witness <file> --trust-root KEYID=PUB[,…]]] [--require-authoritative] [--require-anchored]\n  by default the tool AUTO-RESOLVES the publisher identity from its /.well-known/ discovery pair\n  --no-fork-confirmed = YOUR air-gap assertion ⇒ consumer-override (not authoritative) · --witness <buildNoForkEvidence JSON> + --trust-root (witness pubkeys YOU trust) ⇒ INDEPENDENT authoritative\n  --require-authoritative floors at HIGH · --require-anchored floors at TOP (downgrade resistance: below-floor ⇒ reject, never a silent lower tier)\n  --require-fresh-keylog rejects a possibly-stale key-log (§12.2a) · --keylog-fresh-as-of <RFC3339-Z> supplies fresh-fetch evidence (attested needs a verified head-anchor proof, API-only)');
   const raw = src === '-' ? readFileSync(0) : readFileSync(src);   // Buffer — admission precedes decode
   // pre-parse ONLY to pick the context — the VERDICT below comes from the normative raw path
   let doc; try { doc = decodeInput(raw.toString('utf8')); } catch (e) { die('not a UST blob/base64/json: ' + e.message); }
@@ -826,9 +826,15 @@ async function cmdVerify() {
         return [single.doc];
       });
     } catch (e) { die('could not read the resolution inputs: ' + e.message); }
-    const auth = P.resolveAuthority(doc, { genesis: genesisDoc, keylog: keylogDocs, noForkConfirmed: noFork });
+    // UST-3dj — witness no-fork EVIDENCE + consumer TRUST ROOTS reach the INDEPENDENT authoritative rung
+    // (a bare --no-fork-confirmed is only a consumer-override). --witness <file> = a buildNoForkEvidence JSON;
+    // --trust-root KEYID=PUB[,KEYID=PUB…] = the witness/authority pubkeys the CONSUMER trusts (consumer-rooted, never the doc).
+    let noForkEvidence, trustRoots;
+    { const wp = arg('witness', null); if (wp && wp !== true) { try { noForkEvidence = JSON.parse(readFileSync(wp, 'utf8')); } catch (e) { die('could not read --witness evidence: ' + e.message); } } }
+    { const tr = arg('trust-root', null); if (tr && tr !== true) { trustRoots = {}; for (const pair of String(tr).split(',')) { const [kid, pub] = pair.split('='); if (!kid || !pub) die('--trust-root must be KEYID=PUB[,KEYID=PUB…]'); trustRoots[kid.trim()] = pub.trim(); } } }
+    const auth = P.resolveAuthority(doc, { genesis: genesisDoc, keylog: keylogDocs, noForkConfirmed: noFork, noForkEvidence, trustRoots });
     if (auth.error) die('authority resolution failed: ' + auth.error + (auth.detail ? ' — ' + auth.detail : ''));
-    opts = { ...opts, genesis: genesisDoc, keylog: keylogDocs, noForkConfirmed: noFork, capacity: auth.capacity };
+    opts = { ...opts, genesis: genesisDoc, keylog: keylogDocs, noForkConfirmed: noFork, noForkEvidence, trustRoots, capacity: auth.capacity };
   }
 
   let { verdict: r } = verifyRaw(raw, opts);
