@@ -913,7 +913,7 @@ index, adjacent or not.
 
 **Conformance (math ⇒ code ⇒ green vector, `packages/ust-protocol/conformance.mjs`).**
 - terminality holds for honest logs: *"TERM honest length-1 log (head at pos0, nothing at pos1) → terminal"*, *"TERM honest length-2 log (head at pos1, nothing at pos2) → terminal"*.
-- a hidden/truncated successor is caught: *"TERM strict catches a HIDDEN SUCCESSOR (length lies) → not terminal (right subtree not empty)"*.
+- a hidden/truncated successor is caught: *"TERM strict catches a HIDDEN SUCCESSOR (length lies)"* — now via the P0-5 proof-depth check (siblings ≠ ceil(log2(width))) as well as the right-subtree-empty test.
 - head must sit at the terminal index: *"TERM wrong head at position L-1 → not terminal"*.
 
 Sound against the P0-02 reproduction (`security-regression.mjs`: a real length-3 log presented as length-1 ⇒ not terminal).

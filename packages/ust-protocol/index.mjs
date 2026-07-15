@@ -171,6 +171,10 @@ export const buildGenesis = (id, time, pub, maxPartitions, maxTranscriptBytes, c
 // P1-04 — resolve the checkpoint-authority + recovery roots FROM the signed genesis value (typed, key_id = keyId(pub)
 // validated), never from a raw caller option. Returns {genesisAuthority?, recoveryKeys?, recoveryThreshold?} or null.
 export function resolveCheckpointRoots(genesis) {
+  // P0-2 (rc.35 audit) — roots are extracted ONLY from a VERIFIED, self-signed `class:"genesis"` document. Without this,
+  // a raw unsigned object {state:{data:{genesis:{value:{checkpoint_authority}}}}} installed an ATTACKER checkpoint root
+  // (authority_root:"genesis") and derived corroborated/attested freshness. Verify the doc BEFORE trusting its fields.
+  if (genesis?.state?.id?.class !== 'genesis' || !isValid(verify(genesis, { context: 'key' }))) return null;
   const gv = genesis?.state?.data?.genesis?.value; if (!gv) return null;
   const out = {};
   const ca = gv.checkpoint_authority;
@@ -750,6 +754,9 @@ export function quorumTrustDomains(list, { domains = {}, threshold } = {}) {
 //     it (trust.mapRoots — anchored/pinned out-of-band); it is NEVER taken from the same bundle as the proof. Absence
 //     of admission ⇒ no strong rung (fail-safe). This is the separation of trust-configuration from evidence.
 const mapRootAdmitted = (trust, root) => Array.isArray(trust?.mapRoots) && trust.mapRoots.includes(root);
+// P0-1 (rc.35 audit) — a module-private capability set. Only resolveByDiscovery (which actually ran witnessNoFork)
+// mints a servedNoFork object into it; a transcript caller cannot add to it, so a plain look-alike object earns nothing.
+const VERIFIED_SERVED = new WeakSet();
 export function resolveAuthority(doc, { genesis, keylog = [], noForkConfirmed = false, noForkEvidence, nameMap, trustRoots, corroborated = false, servedNoFork, anchorTime, keylogFreshAsOf, keylogHeadAnchor, substrateVerify, trust } = {}) {
   if (!genesis) return { strength: 'self-asserted', status: 'verified' };         // LIGHT — nothing to resolve
   if (genesis.state?.id?.domain_shard !== doc.state.id.domain_shard) return { error: 'E-GENESIS', detail: 'genesis domain mismatch' };
@@ -820,14 +827,17 @@ export function resolveAuthority(doc, { genesis, keylog = [], noForkConfirmed = 
     if (ev.ok) return { strength: 'authoritative', noFork: 'accepted-external-witness', independently_verified: true,
       basis: 'accepted-external-witness', witness_id: ev.witness_id, ...(ev.trust_domain ? { trust_domain: ev.trust_domain } : {}), status: st2, capacity, freshness };
   }
-  // VERIFIED served-list no-fork — from resolveByDiscovery's witnessNoFork (network fetch + anchor cross-check), bound
-  // to THIS genesis ⇒ corroborated (HIGH, honest: membership in the published set, NOT independent non-membership, F.5a).
-  if (servedNoFork?.confirmed === true && servedNoFork.active_genesis === contentHash(genesis))
+  // VERIFIED served-list no-fork ⇒ corroborated (HIGH, honest: membership in the published set, NOT independent
+  // non-membership, F.5a). P0-1 (rc.35 audit) — the trust is an UNFORGEABLE internal token: only resolveByDiscovery
+  // (which actually ran witnessNoFork: network fetch + anchor cross-check) can mint a servedNoFork into VERIFIED_SERVED.
+  // A transcript caller's plain object {confirmed:true, active_genesis:<public hash>} is NOT in the set — the binding
+  // hash it holds is public, so without the token it earns nothing beyond a caller assertion.
+  if (servedNoFork?.confirmed === true && VERIFIED_SERVED.has(servedNoFork) && servedNoFork.active_genesis === contentHash(genesis))
     return { strength: 'corroborated', noFork: 'served-list', status: st2, capacity, freshness };
-  // a bare `corroborated`/`noForkConfirmed` boolean is a CALLER ASSERTION, not a verified predicate (a STATELESS
-  // verifier cannot fetch a served list). Like noForkConfirmed it is consumer-override, NEVER a silent corroborated
-  // (self-audit rc.35 — closed the `corroborated:true → HIGH` inconsistency; same class as the removed `mapInclusion:true`).
-  if (noForkConfirmed || corroborated) return { strength: 'consumer-override', noFork: 'caller-asserted', independently_verified: false, status: st2, capacity, freshness,
+  // a bare `corroborated`/`noForkConfirmed` boolean OR an unminted `servedNoFork` is a CALLER ASSERTION, not a verified
+  // predicate (a STATELESS verifier cannot fetch a served list). Like noForkConfirmed it is consumer-override, NEVER a
+  // silent corroborated (self-audit rc.35 — same class as the removed `corroborated:true`/`mapInclusion:true`).
+  if (noForkConfirmed || corroborated || servedNoFork) return { strength: 'consumer-override', noFork: 'caller-asserted', independently_verified: false, status: st2, capacity, freshness,
     ...(noForkEvidence !== undefined ? { detail: 'noForkEvidence rejected → consumer-override only (not independently verified)' } : {}) };
   return { strength: 'corroborated', noFork: 'unconfirmed', status: 'unavailable', capacity, freshness,
     detail: 'no independent no-fork evidence; a served witness only corroborates (§12.1a F.5a) → authority pending, retry' };
@@ -1131,6 +1141,14 @@ export function verifyAuthorityCheckpointChain(chain, { genesis, genesisAuthorit
     // 1) resolve the EXPECTED signer from PRIOR state (genesis / pinned / previous checkpoint) — before trusting cp
     let expected;
     if (prev === null) {
+      // P0-3 (rc.35 audit) — a genesis/authority-rooted START is C₀: sequence "0", NO previous-checkpoint fields, and
+      // (when the genesis doc is known) active_genesis == contentHash(genesis). Else a RETIRED genesis key could present
+      // an arbitrary nonzero singleton with no previous_checkpoint and RE-ROOT the chain, bypassing every rotation. A
+      // start from a later point needs pinnedPrior (carrying the prior sequence + authority), never the raw root.
+      if (b.sequence !== '0' || b.previous_checkpoint !== undefined || b.previous_epoch_final_checkpoint !== undefined)
+        return { result: 'INVALID', error: 'E-SEQ', detail: 'a genesis/authority-rooted first checkpoint must be sequence "0" with no previous_checkpoint (re-root rejected)' };
+      if (authority_root === 'genesis' && b.active_genesis !== contentHash(genesis))
+        return { result: 'INVALID', error: 'E-GENESIS', detail: 'C₀ active_genesis ≠ contentHash(genesis) — checkpoint not bound to its rooting genesis' };
       expected = { key_id: genesisAuthority.key_id, pub: genesisAuthority.pub };       // C₀ rooted in the genesis-authorized key
     } else if (prev.body && b.genesis_epoch !== prev.body.genesis_epoch) {
       // GENESIS-EPOCH TRANSITION — a new epoch must NOT silently reset: it needs an authenticated A→B transition
@@ -1193,8 +1211,15 @@ export function buildUniquenessAttestation(fields, privKeyObj, issuerPubB64url) 
 }
 export function verifyCheckpointUniqueness(attestations, { domain_shard, genesis_epoch, sequence, checkpoint, trustRoots = {}, domains = {}, threshold = 2 } = {}) {
   if (!Array.isArray(attestations) || attestations.length === 0) return { attested: false, detail: 'no attestations' };
+  // P0-4 (rc.35 audit) — a POSITIVE INTEGER quorum. threshold ≤ 0 made `0 distinct domains ≥ 0` earn `attested` from an
+  // EMPTY witness set (the strongest freshness rung for free). No admissible-domain cap needed: the seenDomains ≥ threshold
+  // test already bounds the upper side (you cannot meet a threshold higher than the distinct domains actually present).
+  if (!Number.isInteger(threshold) || threshold < 1) return { attested: false, detail: 'threshold must be a positive integer (got ' + threshold + ')' };
   let ref = null; const seenDomains = new Set(), seenIssuers = new Set(), witnesses = [];
   for (const a of attestations) {
+   // P1 (rc.35 audit) — a malformed remote witness statement (e.g. a non-string leaf → canon throws E-CANON) must be
+   // SKIPPED, never propagate a throw through deriveCheckpointFreshness (a denial-of-verifiability). Total, fail-closed.
+   try {
     const { claim, issuer_id, sig } = a || {};
     if (!claim || !issuer_id || !sig || !sig.sig || !sig.pub) continue;
     if (claim.purpose !== 'ust:checkpoint-uniqueness-attestation') continue;            // uniqueness, not bare observation
@@ -1208,6 +1233,7 @@ export function verifyCheckpointUniqueness(attestations, { domain_shard, genesis
     if (seenIssuers.has(issuer_id)) continue;                                           // one issuer counts once
     const dom = domains[issuer_id]; if (dom === undefined) continue;                    // consumer-resolved trust domain, else unadmitted
     seenIssuers.add(issuer_id); seenDomains.add(dom); witnesses.push(issuer_id);
+   } catch { continue; }
   }
   return seenDomains.size >= threshold
     ? { attested: true, basis: 'accepted-witness-quorum', threshold: String(threshold), accepted_witnesses: witnesses, trust_domains: [...seenDomains] }
@@ -1299,6 +1325,11 @@ export function verifyKeylogTerminality({ root, length, head } = {}, proof = {})
   if (L < 1n) return { terminal: false, detail: 'empty key-log' };
   const hp = proof.headProof || proof;
   if (!hp || !Array.isArray(hp.siblings) || String(hp.index) !== String(L - 1n)) return { terminal: false, detail: 'head proof missing or index ≠ length-1' };
+  // P0-5 (rc.35 audit) — the proof depth MUST be EXACTLY ceil(log2(width)), width = next-pow2(L). An UNDER-DEPTH proof
+  // (fewer siblings than the tree has levels) recomputes the root over a SMALLER tree; with an attacker-chosen `root`
+  // it FORGES terminality for a key-log that actually has successors — re-opening the P0-02 false-terminality class.
+  let width = 1n, depth = 0n; while (width < L) { width <<= 1n; depth++; }
+  if (BigInt(hp.siblings.length) !== depth) return { terminal: false, detail: 'proof depth ' + hp.siblings.length + ' ≠ ceil(log2(width))=' + depth + ' for length ' + L + ' (under/over-depth proof)' };
   let node = keylogLeaf(head), i = L - 1n;
   for (let d = 0; d < hp.siblings.length; d++) {
     const sib = hp.siblings[d], weAreLeft = (i & 1n) === 0n;                            // LEFT child ⇒ sibling is to the RIGHT (higher indices) ⇒ MUST be an empty subtree
@@ -1306,6 +1337,7 @@ export function verifyKeylogTerminality({ root, length, head } = {}, proof = {})
     node = weAreLeft ? klNode(node, sib) : klNode(sib, node);                           // combine using the INDEX-derived side, not a proof field
     i >>= 1n;
   }
+  if (i !== 0n) return { terminal: false, detail: 'index not fully consumed by the proof (head index outside the tree)' };
   return H('ust:keylog-commit', canon({ length: String(L), merkle_root: node })) === root ? { terminal: true } : { terminal: false, detail: 'commitment root mismatch (length/merkle not bound in root)' };
 }
 
@@ -1698,7 +1730,7 @@ export async function resolveByDiscovery(doc, opts = {}, { fetchImpl = fetch, su
   }
   // VERIFIED served-list evidence (bound to THIS genesis) — the ONLY way the stateless core earns `corroborated`; a
   // bare boolean would be a mere assertion (self-audit rc.35). Present only when witnessNoFork actually confirmed.
-  const servedNoFork = witnessConfirmed ? { confirmed: true, active_genesis: genesisHash } : undefined;
+  let servedNoFork; if (witnessConfirmed) { servedNoFork = { confirmed: true, active_genesis: genesisHash }; VERIFIED_SERVED.add(servedNoFork); }   // P0-1: mint the trusted token ONLY after witnessNoFork confirmed
   const authOpts = { genesis, keylog, noForkConfirmed: opts.noForkConfirmed, noForkEvidence: opts.noForkEvidence, trustRoots: opts.trustRoots, servedNoFork };
   const auth = resolveAuthority(doc, authOpts);
   if (auth.error) return { verdict: base, resolution: { error: auth.error + (auth.detail ? ' — ' + auth.detail : '') } };

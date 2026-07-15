@@ -123,6 +123,27 @@ sec('rc35-C', 'UST-kdb', 'a blind (all-unreachable) window must NOT earn no-even
   return P.noEventBacking({ from: su[0], to: su[2] }, P.verifyStream(fr, { genesis: g, checkpoint: c }), fr) !== 'completeness-backed';
 });
 
+// ─── rc.35 adversarial audit (GPT + 2 agents) — deep checkpoint/quorum/terminality core + servedNoFork ─────────────
+sec('rc35-P0a', 'UST-b64', 'servedNoFork look-alike object must NOT reach corroborated/HIGH (unforgeable token)', () =>
+  P.verify(doc, { genesis: gen, servedNoFork: { confirmed: true, active_genesis: P.contentHash(gen) }, context: 'data' }).identity?.strength !== 'corroborated');
+sec('rc35-P0b', 'UST-b64', 'an unsigned/malformed genesis must NOT install a checkpoint authority root', () =>
+  P.verifyAuthorityCheckpointChain([cp], { genesis: { state: { data: { genesis: { value: { checkpoint_authority: { key_id: K0.key_id, pub: K0.pub } } } } } } }).authority_root !== 'genesis');
+sec('rc35-P0c', 'UST-b64', 'a nonzero singleton signed by the genesis key must NOT re-root the chain (bypass rotations)', () => {
+  const C42 = P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: D, genesis_epoch: 'sha256:' + 'cd'.repeat(32), sequence: '42', active_genesis: P.contentHash(gen), current_key_id: K0.key_id, keylog: { root: kc.root, length: kc.length, head: kc.head } }), K0.priv, K0.pub);
+  return P.verifyAuthorityCheckpointChain([C42], { genesisAuthority: { key_id: K0.key_id, pub: K0.pub } }).result !== 'VALID';
+});
+sec('rc35-P0d', 'UST-b64', 'threshold < 1 must NOT earn attested from an empty quorum', () =>
+  P.verifyCheckpointUniqueness([{}], { domain_shard: D, threshold: 0 }).attested === false);
+sec('rc35-P0e', 'UST-b64', 'an under-depth keylog terminality proof must NOT be terminal (P0-02 class stays closed)', () => {
+  const KL_EMPTY = P.H('ust:keylog-empty', ''), klN = (l, r) => P.H('ust:keylog-node', l + '|' + r);
+  const head = 'sha256:' + 'a2'.repeat(32), node = klN(P.keylogLeaf(head), KL_EMPTY);
+  const root = P.H('ust:keylog-commit', P.canon({ length: '3', merkle_root: node }));
+  return P.verifyKeylogTerminality({ root, length: '3', head }, { headProof: { index: '2', siblings: [KL_EMPTY] } }).terminal !== true;
+});
+sec('rc35-P1', 'UST-b64', 'a malformed uniqueness attestation (non-string leaf) must fail-closed, never throw (DoS)', () => {
+  try { return P.verifyCheckpointUniqueness([{ claim: { purpose: 'ust:checkpoint-uniqueness-attestation', domain_shard: D, genesis_epoch: 'sha256:' + 'cd'.repeat(32), sequence: '0', checkpoint: cpId, as_of: 1 }, issuer_id: 'x', sig: { alg: 'Ed25519', pub: 'AA', sig: 'BB' } }], { domain_shard: D, genesis_epoch: 'sha256:' + 'cd'.repeat(32), sequence: '0', checkpoint: cpId, threshold: 1 }).attested === false; } catch { return false; }
+});
+
 // ─── report ────────────────────────────────────────────────────────────────────────────────────
 console.log('\n  rc.33 audit — security regression (Phase 0, epic UST-1o6): SECURE-expectation gate');
 for (const [s, id, bd, d] of rows) console.log(s + '  ' + id.padEnd(8) + bd.padEnd(9) + d);
