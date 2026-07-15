@@ -482,11 +482,16 @@ snapshot-completeness on the time axis (F.3.1). By Corollary F.3.1 it does NOT f
 consumer holding a cached key-log `L' ⊆ L` decides only `revoke ∉ L'` (membership in its own prefix), which is in
 `σ(L')`, NOT in the σ-algebra that decides `revoke ∉ L`. The publisher (or a stale cache) can OMIT the revoking
 entry exactly as it can omit a rival genesis. So freshness is earned by bringing the non-membership coordinate
-into `ℐ`: an anchored key-log HEAD (its `content_hash` in `Fₜ` — prefix-uniqueness of the chain makes "this is
-the head" a positive lookup that settles `¬∃` later entry, the F.5a mechanism transposed to the key-log) ⇒
-`attested`; a fetch from the authoritative surface timestamped `≥ t` ⇒ `fresh`; neither ⇒ `unverified`. Emitting
-`unverified` (never a forged "valid") and letting the consumer floor on it (`requireFreshKeylog`) is the F.5b
-discipline: the strong word is earned by the coordinate, not bought by assuming the cache is complete.
+into `ℐ`. **An earlier claim — that an anchored key-log HEAD alone settles `¬∃ later entry` and thus earns
+`attested` — was UNSOUND (P0-03, external audit): an anchored head proves membership AT its anchor time, not that
+it is the LATEST head at the target's time; a revoke that FOLLOWS the anchored prefix is invisible to it (the F.5a
+"positive lookup settles ¬∃" transposition fails here because the key-log has no independent map coordinate, only a
+prefix).** Strong key-log freshness is therefore not a single-anchor fact: `corroborated`/`attested` are earned ONLY
+through the checkpoint derivation (F.5i/F.5j) — authorization ∧ strict terminality (F.5n) ∧ proven-after ordering ∧
+independent uniqueness. A fetch from the authoritative surface timestamped `≥ t` still earns `fresh` (a single-view
+report); neither ⇒ `unverified`. Emitting `unverified` (never a forged "valid") and letting the consumer floor on it
+(`requireFreshKeylog`) is the F.5b discipline: the strong word is earned by the composed predicate, not bought by
+assuming a cached prefix is the whole log.
 
 ## F.5e The key-authority process `K_n(t)` — a state machine, not a set (MATH-04, #75)
 
@@ -790,11 +795,15 @@ id(Cₙ₋₁), effective_sequence = n, replacement_authority)`. The recovered a
 key does not sign; the genesis threshold does. The verifier accepts `Cₙ` iff its signature matches `Auth(n)` OR
 `Auth_rec(n)`, resolved before the signature is trusted (F.5h resolve-before-trust, extended to a two-element set).
 
-**Threshold = agreement on ONE replacement, not proof of no rival.** The byte-identical-claim rule forces the `t`
-signers to agree on the SAME `replacement_authority`; two statements naming different replacements are different
-claims, each below `t`, so neither recovers. Hence conflicting recoveries do not both succeed — but, exactly as for
-F.5j/F.5k, a threshold establishes formal AUTHORIZATION of one replacement, not the ABSENCE of a rival equivocating
-set (that remains an authority conflict, detectable, never silently resolved).
+**Threshold authorizes ONE replacement but does NOT prove no rival — the conflict must be DETECTED.** An earlier
+claim — that two statements naming different replacements are "each below `t`, so neither recovers" — was FALSE
+(P0-05, external audit): with OVERLAPPING quorums a single EQUIVOCATING recovery signer makes two conflicting
+replacements EACH reach `t` (e.g. `{R1,R2}` for A and `{R2,R3}` for B under 2-of-3, `R2` equivocating). A threshold
+tolerates the LOSS of `|RK|−t` keys; it does NOT guarantee a unique decision under a Byzantine signer. So the
+verifier GROUPS distinct valid signers by the canonical claim they signed and REJECTS — a detectable authority
+conflict, never an array-order-dependent pick — if MORE THAN ONE distinct replacement reaches `t`; it also requires
+`1 ≤ t ≤ |RK|` (`t = 0` is not authorization). Threshold is formal AUTHORIZATION of one replacement; the independent
+rule that SELECTS it is UNIQUE threshold-attainment, exactly as F.5j/F.5k separate authorization from anti-equivocation.
 
 **Bounded and non-bypassing.** `effective_sequence = n` binds recovery to EXACTLY the next checkpoint; it
 re-authorizes the SIGNER coordinate only. `Cₙ` still passes every other predicate — sequence, `previous_checkpoint`

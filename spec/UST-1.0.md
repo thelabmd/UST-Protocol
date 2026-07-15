@@ -961,12 +961,12 @@ exist`. So a stale cache can accept a key the live log has already revoked, and 
 Freshness is therefore EARNED and REPORTED, never assumed. `resolveAuthority` returns an
 `identity.freshness` alongside the strength:
 
-- **`attested`** — the caller supplies `keylogHeadAnchor`, a **verified anchor inclusion proof** for the key-log
-  HEAD, checked against the substrate (inclusion + final). A verified anchored head IS the whole log at that
-  anchor (the prefix can't hide a later entry) — independent non-membership, the strongest basis. **A RAW head
-  `content_hash` is NOT accepted** (it is trivially derivable from the consumer's own — possibly stale — log, so
-  it proves nothing; accepting it would be an overclaim, the same class as the removed `mapInclusion:true`). Only
-  a substrate-checked proof earns `attested`.
+- **`attested` — REMOVED from this key-log-anchor path (P0-03, external audit).** A key-log HEAD anchor proves
+  membership AT its anchor time, NOT that it is the LATEST head at the document's time: a revoke that FOLLOWS the
+  anchored prefix is invisible to it, so an anchored stale prefix wrongly earned `attested`. `resolveAuthority` no
+  longer grants `attested`; strong key-log freshness (`corroborated`/`attested`) is reachable ONLY through the ONE
+  checkpoint derivation (§12.3.5), which binds authorization + strict terminality + proven-after ordering +
+  independent uniqueness. This key-log surface reports at most `fresh`.
 - **`fresh`** — the caller supplies `keylogFreshAsOf` (a strict RFC3339-Z instant it fetched the log from the
   AUTHORITATIVE §20.1 discovery surface) that is `≥` the document's anchor time — the log was current at least as
   late as the fact being judged.
@@ -975,7 +975,7 @@ Freshness is therefore EARNED and REPORTED, never assumed. `resolveAuthority` re
 
 A consumer for whom revocation propagation matters sets **`requireFreshKeylog`**: an `unverified` freshness then
 yields **`INDETERMINATE` (`reason: "stale_keylog"`)** — retry by re-fetching the key-log from authoritative
-discovery or by supplying a verified `keylogHeadAnchor` — NEVER a silent accept on a possibly-stale view. This is the
+discovery — NEVER a silent accept on a possibly-stale view. This is the
 key-log twin of anchored-time freshness (P10) and of the F.5b downgrade floors: absence of proof lowers the
 reported assurance, it does not forge it.
 
@@ -1062,16 +1062,23 @@ the last committed `next_*` (if any) else the last matched signer — the key a 
 
 #### 12.3.3 Strict key-log terminality — head is the LAST entry, not merely a member (#77)
 
-`keylog.head` MUST be proven the LAST entry of a length-`length` log, not merely present: **inclusion at position
-`length − 1` AND non-membership at position `length`** (no hidden successor). `keylog.root` is a positioned sparse
-Merkle tree (§12.3.4) keyed by INDEX: `key_i = H("ust:keylog-pos", canon({i:String(i)}))`,
-`value_i = H("ust:keylog-entry", canon({h: entryHash_i}))`. This is strictly stronger than the earlier `head ∈ root`
-membership, which a concealed later entry could satisfy. The proof `{ headProof, successorProof }` is EXTERNAL
-evidence (supplied to the verifier), never inside `checkpoint_id`.
+`keylog.head` MUST be proven the LAST entry of a length-`length` log, not merely present. An earlier positioned
+sparse-Merkle construction keyed by `H(index)` was found UNSOUND (external audit, P0-02): authenticated
+non-membership at index `length` says NOTHING about indices `length+1, length+2, …` (scattered hashed-index leaves
+make `[length, ∞)` not a subtree), so a hidden entry at a non-adjacent index passed as terminal. `keylog.root` is now
+a **SIZE-BOUND ordered VECTOR COMMITMENT**: `keylog.root = H("ust:keylog-commit", canon({length, merkle_root}))`,
+where `merkle_root` is an ordered Merkle over EXACTLY `length` leaves (`H("ust:keylog-leaf", canon({h: entryHash_i}))`,
+padded to a power of two with the empty leaf `H("ust:keylog-empty","")`, internal node `H("ust:keylog-node",
+left|right)`). Terminality holds iff `head` is the leaf at index `length−1`, EVERY right sibling on its authentication
+path is the empty-subtree default for its level (so the suffix `[length, ∞)` is provably empty in ONE bounded proof),
+AND the recomputed root equals `keylog.root`. Binding `length` into the root forbids re-reading the same tree at
+another size; there is no coordinate at which a later entry can hide (adjacent or not). The proof
+`{ headProof: {index, siblings} }` is EXTERNAL evidence (supplied to the verifier), never inside `checkpoint_id`.
 
 **Bounds (§13).** No NEW ceiling is minted for the checkpoint chain: the committed `keylog.length` is subject to
-the existing §13 key-log ceiling (≤ 256 default / genesis-declared); the sparse Merkle tree is a FIXED depth 256
-(the key-hash width), so every membership/non-membership co-path is exactly 256 siblings; the `sequence` counter is
+the existing §13 key-log ceiling (≤ 256 default / genesis-declared), so the key-log vector commitment is an ordered
+Merkle of ≤ 256 leaves; the §12.3.4 UNIQUENESS sparse Merkle tree is a FIXED depth 256
+(the key-hash width), so every membership/non-membership co-path there is exactly 256 siblings; the `sequence` counter is
 monotone and UNBOUNDED (a chain grows over time and is walked incrementally — the verifier's §13 `resource_limit`
 governs how far it walks, never a protocol cap); the recovery set is a small genesis-fixed finite set and the
 witness quorum a finite consumer-configured one.
@@ -1089,8 +1096,11 @@ Two INDEPENDENT (non-publisher) bases prove `¬∃ rival at the coordinate`, bot
   canon({domain_shard, genesis_epoch, sequence}))`, `value = H("ust:checkpoint-map-value", canon({checkpoint}))`
   (predicate: the checkpoint is the unique value at that coordinate); **name-map** —
   `key = H("ust:name-map-key", canon({domain_shard}))`, `value = H("ust:name-map-value", canon({active_genesis}))`
-  (predicate: `active_genesis` is the unique binding for the domain). The consumer trusts an anchored, independent
-  map root; the operator does not control it.
+  (predicate: `active_genesis` is the unique binding for the domain). **The admissible map root MUST come from the
+  consumer's own trust configuration (`ℐ_C`) — a root it independently anchored or pinned — and MUST NEVER be taken
+  from the same bundle as the proof (P0-01, external audit).** A verifier that lets an evidence bundle supply BOTH
+  the proof and its root grants a self-declared `authoritative`/`attested` (assurance is earned by proof over a
+  consumer-held root, capped by trust — §F.5.0); the map proof is verified against the consumer-admitted root only.
 - **Accepted-witness quorum** (`purpose:"ust:checkpoint-uniqueness-attestation"`) — `≥ threshold` **DISTINCT
   CONSUMER-RESOLVED trust domains** signing the byte-identical uniqueness claim over `(domain, genesis_epoch,
   sequence, checkpoint)`. **Independence is CONSUMER-owned** (the consumer maps issuer→domain), NEVER
@@ -1106,7 +1116,10 @@ Checkpoint freshness (`deriveCheckpointFreshness`) is EARNED, never self-declare
   freshness.
 - **`corroborated`** — a CONJUNCTION: an AUTHORIZED checkpoint chain (§12.3.1) ∧ strict key-log terminality
   (§12.3.3) ∧ a VERIFIED external commitment BOUND to the checkpoint id AND ordered **proven-after** the target's
-  anchor. The order is a PROOF relation (`compareEvidenceOrder`, F.5g), NEVER a wall-clock comparison. This is the
+  anchor. Both the commitment and the target anchor MUST be of a proof-kind whose CAPABILITY establishes temporal
+  order (`order`/`time`); a class that cannot (e.g. `content-addressed`, `authenticated-map`, unknown) NEVER
+  satisfies the ordering conjunct ⇒ INDETERMINATE (P0-04, external audit — a connector may not exceed its declared
+  power). The order is a PROOF relation (`compareEvidenceOrder`, F.5g), NEVER a wall-clock comparison. This is the
   CEILING for a single publisher — one publisher cannot prove split-view absence.
 - **`attested`** — `corroborated` ∧ an INDEPENDENT anti-equivocation proof over THIS checkpoint (§12.3.4 map
   uniqueness OR witness quorum; a §12.2a substrate-anchored key-log head is the same top rung by a different
@@ -1423,7 +1436,7 @@ Independent re-implementation is expected; the vectors make "verify without trus
 - **alg (signatures):** `Ed25519` (strict, §7). **hash:** `sha256:` domain-separated (§7). **enc.alg (AEAD):**
   `AES-256-GCM` (**MTI — mandatory to implement**: every conforming verifier implements it),
   `XChaCha20-Poly1305` (OPTIONAL: a verifier that does not implement it MUST return
-  `INDETERMINATE(unsupported_alg)` for a disclosure it cannot decrypt — never a silent skip, never INVALID). **hash domain tags:** `ust:state` (whole-State `content_hash`) | `ust:shard` (a per-partition hash, §4.4) | `ust:keylog|ust:checkpoint|ust:node|ust:leaf|ust:seed|ust:source`; and the authority-checkpoint family (§12.3): `ust:authority-checkpoint` (checkpoint id) | `ust:checkpoint-map-key|ust:checkpoint-map-value` | `ust:name-map-key|ust:name-map-value` | `ust:keylog-pos|ust:keylog-entry` (positioned key-log SMT) | `ust:smt-empty|ust:smt-node|ust:smt-leaf` (sparse-Merkle construction).
+  `INDETERMINATE(unsupported_alg)` for a disclosure it cannot decrypt — never a silent skip, never INVALID). **hash domain tags:** `ust:state` (whole-State `content_hash`) | `ust:shard` (a per-partition hash, §4.4) | `ust:keylog|ust:checkpoint|ust:node|ust:leaf|ust:seed|ust:source`; and the authority-checkpoint family (§12.3): `ust:authority-checkpoint` (checkpoint id) | `ust:checkpoint-map-key|ust:checkpoint-map-value` | `ust:name-map-key|ust:name-map-value` | `ust:keylog-empty|ust:keylog-leaf|ust:keylog-node|ust:keylog-commit` (size-bound key-log vector commitment, §12.3.3) | `ust:smt-empty|ust:smt-node|ust:smt-leaf` (sparse-Merkle construction).
   All algorithm-tagged for agility (§19).
 - **signed purposes (§12.3) — domain-separated `canon` preimages, NEVER interchangeable:** `ust:authority-checkpoint` (a `CheckpointBody`), `ust:authority-checkpoint-signature` (the checkpoint SIGNATURE preimage — distinct from the body purpose), `ust:checkpoint-authority-recovery` (a recovery claim), `ust:genesis-epoch-transition` (an epoch hand-off), `ust:checkpoint-uniqueness-attestation` (a witness-quorum claim). A statement of one purpose MUST NOT verify as another.
 - **authority-checkpoint reserved keys (§12.3):** body: `version,purpose,domain_shard,genesis_epoch,sequence,previous_checkpoint,previous_epoch_final_checkpoint,active_genesis,checkpoint_authority,keylog`; `checkpoint_authority`: `current_key_id,next_key_id,next_pub,effective_sequence`; `keylog`: `root,length,head`. The checkpoint is its OWN object (not a transcript) — it is verified by §12.3.1, never the §14 data algorithm.
