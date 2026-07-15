@@ -674,7 +674,8 @@ const temporalOrderCapable = (ev) => { const c = evidenceCaps(ev?.proof_kind); r
 // proves not-after. Two `not_after` upper bounds ALONE (or cross-substrate positions) prove nothing ⇒ `unproven`.
 export function compareEvidenceOrder(a, b) {
   const fa = a?.facts ?? a ?? {}, fb = b?.facts ?? b ?? {};
-  if (fa.substrate && fb.substrate && fa.substrate === fb.substrate && fa.position !== undefined && fb.position !== undefined)
+  const decint = (s) => typeof s === 'string' && /^(0|[1-9]\d*)$/.test(s);            // P1-02: canonical unsigned decimal — total/fail-closed, never BigInt(NaN)
+  if (fa.substrate && fb.substrate && fa.substrate === fb.substrate && decint(fa.position) && decint(fb.position))
     return BigInt(fa.position) > BigInt(fb.position) ? 'proven-after' : 'not-after';   // one total order ⇒ decidable
   const iso = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(s);
   if (iso(fa.not_before) && iso(fb.not_after) && fa.not_before >= fb.not_after) return 'proven-after';
@@ -996,7 +997,14 @@ export function buildRecoveryStatement(fields, privKeyObj, issuerPubB64url) {
 }
 export function verifyCheckpointRecovery(statements, { domain_shard, genesis_epoch, last_accepted_checkpoint, effective_sequence, recoveryKeys = {}, threshold = 2 } = {}) {
   if (!Array.isArray(statements) || statements.length === 0) return { recovered: false, detail: 'no recovery statements' };
-  let ref = null, replacement = null; const seenIssuers = new Set(), signers = [];
+  const nKeys = Object.keys(recoveryKeys).length;
+  if (!(Number.isInteger(threshold) && threshold >= 1 && threshold <= nKeys))          // P0-05: 1 ≤ threshold ≤ |recoveryKeys| (threshold=0 is not authorization)
+    return { recovered: false, detail: 'invalid recovery threshold ' + threshold + ' (must be 1..' + nKeys + ')' };
+  // UST-0ol Phase 4 — GROUP distinct valid signers by the canonical claim they signed; NEVER lock onto the first
+  // claim seen. Threshold authorization does NOT provide anti-equivocation: with one Byzantine signer, two conflicting
+  // replacements can each reach threshold. If more than ONE distinct replacement reaches threshold ⇒ CONFLICT (reject,
+  // order-independent). A single equivocating recovery must not silently pick a winner by array position (P0-05).
+  const byClaim = new Map();                                                            // canon(claim) → { replacement, signers:Set }
   for (const s of statements) {
     const { claim, issuer_id, sig } = s || {};
     if (!claim || !issuer_id || !sig || !sig.sig || !sig.pub) continue;
@@ -1006,16 +1014,16 @@ export function verifyCheckpointRecovery(statements, { domain_shard, genesis_epo
     const ra = claim.replacement_authority;
     if (!ra || !ra.key_id || !ra.pub || keyId(ra.pub) !== ra.key_id) continue;          // replacement well-formed (key_id = keyId(pub))
     const cc = canon(claim);
-    if (ref === null) { ref = cc; replacement = ra; } else if (cc !== ref) continue;    // all signers sign the BYTE-IDENTICAL claim (agree on ONE replacement)
     const pub = recoveryKeys[issuer_id];
     if (!pub || pub !== sig.pub || keyId(sig.pub) !== issuer_id) continue;              // genesis-authorized recovery signer only
     if (strictB64url(sig.sig, 64) === null || !edVerifyStrict(sig.pub, cc, sig.sig)) continue;
-    if (seenIssuers.has(issuer_id)) continue;                                           // one signer counts once
-    seenIssuers.add(issuer_id); signers.push(issuer_id);
+    let g = byClaim.get(cc); if (!g) { g = { replacement: ra, signers: new Set() }; byClaim.set(cc, g); }
+    g.signers.add(issuer_id);                                                           // one signer counts once per claim
   }
-  return seenIssuers.size >= threshold
-    ? { recovered: true, replacement_authority: replacement, threshold: String(threshold), signers }
-    : { recovered: false, detail: 'recovery quorum not met: ' + seenIssuers.size + ' distinct signers < ' + threshold };
+  const reached = [...byClaim.values()].filter((g) => g.signers.size >= threshold);
+  if (reached.length === 0) return { recovered: false, detail: 'recovery quorum not met (no claim reached ' + threshold + ' distinct signers)' };
+  if (reached.length > 1) return { recovered: false, conflict: true, detail: 'recovery equivocation: ' + reached.length + ' conflicting replacements each reached threshold' };
+  return { recovered: true, replacement_authority: reached[0].replacement, threshold: String(threshold), signers: [...reached[0].signers] };
 }
 
 // ─── #76 (audit-8) GENESIS-EPOCH TRANSITION — a new genesis epoch must NOT silently reset the authority chain. The
@@ -1154,6 +1162,8 @@ function smtRoot(depth, entries) {                                              
 }
 // Build a verifiable map from typed leaves; returns the root and a prover (inclusion co-path, top→bottom).
 export function buildVerifiableMap(leaves) {
+  const seen = new Set();                                                             // P1-05: an authenticated dictionary is ONE value per key — reject duplicates (root would be input-order dependent otherwise)
+  for (const l of leaves) { if (seen.has(l.key)) throw Object.assign(new Error('E-MALFORMED: duplicate typed key in verifiable map (one value per key)'), { code: 'E-MALFORMED' }); seen.add(l.key); }
   const entries = leaves.map((l) => ({ hex: smtHex(l.key), kh: l.key, vh: l.value }));
   const root = smtRoot(0, entries);
   const prove = (key) => { const hex = smtHex(key); const sib = []; let ents = entries;
