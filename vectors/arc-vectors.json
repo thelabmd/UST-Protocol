@@ -1,7 +1,7 @@
 {
   "version": "UST 1.0 assurance-arc vectors (1.0.0-rc.36)",
   "note": "language-neutral contract: pre-signed inputs + expected verdict, executable by any implementation (see run-arc-vectors.mjs)",
-  "count": 59,
+  "count": 60,
   "vectors": [
     {
       "id": "ac-valid-chain",
@@ -1153,11 +1153,165 @@
             "sha256:e8846a47e1f60449f4fa14b5287384e4753622300dc85aafaba3415ba01d3aa7": "op-b"
           },
           "threshold": 2
-        }
+        },
+        "allowExperimentalAttested": true
       },
       "expect": {
         "keylog_freshness": "attested",
         "basis": "accepted-witness-quorum"
+      }
+    },
+    {
+      "id": "fresh-attested-withheld-in-stable",
+      "op": "deriveCheckpointFreshness",
+      "chain": [
+        {
+          "body": {
+            "version": "1",
+            "purpose": "ust:authority-checkpoint",
+            "domain_shard": "noosphere.md",
+            "genesis_epoch": "sha256:0b47eb1e9f5e6c671fb3dba656126935944a8d393b3be3eec20348a1ba73753f",
+            "sequence": "0",
+            "active_genesis": "sha256:a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+            "checkpoint_authority": {
+              "current_key_id": "sha256:0d88742630d4b9fee75b57ea828a074f70bdbbca7780477e2396f56610e564d0"
+            },
+            "keylog": {
+              "length": "1",
+              "root": "sha256:42a9e2df0a9137e153baf34043b41d9f6c9bb3d3bd49d7a4ba34fb06c4b2ba49",
+              "head": "sha256:abababababababababababababababababababababababababababababababab"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:0d88742630d4b9fee75b57ea828a074f70bdbbca7780477e2396f56610e564d0",
+            "pub": "0EqyMnQrtKs6E2i9RhXk5tAiSrcaAWuvhSCjMsl3hzc",
+            "sig": "GQzRZRNaM0k1zwLuXR49whGZqJaOKjuS-3j0e6G5DOZKiFXrwvAyTz3cQMGK6Z7NwXVCdX1KOEor-xCML4B1CQ"
+          }
+        }
+      ],
+      "opts": {
+        "genesisAuthority": {
+          "key_id": "sha256:0d88742630d4b9fee75b57ea828a074f70bdbbca7780477e2396f56610e564d0",
+          "pub": "0EqyMnQrtKs6E2i9RhXk5tAiSrcaAWuvhSCjMsl3hzc"
+        },
+        "target": {
+          "active_genesis": "sha256:a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+          "domain_shard": "noosphere.md",
+          "subject": "ust:target",
+          "anchor": {
+            "claim": {
+              "version": "1",
+              "purpose": "ust:evidence-receipt",
+              "domain_shard": "noosphere.md",
+              "active_genesis": "sha256:a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+              "genesis_epoch": "sha256:0b47eb1e9f5e6c671fb3dba656126935944a8d393b3be3eec20348a1ba73753f",
+              "subject": "ust:target",
+              "proof_kind": "pow-header-chain",
+              "facts": {
+                "substrate": "bitcoin",
+                "position": "800"
+              },
+              "issued_at": "2026-01-01T00:00:00Z"
+            },
+            "issuer_id": "sha256:c00e513be458544f3e12f578b99b4e261241d9b53e5a002695b13616010bbe97",
+            "sig": {
+              "alg": "Ed25519",
+              "key_id": "sha256:c00e513be458544f3e12f578b99b4e261241d9b53e5a002695b13616010bbe97",
+              "pub": "SAdaWX5yGhVuLgeZ3lzAxTJNxufq8c3UYlCGjsUyFd0",
+              "sig": "fYNR824L_AhNKcpQiiT6EIDx0Jog_FpccznWcYfCgCuOjC8sYUBNoGtL3sb-0yoF_5d9gjMzg0vgIPWKvnxTBQ"
+            }
+          }
+        },
+        "commitment": {
+          "claim": {
+            "version": "1",
+            "purpose": "ust:evidence-receipt",
+            "domain_shard": "noosphere.md",
+            "active_genesis": "sha256:a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+            "genesis_epoch": "sha256:0b47eb1e9f5e6c671fb3dba656126935944a8d393b3be3eec20348a1ba73753f",
+            "subject": "sha256:cc5bc257a684dc5471b2b6506633ab37da0e66ef2fe6808441d604072260c29c",
+            "proof_kind": "pow-header-chain",
+            "facts": {
+              "substrate": "bitcoin",
+              "position": "900"
+            },
+            "issued_at": "2026-01-01T00:00:00Z"
+          },
+          "issuer_id": "sha256:c00e513be458544f3e12f578b99b4e261241d9b53e5a002695b13616010bbe97",
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:c00e513be458544f3e12f578b99b4e261241d9b53e5a002695b13616010bbe97",
+            "pub": "SAdaWX5yGhVuLgeZ3lzAxTJNxufq8c3UYlCGjsUyFd0",
+            "sig": "9Oe2desGK-tCrOv1AFCxc-siDUa959uZjnlCHRfOmb2fVAKRQZox3Q1PkiwkdlD1YzSA_-1mK9kYPqGZwmfSBQ"
+          }
+        },
+        "terminality": {
+          "headProof": {
+            "index": "0",
+            "siblings": []
+          }
+        },
+        "trust": {
+          "connectors": {
+            "sha256:c00e513be458544f3e12f578b99b4e261241d9b53e5a002695b13616010bbe97": {
+              "pub": "SAdaWX5yGhVuLgeZ3lzAxTJNxufq8c3UYlCGjsUyFd0",
+              "trust_domain": "btc-watch",
+              "allowed_proof_kinds": [
+                "pow-header-chain"
+              ]
+            }
+          }
+        },
+        "uniqueness": {
+          "attestations": [
+            {
+              "claim": {
+                "purpose": "ust:checkpoint-uniqueness-attestation",
+                "domain_shard": "noosphere.md",
+                "genesis_epoch": "sha256:0b47eb1e9f5e6c671fb3dba656126935944a8d393b3be3eec20348a1ba73753f",
+                "sequence": "0",
+                "checkpoint": "sha256:cc5bc257a684dc5471b2b6506633ab37da0e66ef2fe6808441d604072260c29c"
+              },
+              "issuer_id": "sha256:727e2c80fef238781d1fe73b90740d329aeff8bc5bd59ac7625b147cf68eb667",
+              "sig": {
+                "alg": "Ed25519",
+                "key_id": "sha256:727e2c80fef238781d1fe73b90740d329aeff8bc5bd59ac7625b147cf68eb667",
+                "pub": "iEuIV_TqoWE8YVBNs01L6vNGUXoOMd483dTZtCAdnQs",
+                "sig": "7T-3ArL2mHswAETPu4TsGfYFBVuREH09gO0KoMiTyFUhlA4k6cy4cNooKcI9U-P9CYisgaiJzszIpNlrUdzDDw"
+              }
+            },
+            {
+              "claim": {
+                "purpose": "ust:checkpoint-uniqueness-attestation",
+                "domain_shard": "noosphere.md",
+                "genesis_epoch": "sha256:0b47eb1e9f5e6c671fb3dba656126935944a8d393b3be3eec20348a1ba73753f",
+                "sequence": "0",
+                "checkpoint": "sha256:cc5bc257a684dc5471b2b6506633ab37da0e66ef2fe6808441d604072260c29c"
+              },
+              "issuer_id": "sha256:e8846a47e1f60449f4fa14b5287384e4753622300dc85aafaba3415ba01d3aa7",
+              "sig": {
+                "alg": "Ed25519",
+                "key_id": "sha256:e8846a47e1f60449f4fa14b5287384e4753622300dc85aafaba3415ba01d3aa7",
+                "pub": "oJql9HpnWYAv-VX43C0qFKXJnSO-l_hkEn_5ODRVpPA",
+                "sig": "L_FwZzxIoRLRFUPS_nYsEgt_yVzNYNW8W58N4SGz3DAm-dUR2zGe8FrJN_avK4lute6Z8_5u1DbQN2wQEm01Dw"
+              }
+            }
+          ],
+          "trustRoots": {
+            "sha256:727e2c80fef238781d1fe73b90740d329aeff8bc5bd59ac7625b147cf68eb667": "iEuIV_TqoWE8YVBNs01L6vNGUXoOMd483dTZtCAdnQs",
+            "sha256:e8846a47e1f60449f4fa14b5287384e4753622300dc85aafaba3415ba01d3aa7": "oJql9HpnWYAv-VX43C0qFKXJnSO-l_hkEn_5ODRVpPA"
+          },
+          "domains": {
+            "sha256:727e2c80fef238781d1fe73b90740d329aeff8bc5bd59ac7625b147cf68eb667": "op-a",
+            "sha256:e8846a47e1f60449f4fa14b5287384e4753622300dc85aafaba3415ba01d3aa7": "op-b"
+          },
+          "threshold": 2
+        }
+      },
+      "expect": {
+        "keylog_freshness": "corroborated",
+        "attested_withheld": "experimental-gate"
       }
     },
     {
@@ -1529,7 +1683,8 @@
           "mapRoots": [
             "sha256:90eca5f0c058a71045a273b6a3649bbe12333daa2bcf5a0ed32cf13c6a05a9c9"
           ]
-        }
+        },
+        "allowExperimentalAttested": true
       },
       "expect": {
         "keylog_freshness": "attested",

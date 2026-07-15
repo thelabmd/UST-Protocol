@@ -755,9 +755,11 @@ console.log('\n═════════════════════�
   const trustRoots = { [Wa.key_id]: Wa.pubB64, [Wb.key_id]: Wb.pubB64, [Wc.key_id]: Wc.pubB64 };
   const ua = (W, extra) => P.buildUniquenessAttestation({ domain_shard: D, genesis_epoch: EP, sequence: '0', checkpoint: headId, ...extra }, W.priv, W.pubB64);
   const uOpts = (atts) => ({ attestations: atts, trustRoots, domains, threshold: 2 });
-  const F = (uniq) => P.deriveCheckpointFreshness([C0], { genesisAuthority: gAuth, target, commitment: commit, terminality: term, trust, uniqueness: uniq });
+  const F = (uniq) => P.deriveCheckpointFreshness([C0], { genesisAuthority: gAuth, target, commitment: commit, terminality: term, trust, uniqueness: uniq, allowExperimentalAttested: true });   // K1: these test the EXPERIMENTAL attested path
   const VU = (atts) => P.verifyCheckpointUniqueness(atts, { domain_shard: D, genesis_epoch: EP, sequence: '0', checkpoint: headId, trustRoots, domains, threshold: 2 });
 
+  // K1 ship-gate (UST-znh) — the STABLE verifier does not EMIT attested; the proof still holds but the rung is capped.
+  check('K1 stable path (no opt-in): a would-be attested checkpoint is capped at corroborated, attested_withheld named', (r => r.result === 'VALID' && r.keylog_freshness === 'corroborated' && r.attested_withheld === 'experimental-gate' && r.anti_equivocation === 'attested')(P.deriveCheckpointFreshness([C0], { genesisAuthority: gAuth, target, commitment: commit, terminality: term, trust, uniqueness: uOpts([ua(Wa), ua(Wb)]) })));
   check('PhC 2 witnesses, DISTINCT domains → attested (accepted-witness-quorum), anti_equivocation attested', (r => r.result === 'VALID' && r.keylog_freshness === 'attested' && r.basis === 'accepted-witness-quorum' && r.anti_equivocation === 'attested' && r.trust_domains.length === 2)(F(uOpts([ua(Wa), ua(Wb)]))));
   check('PhC 2 witnesses, SAME domain → quorum not met → stays corroborated', (r => r.keylog_freshness === 'corroborated')(F(uOpts([ua(Wa), ua(Wc)]))));
   check('PhC uniqueness on an UNAUTHORIZED checkpoint → INVALID, never attested', (r => r.result === 'INVALID' && r.keylog_freshness !== 'attested')(P.deriveCheckpointFreshness([P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: D, genesis_epoch: EP, sequence: '0', active_genesis: AG, current_key_id: K0.key_id, keylog }), KX.priv, KX.pubB64)], { genesisAuthority: gAuth, target, commitment: commit, terminality: term, uniqueness: uOpts([ua(Wa), ua(Wb)]) })));
@@ -799,7 +801,7 @@ console.log('\n═════════════════════�
   const cpLeaf = P.checkpointMapLeaf({ domain_shard: D, genesis_epoch: EP, sequence: '0', checkpoint: headId });
   const cmap = P.buildVerifiableMap([cpLeaf, P.checkpointMapLeaf({ domain_shard: D, genesis_epoch: EP, sequence: '1', checkpoint: 'sha256:' + 'ab'.repeat(32) })]);
   const cproof = cmap.prove(cpLeaf.key);
-  const Fmap = (uniq) => P.deriveCheckpointFreshness([C0], { genesisAuthority: gAuth, target, commitment: btc(900, headId), terminality: term, uniqueness: uniq, trust: { connectors, mapRoots: uniq?.map ? [uniq.map.mapRoot] : [] } });   // Phase 1: consumer admits the root it holds
+  const Fmap = (uniq) => P.deriveCheckpointFreshness([C0], { genesisAuthority: gAuth, target, commitment: btc(900, headId), terminality: term, uniqueness: uniq, trust: { connectors, mapRoots: uniq?.map ? [uniq.map.mapRoot] : [] }, allowExperimentalAttested: true });   // K1: experimental attested path; consumer admits the root it holds
 
   check('#42 checkpoint-map inclusion → attested (basis authenticated-map-uniqueness)', (r => r.keylog_freshness === 'attested' && r.basis === 'authenticated-map-uniqueness' && r.map_root === cmap.root)(Fmap({ map: { proof: cproof, mapRoot: cmap.root } })));
   const rivalMap = P.buildVerifiableMap([P.checkpointMapLeaf({ domain_shard: D, genesis_epoch: EP, sequence: '0', checkpoint: 'sha256:' + '99'.repeat(32) })]);

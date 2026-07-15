@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.36', revision: 57 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.36', revision: 58 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -1500,7 +1500,15 @@ export function verifyKeylogTerminality({ root, length, head } = {}, proof = {})
 //     (F.5g `compareEvidenceOrder`, never a timestamp compare). This CLOSES the P0-05 stale-prefix overclaim by
 //     earning `corroborated`, NEVER `attested`: a single publisher cannot prove split-view absence — independent
 //     anti-equivocation is Phase C/#42. (Strict last-index terminality is the #77 refinement; here `head ∈ root`.)
-export function deriveCheckpointFreshness(chain, { genesis, context, genesisAuthority, pinnedPrior, target, commitment, terminality, uniqueness, trust } = {}) {
+// STABILITY (rc.37 UST-znh K1 — the ship-gate freeze). LIGHT/HIGH are STABLE. This checkpoint-freshness subsystem is
+// EXPERIMENTAL until the kernel gates (one closed API + mandatory append-only consistency proof + scope-bound pinning
+// + shared node/web core + boundary fuzzing + independent clean-run/audit). Its top rung `attested` fell in all three
+// audit rounds via its SUPPORTING layer, so the STABLE verifier does not EMIT it: attested requires the caller to
+// consciously opt into the experimental extension (`opts.allowExperimentalAttested === true`); without it the verdict
+// is capped at `corroborated` and carries `attested_withheld:'experimental-gate'`. Nothing else changes — this is a
+// contract-honesty gate, not a logic change; the closed kernel (UST-znh) replaces this whole function.
+export const STABILITY = Object.freeze({ light: 'stable', high: 'stable', corroborated: 'experimental-usable', attested: 'experimental-extension' });
+export function deriveCheckpointFreshness(chain, { genesis, context, genesisAuthority, pinnedPrior, target, commitment, terminality, uniqueness, trust, allowExperimentalAttested = false } = {}) {
   const chn = verifyAuthorityCheckpointChain(chain, { genesis, context, genesisAuthority, pinnedPrior });
   if (chn.result !== 'VALID') return chn.result === 'INDETERMINATE' ? chn
     : { result: 'INVALID', error: chn.error, detail: 'checkpoint chain not authorized: ' + (chn.detail || chn.error), keylog_freshness: 'unverified' };
@@ -1533,9 +1541,17 @@ export function deriveCheckpointFreshness(chain, { genesis, context, genesisAuth
     let uq = null;                                                                       // two INDEPENDENT bases for the SAME predicate
     if (uniqueness.map && mapRootAdmitted(trust, uniqueness.map.mapRoot)) uq = verifyCheckpointMapUniqueness(uniqueness.map.proof, { domain_shard: b.domain_shard, genesis_epoch: b.genesis_epoch, sequence: b.sequence, checkpoint: headId, mapRoot: uniqueness.map.mapRoot });   // Phase 1: map root must be consumer-admitted (trust.mapRoots)
     if ((!uq || !uq.attested) && uniqueness.attestations) uq = verifyCheckpointUniqueness(uniqueness.attestations, { domain_shard: b.domain_shard, genesis_epoch: b.genesis_epoch, sequence: b.sequence, checkpoint: headId, trustRoots: uniqueness.trustRoots, domains: uniqueness.domains, threshold: uniqueness.threshold });
-    if (uq && uq.attested) return { result: 'VALID', keylog_freshness: 'attested', basis: uq.basis, anti_equivocation: 'attested',
-      ...(uq.threshold ? { threshold: uq.threshold, accepted_witnesses: uq.accepted_witnesses, trust_domains: uq.trust_domains } : {}),
-      ...(uq.map_root ? { map_root: uq.map_root } : {}), head: headId, sequence: b.sequence, active_genesis: b.active_genesis };
+    if (uq && uq.attested) {
+      // K1 ship-gate: the STABLE verifier does not emit `attested`. Without the explicit experimental opt-in the
+      // proof still HOLDS (uniqueness verified) but the reported rung is capped at `corroborated`, with the withheld
+      // rung named — an honest downgrade, never a silent one.
+      if (!allowExperimentalAttested) return { result: 'VALID', keylog_freshness: 'corroborated', basis: uq.basis, anti_equivocation: 'attested',
+        attested_withheld: 'experimental-gate', stability: 'experimental-extension',
+        ...(uq.map_root ? { map_root: uq.map_root } : {}), head: headId, sequence: b.sequence, active_genesis: b.active_genesis };
+      return { result: 'VALID', keylog_freshness: 'attested', basis: uq.basis, anti_equivocation: 'attested', stability: 'experimental-extension',
+        ...(uq.threshold ? { threshold: uq.threshold, accepted_witnesses: uq.accepted_witnesses, trust_domains: uq.trust_domains } : {}),
+        ...(uq.map_root ? { map_root: uq.map_root } : {}), head: headId, sequence: b.sequence, active_genesis: b.active_genesis };
+    }
   }
   return { result: 'VALID', keylog_freshness: 'corroborated', basis: 'publisher-checkpoint', anti_equivocation: 'unverified',  // ceiling without independent uniqueness
     head: headId, sequence: b.sequence, active_genesis: b.active_genesis };

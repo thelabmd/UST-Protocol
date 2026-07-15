@@ -58,7 +58,7 @@ const CAPS = {
 };
 
 // Internal primitives — not user-capability units (raw hash, encoders, error types, the registry itself).
-const PRIMITIVES = new Set(['VERSION', 'H', 'Hbytes', 'edVerifyStrict', 'strictB64url', 'parseCadenceInt', 'UstInvalid', 'UstIndeterminate', 'REGISTRY', 'noFraudProof']);
+const PRIMITIVES = new Set(['VERSION', 'STABILITY', 'H', 'Hbytes', 'edVerifyStrict', 'strictB64url', 'parseCadenceInt', 'UstInvalid', 'UstIndeterminate', 'REGISTRY', 'noFraudProof']);
 
 // A connector exposes the substrate seam (verifyAnchor delegate + typed evidence emit), not core names.
 const connector = (X) => (cap) => ['anchor-verify', 'typed-evidence', 'substrate-registry'].includes(cap) && typeof X.substrateVerify !== 'undefined' && typeof X.toVerifiedEvidence === 'function';

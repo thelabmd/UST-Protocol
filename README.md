@@ -180,6 +180,22 @@ UST proves **fixation, not truth**: *this publisher committed to this data, at t
 **not** prove the data is *correct* — a publisher can sign a wrong reading. You learn **whom to hold accountable**
 and **that nothing was tampered** — a real, bounded guarantee, not an oracle of truth.
 
+## Stability of assurance tiers
+
+Not every rung is equally settled. The `STABILITY` export is the machine-readable map:
+
+| tier / rung | status |
+|---|---|
+| `LIGHT`, `HIGH` | **stable** — three independent adversarial audit rounds left them intact |
+| `corroborated` freshness | experimental-usable |
+| `attested` freshness | **experimental extension** — the STABLE verifier does not emit it |
+
+`attested` (independent anti-equivocation over a checkpoint) is being re-based on a closed verification kernel
+(mandatory append-only consistency proof, scope-bound pinning, one shared node/browser core). Until those ship
+gates pass, `deriveCheckpointFreshness` caps a would-be `attested` result at `corroborated` and names the withheld
+rung (`attested_withheld: "experimental-gate"`); the top rung is reachable only with an explicit
+`allowExperimentalAttested: true` opt-in. This keeps the whole protocol from inheriting the youngest layer's risk.
+
 ## License
 
 **Code: Apache-2.0.** **Specification text: CC BY 4.0.** Source code (`packages/**`, tooling) is licensed under

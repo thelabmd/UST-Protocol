@@ -1174,6 +1174,13 @@ closed, e.g. recovery keys) on EVERY surface — a non-positive threshold never 
 
 #### 12.3.5 Freshness ladder — `unverified ⊊ fresh ⊊ corroborated ⊊ attested`
 
+> **Stability (rc.37 ship-gate).** `LIGHT`/`HIGH` are STABLE; this checkpoint-freshness subsystem is EXPERIMENTAL
+> until the closed verification kernel lands (one public entrypoint, mandatory append-only consistency proof,
+> scope-bound pinning, shared node/browser core, boundary fuzzing, independent audit). The STABLE verifier does NOT
+> emit `attested`: without an explicit experimental opt-in a would-be `attested` result is capped at `corroborated`
+> and names the withheld rung (`attested_withheld:"experimental-gate"`). The `STABILITY` export is the
+> machine-readable map. This keeps the protocol from inheriting the youngest layer's risk while the kernel is built.
+
 Checkpoint freshness (`deriveCheckpointFreshness`) is EARNED, never self-declared, and reported as a rung:
 
 - **`unverified`** — no evidence (the default; an honest strength, not `INVALID`).
@@ -2267,6 +2274,17 @@ provenance and will be lifted into this ledger when the spec is published.
   E-BOUNDS before Merkle work). With this, phases M1–M5, C1–C4, V1–V2 of the rc.35 round-2 structural refactor are
   COMPLETE: the remaining epic item is A1 — a diverse-model adversarial round-3 over the refactored layer.
   Gates: conformance 376/0, security 29/0, model guard green, arc 59/0, parity green, npm-drift green.
+- **REV 58 (2026-07-15, `rc.37` line)** — **round-3 audit closed (REJECT: 4 P0 + 4 P1 + 1 P2, all reproduced) →
+  topology change begins.** A third diverse-model round showed the four new P0 are one root cause: intermediate
+  'verified' objects still cross public boundaries as plain JS structures. Direction (owner): stop hardening
+  functions with more checks; make strong verdicts UNREACHABLE except through one small verification kernel, built
+  MATH-FIRST (define the proof calculus, then code interprets it — `rnd/CALCULUS-ust-proof-system.md`). First
+  landed step — the SHIP-GATE freeze (K1): `LIGHT`/`HIGH` are STABLE; the checkpoint-freshness subsystem is
+  EXPERIMENTAL until the kernel gates; the STABLE verifier no longer emits `attested` (capped at `corroborated` +
+  `attested_withheld` without an explicit opt-in). New `STABILITY` export + §12.3.5 note. The P1-4 epoch decision is
+  resolved as a TWO-PHASE lifecycle (FutureGenesisCommitment → activation requiring a VERIFIED destination genesis;
+  `to_scope_id = scope(g_B)`, authority from verified `g_B`, never the statement). Gates: conformance 377/0,
+  arc 60/0. Kernel phases K2–K9 tracked in bd `UST-znh`.
 
 **Design principle throughout:** every normative clause answers "mechanism (protocol) or operator
 instantiation (profile)?"; operator specifics (substrate, partition schema, completeness, cadence) live in the
