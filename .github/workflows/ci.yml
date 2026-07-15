@@ -21,6 +21,8 @@ jobs:
         run: npm run test:vectors
       - name: spec <-> code registry sync (canonical string sets — spec == REGISTRY == code)
         run: npm run test:spec-sync
+      - name: capability parity (every surface's stance matches the spec's capability set — no silent lag, UST-3dj class)
+        run: npm run test:parity
       - name: CLI ceremony regression (9th-audit — the seven points cannot regress)
         run: npm run test:cli
       - name: ust-lite is a valid UST subset (byte-identical to the reference impl, both directions)
