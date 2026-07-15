@@ -15,6 +15,7 @@
     "test:cli": "node packages/ust-cli/regression.mjs",
     "test:model": "node packages/ust-protocol/model-correspondence.mjs",
     "test:vectors": "node packages/ust-protocol/gen-arc-vectors.mjs && git diff --exit-code vectors/arc-vectors.json && node packages/ust-protocol/run-arc-vectors.mjs",
-    "test:spec-sync": "node tools/gen-spec-registry.mjs && git diff --exit-code spec/UST-1.0.md && node tools/spec-code-sync.mjs"
+    "test:spec-sync": "node tools/gen-spec-registry.mjs && git diff --exit-code spec/UST-1.0.md && node tools/spec-code-sync.mjs",
+    "test:lite": "node packages/ust-lite/test.mjs"
   }
 }

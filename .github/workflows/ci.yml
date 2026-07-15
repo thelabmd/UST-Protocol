@@ -23,5 +23,7 @@ jobs:
         run: npm run test:spec-sync
       - name: CLI ceremony regression (9th-audit — the seven points cannot regress)
         run: npm run test:cli
+      - name: ust-lite is a valid UST subset (byte-identical to the reference impl, both directions)
+        run: npm run test:lite
       - name: npm-drift gate (a published version is immutable)
         run: node tools/npm-drift-check.mjs
