@@ -679,6 +679,25 @@ console.log('\n═════════════════════�
   check('K3 forged context (caller-shaped {scope_id, checkpoint_authority}) → INVALID(E-AUTHORITY), not verified-context', (r => r.result === 'INVALID' && r.error === 'E-AUTHORITY')(P.verifyAuthorityCheckpointChain([C0], { context: { scope_id: ctx.scope_id, active_genesis: ctx.active_genesis, domain: D, genesis_epoch: ctx.genesis_epoch, checkpoint_authority: { key_id: K0.key_id, pub: K0.pubB64 } } })));
   check('K3 the genuine context IS a branded handle (isVerifiedHandle true); the look-alike is not', P.isVerifiedHandle('genesis', ctx) === true && P.isVerifiedHandle('genesis', { ...ctx }) === false);
   check('K3 a VALID chain mints a branded CheckpointChainHandle (pin) carrying the scoped snapshot', (r => P.isVerifiedHandle('chain', r.pin) && r.pin.scope_id === P.authorityScopeId(P.contentHash(genCA)) && r.pin.checkpoint_id === r.head)(P.verifyAuthorityCheckpointChain([C0], { context: ctx })));
+
+  // ── K4 (UST-znh) — verifyAuthorityBundle: the ONE public entrypoint. Caller hands RAW inputs + config; the kernel
+  //    builds every branded handle itself (genesis → context → chain → freshness → assurance). Corroborated path.
+  const KCk = kp('64'.repeat(32));
+  const connK = { [KCk.key_id]: { pub: KCk.pubB64, trust_domain: 'btc-watch', allowed_proof_kinds: ['pow-header-chain'] } };
+  const klk = P.buildKeylogCommitment(['sha256:' + 'ab'.repeat(32)]);
+  const C0k = P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: D, genesis_epoch: P.genesisEpoch(P.contentHash(genCA)), sequence: '0', active_genesis: P.contentHash(genCA), current_key_id: K0.key_id, keylog: { root: klk.root, length: klk.length, head: klk.head } }), K0.priv, K0.pubB64);
+  const headK = P.authorityCheckpointId(C0k);
+  const rcptK = (subj, pos) => P.buildEvidenceReceipt({ domain_shard: D, active_genesis: P.contentHash(genCA), subject: subj, proof_kind: 'pow-header-chain', facts: { substrate: 'bitcoin', position: String(pos) }, issued_at: '2026-01-01T00:00:00Z' }, KCk.priv, KCk.pubB64);
+  const bundleIn = { genesis: genCA, checkpoints: [C0k], target: { active_genesis: P.contentHash(genCA), domain_shard: D, subject: 'ust:target', anchor: rcptK('ust:target', 800) }, commitment: rcptK(headK, 900), terminality: { headProof: klk.headProof, successorProof: klk.successorProof } };
+  const cfg = { trust: { connectors: connK } };
+  check('K4 verifyAuthorityBundle (raw genesis + checkpoint + receipts) → VALID corroborated, scope_id + derivation trace', (r => r.result === 'VALID' && r.keylog_freshness === 'corroborated' && r.scope_id === P.authorityScopeId(P.contentHash(genCA)) && r.derivation.rule === 'FreshnessCorroborated' && r.derivation.premises.includes('checkpoint-after-target'))(P.verifyAuthorityBundle(bundleIn, cfg)));
+  check('K4 bundle without genesis → INDETERMINATE(authority_unresolved) — an authority bundle roots in a verified genesis', (r => r.result === 'INDETERMINATE' && r.reason === 'authority_unresolved')(P.verifyAuthorityBundle({ ...bundleIn, genesis: undefined }, cfg)));
+  check('K4 bundle with an UNVERIFIED genesis (not self-signed) → INVALID(E-GENESIS)', (r => r.result === 'INVALID' && r.error === 'E-GENESIS')(P.verifyAuthorityBundle({ ...bundleIn, genesis: { state: { id: { class: 'genesis' } }, sig: {} } }, cfg)));
+  check('K4 bundle output is frozen (single public verdict, no post-hoc mutation)', (() => { const r = P.verifyAuthorityBundle(bundleIn, cfg); try { r.tier = 'TOP'; } catch {} return Object.isFrozen(r) && r.tier !== 'TOP'; })());
+  // K4 + K1: attested only via explicit experimental policy; default stable caps at corroborated.
+  const uniqK = { attestations: [P.buildUniquenessAttestation({ domain_shard: D, genesis_epoch: P.genesisEpoch(P.contentHash(genCA)), sequence: '0', checkpoint: headK }, kp('71'.repeat(32)).priv, kp('71'.repeat(32)).pubB64)], trustRoots: { [kp('71'.repeat(32)).key_id]: kp('71'.repeat(32)).pubB64 }, domains: { [kp('71'.repeat(32)).key_id]: 'op-a' }, threshold: 1 };
+  check('K4 bundle applies policy.allowExperimentalAttested (default stable → attested_withheld)', (r => r.keylog_freshness === 'corroborated' && r.attested_withheld === 'experimental-gate')(P.verifyAuthorityBundle({ ...bundleIn, uniqueness: uniqK }, cfg)));
+  check('K4 bundle with policy.allowExperimentalAttested → attested', (r => r.keylog_freshness === 'attested' && r.derivation.premises.includes('checkpoint-unique'))(P.verifyAuthorityBundle({ ...bundleIn, uniqueness: uniqK }, { trust: { connectors: connK }, policy: { allowExperimentalAttested: true } })));
 }
 
 // ─── #76 Phase B — publisher-checkpoint CORROBORATED freshness (authorized chain × head∈root × proven-after target).

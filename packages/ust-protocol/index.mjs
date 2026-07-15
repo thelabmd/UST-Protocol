@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.36', revision: 61 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.36', revision: 62 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -1600,6 +1600,38 @@ export function deriveCheckpointFreshness(chain, { genesis, context, genesisAuth
   }
   return { result: 'VALID', keylog_freshness: 'corroborated', basis: 'publisher-checkpoint', anti_equivocation: 'unverified',  // ceiling without independent uniqueness
     head: headId, sequence: b.sequence, active_genesis: b.active_genesis };
+}
+
+// ─── K4 (rc.37, UST-znh) — THE ONE PUBLIC AUTHORITY ENTRYPOINT. The topology rule realized as an API: a caller hands
+//     ONLY raw inputs + consumer config; the kernel builds every branded handle itself (genesis → context → chain →
+//     freshness → assurance), so no caller-named `Verified*` object crosses the boundary and the check ORDER cannot be
+//     bypassed by assembling the intermediate functions by hand. Those functions remain exported for now (surfaces +
+//     second-impl parity) but are `@internal`: this is the canonical path, and round-4 audits ONLY this boundary.
+//     Returns a single verdict carrying the freshness rung, the assurance report, the scope_id, and a derivation TRACE
+//     (which atoms were proven, by which rule) — every strong verdict is explainable and machine-auditable.
+export function verifyAuthorityBundle(inputs = {}, config = {}) {
+  const { genesis, checkpoints = [], keylogEntries, target, commitment, terminality, uniqueness } = inputs || {};
+  const { trust, policy = {} } = config || {};
+  // 1. genesis → the SOLE root: a branded VerifiedAuthorityContext (K2/K3). No genesis ⇒ no authority.
+  if (!genesis) return Object.freeze({ result: 'INDETERMINATE', reason: 'authority_unresolved', detail: 'verifyAuthorityBundle: no genesis supplied — an authority bundle roots in a verified genesis' });
+  const context = verifiedGenesisContext(genesis);
+  if (!context) return Object.freeze({ result: 'INVALID', error: 'E-GENESIS', detail: 'verifyAuthorityBundle: genesis does not verify (class:genesis + self-signature)' });
+  // 2+3. checkpoint chain + freshness, rooted in the context; the append-only witness is forwarded (K5). ONE seam.
+  const fresh = deriveCheckpointFreshness(checkpoints, { context, keylogEntries, target, commitment, terminality, uniqueness, trust,
+    allowExperimentalAttested: policy.allowExperimentalAttested === true });          // K1: attested only via explicit experimental policy
+  // 4. assurance: the freshness verdict + admitted evidence → a branded predicate graph → the frozen report (K3).
+  const admittedEvidence = [commitment, target?.anchor].filter((e) => isHandle('evidence', e));   // only image(VerifyEvidence_C) contributes capability
+  const report = deriveAssurance(provePredicates({ freshness: fresh, evidence: admittedEvidence }));
+  // derivation TRACE — the proven atoms behind the freshness rung (K7 replaces this with the full least-fixed-point).
+  const proven = [];
+  if (fresh.result === 'VALID') { proven.push('checkpoint-authorized', 'scope-bound', 'keylog-append-only', 'snapshot-terminal', 'checkpoint-committed', 'checkpoint-after-target');
+    if (fresh.keylog_freshness === 'attested') proven.push('checkpoint-unique'); }
+  return Object.freeze({ result: fresh.result, ...(fresh.error ? { error: fresh.error } : {}), ...(fresh.reason ? { reason: fresh.reason } : {}),
+    scope_id: context.scope_id, keylog_freshness: fresh.keylog_freshness,
+    ...(fresh.attested_withheld ? { attested_withheld: fresh.attested_withheld } : {}),
+    assurance: report.strength, support: report.support, tier: report.tier,
+    derivation: Object.freeze({ rule: fresh.keylog_freshness === 'attested' ? 'FreshnessAttested' : fresh.keylog_freshness === 'corroborated' ? 'FreshnessCorroborated' : 'none', premises: Object.freeze(proven) }),
+    detail: fresh.detail });
 }
 
 // ─── #78 ASSURANCE PRODUCT-LATTICE (formal-model F.5.0, CODE realization — the math must pass through code +

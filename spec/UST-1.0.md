@@ -2318,6 +2318,15 @@ provenance and will be lifted into this ledger when the spec is published.
   INDETERMINATE reason `chain_consistency_unproven`. §12.3.1 + F.5i in lockstep. security-regression r3-P0-2 +
   r3-P0-3. **All four round-3 P0 now dissolve at the type/transition level** (forged context K3, forged assembler K3,
   scope-free pin K5, growth rewrite K5). Gates: conformance 383/0, arc 61/0, security 33/0, model guard green.
+- **REV 62 (2026-07-16, `rc.37` line)** — **kernel phase K4-core: one public authority entrypoint.**
+  `verifyAuthorityBundle(inputs, config)` takes ONLY raw inputs (`genesis`, `checkpoints`, `commitment`/receipts,
+  `target`, `uniqueness`, `keylogEntries`) + consumer `{trust, policy}`; the kernel builds every branded handle
+  itself (genesis → context → chain → freshness → assurance) and returns a single frozen verdict with `scope_id`,
+  the freshness rung, the assurance report, and a derivation TRACE. No caller-named `Verified*` object crosses the
+  boundary and the check ORDER cannot be bypassed by hand-assembling the intermediate functions. `policy.allow
+  ExperimentalAttested` gates the attested rung (K1). The intermediate functions remain exported (`@internal`) —
+  K3 brands already make them non-forgeable; making them package-private is K4-tail (a breaking change gated on a
+  major-version + surface migration). Round-4 audits ONLY this boundary. Gates: conformance 389/0, parity green.
 
 **Design principle throughout:** every normative clause answers "mechanism (protocol) or operator
 instantiation (profile)?"; operator specifics (substrate, partition schema, completeness, cadence) live in the
