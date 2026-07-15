@@ -254,8 +254,12 @@ ORTHOGONAL coordinates, each its own information sub-σ-algebra of `ℐ`:
 - **IdentityStrength** `A_id := σ(name-binding, active-genesis uniqueness)` (§12.1a / F.5a, F.5j).
 - **FreshnessStrength** `A_fresh := σ(terminality, temporal order, checkpoint uniqueness)` (§12.2a/§12.3 / F.5i, F.5n).
 - **TimeStrength** `Fₜ` — the anchor filtration (§11.2 / F.5c).
-- **EvidenceBasis** — the connector-evidence class; it enters `Fₜ` ONLY under Variant A (a proof-kind bound to a
-  real-time relation, F.5g gap 5), never as a bare timestamp.
+- **EvidenceBasis** — the connector-evidence CAPABILITY. Modeled not as a scalar rank but as a SET of capabilities
+  (`order`, `time`, `inclusion`, `consistency`, `membership`, `non-membership`, `content-equality`, `availability`;
+  realized as `EVIDENCE_CAPS`, P2-02) partially ordered by SET INCLUSION — capabilities are NOT naturally linear
+  (map-uniqueness, transparency-consistency, content-equality and trusted-timestamp are mutually incomparable). A
+  predicate is discharged ONLY by an admissible capability: temporal order needs `order`/`time`, so a proof-kind
+  bearing neither (`content-addressed`, `authenticated-map`, opaque) enters `Fₜ` under NO circumstance (Variant A, F.5g).
 
 **Gap 3 — split `A_id` from `A_fresh`.** These were the two facts `𝒮_HIGH`'s `W_n` fused; F.5a already splits
 name-binding from no-fork, and here the split is axis-level: name authority and key-log freshness are measurable
@@ -271,6 +275,25 @@ meet = per-axis min, join = per-axis max — a reflexive/antisymmetric partial o
 **Gap 1 — `A_id ⊥ A_fresh` (independence).** Identity and freshness strengthen INDEPENDENTLY: name authority can
 rise with freshness fixed and vice-versa, so the two are in general INCOMPARABLE in `(𝓐, ≤)` —
 *"LATTICE (4) A_id"* vs `A_fresh`. The linear tower collapsed this; the product keeps them apart.
+
+**Non-degeneracy (P2-01) — the STRICT inclusions need a NAMED hypothesis.** Claims like `corroborated ⊊ authoritative`
+(F.5a) and `corroborated ⊊ attested` (F.5j) are STRICT only under an explicit assumption, made here: the independent
+coordinate (the authenticated map root, or the accepted-witness quorum) is NOT a measurable function of the
+publisher's own view, AND there exist histories `ω, ω'` agreeing on the publisher view but differing in that
+coordinate (a rival genesis, or a rival checkpoint at the same coordinate). In a DEGENERATE model — the map is a
+function of the publisher's list, or no rival history exists — the σ-algebras coincide and the "inclusion" is
+EQUALITY, not strict. The audit is the operational face of this: the P0 fixes make the independent coordinate
+CONSUMER-rooted (§12.3.4) and capability-checked (§12.3.5), so it is genuinely not publisher-controlled — the
+hypothesis is not merely assumed but ENFORCED (a self-supplied root no longer reaches the strong rung).
+
+**Per-edge predicates (P2-03) — each adjacent rung is strictly stronger by a CHECKED predicate, not a declared rank.**
+The lattice laws hold for ANY rank order; they do not prove that a rung EARNS its place. Each edge is a theorem with a
+running realization (the P0-01..05 reproductions, now `security-regression.mjs`, are precisely the attempts to reach a
+rung WITHOUT its predicate — all rejected):
+- `corroborated ≺ authoritative` (identity): INDEPENDENT active-genesis uniqueness under a consumer-rooted map (F.5j/F.5k) — enforced by the trust boundary (§12.3.4) and *"LATTICE (4) A_id"* independence.
+- `fresh ≺ corroborated` (freshness): an authorized checkpoint chain ∧ strict SIZE-BOUND terminality (F.5n) ∧ proven-after ordering of a CAPABILITY-typed commitment (F.5g).
+- `corroborated ≺ attested` (freshness): + INDEPENDENT anti-equivocation (F.5j); the top rung is unreachable without it.
+- the projection over these axes agrees with the realized verifier — *"LATTICE (6) projectTier agrees with the realized"* tier — so the ranks are not free declarations but the live machine's own order.
 
 **Theorem F.5.0 (Tier is a monotone policy projection).** The classic tier is a map `Π : 𝓐 → {NONE ≺ LIGHT ≺ HIGH
 ≺ TOP}` reading ONLY the Integrity, IdentityStrength and TimeStrength coordinates: `Π(A) = TOP` iff
