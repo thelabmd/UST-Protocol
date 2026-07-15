@@ -627,6 +627,40 @@ non-membership — the one composition problem that genuinely needs the anchored
 separately. The audit's manifest collapses, by the math, to "per-frame `K_A` + `A`-signed cadence + the existing
 substrate anchor" — less machinery, each omission proven, not cut.
 
+## F.5g.0 The verified authority context — scope is DERIVED, never chosen (M2, rc.36)
+
+Every theorem from F.5g on binds objects to an AUTHORITY SCOPE. The rc.35 round-2 audits showed the scope parameters
+were read from the very objects being verified — the publisher chose the terms of its own audit (epoch-split,
+cross-domain, re-root). M2 fixes the root: ONE seam derives the scope from a VERIFIED genesis, and every downstream
+layer takes the derived context, never raw fields.
+
+**Definition (VerifiedAuthorityContext).** For a genesis document `g` whose class and self-signature VERIFY
+(`resolveCheckpointRoots` — P0-2: verify-before-extract):
+
+```
+active_genesis := contentHash(g)                       — never a carried field
+genesis_epoch  := H_"ust:genesis-epoch"(active_genesis) — DERIVED; a carried different value is malformed
+scope_id       := H_"ust:authority-scope"(canon({domain, active_genesis, genesis_epoch}))
+ctx            := { scope_id, domain, active_genesis, genesis_epoch, checkpoint_authority, recovery* }
+```
+
+**Theorem M2 (namespace non-malleability).** Every scope parameter of every downstream predicate is a function of
+`(verified genesis, consumer config)` — a publisher cannot choose the namespace any verifier keys by: (i) a
+checkpoint carrying a non-canonical `genesis_epoch` is `E-MALFORMED` (two rival C₀ over one genesis collide in ONE
+uniqueness slot — epoch-split closed); (ii) an evidence receipt with a non-canonical epoch is `E-EVIDENCE` (F.5g);
+(iii) an epoch transition binds `to_active_genesis` with a canonical `to_genesis_epoch` (F.5m); (iv) chain
+verification roots in the CONTEXT (`authority_root: "verified-context"`) — authority, recovery keys and the C₀
+`active_genesis` binding all flow from the one derivation.
+
+**Realization.** `verifiedGenesisContext(genesis)` (the sole context producer), `genesisEpoch`, `authorityScopeId`
+(the ONE canonical scope id, shared by context and evidence), and the `context` root of
+`verifyAuthorityCheckpointChain` / `deriveCheckpointFreshness`.
+
+**Conformance (math ⇒ code ⇒ green vector, `packages/ust-protocol/conformance.mjs`).**
+- the seam derives, never copies: *"M2 verifiedGenesisContext derives canonical scope (epoch=H(active_genesis), scope_id bound)"*, *"M2 verifiedGenesisContext rejects an unsigned genesis → null (P0-2 carried)"*.
+- downstream takes the context: *"C1 chain rooted in a VerifiedAuthorityContext → VALID (authority_root verified-context)"*, *"C1 context-rooted C₀ bound to the context scope: foreign active_genesis → INVALID(E-GENESIS)"*.
+- uniform hygiene at every scope-bound object: *"M3 receipt: non-canonical genesis_epoch → INVALID(E-EVIDENCE) (M2 hygiene is uniform)"*, *"M4.4 transition with a NON-canonical to_genesis_epoch → not ok (M2 hygiene uniform)"*.
+
 ## F.5g The evidence seam — provenance is a theorem; capability exists only in image(VerifyEvidence_C) (#76 Phase A → M3, rc.36)
 
 F.5a.1 pinned admission for ONE evidence kind (no-fork). Phase A stated the same discipline for ANY connector; the

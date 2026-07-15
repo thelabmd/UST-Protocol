@@ -1058,9 +1058,12 @@ producer of an authority context; downstream layers take the context, never raw 
 
 Authority is carried IN-BAND and NON-CIRCULARLY: **a checkpoint NEVER authorizes its own signer.** The genesis
 authorizes C₀'s signer; each Cₙ₋₁ authorizes the signer of Cₙ. The expected signer is resolved from PRIOR state
-BEFORE Cₙ's signature is trusted. The verifier MUST supply a root: either `genesisAuthority = {key_id, pub}` (the
-profile's genesis-authorized checkpoint key) or a `pinnedPrior = {checkpoint_id, authority, sequence}`. No
-root ⇒ **INDETERMINATE (`authority_unresolved`)** — never a silent accept. For each Cₙ, in order:
+BEFORE Cₙ's signature is trusted. The verifier MUST supply a root — preferred: a `context`
+(the `verifiedGenesisContext` output, §12.3.0a — ONE verified derivation carrying scope + authority + recovery keys;
+C₀ is bound to ITS `active_genesis`, `authority_root:"verified-context"`); or `genesis` (roots resolved from the
+signed genesis); or `genesisAuthority = {key_id, pub}` (a consumer PIN); or a
+`pinnedPrior = {checkpoint_id, authority, sequence}`. No root ⇒ **INDETERMINATE (`authority_unresolved`)** — never a
+silent accept. For each Cₙ, in order:
 
 1. **Shape.** `body.purpose == "ust:authority-checkpoint"`, `sequence` is a canonical decimal string, and
    `genesis_epoch == H("ust:genesis-epoch", active_genesis)` (canonical scope, §12.3.0a), else `E-MALFORMED`.
@@ -2235,6 +2238,13 @@ provenance and will be lifted into this ledger when the spec is published.
   `threshold ≤ 0` previously reported `met` from an empty list (`rc35-P1b`, the P0-4 sibling). §12.3.4 quorum-algebra
   paragraph; F.5j M5 section in the formal model (in lockstep). Gates: conformance 365/0, model 128/128,
   security 26/0.
+- **REV 55 (2026-07-15, `rc.36`)** — **authority-layer refactor, phase C1-tail (downstream takes the context) + M2
+  formalized.** `verifyAuthorityCheckpointChain`/`deriveCheckpointFreshness` accept a `context` — the
+  `verifiedGenesisContext` output — as the PREFERRED root (`authority_root:"verified-context"`): scope, checkpoint
+  authority and recovery keys flow from ONE verified derivation, never re-read from raw genesis fields; the C₀
+  `active_genesis` is bound to the context scope (`E-GENESIS` on mismatch). Formal model gains **F.5g.0** (M2 — the
+  verified authority context: scope DERIVED never chosen; namespace non-malleability theorem tying epoch-split /
+  receipt-epoch / transition-epoch hygiene to the one seam). Gates: conformance 367/0, model guard green.
 
 **Design principle throughout:** every normative clause answers "mechanism (protocol) or operator
 instantiation (profile)?"; operator specifics (substrate, partition schema, completeness, cadence) live in the

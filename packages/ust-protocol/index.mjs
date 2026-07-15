@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.36', revision: 54 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.36', revision: 55 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -1218,15 +1218,20 @@ export function verifyEpochTransition(statement, { domain_shard, from_genesis_ep
 const CP_BODY_KEYS = new Set(['version', 'purpose', 'domain_shard', 'genesis_epoch', 'sequence', 'previous_checkpoint', 'previous_epoch_final_checkpoint', 'active_genesis', 'checkpoint_authority', 'keylog']);
 const CP_CA_KEYS = new Set(['current_key_id', 'next_key_id', 'next_pub', 'effective_sequence']);
 const isHashStr = (s) => typeof s === 'string' && /^sha256:[0-9a-f]{64}$/.test(s);
-export function verifyAuthorityCheckpointChain(chain, { genesis, genesisAuthority, pinnedPrior, recoveries, recoveryKeys, recoveryThreshold, epochTransitions, keylogEntries } = {}) {
+export function verifyAuthorityCheckpointChain(chain, { genesis, context, genesisAuthority, pinnedPrior, recoveries, recoveryKeys, recoveryThreshold, epochTransitions, keylogEntries } = {}) {
   if (!Array.isArray(chain) || chain.length === 0) return { error: 'E-MALFORMED', detail: 'empty checkpoint chain' };
   // M4.2 (C4 bounds-before-work) — the optional full prefix-extension witness is the key-log ENTRY vector itself,
   // capped by the §13 resolution ceiling BEFORE any Merkle work.
   if (keylogEntries !== undefined && (!Array.isArray(keylogEntries) || keylogEntries.length > 256 || keylogEntries.some((e) => !isHashStr(e))))
     return { result: 'INVALID', error: 'E-BOUNDS', detail: 'keylogEntries must be ≤ 256 sha256 entry hashes (§13 key-log ceiling)' };
   // P1-04 — prefer roots RESOLVED from the signed genesis; a raw genesisAuthority is a consumer PIN, reported as such.
-  let authority_root = 'consumer-pin';
-  if (genesis) { const gr = resolveCheckpointRoots(genesis); if (gr?.genesisAuthority) { genesisAuthority = gr.genesisAuthority; authority_root = 'genesis'; } if (gr?.recoveryKeys && recoveryKeys === undefined) { recoveryKeys = gr.recoveryKeys; recoveryThreshold = recoveryThreshold ?? gr.recoveryThreshold; } }
+  // C1 (M2) — a VerifiedAuthorityContext (the verifiedGenesisContext seam output) is the PREFERRED downstream root:
+  // scope + authority + recovery keys all come from ONE verified derivation, never re-read from raw genesis fields.
+  let authority_root = 'consumer-pin', ctxGenesis = null;
+  if (context && typeof context === 'object' && context.scope_id && context.checkpoint_authority) {
+    genesisAuthority = context.checkpoint_authority; ctxGenesis = context.active_genesis; authority_root = 'verified-context';
+    if (context.recoveryKeys && recoveryKeys === undefined) { recoveryKeys = context.recoveryKeys; recoveryThreshold = recoveryThreshold ?? context.recoveryThreshold; }
+  } else if (genesis) { const gr = resolveCheckpointRoots(genesis); if (gr?.genesisAuthority) { genesisAuthority = gr.genesisAuthority; authority_root = 'genesis'; } if (gr?.recoveryKeys && recoveryKeys === undefined) { recoveryKeys = gr.recoveryKeys; recoveryThreshold = recoveryThreshold ?? gr.recoveryThreshold; } }
   if (!genesisAuthority && !pinnedPrior) return { result: 'INDETERMINATE', reason: 'authority_unresolved', detail: 'no genesis-rooted or pinned-prior checkpoint authority to resolve the first signer' };
   let prev = pinnedPrior ? { id: pinnedPrior.checkpoint_id, authority: pinnedPrior.authority, sequence: pinnedPrior.sequence, body: null } : null;
   for (let i = 0; i < chain.length; i++) {
@@ -1257,6 +1262,8 @@ export function verifyAuthorityCheckpointChain(chain, { genesis, genesisAuthorit
         return { result: 'INVALID', error: 'E-SEQ', detail: 'a genesis/authority-rooted first checkpoint must be sequence "0" with no previous_checkpoint (re-root rejected)' };
       if (authority_root === 'genesis' && b.active_genesis !== contentHash(genesis))
         return { result: 'INVALID', error: 'E-GENESIS', detail: 'C₀ active_genesis ≠ contentHash(genesis) — checkpoint not bound to its rooting genesis' };
+      if (authority_root === 'verified-context' && b.active_genesis !== ctxGenesis)
+        return { result: 'INVALID', error: 'E-GENESIS', detail: 'C₀ active_genesis ≠ the verified context active_genesis — checkpoint not bound to its rooting scope (C1/M2)' };
       expected = { key_id: genesisAuthority.key_id, pub: genesisAuthority.pub };       // C₀ rooted in the genesis-authorized key
     } else if (prev.body && b.genesis_epoch !== prev.body.genesis_epoch) {
       // GENESIS-EPOCH TRANSITION — a new epoch must NOT silently reset: it needs an authenticated A→B transition
@@ -1494,8 +1501,8 @@ export function verifyKeylogTerminality({ root, length, head } = {}, proof = {})
 //     (F.5g `compareEvidenceOrder`, never a timestamp compare). This CLOSES the P0-05 stale-prefix overclaim by
 //     earning `corroborated`, NEVER `attested`: a single publisher cannot prove split-view absence — independent
 //     anti-equivocation is Phase C/#42. (Strict last-index terminality is the #77 refinement; here `head ∈ root`.)
-export function deriveCheckpointFreshness(chain, { genesis, genesisAuthority, pinnedPrior, target, commitment, terminality, uniqueness, trust } = {}) {
-  const chn = verifyAuthorityCheckpointChain(chain, { genesis, genesisAuthority, pinnedPrior });
+export function deriveCheckpointFreshness(chain, { genesis, context, genesisAuthority, pinnedPrior, target, commitment, terminality, uniqueness, trust } = {}) {
+  const chn = verifyAuthorityCheckpointChain(chain, { genesis, context, genesisAuthority, pinnedPrior });
   if (chn.result !== 'VALID') return chn.result === 'INDETERMINATE' ? chn
     : { result: 'INVALID', error: chn.error, detail: 'checkpoint chain not authorized: ' + (chn.detail || chn.error), keylog_freshness: 'unverified' };
   const b = chain[chain.length - 1].body, headId = chn.head;

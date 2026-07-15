@@ -666,6 +666,14 @@ console.log('\n═════════════════════�
   // M2 (rc.35 refactor) — the verifyGenesis seam derives the canonical scope; the publisher never chooses domain/epoch/scope.
   check('M2 verifiedGenesisContext derives canonical scope (epoch=H(active_genesis), scope_id bound)', (c => c && c.genesis_epoch === P.genesisEpoch(P.contentHash(genCA)) && c.scope_id === P.H('ust:authority-scope', P.canon({ domain: c.domain, active_genesis: c.active_genesis, genesis_epoch: c.genesis_epoch })) && c.domain === D && c.checkpoint_authority.key_id === K0.key_id)(P.verifiedGenesisContext(genCA)));
   check('M2 verifiedGenesisContext rejects an unsigned genesis → null (P0-2 carried)', P.verifiedGenesisContext({ state: { id: { class: 'genesis' }, data: { genesis: { value: {} } } } }) === null);
+  // C1 (UST-6vj) — downstream takes the CONTEXT: one verified derivation carries scope + authority + recovery.
+  const ctx = P.verifiedGenesisContext(genCA);
+  check('C1 chain rooted in a VerifiedAuthorityContext → VALID (authority_root verified-context)', (r => r.result === 'VALID' && r.authority_root === 'verified-context')(P.verifyAuthorityCheckpointChain([C0], { context: ctx })));
+  check('C1 context-rooted C₀ bound to the context scope: foreign active_genesis → INVALID(E-GENESIS)', (r => r.result === 'INVALID' && r.error === 'E-GENESIS')((() => {
+    const AGx = 'sha256:' + '77'.repeat(32);
+    const Cx = P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: D, genesis_epoch: P.genesisEpoch(AGx), sequence: '0', active_genesis: AGx, current_key_id: K0.key_id, keylog: { root: kl.root, length: kl.length, head: kl.head } }), K0.priv, K0.pubB64);
+    return P.verifyAuthorityCheckpointChain([Cx], { context: ctx });
+  })()));
 }
 
 // ─── #76 Phase B — publisher-checkpoint CORROBORATED freshness (authorized chain × head∈root × proven-after target).
