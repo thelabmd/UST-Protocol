@@ -334,11 +334,12 @@ needs a `proof` (§11.2); **from what** needs `provenance` (§9). This one carri
 name `self-asserted` — still a fully key-authentic, integrity-valid UST at LIGHT.
 
 **Reproducible (the first conformance vector, keyed).** Full `key_id` = `sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb`.
-The per-partition hash `hashes.space_weather = H_shard(canon({domain_shard,ust_id,space_weather:value})) =
-sha256:0a79670517c3f97c8a66db655f61c622f5a1cdbbdbded8073b23f08150b5427d`. The **signed content** `S = canon({ust,state})`
+The per-partition hash `hashes.space_weather = H_shard(canon({domain_shard,ust_id,partition:"space_weather",value})) =
+sha256:07bbc7aef2cab89dc1cfeb47c6afdfeaf5ae038beee0203b86339a189006c85b` (the NAME is carried as a VALUE under
+`partition`, never as a key — §4.4 line above). The **signed content** `S = canon({ust,state})`
 (§7 — the whole transcript minus `sig`/`proof`) is EXACTLY:
 ```
-{"state":{"data":{"space_weather":{"kind":"captured","value":{"bz":"-2.82","kp":"3.0","solar_wind_density":"3.66","solar_wind_speed":"482.9","xray_flux":"0.000001"}}},"hashes":{"space_weather":"sha256:0a79670517c3f97c8a66db655f61c622f5a1cdbbdbded8073b23f08150b5427d"},"id":{"class":"observation","domain_shard":"helioradar.com","key_id":"sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb","ust_id":"ust:20260424.15"},"time":{"generated_at":"2026-04-24T15:03:12Z","valid_from":"2026-04-24T15:00:00Z","valid_to":"2026-04-24T16:00:00Z"}},"ust":"1.0"}
+{"state":{"data":{"space_weather":{"kind":"captured","value":{"bz":"-2.82","kp":"3.0","solar_wind_density":"3.66","solar_wind_speed":"482.9","xray_flux":"0.000001"}}},"hashes":{"space_weather":"sha256:07bbc7aef2cab89dc1cfeb47c6afdfeaf5ae038beee0203b86339a189006c85b"},"id":{"class":"observation","domain_shard":"helioradar.com","key_id":"sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb","ust_id":"ust:20260424.15"},"time":{"generated_at":"2026-04-24T15:03:12Z","valid_from":"2026-04-24T15:00:00Z","valid_to":"2026-04-24T16:00:00Z"}},"ust":"1.0"}
 ```
 The **content_hash** `= H_state(canon({ust,state}))` — the UNIQUE document descriptor (§7) —
 = `sha256:2c9ced09fae6e729e55319b60d45975b5a53e382335bcf1e5846335970dff683`. A signed instance (Ed25519 seed
@@ -745,13 +746,17 @@ negative is only as strong as the STREAM COMPLETENESS over that window: the abse
 (identity+integrity), but *"nothing ELSE happened"* is a NO-OMISSION claim, not a single-document property. A consumer
 therefore trusts a no-event claim over `[from,to]` **only** when the interval that `verifyStream` VALIDATED and returns
 (`streamResult.interval`) CONTAINS `[from,to]` — read FROM the verified stream result, never a caller-supplied
-checkpoint, so a spoofed checkpoint cannot forge a backing. `noEventBacking(window, streamResult)` then GRADES it:
-`completeness-backed` needs `complete` (NO-OMISSION: every grid slot is a frame or a signed gap, so a hidden event is
-impossible); a `chain-consistent` interval yields `no-deletion-only` — no EMITTED frame was deleted, but an OMITTED
-(never-emitted) slot could still hide the very event, so it is a PARTIAL backing, NOT a full no-event proof;
-otherwise `publisher-asserted` / `not-applicable`. This is the crux: without `complete` a lone absence document could
-hide that something DID happen by simply not publishing the positive frame — exactly the omission that
-`chain-consistent` cannot see and `complete` (the signed grid) closes.
+checkpoint, so a spoofed checkpoint cannot forge a backing. `noEventBacking(window, streamResult, frames)` then GRADES it:
+`completeness-backed` needs `complete` (NO-OMISSION: every grid slot is a frame or a signed gap) **AND** OBSERVATIONAL
+coverage — every covered slot was POSITIVELY observed. A slot where the publisher was UNREACHABLE (a blind
+`kind:"absence"`/`reason:"unreachable"`) observed NOTHING, so a hidden event is not impossible there ⇒ `observation-gap`;
+without `frames` observation cannot be checked ⇒ `observation-unchecked`. A `chain-consistent` interval yields
+`no-deletion-only` — no EMITTED frame was deleted, but an OMITTED slot could still hide the event, a PARTIAL backing;
+otherwise `publisher-asserted` / `not-applicable`. Two things `noEventBacking` does NOT do, which the CALLER MUST: bind
+the claim's SUBJECT to the stream (a `complete` stream about partition X does not, alone, deny an event about Y), and
+supply the frames verifyStream verified. The crux: without `complete` + observation a lone absence document could hide
+that something DID happen by simply not publishing (or being blind to) the positive frame — the omission `chain-consistent`
+cannot see and `complete` + observational coverage close.
 
 **Concrete format (normative).** The cadence is a string integer of SECONDS, RESOLVED at a slot's time from
 `genesis.value.cadence` (the initial value) plus an optional **cadence-log** — a genesis-rooted, `prev`-chained
@@ -2101,7 +2106,16 @@ provenance and will be lifted into this ledger when the spec is published.
   completeness (§11.3): a windowed non-occurrence is `completeness-backed` only when `verifyStream` is
   `chain-consistent`/`complete` over a covering checkpoint interval that CONTAINS the window, else it is the
   publisher's unwitnessed assertion — `noEventBacking()` returns the verdict. `buildAbsence()` helper added; both new
-  exports triaged in the capability-parity gate (core-only — no surface exposes them yet).
+  exports triaged in the capability-parity gate (core-only — no surface exposes them yet). **Independent adversarial
+  pass (two agents) then hardened rc.35 STRUCTURALLY (5 confirmed findings, `security-regression` rc35-A..D):** a P0 —
+  a PUBLIC partition carrying `commit` decoupled its displayed `value` from the signed hash (hash taken over `commit`)
+  and made mode-by-commit vs mode-by-privacy verifiers disagree — closed by ENFORCING the §4.4 public/private envelope
+  XOR (public = {kind,value}, no commit/enc; private = {kind,privacy,commit}, no plaintext value); a bare
+  `corroborated:true` boolean reaching HIGH — downgraded to `consumer-override` (a stateless verifier cannot fetch a
+  served list; genuine `corroborated` needs the `servedNoFork` evidence resolveByDiscovery produces after
+  `witnessNoFork`, §12.1a); `noEventBacking` over-backing a window where the publisher was UNREACHABLE at every slot —
+  now grades OBSERVATIONAL coverage (`observation-gap`/`observation-unchecked`) and names subject-binding as a caller
+  precondition (§11.3); and the §4.5 worked example was corrected from name-as-key to the normative name-as-VALUE.
 
 **Design principle throughout:** every normative clause answers "mechanism (protocol) or operator
 instantiation (profile)?"; operator specifics (substrate, partition schema, completeness, cadence) live in the

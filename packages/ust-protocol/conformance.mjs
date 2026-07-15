@@ -884,12 +884,16 @@ console.log('\n═════════════════════�
   check('#39 public absence WITHOUT reason → E-MALFORMED', P.verify(noReason, { context: 'data' }).error === 'E-MALFORMED');
   const window = { from: 'ust:20260628.10', to: 'ust:20260628.12' };
   const cover = { from: 'ust:20260628.10', to: 'ust:20260628.13' };   // interval as verifyStream RETURNS it (verified)
-  check('#39 no-event + COMPLETE covering interval ⇒ completeness-backed (no-omission)', P.noEventBacking(window, { complete: 'complete', interval: cover }) === 'completeness-backed');
-  check('#39 no-event + chain-consistent covering interval ⇒ no-deletion-only (omission still possible — rc.35 self-audit)', P.noEventBacking(window, { complete: 'chain-consistent', interval: cover }) === 'no-deletion-only');
-  check('#39 no-event + provisional stream ⇒ publisher-asserted', P.noEventBacking(window, { complete: 'provisional', interval: cover }) === 'publisher-asserted');
-  check('#39 no-event + verified interval does NOT contain the window ⇒ publisher-asserted', P.noEventBacking(window, { complete: 'complete', interval: { from: 'ust:20260628.10', to: 'ust:20260628.11' } }) === 'publisher-asserted');
-  check('#39 completeness WITHOUT a verified interval ⇒ publisher-asserted (no spoofable checkpoint)', P.noEventBacking(window, { complete: 'complete' }) === 'publisher-asserted');
-  check('#39 no window ⇒ not-applicable', P.noEventBacking({}, { complete: 'complete', interval: cover }) === 'not-applicable');
+  const observedFrames = [{ state: { id: { ust_id: 'ust:20260628.10' }, data: { q: { kind: 'captured', value: { v: '1' } } } } }, { state: { id: { ust_id: 'ust:20260628.11' }, data: { q: { kind: 'captured', value: { v: '2' } } } } }];
+  const blindFrames = [{ state: { id: { ust_id: 'ust:20260628.11' }, data: { q: { kind: 'absence', value: { reason: 'unreachable' } } } } }];   // publisher blind at a covered slot
+  check('#39 complete + observed frames ⇒ completeness-backed', P.noEventBacking(window, { complete: 'complete', interval: cover }, observedFrames) === 'completeness-backed');
+  check('#39 complete + BLIND (unreachable) covered slot ⇒ observation-gap (self-audit #2: blind ≠ no-event)', P.noEventBacking(window, { complete: 'complete', interval: cover }, blindFrames) === 'observation-gap');
+  check('#39 complete but NO frames ⇒ observation-unchecked (cannot confirm observation)', P.noEventBacking(window, { complete: 'complete', interval: cover }) === 'observation-unchecked');
+  check('#39 chain-consistent covering interval ⇒ no-deletion-only (omission still possible)', P.noEventBacking(window, { complete: 'chain-consistent', interval: cover }, observedFrames) === 'no-deletion-only');
+  check('#39 provisional stream ⇒ publisher-asserted', P.noEventBacking(window, { complete: 'provisional', interval: cover }, observedFrames) === 'publisher-asserted');
+  check('#39 verified interval does NOT contain the window ⇒ publisher-asserted', P.noEventBacking(window, { complete: 'complete', interval: { from: 'ust:20260628.10', to: 'ust:20260628.11' } }, observedFrames) === 'publisher-asserted');
+  check('#39 completeness WITHOUT a verified interval ⇒ publisher-asserted (no spoofable checkpoint)', P.noEventBacking(window, { complete: 'complete' }, observedFrames) === 'publisher-asserted');
+  check('#39 no window ⇒ not-applicable', P.noEventBacking({}, { complete: 'complete', interval: cover }, observedFrames) === 'not-applicable');
 }
 
 console.log('  ust-protocol ' + P.VERSION.spec + ' conformance vs ' + V.version);

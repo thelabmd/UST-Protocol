@@ -104,6 +104,25 @@ sec('P1-05', 'UST-dqj', 'buildVerifiableMap must REJECT duplicate typed keys (on
   try { P.buildVerifiableMap([dupA, dupB]); return false; } catch { return true; }
 });
 
+// ─── rc.35 adversarial pass (independent agents) — 5 confirmed findings ─────────────────────────────
+// P0 — a PUBLIC partition carrying `commit` decouples its displayed value from the signed hash (hash is taken over
+// commit); a §4.4-faithful verifier (mode-by-privacy) disagrees (I4). Must reject: public = {kind,value}, no commit/enc.
+sec('rc35-A', 'UST-kdb', 'public partition carrying commit must be E-MALFORMED (value must not decouple from the hash)', () =>
+  P.verify(P.seal(P.buildState({ domain_shard: D, ust_id: 'ust:20260709.10', key_id: K0.key_id, class: 'observation' }, T9, { q: { kind: 'captured', value: { v: '999' }, commit: 'sha256:' + 'ab'.repeat(32) } }), K0.priv, K0.pub), { context: 'data' }).error === 'E-MALFORMED');
+sec('rc35-B', 'UST-kdb', 'public partition carrying enc must be E-MALFORMED (closed envelope XOR enforced)', () =>
+  P.verify(P.seal(P.buildState({ domain_shard: D, ust_id: 'ust:20260709.11', key_id: K0.key_id, class: 'observation' }, T9, { q: { kind: 'captured', value: { v: '1' }, enc: { alg: 'AES-256-GCM', key_id: 'k', ct: 'AA' } } }), K0.priv, K0.pub), { context: 'data' }).error === 'E-MALFORMED');
+// D — a bare `corroborated:true` boolean is a caller assertion, not a verified predicate: consumer-override, never HIGH.
+sec('rc35-D', 'UST-kdb', 'bare corroborated:true must NOT reach VALID:HIGH (self-declared assurance)', () =>
+  P.verify(doc, { genesis: gen, corroborated: true, context: 'data' }).result !== 'VALID:HIGH');
+// C — a no-event window in which the publisher was UNREACHABLE at every slot is NOT completeness-backed (blind ≠ no-event).
+sec('rc35-C', 'UST-kdb', 'a blind (all-unreachable) window must NOT earn no-event completeness-backed', () => {
+  const g = P.seal(P.buildGenesis({ domain_shard: D, ust_id: 'ust:20260701.00', key_id: K0.key_id }, T0, K0.pub, undefined, undefined, 3600), K0.priv, K0.pub);
+  const su = ['ust:20260701.00', 'ust:20260701.01', 'ust:20260701.02']; let pv = P.contentHash(g); const fr = [];
+  for (const u of su) { const f = P.seal(P.buildAbsence({ domain_shard: D, ust_id: u, key_id: K0.key_id }, T0, 'quake', 'unreachable', {}, pv), K0.priv, K0.pub); fr.push(f); pv = P.contentHash(f); }
+  const c = P.seal(P.buildCheckpoint({ domain_shard: D, ust_id: 'ust:20260701.03', key_id: K0.key_id }, T0, P.contentHash(fr[2]), 3, P.contentHash(fr[2]), { from: su[0], to: su[2] }), K0.priv, K0.pub);
+  return P.noEventBacking({ from: su[0], to: su[2] }, P.verifyStream(fr, { genesis: g, checkpoint: c }), fr) !== 'completeness-backed';
+});
+
 // ─── report ────────────────────────────────────────────────────────────────────────────────────
 console.log('\n  rc.33 audit — security regression (Phase 0, epic UST-1o6): SECURE-expectation gate');
 for (const [s, id, bd, d] of rows) console.log(s + '  ' + id.padEnd(8) + bd.padEnd(9) + d);

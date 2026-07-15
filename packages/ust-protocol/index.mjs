@@ -282,6 +282,18 @@ export function verify(doc, opts = {}) {
       if (part.kind === 'absence' && part.privacy === undefined && (typeof part.value?.reason !== 'string' || part.value.reason.length === 0))
         return bad('E-MALFORMED', 'absence partition requires a non-empty value.reason: ' + name);
       if (part.privacy !== undefined && !PRIVACY.includes(part.privacy)) return bad('E-MALFORMED', 'unknown privacy mode: ' + name + '.' + part.privacy);
+      // §4.4 CLOSED envelope variants — ENFORCE the public/private XOR, not just the key allowlist (self-audit rc.35,
+      // agent-found P0/P2). The per-partition hash is taken over `commit` WHENEVER present, so a PUBLIC partition that
+      // also carried a `commit` would bind the hash to the commit while DISPLAYING an unrelated `value` — "what you see
+      // ≠ what is signed", and two verifiers (mode-by-commit vs mode-by-privacy) disagree (I4). So: PUBLIC (no privacy)
+      // MUST carry `value` and MUST NOT carry `commit`/`enc`; PRIVATE MUST carry `commit` and MUST NOT carry a plaintext `value`.
+      if (part.privacy === undefined) {
+        if (part.commit !== undefined || part.enc !== undefined) return bad('E-MALFORMED', 'public partition must not carry commit/enc (§4.4 public = {kind,value}): ' + name);
+        if (part.value === undefined) return bad('E-MALFORMED', 'public partition requires value (§4.4): ' + name);
+      } else {
+        if (part.commit === undefined) return bad('E-MALFORMED', 'private partition requires commit (§4.4): ' + name);
+        if (part.value !== undefined) return bad('E-MALFORMED', 'private partition must not carry a plaintext value (§4.4): ' + name);
+      }
     }
     // step 2 — canonical, content_hash, bijection, per-partition hashes (§14.2, G19, §4.4)
     let S; try { S = signedContent(doc); } catch (e) { return bad('E-CANON', e.detail || 'canon'); }
@@ -738,7 +750,7 @@ export function quorumTrustDomains(list, { domains = {}, threshold } = {}) {
 //     it (trust.mapRoots — anchored/pinned out-of-band); it is NEVER taken from the same bundle as the proof. Absence
 //     of admission ⇒ no strong rung (fail-safe). This is the separation of trust-configuration from evidence.
 const mapRootAdmitted = (trust, root) => Array.isArray(trust?.mapRoots) && trust.mapRoots.includes(root);
-export function resolveAuthority(doc, { genesis, keylog = [], noForkConfirmed = false, noForkEvidence, nameMap, trustRoots, corroborated = false, anchorTime, keylogFreshAsOf, keylogHeadAnchor, substrateVerify, trust } = {}) {
+export function resolveAuthority(doc, { genesis, keylog = [], noForkConfirmed = false, noForkEvidence, nameMap, trustRoots, corroborated = false, servedNoFork, anchorTime, keylogFreshAsOf, keylogHeadAnchor, substrateVerify, trust } = {}) {
   if (!genesis) return { strength: 'self-asserted', status: 'verified' };         // LIGHT — nothing to resolve
   if (genesis.state?.id?.domain_shard !== doc.state.id.domain_shard) return { error: 'E-GENESIS', detail: 'genesis domain mismatch' };
   const rk = resolveKeys(genesis, keylog);
@@ -808,9 +820,15 @@ export function resolveAuthority(doc, { genesis, keylog = [], noForkConfirmed = 
     if (ev.ok) return { strength: 'authoritative', noFork: 'accepted-external-witness', independently_verified: true,
       basis: 'accepted-external-witness', witness_id: ev.witness_id, ...(ev.trust_domain ? { trust_domain: ev.trust_domain } : {}), status: st2, capacity, freshness };
   }
-  if (noForkConfirmed) return { strength: 'consumer-override', noFork: 'caller-asserted', independently_verified: false, status: st2, capacity, freshness,
+  // VERIFIED served-list no-fork — from resolveByDiscovery's witnessNoFork (network fetch + anchor cross-check), bound
+  // to THIS genesis ⇒ corroborated (HIGH, honest: membership in the published set, NOT independent non-membership, F.5a).
+  if (servedNoFork?.confirmed === true && servedNoFork.active_genesis === contentHash(genesis))
+    return { strength: 'corroborated', noFork: 'served-list', status: st2, capacity, freshness };
+  // a bare `corroborated`/`noForkConfirmed` boolean is a CALLER ASSERTION, not a verified predicate (a STATELESS
+  // verifier cannot fetch a served list). Like noForkConfirmed it is consumer-override, NEVER a silent corroborated
+  // (self-audit rc.35 — closed the `corroborated:true → HIGH` inconsistency; same class as the removed `mapInclusion:true`).
+  if (noForkConfirmed || corroborated) return { strength: 'consumer-override', noFork: 'caller-asserted', independently_verified: false, status: st2, capacity, freshness,
     ...(noForkEvidence !== undefined ? { detail: 'noForkEvidence rejected → consumer-override only (not independently verified)' } : {}) };
-  if (corroborated) return { strength: 'corroborated', noFork: 'served-list', status: st2, capacity, freshness };
   return { strength: 'corroborated', noFork: 'unconfirmed', status: 'unavailable', capacity, freshness,
     detail: 'no independent no-fork evidence; a served witness only corroborates (§12.1a F.5a) → authority pending, retry' };
 }
@@ -1508,26 +1526,28 @@ export function verifyStream(frames, { genesis, keylog, checkpoint, cadenceLog, 
   return { complete: 'provisional', head: prevHash };                  // no checkpoint → open tail (P5)
 }
 
-// §11.3 #39 — a NO-EVENT claim (a `kind:'absence'` partition, reason 'no-event', carrying the ust_id window {from,to}
-// it covers) is only as strong as the STREAM COMPLETENESS over that window. Verdicts: 'completeness-backed' (the
-// window is inside a `complete` interval — no-omission, a hidden event is impossible); 'no-deletion-only' (inside a
-// `chain-consistent` interval — no EMITTED frame was deleted, but an omitted slot could still hide the event, a PARTIAL
-// backing); 'publisher-asserted' (no covering verified interval); 'not-applicable' (no window). The absence DOC still
-// verifies on its own (identity); this answers the SEPARATE "may I trust that nothing ELSE happened?" — a notary's hard half.
-export function noEventBacking(claimWindow, streamResult) {
+// §11.3 #39 — a NO-EVENT claim (a `kind:'absence'`/`reason:'no-event'` partition over a ust_id window) is only as
+// strong as the stream's COMPLETENESS *and* OBSERVATIONAL coverage over that window. Verdicts:
+//   'completeness-backed' — window ⊆ a `complete` interval AND every covered slot was POSITIVELY observed (no blind slot);
+//   'observation-gap'     — complete + covered, but the publisher was UNREACHABLE at a covered slot, so a hidden event is
+//                           NOT impossible there — the no-event breaks at that slot (self-audit rc.35 #2, agent-found);
+//   'observation-unchecked' — complete + covered, but `frames` not supplied, so observational coverage cannot be checked;
+//   'no-deletion-only'    — a `chain-consistent` interval: no EMITTED frame deleted, but an OMITTED slot could hide it;
+//   'publisher-asserted' — no covering verified interval; 'not-applicable' — no window.
+// PRECONDITION the CALLER MUST also enforce (NOT checked here): the stream OBSERVES the claim's SUBJECT — a `complete`
+// stream about partition X does not, on its own, deny an event about Y (agent-found). Pass `frames` (the same array
+// verifyStream verified) to check observational coverage; without it the strongest verdict is withheld.
+export function noEventBacking(claimWindow, streamResult, frames) {
   if (!claimWindow || claimWindow.from === undefined || claimWindow.to === undefined) return 'not-applicable';
   if (streamResult?.complete !== 'chain-consistent' && streamResult?.complete !== 'complete') return 'publisher-asserted';
-  // SECURITY (self-audit rc.35) — the interval is the range verifyStream ITSELF validated (first==from, last==to, no
-  // frame outside), returned in its result — NOT a caller-supplied checkpoint, so a spoofed checkpoint cannot forge a backing.
-  const iv = streamResult.interval;
-  if (!iv || iv.from === undefined || iv.to === undefined) return 'publisher-asserted';   // checkpoint carried no interval ⇒ no windowed completeness
+  const iv = streamResult.interval;   // the range verifyStream ITSELF validated (first==from,last==to,no frame outside) — not a caller checkpoint, so unspoofable
+  if (!iv || iv.from === undefined || iv.to === undefined) return 'publisher-asserted';
   const w0 = ustToEpoch(claimWindow.from), w1 = ustToEpoch(claimWindow.to), i0 = ustToEpoch(iv.from), i1 = ustToEpoch(iv.to);
   if ([w0, w1, i0, i1].some((x) => x === null) || !(i0 <= w0 && i1 >= w1)) return 'publisher-asserted';   // the verified interval must CONTAIN the window
-  // NO-OMISSION vs NO-DELETION (self-audit rc.35) — a no-event guarantee needs `complete`: every grid slot is a frame
-  // OR a signed gap, so a hidden/OMITTED event is impossible. `chain-consistent` proves only NO-DELETION of EMITTED
-  // frames; a never-emitted slot could still hide the very event the claim denies — so it is 'no-deletion-only', a
-  // PARTIAL backing, never a full no-event proof (exactly the omission the issue warns of).
-  return streamResult.complete === 'complete' ? 'completeness-backed' : 'no-deletion-only';
+  if (streamResult.complete !== 'complete') return 'no-deletion-only';   // chain-consistent: no-deletion only, an omitted slot could still hide the event
+  if (!Array.isArray(frames)) return 'observation-unchecked';            // complete, but no frames to confirm the publisher actually observed each slot
+  const blind = frames.some((f) => { const e = ustToEpoch(f?.state?.id?.ust_id); return e !== null && e >= w0 && e <= w1 && Object.values(f?.state?.data || {}).some((p) => p && p.kind === 'absence' && p.value?.reason === 'unreachable'); });
+  return blind ? 'observation-gap' : 'completeness-backed';              // a blind (unreachable) covered slot means a hidden event is not impossible
 }
 
 // ─── §S6/F7 — the CONFORMANCE boundary is raw bytes. `verify(JSON.parse(x))` can't satisfy §6 because JSON.parse
@@ -1676,11 +1696,14 @@ export async function resolveByDiscovery(doc, opts = {}, { fetchImpl = fetch, su
     witnessConfirmed = w.status === 'confirmed';
     noFork = witnessConfirmed ? 'served-list (corroborated)' : 'HIGH pending — ' + w.detail;
   }
-  const authOpts = { genesis, keylog, noForkConfirmed: opts.noForkConfirmed, noForkEvidence: opts.noForkEvidence, trustRoots: opts.trustRoots, corroborated: witnessConfirmed };
+  // VERIFIED served-list evidence (bound to THIS genesis) — the ONLY way the stateless core earns `corroborated`; a
+  // bare boolean would be a mere assertion (self-audit rc.35). Present only when witnessNoFork actually confirmed.
+  const servedNoFork = witnessConfirmed ? { confirmed: true, active_genesis: genesisHash } : undefined;
+  const authOpts = { genesis, keylog, noForkConfirmed: opts.noForkConfirmed, noForkEvidence: opts.noForkEvidence, trustRoots: opts.trustRoots, servedNoFork };
   const auth = resolveAuthority(doc, authOpts);
   if (auth.error) return { verdict: base, resolution: { error: auth.error + (auth.detail ? ' — ' + auth.detail : '') } };
   if (callerNoFork) noFork = auth.independently_verified ? 'accepted-external-witness (authoritative)' : 'caller-asserted (consumer-override)';
-  const verdict = await verifyAsync(doc, { ...opts, genesis, keylog, noForkConfirmed: opts.noForkConfirmed, corroborated: witnessConfirmed, capacity: auth.capacity, substrateVerify });   // #69 E1 — await the doc's own anchor substrate (TOP)
+  const verdict = await verifyAsync(doc, { ...opts, genesis, keylog, noForkConfirmed: opts.noForkConfirmed, servedNoFork, capacity: auth.capacity, substrateVerify });   // #69 E1 — await the doc's own anchor substrate (TOP)
   return { verdict, resolution: { publisher: auth.publisher ?? shard, strength: auth.strength, capacity: auth.capacity, noFork, source: `https://${shard}/.well-known/ (§20.1 discovery + §12.1a witness)` } };
 }
 
