@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.36', revision: 55 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.36', revision: 56 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -536,16 +536,15 @@ export function verify(doc, opts = {}) {
     // (independent non-membership) reaches TOP, so an anchored-but-only-corroborated name never overclaims TOP.
     const verified = identity.status === 'verified';
     const authoritative = nameAuthoritative && verified;
-    const nameBound = verified && (nameAuthoritative || identity.strength === 'corroborated');
     // §3.1/§15 — TOP = authoritative identity + anchored time. HIGH = name-bound (corroborated or authoritative).
     // Stream COMPLETENESS is a separate RANGE verdict (verifyStream), never a single-document claim.
-    // P1-03 — the tier is the SINGLE-SOURCE projection of the live AssuranceState (§F.5.0), not a second inline
-    // formula: verify() builds ONE state from its resolved strengths and projects it once, so the lattice IS the machine.
-    const assurance = assuranceState({ integrity: 'valid',
-      identity: authoritative ? 'authoritative' : nameBound ? 'corroborated' : (identity.strength === 'pinned' ? 'pinned' : 'self-asserted'),
-      freshness: identity.freshness || 'unverified',
-      time: timeField.strength === 'anchored' ? 'anchored' : 'unproven' });   // M1.1: capability SUPPORT is not a strength coordinate (the old 5th axis was a hardwired 'opaque')
-    const tier = projectTier(assurance);
+    // P1-03/C3 — ONE assembler: verify() maps the consumer-override π_override projection (an explicit consumer
+    // axiom, applied BEFORE assembly — never a hidden boolean inside it) and hands the SEAM VERDICTS to
+    // deriveAssurance; the lattice IS the machine (no second inline tier formula).
+    const idVerdict = (identity.strength === 'consumer-override' && nameAuthoritative) ? { ...identity, strength: 'authoritative' } : identity;
+    const report = deriveAssurance({ identity: idVerdict, anchor: doc.proof !== undefined ? { inclusion: timeField.inclusion === true, time: timeField.strength } : undefined });
+    const assurance = report.strength;
+    const tier = report.tier;
     // §3.1/F.5b DOWNGRADE RESISTANCE — the symmetric floor to requireAuthoritative. A consumer requiring TOP
     // MUST reject anything the evidence proves below TOP, NEVER silently accept a lower tier (stripping the anchor
     // can only LOWER the tier, W1: it cannot forge upward). The rejection NAMES the missing coordinate: a
@@ -1597,6 +1596,29 @@ export function capAssurance(state, ceiling) {
   if (!ceiling) return s;
   const cap = assuranceState(Object.fromEntries(AXES.map((ax) => [ax, ceiling[ax] ?? ASSURANCE_AXES[ax][ASSURANCE_AXES[ax].length - 1]])));
   return meetAssurance(s, cap);
+}
+
+// ─── C3 (UST-6vj, M1.2) — THE ONE ASSURANCE ASSEMBLER. Pure, deterministic, total: strength coordinates are DERIVED
+//     from SEAM VERDICTS (the resolveAuthority / deriveCheckpointFreshness / verifyAnchor result objects) by fixed
+//     rules — never from caller labels or booleans; capability SUPPORT is the union of capabilities of evidence that
+//     is actually in image(VerifyEvidence_C) (the WeakSet witness) — a minted look-alike contributes nothing (B3: no
+//     step manufactures a capability). Runs strictly AFTER the §14 integrity floor: an INVALID document never reaches
+//     assembly, so integrity is 'valid' by position, not by parameter (Reach_C: the verifier only emits tuples whose
+//     coordinates were each earned by a predicate; the confinement property is pinned in conformance, Phase V).
+export function deriveAssurance({ identity, freshness, anchor, evidence = [] } = {}) {
+  const verified = identity?.status === 'verified';                                  // 'suspect' (pre-compromise window) never name-binds — mirrors §14 exactly
+  const idStr = !verified ? 'self-asserted'
+    : identity.strength === 'authoritative' ? 'authoritative'
+    : identity.strength === 'corroborated' ? 'corroborated'
+    : identity.strength === 'pinned' ? 'pinned' : 'self-asserted';
+  const frStr = (freshness?.result === 'VALID' && (freshness.keylog_freshness === 'corroborated' || freshness.keylog_freshness === 'attested')) ? freshness.keylog_freshness
+    : identity?.freshness === 'fresh' ? 'fresh' : 'unverified';                       // fresh = the single-view §12.2a rung carried by the identity resolution
+  const tmStr = anchor?.inclusion === true && anchor?.time === 'anchored' ? 'anchored' : 'unproven';
+  const support = [...new Set((Array.isArray(evidence) ? evidence : [])
+    .filter((e) => e && typeof e === 'object' && VERIFIED_EVIDENCE.has(e))            // provenance-verified only (M3)
+    .flatMap((e) => evidenceCaps(e.proof_kind)))].sort();
+  const strength = Object.freeze(assuranceState({ integrity: 'valid', identity: idStr, freshness: frStr, time: tmStr }));
+  return Object.freeze({ strength, support: Object.freeze(support), tier: projectTier(strength) });
 }
 
 // ─── #oy8 CANONICAL REGISTRY — the SINGLE SOURCE OF TRUTH for the protocol's machine-checkable STRING SETS. The spec's

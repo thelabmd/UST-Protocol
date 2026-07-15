@@ -978,6 +978,27 @@ console.log('\n═════════════════════�
   // M1.1 — capability SUPPORT: a separate Boolean lattice (P(Caps), ⊆), single-sourced, |Caps| = 8
   check('M1.1 EVIDENCE_CAPS_UNIVERSE: |Caps| = 8, single-sourced from EVIDENCE_CAPS (support ≠ strength coordinate)', P.EVIDENCE_CAPS_UNIVERSE.length === 8 && ['pow-header-chain', 'transparency-log', 'authenticated-map', 'content-addressed', 'rfc3161-tsa'].every((k) => P.evidenceCaps(k).every((c) => P.EVIDENCE_CAPS_UNIVERSE.includes(c))));
   check('M1.1 support is ⊆-ordered, not a chain: transparency-log vs authenticated-map caps are incomparable sets', (() => { const a = P.evidenceCaps('transparency-log'), b = P.evidenceCaps('authenticated-map'); return !a.every((c) => b.includes(c)) && !b.every((c) => a.includes(c)); })());
+
+  // ── C3 (UST-6vj, M1.2) — deriveAssurance: THE one assembler. Strength from SEAM VERDICTS, support from
+  //    image(VerifyEvidence_C) only; pure/total/frozen. (The full Reach_C confinement sweep is Phase V.)
+  check('C3 deriveAssurance: a bare strength LABEL without a verified status earns nothing (no caller labels)',
+    (r => r.strength.identity === 'self-asserted' && r.tier === 'LIGHT')(P.deriveAssurance({ identity: { strength: 'authoritative' } })));
+  check('C3 deriveAssurance: the identity seam verdict maps by fixed rules (authoritative/verified → authoritative)',
+    (r => r.strength.identity === 'authoritative' && r.tier === 'HIGH')(P.deriveAssurance({ identity: { strength: 'authoritative', status: 'verified' } })));
+  check('C3 deriveAssurance: suspect status never name-binds (mirrors §14)',
+    (r => r.strength.identity === 'self-asserted')(P.deriveAssurance({ identity: { strength: 'authoritative', status: 'suspect' } })));
+  check('C3 deriveAssurance: freshness rung only from a VALID freshness verdict, never a label',
+    (() => { const lie = P.deriveAssurance({ identity: { strength: 'corroborated', status: 'verified' }, freshness: { keylog_freshness: 'attested' } });
+      const ok = P.deriveAssurance({ identity: { strength: 'corroborated', status: 'verified' }, freshness: { result: 'VALID', keylog_freshness: 'attested' } });
+      return lie.strength.freshness === 'unverified' && ok.strength.freshness === 'attested'; })());
+  check('C3 deriveAssurance: anchored time requires inclusion === true AND time === anchored from the anchor seam',
+    (() => { const no = P.deriveAssurance({ identity: { strength: 'authoritative', status: 'verified' }, anchor: { inclusion: false, time: 'anchored' } });
+      const yes = P.deriveAssurance({ identity: { strength: 'authoritative', status: 'verified' }, anchor: { inclusion: true, time: 'anchored' } });
+      return no.strength.time === 'unproven' && no.tier === 'HIGH' && yes.strength.time === 'anchored' && yes.tier === 'TOP'; })());
+  check('C3 support: only image(VerifyEvidence_C) contributes capabilities — a minted look-alike contributes none (B3)',
+    (r => r.support.length === 0)(P.deriveAssurance({ identity: { strength: 'self-asserted', status: 'verified' }, evidence: [{ proof_kind: 'pow-header-chain', verified_facts: {}, basis: 'admitted-connector-receipt' }] })));
+  check('C3 deriveAssurance output is frozen (pure value, no post-hoc mutation)',
+    (() => { const r = P.deriveAssurance({}); try { r.tier = 'TOP'; } catch {} try { r.strength.identity = 'authoritative'; } catch {} return r.tier !== 'TOP' && Object.isFrozen(r) && r.strength.identity === 'self-asserted'; })());
 }
 
 // ─── #39 negative / absence observation — the notary's other half ──────────────────────────────────────

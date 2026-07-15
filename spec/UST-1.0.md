@@ -2245,6 +2245,17 @@ provenance and will be lifted into this ledger when the spec is published.
   `active_genesis` is bound to the context scope (`E-GENESIS` on mismatch). Formal model gains **F.5g.0** (M2 — the
   verified authority context: scope DERIVED never chosen; namespace non-malleability theorem tying epoch-split /
   receipt-epoch / transition-epoch hygiene to the one seam). Gates: conformance 367/0, model guard green.
+- **REV 56 (2026-07-15, `rc.36`)** — **authority-layer refactor, phase C3 (one assurance assembler) + C4 (legacy
+  routes audited closed).** New `deriveAssurance({identity, freshness, anchor, evidence})` — pure, total, frozen: the
+  strength coordinates are DERIVED from seam verdicts by fixed rules (a bare strength label, an unVALID freshness
+  verdict, or an anchor without `inclusion ∧ anchored` earns nothing — no caller labels, no booleans); capability
+  SUPPORT is the union over evidence in `image(VerifyEvidence_C)` only (B3). §14 `verify()` now assembles through
+  THIS one function — the consumer-override π_override projection is applied explicitly BEFORE assembly, and the
+  inline tier formula is gone (the lattice is the machine, single source). C4 audit: every legacy route is closed by
+  construction — a raw evidence look-alike ⇒ `evidence_unverified` (M3), a raw `servedNoFork` ⇒ consumer-override
+  (P0-1 witness set), publisher-only checkpoint evidence ⇒ ceiling `corroborated` (F.5i), `attested` reachable only
+  through verified chain roots + the receipt seam + consumer config (uniqueness quorum/map) — no parallel old/new
+  paths remain. Gates: conformance 374/0, model guard green (+C3 citations), parity (deriveAssurance triaged).
 
 **Design principle throughout:** every normative clause answers "mechanism (protocol) or operator
 instantiation (profile)?"; operator specifics (substrate, partition schema, completeness, cadence) live in the
