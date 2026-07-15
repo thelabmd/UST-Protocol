@@ -14,6 +14,7 @@ const blocks = {
   'evidence-order': tick(REGISTRY.evidenceOrder).join(' | '),
   'verified-evidence-fields': 'required ' + tick(REGISTRY.verifiedEvidenceFields.required).join(', ')
     + '; optional ' + tick(REGISTRY.verifiedEvidenceFields.optional).join(', '),
+  'hash-domains': tick(REGISTRY.hashDomains).join(' | '),
 };
 
 const path = new URL('../spec/UST-1.0.md', import.meta.url);

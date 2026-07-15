@@ -402,10 +402,14 @@ publisher-bound values a layer up.)
 - **Content hash (domain-separated, M6/P8):** every hash in UST is typed —
   `H_t(x) = "sha256:" || lowerhex( SHA-256( ascii(t) || 0x00 || x ) )`. **Exact byte layout (P8):** `ascii(t)`
   is the tag's literal ASCII bytes, then ONE `0x00` byte, then `x`, where `x` per tag is:
-  `ust:state`→`utf8(canon({ust,state}))` (the signed content); `ust:keylog` has TWO byte-disjoint inputs — for a `key_id` it is the RAW public-key bytes (`key_id = H("ust:keylog", pub_raw)`, where `pub_raw` = the octets of the key, i.e. base64url-decode(`sig.pub`) — NOT plain `SHA256(pub)`, NOT the base64url string), and for a key-log ENTRY hash it is `utf8(canon(entry-without-sig))` (32 raw key bytes can never equal a JSON-object canon, so no collision); `ust:checkpoint`→
-  `utf8(canon({ust,state}))` (a checkpoint is a transcript); `ust:leaf`→the leaf's `content_hash` ASCII bytes;
+  `ust:state`→`utf8(canon({ust,state}))` (the signed content; a checkpoint is ITSELF a transcript and hashes under `ust:state` — it has NO separate domain, whereas the checkpoint CHAIN link uses `ust:authority-checkpoint` and the checkpoint MAP uses `ust:checkpoint-map-key`/`-value`); `ust:keylog` has TWO byte-disjoint inputs — for a `key_id` it is the RAW public-key bytes (`key_id = H("ust:keylog", pub_raw)`, where `pub_raw` = the octets of the key, i.e. base64url-decode(`sig.pub`) — NOT plain `SHA256(pub)`, NOT the base64url string), and for a key-log ENTRY hash it is `utf8(canon(entry-without-sig))` (32 raw key bytes can never equal a JSON-object canon, so no collision);
+  `ust:leaf`→the leaf's `content_hash` ASCII bytes;
   `ust:node`→`left_hash_ascii || right_hash_ascii` (both `sha256:`-prefixed, concatenated); `ust:seed`→
-  `utf8(canon([content_hash,…]))`; `ust:source`→the source bytes. Distinct tags make a bytes-equal collision across object kinds impossible. `content_hash = H_state(S)` where
+  `utf8(canon([content_hash,…]))`. Distinct tags make a bytes-equal collision across object kinds impossible. The COMPLETE, authoritative domain set is RENDERED from the reference `REGISTRY` (LAYER 1 drift gate §16 — never hand-maintained, so the enumeration above can never claim a domain the code lacks nor omit one it added):
+  <!-- BEGIN spec-sync:hash-domains -->
+`ust:state` | `ust:shard` | `ust:seed` | `ust:keylog` | `ust:leaf` | `ust:node` | `ust:authority-checkpoint` | `ust:checkpoint-map-key` | `ust:checkpoint-map-value` | `ust:name-map-key` | `ust:name-map-value` | `ust:keylog-empty` | `ust:keylog-leaf` | `ust:keylog-node` | `ust:keylog-commit` | `ust:smt-empty` | `ust:smt-node` | `ust:smt-leaf`
+<!-- END spec-sync:hash-domains -->
+  `content_hash = H_state(S)` where
   `S = canon({ust, state})` (the signed content) is the document's UNIQUE reference (chains §9, anchors §11,
   revocation §12); the PER-PARTITION hashes `H_shard(...)` in `state.hashes` (§4.4) are publisher-scoped (each
   binds `domain_shard`). Both are domain-separated; the vectors are normative (§16). `content_hash` is derived
