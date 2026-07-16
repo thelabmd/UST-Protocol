@@ -109,6 +109,9 @@ V.push({ id: 'config.noncanonical', note: 'whitespace-prefixed (non-canonical) c
 add('package.extra-field', 'an extra top-level package field (schema not closed over raw JSON)', b64u(P.canon({ term: πCorr, witnesses: store, __extra: 'x' })), CFG, { result: 'INVALID', code: 'E-NONCANONICAL' });
 add('package.params-empty', 'an explicit params:{} node — a second wire form of the canonical (no-params) term', b64u(P.canon({ term: { ...πCorr, params: {} }, witnesses: store })), CFG, { result: 'INVALID', code: 'E-NONCANONICAL' });
 add('term.missing-param', 'Anchored with required s/subject omitted', b64u(canonPkg(N('Anchored', [], [put(rc('ust:x', 1))]))), CFG, { result: 'INVALID', code: 'E-TERM-PARAM-MISSING' });
+// cluster I (M-CONFIG P0-03): a trust domain is a typed VALUE — object domains are not typed strings, so they do not
+// resolve and the quorum cannot be met (two structurally-identical objects never count as two distinct domains).
+add('quorum.domain-object', 'object-valued trust domains do not resolve (ControlDomain is a string)', b64u(canonPkg(πWit)), { ...CFG, domains: { [Wa.key_id]: { id: 'same' }, [Wb.key_id]: { id: 'same' } } }, { result: 'INDETERMINATE', code: 'quorum not met' });
 
 // ── security-condition coverage manifest (owner completion criterion 8) ──────────────────────────────────────────────
 const MANIFEST = {
@@ -129,7 +132,9 @@ const MANIFEST = {
     { id: 'CONFIG-CANONICAL', rule: 'decodeConfig', negative_vectors: ['config.noncanonical'] },
     { id: 'PACKAGE-CLOSURE-DECODED-ADT', rule: 'decodePackage', negative_vectors: ['package.extra-field', 'package.params-empty'] },
     { id: 'TERM-REQUIRED-PARAMS', rule: 'decodeTerm', negative_vectors: ['term.missing-param'] },
+    { id: 'QUORUM-DOMAIN-VALUE', rule: 'normalizeConfig/QuorumAgreement', negative_vectors: ['quorum.domain-object'] },
   ],
+  note_positive_shape: 'Positive-shape / arg-dependent invariants (config_id set-order equality P1-07; limits-getter totality P1-01; Uint8Array-only P2-01; single-read reads===1; carrier separation; permutation invariance) are covered by JS property tests in reference-checker.test.mjs, not negative byte-vectors — the {result,code} byte form cannot express a positive equality or a non-bytes input.',
 };
 
 const vectors = { protocol: 'UST', suite: 'checker-byte-vectors', reference_checker: REFERENCE_CHECKER_VERSION, note: 'language-neutral: decode base64url → bytes → checkAuthorityProofBytes(package, config); assert result and (for a negative) that reason contains code.', vectors: V };

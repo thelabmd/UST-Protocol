@@ -113,6 +113,14 @@
       "negative_vectors": [
         "term.missing-param"
       ]
+    },
+    {
+      "id": "QUORUM-DOMAIN-VALUE",
+      "rule": "normalizeConfig/QuorumAgreement",
+      "negative_vectors": [
+        "quorum.domain-object"
+      ]
     }
-  ]
+  ],
+  "note_positive_shape": "Positive-shape / arg-dependent invariants (config_id set-order equality P1-07; limits-getter totality P1-01; Uint8Array-only P2-01; single-read reads===1; carrier separation; permutation invariance) are covered by JS property tests in reference-checker.test.mjs, not negative byte-vectors — the {result,code} byte form cannot express a positive equality or a non-bytes input."
 }

@@ -330,6 +330,26 @@ const CFG = { ...CONN, witnesses: { [Wa.key_id]: Wa.pub, [Wb.key_id]: Wb.pub }, 
   check('QUORUM permutation invariance (P1-03/M-DET): reversing vote order → identical D', rFwd.result === 'VALID' && rRev.result === 'VALID' && JSON.stringify(rFwd.judgment.aeq.quorum.domains) === JSON.stringify(rRev.judgment.aeq.quorum.domains));
 }
 
+// ── cluster I — M-CONFIG set-normalization + M-BYTE totality over the full signature (round-7 rev4) ────────────────────
+// P1-07 config_id extensional over the SET: reversing allowed_proof_kinds leaves the effective config, and config_id, unchanged.
+{
+  const mk = (kinds) => ({ connectors: { [KC.key_id]: { pub: KC.pub, trust_domain: 'btc-watch', allowed_proof_kinds: kinds } }, policy: { uniqueness_threshold: 2 } });
+  const r1 = checkAuthorityProof({ term: πCorr, witnesses }, mk(['pow-header-chain', 'transparency-log', 'rfc3161-tsa']));
+  const r2 = checkAuthorityProof({ term: πCorr, witnesses }, mk(['rfc3161-tsa', 'transparency-log', 'pow-header-chain']));
+  check('CONFIG set-order (P1-07): reversing allowed_proof_kinds → SAME config_id (extensional over the set)', r1.result === 'VALID' && r2.result === 'VALID' && r1.config_id === r2.config_id);
+}
+// P1-01 limits totality: a Proxy/getter `limits` is read (numeric fields, after the byte snapshots, inside try) → never
+// throws uncaught, never mutates a buffer pre-snapshot. P2-01: the bytes API takes Uint8Array only (a string → E-BYTES-TYPE).
+{
+  const pkgB = U8(P.canon({ term: πCorr, witnesses })), cfgB = U8(canonJSON(CFG));
+  let threw = false, r;
+  // the old code spread {...limits}, so an ownKeys trap escaped as an uncaught throw; readLimits reads NUMERIC fields
+  // (no spread), so the trap is never invoked → the checker completes normally.
+  try { r = checkAuthorityProofBytes(pkgB, cfgB, new Proxy({}, { ownKeys() { throw new Error('trap'); } })); } catch { threw = true; }
+  const rStr = checkAuthorityProofBytes(P.canon({ term: πCorr, witnesses }), canonJSON(CFG));   // strings, not Uint8Array
+  check('LIMITS/BYTES totality (P1-01/P2-01): an ownKeys-trap limits never escapes (VALID); a string input → INVALID(E-BYTES-TYPE)', !threw && r.result === 'VALID' && rStr.result === 'INVALID' && /E-BYTES-TYPE/.test(rStr.reason));
+}
+
 console.log('\n  reference-checker vectors (' + (typeof pass === 'number' ? '' : '') + 'L1)   PASS ' + pass + '   FAIL ' + fail);
 if (fails.length) { fails.forEach((f) => console.log('    ✗ ' + f)); process.exit(1); }
 console.log('  ✓ check_C accepts a genuine corroborated proof; every past P0 is unbuildable or a structured reject');

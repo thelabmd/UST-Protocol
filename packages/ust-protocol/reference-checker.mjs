@@ -73,7 +73,7 @@ function normalizeConfig(rawLive) {
   if (raw === null || typeof raw !== 'object') return { err: 'config must be an object' };
   const connectors = raw.connectors && typeof raw.connectors === 'object' ? raw.connectors : {};
   const mapRoots = Array.isArray(raw.mapRoots) ? raw.mapRoots.filter(isHash) : [];
-  const domains = raw.domains && typeof raw.domains === 'object' ? raw.domains : {};
+  const domains = Object.fromEntries(Object.entries(raw.domains && typeof raw.domains === 'object' ? raw.domains : {}).filter(([, v]) => typeof v === 'string'));   // ControlDomain is a typed STRING — quorum distinctness is by VALUE, not JS object reference (P0-03)
   const witnesses = raw.witnesses && typeof raw.witnesses === 'object' ? raw.witnesses : {};
   const policy = raw.policy && typeof raw.policy === 'object' ? raw.policy : {};
   const uniqueness_threshold = Number.isInteger(policy.uniqueness_threshold) && policy.uniqueness_threshold >= 1 ? policy.uniqueness_threshold : 2;
@@ -83,7 +83,7 @@ function normalizeConfig(rawLive) {
   // kinds, trust domains, the full witness key→pub map (VALUES, not just names), domain map, map roots, thresholds.
   // Changing any witness pub at the same key_id changes config_id. canon canonicalizes (sorted keys, string leaves).
   const config_id = H('ust:consumer-config', canon({
-    connectors: Object.fromEntries(Object.entries(connectors).map(([k, v]) => [k, { pub: v.pub, allowed_proof_kinds: v.allowed_proof_kinds || [], ...(v.trust_domain !== undefined ? { trust_domain: v.trust_domain } : {}) }])),
+    connectors: Object.fromEntries(Object.entries(connectors).map(([k, v]) => [k, { pub: v.pub, allowed_proof_kinds: [...new Set(Array.isArray(v.allowed_proof_kinds) ? v.allowed_proof_kinds : [])].sort(), ...(v.trust_domain !== undefined ? { trust_domain: v.trust_domain } : {}) }])),   // allowed_proof_kinds set-normalized (P1-07)
     mapRoots: [...mapRoots].sort(), domains, witnesses,
     policy: { uniqueness_threshold: String(uniqueness_threshold), allowExperimentalAttested: C.policy.allowExperimentalAttested ? '1' : '0' } }));
   return { C, config_id };
@@ -92,13 +92,19 @@ function normalizeConfig(rawLive) {
 // ── the byte boundary (§2, M-BYTE/M-DEC) — the TCB is over immutable octets ───────────────────────────────────────
 const TEXT_ENC = new TextEncoder();
 const TEXT_DEC = new TextDecoder('utf-8', { fatal: true });   // invalid UTF-8 throws → E-UTF8
-// SnapshotBytes: copy the live view into a fresh immutable buffer; reject non-Uint8Array and SharedArrayBuffer-backed
-// views (another thread could mutate mid-check). A convenience string input is UTF-8 encoded. The theorem begins here.
+// SnapshotBytes: copy the live view into a fresh immutable buffer; reject non-Uint8Array (Uint8Array ONLY — no string
+// convenience, P2-01) and SharedArrayBuffer-backed views (another thread could mutate mid-check). The theorem begins here.
 function snapshotBytes(input) {
-  if (typeof input === 'string') return { bytes: TEXT_ENC.encode(input) };
   if (!(input instanceof Uint8Array)) return { error: 'E-BYTES-TYPE' };
   if (typeof SharedArrayBuffer !== 'undefined' && input.buffer instanceof SharedArrayBuffer) return { error: 'E-BYTES-SHARED' };
   const copy = new Uint8Array(input.byteLength); copy.set(input); return { bytes: copy };
+}
+// readLimits: read specific NUMERIC fields from the caller `limits` (never a live spread), each validated to a positive
+// integer or the default — called INSIDE the try and AFTER the byte snapshots, so a getter/Proxy on `limits` cannot
+// mutate a buffer before its snapshot or escape as an uncaught throw (M-BYTE domain includes limits, P1-01).
+function readLimits(lim) {
+  const num = (k) => { const v = (lim === null || typeof lim !== 'object') ? undefined : lim[k]; return (typeof v === 'number' && Number.isInteger(v) && v > 0) ? v : DEFAULT_LIMITS[k]; };
+  return { maxNodes: num('maxNodes'), maxDepth: num('maxDepth'), maxWitnesses: num('maxWitnesses'), maxWitnessBytes: num('maxWitnessBytes'), maxPackageBytes: num('maxPackageBytes') };
 }
 // DecodeTerm (§2b, M-DEC): build the closed Term ADT strictly to each RULE_CONTRACTS entry — exact children arity, exact
 // witness count, allowed params only, NO unknown fields / stored conclusion / extra children/witnesses/free params. A
@@ -179,11 +185,11 @@ function decodeConfig(bytes) {
 // checkAuthorityProofBytes — THE NORMATIVE TCB. Immutable bytes in; VALID/INVALID/INDETERMINATE out. A live object never
 // enters (M-BYTE): the package/config are decoded ONCE from bytes into inert typed values, then rules run over those.
 export function checkAuthorityProofBytes(packageBytes, configBytes, limits = {}) {
-  const L = { ...DEFAULT_LIMITS, ...limits };
   const INVALID = (reason) => ({ result: 'INVALID', reason });
   try {
     const pb = snapshotBytes(packageBytes); if (pb.error) return INVALID('package bytes: ' + pb.error);
     const cb = snapshotBytes(configBytes); if (cb.error) return INVALID('config bytes: ' + cb.error);
+    const L = readLimits(limits);   // AFTER the byte snapshots, INSIDE the try — a limits getter/Proxy cannot affect a buffer or escape uncaught (P1-01)
     const nc = decodeConfig(cb.bytes); if (nc.err) return INVALID('config: ' + nc.err);
     const { C, config_id } = nc;
     const withCfg = (r) => (r && r.result !== 'VALID') ? { ...r, config_id } : r;   // config_id identifies the config USED, whatever the verdict (P1-02)
