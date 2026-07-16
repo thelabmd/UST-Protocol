@@ -2,7 +2,7 @@
 // Reference-checker vectors — the checker ACCEPTS a genuine corroborated proof, and every past P0 is either an
 // UNBUILDABLE term or a structured reject. An UNTRUSTED prover (this file) proposes packages; check_C is the oracle.
 import * as P from './index.mjs';
-import { checkAuthorityProof, witnessId } from './reference-checker.mjs';
+import { checkAuthorityProof, witnessId, REFERENCE_CHECKER_RULES } from './reference-checker.mjs';
 import { createPrivateKey, createPublicKey } from 'node:crypto';
 const kp = (h) => { const priv = createPrivateKey({ key: Buffer.concat([Buffer.from('302e020100300506032b657004220420', 'hex'), Buffer.from(h, 'hex')]), format: 'der', type: 'pkcs8' }); const pub = createPublicKey(priv).export({ format: 'der', type: 'spki' }).slice(-32).toString('base64url'); return { priv, pub, key_id: P.keyId(pub) }; };
 const T = { generated_at: '2026-07-16T00:00:00Z', valid_from: '2026-07-16T00:00:00Z', valid_to: '2026-07-16T01:00:00Z' };
@@ -217,6 +217,32 @@ const CFG = { ...CONN, witnesses: { [Wa.key_id]: Wa.pub, [Wb.key_id]: Wb.pub }, 
   const c0big = P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: 'good.example', genesis_epoch: EP, sequence: '0', active_genesis: AG, current_key_id: G.key_id, keylog: { root: kl.root, length: '257', head: kl.head } }), G.priv, G.pub);
   const r = checkAuthorityProof({ term: node('CheckpointZero', [πGenesis], [put(c0big)]), witnesses }, CFG);
   check('REJECT over-ceiling key-log (P1-04): C0 length 257 > 256 → INVALID(ceiling)', r.result === 'INVALID' && /ceiling/.test(r.reason));
+}
+
+// ── cluster C — specification ↔ code correspondence ────────────────────────────────────────────────────────────────
+// P2-01 the term carries NO conclusion: a node with a stored `expected`/`conclusion` is rejected (never trusted).
+{
+  const forged = { rule: 'Genesis', children: [], witnesses: [gW], expected: { kind: 'Assurance', tier: 'TOP' } };
+  const r = checkAuthorityProof({ term: forged, witnesses }, CFG);
+  check('REJECT stored conclusion (P2-01): a node carrying `expected` → INVALID (checker recomputes, never trusts)', r.result === 'INVALID' && /must not carry a conclusion/.test(r.reason));
+}
+// P2-02 grammar↔RULES parity: the exported registry is exactly the 15 implemented constructors, and a reserved/folded
+// name (DirectEvidence, NameAuthoritative, SnapshotTerminal, WitnessVote, EpochCheckpointZero) is unknown → INVALID.
+{
+  const EXPECTED = ['Genesis', 'CheckpointZero', 'CheckpointStep', 'ConnectorEvidence', 'AfterOrder', 'Corroborated', 'MapUnique', 'QuorumAgreement', 'ReinforceMap', 'ReinforceQuorum', 'FutureGenesisCommitment', 'ActivateGenesis', 'NameBound', 'Anchored', 'ProjectAssurance'];
+  const parity = REFERENCE_CHECKER_RULES.length === EXPECTED.length && EXPECTED.every((rule, i) => REFERENCE_CHECKER_RULES[i] === rule);
+  const reserved = ['DirectEvidence', 'NameAuthoritative', 'SnapshotTerminal', 'WitnessVote', 'EpochCheckpointZero'];
+  const allReservedInvalid = reserved.every((rule) => { const r = checkAuthorityProof({ term: node(rule, [], []), witnesses }, CFG); return r.result === 'INVALID' && /unknown rule/.test(r.reason); });
+  check('PARITY grammar↔RULES (P2-02): registry == 15 implemented constructors, reserved/folded names → INVALID(unknown)', parity && allReservedInvalid);
+}
+// P0-06 terminality location: it is required at FRESHNESS (Corroborated), NOT at CheckpointZero — spec (rev2) and code
+// now agree. A bare chain is VALID without terminality; Corroborated with a non-terminal head is INDETERMINATE.
+{
+  const rBareChain = checkAuthorityProof({ term: πChain, witnesses }, CFG);
+  const badTerm = put({ headProof: ['sha256:' + 'cd'.repeat(32)] });
+  const πCorrNoTerm = node('Corroborated', [πChain, πCommit, πTarget, πAfter], [badTerm]);
+  const rNoTerm = checkAuthorityProof({ term: πCorrNoTerm, witnesses }, CFG);
+  check('SPEC-SYNC terminality (P0-06): K0 needs none (bare chain VALID); Corroborated demands it (non-terminal → INDETERMINATE)', rBareChain.result === 'VALID' && rBareChain.judgment.kind === 'Chain' && rNoTerm.result === 'INDETERMINATE' && /terminal/.test(rNoTerm.reason));
 }
 
 console.log('\n  reference-checker vectors (' + (typeof pass === 'number' ? '' : '') + 'L1)   PASS ' + pass + '   FAIL ' + fail);

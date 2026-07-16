@@ -17,9 +17,15 @@ import { canon, H, keyId, edVerifyStrict, contentHash, verify, isValid, verifyKe
   resolveKeys, buildKeylogCommitment, authorityCheckpointId, strictB64url } from './index.mjs';
 
 export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev2';
-const RULES = new Set(['Genesis', 'CheckpointZero', 'CheckpointStep', 'ConnectorEvidence', 'AfterOrder',
-  'Corroborated', 'MapUnique', 'QuorumAgreement', 'ReinforceMap', 'ReinforceQuorum',
+// The closed constructor registry — EXACTLY one inference rule per name, and one `switch` branch below per name. This
+// list is the single source of truth for the grammar↔RULES parity gate (P2-02): the spec grammar (§4) and this array
+// must match, and a term naming any other constructor (incl. reserved DirectEvidence/NameAuthoritative, or the
+// spec-ideal SnapshotTerminal/WitnessVote/EpochCheckpointZero that are realized as folded premises of Corroborated /
+// QuorumAgreement / ActivateGenesis) is a structured INVALID('unknown rule'), never silently accepted.
+export const REFERENCE_CHECKER_RULES = Object.freeze(['Genesis', 'CheckpointZero', 'CheckpointStep', 'ConnectorEvidence',
+  'AfterOrder', 'Corroborated', 'MapUnique', 'QuorumAgreement', 'ReinforceMap', 'ReinforceQuorum',
   'FutureGenesisCommitment', 'ActivateGenesis', 'NameBound', 'Anchored', 'ProjectAssurance']);
+const RULES = new Set(REFERENCE_CHECKER_RULES);
 const DEFAULT_LIMITS = { maxNodes: 512, maxDepth: 32, maxWitnesses: 1024, maxWitnessBytes: 1 << 20 };
 const BOUNDED_READ_FACTOR = 256;   // caps the single-read encode against exponential DAG expansion (totality, §10)
 const isHash = (s) => typeof s === 'string' && /^sha256:[0-9a-f]{64}$/.test(s);
@@ -101,6 +107,7 @@ export function checkAuthorityProof(pkg, rawConfig, limits = {}) {
       if (!node || typeof node !== 'object') throw { reject: INVALID('malformed term node') };
       if (onPath.has(node)) throw { reject: INVALID('cyclic term (a node is its own ancestor)') };
       if (!RULES.has(node.rule)) throw { reject: INVALID('unknown rule "' + node.rule + '" (closed enum)') };
+      if ('expected' in node || 'conclusion' in node) throw { reject: INVALID('term node must not carry a conclusion (§5 — the checker recomputes it; a stored conclusion is never trusted, P2-01)') };
       if (depth > L.maxDepth) throw { reject: INVALID('term too deep (> ' + L.maxDepth + ')') };
       if (!counted.has(node)) { counted.add(node); if (++nodes > L.maxNodes) throw { reject: INVALID('too many term nodes (> ' + L.maxNodes + ')') }; }
       onPath.add(node);
