@@ -122,11 +122,12 @@ function checkTermInner(node, C, W, memo) {
       const b = c.w.body;
       if (!b || b.purpose !== 'ust:authority-checkpoint' || String(b.sequence) !== '0' || b.previous_checkpoint !== undefined || b.previous_epoch_final_checkpoint !== undefined) return bad('C0 must be a seq-0 checkpoint with no previous links');
       const sc = scopeOk(b, G.j); if (sc) return bad(sc);
+      if (b.domain_shard !== G.j.domain) return bad('checkpoint domain_shard ≠ genesis domain (§2.y — a diagnostic wire field must agree with the scope)');
       const sg = sigOk(c.w, G.j.chkAuth); if (sg) return bad(sg);
       if (b.checkpoint_authority?.current_key_id !== G.j.chkAuth.key_id) return bad('current_key_id ≠ genesis checkpoint authority');
       const rot = rotationOk(b); if (rot) return bad(rot);
       if (!verifyKeylogTerminality(b.keylog, t.w).terminal) return ind('key-log head terminality not proven');
-      return { j: { kind: 'Chain', s: G.j.s, n: 0, keylog: b.keylog, head_id: authorityCheckpointId(c.w), activeAuthority: nextAuthority(b, G.j.chkAuth) } };
+      return { j: { kind: 'Chain', s: G.j.s, domain: G.j.domain, n: 0, keylog: b.keylog, head_id: authorityCheckpointId(c.w), activeAuthority: nextAuthority(b, G.j.chkAuth) } };
     }
     case 'CheckpointStep': {
       const CH = sub(0); if (!CH.j || CH.j.kind !== 'Chain') return CH.j ? bad('child 0 must be Chain') : CH;
@@ -138,12 +139,13 @@ function checkTermInner(node, C, W, memo) {
       if (b.previous_checkpoint !== prev.head_id) return bad('previous_checkpoint ≠ prior head');
       const sc = scopeOk(b, { s: prev.s, active_genesis: agFromScope(b) }); if (sc) return bad(sc);
       if (authorityScopeId(b.active_genesis) !== prev.s) return bad('checkpoint scope ≠ chain scope (cross-scope)');
+      if (b.domain_shard !== prev.domain) return bad('checkpoint domain_shard changes within the chain (§2.y)');
       const sg = sigOk(c.w, prev.activeAuthority); if (sg) return bad('signer is not the resolved active authority: ' + sg);
       if (b.checkpoint_authority?.current_key_id !== prev.activeAuthority.key_id) return bad('current_key_id ≠ resolved authority');
       const rot = rotationOk(b); if (rot) return bad(rot);
       const ap = appendOnly(prev.keylog, b.keylog, wt[1] !== undefined ? W(wt[1]) : null); if (ap.err) return ap.ind ? ind(ap.err) : bad(ap.err);
       if (!verifyKeylogTerminality(b.keylog, t.w).terminal) return ind('key-log head terminality not proven');
-      return { j: { kind: 'Chain', s: prev.s, n: prev.n + 1, keylog: b.keylog, head_id: authorityCheckpointId(c.w), activeAuthority: nextAuthority(b, prev.activeAuthority) } };
+      return { j: { kind: 'Chain', s: prev.s, domain: prev.domain, n: prev.n + 1, keylog: b.keylog, head_id: authorityCheckpointId(c.w), activeAuthority: nextAuthority(b, prev.activeAuthority) } };
     }
     case 'ConnectorEvidence': {
       const G = sub(0); if (!G.j || G.j.kind !== 'Genesis') return G.j ? bad('child 0 must be Genesis') : G;
@@ -154,6 +156,7 @@ function checkTermInner(node, C, W, memo) {
       if (strictB64url(sig.sig, 64) === null || !edVerifyStrict(sig.pub, canon({ purpose: 'ust:evidence-receipt-signature', claim: cl }), sig.sig)) return bad('receipt signature invalid');
       for (const k of ['assurance', 'strength', 'trust_domain', 'independent', 'capability', 'attested', 'threshold']) if (k in (cl.facts || {})) return bad('receipt facts must not self-declare ' + k);
       if (cl.active_genesis !== G.j.active_genesis || cl.genesis_epoch !== genesisEpoch(cl.active_genesis)) return bad('receipt scope ≠ genesis scope');
+      if (cl.domain_shard !== G.j.domain) return bad('receipt domain_shard ≠ genesis domain (§2.y)');
       if (cl.subject !== p.subject) return bad('receipt subject ≠ required subject');
       // ADMISSION FROM C ONLY (never from the term): the issuer must be a consumer-admitted connector for this kind.
       const conn = C.connectors[sig.key_id];

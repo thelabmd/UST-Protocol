@@ -88,6 +88,19 @@ const CFG = { ...CONN, witnesses: { [Wa.key_id]: Wa.pub, [Wb.key_id]: Wb.pub }, 
   check('REJECT cross-scope: chain scope ≠ evidence scope → INVALID (does not unify)', r.result === 'INVALID' && /scope/.test(r.reason));
 }
 
+// ── round-4 P0-4 (fully-consistent forgery): checkpoint + receipts all claim a foreign domain, active_genesis=good.
+//    §2.y — a diagnostic wire field (domain_shard) MUST agree with the scope; check_C rejects (the old stack accepts).
+{
+  const c0evil = P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: 'evil.example', genesis_epoch: EP, sequence: '0', active_genesis: AG, current_key_id: G.key_id, keylog: { root: kl.root, length: kl.length, head: kl.head } }), G.priv, G.pub);
+  const headE = P.authorityCheckpointId(c0evil);
+  const rcE = (subj, pos) => P.buildEvidenceReceipt({ domain_shard: 'evil.example', active_genesis: AG, subject: subj, proof_kind: 'pow-header-chain', facts: { substrate: 'bitcoin', position: String(pos) }, issued_at: '2026-01-01T00:00:00Z' }, KC.priv, KC.pub);
+  const gWx = put(gen), c0Wx = put(c0evil), tWx = put(term), cmx = put(rcE(headE, 900)), anx = put(rcE('ust:target', 800));
+  const πGx = node('Genesis', [], [gWx]);
+  const πChx = node('CheckpointZero', [πGx], [c0Wx, tWx]);
+  const r = checkAuthorityProof({ term: πChx, witnesses }, CFG);
+  check('REJECT foreign-domain (§2.y): checkpoint domain_shard ≠ genesis domain → INVALID even when active_genesis matches', r.result === 'INVALID' && /domain_shard ≠ genesis domain/.test(r.reason));
+}
+
 // ── round-4 P0-5: epoch activation REQUIRES a verified Genesis[sB] child — a hash cannot introduce it ──
 {
   const KB = kp('b0'.repeat(32)), AGB = 'sha256:' + '99'.repeat(32);
