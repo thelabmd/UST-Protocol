@@ -27,6 +27,7 @@
     "test:web-signer": "node packages/ust-web-signer/test.mjs",
     "test:mcp-live": "node packages/ust-mcp/live-test.mjs",
     "test:audit": "npm audit --omit=optional --audit-level=critical",
-    "test:reference-checker": "node packages/ust-protocol/reference-checker.test.mjs"
+    "test:reference-checker": "node packages/ust-protocol/reference-checker.test.mjs",
+    "test:reference-checker-fuzz": "node packages/ust-protocol/reference-checker.fuzz.mjs"
   }
 }
