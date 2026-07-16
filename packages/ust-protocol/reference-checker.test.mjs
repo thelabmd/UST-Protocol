@@ -141,6 +141,41 @@ const CFG = { ...CONN, witnesses: { [Wa.key_id]: Wa.pub, [Wb.key_id]: Wb.pub }, 
   check('BOUNDS: a cyclic/shared term node → INVALID (not a tree), never infinite loop', r.result === 'INVALID');
 }
 
+// ── cluster A — §2 byte-semantics: the checker reads each caller input EXACTLY ONCE into an inert value ─────────────
+// P0-05 INSTRUMENTATION GATE: a witness exposed as a getter is read exactly once by the checker (rules read the inert
+// snapshot, not the live object) — so a value cannot differ between the hash read and a rule read.
+{
+  let reads = 0;
+  const evil = { get headProof() { reads++; return kl.headProof; } };   // returns the CORRECT value; counts reads
+  const evilW = witnessId(evil);                                        // (this addressing read is the prover's, not the checker's)
+  witnesses[evilW] = evil;
+  reads = 0;                                                            // count ONLY the checker's reads of the live object
+  const πCorrEvil = node('Corroborated', [πChain, πCommit, πTarget, πAfter], [evilW]);
+  const r = checkAuthorityProof({ term: πCorrEvil, witnesses }, CFG);
+  check('BYTE-SEMANTICS single-read (P0-05): checker reads a live witness EXACTLY once → VALID and reads===1 (no hash/rule divergence)', r.result === 'VALID' && reads === 1);
+}
+// P1-02 prototype-planted witness: own-keys + null-proto store → an INHERITED witness is invisible AND unreachable.
+{
+  const proto = {}; proto[gW] = gen;                                    // the genesis planted on the prototype only
+  const witnessesInherited = Object.create(proto);                     // zero own keys; gW resolves only via inheritance
+  const r = checkAuthorityProof({ term: node('Genesis', [], [gW]), witnesses: witnessesInherited }, CFG);
+  check('REJECT prototype-planted witness (P1-02): inherited witness is not in the own-key store → INVALID(missing)', r.result === 'INVALID' && /missing witness/.test(r.reason));
+}
+// P0-02 non-canonical coordinate: MapUnique at n="00" cannot decode to a CanonicalSeq, so it never aliases n=0.
+{
+  const dummyMap = put({ proof: {}, mapRoot: 'sha256:' + '00'.repeat(32) });
+  const πMU = node('MapUnique', [πGenesis], [dummyMap], { n: '00', h: head });
+  const r = checkAuthorityProof({ term: node('ReinforceMap', [πCorr, πMU]), witnesses }, CFG);
+  check('REJECT non-canonical coordinate (P0-02): MapUnique n="00" → INVALID(CanonicalSeq), cannot alias n=0', r.result === 'INVALID' && /non-canonical sequence/.test(r.reason));
+}
+// P1-05 config snapshot: the consumer config is read once into an inert value; a getter fires exactly once.
+{
+  let creads = 0;
+  const cfgAccessor = { get connectors() { creads++; return CONN.connectors; }, witnesses: CFG.witnesses, domains: CFG.domains, policy: CFG.policy };
+  const r = checkAuthorityProof({ term: πCorr, witnesses }, cfgAccessor);
+  check('CONFIG snapshot (P1-05): config read once into an inert value → VALID and connectors getter read exactly once', r.result === 'VALID' && creads === 1);
+}
+
 console.log('\n  reference-checker vectors (' + (typeof pass === 'number' ? '' : '') + 'L1)   PASS ' + pass + '   FAIL ' + fail);
 if (fails.length) { fails.forEach((f) => console.log('    ✗ ' + f)); process.exit(1); }
 console.log('  ✓ check_C accepts a genuine corroborated proof; every past P0 is unbuildable or a structured reject');

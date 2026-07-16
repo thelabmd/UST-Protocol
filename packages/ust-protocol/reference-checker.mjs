@@ -16,16 +16,37 @@ import { canon, H, keyId, edVerifyStrict, contentHash, verify, isValid, verifyKe
   verifyCheckpointMapUniqueness, evidenceCaps, compareEvidenceOrder, authorityScopeId, genesisEpoch,
   resolveKeys, buildKeylogCommitment, authorityCheckpointId, strictB64url } from './index.mjs';
 
-export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1';
+export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev2';
 const RULES = new Set(['Genesis', 'CheckpointZero', 'CheckpointStep', 'ConnectorEvidence', 'AfterOrder',
   'Corroborated', 'MapUnique', 'QuorumAgreement', 'ReinforceMap', 'ReinforceQuorum',
   'FutureGenesisCommitment', 'ActivateGenesis', 'NameBound', 'Anchored', 'ProjectAssurance']);
 const DEFAULT_LIMITS = { maxNodes: 512, maxDepth: 32, maxWitnesses: 1024, maxWitnessBytes: 1 << 20 };
+const BOUNDED_READ_FACTOR = 256;   // caps the single-read encode against exponential DAG expansion (totality, §10)
 const isHash = (s) => typeof s === 'string' && /^sha256:[0-9a-f]{64}$/.test(s);
 export const witnessId = (obj) => H('ust:witness', canon(obj));   // content address a witness (for provers building packages)
+const POISON = Symbol('malformed-witness');   // a caller witness with non-canonical bytes — reachable only as a structured per-use reject
+// CanonicalSeq (§3): a sequence is a canonical decimal string, never a wire value coerced by Number(). Rejects "00",
+// "01", "+1", "1.0", " 1" — so the P0-02 "00"→0 alias cannot form. Returns the canonical string, or null.
+const decodeSeq = (x) => (typeof x === 'string' && /^(0|[1-9][0-9]*)$/.test(x)) ? x
+  : (typeof x === 'number' && Number.isInteger(x) && x >= 0 ? String(x) : null);
+// §2 byte-semantics: read a caller value EXACTLY ONCE into an inert internal value. The counting replacer fires each
+// getter once and BOUNDS the read, so a cyclic or exponentially-shared object graph is rejected (not OOM); JSON.parse
+// then yields an own-data-only tree with no getters/prototype/proxy. After this the caller object is never read again.
+function inertRead(v, bound) {
+  let visits = 0, enc;
+  try { enc = JSON.stringify(v, (_k, x) => { if (++visits > bound) throw new Error('bounded-read exceeded'); return x; }); }
+  catch { return { err: 'not a bounded, acyclic, serializable value' }; }
+  if (typeof enc !== 'string') return { err: 'not an encodable object' };
+  return { v: JSON.parse(enc) };
+}
 
 // ── config normalization (total; §8/§10) — C is a WORLD PARAMETER, never in the term ──────────────────────────────
-function normalizeConfig(raw) {
+function normalizeConfig(rawLive) {
+  // §2/§8 byte-semantics: snapshot the consumer config ONCE into an inert first-order value, then read only that —
+  // kills a config that mutates or resolves via getters between reads (P1-05). config_id is computed over the snapshot.
+  const ci = inertRead(rawLive, 1 << 16);
+  if (ci.err) return { err: 'config is ' + ci.err };
+  const raw = ci.v;
   if (raw === null || typeof raw !== 'object') return { err: 'config must be an object' };
   const connectors = raw.connectors && typeof raw.connectors === 'object' ? raw.connectors : {};
   const mapRoots = Array.isArray(raw.mapRoots) ? raw.mapRoots.filter(isHash) : [];
@@ -46,43 +67,60 @@ function normalizeConfig(raw) {
 export function checkAuthorityProof(pkg, rawConfig, limits = {}) {
   const L = { ...DEFAULT_LIMITS, ...limits };
   const INVALID = (reason) => ({ result: 'INVALID', reason });
-  const INDET = (reason) => ({ result: 'INDETERMINATE', reason });
   try {
     if (!pkg || typeof pkg !== 'object' || !pkg.term || typeof pkg.term !== 'object' || !pkg.witnesses || typeof pkg.witnesses !== 'object')
       return INVALID('ProofPackage must be { term, witnesses }');
     const nc = normalizeConfig(rawConfig);
     if (nc.err) return INVALID('config: ' + nc.err);
     const { C, config_id } = nc;
-    // §10 bounds BEFORE crypto: witness count/bytes, node count, depth, cycle guard.
-    const wids = Object.keys(pkg.witnesses);
-    if (wids.length > L.maxWitnesses) return INVALID('too many witnesses (> ' + L.maxWitnesses + ')');
-    for (const w of Object.values(pkg.witnesses)) if (canon(w).length > L.maxWitnessBytes) return INVALID('witness exceeds byte cap');
-    // §10 acyclic-DAG guard: sharing a sub-proof is ALLOWED (a proof DAG); a CYCLE (node on its own ancestor path)
-    // is not. Count unique nodes once; bound depth of the DAG.
+
+    // §2 byte-semantics: read every caller input EXACTLY ONCE into an inert internal value, then never touch the caller
+    // object again. Kills, as a CLASS: stateful getters between hash and rule (P0-05), post-hash mutation, prototype
+    // inheritance (P1-02), planted non-own fields, representation divergence between two reads, mutable witness refs.
+    const ti = inertRead(pkg.term, L.maxNodes * BOUNDED_READ_FACTOR);
+    if (ti.err) return INVALID('term is ' + ti.err);
+    const term = ti.v;
+    // §10 witness COUNT before snapshot (DoS); OWN keys only — a prototype-planted witness is invisible here and, via
+    // the null-proto store below, unreachable in W. Snapshot each witness to its canonical inert form (content-address
+    // stable): one bounded read → canon → parse, so hashing and every rule read see the SAME frozen bytes.
+    const rawKeys = Object.keys(pkg.witnesses);
+    if (rawKeys.length > L.maxWitnesses) return INVALID('too many witnesses (> ' + L.maxWitnesses + ')');
+    const store = Object.create(null);
+    for (const k of rawKeys) {
+      const wi = inertRead(pkg.witnesses[k], L.maxWitnessBytes);
+      if (wi.err) { store[k] = POISON; continue; }
+      let bytes; try { bytes = canon(wi.v); } catch { store[k] = POISON; continue; }
+      if (bytes.length > L.maxWitnessBytes) return INVALID('witness exceeds byte cap');
+      store[k] = JSON.parse(bytes);
+    }
+    // §10 acyclic-DAG guard over the INERT term: sharing is expanded to a bounded tree; still reject cycles (defensive)
+    // and enforce node/depth caps. Count unique nodes once; bound depth.
     let nodes = 0;
     const counted = new WeakSet();
-    const bound = (node, depth, onPath) => {
+    const boundTerm = (node, depth, onPath) => {
       if (!node || typeof node !== 'object') throw { reject: INVALID('malformed term node') };
       if (onPath.has(node)) throw { reject: INVALID('cyclic term (a node is its own ancestor)') };
       if (!RULES.has(node.rule)) throw { reject: INVALID('unknown rule "' + node.rule + '" (closed enum)') };
       if (depth > L.maxDepth) throw { reject: INVALID('term too deep (> ' + L.maxDepth + ')') };
       if (!counted.has(node)) { counted.add(node); if (++nodes > L.maxNodes) throw { reject: INVALID('too many term nodes (> ' + L.maxNodes + ')') }; }
       onPath.add(node);
-      for (const c of node.children || []) bound(c, depth + 1, onPath);
+      for (const c of node.children || []) boundTerm(c, depth + 1, onPath);
       onPath.delete(node);
     };
-    try { bound(pkg.term, 0, new Set()); } catch (e) { if (e.reject) return e.reject; throw e; }
+    try { boundTerm(term, 0, new Set()); } catch (e) { if (e.reject) return e.reject; throw e; }
 
-    // content-addressed witness fetch — recompute H(canon) and match (§2). Never trust a parsed object by identity.
+    // content-addressed witness fetch from the INERT store — recompute H(canon) and match (§2). The null-proto store
+    // resolves OWN keys only, so a wid absent from the caller's own witnesses (e.g. planted on a prototype) is missing.
     const W = (wid) => {
-      const w = pkg.witnesses[wid];
+      const w = store[wid];
       if (w === undefined) return { err: 'missing witness ' + wid };
+      if (w === POISON) return { err: 'malformed witness bytes (non-canonical) ' + wid };
       if (witnessId(w) !== wid) return { err: 'witness_id mismatch (content address)' };
       return { w };
     };
-    const R = checkTerm(pkg.term, C, W, new WeakMap());   // returns { j } | { result, reason }; memoized over the DAG
+    const R = checkTerm(term, C, W, new WeakMap());   // returns { j } | { result, reason }; memoized over the DAG
     if (!R.j) return R.result ? R : INVALID(R.reason || 'derivation failed');
-    return { result: 'VALID', judgment: R.j, proof_hash: H('ust:proof-term', canon(stripExpected(pkg.term))), config_id };
+    return { result: 'VALID', judgment: R.j, proof_hash: H('ust:proof-term', canon(stripExpected(term))), config_id };
   } catch (e) { return INVALID('checker threw (should be total — please report): ' + (e && e.message ? e.message : String(e))); }
 }
 
@@ -187,14 +225,16 @@ function checkTermInner(node, C, W, memo) {
     case 'MapUnique': {
       const G = sub(0); if (!G.j || G.j.kind !== 'Genesis') return G.j ? bad('child 0 must be Genesis') : G;
       const m = wit(0); if (m.err) return bad(m.err);
+      const nseq = decodeSeq(p.n); if (nseq === null) return bad('non-canonical sequence coordinate (§3 CanonicalSeq)');   // P0-02: "00" ≠ "0"
       const { proof, mapRoot } = m.w;
       if (!C.mapRoots.includes(mapRoot)) return ind('map root is not consumer-admitted (ρ ∉ C.mapRoots)');
-      const u = verifyCheckpointMapUniqueness(proof, { domain_shard: G.j.domain, genesis_epoch: genesisEpoch(G.j.active_genesis), sequence: String(p.n), checkpoint: p.h, mapRoot });
+      const u = verifyCheckpointMapUniqueness(proof, { domain_shard: G.j.domain, genesis_epoch: genesisEpoch(G.j.active_genesis), sequence: nseq, checkpoint: p.h, mapRoot });
       if (!u.attested) return ind('map non-membership not proven at (s,n)');
-      return { j: { kind: 'MapUnique', s: G.j.s, n: Number(p.n), h: p.h, rho: mapRoot } };
+      return { j: { kind: 'MapUnique', s: G.j.s, n: Number(nseq), h: p.h, rho: mapRoot } };
     }
     case 'QuorumAgreement': {
       const G = sub(0); if (!G.j || G.j.kind !== 'Genesis') return G.j ? bad('child 0 must be Genesis') : G;
+      const nseq = decodeSeq(p.n); if (nseq === null) return bad('non-canonical sequence coordinate (§3 CanonicalSeq)');
       const t = C.policy.uniqueness_threshold;
       const domains = new Set(); let ref = null;
       for (const wid of wt) {
@@ -202,7 +242,7 @@ function checkTermInner(node, C, W, memo) {
         const { claim, issuer_id, sig } = a.w || {};
         if (!claim || !sig || claim.purpose !== 'ust:checkpoint-uniqueness-attestation') continue;
         if ('trust_domain' in claim || 'issuer_id' in claim) continue;               // no self-declared independence
-        if (claim.genesis_epoch !== genesisEpoch(G.j.active_genesis) || String(claim.sequence) !== String(p.n) || claim.checkpoint !== p.h) continue;
+        if (claim.genesis_epoch !== genesisEpoch(G.j.active_genesis) || String(claim.sequence) !== nseq || claim.checkpoint !== p.h) continue;
         const cc = canon(claim); if (ref === null) ref = cc; else if (cc !== ref) continue;   // BYTE-IDENTICAL claim
         const pub = C.witnesses[issuer_id];                                            // trust roots FROM C, never the term
         if (!pub || pub !== sig.pub || keyId(sig.pub) !== issuer_id) continue;
@@ -211,7 +251,7 @@ function checkTermInner(node, C, W, memo) {
         domains.add(dom);
       }
       if (domains.size < t) return ind('quorum not met: ' + domains.size + ' distinct domains < ' + t);
-      return { j: { kind: 'QuorumAgreement', s: G.j.s, n: Number(p.n), h: p.h, D: [...domains].sort(), t } };
+      return { j: { kind: 'QuorumAgreement', s: G.j.s, n: Number(nseq), h: p.h, D: [...domains].sort(), t } };
     }
     case 'ReinforceMap': {
       const F = sub(0), M = sub(1);
