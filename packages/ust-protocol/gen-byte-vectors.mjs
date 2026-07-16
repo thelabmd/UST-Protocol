@@ -66,6 +66,28 @@ add('order.cross-clock', 'two intervals on different clocks cannot be ordered', 
 const genPad = P.seal(P.buildGenesis({ domain_shard: 'good.example', ust_id: 'ust:20260716.00', key_id: G.key_id }, T, G.pub, undefined, undefined, undefined, { key_id: G.key_id, pub: G.pub + '=' }), G.priv, G.pub);
 add('key.padded-pub', 'a padded (non-canonical) checkpoint_authority pub', b64u(canonPkg(N('Genesis', [], [put(genPad)]))), CFG, { result: 'INVALID', code: 'checkpoint_authority' });
 
+// earlier-round security conditions (rounds 3-5), now as normative TCB byte-vectors (not only object-adapter asserts):
+// M-REL detached-After — an After ordering UNRELATED evidences does not satisfy Corroborated over commit/target.
+const o1 = N('ConnectorEvidence', [πG], [put(rc('ust:other', 500))], { subject: 'ust:other' });
+const o2 = N('ConnectorEvidence', [πG], [put(rc('ust:other2', 100))], { subject: 'ust:other2' });
+add('rel.detached-after', 'After orders unrelated evidences', b64u(canonPkg(N('Corroborated', [πChain, πC, πT, N('AfterOrder', [o1, o2])], [put(term)]))), CFG, { result: 'INVALID', code: 'detached After' });
+// §2.y scope — a checkpoint whose domain_shard ≠ the genesis domain (even with the same active_genesis).
+const c0evil = P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: 'evil.example', genesis_epoch: EP, sequence: '0', active_genesis: AG, current_key_id: G.key_id, keylog: { root: kl.root, length: kl.length, head: kl.head } }), G.priv, G.pub);
+add('scope.foreign-domain', 'checkpoint domain_shard ≠ genesis domain', b64u(canonPkg(N('CheckpointZero', [πG], [put(c0evil)]))), CFG, { result: 'INVALID', code: 'domain_shard' });
+// §13 key-log ceiling — a C0 claiming a 257-length key-log.
+const c0big = P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: 'good.example', genesis_epoch: EP, sequence: '0', active_genesis: AG, current_key_id: G.key_id, keylog: { root: kl.root, length: '257', head: kl.head } }), G.priv, G.pub);
+add('keylog.over-ceiling', 'C0 key-log length 257 > 256', b64u(canonPkg(N('CheckpointZero', [πG], [put(c0big)]))), CFG, { result: 'INVALID', code: 'ceiling' });
+// P0-03 quorum domain binding — attestations for a FOREIGN domain are not counted.
+const uaEvil = (W) => P.buildUniquenessAttestation({ domain_shard: 'evil.example', genesis_epoch: EP, sequence: '0', checkpoint: head }, W.priv, W.pub);
+add('quorum.foreign-domain', 'votes for a foreign domain are not counted', b64u(canonPkg(N('ReinforceQuorum', [πCorr, N('QuorumAgreement', [πChain], [put(uaEvil(Wa)), put(uaEvil(Wb))])]))), CFG, { result: 'INDETERMINATE', code: 'quorum not met' });
+// P0-02(r4) self-trust — a quorum of attacker witnesses NOT admitted by the consumer config.
+const Ez1 = kp('e1'.repeat(32)), Ez2 = kp('e2'.repeat(32));
+const uaE = (W) => P.buildUniquenessAttestation({ domain_shard: 'good.example', genesis_epoch: EP, sequence: '0', checkpoint: head }, W.priv, W.pub);
+add('quorum.self-trust', 'attacker witnesses not admitted by config', b64u(canonPkg(N('ReinforceQuorum', [πCorr, N('QuorumAgreement', [πChain], [put(uaE(Ez1)), put(uaE(Ez2))])]))), CFG, { result: 'INDETERMINATE', code: 'quorum not met' });
+// P0-03(r4) content address — a witness tampered after addressing fails its content address.
+const genW = put(gen);
+add('witness.content-address', 'a tampered witness fails its content address', b64u(P.canon({ term: πChain, witnesses: { ...store, [genW]: { ...store[genW], __tamper: 'x' } } })), CFG, { result: 'INVALID', code: 'content address' });
+
 // F — semantic invariants (M-CONFIG): same package, config with a swapped witness pub → a DIFFERENT config_id.
 // swapping witness pub VALUES at the same key_ids BREAKS admission (the attestations no longer verify) → INDETERMINATE,
 // AND the config_id must differ from the genuine one — proof that config_id is extensional over pub values (P1-02).
@@ -80,6 +102,12 @@ const MANIFEST = {
     { id: 'ORDER-SAME-IDENTITY', rule: 'AfterOrder', negative_vectors: ['order.cross-clock'] },
     { id: 'KEY-STRICT-PUB32', rule: 'Genesis/sigOk/ConnectorEvidence/QuorumAgreement', negative_vectors: ['key.padded-pub'] },
     { id: 'CONFIG-EXTENSIONAL-OVER-PUB', rule: 'normalizeConfig', negative_vectors: ['config.pub-swap'] },
+    { id: 'AFTER-RELATES-ITS-EVIDENCES', rule: 'Corroborated', negative_vectors: ['rel.detached-after'] },
+    { id: 'SCOPE-DOMAIN-AGREEMENT', rule: 'CheckpointZero/CheckpointStep', negative_vectors: ['scope.foreign-domain'] },
+    { id: 'KEYLOG-CEILING', rule: 'CheckpointZero/CheckpointStep', negative_vectors: ['keylog.over-ceiling'] },
+    { id: 'QUORUM-DOMAIN-BINDING', rule: 'QuorumAgreement', negative_vectors: ['quorum.foreign-domain'] },
+    { id: 'QUORUM-TRUST-FROM-CONFIG', rule: 'QuorumAgreement', negative_vectors: ['quorum.self-trust'] },
+    { id: 'WITNESS-CONTENT-ADDRESS', rule: 'decodePackage/W', negative_vectors: ['witness.content-address'] },
   ],
 };
 

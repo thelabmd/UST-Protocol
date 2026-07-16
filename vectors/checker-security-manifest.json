@@ -41,6 +41,48 @@
       "negative_vectors": [
         "config.pub-swap"
       ]
+    },
+    {
+      "id": "AFTER-RELATES-ITS-EVIDENCES",
+      "rule": "Corroborated",
+      "negative_vectors": [
+        "rel.detached-after"
+      ]
+    },
+    {
+      "id": "SCOPE-DOMAIN-AGREEMENT",
+      "rule": "CheckpointZero/CheckpointStep",
+      "negative_vectors": [
+        "scope.foreign-domain"
+      ]
+    },
+    {
+      "id": "KEYLOG-CEILING",
+      "rule": "CheckpointZero/CheckpointStep",
+      "negative_vectors": [
+        "keylog.over-ceiling"
+      ]
+    },
+    {
+      "id": "QUORUM-DOMAIN-BINDING",
+      "rule": "QuorumAgreement",
+      "negative_vectors": [
+        "quorum.foreign-domain"
+      ]
+    },
+    {
+      "id": "QUORUM-TRUST-FROM-CONFIG",
+      "rule": "QuorumAgreement",
+      "negative_vectors": [
+        "quorum.self-trust"
+      ]
+    },
+    {
+      "id": "WITNESS-CONTENT-ADDRESS",
+      "rule": "decodePackage/W",
+      "negative_vectors": [
+        "witness.content-address"
+      ]
     }
   ]
 }
