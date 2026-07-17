@@ -15,7 +15,7 @@ const OK = '#3fb950', WARN = '#d29922', PURPLE = '#bc8cff', GREEN = '#7ee787';
 const MONO = "ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace";
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-function panel(name, title, build) {                             // shared frame: rounded border + panel title row
+function panel(name, title, build, titleStyle) {                 // shared frame: rounded border + panel title row; titleStyle overrides the default for long titles
   const parts = [];
   const P = {
     y: 46,
@@ -30,7 +30,7 @@ function panel(name, title, build) {                             // shared frame
     },
     row: (dy) => (P.y += dy, P.y),
   };
-  P.t(28, 34, title, TITLE, 'font-size="13" font-weight="600" letter-spacing="2"');
+  P.t(28, 34, title, TITLE, titleStyle || 'font-size="13" font-weight="600" letter-spacing="2"');
   build(P);
   const H = P.y + 26;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(title)}">
@@ -91,7 +91,7 @@ panel('ust-anatomy', 'A TRANSCRIPT — SELF-CONTAINED, VERIFIES ANYWHERE', (P) =
 });
 
 // ── 2. TIERS — the verdict ladder (each rung EARNED, the verdict carries its tier) ──
-panel('ust-tiers', 'TRUST IS GRADUATED — THE VERDICT CARRIES ITS TIER', (P) => {
+panel('ust-tiers', 'TRUST IS GRADUATED, AND THE VERDICT CARRIES ITS TIER — A CONFORMING VERIFIER NEVER SAYS A BARE VALID:', (P) => {
   const cols = [
     { x: 24, top: 150, chip: 'VALID:LIGHT', c: TEXT, name: 'the floor — a key, canonical form, a signature', rows: ['exact bytes · signing key', 'claimed time frame', 'no infra · no fees'] },
     { x: 312, top: 110, chip: 'VALID:HIGH', c: VALUE, name: '+ the NAME is provably bound to the key', rows: ['genesis + key log ceremony', 'rotation / revocation', 'corroborated|authoritative'] },
@@ -116,7 +116,7 @@ panel('ust-tiers', 'TRUST IS GRADUATED — THE VERDICT CARRIES ITS TIER', (P) =>
   P.t(456, P.y, '= cannot decide — never conflated with forged', LABEL, 'font-size="13"');
   P.row(22);
   P.t(28, P.y, 'a tier is EARNED per verification — there is NO field a producer can set to claim it', TEXT, 'font-size="13"');
-});
+}, 'font-size="11.5" font-weight="600" letter-spacing="0.8"');   // 102-char title — fitted, same voice
 
 // ── 3. CHAIN — one state, graduated visibility (the L1..L4 ladder, hash-linked) ──
 panel('ust-chain', 'ONE STATE — GRADUATED VISIBILITY', (P) => {
