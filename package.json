@@ -1,6 +1,6 @@
 {
   "name": "ust",
-  "version": "1.0.0-rc.34",
+  "version": "1.0.0-rc.36",
   "private": true,
   "description": "UST (Universal State Transcript) — specification, conformance vectors, and reference implementations. Trust infrastructure for machine-readable state.",
   "license": "Apache-2.0",
@@ -18,7 +18,7 @@
     "test:cli": "node packages/ust-cli/regression.mjs",
     "test:model": "node packages/ust-protocol/model-correspondence.mjs",
     "test:vectors": "node packages/ust-protocol/gen-arc-vectors.mjs && git diff --exit-code vectors/arc-vectors.json && node packages/ust-protocol/run-arc-vectors.mjs",
-    "test:spec-sync": "node tools/gen-spec-registry.mjs && node tools/gen-readme-version.mjs && git diff --exit-code spec/UST-1.0.md README.md && node tools/spec-code-sync.mjs",
+    "test:spec-sync": "node tools/gen-spec-registry.mjs && node tools/gen-readme-version.mjs && git diff --exit-code spec/UST-1.0.md README.md package.json && node tools/spec-code-sync.mjs",
     "test:parity": "node tools/capability-parity.mjs",
     "test:lite": "node packages/ust-lite/test.mjs",
     "test:security": "node packages/ust-protocol/security-regression.mjs",
