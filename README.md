@@ -28,7 +28,37 @@ key, a canonical form and a signature.
 
 ![Anatomy of a UST transcript — a self-contained signed JSON document: id (who + when), time frame, data partitions, domain-separated hashes, provenance links, Ed25519 signature. Seal at creation, store anywhere, verify offline.](.github/ust-anatomy.svg)
 
-## WHAT IS A REAL TRUTH IN AN AGENT WORLD?
+## The time coordinate — `ust_id`
+
+Before anything else, a UST is an address on **one shared time axis**. Every transcript carries a frame id,
+`ust:YYYYMMDD.HH[MM[SS]]` (UTC): `ust:20260710.14` is an hour frame, `ust:20260710.1429` a minute,
+`ust:20260710.142900` a second. This is not metadata — it is part of the document's *identity*, and the
+per-partition hashes **bind** it: a signed value cannot be replayed into another hour or re-attributed to
+another frame.
+
+![One time axis — ust:20260710.14 (hour) contains ust:20260710.1429 (minute) contains ust:20260710.142900 (second): containment is literal string prefixing, sortable equals streamable, one shared UTC grid for every publisher.](.github/ust-time.svg)
+
+One coordinate system, shared by every publisher on Earth by construction (UTC), buys things no per-vendor
+timestamp field can:
+
+- **"What was the world doing at 14:29Z?" is a query, not a metaphor.** Transcripts from unrelated publishers
+  carrying the same coordinate are claims about the *same moment*. Collect them and you hold a signed
+  cross-section of the world at `t` — each slice independently verifiable.
+- **Correlation without coordination.** Publishers never agree on anything except the grid. Space weather ×
+  grid frequency × market state × an agent's decision — joinable *after the fact* by coordinate, across
+  organizations that have never heard of each other. Pattern mining over independent signed sources, no shared
+  platform required.
+- **Containment is literal string prefixing.** A second nests in its minute, the minute in its hour:
+  `ust:20260710.14` ⊃ `ust:20260710.1429` ⊃ `ust:20260710.142900`. Roll-ups and drill-downs are prefix scans;
+  a parent frame can *attest* its children (attestation + Merkle root over their content hashes), so "the hour"
+  becomes a signed aggregate of its seconds — provably complete over a closed range (`verifyStream`).
+- **Sortable = streamable.** Fixed-width UTC fields sort lexicographically in time order; a time range is a
+  string range. Storage keys, feeds and archives inherit chronology for free.
+
+Honesty holds on this axis too: at LIGHT the coordinate is the publisher's **claimed** frame; a TOP anchor
+proves the document existed **by** a real point in time (and `generated_at` may not postdate its own anchor).
+
+## What is a real truth in an agent world?
 
 Trust is **graduated, and the verdict carries its tier** — a conforming verifier never says a bare `VALID`:
 
@@ -73,36 +103,6 @@ of every layer are publicly provable while each layer's content is disclosed onl
 Different consumers hold different depths of the same reality — the public sees L1, a client L1–L2, a partner
 L1–L3, an auditor the whole chain — and every one of them can *verify* exactly what they hold. That is the
 protocol's real subject: **differentiated, provable access to a shared machine state.**
-
-## The time coordinate — `ust_id`
-
-Before anything else, a UST is an address on **one shared time axis**. Every transcript carries a frame id,
-`ust:YYYYMMDD.HH[MM[SS]]` (UTC): `ust:20260710.14` is an hour frame, `ust:20260710.1429` a minute,
-`ust:20260710.142900` a second. This is not metadata — it is part of the document's *identity*, and the
-per-partition hashes **bind** it: a signed value cannot be replayed into another hour or re-attributed to
-another frame.
-
-![One time axis — ust:20260710.14 (hour) contains ust:20260710.1429 (minute) contains ust:20260710.142900 (second): containment is literal string prefixing, sortable equals streamable, one shared UTC grid for every publisher.](.github/ust-time.svg)
-
-One coordinate system, shared by every publisher on Earth by construction (UTC), buys things no per-vendor
-timestamp field can:
-
-- **"What was the world doing at 14:29Z?" is a query, not a metaphor.** Transcripts from unrelated publishers
-  carrying the same coordinate are claims about the *same moment*. Collect them and you hold a signed
-  cross-section of the world at `t` — each slice independently verifiable.
-- **Correlation without coordination.** Publishers never agree on anything except the grid. Space weather ×
-  grid frequency × market state × an agent's decision — joinable *after the fact* by coordinate, across
-  organizations that have never heard of each other. Pattern mining over independent signed sources, no shared
-  platform required.
-- **Containment is literal string prefixing.** A second nests in its minute, the minute in its hour:
-  `ust:20260710.14` ⊃ `ust:20260710.1429` ⊃ `ust:20260710.142900`. Roll-ups and drill-downs are prefix scans;
-  a parent frame can *attest* its children (attestation + Merkle root over their content hashes), so "the hour"
-  becomes a signed aggregate of its seconds — provably complete over a closed range (`verifyStream`).
-- **Sortable = streamable.** Fixed-width UTC fields sort lexicographically in time order; a time range is a
-  string range. Storage keys, feeds and archives inherit chronology for free.
-
-Honesty holds on this axis too: at LIGHT the coordinate is the publisher's **claimed** frame; a TOP anchor
-proves the document existed **by** a real point in time (and `generated_at` may not postdate its own anchor).
 
 ## Layout
 
@@ -189,6 +189,9 @@ If you are asked to verify a UST and you **cannot run a verifier**, the correct 
 UST proves **fixation, not truth**: *this publisher committed to this data, at this time, unchanged.* It does
 **not** prove the data is *correct* — a publisher can sign a wrong reading. You learn **whom to hold accountable**
 and **that nothing was tampered** — a real, bounded guarantee, not an oracle of truth.
+
+The precise semantics of every verdict — verification as a measurability test over three nested σ-algebras —
+is the **formal model**: [`spec/UST-1.0-formal-model.md`](spec/UST-1.0-formal-model.md) (non-normative).
 
 ## Stability of assurance tiers
 
