@@ -16,13 +16,11 @@ const TITLE = '#58a6ff', TEXT = '#c9d1da', LABEL = '#8b949e', VALUE = '#79c0ff';
 const OK = '#3fb950', WARN = '#d29922';
 const MONO = "ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace";
 
-const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');   // MUST escape quotes: the alt goes into aria-label="…" (ust:"1.0" would break the attribute → XML error)
 const parts = [];
-const texts = [];                                                // drawn glyphs in reading order → BECOMES the README alt (agents read the alt, not the SVG)
-const push = (s) => { const v = String(s ?? '').trim(); if (v && !/^[·:{}(),.[\]•✓○—-]+$/.test(v)) texts.push(v); };
 let y = 0;
 const row = (dy) => (y += dy, y);
-const text = (x, yy, s, fill, extra = '') => { parts.push(`  <text x="${x}" y="${yy}" fill="${fill}" ${extra}>${esc(s)}</text>`); push(s); };
+const text = (x, yy, s, fill, extra = '') => parts.push(`  <text x="${x}" y="${yy}" fill="${fill}" ${extra}>${esc(s)}</text>`);
 const section = (label) => {                                     // ── LABEL ──────── separator with the title cut into it
   const yy = row(34);
   parts.push(`  <line x1="${PAD - 12}" y1="${yy - 4}" x2="${W - 16}" y2="${yy - 4}" stroke="${SEP}" stroke-width="1"/>`);
@@ -65,9 +63,9 @@ bullet('Pin exact dependency versions.');
 bullet('Do not treat RC builds as production-final.');
 const H = y + 26;
 
-// the alt IS the panel's content (meaning, not formatting) — the version stays the FIRST backtick token so the machine
-// status-line remains greppable; agents that only see the alt still get the whole panel.
-const alt = 'UST status: `' + VERSION.spec + '` — ' + texts.filter((t) => t !== 'UST Protocol' && t !== VERSION.spec).join(' · ');
+// a CURATED, READABLE alt (agents read the alt, not the SVG) — the version stays the FIRST backtick token so the machine
+// status-line remains greppable; the prose mirrors the panel's meaning.
+const alt = 'UST status: `' + VERSION.spec + '` — a release candidate, not a final 1.0. Verify machine-readable state without trusting whoever handed it to you. Multiple external AI reviews incorporated structurally; an independent human cryptographic audit is pending; suitable for evaluation and integration testing. The wire format ust:"1.0" is stable across all release candidates; pin exact versions.';
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(alt.replace(/`/g, ''))}">
 <title>${esc(alt.replace(/`/g, ''))}</title>
 <g font-family="${MONO}" font-size="15">

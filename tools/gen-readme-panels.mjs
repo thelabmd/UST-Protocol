@@ -13,22 +13,23 @@ const BG = '#0d1117', BORDER = '#3d444d', SEP = '#30363d';
 const TITLE = '#58a6ff', TEXT = '#c9d1da', LABEL = '#8b949e', VALUE = '#79c0ff';
 const OK = '#3fb950', WARN = '#d29922', PURPLE = '#bc8cff', GREEN = '#7ee787';
 const MONO = "ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace";
-const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');   // MUST escape quotes: the alt goes into aria-label="…", and JSON glyphs like ust:"1.0" would otherwise break the attribute (XML error)
 
-const PANELS = [];                                               // { name, alt } — collected so the README image ALT text is regenerated FROM the panel content
-function panel(name, title, build, titleStyle) {                 // shared frame: rounded border + panel title row; titleStyle overrides the default for long titles
+const PANELS = [];                                               // { name, alt } — the README image ALT text is synced from these, colocated with each panel
+// The alt is a CURATED, READABLE prose summary of the panel (agents read the alt, not the SVG). It lives here next to
+// the panel so it regenerates with it, and the spec-sync git-diff gate fails if the README alt drifts from it — but it
+// reads as a sentence, not a glyph dump. `[ ]` → `( )` keeps the markdown alt well-formed.
+function panel(name, title, alt, build, titleStyle) {            // shared frame: rounded border + panel title row; titleStyle overrides the default for long titles
   const parts = [];
-  const texts = [];                                              // every glyph the panel draws, in reading order — this BECOMES the alt text (agents read the alt, not the SVG)
-  const push = (s) => { const v = String(s ?? '').trim(); if (v && !/^[·:{}(),.[\]←▶▲─→|+$]+$/.test(v)) texts.push(v); };   // keep words/values, drop stand-alone visual punctuation glyphs (·, :, {, ←, ▶ …)
   const P = {
     y: 46,
-    t: (x, y, s, fill, extra = '') => { parts.push(`  <text x="${x}" y="${y}" fill="${fill}" ${extra}>${esc(s)}</text>`); push(s); },
+    t: (x, y, s, fill, extra = '') => parts.push(`  <text x="${x}" y="${y}" fill="${fill}" ${extra}>${esc(s)}</text>`),
     line: (x1, y1, x2, y2, stroke = SEP, wd = 1) => parts.push(`  <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="${wd}"/>`),
     rect: (x, y, w, h, opts = '') => parts.push(`  <rect x="${x}" y="${y}" width="${w}" height="${h}" ${opts}/>`),
     chip: (x, y, s, color) => {                                  // small rounded status chip, returns its width
       const w = Math.round(s.length * 7.3 + 18);
       parts.push(`  <rect x="${x}" y="${y - 13}" width="${w}" height="19" rx="9.5" fill="none" stroke="${color}" stroke-width="1"/>`);
-      parts.push(`  <text x="${x + w / 2}" y="${y + 1}" fill="${color}" font-size="12" text-anchor="middle">${esc(s)}</text>`); push(s);
+      parts.push(`  <text x="${x + w / 2}" y="${y + 1}" fill="${color}" font-size="12" text-anchor="middle">${esc(s)}</text>`);
       return w;
     },
     row: (dy) => (P.y += dy, P.y),
@@ -36,8 +37,7 @@ function panel(name, title, build, titleStyle) {                 // shared frame
   P.t(28, 34, title, TITLE, titleStyle || 'font-size="13" font-weight="600" letter-spacing="2"');
   build(P);
   const H = P.y + 26;
-  // the alt IS the panel's textual content (meaning, not formatting): join in reading order; []→() keeps the markdown alt well-formed.
-  const alt = texts.join(' · ').replace(/\s+/g, ' ').replace(/\[/g, '(').replace(/\]/g, ')');
+  alt = alt.replace(/\[/g, '(').replace(/\]/g, ')');
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(alt)}">
 <title>${esc(alt)}</title>
 <g font-family="${MONO}" font-size="15" xml:space="preserve">
@@ -53,7 +53,9 @@ ${parts.join('\n')}
 }
 
 // ── 1. ANATOMY — what a transcript IS (JSON skeleton + inline annotations + the seal→store→verify pipeline) ──
-panel('ust-anatomy', 'A TRANSCRIPT — SELF-CONTAINED, VERIFIES ANYWHERE', (P) => {
+panel('ust-anatomy', 'A TRANSCRIPT — SELF-CONTAINED, VERIFIES ANYWHERE',
+  'Anatomy of a UST transcript — a self-contained signed JSON document. Its id says WHO (domain_shard: a name or a self-certifying key-id) and WHEN (ust_id: an address on one shared UTC axis), plus key_id and class. A time frame carries generated_at, valid_from and valid_to. The data holds partitions (captured, computed, blinded or encrypted); one domain-separated hash per partition binds the data to the id and frame. Provenance (based_on, prev, seed) links chains, streams and derivations. An Ed25519 signature travels WITH the data, not the channel. Seal at creation, store anywhere, verify offline in one call — no blockchain; TLS secures the pipe, UST secures the payload, so it verifies the same from a cache, mirror, file or chat paste.',
+  (P) => {
   const CODE = 36, ANN = 520, CH = 8.43;   // 14px mono ≈ 8.43px/char — the JSON column ends < 500, annotations at 520
   const codeLine = (x, y, s) => {          // colored JSON line: key blue · string value green · rest text-gray
     const m = s.match(/^(\s*)"([^"]+)"(\s*:\s*)(.*)$/);
@@ -97,7 +99,9 @@ panel('ust-anatomy', 'A TRANSCRIPT — SELF-CONTAINED, VERIFIES ANYWHERE', (P) =
 });
 
 // ── 2. TIERS — the verdict ladder (each rung EARNED, the verdict carries its tier) ──
-panel('ust-tiers', 'TRUST IS GRADUATED, AND THE VERDICT CARRIES ITS TIER — A CONFORMING VERIFIER NEVER SAYS A BARE VALID:', (P) => {
+panel('ust-tiers', 'TRUST IS GRADUATED, AND THE VERDICT CARRIES ITS TIER — A CONFORMING VERIFIER NEVER SAYS A BARE VALID:',
+  'The verdict ladder — trust is graduated and the verdict carries its tier; a conforming verifier never says a bare VALID. VALID:LIGHT is the floor: exact bytes, the signing key and the claimed time frame (a key, canonical form and a signature — no infrastructure, no fees). VALID:HIGH adds that the NAME is provably bound to the key (a genesis + key-log ceremony, rotation and revocation; strength corroborated or authoritative). VALID:TOP adds that the document existed BY a real point in time (an anchor inclusion proof — Bitcoin/OTS or Rekor, opt-in; stream completeness is a separate range verdict). INVALID is a definite failure (an E-* code); INDETERMINATE means cannot decide — never conflated with forged. A tier is EARNED per verification: there is no field a producer can set to claim it.',
+  (P) => {
   const cols = [
     { x: 24, top: 150, chip: 'VALID:LIGHT', c: TEXT, name: 'the floor — a key, canonical form, a signature', rows: ['exact bytes · signing key', 'claimed time frame', 'no infra · no fees'] },
     { x: 312, top: 110, chip: 'VALID:HIGH', c: VALUE, name: '+ the NAME is provably bound to the key', rows: ['genesis + key log ceremony', 'rotation / revocation', 'corroborated|authoritative'] },
@@ -125,7 +129,9 @@ panel('ust-tiers', 'TRUST IS GRADUATED, AND THE VERDICT CARRIES ITS TIER — A C
 }, 'font-size="11.5" font-weight="600" letter-spacing="0.8"');   // 102-char title — fitted, same voice
 
 // ── 3. CHAIN — one state, graduated visibility (the L1..L4 ladder, hash-linked) ──
-panel('ust-chain', 'ONE STATE — GRADUATED VISIBILITY', (P) => {
+panel('ust-chain', 'ONE STATE — GRADUATED VISIBILITY',
+  'One state, graduated visibility — a single connected state can be a hash-linked chain of independently signed layers. L1 is a public observation anyone verifies. L2 is a blinded commitment: the value is fixed but hidden until reveal, while its existence is public. L3 is an encrypted shard: AEAD ciphertext plus a commitment, so only key holders read and verify it. L4 is a partner’s derived shard under another publisher’s own key — cross-party, provable lineage. Each layer links to the prior by based_on = sha256(content) plus a recomputed seed, so order and lineage are publicly provable. Every layer verifies on its own; trust composes but is never inherited; payloads stay deletable while “existed, in this order” remains provable.',
+  (P) => {
   const layers = [
     { tag: 'L1', name: 'public observation', ex: '"geomagnetic activity: elevated"', chip: 'anyone verifies', c: OK },
     { tag: 'L2', name: 'blinded commitment', ex: 'value fixed — hidden until reveal', chip: 'existence is public', c: WARN },
@@ -152,7 +158,9 @@ panel('ust-chain', 'ONE STATE — GRADUATED VISIBILITY', (P) => {
 });
 
 // ── 4. TIME — the shared axis (containment IS string prefixing) ──
-panel('ust-time', 'ONE TIME AXIS — EVERY PUBLISHER, BY CONSTRUCTION (UTC)', (P) => {
+panel('ust-time', 'ONE TIME AXIS — EVERY PUBLISHER, BY CONSTRUCTION (UTC)',
+  'One shared time axis — every transcript carries a frame id ust:YYYYMMDD.HH[MM[SS]] in UTC. The hour ust:20260710.14 contains the minute ust:20260710.1429 contains the second ust:20260710.142900: containment is literal string prefixing, so roll-ups are prefix scans and sortable equals streamable. Because every publisher shares the grid by construction, “what was the world doing at 14:29Z?” is a query, not a metaphor — the same coordinate from unrelated publishers means the same moment, joinable after the fact.',
+  (P) => {
   const boxes = [                                                // explicitly nested: hour ⊃ minute ⊃ second
     { x: 24, y: 64, w: 832, h: 172, label: 'ust:20260710.14', tail: 'the hour frame', c: SEP, lc: TEXT },
     { x: 48, y: 104, w: 620, h: 108, label: 'ust:20260710.1429', tail: 'the minute', c: VALUE, lc: VALUE },
@@ -170,7 +178,9 @@ panel('ust-time', 'ONE TIME AXIS — EVERY PUBLISHER, BY CONSTRUCTION (UTC)', (P
 });
 
 // ── 5. MAP — the repository at a glance ──
-panel('ust-map', 'REPOSITORY MAP', (P) => {
+panel('ust-map', 'REPOSITORY MAP',
+  'Repository map. spec/ holds the normative UST-1.0.md plus a measure-theoretic formal model. vectors/ holds language-neutral conformance vectors and a byte corpus — the cross-implementation arbiter. packages/ holds ust-protocol (the zero-dep reference verifier + producer), ust-cli (the ust command: verify, canon, the HIGH genesis ceremony, witness), ust-mcp (an MCP server so agents verify natively), ust-lite (a byte-identical minimal subset), ust-web-signer (WebCrypto browser signing with non-extractable keys), and ust-ots-verify / ust-rekor-verify (opt-in Bitcoin/OTS and Sigstore Rekor anchor substrates). docs/ is the client-side web verifier plus zero-dependency single-file verifiers. tools/ are the drift gates that keep spec = code = vectors = README = these panels in sync.',
+  (P) => {
   const rows = [
     ['UST-Protocol/', '', TEXT, true],
     ['├── spec/', 'UST-1.0.md (normative) · formal model (measure-theoretic semantics)', VALUE],
@@ -209,7 +219,9 @@ panel('ust-map', 'REPOSITORY MAP', (P) => {
     return { usage, desc: parts.slice(i).join(' ') };
   });
   if (rows.length < 8) throw new Error('parsed only ' + rows.length + ' CLI commands — help format changed, update the parser');
-  panel('ust-cli', 'THE ust CLI — ONE ENTRYPOINT, THE WHOLE SURFACE', (P) => {
+  // the alt is DERIVED from the same parsed rows the panel draws (so it stays in sync with the real binary) but reads as prose.
+  const cliAlt = 'The ust CLI — one entrypoint, the whole command surface (parsed from the real binary’s help). Install with npm i -g @ust-protocol/cli. The ' + rows.length + ' subcommands: ' + rows.map((r) => r.usage.split(' ').slice(1).join(' ') + ' (' + r.desc + ')').join('; ') + '. Exit 0 = VALID with the tier in the verdict, 1 = not; the ceremony self-verifies its outputs, fail-closed.';
+  panel('ust-cli', 'THE ust CLI — ONE ENTRYPOINT, THE WHOLE SURFACE', cliAlt, (P) => {
     let y = P.row(28);
     P.t(36, y, '$', OK, 'font-weight="600"'); P.t(54, y, 'npm i -g @ust-protocol/cli', TEXT, 'font-weight="600"');
     P.t(300, y, '# installs the ust command', LABEL, 'font-size="13"');

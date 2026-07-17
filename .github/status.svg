@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 516" role="img" aria-label="UST status: 1.0.0-rc.36 — Verify machine-readable state without trusting whoever handed it to you. · RELEASE STATUS · Version · Stage · RELEASE CANDIDATE · Final 1.0? · No · ASSESSMENT · Multiple external AI reviews incorporated structurally · Independent human cryptographic audit — pending · Suitable for evaluation and integration testing · COMPATIBILITY · Wire format · ust: "1.0" · Stability · stable across all 1.0 release candidates · RECOMMENDATION · Pin exact dependency versions. · Do not treat RC builds as production-final.">
-<title>UST status: 1.0.0-rc.36 — Verify machine-readable state without trusting whoever handed it to you. · RELEASE STATUS · Version · Stage · RELEASE CANDIDATE · Final 1.0? · No · ASSESSMENT · Multiple external AI reviews incorporated structurally · Independent human cryptographic audit — pending · Suitable for evaluation and integration testing · COMPATIBILITY · Wire format · ust: "1.0" · Stability · stable across all 1.0 release candidates · RECOMMENDATION · Pin exact dependency versions. · Do not treat RC builds as production-final.</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 516" role="img" aria-label="UST status: 1.0.0-rc.36 — a release candidate, not a final 1.0. Verify machine-readable state without trusting whoever handed it to you. Multiple external AI reviews incorporated structurally; an independent human cryptographic audit is pending; suitable for evaluation and integration testing. The wire format ust:&quot;1.0&quot; is stable across all release candidates; pin exact versions.">
+<title>UST status: 1.0.0-rc.36 — a release candidate, not a final 1.0. Verify machine-readable state without trusting whoever handed it to you. Multiple external AI reviews incorporated structurally; an independent human cryptographic audit is pending; suitable for evaluation and integration testing. The wire format ust:&quot;1.0&quot; is stable across all release candidates; pin exact versions.</title>
 <g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="15">
   <rect x="1.5" y="1.5" width="877" height="513" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1.5"/>
   <text x="28" y="40" fill="#58a6ff" font-size="17" font-weight="600">UST Protocol</text>
@@ -30,7 +30,7 @@
   <text x="30" y="346" fill="#58a6ff" font-size="12" font-weight="600" letter-spacing="2">COMPATIBILITY</text>
   <text x="42" y="372" fill="#8b949e" >Wire format</text>
   <text x="192" y="372" fill="#8b949e" >:</text>
-  <text x="214" y="372" fill="#79c0ff" >ust: "1.0"</text>
+  <text x="214" y="372" fill="#79c0ff" >ust: &quot;1.0&quot;</text>
   <text x="42" y="398" fill="#8b949e" >Stability</text>
   <text x="192" y="398" fill="#8b949e" >:</text>
   <text x="214" y="398" fill="#c9d1da" >stable across all 1.0 release candidates</text>
