@@ -14,9 +14,9 @@
 // verifications over W (proof: structural induction on π). TCB = this file + the imported leaf primitives.
 import { canon, H, keyId, edVerifyStrict, contentHash, verify, isValid, verifyKeylogTerminality,
   verifyCheckpointMapUniqueness, evidenceCaps, compareEvidenceOrder, authorityScopeId, genesisEpoch,
-  resolveKeys, buildKeylogCommitment, authorityCheckpointId, strictB64url } from './index.mjs';
+  resolveKeys, buildKeylogCommitment, authorityCheckpointId, strictB64url, isPublicDnsShard } from './index.mjs';
 
-export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev8';
+export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev9';
 // RULE_CONTRACTS (§2b) — the STRUCTURAL source of truth: exactly one inference rule per name, one switch branch per
 // name, and a fixed (children arity, witness count, allowed params, conclusion kind). DecodeTerm enforces these on
 // decode; a term with an extra child / extra witness / free param / unknown field / stored conclusion is rejected
@@ -24,7 +24,7 @@ export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev8';
 // stay in the rule interpreter, so the registry never becomes a second clever TCB. Grammar↔RULES parity derives from it.
 const wc = (min, max = min) => ({ min, max });
 const rp = { req: true, type: 'string' };   // a REQUIRED string param (M-ADT: params are a typed schema, not an allowed-name list)
-export const RULE_CONTRACTS = Object.freeze({
+export const RULE_CONTRACTS = Object.freeze(Object.assign(Object.create(null), {   // null-proto (round-12 P0-01): RULE_CONTRACTS["constructor"] must be undefined, not the Object constructor
   Genesis:                 { children: 0, witnesses: wc(1),        params: {},                conclusion: 'Genesis' },
   CheckpointZero:          { children: 1, witnesses: wc(1),        params: {},                conclusion: 'Chain' },
   CheckpointStep:          { children: 1, witnesses: wc(1, 2),     params: {},                conclusion: 'Chain' },       // consistency witness optional
@@ -40,7 +40,7 @@ export const RULE_CONTRACTS = Object.freeze({
   NameBound:               { children: 1, witnesses: wc(0, 1),     params: { doc_key_id: rp },    conclusion: 'Identity' },
   Anchored:                { children: 0, witnesses: wc(1),        params: { s: rp, subject: rp },  conclusion: 'Time' },
   ProjectAssurance:        { children: 3, witnesses: wc(0),        params: {},                conclusion: 'Assurance' },
-});
+}));
 export const REFERENCE_CHECKER_RULES = Object.freeze(Object.keys(RULE_CONTRACTS));   // parity DERIVES from the registry
 const RULES = new Set(REFERENCE_CHECKER_RULES);
 const DEFAULT_LIMITS = { maxNodes: 512, maxDepth: 32, maxWitnesses: 1024, maxWitnessBytes: 1 << 20, maxPackageBytes: 1 << 22 };
@@ -75,16 +75,20 @@ const pStr = (x) => typeof x === 'string';
 const pBool = (x) => typeof x === 'boolean';
 const pSeq = (x) => decodeSeq(x) !== null;                 // CanonicalSeq
 const pSig64 = (x) => strictB64url(x, 64) !== null;        // Sig64
-const pRFC = (x) => typeof x === 'string' && RFC3339Z.test(x);
+const pId = (x) => typeof x === 'string' && x.length > 0;  // a NON-EMPTY identifier (round-12 P0-04: subject/domain/proof_kind can't be "")
+const pRFC = (x) => { if (typeof x !== 'string' || !RFC3339Z.test(x)) return false; const t = Date.parse(x); return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 19) + 'Z' === x; };   // real calendar + canonical round-trip (round-12 P0-04: "2026-02-31T25:61:61Z" is shape-valid but not a real time)
 const pHashArr = (x) => Array.isArray(x) && x.every(isHash);
 const eq = (c) => (x) => x === c;                          // an EXACT constant (version, purpose)
 const rec = (schema) => (x) => decodeRec(x, schema) === null;   // a nested typed record
+// decodeRec membership is OWN-key only (round-12 P0-01): `k in schema` walks the prototype chain, so an inherited name
+// (constructor, __proto__, toString, hasOwnProperty, valueOf) would count as a declared field and slip past the
+// unknown-key gate — reopening head-id malleability and admitting judgments outside the ADT. Object.hasOwn closes the class.
 function decodeRec(o, schema) {
   if (o === null || typeof o !== 'object' || Array.isArray(o)) return 'E-REC-SHAPE';
-  for (const k of Object.keys(o)) if (!(k in schema)) return 'unknown:' + k;                 // no unknown key
+  for (const k of Object.keys(o)) if (!Object.hasOwn(schema, k)) return 'unknown:' + k;       // no key the schema does not OWN
   for (const k of Object.keys(schema)) {
     const s = schema[k];
-    if (!(k in o)) { if (!s.opt) return 'missing:' + k; continue; }
+    if (!Object.hasOwn(o, k)) { if (!s.opt) return 'missing:' + k; continue; }
     if (!s.t(o[k])) return 'bad:' + k;                                                        // wrong type / constant / refined value
   }
   return null;
@@ -94,30 +98,38 @@ function decodeRec(o, schema) {
 const SIG_ENV = { alg: { t: eq('Ed25519') }, key_id: { t: isHash }, pub: { t: strictPub }, sig: { t: pSig64 } };   // a signature wrapper (receipt/checkpoint/vote/transition)
 const KEYLOG_COMMIT = { root: { t: isHash }, length: { t: pSeq }, head: { t: isHash } };                            // P0-03: root/head are HASHES, not arbitrary strings
 const CHK_AUTHORITY = { current_key_id: { t: isHash }, next_key_id: { t: isHash, opt: true }, next_pub: { t: strictPub, opt: true }, effective_sequence: { t: pSeq, opt: true } };
-const CHECKPOINT_BODY = { version: { t: eq('1') }, purpose: { t: eq('ust:authority-checkpoint') }, domain_shard: { t: pStr }, genesis_epoch: { t: isHash }, sequence: { t: pSeq }, active_genesis: { t: isHash }, checkpoint_authority: { t: rec(CHK_AUTHORITY) }, keylog: { t: rec(KEYLOG_COMMIT) }, previous_checkpoint: { t: isHash, opt: true }, previous_epoch_final_checkpoint: { t: isHash, opt: true } };
-const RECEIPT_CLAIM = { version: { t: eq('1') }, purpose: { t: eq('ust:evidence-receipt') }, domain_shard: { t: pStr }, active_genesis: { t: isHash }, genesis_epoch: { t: isHash }, subject: { t: pStr }, proof_kind: { t: pStr }, facts: { t: (x) => x !== null && typeof x === 'object' && !Array.isArray(x) }, issued_at: { t: pRFC }, payload_digest: { t: isHash, opt: true } };
-const TRANSITION_CLAIM = { purpose: { t: eq('ust:genesis-epoch-transition') }, domain_shard: { t: pStr }, from_genesis_epoch: { t: isHash }, from_final_checkpoint: { t: isHash }, from_sequence: { t: pSeq }, to_active_genesis: { t: isHash }, to_initial_sequence: { t: pSeq }, to_genesis_epoch: { t: isHash, opt: true }, to_checkpoint_authority: { t: rec({ key_id: { t: isHash }, pub: { t: strictPub } }), opt: true } };
+const CHECKPOINT_BODY = { version: { t: eq('1') }, purpose: { t: eq('ust:authority-checkpoint') }, domain_shard: { t: pId }, genesis_epoch: { t: isHash }, sequence: { t: pSeq }, active_genesis: { t: isHash }, checkpoint_authority: { t: rec(CHK_AUTHORITY) }, keylog: { t: rec(KEYLOG_COMMIT) }, previous_checkpoint: { t: isHash, opt: true }, previous_epoch_final_checkpoint: { t: isHash, opt: true } };
+const RECEIPT_CLAIM = { version: { t: eq('1') }, purpose: { t: eq('ust:evidence-receipt') }, domain_shard: { t: pId }, active_genesis: { t: isHash }, genesis_epoch: { t: isHash }, subject: { t: pId }, proof_kind: { t: pId }, facts: { t: (x) => x !== null && typeof x === 'object' && !Array.isArray(x) }, issued_at: { t: pRFC }, payload_digest: { t: isHash, opt: true } };
+// to_genesis_epoch + to_checkpoint_authority are REQUIRED (round-12 P0-03): the SIGNED destination epoch/authority must be
+// relevant — carried through FutureCommitted and unified with Genesis-B/C0-B at activation, so epoch A cannot sign a handoff
+// to one authority while the checker activates another.
+const TRANSITION_CLAIM = { purpose: { t: eq('ust:genesis-epoch-transition') }, domain_shard: { t: pId }, from_genesis_epoch: { t: isHash }, from_final_checkpoint: { t: isHash }, from_sequence: { t: pSeq }, to_active_genesis: { t: isHash }, to_initial_sequence: { t: pSeq }, to_genesis_epoch: { t: isHash }, to_checkpoint_authority: { t: rec({ key_id: { t: isHash }, pub: { t: strictPub } }) } };
 const HEAD_PROOF = { index: { t: pSeq }, siblings: { t: pHashArr } };   // P1-02 terminality interior
 const MAP_PROOF = { siblings: { t: pHashArr } };                        // P1-03 authenticated-map interior
-const VOTE_CLAIM = { purpose: { t: eq('ust:checkpoint-uniqueness-attestation') }, domain_shard: { t: pStr }, genesis_epoch: { t: isHash }, sequence: { t: pSeq }, checkpoint: { t: isHash } };
+const VOTE_CLAIM = { purpose: { t: eq('ust:checkpoint-uniqueness-attestation') }, domain_shard: { t: pId }, genesis_epoch: { t: isHash }, sequence: { t: pSeq }, checkpoint: { t: isHash } };
 const isNFC = (s) => typeof s === 'string' && s.normalize('NFC') === s;   // a free-text config leaf must be NFC (canon requires it; validate at DECODE so it never reaches a throw — round-10 P1-02)
 // FACTS_KEYS / ORDER_COORD (round-10 P0-03): the evidence `facts` object is a CLOSED ADT keyed by proof_kind, and the
 // temporal order coordinate is read ONLY from that kind's authorized fields — a transparency-log's order is Position(
 // log_id, index), a pow chain's Position(substrate, position), a tsa's Interval(clock_id, …). Planting a pow-style
 // {substrate, position} on a transparency-log receipt is now a CLOSED-facts violation, not a silently-honored order.
-const FACTS_KEYS = Object.freeze({
+// NULL-prototype registries (round-12 P0-01): keyed by an attacker-influenced proof_kind. A plain object would resolve
+// FACTS_KEYS["toString"] / EVIDENCE_CAPS["constructor"] to an inherited FUNCTION (truthy), producing a judgment whose caps
+// is a function — outside the ADT. Object.create(null) has NO prototype, so an inherited name resolves to undefined, and
+// isKnownKind (own-key membership) is the CLOSED registry of admissible proof_kinds.
+const FACTS_KEYS = Object.freeze(Object.assign(Object.create(null), {
   'pow-header-chain': ['substrate', 'position'],
   'transparency-log': ['log_id', 'index'],
   'rfc3161-tsa':      ['clock_id', 'not_before', 'not_after'],
   'authenticated-map': [],
   'content-addressed': [],
-});
-const factsKeys = (proof_kind) => FACTS_KEYS[proof_kind] || [];   // an unknown kind carries NO facts (closed to {})
-const ORDER_COORD = Object.freeze({
+}));
+const isKnownKind = (proof_kind) => Object.hasOwn(FACTS_KEYS, proof_kind);   // the closed set of admissible proof_kinds (round-12 P0-01)
+const factsKeys = (proof_kind) => (isKnownKind(proof_kind) ? FACTS_KEYS[proof_kind] : []);
+const ORDER_COORD = Object.freeze(Object.assign(Object.create(null), {
   'pow-header-chain': { kind: 'position', id: 'substrate', val: 'position' },
   'transparency-log': { kind: 'position', id: 'log_id',    val: 'index' },
   'rfc3161-tsa':      { kind: 'interval', id: 'clock_id',  lo: 'not_before', hi: 'not_after' },
-});
+}));
 // §2 byte-semantics: read a caller value EXACTLY ONCE into an inert internal value. The counting replacer fires each
 // getter once and BOUNDS the read, so a cyclic or exponentially-shared object graph is rejected (not OOM); JSON.parse
 // then yields an own-data-only tree with no getters/prototype/proxy. After this the caller object is never read again.
@@ -148,6 +160,7 @@ function normalizeConfig(raw) {
     if (!isPlain(v)) return { err: 'E-CONFIG-CONNECTOR:' + k };
     for (const ck of Object.keys(v)) if (ck !== 'pub' && ck !== 'allowed_proof_kinds' && ck !== 'trust_domain') return { err: 'E-CONFIG-CONNECTOR-FIELD:' + ck };
     if (!strictPub(v.pub)) return { err: 'E-CONFIG-CONNECTOR-PUB:' + k };
+    if (keyId(v.pub) !== k) return { err: 'E-CONFIG-CONNECTOR-KEY:' + k };   // the map key IS keyId(pub) — no semantically-dead entry can perturb config_id (round-12 P1-01)
     if (!Array.isArray(v.allowed_proof_kinds) || !v.allowed_proof_kinds.every((x) => typeof x === 'string' && isNFC(x)) || !sortedSet(v.allowed_proof_kinds)) return { err: 'E-CONFIG-APK:' + k };
     if (v.trust_domain !== undefined && (typeof v.trust_domain !== 'string' || !isNFC(v.trust_domain))) return { err: 'E-CONFIG-TRUST-DOMAIN:' + k };   // NFC at decode → never a throw at config_id (P1-02)
   }
@@ -159,7 +172,8 @@ function normalizeConfig(raw) {
   for (const k of Object.keys(domains)) if (typeof domains[k] !== 'string' || !isNFC(domains[k])) return { err: 'E-CONFIG-DOMAIN:' + k };   // ControlDomain is a typed NFC STRING
   if (raw.witnesses !== undefined && !isPlain(raw.witnesses)) return { err: 'E-CONFIG-WITNESSES' };
   const witnesses = raw.witnesses ?? {};
-  for (const k of Object.keys(witnesses)) if (!strictPub(witnesses[k])) return { err: 'E-CONFIG-WITNESS:' + k };   // each witness value is a Pub32
+  for (const k of Object.keys(witnesses)) { if (!strictPub(witnesses[k])) return { err: 'E-CONFIG-WITNESS:' + k }; if (keyId(witnesses[k]) !== k) return { err: 'E-CONFIG-WITNESS-KEY:' + k }; }   // key IS keyId(pub) (round-12 P1-01)
+  for (const k of Object.keys(domains)) if (!Object.hasOwn(witnesses, k)) return { err: 'E-CONFIG-DOMAIN-UNADMITTED:' + k };   // a domain label for a non-witness issuer is a dead entry (round-12 P1-01)
   if (raw.policy !== undefined && !isPlain(raw.policy)) return { err: 'E-CONFIG-POLICY' };   // an array/string/null policy is rejected, never silently defaulted (round-10 P0-01)
   const policy = raw.policy ?? {};
   for (const k of Object.keys(policy)) if (k !== 'uniqueness_threshold' && k !== 'allowExperimentalAttested') return { err: 'E-CONFIG-POLICY-FIELD:' + k };
@@ -356,6 +370,10 @@ function checkTermInner(node, C, W, memo) {
       if (doc.state?.id?.class !== 'genesis') return bad('not class:genesis');
       if (!isValid(verify(doc, { context: 'genesis' }))) return bad('genesis integrity/signature invalid');
       if (!strictPub(doc.sig.pub) || keyId(doc.sig.pub) !== doc.state.id.key_id) return bad('genesis key not self-bound (non-canonical or mismatched pub)');   // P1-04
+      // the genesis domain_shard is a TYPED identity: a self-certifying key-id (== key_id) OR a canonical public-DNS shard
+      // (round-12 P1-02) — "bad name" (spaces / invalid A-label) is neither, so it cannot become an authority scope.
+      const ds = doc.state.id.domain_shard;
+      if (isHash(ds) ? ds !== doc.state.id.key_id : !isPublicDnsShard(ds)) return bad('genesis domain_shard is not a valid public-DNS shard or self-certifying key-id');
       const ca = doc.state?.data?.genesis?.value?.checkpoint_authority;
       if (!ca || !ca.key_id || !ca.pub || !strictPub(ca.pub) || keyId(ca.pub) !== ca.key_id) return bad('malformed checkpoint_authority');   // P1-04 strict pub
       const active_genesis = contentHash(doc);
@@ -523,13 +541,22 @@ function checkTermInner(node, C, W, memo) {
       if (claim.from_genesis_epoch !== CH.j.genesis_epoch) return bad('epoch transition from_genesis_epoch ≠ chain-A epoch');
       if (decodeSeq(claim.from_sequence) !== CH.j.n) return bad('epoch transition from_sequence ≠ chain-A sequence');
       const toInitialSeq = decodeSeq(claim.to_initial_sequence); if (toInitialSeq === null) return bad('epoch transition to_initial_sequence is not a CanonicalSeq');
-      return { j: { kind: 'FutureCommitted', sA: CH.j.s, hA: CH.j.head_id, nA: CH.j.n, domain: CH.j.domain, hB: claim.to_active_genesis, toInitialSeq } };
+      // M-ERA (round-12 P0-03): the SIGNED destination epoch + authority must be RELEVANT — canonical to the target genesis
+      // and self-bound — and are CARRIED so ActivateGenesis unifies them with the actual Genesis B (no sign-WX / activate-WB).
+      if (claim.to_genesis_epoch !== genesisEpoch(claim.to_active_genesis)) return bad('epoch transition to_genesis_epoch ≠ genesisEpoch(to_active_genesis) (non-canonical destination epoch)');
+      const authB = claim.to_checkpoint_authority;
+      if (keyId(authB.pub) !== authB.key_id) return bad('to_checkpoint_authority key not self-bound (keyId(pub) ≠ key_id)');
+      return { j: { kind: 'FutureCommitted', sA: CH.j.s, hA: CH.j.head_id, nA: CH.j.n, domain: CH.j.domain, hB: claim.to_active_genesis, epochB: claim.to_genesis_epoch, authB: { key_id: authB.key_id, pub: authB.pub }, toInitialSeq } };
     }
     case 'ActivateGenesis': {
       const FC = sub(0); if (!FC.j || FC.j.kind !== 'FutureCommitted') return FC.j ? bad('child 0 must be FutureCommitted') : FC;
       const GB = sub(1); if (!GB.j || GB.j.kind !== 'Genesis') return GB.j ? bad('child 1 must be a VERIFIED Genesis[sB] — a hash cannot introduce it') : GB;
       if (GB.j.active_genesis !== FC.j.hB) return bad('destination genesis contentHash ≠ committed target');
       if (GB.j.domain !== FC.j.domain) return bad('epoch transition crosses domains (AllowedTransition requires same domain)');   // P0-04 policy
+      // M-ERA (round-12 P0-03): epoch-B genesis authority MUST equal the SIGNED transition-committed destination authority —
+      // else epoch A appears to sign a handoff to one authority while the checker activates another.
+      if (GB.j.chkAuth.key_id !== FC.j.authB.key_id || GB.j.chkAuth.pub !== FC.j.authB.pub) return bad('epoch-B genesis authority ≠ transition-committed destination authority');
+      if (genesisEpoch(GB.j.active_genesis) !== FC.j.epochB) return bad('epoch-B genesis epoch ≠ transition-committed to_genesis_epoch');
       // EpochActivated cannot come from signer+hash equality alone — the epoch-B INITIAL checkpoint C0_B must be verified
       // under the epoch-B genesis authority and bound to the epoch-A final checkpoint at the committed sequence (P0-04).
       const c = wit(0); if (c.err) return bad('epoch-B initial checkpoint (C0_B) witness required: ' + c.err);
@@ -627,6 +654,7 @@ function closedReceipt(rw) {
   const es = decodeRec(rw.sig, SIG_ENV); if (es) return 'receipt sig envelope not typed (round-11 ' + es + ')';
   const cl = rw.claim;
   const ec = decodeRec(cl, RECEIPT_CLAIM); if (ec) return 'receipt claim not typed (round-11 ' + ec + ')';
+  if (!isKnownKind(cl.proof_kind)) return 'receipt proof_kind is not a registered kind (round-12 P0-01)';   // closed registry — no prototype-name / unknown kind
   if (!closedRec(cl.facts, [], factsKeys(cl.proof_kind))) return 'receipt facts not closed for proof_kind (round-10 P0-03)';
   return null;
 }
@@ -663,7 +691,12 @@ function appendOnly(prevKl, newKl, entriesWit) {
   if (!entriesWit || entriesWit.err || !Array.isArray(entriesWit.w)) return { err: 'growth edge requires a prefix-extension witness', ind: true };
   const E = entriesWit.w;
   if (E.length > 256 || !E.every(isHash)) return { err: 'prefix witness malformed or over the §13 ceiling' };
+  // the entry vector must actually CONTAIN the claimed new length (round-12 P0-02): E.slice(0, Ln) silently CLAMPS, so a
+  // one-entry vector would "grow" a length-2 key-log by re-committing the same single element. Require E.length >= Ln and
+  // that the recomputed commitment LENGTHS equal the claimed lengths — not only root/head.
+  if (BigInt(E.length) < Ln) return { err: 'prefix witness has fewer entries than the claimed new length (phantom growth)', ind: true };
   const kp = buildKeylogCommitment(E.slice(0, Number(Lp))), kn = buildKeylogCommitment(E.slice(0, Number(Ln)));
+  if (kp.length !== prevKl.length || kn.length !== newKl.length) return { err: 'recomputed key-log length ≠ claimed length (phantom growth)', ind: true };
   if (kp.root !== prevKl.root || kp.head !== prevKl.head || kn.root !== newKl.root || kn.head !== newKl.head) return { err: 'key-logs are not prefixes of one entry vector (append-only unproven)', ind: true };
   return {};
 }

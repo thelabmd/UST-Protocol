@@ -433,6 +433,20 @@ const CFG = { ...CONN, witnesses: { [Wa.key_id]: Wa.pub, [Wb.key_id]: Wb.pub }, 
   const r = checkAuthorityProof({ term: pAct, witnesses }, {});
   check('OFFICIAL builder drives the checker (round-11 P1-01): buildEpochTransition (with from_sequence) → VALID EpochActivated, one shared { claim, issuer_id, sig } wire form', r.result === 'VALID' && r.judgment.kind === 'EpochActivated' && Object.keys(et).sort().join(',') === 'claim,issuer_id,sig' && Object.hasOwn(et.claim, 'from_sequence'));
 }
+// ── rev9 round-12 — PROTOTYPE-safe: an inherited-name field is NOT a declared schema field (object-adapter regression) ──
+{
+  const c0Proto = { ...C0, sig: { ...C0.sig, constructor: 'unsigned-extra' } };
+  const w = { ...witnesses, [witnessId(c0Proto)]: c0Proto };
+  const r = checkAuthorityProof({ term: node('CheckpointZero', [πGenesis], [witnessId(c0Proto)]), witnesses: w }, CFG);
+  check('PROTOTYPE-safe (round-12 P0-01): a checkpoint sig.constructor own-field → INVALID (Object.hasOwn membership, not `in`)', r.result === 'INVALID' && /sig envelope not typed|not typed/.test(r.reason));
+  const rk = checkAuthorityProof({ term: node('ConnectorEvidence', [πGenesis], [put((() => { const b = rc(head, 900), claim = { ...b.claim, proof_kind: 'toString' }; return { ...b, claim }; })())], { subject: head }), witnesses }, CFG);
+  check('PROTOTYPE-safe kind (round-12 P0-01): proof_kind "toString" is not a registered kind → INVALID (closed registry, caps never a function)', rk.result === 'INVALID' && /registered kind|not typed/.test(rk.reason));
+}
+// ── rev9 round-12 — config key⇄pub binding: a dead connector entry is REJECTED at decode, not a config_id perturbation ──
+{
+  const r = checkAuthorityProof({ term: πChain, witnesses }, { connectors: { ['sha256:' + '00'.repeat(32)]: { pub: CFG.connectors[Object.keys(CFG.connectors)[0]].pub, allowed_proof_kinds: ['pow-header-chain'] } } });
+  check('CONFIG key⇄pub binding (round-12 P1-01): a connector under a key ≠ keyId(pub) → INVALID(E-CONFIG-CONNECTOR-KEY), no dead entry', r.result === 'INVALID' && /E-CONFIG-CONNECTOR-KEY|config/.test(r.reason));
+}
 
 console.log('\n  reference-checker vectors (' + (typeof pass === 'number' ? '' : '') + 'L1)   PASS ' + pass + '   FAIL ' + fail);
 if (fails.length) { fails.forEach((f) => console.log('    ✗ ' + f)); process.exit(1); }

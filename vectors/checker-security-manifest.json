@@ -50,7 +50,7 @@
       ]
     },
     {
-      "id": "CONFIG-EXTENSIONAL-OVER-PUB",
+      "id": "CONFIG-KEY-BINDING",
       "rule": "normalizeConfig",
       "negative_vectors": [
         "config.pub-swap"
@@ -237,6 +237,50 @@
       "rule": "QuorumAgreement/SIG_ENV",
       "negative_vectors": [
         "vote.sig-extra"
+      ]
+    },
+    {
+      "id": "REGISTRY-OWN-KEY",
+      "rule": "decodeRec/isKnownKind",
+      "negative_vectors": [
+        "checkpoint.sig-proto",
+        "receipt.proofkind-proto"
+      ]
+    },
+    {
+      "id": "RECEIPT-VALUE-REFINED",
+      "rule": "ConnectorEvidence/decodeRec",
+      "negative_vectors": [
+        "receipt.empty-subject",
+        "receipt.fake-calendar"
+      ]
+    },
+    {
+      "id": "CONFIG-KEY-PUB-BINDING",
+      "rule": "normalizeConfig",
+      "negative_vectors": [
+        "config.connector-deadkey"
+      ]
+    },
+    {
+      "id": "GENESIS-IDENTITY-TYPED",
+      "rule": "Genesis",
+      "negative_vectors": [
+        "genesis.bad-dns"
+      ]
+    },
+    {
+      "id": "KEYLOG-APPEND-LENGTH",
+      "rule": "CheckpointStep/appendOnly",
+      "negative_vectors": [
+        "keylog.phantom-growth"
+      ]
+    },
+    {
+      "id": "EPOCH-DESTINATION-AUTHORITY",
+      "rule": "ActivateGenesis",
+      "negative_vectors": [
+        "transition.dead-authority"
       ]
     },
     {

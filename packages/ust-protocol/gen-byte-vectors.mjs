@@ -111,7 +111,7 @@ add('witness.content-address', 'a tampered witness fails its content address', b
 // F — semantic invariants (M-CONFIG): same package, config with a swapped witness pub → a DIFFERENT config_id.
 // swapping witness pub VALUES at the same key_ids BREAKS admission (the attestations no longer verify) → INDETERMINATE,
 // AND the config_id must differ from the genuine one — proof that config_id is extensional over pub values (P1-02).
-add('config.pub-swap', 'witness pubs swapped at the same key_ids: quorum breaks + config_id changes', b64u(canonPkg(πWit)), { ...CFG, witnesses: { [Wa.key_id]: Wb.pub, [Wb.key_id]: Wa.pub } }, { result: 'INDETERMINATE', config_id_differs_from: 'accept.reinforce-quorum' });
+add('config.pub-swap', 'a witness pub swapped to a key that is not its keyId — dead binding, rejected at decode (round-12 P1-01)', b64u(canonPkg(πWit)), { ...CFG, witnesses: { [Wa.key_id]: Wb.pub, [Wb.key_id]: Wa.pub } }, { result: 'INVALID', code: 'E-CONFIG-WITNESS-KEY' });
 
 // rev4 round-7 cluster G (M-DEC total + M-ADT): config canonicality, package closure over the decoded ADT, required params.
 V.push({ id: 'config.noncanonical', note: 'whitespace-prefixed (non-canonical) config bytes', package_b64url: b64u(canonPkg(πCorr)), config_b64url: b64u('  ' + canonJSON(CFG)), expected: { result: 'INVALID', code: 'E-CONFIG-NONCANONICAL' } });
@@ -189,6 +189,36 @@ const txClaim = { purpose: 'ust:genesis-epoch-transition', domain_shard: 'good.e
 const txW = { claim: txClaim, sig: { alg: 'Ed25519', key_id: G.key_id, pub: G.pub, sig: edSign(null, Buffer.from(P.canon(txClaim), 'utf8'), G.priv).toString('base64url') } };
 add('transition.claim-extra', 'an epoch-transition claim carrying an extra signed field (round-11 P0-04)', b64u(canonPkg(N('FutureGenesisCommitment', [πChain], [put(txW)]))), {}, { result: 'INVALID', code: 'claim not typed' });
 
+// ── rev9 round-12 — OWN-key membership (prototype-safe) + refined leaf VALUES + phantom-growth + dead epoch authority ──
+// (reReceipt re-signs a receipt with a mutated claim — declared in the round-11 block above)
+// P0-01 prototype names: an inherited name is NOT a declared field (Object.hasOwn), and the proof-kind registry is closed.
+const c0Proto = { ...C0, sig: { ...C0.sig, constructor: 'unsigned-extra' } };
+add('checkpoint.sig-proto', 'a checkpoint sig wrapper carrying an inherited-name field "constructor" (round-12 P0-01)', b64u(canonPkg(N('CheckpointZero', [πG], [put(c0Proto)]))), CFG, { result: 'INVALID', code: 'sig envelope not typed' });
+const πProtoKind = N('ConnectorEvidence', [πG], [put(reReceipt({ proof_kind: 'toString' }))], { subject: head });
+add('receipt.proofkind-proto', 'a receipt whose proof_kind is the inherited name "toString" — not a registered kind (round-12 P0-01)', b64u(canonPkg(N('Corroborated', [πChain, πProtoKind, πT, N('AfterOrder', [πProtoKind, πT])], [put(term)]))), CFG, { result: 'INVALID', code: 'not a registered kind' });
+// P0-04 refined leaf VALUES: empty subject + a shape-valid-but-unreal calendar time.
+const πEmptySubj = N('ConnectorEvidence', [πG], [put(reReceipt({ subject: '' }))], { subject: '' });
+add('receipt.empty-subject', 'a re-signed receipt with subject:"" (round-12 P0-04)', b64u(canonPkg(N('Corroborated', [πChain, πC, πEmptySubj, N('AfterOrder', [πC, πEmptySubj])], [put(term)]))), CFG, { result: 'INVALID', code: 'claim not typed' });
+const πFakeDate = N('ConnectorEvidence', [πG], [put(reReceipt({ issued_at: '2026-02-31T25:61:61Z' }))], { subject: head });
+add('receipt.fake-calendar', 'a re-signed receipt with issued_at "2026-02-31T25:61:61Z" — shape-valid, not a real time (round-12 P0-04)', b64u(canonPkg(N('Corroborated', [πChain, πFakeDate, πT, N('AfterOrder', [πFakeDate, πT])], [put(term)]))), CFG, { result: 'INVALID', code: 'claim not typed' });
+// P1-01 config key/pub binding — a connector under a key that is not keyId(pub) is a dead entry.
+add('config.connector-deadkey', 'a connector under key sha256:00…00 whose pub keyId differs — dead binding (round-12 P1-01)', b64u(canonPkg(πCorr)), { connectors: { ['sha256:' + '00'.repeat(32)]: { pub: KC.pub, allowed_proof_kinds: ['pow-header-chain'] } } }, { result: 'INVALID', code: 'E-CONFIG-CONNECTOR-KEY' });
+// P1-02 genesis identity — a domain_shard that is neither a public-DNS shard nor a key-id.
+const genBad = P.seal(P.buildGenesis({ domain_shard: 'bad name', ust_id: 'ust:20260716.00', key_id: G.key_id }, T, G.pub, undefined, undefined, undefined, { key_id: G.key_id, pub: G.pub }), G.priv, G.pub);
+add('genesis.bad-dns', 'a genesis whose domain_shard "bad name" is not a valid public-DNS shard or key-id (round-12 P1-02)', b64u(canonPkg(N('Genesis', [], [put(genBad)]))), CFG, { result: 'INVALID', code: 'valid public-DNS shard or self-certifying key-id' });
+// P0-02 phantom key-log growth — a CheckpointStep claiming length 2 from a one-entry prefix vector.
+const c1Phantom = P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: 'good.example', genesis_epoch: EP, sequence: '1', previous_checkpoint: head, active_genesis: AG, current_key_id: G.key_id, keylog: { root: kl.root, length: '2', head: kl.head } }), G.priv, G.pub);
+add('keylog.phantom-growth', 'a CheckpointStep claiming key-log length 2 from a one-entry prefix vector (round-12 P0-02)', b64u(canonPkg(N('CheckpointStep', [πChain], [put(c1Phantom), put(['sha256:' + 'ab'.repeat(32)])]))), CFG, { result: 'INDETERMINATE', code: 'phantom growth' });
+// P0-03 dead epoch destination authority — the transition signs WX but Genesis B is WB.
+const WB12 = kp('b0'.repeat(32)), WX12 = kp('bf'.repeat(32));
+const genB12 = P.seal(P.buildGenesis({ domain_shard: 'good.example', ust_id: 'ust:20260716.01', key_id: WB12.key_id }, T, WB12.pub, undefined, undefined, undefined, { key_id: WB12.key_id, pub: WB12.pub }), WB12.priv, WB12.pub);
+const AGB12 = P.contentHash(genB12), EPB12 = P.genesisEpoch(AGB12);
+const txDead = { purpose: 'ust:genesis-epoch-transition', domain_shard: 'good.example', from_genesis_epoch: EP, from_final_checkpoint: head, from_sequence: '0', to_active_genesis: AGB12, to_genesis_epoch: EPB12, to_checkpoint_authority: { key_id: WX12.key_id, pub: WX12.pub }, to_initial_sequence: '0' };
+const txWDead = { claim: txDead, sig: { alg: 'Ed25519', key_id: G.key_id, pub: G.pub, sig: edSign(null, Buffer.from(P.canon(txDead), 'utf8'), G.priv).toString('base64url') } };
+const klB12 = P.buildKeylogCommitment(['sha256:' + 'bc'.repeat(32)]);
+const c0B12 = P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: 'good.example', genesis_epoch: EPB12, sequence: '0', previous_epoch_final_checkpoint: head, active_genesis: AGB12, current_key_id: WB12.key_id, keylog: { root: klB12.root, length: klB12.length, head: klB12.head } }), WB12.priv, WB12.pub);
+add('transition.dead-authority', 'a transition signing destination authority WX while Genesis B is WB (round-12 P0-03)', b64u(canonPkg(N('ActivateGenesis', [N('FutureGenesisCommitment', [πChain], [put(txWDead)]), N('Genesis', [], [put(genB12)])], [put(c0B12)]))), {}, { result: 'INVALID', code: 'transition-committed destination authority' });
+
 // ── security-condition coverage manifest (owner completion criterion 8) ──────────────────────────────────────────────
 const MANIFEST = {
   note: 'Every security side-condition maps to ≥1 negative byte-vector; the runner asserts each vector exists and holds. In round-7 this feeds a mutation harness (remove the condition → the listed vector must start failing).',
@@ -199,7 +229,7 @@ const MANIFEST = {
   { id: 'FACTS-CLOSED-PER-KIND', rule: 'ConnectorEvidence/closedReceipt', negative_vectors: ['facts.wrong-kind'] },
     { id: 'ORDER-INTERVAL-WELLFORMED', rule: 'AfterOrder/orderSemantic', negative_vectors: ['order.inverted-interval'] },
     { id: 'KEY-STRICT-PUB32', rule: 'Genesis/sigOk/ConnectorEvidence/QuorumAgreement', negative_vectors: ['key.padded-pub'] },
-    { id: 'CONFIG-EXTENSIONAL-OVER-PUB', rule: 'normalizeConfig', negative_vectors: ['config.pub-swap'] },
+    { id: 'CONFIG-KEY-BINDING', rule: 'normalizeConfig', negative_vectors: ['config.pub-swap'] },
     { id: 'AFTER-RELATES-ITS-EVIDENCES', rule: 'Corroborated', negative_vectors: ['rel.detached-after'] },
     { id: 'SCOPE-DOMAIN-AGREEMENT', rule: 'CheckpointZero/CheckpointStep', negative_vectors: ['scope.foreign-domain'] },
     { id: 'KEYLOG-CEILING', rule: 'CheckpointZero/CheckpointStep', negative_vectors: ['keylog.over-ceiling'] },
@@ -225,6 +255,12 @@ const MANIFEST = {
   { id: 'TERMINALITY-INTERIOR-CLOSED', rule: 'Corroborated/HEAD_PROOF', negative_vectors: ['terminality.headproof-extra'] },
   { id: 'MAP-INTERIOR-CLOSED', rule: 'MapUnique/MAP_PROOF', negative_vectors: ['map.proof-extra'] },
   { id: 'VOTE-SIG-CLOSED', rule: 'QuorumAgreement/SIG_ENV', negative_vectors: ['vote.sig-extra'] },
+  { id: 'REGISTRY-OWN-KEY', rule: 'decodeRec/isKnownKind', negative_vectors: ['checkpoint.sig-proto', 'receipt.proofkind-proto'] },
+  { id: 'RECEIPT-VALUE-REFINED', rule: 'ConnectorEvidence/decodeRec', negative_vectors: ['receipt.empty-subject', 'receipt.fake-calendar'] },
+  { id: 'CONFIG-KEY-PUB-BINDING', rule: 'normalizeConfig', negative_vectors: ['config.connector-deadkey'] },
+  { id: 'GENESIS-IDENTITY-TYPED', rule: 'Genesis', negative_vectors: ['genesis.bad-dns'] },
+  { id: 'KEYLOG-APPEND-LENGTH', rule: 'CheckpointStep/appendOnly', negative_vectors: ['keylog.phantom-growth'] },
+  { id: 'EPOCH-DESTINATION-AUTHORITY', rule: 'ActivateGenesis', negative_vectors: ['transition.dead-authority'] },
   { id: 'TRANSITION-CLAIM-TYPED', rule: 'FutureGenesisCommitment/closedTransition', negative_vectors: ['transition.claim-extra'] },
   { id: 'CONFIG-TOTAL-TYPED', rule: 'normalizeConfig', negative_vectors: ['config.connector-string', 'config.policy-array', 'config.apk-unsorted'] },
   ],

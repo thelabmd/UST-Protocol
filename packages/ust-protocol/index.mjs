@@ -752,14 +752,14 @@ export function evidenceClass(proof_kind) {
 // UST-0ol Phase 2 — evidence CAPABILITY as a SET (P2-02: capabilities are not a scalar rank). A predicate is
 // satisfiable ONLY by an admissible capability; strong derivation checks this before trusting a piece of evidence,
 // so a connector can never exceed its declared power (content-addressed is not temporal; unknown ⇒ no capability).
-const EVIDENCE_CAPS = {
+const EVIDENCE_CAPS = Object.assign(Object.create(null), {   // null-proto (UST-Protocol round-12 P0-01): EVIDENCE_CAPS["toString"] must be undefined, not an inherited function
   'pow-header-chain':  ['order', 'time'],
   'transparency-log':  ['inclusion', 'consistency', 'order'],
   'authenticated-map': ['membership', 'non-membership'],
   'content-addressed': ['content-equality', 'availability'],
   'rfc3161-tsa':       ['time'],
-};
-export const evidenceCaps = (proof_kind) => EVIDENCE_CAPS[proof_kind] || [];
+});
+export const evidenceCaps = (proof_kind) => (Object.hasOwn(EVIDENCE_CAPS, proof_kind) ? EVIDENCE_CAPS[proof_kind] : []);
 
 // ─── M3 (UST-6vj C2) — THE EVIDENCE SEAM. Provenance is a THEOREM, not an assumption: a strong rung consumes
 //     evidence only from image(VerifyEvidence_C) — either a proof the core verifies inline (terminality / map /
