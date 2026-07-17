@@ -16,7 +16,7 @@ import { canon, H, keyId, edVerifyStrict, contentHash, verify, isValid, verifyKe
   verifyCheckpointMapUniqueness, evidenceCaps, compareEvidenceOrder, authorityScopeId, genesisEpoch,
   resolveKeys, buildKeylogCommitment, authorityCheckpointId, strictB64url } from './index.mjs';
 
-export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev7';
+export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev8';
 // RULE_CONTRACTS (§2b) — the STRUCTURAL source of truth: exactly one inference rule per name, one switch branch per
 // name, and a fixed (children arity, witness count, allowed params, conclusion kind). DecodeTerm enforces these on
 // decode; a term with an extra child / extra witness / free param / unknown field / stored conclusion is rejected
@@ -65,6 +65,41 @@ const closedRec = (o, req, opt = []) => {
   for (const k of req) if (!Object.prototype.hasOwnProperty.call(o, k)) return false;         // every required present
   return true;
 };
+// decodeRec (rev8, M-DEC-LEAF tightened, round-11): closure is NOT enough — a closed key-set with un-typed VALUES still
+// admits version:"999", issued_at:"not-a-time", keylog:{root:"not-a-hash"}. Each leaf is now a TYPED decoder: a plain
+// object whose keys ⊆ schema, every REQUIRED field present AND satisfying its predicate (an exact constant, a refined
+// type, or a nested schema). Returns null (ok) or a 'code:field' tag. The identity/coordinate a rule computes is thus
+// over a TYPED closed ADT, not a merely key-closed one. Predicates below reuse the leaf refinements (§2b).
+const RFC3339Z = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+const pStr = (x) => typeof x === 'string';
+const pBool = (x) => typeof x === 'boolean';
+const pSeq = (x) => decodeSeq(x) !== null;                 // CanonicalSeq
+const pSig64 = (x) => strictB64url(x, 64) !== null;        // Sig64
+const pRFC = (x) => typeof x === 'string' && RFC3339Z.test(x);
+const pHashArr = (x) => Array.isArray(x) && x.every(isHash);
+const eq = (c) => (x) => x === c;                          // an EXACT constant (version, purpose)
+const rec = (schema) => (x) => decodeRec(x, schema) === null;   // a nested typed record
+function decodeRec(o, schema) {
+  if (o === null || typeof o !== 'object' || Array.isArray(o)) return 'E-REC-SHAPE';
+  for (const k of Object.keys(o)) if (!(k in schema)) return 'unknown:' + k;                 // no unknown key
+  for (const k of Object.keys(schema)) {
+    const s = schema[k];
+    if (!(k in o)) { if (!s.opt) return 'missing:' + k; continue; }
+    if (!s.t(o[k])) return 'bad:' + k;                                                        // wrong type / constant / refined value
+  }
+  return null;
+}
+// Typed leaf schemas (§2b, round-11) — one source of truth for each SIGNED inner object. `head_id`/order/coordinate are
+// computed over these CLOSED, TYPED ADTs, so no un-typed or extra field can shift an identity or slip a malformed value.
+const SIG_ENV = { alg: { t: eq('Ed25519') }, key_id: { t: isHash }, pub: { t: strictPub }, sig: { t: pSig64 } };   // a signature wrapper (receipt/checkpoint/vote/transition)
+const KEYLOG_COMMIT = { root: { t: isHash }, length: { t: pSeq }, head: { t: isHash } };                            // P0-03: root/head are HASHES, not arbitrary strings
+const CHK_AUTHORITY = { current_key_id: { t: isHash }, next_key_id: { t: isHash, opt: true }, next_pub: { t: strictPub, opt: true }, effective_sequence: { t: pSeq, opt: true } };
+const CHECKPOINT_BODY = { version: { t: eq('1') }, purpose: { t: eq('ust:authority-checkpoint') }, domain_shard: { t: pStr }, genesis_epoch: { t: isHash }, sequence: { t: pSeq }, active_genesis: { t: isHash }, checkpoint_authority: { t: rec(CHK_AUTHORITY) }, keylog: { t: rec(KEYLOG_COMMIT) }, previous_checkpoint: { t: isHash, opt: true }, previous_epoch_final_checkpoint: { t: isHash, opt: true } };
+const RECEIPT_CLAIM = { version: { t: eq('1') }, purpose: { t: eq('ust:evidence-receipt') }, domain_shard: { t: pStr }, active_genesis: { t: isHash }, genesis_epoch: { t: isHash }, subject: { t: pStr }, proof_kind: { t: pStr }, facts: { t: (x) => x !== null && typeof x === 'object' && !Array.isArray(x) }, issued_at: { t: pRFC }, payload_digest: { t: isHash, opt: true } };
+const TRANSITION_CLAIM = { purpose: { t: eq('ust:genesis-epoch-transition') }, domain_shard: { t: pStr }, from_genesis_epoch: { t: isHash }, from_final_checkpoint: { t: isHash }, from_sequence: { t: pSeq }, to_active_genesis: { t: isHash }, to_initial_sequence: { t: pSeq }, to_genesis_epoch: { t: isHash, opt: true }, to_checkpoint_authority: { t: rec({ key_id: { t: isHash }, pub: { t: strictPub } }), opt: true } };
+const HEAD_PROOF = { index: { t: pSeq }, siblings: { t: pHashArr } };   // P1-02 terminality interior
+const MAP_PROOF = { siblings: { t: pHashArr } };                        // P1-03 authenticated-map interior
+const VOTE_CLAIM = { purpose: { t: eq('ust:checkpoint-uniqueness-attestation') }, domain_shard: { t: pStr }, genesis_epoch: { t: isHash }, sequence: { t: pSeq }, checkpoint: { t: isHash } };
 const isNFC = (s) => typeof s === 'string' && s.normalize('NFC') === s;   // a free-text config leaf must be NFC (canon requires it; validate at DECODE so it never reaches a throw — round-10 P1-02)
 // FACTS_KEYS / ORDER_COORD (round-10 P0-03): the evidence `facts` object is a CLOSED ADT keyed by proof_kind, and the
 // temporal order coordinate is read ONLY from that kind's authorized fields — a transparency-log's order is Position(
@@ -134,7 +169,16 @@ function normalizeConfig(raw) {
   // QuorumAgreement fails CLOSED (INDETERMINATE), never a silent 2. allowExperimentalAttested absent = false (fail-closed).
   const C = Object.freeze({ connectors, mapRoots, domains, witnesses,
     policy: Object.freeze({ ...(policy.uniqueness_threshold !== undefined ? { uniqueness_threshold: policy.uniqueness_threshold } : {}), allowExperimentalAttested: policy.allowExperimentalAttested === true }) });
-  return { C };
+  // config_id identifies the NORMALIZED TRUST WORLD, not the input bytes (round-11 P2-01): it is H over a canonical
+  // projection of C, so two byte-different configs with the SAME effective trust world ({} ≡ {connectors:{}} ≡
+  // {policy:{allowExperimentalAttested:false}}) share one config_id — yet, because NO field is defaulted, two configs with
+  // DIFFERENT behavior (absent vs present threshold) still differ (round-10 P1-01 preserved). canonJSON (not canon) so the
+  // NFC-validated leaves never reach a throw (round-10 P1-02). The projection is INJECTIVE over C, so config_id ⟺ C.
+  const config_id = H('ust:consumer-config', canonJSON({
+    connectors: Object.fromEntries(Object.entries(connectors).map(([k, v]) => [k, { pub: v.pub, allowed_proof_kinds: v.allowed_proof_kinds, ...(v.trust_domain !== undefined ? { trust_domain: v.trust_domain } : {}) }])),
+    mapRoots, domains, witnesses,
+    policy: { ...(C.policy.uniqueness_threshold !== undefined ? { uniqueness_threshold: String(C.policy.uniqueness_threshold) } : {}), allowExperimentalAttested: C.policy.allowExperimentalAttested ? '1' : '0' } }));
+  return { C, config_id };
 }
 
 // ── the byte boundary (§2, M-BYTE/M-DEC) — the TCB is over immutable octets ───────────────────────────────────────
@@ -234,10 +278,9 @@ function decodeConfig(bytes) {
   // alias, so the consumer trust world is language-neutral, not parser-dependent (P0-01).
   let reB; try { reB = canonJSON(parsed); } catch { return { err: 'E-CONFIG-NONCANONICAL' }; }
   if (reB !== text) return { err: 'E-CONFIG-NONCANONICAL' };
-  const nc = normalizeConfig(parsed); if (nc.err) return nc;
-  // config_id over the PROVEN-canonical bytes (round-10 P1-01/P1-02): B is bijective with the ADT, so H(B) is a faithful
-  // id — and it never routes through canon(), so a non-NFC leaf (already rejected above) can no longer reach a throw.
-  return { C: nc.C, config_id: H('ust:consumer-config', text) };
+  // the wire bytes must still be canonical (no whitespace/key-order/dup/alias — round-10 P0-01), but config_id itself is
+  // over the normalized WORLD (computed in normalizeConfig, round-11 P2-01), not these bytes.
+  return normalizeConfig(parsed);
 }
 
 // checkAuthorityProofBytes — THE NORMATIVE TCB. Immutable bytes in; VALID/INVALID/INDETERMINATE out. A live object never
@@ -388,7 +431,7 @@ function checkTermInner(node, C, W, memo) {
       if (!TG.j || TG.j.kind !== 'Evidence') return TG.j ? bad('child 2 must be Evidence (target anchor)') : TG;
       if (!AF.j || AF.j.kind !== 'After') return AF.j ? bad('child 3 must be After') : AF;
       const tm = wit(0); if (tm.err) return bad(tm.err);                                 // terminality of the HEAD key-log
-      if (!exactKeys(tm.w, 'headProof')) return bad('terminality witness must be exactly { headProof } (typed witness, round-9 P0-04)');
+      if (!exactKeys(tm.w, 'headProof') || decodeRec(tm.w.headProof, HEAD_PROOF)) return bad('terminality witness must be exactly { headProof: { index, siblings } } typed (round-11 P1-02)');
       if (!verifyKeylogTerminality(CH.j.keylog, tm.w).terminal) return ind('key-log head terminality not proven');
       const s = CH.j.s;
       if (CM.j.s !== s || TG.j.s !== s || AF.j.s !== s) return bad('scope mismatch across freshness premises (cross-scope)');
@@ -403,7 +446,7 @@ function checkTermInner(node, C, W, memo) {
       // free checkpoint coordinate a term could pick, so P0-02 is closed STRUCTURALLY (not "non-canonical → caught").
       const CH = sub(0); if (!CH.j || CH.j.kind !== 'Chain') return CH.j ? bad('child 0 must be Chain (coordinate provenance)') : CH;
       const m = wit(0); if (m.err) return bad(m.err);
-      if (!exactKeys(m.w, 'proof', 'mapRoot')) return bad('map-uniqueness witness must be exactly { proof, mapRoot } (typed witness, round-9 P0-04)');
+      if (!exactKeys(m.w, 'proof', 'mapRoot') || decodeRec(m.w.proof, MAP_PROOF) || !isHash(m.w.mapRoot)) return bad('map-uniqueness witness must be exactly { proof: { siblings }, mapRoot: hash } typed (round-11 P1-03)');
       const { proof, mapRoot } = m.w;
       if (!C.mapRoots.includes(mapRoot)) return ind('map root is not consumer-admitted (ρ ∉ C.mapRoots)');
       const u = verifyCheckpointMapUniqueness(proof, { domain_shard: CH.j.domain, genesis_epoch: CH.j.genesis_epoch, sequence: String(CH.j.n), checkpoint: CH.j.head_id, mapRoot });
@@ -425,7 +468,7 @@ function checkTermInner(node, C, W, memo) {
         const a = W(wid); if (a.err) continue;
         const { claim, issuer_id, sig } = a.w || {};
         if (!exactKeys(a.w, 'claim', 'issuer_id', 'sig')) continue;                    // typed attestation envelope (round-9 P0-04)
-        if (!exactKeys(claim, 'purpose', 'domain_shard', 'genesis_epoch', 'sequence', 'checkpoint')) continue;   // typed claim — no extra field can forge a DISTINCT claim at one coordinate (round-9 P0-02)
+        if (decodeRec(claim, VOTE_CLAIM) || decodeRec(sig, SIG_ENV)) continue;   // typed vote claim + sig wrapper (round-11 P1-04)   // typed claim — no extra field can forge a DISTINCT claim at one coordinate (round-9 P0-02)
         if (!claim || !sig || claim.purpose !== 'ust:checkpoint-uniqueness-attestation') continue;
         if ('trust_domain' in claim || 'issuer_id' in claim) continue;               // no self-declared independence
         if (claim.domain_shard !== CH.j.domain) continue;                            // attested checkpoint must be in the chain domain (§2.y, P0-03)
@@ -468,7 +511,7 @@ function checkTermInner(node, C, W, memo) {
     case 'FutureGenesisCommitment': {
       const CH = sub(0); if (!CH.j || CH.j.kind !== 'Chain') return CH.j ? bad('child 0 must be Chain (epoch A)') : CH;
       const cm = wit(0); if (cm.err) return bad(cm.err);
-      if (!exactKeys(cm.w, 'claim', 'sig')) return bad('epoch-transition witness must be exactly { claim, sig } (typed witness, round-9 P0-04)');
+      { const e = closedTransition(cm.w); if (e) return bad(e); }
       const { claim, sig } = cm.w;
       if (!claim || claim.purpose !== 'ust:genesis-epoch-transition') return bad('not an epoch-transition commitment');
       if (!isHash(claim.to_active_genesis)) return bad('commitment lacks a target genesis hash');
@@ -572,22 +615,30 @@ function orderSemantic(proof_kind, facts) {
 // sig.wrapper_nonce, a body.extension_semantics) can shift the identity without being rejected here first.
 function closedCheckpoint(cw) {
   if (!exactKeys(cw, 'body', 'sig')) return 'checkpoint witness must be exactly { body, sig }';
-  if (!closedRec(cw.sig, ['alg', 'key_id', 'pub', 'sig'])) return 'checkpoint sig envelope not closed (round-10 P0-04)';
-  const b = cw.body;
-  if (!closedRec(b, ['version', 'purpose', 'domain_shard', 'genesis_epoch', 'sequence', 'active_genesis', 'checkpoint_authority', 'keylog'], ['previous_checkpoint', 'previous_epoch_final_checkpoint'])) return 'checkpoint body not closed (round-10 P0-05)';
-  if (!closedRec(b.checkpoint_authority, ['current_key_id'], ['next_key_id', 'next_pub', 'effective_sequence'])) return 'checkpoint_authority not closed';
-  if (!closedRec(b.keylog, ['root', 'length', 'head'])) return 'checkpoint keylog not closed';
+  const es = decodeRec(cw.sig, SIG_ENV); if (es) return 'checkpoint sig envelope not typed (round-11 ' + es + ')';
+  const eb = decodeRec(cw.body, CHECKPOINT_BODY); if (eb) return 'checkpoint body not typed (round-11 ' + eb + ')';   // version==="1", keylog root/head HASHES, seqs typed (P0-02/P0-03)
   return null;
 }
-// closedReceipt (round-10 P0-02/P0-03): a connector receipt is a CLOSED ADT — envelope { claim, issuer_id, sig }, sig
-// { alg, key_id, pub, sig }, the claim exactly its 9 fields (so version/issued_at can no longer be dropped and re-signed),
-// and facts CLOSED to the proof_kind's schema (so a transparency-log cannot smuggle a pow-style { substrate, position }).
+// closedReceipt (round-11 typed): a connector receipt is a CLOSED, TYPED ADT — envelope { claim, issuer_id, sig }, a typed
+// sig wrapper, the claim's LEAF VALUES refined (version==="1", issued_at RFC3339-Z, active_genesis/genesis_epoch HASHES —
+// not merely present, round-11 P0-01), and facts CLOSED to the proof_kind's schema (round-10 P0-03).
 function closedReceipt(rw) {
   if (!closedRec(rw, ['claim', 'issuer_id', 'sig'])) return 'receipt envelope not closed';
-  if (!closedRec(rw.sig, ['alg', 'key_id', 'pub', 'sig'])) return 'receipt sig envelope not closed';
+  const es = decodeRec(rw.sig, SIG_ENV); if (es) return 'receipt sig envelope not typed (round-11 ' + es + ')';
   const cl = rw.claim;
-  if (!closedRec(cl, ['version', 'purpose', 'domain_shard', 'active_genesis', 'genesis_epoch', 'subject', 'proof_kind', 'facts', 'issued_at'], ['payload_digest'])) return 'receipt claim not closed (round-10 P0-02)';
-  if (typeof cl.proof_kind !== 'string' || !closedRec(cl.facts, [], factsKeys(cl.proof_kind))) return 'receipt facts not closed for proof_kind (round-10 P0-03)';
+  const ec = decodeRec(cl, RECEIPT_CLAIM); if (ec) return 'receipt claim not typed (round-11 ' + ec + ')';
+  if (!closedRec(cl.facts, [], factsKeys(cl.proof_kind))) return 'receipt facts not closed for proof_kind (round-10 P0-03)';
+  return null;
+}
+// closedTransition (round-11 P0-04/P1-01): an epoch-transition witness is a CLOSED, TYPED ADT — envelope { claim, sig,
+// issuer_id? }, a typed sig wrapper, and the claim's leaf values refined (from_sequence a CanonicalSeq, to_active_genesis a
+// HASH, no extra signed field). ONE wire schema shared with buildEpochTransition (issuer_id is the redundant field the
+// official builder emits; it is accepted and bound to sig.key_id when present, so builder output drives the checker).
+function closedTransition(cm) {
+  if (!closedRec(cm, ['claim', 'sig'], ['issuer_id'])) return 'epoch-transition witness must be { claim, sig, issuer_id? }';
+  const es = decodeRec(cm.sig, SIG_ENV); if (es) return 'epoch-transition sig envelope not typed (round-11 ' + es + ')';
+  if (cm.issuer_id !== undefined && cm.issuer_id !== cm.sig.key_id) return 'epoch-transition issuer_id ≠ sig.key_id';
+  const ec = decodeRec(cm.claim, TRANSITION_CLAIM); if (ec) return 'epoch-transition claim not typed (round-11 ' + ec + ')';
   return null;
 }
 function sigOk(cp, auth) {

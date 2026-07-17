@@ -1201,11 +1201,12 @@ export function verifyCheckpointRecovery(statements, { domain_shard, genesis_epo
 // ─── #76 (audit-8) GENESIS-EPOCH TRANSITION — a new genesis epoch must NOT silently reset the authority chain. The
 //     A→B transition is a typed statement SIGNED BY EPOCH A's checkpoint authority, binding A's final checkpoint and
 //     naming epoch B's initial checkpoint authority + initial sequence. Epoch B's C₀ then binds that final checkpoint.
-export function epochTransitionClaim({ domain_shard, from_genesis_epoch, from_final_checkpoint, to_active_genesis, to_genesis_epoch, to_key_id, to_pub, to_initial_sequence = '0' }) {
+export function epochTransitionClaim({ domain_shard, from_genesis_epoch, from_final_checkpoint, from_sequence, to_active_genesis, to_genesis_epoch, to_key_id, to_pub, to_initial_sequence = '0' }) {
   // M4.4 — a transition hands authority to a VERIFIED new genesis, not a free epoch label: it binds
   // to_active_genesis, and to_genesis_epoch is CANONICAL to it (derived when omitted; verify re-checks).
   const toEpoch = to_genesis_epoch ?? (isHashStr(to_active_genesis) ? genesisEpoch(to_active_genesis) : undefined);
   return { purpose: 'ust:genesis-epoch-transition', domain_shard, from_genesis_epoch, from_final_checkpoint,
+    ...(from_sequence !== undefined ? { from_sequence: String(from_sequence) } : {}),   // M-ERA: bind the epoch-A FINAL sequence (the reference checker requires it; UST-Protocol round-11 P1-01)
     ...(to_active_genesis !== undefined ? { to_active_genesis } : {}),                 // absence is caught at verify (M4.4), kept out of canon
     ...(toEpoch !== undefined ? { to_genesis_epoch: toEpoch } : {}),
     to_checkpoint_authority: { key_id: to_key_id, pub: to_pub }, to_initial_sequence: String(to_initial_sequence) };

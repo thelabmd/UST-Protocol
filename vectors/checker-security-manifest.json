@@ -203,6 +203,50 @@
       ]
     },
     {
+      "id": "RECEIPT-LEAF-TYPED",
+      "rule": "ConnectorEvidence/decodeRec",
+      "negative_vectors": [
+        "receipt.version-not-typed",
+        "receipt.issued-at-not-typed"
+      ]
+    },
+    {
+      "id": "CHECKPOINT-LEAF-TYPED",
+      "rule": "CheckpointZero/decodeRec",
+      "negative_vectors": [
+        "checkpoint.version-not-typed",
+        "checkpoint.keylog-not-hash"
+      ]
+    },
+    {
+      "id": "TERMINALITY-INTERIOR-CLOSED",
+      "rule": "Corroborated/HEAD_PROOF",
+      "negative_vectors": [
+        "terminality.headproof-extra"
+      ]
+    },
+    {
+      "id": "MAP-INTERIOR-CLOSED",
+      "rule": "MapUnique/MAP_PROOF",
+      "negative_vectors": [
+        "map.proof-extra"
+      ]
+    },
+    {
+      "id": "VOTE-SIG-CLOSED",
+      "rule": "QuorumAgreement/SIG_ENV",
+      "negative_vectors": [
+        "vote.sig-extra"
+      ]
+    },
+    {
+      "id": "TRANSITION-CLAIM-TYPED",
+      "rule": "FutureGenesisCommitment/closedTransition",
+      "negative_vectors": [
+        "transition.claim-extra"
+      ]
+    },
+    {
       "id": "CONFIG-TOTAL-TYPED",
       "rule": "normalizeConfig",
       "negative_vectors": [

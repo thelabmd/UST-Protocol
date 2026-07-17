@@ -251,7 +251,7 @@ const CFG = { ...CONN, witnesses: { [Wa.key_id]: Wa.pub, [Wb.key_id]: Wb.pub }, 
 // now agree. A bare chain is VALID without terminality; Corroborated with a non-terminal head is INDETERMINATE.
 {
   const rBareChain = checkAuthorityProof({ term: πChain, witnesses }, CFG);
-  const badTerm = put({ headProof: ['sha256:' + 'cd'.repeat(32)] });
+  const badTerm = put({ headProof: { index: '1', siblings: [] } });   // well-formed but index ≠ length-1 → non-terminal (round-11: array headProof is now a typed reject)
   const πCorrNoTerm = node('Corroborated', [πChain, πCommit, πTarget, πAfter], [badTerm]);
   const rNoTerm = checkAuthorityProof({ term: πCorrNoTerm, witnesses }, CFG);
   check('SPEC-SYNC terminality (P0-06): K0 needs none (bare chain VALID); Corroborated demands it (non-terminal → INDETERMINATE)', rBareChain.result === 'VALID' && rBareChain.judgment.kind === 'Chain' && rNoTerm.result === 'INDETERMINATE' && /terminal/.test(rNoTerm.reason));
@@ -410,7 +410,28 @@ const CFG = { ...CONN, witnesses: { [Wa.key_id]: Wa.pub, [Wb.key_id]: Wb.pub }, 
 {
   const c0SigX = { ...C0, sig: { ...C0.sig, wrapper_nonce: 'x' } }, w = { ...witnesses, [witnessId(c0SigX)]: c0SigX };
   const r = checkAuthorityProof({ term: node('CheckpointZero', [πGenesis], [witnessId(c0SigX)]), witnesses: w }, CFG);
-  check('HEAD-ID stable (round-10 P0-04): an extra field on the checkpoint sig wrapper → INVALID(sig envelope not closed)', r.result === 'INVALID' && /sig envelope not closed|not closed/.test(r.reason));
+  check('HEAD-ID stable (round-10 P0-04): an extra field on the checkpoint sig wrapper → INVALID(sig envelope not closed)', r.result === 'INVALID' && /sig envelope not typed|not typed/.test(r.reason));
+}
+// ── rev8 round-11 — config_id identifies the TRUST WORLD: byte-different but semantically-equal configs share an id ──
+{
+  const idA = checkAuthorityProof({ term: πChain, witnesses }, {}).config_id;
+  const idB = checkAuthorityProof({ term: πChain, witnesses }, { connectors: {} }).config_id;
+  const idC = checkAuthorityProof({ term: πChain, witnesses }, { policy: { allowExperimentalAttested: false } }).config_id;
+  const idD = checkAuthorityProof({ term: πChain, witnesses }, { policy: { uniqueness_threshold: 2 } }).config_id;
+  check('CONFIG-ID = trust world (round-11 P2-01): {} ≡ {connectors:{}} ≡ {policy:{allowExperimentalAttested:false}} share one config_id, yet a config with a threshold differs', idA === idB && idA === idC && typeof idA === 'string' && idA !== idD);
+}
+// ── rev8 round-11 — the OFFICIAL builder drives the checker: one shared epoch-transition wire form (P1-01) ──
+{
+  const WB = kp('b0'.repeat(32));
+  const genB = P.seal(P.buildGenesis({ domain_shard: 'good.example', ust_id: 'ust:20260716.01', key_id: WB.key_id }, T, WB.pub, undefined, undefined, undefined, { key_id: WB.key_id, pub: WB.pub }), WB.priv, WB.pub);
+  const AGB = P.contentHash(genB), EPB = P.genesisEpoch(AGB);
+  const klB = P.buildKeylogCommitment(['sha256:' + 'bc'.repeat(32)]);
+  const c0B = P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: 'good.example', genesis_epoch: EPB, sequence: '0', previous_epoch_final_checkpoint: head, active_genesis: AGB, current_key_id: WB.key_id, keylog: { root: klB.root, length: klB.length, head: klB.head } }), WB.priv, WB.pub);
+  const et = P.buildEpochTransition({ domain_shard: 'good.example', from_genesis_epoch: EP, from_final_checkpoint: head, from_sequence: '0', to_active_genesis: AGB, to_genesis_epoch: EPB, to_key_id: WB.key_id, to_pub: WB.pub, to_initial_sequence: '0' }, G.priv, G.pub);
+  const pFC = node('FutureGenesisCommitment', [πChain], [put(et)]);
+  const pAct = node('ActivateGenesis', [pFC, node('Genesis', [], [put(genB)])], [put(c0B)]);
+  const r = checkAuthorityProof({ term: pAct, witnesses }, {});
+  check('OFFICIAL builder drives the checker (round-11 P1-01): buildEpochTransition (with from_sequence) → VALID EpochActivated, one shared { claim, issuer_id, sig } wire form', r.result === 'VALID' && r.judgment.kind === 'EpochActivated' && Object.keys(et).sort().join(',') === 'claim,issuer_id,sig' && Object.hasOwn(et.claim, 'from_sequence'));
 }
 
 console.log('\n  reference-checker vectors (' + (typeof pass === 'number' ? '' : '') + 'L1)   PASS ' + pass + '   FAIL ' + fail);
