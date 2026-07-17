@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
-# Universal State Transcript (UST)
+# Universal State Transcript | UST Protocol | UST
 
 [![CI](https://img.shields.io/github/actions/workflow/status/thelabmd/UST-Protocol/ci.yml?branch=main&label=CI)](https://github.com/thelabmd/UST-Protocol/actions)
 [![code license](https://img.shields.io/badge/code-Apache--2.0-blue)](./LICENSE)
@@ -26,7 +26,11 @@ key, and were not changed since?"* Seal at creation → store anywhere → verif
 offline, with one library call. No blockchain required, no consensus, no per-record fees: the LIGHT tier is a
 key, a canonical form and a signature.
 
+![Anatomy of a UST transcript — a self-contained signed JSON document: id (who + when), time frame, data partitions, domain-separated hashes, provenance links, Ed25519 signature. Seal at creation, store anywhere, verify offline.](.github/ust-anatomy.svg)
+
 Trust is **graduated, and the verdict carries its tier** — a conforming verifier never says a bare `VALID`:
+
+![The verdict ladder — VALID:LIGHT (key + canonical form + signature), VALID:HIGH (+ name provably bound to the key), VALID:TOP (+ existed by a real point in time). INVALID is a definite failure; INDETERMINATE is never conflated with forged.](.github/ust-tiers.svg)
 
 | verdict | what is proven |
 |---|---|
@@ -47,12 +51,7 @@ It can be a **chain of independently signed layers**, each a full transcript wit
 provenance — linked by content hashes (`based_on` + a recomputed `seed`), so the **existence, order and lineage
 of every layer are publicly provable while each layer's content is disclosed only to whom it is meant for**:
 
-```
-L1  public observation            "geomagnetic activity: elevated"           anyone verifies
-L2  blinded commitment            proof a value was fixed — value hidden      existence is public
-L3  encrypted shard               AEAD ciphertext + commitment                key holders read & verify
-L4  partner's derived shard       another publisher, another key, based_on →  cross-party, provable lineage
-```
+![One state, graduated visibility — a hash-linked chain of independently signed layers: L1 public observation (anyone verifies), L2 blinded commitment (existence public, value hidden), L3 encrypted shard (key holders read and verify), L4 a partner's derived shard (cross-party provable lineage).](.github/ust-chain.svg)
 
 - **Blinded** (`privacy: "blinded"`): the value is replaced by a frame-bound commitment
   (`H(domain_shard, ust_id, nonce, name, value)`). Publish now, reveal later — and the revealed `{nonce, value}`
@@ -81,6 +80,8 @@ Before anything else, a UST is an address on **one shared time axis**. Every tra
 per-partition hashes **bind** it: a signed value cannot be replayed into another hour or re-attributed to
 another frame.
 
+![One time axis — ust:20260710.14 (hour) contains ust:20260710.1429 (minute) contains ust:20260710.142900 (second): containment is literal string prefixing, sortable equals streamable, one shared UTC grid for every publisher.](.github/ust-time.svg)
+
 One coordinate system, shared by every publisher on Earth by construction (UTC), buys things no per-vendor
 timestamp field can:
 
@@ -102,6 +103,8 @@ Honesty holds on this axis too: at LIGHT the coordinate is the publisher's **cla
 proves the document existed **by** a real point in time (and `generated_at` may not postdate its own anchor).
 
 ## Layout
+
+![Repository map — spec (normative + formal model), vectors (the cross-implementation arbiter), packages (reference verifier, CLI, MCP server, lite, web signer, anchor substrates), docs (web verifier), tools (drift gates).](.github/ust-map.svg)
 
 | Path | What |
 |------|------|

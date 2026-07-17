@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 314" role="img" aria-label="ONE TIME AXIS — EVERY PUBLISHER, BY CONSTRUCTION (UTC)">
+<title>ONE TIME AXIS — EVERY PUBLISHER, BY CONSTRUCTION (UTC)</title>
+<g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="15" xml:space="preserve">
+  <rect x="1.5" y="1.5" width="877" height="311" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1.5"/>
+  <line x1="16" y1="46" x2="864" y2="46" stroke="#30363d" stroke-width="1"/>
+  <text x="28" y="34" fill="#58a6ff" font-size="13" font-weight="600" letter-spacing="2">ONE TIME AXIS — EVERY PUBLISHER, BY CONSTRUCTION (UTC)</text>
+  <rect x="24" y="64" width="832" height="172" rx="8" fill="none" stroke="#30363d" stroke-width="1.2"/>
+  <text x="40" y="91" fill="#c9d1da" font-weight="600">ust:20260710.14</text>
+  <text x="187.45" y="91" fill="#8b949e" font-size="13">— the hour frame</text>
+  <rect x="48" y="104" width="620" height="108" rx="8" fill="none" stroke="#79c0ff" stroke-width="1.2"/>
+  <text x="64" y="131" fill="#79c0ff" font-weight="600">ust:20260710.1429</text>
+  <text x="229.51" y="131" fill="#8b949e" font-size="13">— the minute</text>
+  <rect x="72" y="146" width="400" height="44" rx="8" fill="none" stroke="#3fb950" stroke-width="1.2"/>
+  <text x="88" y="173" fill="#3fb950" font-weight="600">ust:20260710.142900</text>
+  <text x="271.57" y="173" fill="#8b949e" font-size="13">— the second</text>
+  <text x="28" y="266" fill="#8b949e" font-size="13">containment is literal string prefixing — roll-ups are prefix scans · sortable = streamable</text>
+  <text x="28" y="288" fill="#c9d1da" font-size="13">“what was the world doing at 14:29Z?” is a query — same coordinate ⇒ same moment, joinable after the fact</text>
+</g>
+</svg>

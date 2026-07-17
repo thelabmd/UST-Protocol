@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 407" role="img" aria-label="REPOSITORY MAP">
+<title>REPOSITORY MAP</title>
+<g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="15" xml:space="preserve">
+  <rect x="1.5" y="1.5" width="877" height="404" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1.5"/>
+  <line x1="16" y1="46" x2="864" y2="46" stroke="#30363d" stroke-width="1"/>
+  <text x="28" y="34" fill="#58a6ff" font-size="13" font-weight="600" letter-spacing="2">REPOSITORY MAP</text>
+  <text x="36" y="71" fill="#c9d1da" font-weight="600">UST-Protocol/</text>
+  <text x="36" y="96" fill="#79c0ff" >├── spec/</text>
+  <text x="320" y="96" fill="#8b949e" font-size="13">UST-1.0.md (normative) · formal model (measure-theoretic semantics)</text>
+  <text x="36" y="121" fill="#79c0ff" >├── vectors/</text>
+  <text x="320" y="121" fill="#8b949e" font-size="13">language-neutral conformance + byte corpus — the cross-impl arbiter</text>
+  <text x="36" y="146" fill="#79c0ff" >├── packages/</text>
+  <text x="36" y="171" fill="#7ee787" >│   ├── ust-protocol</text>
+  <text x="320" y="171" fill="#8b949e" font-size="13">reference verifier + producer — zero-dep, stateless</text>
+  <text x="36" y="196" fill="#7ee787" >│   ├── ust-cli</text>
+  <text x="320" y="196" fill="#8b949e" font-size="13">the ust command — verify · canon · HIGH genesis ceremony · witness</text>
+  <text x="36" y="221" fill="#7ee787" >│   ├── ust-mcp</text>
+  <text x="320" y="221" fill="#8b949e" font-size="13">MCP server — agents verify natively</text>
+  <text x="36" y="246" fill="#c9d1da" >│   ├── ust-lite</text>
+  <text x="320" y="246" fill="#8b949e" font-size="13">minimal subset — byte-identical verdicts</text>
+  <text x="36" y="271" fill="#7ee787" >│   ├── ust-web-signer</text>
+  <text x="320" y="271" fill="#8b949e" font-size="13">WebCrypto browser signing (non-extractable keys)</text>
+  <text x="36" y="296" fill="#7ee787" >│   └── ust-{ots,rekor}-verify</text>
+  <text x="320" y="296" fill="#8b949e" font-size="13">opt-in anchor substrates — Bitcoin/OTS · Sigstore Rekor</text>
+  <text x="36" y="321" fill="#79c0ff" >├── docs/</text>
+  <text x="320" y="321" fill="#8b949e" font-size="13">web verifier (GitHub Pages) · zero-dependency single-file verifiers</text>
+  <text x="36" y="346" fill="#79c0ff" >├── examples/ · extension/</text>
+  <text x="320" y="346" fill="#8b949e" font-size="13">sample docs (valid + tampered) · “Make it UST” Chrome demo</text>
+  <text x="36" y="371" fill="#79c0ff" >└── tools/</text>
+  <text x="320" y="371" fill="#8b949e" font-size="13">drift gates: spec == code == vectors == README == these panels</text>
+</g>
+</svg>
