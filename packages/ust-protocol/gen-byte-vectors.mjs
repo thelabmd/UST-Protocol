@@ -237,6 +237,16 @@ const rcSurr = P.buildEvidenceReceipt({ domain_shard: 'good.example', active_gen
 const πSurr = N('ConnectorEvidence', [πG], [put(rcSurr)], { subject: head });
 add('receipt.lone-surrogate', 'a receipt facts.substrate with an unpaired surrogate "\\uD800" (round-13 P1-04)', b64u(canonPkg(N('Corroborated', [πChain, πSurr, πT, N('AfterOrder', [πSurr, πT])], [put(term)]))), CFG, { result: 'INVALID', code: 'E-SURROGATE' });
 
+// ── rev11 round-14 — canonical order coordinate, config ceiling, iterative deep-scan ──
+// P1-01 pow position must be a CANONICAL non-negative decimal — "00" (leading zero) is not.
+const rcPos00 = reReceipt({ facts: { substrate: 'bitcoin', position: '00' } });
+const πPos00 = N('ConnectorEvidence', [πG], [put(rcPos00)], { subject: head });
+add('facts.position-noncanonical', 'a pow receipt with position "00" (leading zero, not a CanonicalSeq) — round-14 P1-01', b64u(canonPkg(N('Corroborated', [πChain, πPos00, πT, N('AfterOrder', [πPos00, πT])], [put(term)]))), CFG, { result: 'INVALID', code: 'facts not typed' });
+// P1-02 config over the 1 MiB ceiling is rejected right after the snapshot, before any decode/scan.
+V.push({ id: 'config.oversize', note: 'a config over the 1 MiB ceiling → rejected before decode (round-14 P1-02)', package_b64url: b64u(canonPkg(πCorr)), config_b64url: b64u(canonJSON({ x: 'a'.repeat((1 << 20) + 16) })), expected: { result: 'INVALID', code: 'E-CONFIG-SIZE' } });
+// P2-01 a ~15k-deep nested array must not overflow the recursive pre-scan — iterative scan, then a STRUCTURED reject.
+add('package.deep-arrays', 'a ~15k-deep nested-array term — the surrogate pre-scan must be iterative, then structured reject (round-14 P2-01)', b64u('{"term":' + '['.repeat(15000) + ']'.repeat(15000) + ',"witnesses":{}}'), CFG, { result: 'INVALID', code: 'E-PACKAGE-SHAPE' });
+
 // ── security-condition coverage manifest (owner completion criterion 8) ──────────────────────────────────────────────
 const MANIFEST = {
   note: 'Every security side-condition maps to ≥1 negative byte-vector; the runner asserts each vector exists and holds. In round-7 this feeds a mutation harness (remove the condition → the listed vector must start failing).',
@@ -282,6 +292,9 @@ const MANIFEST = {
   { id: 'FACTS-REAL-CALENDAR', rule: 'ConnectorEvidence/FACTS_SCHEMA', negative_vectors: ['facts.impossible-interval'] },
   { id: 'VOTE-KEYID-BINDING', rule: 'QuorumAgreement', negative_vectors: ['vote.keyid-mismatch'] },
   { id: 'REFERENCE-BUDGET', rule: 'decodeTerm', negative_vectors: ['quorum.dup-refs'] },
+  { id: 'ORDER-COORD-CANONICAL', rule: 'ConnectorEvidence/FACTS_SCHEMA', negative_vectors: ['facts.position-noncanonical'] },
+  { id: 'CONFIG-SIZE-CEILING', rule: 'checkAuthorityProofBytes', negative_vectors: ['config.oversize'] },
+  { id: 'ITERATIVE-DEEP-SCAN', rule: 'decodePackage/anyLoneSurrogate', negative_vectors: ['package.deep-arrays'] },
   { id: 'UNICODE-SCALAR', rule: 'decodePackage', negative_vectors: ['receipt.lone-surrogate'] },
   { id: 'EPOCH-DESTINATION-AUTHORITY', rule: 'ActivateGenesis', negative_vectors: ['transition.dead-authority'] },
   { id: 'TRANSITION-CLAIM-TYPED', rule: 'FutureGenesisCommitment/closedTransition', negative_vectors: ['transition.claim-extra'] },

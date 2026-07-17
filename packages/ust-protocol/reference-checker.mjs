@@ -16,7 +16,7 @@ import { canon, H, keyId, edVerifyStrict, contentHash, verify, isValid, verifyKe
   verifyCheckpointMapUniqueness, evidenceCaps, compareEvidenceOrder, authorityScopeId, genesisEpoch,
   resolveKeys, buildKeylogCommitment, authorityCheckpointId, strictB64url, isPublicDnsShard } from './index.mjs';
 
-export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev10';
+export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev11';
 // RULE_CONTRACTS (§2b) — the STRUCTURAL source of truth: exactly one inference rule per name, one switch branch per
 // name, and a fixed (children arity, witness count, allowed params, conclusion kind). DecodeTerm enforces these on
 // decode; a term with an extra child / extra witness / free param / unknown field / stored conclusion is rejected
@@ -43,7 +43,7 @@ export const RULE_CONTRACTS = Object.freeze(Object.assign(Object.create(null), {
 }));
 export const REFERENCE_CHECKER_RULES = Object.freeze(Object.keys(RULE_CONTRACTS));   // parity DERIVES from the registry
 const RULES = new Set(REFERENCE_CHECKER_RULES);
-const DEFAULT_LIMITS = { maxNodes: 512, maxDepth: 32, maxWitnesses: 1024, maxWitnessBytes: 1 << 20, maxPackageBytes: 1 << 22, maxWitnessRefs: 4096 };   // maxWitnessRefs (round-13 P1-03): total witness REFERENCES across the term, independent of unique store count — bounds crypto ops
+const DEFAULT_LIMITS = { maxNodes: 512, maxDepth: 32, maxWitnesses: 1024, maxWitnessBytes: 1 << 20, maxPackageBytes: 1 << 22, maxWitnessRefs: 4096, maxConfigBytes: 1 << 20 };   // maxConfigBytes (round-14 P1-02): the config has its OWN independent 1 MiB ceiling, not silently the package limit   // maxWitnessRefs (round-13 P1-03): total witness REFERENCES across the term, independent of unique store count — bounds crypto ops
 const isHash = (s) => typeof s === 'string' && /^sha256:[0-9a-f]{64}$/.test(s);
 export const witnessId = (obj) => H('ust:witness', canon(obj));   // content address a witness (for provers building packages)
 // CanonicalSeq (§3): a sequence is a canonical decimal string, never a wire value coerced by Number(). Rejects "00",
@@ -119,8 +119,8 @@ const isNFC = (s) => typeof s === 'string' && s.normalize('NFC') === s;   // a f
 // FACTS_SCHEMA (round-13 P0-02): a TYPED per-kind facts ADT, not just a key-set — the rfc3161-tsa interval endpoints are
 // REAL calendar times (pRFC), so an impossible 2026-02-31 interval is rejected at receipt decode, before orderSemantic.
 const FACTS_SCHEMA = Object.freeze(Object.assign(Object.create(null), {
-  'pow-header-chain':  { substrate: { t: pId }, position: { t: pId } },
-  'transparency-log':  { log_id: { t: pId }, index: { t: pId } },
+  'pow-header-chain':  { substrate: { t: pId }, position: { t: pSeq } },   // position/index are CANONICAL non-negative decimals (round-14 P1-01): "abc"/"00"/"-1" rejected
+  'transparency-log':  { log_id: { t: pId }, index: { t: pSeq } },
   'rfc3161-tsa':       { clock_id: { t: pId }, not_before: { t: pRFC }, not_after: { t: pRFC } },
   'authenticated-map': {},
   'content-addressed': {},
@@ -217,10 +217,17 @@ const hasLoneSurrogate = (s) => {
   }
   return false;
 };
-function anyLoneSurrogate(v) {
-  if (typeof v === 'string') return hasLoneSurrogate(v);
-  if (Array.isArray(v)) return v.some(anyLoneSurrogate);
-  if (v !== null && typeof v === 'object') { for (const k of Object.keys(v)) if (hasLoneSurrogate(k) || anyLoneSurrogate(v[k])) return true; }
+// ITERATIVE (round-14 P2-01): a recursive pre-walk overflowed the engine stack on a ~15k-deep JSON array BEFORE decodeTerm's
+// maxDepth guard ran — a caught RangeError, not a structured reject. An explicit worklist is stack-safe; the structure is
+// bounded by maxPackageBytes, and the deep TERM is then rejected structurally by decodeTerm (E-TERM-DEPTH).
+function anyLoneSurrogate(root) {
+  const stack = [root];
+  while (stack.length) {
+    const v = stack.pop();
+    if (typeof v === 'string') { if (hasLoneSurrogate(v)) return true; }
+    else if (Array.isArray(v)) { for (let i = 0; i < v.length; i++) stack.push(v[i]); }
+    else if (v !== null && typeof v === 'object') { for (const k of Object.keys(v)) { if (hasLoneSurrogate(k)) return true; stack.push(v[k]); } }
+  }
   return false;
 }
 // the intrinsic %TypedArray%.prototype.byteLength getter — it reads the [[ViewedArrayBuffer]] internal slot, so calling
@@ -333,6 +340,7 @@ export function checkAuthorityProofBytes(packageBytes, configBytes) {
   try {
     const pb = snapshotBytes(packageBytes); if (pb.error) return INVALID('package bytes: ' + pb.error);
     const cb = snapshotBytes(configBytes); if (cb.error) return INVALID('config bytes: ' + cb.error);
+    if (cb.bytes.byteLength > L.maxConfigBytes) return INVALID('config: E-CONFIG-SIZE');   // config has its OWN ceiling (round-14 P1-02) — reject right after the snapshot, before decode/parse/scan/recanon (no DoS via a giant config on a tiny package)
     const nc = decodeConfig(cb.bytes); if (nc.err) return INVALID('config: ' + nc.err);
     const { C, config_id } = nc;
     const withCfg = (r) => (r && r.result !== 'VALID') ? { ...r, config_id } : r;   // config_id identifies the config USED, whatever the verdict (P1-02)
@@ -345,7 +353,7 @@ export function checkAuthorityProofBytes(packageBytes, configBytes) {
       if (witnessId(w) !== wid) return { err: 'witness_id mismatch (content address)' };
       return { w };
     };
-    const R = checkTerm(term, C, W, new WeakMap());
+    const R = checkTerm(term, C, W, new Map(), new WeakMap());   // content-keyed memo (round-14 P1-03) + a per-object nodeKey cache
     if (!R.j) return withCfg(R.result ? R : INVALID(R.reason || 'derivation failed'));
     return { result: 'VALID', judgment: R.j, proof_hash: H('ust:proof-term', canon(stripExpected(term))), config_id };
   } catch (e) { return INVALID('checker threw (should be total — please report): ' + (e && e.message ? e.message : String(e))); }
@@ -378,17 +386,29 @@ const stripExpected = (n) => ({ rule: n.rule, ...(n.params !== undefined ? { par
 
 // dispatch — each case RE-DERIVES its judgment. Rejections are structured; nothing throws to the caller. Memoized by
 // node identity so a SHARED sub-proof (a proof DAG) is checked once, not re-checked per parent.
-function checkTerm(node, C, W, memo) {
-  if (memo.has(node)) return memo.get(node);
-  const R = checkTermInner(node, C, W, memo);
-  memo.set(node, R);
+// content identity of a node (round-14 P1-03): equal subtrees at DIFFERENT positions are different OBJECTS (JSON decode is a
+// tree), so an object-identity memo re-verifies a duplicated subproof — 25 syntactic copies of a quorum branch ran its full
+// crypto 25×. A CONTENT key (rule + witness ids + params + child content keys) memoizes by MEANING: each unique subderivation
+// runs its crypto ONCE. Sound: check_C is deterministic in (node content, C, W); W is content-addressed; C is fixed per check.
+const nodeKey = (n, km) => {
+  let k = km.get(n);
+  if (k !== undefined) return k;
+  k = n.rule + ' ' + JSON.stringify(n.witnesses || []) + ' ' + JSON.stringify(n.params || {}) + ' [' + (n.children || []).map((c) => nodeKey(c, km)).join('') + ']';
+  km.set(n, k);
+  return k;
+};
+function checkTerm(node, C, W, memo, km) {
+  const key = nodeKey(node, km);
+  const hit = memo.get(key); if (hit !== undefined) return hit;
+  const R = checkTermInner(node, C, W, memo, km);
+  memo.set(key, R);
   return R;
 }
-function checkTermInner(node, C, W, memo) {
+function checkTermInner(node, C, W, memo, km) {
   const ch = node.children || [], wt = node.witnesses || [], p = node.params || {};
   const bad = (reason) => ({ result: 'INVALID', reason: node.rule + ': ' + reason });
   const ind = (reason) => ({ result: 'INDETERMINATE', reason: node.rule + ': ' + reason });
-  const sub = (i) => checkTerm(ch[i], C, W, memo);
+  const sub = (i) => checkTerm(ch[i], C, W, memo, km);
   const wit = (i) => W(wt[i]);
 
   switch (node.rule) {

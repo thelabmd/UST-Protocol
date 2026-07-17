@@ -467,6 +467,27 @@ const CFG = { ...CONN, witnesses: { [Wa.key_id]: Wa.pub, [Wb.key_id]: Wb.pub }, 
   const rd = checkAuthorityProof({ term: node('ReinforceQuorum', [πCorr, dup]), witnesses }, CFG);
   check('REFERENCE budget (round-13 P1-03): 5000 duplicate vote refs → INVALID(E-TERM-REFS), no crypto amplification', rd.result === 'INVALID' && /E-TERM-REFS/.test(rd.reason));
 }
+// ── rev11 round-14 — compromise is MONOTONIC: compromised → retired → re-add is rejected (resolveKeys P0-01) ──
+{
+  const K = kp('d1'.repeat(32));
+  let prev = P.contentHash(gen), n = 0;
+  const entry = (op) => { const e = P.seal(P.buildKeyLogEntry({ domain_shard: 'good.example', ust_id: 'ust:20260716.' + String(10 + n++), key_id: G.key_id }, T, op, prev), G.priv, G.pub); prev = P.contentHash(e); return e; };
+  const log = [
+    entry({ op: 'add', pub: K.pub, new_key_id: K.key_id }),
+    entry({ op: 'revoke', pub: K.pub, reason: 'compromised', compromised_since: '2026-07-16T00:00:00Z' }),
+    entry({ op: 'revoke', pub: K.pub, reason: 'retired' }),          // the downgrade attempt
+    entry({ op: 'add', pub: K.pub, new_key_id: K.key_id }),          // and re-authorization
+  ];
+  const rk = P.resolveKeys(gen, log);
+  check('COMPROMISE monotonic (round-14 P0-01): compromised → retired → re-add is rejected (E-KEY); compromise is terminal', rk.error === 'E-KEY' && /terminal|COMPROMISED/i.test(rk.detail || ''));
+}
+// ── rev11 round-14 — pow position is a CANONICAL non-negative decimal ("00" rejected, object adapter) ──
+{
+  const bad = P.buildEvidenceReceipt({ domain_shard: 'good.example', active_genesis: AG, subject: head, proof_kind: 'pow-header-chain', facts: { substrate: 'bitcoin', position: '00' }, issued_at: '2026-01-01T00:00:00Z' }, KC.priv, KC.pub);
+  const pc = node('ConnectorEvidence', [πGenesis], [put(bad)], { subject: head });
+  const r = checkAuthorityProof({ term: node('Corroborated', [πChain, pc, πTarget, node('AfterOrder', [pc, πTarget])], [tW]), witnesses }, CFG);
+  check('ORDER coordinate canonical (round-14 P1-01): pow position "00" (leading zero) → INVALID (facts not typed), not typed Evidence', r.result === 'INVALID' && /facts not typed|facts/.test(r.reason));
+}
 
 console.log('\n  reference-checker vectors (' + (typeof pass === 'number' ? '' : '') + 'L1)   PASS ' + pass + '   FAIL ' + fail);
 if (fails.length) { fails.forEach((f) => console.log('    ✗ ' + f)); process.exit(1); }

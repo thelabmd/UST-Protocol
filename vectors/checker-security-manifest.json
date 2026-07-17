@@ -306,6 +306,27 @@
       ]
     },
     {
+      "id": "ORDER-COORD-CANONICAL",
+      "rule": "ConnectorEvidence/FACTS_SCHEMA",
+      "negative_vectors": [
+        "facts.position-noncanonical"
+      ]
+    },
+    {
+      "id": "CONFIG-SIZE-CEILING",
+      "rule": "checkAuthorityProofBytes",
+      "negative_vectors": [
+        "config.oversize"
+      ]
+    },
+    {
+      "id": "ITERATIVE-DEEP-SCAN",
+      "rule": "decodePackage/anyLoneSurrogate",
+      "negative_vectors": [
+        "package.deep-arrays"
+      ]
+    },
+    {
       "id": "UNICODE-SCALAR",
       "rule": "decodePackage",
       "negative_vectors": [

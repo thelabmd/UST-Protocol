@@ -636,6 +636,7 @@ export function resolveKeys(genesis, keylog = []) {
   const all = new Map([[gKid, gPub]]);
   const active = new Map([[gKid, gPub]]);
   const revoked = new Map();                                                      // key_id → {reason, compromised_since?, at}
+  const compromised = new Set();                                                  // MONOTONIC (round-14 P0-01): compromise is TERMINAL — a compromised key is never re-authorized, and its status can never be downgraded (compromised → retired) by a later revoke
   const history = new Map([[gKid, { pub: gPub, from: 0, authorized_at: genesis.state.time.generated_at, retired_at: null, revoked_at: null }]]);  // authorized_at = K_n(t) lower bound (F.5e)
   const OP_FIELDS = Object.assign(Object.create(null), { add: ['op', 'pub', 'new_key_id'], rotate: ['op', 'pub', 'new_key_id'], revoke: ['op', 'pub', 'reason', 'compromised_since'] });   // null-proto (UST-Protocol round-13 P2-01): OP_FIELDS["toString"] must be undefined, not an inherited function
   const derive = (i, pub, label) => {                                            // strict pub + derived key_id
@@ -658,7 +659,7 @@ export function resolveKeys(genesis, keylog = []) {
     if (op.op === 'add' || op.op === 'rotate') {
       const d = derive(i, op.pub, op.op); if (d.error) return d.error;
       if (op.new_key_id !== undefined && op.new_key_id !== d.kid) return { error: 'E-KEY', detail: 'entry ' + i + ' new_key_id != H(ust:keylog, pub)' };
-      if (revoked.get(d.kid)?.reason === 'compromised') return { error: 'E-KEY', detail: 'entry ' + i + ' cannot re-authorize a COMPROMISED key' };
+      if (compromised.has(d.kid)) return { error: 'E-KEY', detail: 'entry ' + i + ' cannot re-authorize a COMPROMISED key (terminal, round-14 P0-01)' };
       all.set(d.kid, op.pub); active.set(d.kid, op.pub);
       if (!history.has(d.kid)) history.set(d.kid, { pub: op.pub, from: i + 1, authorized_at: e.state.time.generated_at, retired_at: null, revoked_at: null });
       // #75 spec §12.2 "each rotation is authorized by the key it supersedes": on rotate the SIGNER is superseded —
@@ -675,7 +676,9 @@ export function resolveKeys(genesis, keylog = []) {
       if (op.reason === 'compromised') {
         if (typeof op.compromised_since !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(op.compromised_since)) return { error: 'E-MALFORMED', detail: 'entry ' + i + ' compromised requires strict RFC3339-Z compromised_since (§12.2)' };
       } else if (op.compromised_since !== undefined) return { error: 'E-MALFORMED', detail: 'entry ' + i + ' retired MUST NOT carry compromised_since' };
+      if (compromised.has(d.kid)) return { error: 'E-KEY', detail: 'entry ' + i + ' COMPROMISED is terminal — cannot re-revoke or downgrade (round-14 P0-01)' };
       active.delete(d.kid);
+      if (op.reason === 'compromised') compromised.add(d.kid);                     // monotonic — never cleared
       revoked.set(d.kid, { reason: op.reason, compromised_since: op.compromised_since, at: e.state.time.generated_at });
       const h = history.get(d.kid); if (h) h.revoked_at = e.state.time.generated_at;
     }
