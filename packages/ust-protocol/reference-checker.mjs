@@ -16,7 +16,7 @@ import { canon, H, keyId, edVerifyStrict, contentHash, verify, isValid, verifyKe
   verifyCheckpointMapUniqueness, evidenceCaps, compareEvidenceOrder, authorityScopeId, genesisEpoch,
   resolveKeys, buildKeylogCommitment, authorityCheckpointId, strictB64url } from './index.mjs';
 
-export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev6';
+export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev7';
 // RULE_CONTRACTS (§2b) — the STRUCTURAL source of truth: exactly one inference rule per name, one switch branch per
 // name, and a fixed (children arity, witness count, allowed params, conclusion kind). DecodeTerm enforces these on
 // decode; a term with an extra child / extra witness / free param / unknown field / stored conclusion is rejected
@@ -55,6 +55,34 @@ const strictPub = (p) => strictB64url(p, 32) !== null;   // Pub32: canonical unp
 // typed witness envelope: EXACTLY these keys, no extras (round-9 P0-04) — a validly-signed inner claim/body cannot smuggle
 // an extra outer field the signature does not cover, and an attestation cannot forge a distinct claim at one coordinate.
 const exactKeys = (o, ...keys) => o !== null && typeof o === 'object' && !Array.isArray(o) && Object.keys(o).length === keys.length && keys.every((k) => Object.prototype.hasOwnProperty.call(o, k));
+// closedRec (rev7, M-DEC-LEAF): a CLOSED typed record — a plain object whose keys ⊆ (req ∪ opt) and ⊇ req. This is the
+// exactKeys generalization with OPTIONAL keys: it rejects ANY unknown field at the level it guards, so a validly-SIGNED
+// inner body/claim/sig can no longer carry an extra field the interpreter ignores but the identity hash absorbs (round-10
+// P0-02/P0-04/P0-05). Every witness envelope, claim, body, sig, and per-kind facts object is validated through this.
+const closedRec = (o, req, opt = []) => {
+  if (o === null || typeof o !== 'object' || Array.isArray(o)) return false;
+  for (const k of Object.keys(o)) if (!req.includes(k) && !opt.includes(k)) return false;   // no unknown key
+  for (const k of req) if (!Object.prototype.hasOwnProperty.call(o, k)) return false;         // every required present
+  return true;
+};
+const isNFC = (s) => typeof s === 'string' && s.normalize('NFC') === s;   // a free-text config leaf must be NFC (canon requires it; validate at DECODE so it never reaches a throw — round-10 P1-02)
+// FACTS_KEYS / ORDER_COORD (round-10 P0-03): the evidence `facts` object is a CLOSED ADT keyed by proof_kind, and the
+// temporal order coordinate is read ONLY from that kind's authorized fields — a transparency-log's order is Position(
+// log_id, index), a pow chain's Position(substrate, position), a tsa's Interval(clock_id, …). Planting a pow-style
+// {substrate, position} on a transparency-log receipt is now a CLOSED-facts violation, not a silently-honored order.
+const FACTS_KEYS = Object.freeze({
+  'pow-header-chain': ['substrate', 'position'],
+  'transparency-log': ['log_id', 'index'],
+  'rfc3161-tsa':      ['clock_id', 'not_before', 'not_after'],
+  'authenticated-map': [],
+  'content-addressed': [],
+});
+const factsKeys = (proof_kind) => FACTS_KEYS[proof_kind] || [];   // an unknown kind carries NO facts (closed to {})
+const ORDER_COORD = Object.freeze({
+  'pow-header-chain': { kind: 'position', id: 'substrate', val: 'position' },
+  'transparency-log': { kind: 'position', id: 'log_id',    val: 'index' },
+  'rfc3161-tsa':      { kind: 'interval', id: 'clock_id',  lo: 'not_before', hi: 'not_after' },
+});
 // §2 byte-semantics: read a caller value EXACTLY ONCE into an inert internal value. The counting replacer fires each
 // getter once and BOUNDS the read, so a cyclic or exponentially-shared object graph is rejected (not OOM); JSON.parse
 // then yields an own-data-only tree with no getters/prototype/proxy. After this the caller object is never read again.
@@ -69,48 +97,44 @@ function inertRead(v, bound) {
 // ── config normalization (total; §8/§10) — C is a WORLD PARAMETER, never in the term ──────────────────────────────
 const isPlain = (x) => x !== null && typeof x === 'object' && !Array.isArray(x);   // a JSON object, never an array/null (round-9 P0-05)
 const sortedSet = (a) => JSON.stringify([...new Set(a)].sort()) === JSON.stringify(a);   // already sorted + de-duplicated as supplied (round-9 P1-01)
-// DecodeConfig — a TOTAL, TYPED, CLOSED, CANONICAL config ADT. Never throws (every malformed input → a stable E-CONFIG,
-// round-9 P1-02); each sub-object must be a plain object of the exact typed shape (an array no longer passes `typeof
-// object`, P0-05); set-valued fields must be supplied sorted + de-duplicated (P1-01); unknown fields (top-level AND
-// nested) are rejected. config_id is over the validated canonical form (string leaves only → canon never throws).
-function normalizeConfig(rawLive) {
-  const ci = inertRead(rawLive, 1 << 16);
-  if (ci.err) return { err: 'config is ' + ci.err };
-  const raw = ci.v;
+// DecodeConfig — a TOTAL, TYPED, CLOSED config ADT. Never throws (every malformed input → a stable E-CONFIG, round-9
+// P1-02); each sub-object must be a plain object of the exact typed shape (an array no longer passes `typeof object`,
+// P0-05); set-valued fields must be supplied sorted + de-duplicated (P1-01); unknown fields (top-level AND nested) are
+// rejected; every free-string leaf is NFC. NO field is silently DEFAULTED (round-10 P0-01) — an absent value is PRESERVED
+// through to config_id = H(canonical bytes) in decodeConfig, so decode is injective (distinct canonical bytes ⟺ distinct
+// config_id) and an absent uniqueness_threshold fails quorum CLOSED rather than becoming a silent 2.
+function normalizeConfig(raw) {
   if (!isPlain(raw)) return { err: 'E-CONFIG-SHAPE' };
   for (const k of Object.keys(raw)) if (k !== 'connectors' && k !== 'mapRoots' && k !== 'domains' && k !== 'witnesses' && k !== 'policy') return { err: 'E-CONFIG-FIELD:' + k };
-  if (raw.$1 != null && !isPlain(raw.connectors)) return { err: 'E-CONFIG-CONNECTORS' };
+  if (raw.connectors !== undefined && !isPlain(raw.connectors)) return { err: 'E-CONFIG-CONNECTORS' };
   const connectors = raw.connectors ?? {};
   for (const k of Object.keys(connectors)) {
     const v = connectors[k];
     if (!isPlain(v)) return { err: 'E-CONFIG-CONNECTOR:' + k };
     for (const ck of Object.keys(v)) if (ck !== 'pub' && ck !== 'allowed_proof_kinds' && ck !== 'trust_domain') return { err: 'E-CONFIG-CONNECTOR-FIELD:' + ck };
     if (!strictPub(v.pub)) return { err: 'E-CONFIG-CONNECTOR-PUB:' + k };
-    if (!Array.isArray(v.allowed_proof_kinds) || !v.allowed_proof_kinds.every((x) => typeof x === 'string') || !sortedSet(v.allowed_proof_kinds)) return { err: 'E-CONFIG-APK:' + k };
-    if (v.trust_domain !== undefined && typeof v.trust_domain !== 'string') return { err: 'E-CONFIG-TRUST-DOMAIN:' + k };
+    if (!Array.isArray(v.allowed_proof_kinds) || !v.allowed_proof_kinds.every((x) => typeof x === 'string' && isNFC(x)) || !sortedSet(v.allowed_proof_kinds)) return { err: 'E-CONFIG-APK:' + k };
+    if (v.trust_domain !== undefined && (typeof v.trust_domain !== 'string' || !isNFC(v.trust_domain))) return { err: 'E-CONFIG-TRUST-DOMAIN:' + k };   // NFC at decode → never a throw at config_id (P1-02)
   }
-  if (raw.mapRoots != null && !Array.isArray(raw.mapRoots)) return { err: 'E-CONFIG-MAPROOTS' };
+  if (raw.mapRoots !== undefined && !Array.isArray(raw.mapRoots)) return { err: 'E-CONFIG-MAPROOTS' };
   const mapRoots = raw.mapRoots ?? [];
   if (!mapRoots.every(isHash) || !sortedSet(mapRoots)) return { err: 'E-CONFIG-MAPROOTS' };
-  if (raw.$1 != null && !isPlain(raw.domains)) return { err: 'E-CONFIG-DOMAINS' };
+  if (raw.domains !== undefined && !isPlain(raw.domains)) return { err: 'E-CONFIG-DOMAINS' };
   const domains = raw.domains ?? {};
-  for (const k of Object.keys(domains)) if (typeof domains[k] !== 'string') return { err: 'E-CONFIG-DOMAIN:' + k };   // ControlDomain is a typed STRING (P0-03)
-  if (raw.$1 != null && !isPlain(raw.witnesses)) return { err: 'E-CONFIG-WITNESSES' };
+  for (const k of Object.keys(domains)) if (typeof domains[k] !== 'string' || !isNFC(domains[k])) return { err: 'E-CONFIG-DOMAIN:' + k };   // ControlDomain is a typed NFC STRING
+  if (raw.witnesses !== undefined && !isPlain(raw.witnesses)) return { err: 'E-CONFIG-WITNESSES' };
   const witnesses = raw.witnesses ?? {};
   for (const k of Object.keys(witnesses)) if (!strictPub(witnesses[k])) return { err: 'E-CONFIG-WITNESS:' + k };   // each witness value is a Pub32
-  if (raw.$1 != null && !isPlain(raw.policy)) return { err: 'E-CONFIG-POLICY' };   // an array/string policy is rejected, never silently defaulted (P0-05)
+  if (raw.policy !== undefined && !isPlain(raw.policy)) return { err: 'E-CONFIG-POLICY' };   // an array/string/null policy is rejected, never silently defaulted (round-10 P0-01)
   const policy = raw.policy ?? {};
   for (const k of Object.keys(policy)) if (k !== 'uniqueness_threshold' && k !== 'allowExperimentalAttested') return { err: 'E-CONFIG-POLICY-FIELD:' + k };
   if (policy.uniqueness_threshold !== undefined && !(Number.isInteger(policy.uniqueness_threshold) && policy.uniqueness_threshold >= 1)) return { err: 'E-CONFIG-THRESHOLD' };
   if (policy.allowExperimentalAttested !== undefined && typeof policy.allowExperimentalAttested !== 'boolean') return { err: 'E-CONFIG-POLICY-FLAG' };
-  const uniqueness_threshold = policy.uniqueness_threshold ?? 2;
+  // NO threshold default (round-10 P0-01): an absent uniqueness_threshold means "no quorum threshold configured" and
+  // QuorumAgreement fails CLOSED (INDETERMINATE), never a silent 2. allowExperimentalAttested absent = false (fail-closed).
   const C = Object.freeze({ connectors, mapRoots, domains, witnesses,
-    policy: Object.freeze({ uniqueness_threshold, allowExperimentalAttested: policy.allowExperimentalAttested === true }) });
-  const config_id = H('ust:consumer-config', canon({
-    connectors: Object.fromEntries(Object.entries(connectors).map(([k, v]) => [k, { pub: v.pub, allowed_proof_kinds: v.allowed_proof_kinds, ...(v.trust_domain !== undefined ? { trust_domain: v.trust_domain } : {}) }])),
-    mapRoots, domains, witnesses,
-    policy: { uniqueness_threshold: String(uniqueness_threshold), allowExperimentalAttested: C.policy.allowExperimentalAttested ? '1' : '0' } }));
-  return { C, config_id };
+    policy: Object.freeze({ ...(policy.uniqueness_threshold !== undefined ? { uniqueness_threshold: policy.uniqueness_threshold } : {}), allowExperimentalAttested: policy.allowExperimentalAttested === true }) });
+  return { C };
 }
 
 // ── the byte boundary (§2, M-BYTE/M-DEC) — the TCB is over immutable octets ───────────────────────────────────────
@@ -182,8 +206,15 @@ function decodePackage(bytes, L) {
   const td = decodeTerm(parsed.term, L, 0, { n: 0 }); if (td.err) return { err: td.err };
   const wkeys = Object.keys(parsed.witnesses);
   if (wkeys.length > L.maxWitnesses) return { err: 'E-WITNESS-COUNT' };
+  // REACHABILITY (round-10 P1-03): every stored witness MUST be referenced by the decoded term. An unreferenced witness is
+  // dead weight the proof_hash (over the term) does not cover — it would let two distinct package byte-strings carry the
+  // SAME judgment + proof_hash. Requiring witnesses == referenced makes the decoded form canonical: term ⟹ witness id set
+  // ⟹ (content-addressed) witness bytes ⟹ package bytes, so proof_hash is injective over the package.
+  const referenced = new Set();
+  (function walk(t) { for (const w of t.witnesses) referenced.add(w); for (const c of t.children) walk(c); })(td.term);
   const store = Object.create(null);
-  for (const k of wkeys) {                                 // EVERY witness content-addressed + byte-bounded, even if unreferenced (M-DEC domain, P1-03)
+  for (const k of wkeys) {
+    if (!referenced.has(k)) return { err: 'E-WITNESS-UNREFERENCED:' + k };   // no dangling witness
     const w = parsed.witnesses[k];
     let wb; try { wb = canon(w); } catch { return { err: 'E-WITNESS-NONCANONICAL' }; }
     if (Buffer.byteLength(wb, 'utf8') > L.maxWitnessBytes) return { err: 'E-WITNESS-SIZE' };   // over UTF-8 BYTES, not UTF-16 code units (round-8 P1-03)
@@ -203,7 +234,10 @@ function decodeConfig(bytes) {
   // alias, so the consumer trust world is language-neutral, not parser-dependent (P0-01).
   let reB; try { reB = canonJSON(parsed); } catch { return { err: 'E-CONFIG-NONCANONICAL' }; }
   if (reB !== text) return { err: 'E-CONFIG-NONCANONICAL' };
-  return normalizeConfig(parsed);
+  const nc = normalizeConfig(parsed); if (nc.err) return nc;
+  // config_id over the PROVEN-canonical bytes (round-10 P1-01/P1-02): B is bijective with the ADT, so H(B) is a faithful
+  // id — and it never routes through canon(), so a non-NFC leaf (already rejected above) can no longer reach a throw.
+  return { C: nc.C, config_id: H('ust:consumer-config', text) };
 }
 
 // checkAuthorityProofBytes — THE NORMATIVE TCB. Immutable bytes in; VALID/INVALID/INDETERMINATE out. A live object never
@@ -234,8 +268,21 @@ export function checkAuthorityProofBytes(packageBytes, configBytes) {
 
 // EncodeLive — the UNTRUSTED encoding adapter (outside the TCB). It MAY run getters/toJSON; that only chooses the bytes
 // (a caller could hand any bytes directly), never produces a proof. Package uses canonical string-leaf bytes (`canon`),
-// config uses JSON. checkAuthorityProof(obj,cfg) := checkAuthorityProofBytes(EncodeLive(pkg), EncodeLive(cfg)).
-const encodeLive = (x, kind) => { try { return { bytes: TEXT_ENC.encode(kind === 'package' ? canon(x) : canonJSON(x ?? null)) }; } catch { return { error: 'E-ENCODE' }; } };
+// config uses JSON. Part of choosing CANONICAL package bytes is PRUNING the witness store to those the term references
+// (round-10 P1-03) — the same canonicalization the TCB then re-checks on the bytes; a caller who hands raw bytes with a
+// dangling witness still gets E-WITNESS-UNREFERENCED. checkAuthorityProof(obj,cfg) := checkAuthorityProofBytes(EncodeLive…).
+const referencedIds = (term) => { const r = new Set(); (function walk(t) { if (t && typeof t === 'object') { for (const w of (Array.isArray(t.witnesses) ? t.witnesses : [])) r.add(w); for (const c of (Array.isArray(t.children) ? t.children : [])) walk(c); } })(term); return r; };
+const encodeLive = (x, kind) => {
+  try {
+    let v = x;
+    if (kind === 'package' && x && typeof x === 'object' && x.witnesses && typeof x.witnesses === 'object' && !Array.isArray(x.witnesses)) {
+      const ref = referencedIds(x.term), w = {};
+      for (const k of Object.keys(x.witnesses)) if (ref.has(k)) w[k] = x.witnesses[k];   // canonical package = only referenced witnesses
+      v = { ...x, witnesses: w };
+    }
+    return { bytes: TEXT_ENC.encode(kind === 'package' ? canon(v) : canonJSON(v ?? null)) };
+  } catch { return { error: 'E-ENCODE' }; }
+};
 export function checkAuthorityProof(obj, config) {
   const p = encodeLive(obj, 'package'); if (p.error) return { result: 'INVALID', reason: 'package: ' + p.error };
   const c = encodeLive(config, 'config'); if (c.error) return { result: 'INVALID', reason: 'config: ' + c.error };
@@ -274,7 +321,7 @@ function checkTermInner(node, C, W, memo) {
     case 'CheckpointZero': {
       const G = sub(0); if (!G.j || G.j.kind !== 'Genesis') return G.j ? bad('child 0 must be Genesis') : G;
       const c = wit(0); if (c.err) return bad(c.err);
-      if (!exactKeys(c.w, 'body', 'sig')) return bad('checkpoint witness must be exactly { body, sig } (typed witness, round-9 P0-04)');
+      { const cc = closedCheckpoint(c.w); if (cc) return bad(cc); }
       const b = c.w.body;
       if (!b || b.purpose !== 'ust:authority-checkpoint' || decodeSeq(b.sequence) !== '0' || b.previous_checkpoint !== undefined || b.previous_epoch_final_checkpoint !== undefined) return bad('C0 must be a seq-0 checkpoint with no previous links');
       const sc = scopeOk(b, G.j); if (sc) return bad(sc);
@@ -288,7 +335,7 @@ function checkTermInner(node, C, W, memo) {
     case 'CheckpointStep': {
       const CH = sub(0); if (!CH.j || CH.j.kind !== 'Chain') return CH.j ? bad('child 0 must be Chain') : CH;
       const c = wit(0); if (c.err) return bad(c.err);
-      if (!exactKeys(c.w, 'body', 'sig')) return bad('checkpoint witness must be exactly { body, sig } (typed witness, round-9 P0-04)');
+      { const cc = closedCheckpoint(c.w); if (cc) return bad(cc); }
       const b = c.w.body, prev = CH.j;
       if (!b || b.purpose !== 'ust:authority-checkpoint') return bad('not an authority checkpoint');
       if (decodeSeq(b.sequence) !== seqSucc(prev.n)) return bad('sequence ≠ prev+1');
@@ -306,12 +353,11 @@ function checkTermInner(node, C, W, memo) {
     case 'ConnectorEvidence': {
       const G = sub(0); if (!G.j || G.j.kind !== 'Genesis') return G.j ? bad('child 0 must be Genesis') : G;
       const r = wit(0); if (r.err) return bad(r.err);
+      { const e = closedReceipt(r.w); if (e) return bad(e); }   // CLOSED receipt ADT: envelope + sig + claim + per-kind facts (round-10 P0-02/P0-03; subsumes the round-8 unknown-field & banned-facts checks)
       const cl = r.w.claim, sig = r.w.sig;
-      for (const k of Object.keys(r.w)) if (k !== 'claim' && k !== 'issuer_id' && k !== 'sig') return bad('receipt has an unknown field "' + k + '" (typed witness schema, round-8 P0-04)');
-      if (!cl || !sig || cl.purpose !== 'ust:evidence-receipt') return bad('not an evidence receipt');
+      if (cl.purpose !== 'ust:evidence-receipt') return bad('not an evidence receipt');
       if (sig.alg !== 'Ed25519' || !strictPub(sig.pub) || keyId(sig.pub) !== sig.key_id || r.w.issuer_id !== sig.key_id) return bad('receipt signature not Ed25519 / issuer mismatch / non-canonical pub');   // P0-02 alg envelope + P1-04
       if (strictB64url(sig.sig, 64) === null || !edVerifyStrict(sig.pub, canon({ purpose: 'ust:evidence-receipt-signature', claim: cl }), sig.sig)) return bad('receipt signature invalid');
-      for (const k of ['assurance', 'strength', 'trust_domain', 'independent', 'capability', 'attested', 'threshold']) if (k in (cl.facts || {})) return bad('receipt facts must not self-declare ' + k);
       if (cl.active_genesis !== G.j.active_genesis || cl.genesis_epoch !== genesisEpoch(cl.active_genesis)) return bad('receipt scope ≠ genesis scope');
       if (cl.domain_shard !== G.j.domain) return bad('receipt domain_shard ≠ genesis domain (§2.y)');
       if (cl.subject !== p.subject) return bad('receipt subject ≠ required subject');
@@ -368,6 +414,7 @@ function checkTermInner(node, C, W, memo) {
       // Coordinate provenance (Cluster B.1): (γ,n,h) come FROM the proven Chain, never from term params.
       const CH = sub(0); if (!CH.j || CH.j.kind !== 'Chain') return CH.j ? bad('child 0 must be Chain (coordinate provenance)') : CH;
       const t = C.policy.uniqueness_threshold;
+      if (t === undefined) return ind('no uniqueness_threshold configured — quorum fails closed (round-10 P0-01: never a silent default)');
       const n = String(CH.j.n), h = CH.j.head_id;
       // WitnessVote admission is a LOCAL sub-derivation of QuorumAgreement, performed independently per raw attestation
       // BEFORE grouping: authenticate + consumer-resolve + coordinate/domain-bind, THEN group by the ALREADY-VERIFIED
@@ -443,7 +490,7 @@ function checkTermInner(node, C, W, memo) {
       // EpochActivated cannot come from signer+hash equality alone — the epoch-B INITIAL checkpoint C0_B must be verified
       // under the epoch-B genesis authority and bound to the epoch-A final checkpoint at the committed sequence (P0-04).
       const c = wit(0); if (c.err) return bad('epoch-B initial checkpoint (C0_B) witness required: ' + c.err);
-      if (!exactKeys(c.w, 'body', 'sig')) return bad('checkpoint witness must be exactly { body, sig } (typed witness, round-9 P0-04)');
+      { const cc = closedCheckpoint(c.w); if (cc) return bad(cc); }
       const b = c.w.body;
       if (!b || b.purpose !== 'ust:authority-checkpoint') return bad('C0_B is not an authority checkpoint');
       if (b.previous_checkpoint !== undefined) return bad('C0_B must not carry a same-epoch previous_checkpoint');
@@ -501,21 +548,47 @@ function keylogWithinCeiling(kl) {
   const n = decodeSeq(kl.length);
   return n !== null && Number(n) <= KEYLOG_CEIL;
 }
-// §3 OrderSemantic — the order coordinate an evidence may assert is fixed by its proof_kind's caps, NOT its facts.
-// 'order' cap → a Position(substrate, position); else 'time' cap → an Interval(not_before, not_after); else none. A
-// planted fact outside the authorized coordinate is stripped, so a time-only kind can never assert a position (P0-07).
+// §3 OrderSemantic (round-10 P0-03) — the order coordinate is fixed by the proof_kind (ORDER_COORD), NOT by whichever
+// generic facts are present: pow → Position(substrate, position), transparency-log → Position(log_id, index), tsa →
+// Interval(clock_id, not_before ≤ not_after). The identity is proof_kind-namespaced (NUL-delimited) so kinds never collide.
 function orderSemantic(proof_kind, facts) {
-  const caps = evidenceCaps(proof_kind), f = facts || {};
+  const c = ORDER_COORD[proof_kind], f = facts || {};
+  if (!c) return { kind: 'none', id: null, facts: {} };   // round-10 P0-03: coordinate read ONLY from the kind's authorized fields
   // the order carries its IDENTITY (which substrate / which clock), and the identity must be PRESENT — a position needs a
   // substrate, an interval a clock_id; without it there is no comparable order (P0-03). id is an index of After.
   // the identity is NAMESPACED by the TRUSTED proof_kind (P0-04) — two different kinds reusing one `substrate` string do
   // NOT collide; and an interval must be well-formed lower ≤ upper (P1-06), else there is no order.
-  if (caps.includes('order') && typeof f.substrate === 'string') return { kind: 'position', id: proof_kind + ' ' + f.substrate, facts: { substrate: f.substrate, position: f.position } };
-  if (caps.includes('time') && typeof f.clock_id === 'string') {
-    if (typeof f.not_before === 'string' && typeof f.not_after === 'string' && f.not_before > f.not_after) return { kind: 'none', id: null, facts: {} };
-    return { kind: 'interval', id: proof_kind + ' ' + f.clock_id, facts: { not_before: f.not_before, not_after: f.not_after } };
+  if (c.kind === 'position') {
+    if (typeof f[c.id] !== 'string' || typeof f[c.val] !== 'string') return { kind: 'none', id: null, facts: {} };
+    return { kind: 'position', id: proof_kind + ' ' + f[c.id], facts: { substrate: f[c.id], position: f[c.val] } };
   }
-  return { kind: 'none', id: null, facts: {} };
+  if (typeof f[c.id] !== 'string' || typeof f[c.lo] !== 'string' || typeof f[c.hi] !== 'string') return { kind: 'none', id: null, facts: {} };
+  if (f[c.lo] > f[c.hi]) return { kind: 'none', id: null, facts: {} };   // ill-formed interval lower > upper -> no order (P1-06)
+  return { kind: 'interval', id: proof_kind + ' ' + f[c.id], facts: { not_before: f[c.lo], not_after: f[c.hi] } };
+}
+// closedCheckpoint (round-10 P0-04/P0-05): the checkpoint witness is a CLOSED ADT at every level — envelope { body, sig },
+// sig { alg, key_id, pub, sig }, body { the 8 authority-checkpoint fields } + optional prior links, and the nested
+// checkpoint_authority / keylog. Because head_id = H(canon({body, sig})) hashes the CLOSED form, no extra field (a
+// sig.wrapper_nonce, a body.extension_semantics) can shift the identity without being rejected here first.
+function closedCheckpoint(cw) {
+  if (!exactKeys(cw, 'body', 'sig')) return 'checkpoint witness must be exactly { body, sig }';
+  if (!closedRec(cw.sig, ['alg', 'key_id', 'pub', 'sig'])) return 'checkpoint sig envelope not closed (round-10 P0-04)';
+  const b = cw.body;
+  if (!closedRec(b, ['version', 'purpose', 'domain_shard', 'genesis_epoch', 'sequence', 'active_genesis', 'checkpoint_authority', 'keylog'], ['previous_checkpoint', 'previous_epoch_final_checkpoint'])) return 'checkpoint body not closed (round-10 P0-05)';
+  if (!closedRec(b.checkpoint_authority, ['current_key_id'], ['next_key_id', 'next_pub', 'effective_sequence'])) return 'checkpoint_authority not closed';
+  if (!closedRec(b.keylog, ['root', 'length', 'head'])) return 'checkpoint keylog not closed';
+  return null;
+}
+// closedReceipt (round-10 P0-02/P0-03): a connector receipt is a CLOSED ADT — envelope { claim, issuer_id, sig }, sig
+// { alg, key_id, pub, sig }, the claim exactly its 9 fields (so version/issued_at can no longer be dropped and re-signed),
+// and facts CLOSED to the proof_kind's schema (so a transparency-log cannot smuggle a pow-style { substrate, position }).
+function closedReceipt(rw) {
+  if (!closedRec(rw, ['claim', 'issuer_id', 'sig'])) return 'receipt envelope not closed';
+  if (!closedRec(rw.sig, ['alg', 'key_id', 'pub', 'sig'])) return 'receipt sig envelope not closed';
+  const cl = rw.claim;
+  if (!closedRec(cl, ['version', 'purpose', 'domain_shard', 'active_genesis', 'genesis_epoch', 'subject', 'proof_kind', 'facts', 'issued_at'], ['payload_digest'])) return 'receipt claim not closed (round-10 P0-02)';
+  if (typeof cl.proof_kind !== 'string' || !closedRec(cl.facts, [], factsKeys(cl.proof_kind))) return 'receipt facts not closed for proof_kind (round-10 P0-03)';
+  return null;
 }
 function sigOk(cp, auth) {
   const s = cp.sig;

@@ -7,7 +7,7 @@
 import * as P from './index.mjs';
 import { witnessId, canonJSON, REFERENCE_CHECKER_VERSION } from './reference-checker.mjs';
 import { writeFileSync } from 'node:fs';
-import { createPrivateKey, createPublicKey } from 'node:crypto';
+import { createPrivateKey, createPublicKey, sign as edSign } from 'node:crypto';
 
 const kp = (h) => { const priv = createPrivateKey({ key: Buffer.concat([Buffer.from('302e020100300506032b657004220420', 'hex'), Buffer.from(h, 'hex')]), format: 'der', type: 'pkcs8' }); const pub = createPublicKey(priv).export({ format: 'der', type: 'spki' }).slice(-32).toString('base64url'); return { priv, pub, key_id: P.keyId(pub) }; };
 const T = { generated_at: '2026-07-16T00:00:00Z', valid_from: '2026-07-16T00:00:00Z', valid_to: '2026-07-16T01:00:00Z' };
@@ -32,7 +32,15 @@ const πC = N('ConnectorEvidence', [πG], [put(rc(head, 900))], { subject: head 
 const πT = N('ConnectorEvidence', [πG], [put(rc('ust:target', 800))], { subject: 'ust:target' });
 const πAfter = N('AfterOrder', [πC, πT]);
 const πCorr = N('Corroborated', [πChain, πC, πT, πAfter], [put(term)]);
-const pkg = (rootTerm) => ({ term: rootTerm, witnesses: store });
+// canonical package = only the witnesses the term references (round-10 P1-03); the global `store` accumulates across
+// vectors, so each package must be pruned to its own reachable set (an unreferenced witness is now E-WITNESS-UNREFERENCED).
+const pkg = (rootTerm) => {
+  const ref = new Set();
+  (function walk(t) { for (const w of (t.witnesses || [])) ref.add(w); for (const c of (t.children || [])) walk(c); })(rootTerm);
+  const witnesses = {};
+  for (const k of Object.keys(store)) if (ref.has(k)) witnesses[k] = store[k];
+  return { term: rootTerm, witnesses };
+};
 const CFG = { connectors: { [KC.key_id]: { pub: KC.pub, trust_domain: 'btc-watch', allowed_proof_kinds: ['pow-header-chain', 'rfc3161-tsa'] } }, witnesses: { [Wa.key_id]: Wa.pub, [Wb.key_id]: Wb.pub }, domains: { [Wa.key_id]: 'op-a', [Wb.key_id]: 'op-b' }, policy: { uniqueness_threshold: 2 } };
 const CFG_T = { connectors: { [KT.key_id]: { pub: KT.pub, trust_domain: 'tsa', allowed_proof_kinds: ['rfc3161-tsa'] } } };
 
@@ -71,7 +79,7 @@ const CFG_ORD = { connectors: { [KC.key_id]: { pub: KC.pub, trust_domain: 'x', a
 const evR = (subj, pk, facts) => P.buildEvidenceReceipt({ domain_shard: 'good.example', active_genesis: AG, subject: subj, proof_kind: pk, facts, issued_at: '2026-01-01T00:00:00Z' }, KC.priv, KC.pub);
 const πTlog = N('ConnectorEvidence', [πG], [put(evR(head, 'transparency-log', { substrate: 'shared-id', position: '900' }))], { subject: head });
 const πPowShared = N('ConnectorEvidence', [πG], [put(evR('ust:target', 'pow-header-chain', { substrate: 'shared-id', position: '800' }))], { subject: 'ust:target' });
-add('order.cross-namespace', 'a transparency-log and a pow-header-chain reusing one substrate string do not collide', b64u(canonPkg(N('Corroborated', [πChain, πTlog, πPowShared, N('AfterOrder', [πTlog, πPowShared])], [put(term)]))), CFG_ORD, { result: 'INDETERMINATE', code: 'order' });
+add('facts.wrong-kind', 'a transparency-log receipt carrying pow-style {substrate,position} facts (not its log_id/index) — closed-facts violation (round-10 P0-03)', b64u(canonPkg(N('Corroborated', [πChain, πTlog, πPowShared, N('AfterOrder', [πTlog, πPowShared])], [put(term)]))), CFG_ORD, { result: 'INVALID', code: 'facts not closed' });
 const tsaIv = (subj, nb, na) => P.buildEvidenceReceipt({ domain_shard: 'good.example', active_genesis: AG, subject: subj, proof_kind: 'rfc3161-tsa', facts: { clock_id: 'clk', not_before: nb, not_after: na }, issued_at: '2026-01-01T00:00:00Z' }, KT.priv, KT.pub);
 const πIvC = N('ConnectorEvidence', [πG], [put(tsaIv(head, '2026-12-31T00:00:00Z', '2026-01-01T00:00:00Z'))], { subject: head });
 const πIvT = N('ConnectorEvidence', [πG], [put(tsaIv('ust:target', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z'))], { subject: 'ust:target' });
@@ -97,7 +105,8 @@ const uaE = (W) => P.buildUniquenessAttestation({ domain_shard: 'good.example', 
 add('quorum.self-trust', 'attacker witnesses not admitted by config', b64u(canonPkg(N('ReinforceQuorum', [πCorr, N('QuorumAgreement', [πChain], [put(uaE(Ez1)), put(uaE(Ez2))])]))), CFG, { result: 'INDETERMINATE', code: 'quorum not met' });
 // P0-03(r4) content address — a witness tampered after addressing fails its content address.
 const genW = put(gen);
-add('witness.content-address', 'a tampered witness fails its content address', b64u(P.canon({ term: πChain, witnesses: { ...store, [genW]: { ...store[genW], __tamper: 'x' } } })), CFG, { result: 'INVALID', code: 'E-WITNESS-ADDRESS' });
+const caPkg = pkg(πChain); caPkg.witnesses[genW] = { ...caPkg.witnesses[genW], __tamper: 'x' };
+add('witness.content-address', 'a tampered witness fails its content address', b64u(P.canon(caPkg)), CFG, { result: 'INVALID', code: 'E-WITNESS-ADDRESS' });
 
 // F — semantic invariants (M-CONFIG): same package, config with a swapped witness pub → a DIFFERENT config_id.
 // swapping witness pub VALUES at the same key_ids BREAKS admission (the attestations no longer verify) → INDETERMINATE,
@@ -106,8 +115,8 @@ add('config.pub-swap', 'witness pubs swapped at the same key_ids: quorum breaks 
 
 // rev4 round-7 cluster G (M-DEC total + M-ADT): config canonicality, package closure over the decoded ADT, required params.
 V.push({ id: 'config.noncanonical', note: 'whitespace-prefixed (non-canonical) config bytes', package_b64url: b64u(canonPkg(πCorr)), config_b64url: b64u('  ' + canonJSON(CFG)), expected: { result: 'INVALID', code: 'E-CONFIG-NONCANONICAL' } });
-add('package.extra-field', 'an extra top-level package field (schema not closed over raw JSON)', b64u(P.canon({ term: πCorr, witnesses: store, __extra: 'x' })), CFG, { result: 'INVALID', code: 'E-NONCANONICAL' });
-add('package.params-empty', 'an explicit params:{} node — a second wire form of the canonical (no-params) term', b64u(P.canon({ term: { ...πCorr, params: {} }, witnesses: store })), CFG, { result: 'INVALID', code: 'E-NONCANONICAL' });
+add('package.extra-field', 'an extra top-level package field (schema not closed over raw JSON)', b64u(P.canon({ ...pkg(πCorr), __extra: 'x' })), CFG, { result: 'INVALID', code: 'E-NONCANONICAL' });
+add('package.params-empty', 'an explicit params:{} node — a second wire form of the canonical (no-params) term', b64u(P.canon({ term: { ...πCorr, params: {} }, witnesses: pkg(πCorr).witnesses })), CFG, { result: 'INVALID', code: 'E-NONCANONICAL' });
 add('term.missing-param', 'Anchored with required s/subject omitted', b64u(canonPkg(N('Anchored', [], [put(rc('ust:x', 1))]))), CFG, { result: 'INVALID', code: 'E-TERM-PARAM-MISSING' });
 // cluster I (M-CONFIG P0-03): a trust domain is a typed VALUE — object domains are not typed strings, so they do not
 // resolve and the quorum cannot be met (two structurally-identical objects never count as two distinct domains).
@@ -122,7 +131,7 @@ V.push({ id: 'config.unknown-field', note: 'an unknown top-level config field', 
 V.push({ id: 'config.threshold-string', note: 'policy.uniqueness_threshold as a string is rejected, not silently defaulted', package_b64url: b64u(canonPkg(πCorr)), config_b64url: b64u(canonJSON({ ...CFG, policy: { uniqueness_threshold: '999' } })), expected: { result: 'INVALID', code: 'E-CONFIG-THRESHOLD' } });
 add('witness.namebound-object', 'NameBound key-log witness that is an object, not an array', b64u(canonPkg(N('NameBound', [πG], [put({ not: 'array' })], { doc_key_id: G.key_id }))), CFG, { result: 'INVALID', code: 'array' });
 const rcExtraW = put((() => { const c = JSON.parse(JSON.stringify(rc(head, 900))); c.__extra = 'x'; return c; })()), πCX = N('ConnectorEvidence', [πG], [rcExtraW], { subject: head });
-add('witness.receipt-extra-field', 'a receipt witness with an unknown outer field', b64u(canonPkg(N('Corroborated', [πChain, πCX, πT, N('AfterOrder', [πCX, πT])], [put(term)]))), CFG, { result: 'INVALID', code: 'unknown field' });
+add('witness.receipt-extra-field', 'a receipt witness with an unknown outer field', b64u(canonPkg(N('Corroborated', [πChain, πCX, πT, N('AfterOrder', [πCX, πT])], [put(term)]))), CFG, { result: 'INVALID', code: 'not closed' });
 
 // rev6 round-9 — typed witnesses for ALL kinds + a total/typed/closed config ADT.
 const c0x = (() => { const c = JSON.parse(JSON.stringify(C0)); c.__extra = 'x'; return c; })();
@@ -135,13 +144,33 @@ V.push({ id: 'config.connector-string', note: 'a connector value that is a strin
 V.push({ id: 'config.policy-array', note: 'policy is an array, not an object', package_b64url: b64u(canonPkg(πCorr)), config_b64url: b64u(canonJSON({ ...CFG, policy: ['x'] })), expected: { result: 'INVALID', code: 'E-CONFIG-POLICY' } });
 V.push({ id: 'config.apk-unsorted', note: 'allowed_proof_kinds not sorted/de-duplicated', package_b64url: b64u(canonPkg(πCorr)), config_b64url: b64u(canonJSON({ ...CFG, connectors: { [KC.key_id]: { pub: KC.pub, trust_domain: 'x', allowed_proof_kinds: ['rfc3161-tsa', 'pow-header-chain'] } } })), expected: { result: 'INVALID', code: 'E-CONFIG-APK' } });
 
+// ── rev7 round-10 — the typed decode boundary carried to every leaf (config policy / NFC / checkpoint body+sig / receipt claim / reachability) ──
+// P0-01: an EMPTY policy array slipped past the (botched) shape guard and became a silent default-2 threshold; now rejected.
+V.push({ id: 'config.policy-empty-array', note: 'policy:[] (empty array) must not become a silent default threshold (round-10 P0-01)', package_b64url: b64u(canonPkg(πCorr)), config_b64url: b64u(canonJSON({ ...CFG, policy: [] })), expected: { result: 'INVALID', code: 'E-CONFIG-POLICY' } });
+// P1-02: a non-NFC free-string config leaf is a STABLE E-CONFIG at decode, never an internal canon() throw.
+V.push({ id: 'config.non-nfc-trust-domain', note: 'a decomposed (non-NFC) trust_domain → stable E-CONFIG, not a throw (round-10 P1-02)', package_b64url: b64u(canonPkg(πCorr)), config_b64url: b64u(canonJSON({ connectors: { [KC.key_id]: { pub: KC.pub, allowed_proof_kinds: ['pow-header-chain'], trust_domain: 'café' } } })), expected: { result: 'INVALID', code: 'E-CONFIG-TRUST-DOMAIN' } });
+// P0-04: an extra field on the checkpoint SIG wrapper (no re-sign) is rejected — head_id cannot be shifted off one signature.
+const c0SigX = { ...C0, sig: { ...C0.sig, wrapper_nonce: 'attacker-controlled' } };
+add('checkpoint.sig-extra', 'a checkpoint sig wrapper carrying an extra field (round-10 P0-04)', b64u(canonPkg(N('CheckpointZero', [πG], [put(c0SigX)]))), CFG, { result: 'INVALID', code: 'sig envelope not closed' });
+// P0-05: an unknown checkpoint BODY field, even authority-signed, is rejected — the coordinate is over the CLOSED body.
+const c0BodyX = P.sealAuthorityCheckpoint({ ...P.buildAuthorityCheckpoint({ domain_shard: 'good.example', genesis_epoch: EP, sequence: '0', active_genesis: AG, current_key_id: G.key_id, keylog: { root: kl.root, length: kl.length, head: kl.head } }), extension_semantics: 'changes-head-but-not-the-rule' }, G.priv, G.pub);
+add('checkpoint.body-extra', 'an authority-signed checkpoint body with an unknown field (round-10 P0-05)', b64u(canonPkg(N('CheckpointZero', [πG], [put(c0BodyX)]))), CFG, { result: 'INVALID', code: 'body not closed' });
+// P0-02: a receipt claim missing a required field (issued_at), re-signed by the issuer, is rejected — the claim ADT is closed.
+const baseRc = rc(head, 900), incClaim = { ...baseRc.claim }; delete incClaim.issued_at;
+const rcInc = { ...baseRc, claim: incClaim, sig: { ...baseRc.sig, sig: edSign(null, Buffer.from(P.canon({ purpose: 'ust:evidence-receipt-signature', claim: incClaim }), 'utf8'), KC.priv).toString('base64url') } };
+const πCInc = N('ConnectorEvidence', [πG], [put(rcInc)], { subject: head });
+add('receipt.claim-incomplete', 'a receipt claim missing issued_at, re-signed by the issuer (round-10 P0-02)', b64u(canonPkg(N('Corroborated', [πChain, πCInc, πT, N('AfterOrder', [πCInc, πT])], [put(term)]))), CFG, { result: 'INVALID', code: 'claim not closed' });
+// P1-03: a content-addressed witness the term does NOT reference is dead weight the proof_hash can't cover → rejected.
+add('witness.unreferenced', 'a content-addressed witness not referenced by the term (round-10 P1-03)', b64u(P.canon({ term: πChain, witnesses: { ...pkg(πChain).witnesses, [witnessId(JSON.parse(JSON.stringify(rc('ust:dangling', 1))))]: JSON.parse(JSON.stringify(rc('ust:dangling', 1))) } })), CFG, { result: 'INVALID', code: 'E-WITNESS-UNREFERENCED' });
+
 // ── security-condition coverage manifest (owner completion criterion 8) ──────────────────────────────────────────────
 const MANIFEST = {
   note: 'Every security side-condition maps to ≥1 negative byte-vector; the runner asserts each vector exists and holds. In round-7 this feeds a mutation harness (remove the condition → the listed vector must start failing).',
   security_conditions: [
     { id: 'BYTES-IMMUTABLE-CANONICAL', rule: 'decodePackage', negative_vectors: ['bytes.noncanonical.whitespace', 'bytes.noncanonical.duplicate-key', 'bytes.utf8'] },
     { id: 'TERM-EXACT-ADT', rule: 'decodeTerm', negative_vectors: ['term.unknown-rule', 'term.extra-child', 'term.extra-witness', 'term.free-param', 'term.stored-conclusion'] },
-    { id: 'ORDER-SAME-IDENTITY', rule: 'AfterOrder', negative_vectors: ['order.cross-clock', 'order.cross-namespace'] },
+    { id: 'ORDER-SAME-IDENTITY', rule: 'AfterOrder', negative_vectors: ['order.cross-clock'] },
+  { id: 'FACTS-CLOSED-PER-KIND', rule: 'ConnectorEvidence/closedReceipt', negative_vectors: ['facts.wrong-kind'] },
     { id: 'ORDER-INTERVAL-WELLFORMED', rule: 'AfterOrder/orderSemantic', negative_vectors: ['order.inverted-interval'] },
     { id: 'KEY-STRICT-PUB32', rule: 'Genesis/sigOk/ConnectorEvidence/QuorumAgreement', negative_vectors: ['key.padded-pub'] },
     { id: 'CONFIG-EXTENSIONAL-OVER-PUB', rule: 'normalizeConfig', negative_vectors: ['config.pub-swap'] },
@@ -159,7 +188,13 @@ const MANIFEST = {
     { id: 'CONFIG-CLOSED-SCHEMA', rule: 'normalizeConfig', negative_vectors: ['config.unknown-field', 'config.threshold-string'] },
     { id: 'TYPED-WITNESS', rule: 'NameBound/ConnectorEvidence', negative_vectors: ['witness.namebound-object', 'witness.receipt-extra-field'] },
     { id: 'TYPED-WITNESS-ALL-KINDS', rule: 'CheckpointZero/Corroborated/QuorumAgreement', negative_vectors: ['witness.checkpoint-extra', 'witness.terminality-extra', 'witness.attestation-extra-claim'] },
-    { id: 'CONFIG-TOTAL-TYPED', rule: 'normalizeConfig', negative_vectors: ['config.connector-string', 'config.policy-array', 'config.apk-unsorted'] },
+    { id: 'POLICY-CLOSED-NO-DEFAULT', rule: 'normalizeConfig/QuorumAgreement', negative_vectors: ['config.policy-empty-array'] },
+  { id: 'CONFIG-NFC-LEAVES', rule: 'normalizeConfig', negative_vectors: ['config.non-nfc-trust-domain'] },
+  { id: 'CHECKPOINT-SIG-CLOSED', rule: 'CheckpointZero/closedCheckpoint', negative_vectors: ['checkpoint.sig-extra'] },
+  { id: 'CHECKPOINT-BODY-CLOSED', rule: 'CheckpointZero/closedCheckpoint', negative_vectors: ['checkpoint.body-extra'] },
+  { id: 'RECEIPT-CLAIM-CLOSED', rule: 'ConnectorEvidence/closedReceipt', negative_vectors: ['receipt.claim-incomplete'] },
+  { id: 'WITNESS-REACHABILITY', rule: 'decodePackage', negative_vectors: ['witness.unreferenced'] },
+  { id: 'CONFIG-TOTAL-TYPED', rule: 'normalizeConfig', negative_vectors: ['config.connector-string', 'config.policy-array', 'config.apk-unsorted'] },
   ],
   note_positive_shape: 'Positive-shape / arg-dependent invariants (config_id set-order equality P1-07; limits-getter totality P1-01; Uint8Array-only P2-01; single-read reads===1; carrier separation; permutation invariance) are covered by JS property tests in reference-checker.test.mjs, not negative byte-vectors — the {result,code} byte form cannot express a positive equality or a non-bytes input.',
 };

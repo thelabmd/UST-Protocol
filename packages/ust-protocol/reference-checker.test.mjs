@@ -26,6 +26,9 @@ const ua = (W) => P.buildUniquenessAttestation({ domain_shard: 'good.example', g
 const witnesses = {};
 const put = (o) => { const id = witnessId(o); witnesses[id] = o; return id; };
 const node = (rule, children = [], wids = [], params) => ({ rule, children, witnesses: wids, ...(params ? { params } : {}) });
+// minPkg — the CANONICAL package for a term: only the witnesses it references (round-10 P1-03). The scaffold's `witnesses`
+// is a shared accumulating store; byte-path calls must prune to the reachable set (the object adapter prunes for us).
+const minPkg = (t) => { const ref = new Set(); (function w(n) { for (const x of (n.witnesses || [])) ref.add(x); for (const c of (n.children || [])) w(c); })(t); const ws = {}; for (const k of Object.keys(witnesses)) if (ref.has(k)) ws[k] = witnesses[k]; return { term: t, witnesses: ws }; };
 const gW = put(gen), c0W = put(C0), tW = put(term), commitW = put(commit), anchorW = put(anchor);
 
 const πGenesis = node('Genesis', [], [gW]);
@@ -127,7 +130,7 @@ const CFG = { ...CONN, witnesses: { [Wa.key_id]: Wa.pub, [Wb.key_id]: Wb.pub }, 
   const a = checkAuthorityProof({ term: πCorr, witnesses }, null);
   const b = checkAuthorityProof({ term: πCorr, witnesses }, { ...CFG, policy: null });
   check('TOTAL: config null → INVALID(config), never a throw', a.result === 'INVALID' && /config/.test(a.reason));
-  check('TOTAL: policy null → normalized, still VALID', b.result === 'VALID');
+  check('TOTAL: policy null → INVALID(E-CONFIG-POLICY), never silently defaulted (round-10 P0-01)', b.result === 'INVALID' && /E-CONFIG-POLICY|policy/.test(b.reason));
 }
 // ── round-4 P1-2: support rides the DAG — corroborated with no evidence premise is unbuildable ──
 {
@@ -204,7 +207,7 @@ const CFG = { ...CONN, witnesses: { [Wa.key_id]: Wa.pub, [Wb.key_id]: Wb.pub }, 
   const πTsa = node('ConnectorEvidence', [πGenesis], [put(tsaWithPos)], { subject: 'ust:target' });
   const πAfterTsa = node('AfterOrder', [πCommit, πTsa]);                             // pow(position) vs tsa(planted position)
   const r = checkAuthorityProof({ term: node('Corroborated', [πChain, πCommit, πTsa, πAfterTsa], [tW]), witnesses }, CFG_T);
-  check('REJECT tsa-position (P0-07): position order and interval order are incomparable → INDETERMINATE', r.result === 'INDETERMINATE' && /incomparable|order/.test(r.reason));
+  check('REJECT tsa-position (P0-07/round-10 P0-03): a tsa carrying a pow-style {substrate,position} is a CLOSED-facts violation → INVALID', r.result === 'INVALID' && /facts not closed|facts/.test(r.reason));
 }
 // P0-03 foreign-domain quorum: votes attesting a foreign domain are not counted in the good-scope quorum.
 {
@@ -257,18 +260,18 @@ const CFG = { ...CONN, witnesses: { [Wa.key_id]: Wa.pub, [Wb.key_id]: Wb.pub }, 
 // ── cluster D — the byte boundary (M-BYTE / M-DEC): the TCB accepts immutable bytes; one canonical form ──────────────
 // M-BYTE: the normative bytes API accepts canonical package bytes; the object API is exactly the adapter over it.
 {
-  const viaBytes = checkAuthorityProofBytes(U8(P.canon({ term: πCorr, witnesses })), U8(canonJSON(CFG)));
+  const viaBytes = checkAuthorityProofBytes(U8(P.canon(minPkg(πCorr))), U8(canonJSON(CFG)));
   const viaObj = checkAuthorityProof({ term: πCorr, witnesses }, CFG);
   check('BYTES API (M-BYTE): checkAuthorityProofBytes accepts canonical bytes; object adapter == bytes core (same proof_hash/config_id)', viaBytes.result === 'VALID' && viaObj.result === 'VALID' && viaBytes.proof_hash === viaObj.proof_hash && viaBytes.config_id === viaObj.config_id);
 }
 // M-DEC round-trip guard: non-canonical (pretty-printed) package bytes → INVALID(E-NONCANONICAL).
 {
-  const r = checkAuthorityProofBytes(U8(JSON.stringify({ term: πCorr, witnesses }, null, 2)), U8(canonJSON(CFG)));
+  const r = checkAuthorityProofBytes(U8(JSON.stringify(minPkg(πCorr), null, 2)), U8(canonJSON(CFG)));
   check('BYTES non-canonical (M-DEC): whitespace/non-canonical package bytes → INVALID(E-NONCANONICAL)', r.result === 'INVALID' && /E-NONCANONICAL/.test(r.reason));
 }
 // M-DEC: duplicate JSON keys collapse on parse but fail the canonical round-trip → INVALID.
 {
-  const dup = P.canon({ term: πCorr, witnesses }).replace('{', '{"__x":"1","__x":"2",', 1);
+  const dup = P.canon(minPkg(πCorr)).replace('{', '{"__x":"1","__x":"2",', 1);
   const r = checkAuthorityProofBytes(U8(dup), U8(canonJSON(CFG)));
   check('BYTES duplicate-key (M-DEC): duplicate keys collapse on parse but fail the round-trip → INVALID', r.result === 'INVALID' && /E-NONCANONICAL/.test(r.reason));
 }
@@ -341,12 +344,12 @@ const CFG = { ...CONN, witnesses: { [Wa.key_id]: Wa.pub, [Wb.key_id]: Wb.pub }, 
 // P1-01 limits totality: a Proxy/getter `limits` is read (numeric fields, after the byte snapshots, inside try) → never
 // throws uncaught, never mutates a buffer pre-snapshot. P2-01: the bytes API takes Uint8Array only (a string → E-BYTES-TYPE).
 {
-  const pkgB = U8(P.canon({ term: πCorr, witnesses })), cfgB = U8(canonJSON(CFG));
+  const pkgB = U8(P.canon(minPkg(πCorr))), cfgB = U8(canonJSON(CFG));
   let threw = false, r;
   // the old code spread {...limits}, so an ownKeys trap escaped as an uncaught throw; readLimits reads NUMERIC fields
   // (no spread), so the trap is never invoked → the checker completes normally.
   try { r = checkAuthorityProofBytes(pkgB, cfgB, new Proxy({}, { ownKeys() { throw new Error('trap'); } })); } catch { threw = true; }
-  const rStr = checkAuthorityProofBytes(P.canon({ term: πCorr, witnesses }), canonJSON(CFG));   // strings, not Uint8Array
+  const rStr = checkAuthorityProofBytes(P.canon(minPkg(πCorr)), canonJSON(CFG));   // strings, not Uint8Array
   check('LIMITS/BYTES totality (P1-01/P2-01): an ownKeys-trap limits never escapes (VALID); a string input → INVALID(E-BYTES-TYPE)', !threw && r.result === 'VALID' && rStr.result === 'INVALID' && /E-BYTES-TYPE/.test(rStr.reason));
 }
 
@@ -389,6 +392,25 @@ const CFG = { ...CONN, witnesses: { [Wa.key_id]: Wa.pub, [Wb.key_id]: Wb.pub }, 
   const sub = new Sub(real.length); sub.set(real);
   const rr = checkAuthorityProofBytes(sub, U8(canonJSON(CFG)));
   check('NATIVE exact (P0-01): a Uint8Array SUBCLASS (instanceof passes) → INVALID(E-BYTES-TYPE)', sub instanceof Uint8Array && rr.result === 'INVALID' && /E-BYTES-TYPE/.test(rr.reason));
+}
+// ── rev7 round-10 — config_id is injective over canonical bytes (no silent defaulting collapses distinct configs) ──
+{
+  const pkgU8 = U8(P.canon(minPkg(πCorr)));
+  const idEmpty = checkAuthorityProofBytes(pkgU8, U8(canonJSON({}))).config_id;
+  const idThresh = checkAuthorityProofBytes(pkgU8, U8(canonJSON({ policy: { uniqueness_threshold: 2 } }))).config_id;
+  check('CONFIG-ID injective (round-10 P1-01): {} and {policy:{uniqueness_threshold:2}} decode to DISTINCT config_ids (no silent default collapse)', typeof idEmpty === 'string' && typeof idThresh === 'string' && idEmpty !== idThresh);
+}
+// ── rev7 round-10 — quorum fails CLOSED with no configured threshold (never a silent 2) ──
+{
+  const cfgNoThresh = { ...CONN, witnesses: { [Wa.key_id]: Wa.pub, [Wb.key_id]: Wb.pub }, domains: { [Wa.key_id]: 'op-a', [Wb.key_id]: 'op-b' } };   // no policy.uniqueness_threshold
+  const r = checkAuthorityProof({ term: node('ReinforceQuorum', [πCorr, node('QuorumAgreement', [πChain], [put(ua(Wa)), put(ua(Wb))])]), witnesses }, cfgNoThresh);
+  check('QUORUM fails-closed (round-10 P0-01): no uniqueness_threshold configured → INDETERMINATE, never a silent default-2 pass', r.result === 'INDETERMINATE' && /uniqueness_threshold|fails closed/.test(r.reason));
+}
+// ── rev7 round-10 — checkpoint identity malleability closed via the object adapter too (sig.wrapper_nonce / body.extension) ──
+{
+  const c0SigX = { ...C0, sig: { ...C0.sig, wrapper_nonce: 'x' } }, w = { ...witnesses, [witnessId(c0SigX)]: c0SigX };
+  const r = checkAuthorityProof({ term: node('CheckpointZero', [πGenesis], [witnessId(c0SigX)]), witnesses: w }, CFG);
+  check('HEAD-ID stable (round-10 P0-04): an extra field on the checkpoint sig wrapper → INVALID(sig envelope not closed)', r.result === 'INVALID' && /sig envelope not closed|not closed/.test(r.reason));
 }
 
 console.log('\n  reference-checker vectors (' + (typeof pass === 'number' ? '' : '') + 'L1)   PASS ' + pass + '   FAIL ' + fail);

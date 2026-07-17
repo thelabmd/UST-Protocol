@@ -25,8 +25,14 @@
       "id": "ORDER-SAME-IDENTITY",
       "rule": "AfterOrder",
       "negative_vectors": [
-        "order.cross-clock",
-        "order.cross-namespace"
+        "order.cross-clock"
+      ]
+    },
+    {
+      "id": "FACTS-CLOSED-PER-KIND",
+      "rule": "ConnectorEvidence/closedReceipt",
+      "negative_vectors": [
+        "facts.wrong-kind"
       ]
     },
     {
@@ -152,6 +158,48 @@
         "witness.checkpoint-extra",
         "witness.terminality-extra",
         "witness.attestation-extra-claim"
+      ]
+    },
+    {
+      "id": "POLICY-CLOSED-NO-DEFAULT",
+      "rule": "normalizeConfig/QuorumAgreement",
+      "negative_vectors": [
+        "config.policy-empty-array"
+      ]
+    },
+    {
+      "id": "CONFIG-NFC-LEAVES",
+      "rule": "normalizeConfig",
+      "negative_vectors": [
+        "config.non-nfc-trust-domain"
+      ]
+    },
+    {
+      "id": "CHECKPOINT-SIG-CLOSED",
+      "rule": "CheckpointZero/closedCheckpoint",
+      "negative_vectors": [
+        "checkpoint.sig-extra"
+      ]
+    },
+    {
+      "id": "CHECKPOINT-BODY-CLOSED",
+      "rule": "CheckpointZero/closedCheckpoint",
+      "negative_vectors": [
+        "checkpoint.body-extra"
+      ]
+    },
+    {
+      "id": "RECEIPT-CLAIM-CLOSED",
+      "rule": "ConnectorEvidence/closedReceipt",
+      "negative_vectors": [
+        "receipt.claim-incomplete"
+      ]
+    },
+    {
+      "id": "WITNESS-REACHABILITY",
+      "rule": "decodePackage",
+      "negative_vectors": [
+        "witness.unreferenced"
       ]
     },
     {
