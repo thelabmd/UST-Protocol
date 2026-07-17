@@ -79,7 +79,7 @@ const CFG_ORD = { connectors: { [KC.key_id]: { pub: KC.pub, trust_domain: 'x', a
 const evR = (subj, pk, facts) => P.buildEvidenceReceipt({ domain_shard: 'good.example', active_genesis: AG, subject: subj, proof_kind: pk, facts, issued_at: '2026-01-01T00:00:00Z' }, KC.priv, KC.pub);
 const πTlog = N('ConnectorEvidence', [πG], [put(evR(head, 'transparency-log', { substrate: 'shared-id', position: '900' }))], { subject: head });
 const πPowShared = N('ConnectorEvidence', [πG], [put(evR('ust:target', 'pow-header-chain', { substrate: 'shared-id', position: '800' }))], { subject: 'ust:target' });
-add('facts.wrong-kind', 'a transparency-log receipt carrying pow-style {substrate,position} facts (not its log_id/index) — closed-facts violation (round-10 P0-03)', b64u(canonPkg(N('Corroborated', [πChain, πTlog, πPowShared, N('AfterOrder', [πTlog, πPowShared])], [put(term)]))), CFG_ORD, { result: 'INVALID', code: 'facts not closed' });
+add('facts.wrong-kind', 'a transparency-log receipt carrying pow-style {substrate,position} facts (not its log_id/index) — closed-facts violation (round-10 P0-03)', b64u(canonPkg(N('Corroborated', [πChain, πTlog, πPowShared, N('AfterOrder', [πTlog, πPowShared])], [put(term)]))), CFG_ORD, { result: 'INVALID', code: 'facts not typed' });
 const tsaIv = (subj, nb, na) => P.buildEvidenceReceipt({ domain_shard: 'good.example', active_genesis: AG, subject: subj, proof_kind: 'rfc3161-tsa', facts: { clock_id: 'clk', not_before: nb, not_after: na }, issued_at: '2026-01-01T00:00:00Z' }, KT.priv, KT.pub);
 const πIvC = N('ConnectorEvidence', [πG], [put(tsaIv(head, '2026-12-31T00:00:00Z', '2026-01-01T00:00:00Z'))], { subject: head });
 const πIvT = N('ConnectorEvidence', [πG], [put(tsaIv('ust:target', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z'))], { subject: 'ust:target' });
@@ -219,6 +219,24 @@ const klB12 = P.buildKeylogCommitment(['sha256:' + 'bc'.repeat(32)]);
 const c0B12 = P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: 'good.example', genesis_epoch: EPB12, sequence: '0', previous_epoch_final_checkpoint: head, active_genesis: AGB12, current_key_id: WB12.key_id, keylog: { root: klB12.root, length: klB12.length, head: klB12.head } }), WB12.priv, WB12.pub);
 add('transition.dead-authority', 'a transition signing destination authority WX while Genesis B is WB (round-12 P0-03)', b64u(canonPkg(N('ActivateGenesis', [N('FutureGenesisCommitment', [πChain], [put(txWDead)]), N('Genesis', [], [put(genB12)])], [put(c0B12)]))), {}, { result: 'INVALID', code: 'transition-committed destination authority' });
 
+// ── rev10 round-13 — byte injectivity (BOM/surrogate), real-calendar facts, vote key binding, reference budget ──
+const BOM = Buffer.from([0xEF, 0xBB, 0xBF]);
+add('bytes.bom-package', 'a leading UTF-8 BOM on package bytes must be rejected, not silently stripped (round-13 P0-01)', Buffer.concat([BOM, Buffer.from(canonPkg(πCorr), 'utf8')]).toString('base64url'), CFG, { result: 'INVALID', code: 'E-BOM' });
+V.push({ id: 'bytes.bom-config', note: 'a leading UTF-8 BOM on config bytes (round-13 P0-01)', package_b64url: b64u(canonPkg(πCorr)), config_b64url: Buffer.concat([BOM, Buffer.from(canonJSON(CFG), 'utf8')]).toString('base64url'), expected: { result: 'INVALID', code: 'E-CONFIG-BOM' } });
+// P0-02 impossible RFC3161 interval — shape-valid endpoints, not real calendar dates.
+const tsaBad = (subj) => P.buildEvidenceReceipt({ domain_shard: 'good.example', active_genesis: AG, subject: subj, proof_kind: 'rfc3161-tsa', facts: { clock_id: 'clk', not_before: '2026-02-31T00:00:00Z', not_after: '2026-02-31T00:00:00Z' }, issued_at: '2026-01-01T00:00:00Z' }, KT.priv, KT.pub);
+const πIvBadC = N('ConnectorEvidence', [πG], [put(tsaBad(head))], { subject: head }), πIvBadT = N('ConnectorEvidence', [πG], [put(tsaBad('ust:target'))], { subject: 'ust:target' });
+add('facts.impossible-interval', 'rfc3161-tsa facts on 2026-02-31 — shape-valid, not a real calendar interval (round-13 P0-02)', b64u(canonPkg(N('Corroborated', [πChain, πIvBadC, πIvBadT, N('AfterOrder', [πIvBadC, πIvBadT])], [put(term)]))), CFG_T, { result: 'INVALID', code: 'facts not typed' });
+// P1-02 vote sig.key_id not bound to issuer_id (sig is over the claim, so the wrong key_id still verifies but is not counted).
+const voteBadKid = (W) => { const v = JSON.parse(JSON.stringify(ua(W))); v.sig.key_id = 'sha256:' + '00'.repeat(32); return v; };
+add('vote.keyid-mismatch', 'a vote whose sig.key_id ≠ issuer_id is not counted (round-13 P1-02)', b64u(canonPkg(N('ReinforceQuorum', [πCorr, N('QuorumAgreement', [πChain], [put(voteBadKid(Wa)), put(voteBadKid(Wb))])]))), CFG, { result: 'INDETERMINATE', code: 'quorum not met' });
+// P1-03 duplicate references — 5000 refs to two votes exceed the reference budget.
+add('quorum.dup-refs', '5000 duplicate vote references exceed the total-reference budget (round-13 P1-03)', b64u(canonPkg(N('ReinforceQuorum', [πCorr, N('QuorumAgreement', [πChain], Array(2500).fill(put(ua(Wa))).concat(Array(2500).fill(put(ua(Wb)))))]))), CFG, { result: 'INVALID', code: 'E-TERM-REFS' });
+// P1-04 lone UTF-16 surrogate in a signed string.
+const rcSurr = P.buildEvidenceReceipt({ domain_shard: 'good.example', active_genesis: AG, subject: head, proof_kind: 'pow-header-chain', facts: { substrate: '\uD800', position: '900' }, issued_at: '2026-01-01T00:00:00Z' }, KC.priv, KC.pub);
+const πSurr = N('ConnectorEvidence', [πG], [put(rcSurr)], { subject: head });
+add('receipt.lone-surrogate', 'a receipt facts.substrate with an unpaired surrogate "\\uD800" (round-13 P1-04)', b64u(canonPkg(N('Corroborated', [πChain, πSurr, πT, N('AfterOrder', [πSurr, πT])], [put(term)]))), CFG, { result: 'INVALID', code: 'E-SURROGATE' });
+
 // ── security-condition coverage manifest (owner completion criterion 8) ──────────────────────────────────────────────
 const MANIFEST = {
   note: 'Every security side-condition maps to ≥1 negative byte-vector; the runner asserts each vector exists and holds. In round-7 this feeds a mutation harness (remove the condition → the listed vector must start failing).',
@@ -260,6 +278,11 @@ const MANIFEST = {
   { id: 'CONFIG-KEY-PUB-BINDING', rule: 'normalizeConfig', negative_vectors: ['config.connector-deadkey'] },
   { id: 'GENESIS-IDENTITY-TYPED', rule: 'Genesis', negative_vectors: ['genesis.bad-dns'] },
   { id: 'KEYLOG-APPEND-LENGTH', rule: 'CheckpointStep/appendOnly', negative_vectors: ['keylog.phantom-growth'] },
+  { id: 'BYTE-INJECTIVE-BOM', rule: 'decodePackage/decodeConfig', negative_vectors: ['bytes.bom-package', 'bytes.bom-config'] },
+  { id: 'FACTS-REAL-CALENDAR', rule: 'ConnectorEvidence/FACTS_SCHEMA', negative_vectors: ['facts.impossible-interval'] },
+  { id: 'VOTE-KEYID-BINDING', rule: 'QuorumAgreement', negative_vectors: ['vote.keyid-mismatch'] },
+  { id: 'REFERENCE-BUDGET', rule: 'decodeTerm', negative_vectors: ['quorum.dup-refs'] },
+  { id: 'UNICODE-SCALAR', rule: 'decodePackage', negative_vectors: ['receipt.lone-surrogate'] },
   { id: 'EPOCH-DESTINATION-AUTHORITY', rule: 'ActivateGenesis', negative_vectors: ['transition.dead-authority'] },
   { id: 'TRANSITION-CLAIM-TYPED', rule: 'FutureGenesisCommitment/closedTransition', negative_vectors: ['transition.claim-extra'] },
   { id: 'CONFIG-TOTAL-TYPED', rule: 'normalizeConfig', negative_vectors: ['config.connector-string', 'config.policy-array', 'config.apk-unsorted'] },

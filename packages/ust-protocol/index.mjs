@@ -637,7 +637,7 @@ export function resolveKeys(genesis, keylog = []) {
   const active = new Map([[gKid, gPub]]);
   const revoked = new Map();                                                      // key_id → {reason, compromised_since?, at}
   const history = new Map([[gKid, { pub: gPub, from: 0, authorized_at: genesis.state.time.generated_at, retired_at: null, revoked_at: null }]]);  // authorized_at = K_n(t) lower bound (F.5e)
-  const OP_FIELDS = { add: ['op', 'pub', 'new_key_id'], rotate: ['op', 'pub', 'new_key_id'], revoke: ['op', 'pub', 'reason', 'compromised_since'] };
+  const OP_FIELDS = Object.assign(Object.create(null), { add: ['op', 'pub', 'new_key_id'], rotate: ['op', 'pub', 'new_key_id'], revoke: ['op', 'pub', 'reason', 'compromised_since'] });   // null-proto (UST-Protocol round-13 P2-01): OP_FIELDS["toString"] must be undefined, not an inherited function
   const derive = (i, pub, label) => {                                            // strict pub + derived key_id
     if (strictB64url(pub, 32) === null) return { error: { error: 'E-KEY', detail: 'entry ' + i + ' ' + label + ' pub not a 32-byte base64url key' } };
     return { kid: keyId(pub) };
@@ -653,7 +653,7 @@ export function resolveKeys(genesis, keylog = []) {
     if (active.get(sKid) !== e.sig.pub) return { error: 'E-KEY', detail: 'entry ' + i + ' not signed by a currently-active key (revoked / rotated-out / never-authorized)' };
     const op = e.state?.data?.key_op?.value;
     // #75 P0-02d/e + P1-07 — CLOSED exact schema per op: an unknown op or a stray field is an ERROR, never a no-op.
-    if (typeof op !== 'object' || op === null || !OP_FIELDS[op.op]) return { error: 'E-KEY', detail: 'entry ' + i + ' unknown or missing key_op.op (add|rotate|revoke)' };
+    if (typeof op !== 'object' || op === null || typeof op.op !== 'string' || !Object.hasOwn(OP_FIELDS, op.op)) return { error: 'E-KEY', detail: 'entry ' + i + ' unknown or missing key_op.op (add|rotate|revoke)' };
     for (const k of Object.keys(op)) if (!OP_FIELDS[op.op].includes(k)) return { error: 'E-MALFORMED', detail: 'entry ' + i + ' stray field in ' + op.op + ': ' + k };
     if (op.op === 'add' || op.op === 'rotate') {
       const d = derive(i, op.pub, op.op); if (d.error) return d.error;

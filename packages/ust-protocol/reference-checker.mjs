@@ -16,7 +16,7 @@ import { canon, H, keyId, edVerifyStrict, contentHash, verify, isValid, verifyKe
   verifyCheckpointMapUniqueness, evidenceCaps, compareEvidenceOrder, authorityScopeId, genesisEpoch,
   resolveKeys, buildKeylogCommitment, authorityCheckpointId, strictB64url, isPublicDnsShard } from './index.mjs';
 
-export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev9';
+export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev10';
 // RULE_CONTRACTS (§2b) — the STRUCTURAL source of truth: exactly one inference rule per name, one switch branch per
 // name, and a fixed (children arity, witness count, allowed params, conclusion kind). DecodeTerm enforces these on
 // decode; a term with an extra child / extra witness / free param / unknown field / stored conclusion is rejected
@@ -43,7 +43,7 @@ export const RULE_CONTRACTS = Object.freeze(Object.assign(Object.create(null), {
 }));
 export const REFERENCE_CHECKER_RULES = Object.freeze(Object.keys(RULE_CONTRACTS));   // parity DERIVES from the registry
 const RULES = new Set(REFERENCE_CHECKER_RULES);
-const DEFAULT_LIMITS = { maxNodes: 512, maxDepth: 32, maxWitnesses: 1024, maxWitnessBytes: 1 << 20, maxPackageBytes: 1 << 22 };
+const DEFAULT_LIMITS = { maxNodes: 512, maxDepth: 32, maxWitnesses: 1024, maxWitnessBytes: 1 << 20, maxPackageBytes: 1 << 22, maxWitnessRefs: 4096 };   // maxWitnessRefs (round-13 P1-03): total witness REFERENCES across the term, independent of unique store count — bounds crypto ops
 const isHash = (s) => typeof s === 'string' && /^sha256:[0-9a-f]{64}$/.test(s);
 export const witnessId = (obj) => H('ust:witness', canon(obj));   // content address a witness (for provers building packages)
 // CanonicalSeq (§3): a sequence is a canonical decimal string, never a wire value coerced by Number(). Rejects "00",
@@ -116,15 +116,16 @@ const isNFC = (s) => typeof s === 'string' && s.normalize('NFC') === s;   // a f
 // FACTS_KEYS["toString"] / EVIDENCE_CAPS["constructor"] to an inherited FUNCTION (truthy), producing a judgment whose caps
 // is a function — outside the ADT. Object.create(null) has NO prototype, so an inherited name resolves to undefined, and
 // isKnownKind (own-key membership) is the CLOSED registry of admissible proof_kinds.
-const FACTS_KEYS = Object.freeze(Object.assign(Object.create(null), {
-  'pow-header-chain': ['substrate', 'position'],
-  'transparency-log': ['log_id', 'index'],
-  'rfc3161-tsa':      ['clock_id', 'not_before', 'not_after'],
-  'authenticated-map': [],
-  'content-addressed': [],
+// FACTS_SCHEMA (round-13 P0-02): a TYPED per-kind facts ADT, not just a key-set — the rfc3161-tsa interval endpoints are
+// REAL calendar times (pRFC), so an impossible 2026-02-31 interval is rejected at receipt decode, before orderSemantic.
+const FACTS_SCHEMA = Object.freeze(Object.assign(Object.create(null), {
+  'pow-header-chain':  { substrate: { t: pId }, position: { t: pId } },
+  'transparency-log':  { log_id: { t: pId }, index: { t: pId } },
+  'rfc3161-tsa':       { clock_id: { t: pId }, not_before: { t: pRFC }, not_after: { t: pRFC } },
+  'authenticated-map': {},
+  'content-addressed': {},
 }));
-const isKnownKind = (proof_kind) => Object.hasOwn(FACTS_KEYS, proof_kind);   // the closed set of admissible proof_kinds (round-12 P0-01)
-const factsKeys = (proof_kind) => (isKnownKind(proof_kind) ? FACTS_KEYS[proof_kind] : []);
+const isKnownKind = (proof_kind) => Object.hasOwn(FACTS_SCHEMA, proof_kind);   // the closed set of admissible proof_kinds (round-12 P0-01)
 const ORDER_COORD = Object.freeze(Object.assign(Object.create(null), {
   'pow-header-chain': { kind: 'position', id: 'substrate', val: 'position' },
   'transparency-log': { kind: 'position', id: 'log_id',    val: 'index' },
@@ -198,6 +199,30 @@ function normalizeConfig(raw) {
 // ── the byte boundary (§2, M-BYTE/M-DEC) — the TCB is over immutable octets ───────────────────────────────────────
 const TEXT_ENC = new TextEncoder();
 const TEXT_DEC = new TextDecoder('utf-8', { fatal: true });   // invalid UTF-8 throws → E-UTF8
+// strict UTF-8 decode (round-13 P0-01): a leading UTF-8 BOM (EF BB BF) is REJECTED — TextDecoder would silently strip it,
+// aliasing two distinct immutable byte strings to one decoded object (the byte boundary must be injective, M-BYTE).
+function utf8Strict(bytes) {
+  if (bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) return { err: 'E-BOM' };
+  let text; try { text = TEXT_DEC.decode(bytes); } catch { return { err: 'E-UTF8' }; }
+  return { text };
+}
+// lone-surrogate rejection (round-13 P1-04): a JSON \uD800 escape yields a JS string holding an UNPAIRED surrogate — not a
+// Unicode SCALAR. Other-language canonicalizers replace/reject it, so it breaks language-neutral canon. Checked over the
+// PARSED tree (keys + values), since it arrives via the escape, not the UTF-8 bytes.
+const hasLoneSurrogate = (s) => {
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    if (c >= 0xDC00 && c <= 0xDFFF) return true;                                                    // unpaired low
+    if (c >= 0xD800 && c <= 0xDBFF) { const n = s.charCodeAt(i + 1); if (!(n >= 0xDC00 && n <= 0xDFFF)) return true; i++; }   // unpaired high
+  }
+  return false;
+};
+function anyLoneSurrogate(v) {
+  if (typeof v === 'string') return hasLoneSurrogate(v);
+  if (Array.isArray(v)) return v.some(anyLoneSurrogate);
+  if (v !== null && typeof v === 'object') { for (const k of Object.keys(v)) if (hasLoneSurrogate(k) || anyLoneSurrogate(v[k])) return true; }
+  return false;
+}
 // the intrinsic %TypedArray%.prototype.byteLength getter — it reads the [[ViewedArrayBuffer]] internal slot, so calling
 // it on a Proxy (which has no such slot) THROWS. That distinguishes a NATIVE Uint8Array from a Proxy/subclass that only
 // passes `instanceof` (round-8 P0-01).
@@ -227,6 +252,7 @@ function decodeTerm(raw, L, depth, ctr) {
   const witnesses = raw.witnesses === undefined ? [] : raw.witnesses;
   if (!Array.isArray(witnesses) || witnesses.length < contract.witnesses.min || witnesses.length > contract.witnesses.max) return { err: 'E-TERM-WITNESS:' + raw.rule };
   for (const w of witnesses) if (typeof w !== 'string') return { err: 'E-TERM-WITNESS-TYPE' };
+  ctr.refs = (ctr.refs || 0) + witnesses.length; if (ctr.refs > L.maxWitnessRefs) return { err: 'E-TERM-REFS' };   // total references bounded (round-13 P1-03): duplicate refs cannot amplify crypto beyond the budget
   const params = raw.params === undefined ? {} : raw.params;
   if (typeof params !== 'object' || params === null || Array.isArray(params)) return { err: 'E-TERM-PARAMS' };
   for (const pk of Object.keys(params)) {                                    // M-ADT: params are a TYPED schema, not an allowed-name list
@@ -257,8 +283,9 @@ export function canonJSON(v) {
 // non-NFC, padded crypto strings as a class (M-DEC). The parsed value is plain inert data (no getters/prototype/toJSON).
 function decodePackage(bytes, L) {
   if (bytes.byteLength > L.maxPackageBytes) return { err: 'E-PACKAGE-SIZE' };
-  let text; try { text = TEXT_DEC.decode(bytes); } catch { return { err: 'E-UTF8' }; }
+  const ub = utf8Strict(bytes); if (ub.err) return { err: ub.err }; const text = ub.text;
   let parsed; try { parsed = JSON.parse(text); } catch { return { err: 'E-JSON' }; }
+  if (anyLoneSurrogate(parsed)) return { err: 'E-SURROGATE' };   // no unpaired UTF-16 surrogate (round-13 P1-04)
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) || !parsed.term || typeof parsed.term !== 'object' || Array.isArray(parsed.term) || !parsed.witnesses || typeof parsed.witnesses !== 'object' || Array.isArray(parsed.witnesses))
     return { err: 'E-PACKAGE-SHAPE' };
   const td = decodeTerm(parsed.term, L, 0, { n: 0 }); if (td.err) return { err: td.err };
@@ -286,8 +313,9 @@ function decodePackage(bytes, L) {
   return { term: td.term, store };
 }
 function decodeConfig(bytes) {
-  let text; try { text = TEXT_DEC.decode(bytes); } catch { return { err: 'E-UTF8' }; }
+  const ub = utf8Strict(bytes); if (ub.err) return { err: ub.err === 'E-BOM' ? 'E-CONFIG-BOM' : ub.err }; const text = ub.text;
   let parsed; try { parsed = JSON.parse(text); } catch { return { err: 'E-JSON' }; }
+  if (anyLoneSurrogate(parsed)) return { err: 'E-CONFIG-SURROGATE' };   // no unpaired UTF-16 surrogate (round-13 P1-04)
   // M-DEC over ConfigBytes: the config must be canonical too — no whitespace / key order / duplicate keys / numeric
   // alias, so the consumer trust world is language-neutral, not parser-dependent (P0-01).
   let reB; try { reB = canonJSON(parsed); } catch { return { err: 'E-CONFIG-NONCANONICAL' }; }
@@ -482,7 +510,9 @@ function checkTermInner(node, C, W, memo) {
       // claim. An unadmitted or off-coordinate vote never influences the group — no quorum-poison via a pre-admission
       // reference claim (P1-01), no foreign-domain vote (P0-03); adding junk cannot break an agreement (monotonicity).
       const byClaim = new Map();                                                        // verified claim → Set(distinct domains)
+      const seenWid = new Set();
       for (const wid of wt) {
+        if (seenWid.has(wid)) continue; seenWid.add(wid);                              // dedupe (round-13 P1-03): ONE crypto verify per UNIQUE vote id — duplicates never change the set-based result (M-DET), no amplification
         const a = W(wid); if (a.err) continue;
         const { claim, issuer_id, sig } = a.w || {};
         if (!exactKeys(a.w, 'claim', 'issuer_id', 'sig')) continue;                    // typed attestation envelope (round-9 P0-04)
@@ -492,7 +522,7 @@ function checkTermInner(node, C, W, memo) {
         if (claim.domain_shard !== CH.j.domain) continue;                            // attested checkpoint must be in the chain domain (§2.y, P0-03)
         if (claim.genesis_epoch !== CH.j.genesis_epoch || String(claim.sequence) !== n || claim.checkpoint !== h) continue;   // coordinate FROM the chain
         const pub = C.witnesses[issuer_id];                                            // trust roots FROM C, never the term
-        if (!pub || sig.alg !== 'Ed25519' || !strictPub(sig.pub) || pub !== sig.pub || keyId(sig.pub) !== issuer_id) continue;   // P0-02 alg envelope + P1-04 strict pub
+        if (!pub || sig.alg !== 'Ed25519' || !strictPub(sig.pub) || pub !== sig.pub || keyId(sig.pub) !== issuer_id || sig.key_id !== issuer_id) continue;   // P0-02 alg envelope + P1-04 strict pub + round-13 P1-02: sig.key_id === issuer_id === keyId(pub)
         const cc = canon(claim);
         if (strictB64url(sig.sig, 64) === null || !edVerifyStrict(sig.pub, cc, sig.sig)) continue;   // ADMIT (verify) before grouping
         const dom = C.domains[issuer_id]; if (dom === undefined) continue;              // consumer-resolved domain
@@ -579,6 +609,9 @@ function checkTermInner(node, C, W, memo) {
       const kl = wt.length ? W(wt[0]) : { w: [] };
       if (kl.err) return bad(kl.err);
       if (!Array.isArray(kl.w)) return bad('key-log witness must be an array (typed witness, round-8 P0-04)');   // no silent empty-keylog for a wrong-typed witness
+      // every key-log entry MUST be scoped to the ROOTING genesis domain (round-13 P1-01): a foreign-domain class:key doc,
+      // even validly chained + signed, cannot introduce a key into THIS scope — resolveKeys does not bind the entry domain.
+      for (const e of kl.w) if (e?.state?.id?.domain_shard !== G.j.domain) return bad('key-log entry domain_shard ≠ genesis domain');
       const rk = resolveKeys(G.j.genesis, kl.w);
       if (rk.error || !rk.validKeys.has(p.doc_key_id)) return ind('document key not bound in the genesis key-log');
       return { j: { kind: 'Identity', s: G.j.s, rung: 'corroborated', caps: [] } };
@@ -655,7 +688,7 @@ function closedReceipt(rw) {
   const cl = rw.claim;
   const ec = decodeRec(cl, RECEIPT_CLAIM); if (ec) return 'receipt claim not typed (round-11 ' + ec + ')';
   if (!isKnownKind(cl.proof_kind)) return 'receipt proof_kind is not a registered kind (round-12 P0-01)';   // closed registry — no prototype-name / unknown kind
-  if (!closedRec(cl.facts, [], factsKeys(cl.proof_kind))) return 'receipt facts not closed for proof_kind (round-10 P0-03)';
+  if (decodeRec(cl.facts, FACTS_SCHEMA[cl.proof_kind])) return 'receipt facts not typed for proof_kind (round-10 P0-03 / round-13 P0-02)';   // TYPED per-kind facts — tsa endpoints are real calendar times
   return null;
 }
 // closedTransition (round-11 P0-04/P1-01): an epoch-transition witness is a CLOSED, TYPED ADT — envelope { claim, sig,

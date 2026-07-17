@@ -277,6 +277,42 @@
       ]
     },
     {
+      "id": "BYTE-INJECTIVE-BOM",
+      "rule": "decodePackage/decodeConfig",
+      "negative_vectors": [
+        "bytes.bom-package",
+        "bytes.bom-config"
+      ]
+    },
+    {
+      "id": "FACTS-REAL-CALENDAR",
+      "rule": "ConnectorEvidence/FACTS_SCHEMA",
+      "negative_vectors": [
+        "facts.impossible-interval"
+      ]
+    },
+    {
+      "id": "VOTE-KEYID-BINDING",
+      "rule": "QuorumAgreement",
+      "negative_vectors": [
+        "vote.keyid-mismatch"
+      ]
+    },
+    {
+      "id": "REFERENCE-BUDGET",
+      "rule": "decodeTerm",
+      "negative_vectors": [
+        "quorum.dup-refs"
+      ]
+    },
+    {
+      "id": "UNICODE-SCALAR",
+      "rule": "decodePackage",
+      "negative_vectors": [
+        "receipt.lone-surrogate"
+      ]
+    },
+    {
       "id": "EPOCH-DESTINATION-AUTHORITY",
       "rule": "ActivateGenesis",
       "negative_vectors": [

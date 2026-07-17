@@ -447,6 +447,26 @@ const CFG = { ...CONN, witnesses: { [Wa.key_id]: Wa.pub, [Wb.key_id]: Wb.pub }, 
   const r = checkAuthorityProof({ term: πChain, witnesses }, { connectors: { ['sha256:' + '00'.repeat(32)]: { pub: CFG.connectors[Object.keys(CFG.connectors)[0]].pub, allowed_proof_kinds: ['pow-header-chain'] } } });
   check('CONFIG key⇄pub binding (round-12 P1-01): a connector under a key ≠ keyId(pub) → INVALID(E-CONFIG-CONNECTOR-KEY), no dead entry', r.result === 'INVALID' && /E-CONFIG-CONNECTOR-KEY|config/.test(r.reason));
 }
+// ── rev10 round-13 — byte injectivity: a leading UTF-8 BOM is rejected, not silently stripped ──
+{
+  const clean = U8(P.canon(minPkg(πCorr)));
+  const bomd = new Uint8Array(clean.length + 3); bomd.set([0xEF, 0xBB, 0xBF]); bomd.set(clean, 3);
+  const r = checkAuthorityProofBytes(bomd, U8(canonJSON(CFG)));
+  check('BYTE-injective (round-13 P0-01): a leading UTF-8 BOM → INVALID(E-BOM), not the same VALID as clean bytes', r.result === 'INVALID' && /E-BOM/.test(r.reason));
+}
+// ── rev10 round-13 — real-calendar facts + reference budget (object adapter) ──
+{
+  const tsaBad = (subj) => P.buildEvidenceReceipt({ domain_shard: 'good.example', active_genesis: AG, subject: subj, proof_kind: 'rfc3161-tsa', facts: { clock_id: 'clk', not_before: '2026-02-31T00:00:00Z', not_after: '2026-02-31T00:00:00Z' }, issued_at: '2026-01-01T00:00:00Z' }, kp('7a'.repeat(32)).priv, kp('7a'.repeat(32)).pub);
+  const KT = kp('7a'.repeat(32));
+  const cfgT = { connectors: { [KT.key_id]: { pub: KT.pub, trust_domain: 'tsa', allowed_proof_kinds: ['rfc3161-tsa'] } } };
+  const pc = node('ConnectorEvidence', [πGenesis], [put(tsaBad(head))], { subject: head });
+  const pt = node('ConnectorEvidence', [πGenesis], [put(tsaBad('ust:target'))], { subject: 'ust:target' });
+  const r = checkAuthorityProof({ term: node('Corroborated', [πChain, pc, pt, node('AfterOrder', [pc, pt])], [tW]), witnesses }, cfgT);
+  check('FACTS real-calendar (round-13 P0-02): rfc3161-tsa interval on 2026-02-31 → INVALID (facts not typed), not VALID Freshness', r.result === 'INVALID' && /facts not typed|facts/.test(r.reason));
+  const dup = node('QuorumAgreement', [πChain], Array(5000).fill(put(ua(Wa))));
+  const rd = checkAuthorityProof({ term: node('ReinforceQuorum', [πCorr, dup]), witnesses }, CFG);
+  check('REFERENCE budget (round-13 P1-03): 5000 duplicate vote refs → INVALID(E-TERM-REFS), no crypto amplification', rd.result === 'INVALID' && /E-TERM-REFS/.test(rd.reason));
+}
 
 console.log('\n  reference-checker vectors (' + (typeof pass === 'number' ? '' : '') + 'L1)   PASS ' + pass + '   FAIL ' + fail);
 if (fails.length) { fails.forEach((f) => console.log('    ✗ ' + f)); process.exit(1); }
