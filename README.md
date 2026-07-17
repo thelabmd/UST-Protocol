@@ -1,6 +1,14 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 # Universal State Transcript (UST)
 
+[![CI](https://img.shields.io/github/actions/workflow/status/thelabmd/UST-Protocol/ci.yml?branch=main&label=CI)](https://github.com/thelabmd/UST-Protocol/actions)
+[![npm](https://img.shields.io/npm/v/ust-protocol?label=npm)](https://www.npmjs.com/package/ust-protocol)
+[![registry pulls](https://img.shields.io/npm/dt/ust-protocol?label=registry%20pulls&color=informational)](https://www.npmjs.com/package/ust-protocol)
+[![stars](https://img.shields.io/github/stars/thelabmd/UST-Protocol?label=stars)](https://github.com/thelabmd/UST-Protocol/stargazers)
+[![license](https://img.shields.io/badge/license-Apache--2.0-blue)](./LICENSE)
+
+<sub>*registry pulls = npm fetch events (incl. mirrors + security scanners), **not** distinct users.*</sub>
+
 **Verify machine-readable state without trusting whoever handed it to you.**
 
 > **Status: `1.0.0-rc.36` — a RELEASE CANDIDATE, not a final 1.0.** Multiple external AI reviews are folded in
