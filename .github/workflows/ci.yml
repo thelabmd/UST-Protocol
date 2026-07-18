@@ -48,3 +48,5 @@ jobs:
         run: npm run test:audit
       - name: npm-drift gate (a published version is immutable)
         run: node tools/npm-drift-check.mjs
+      - name: CHANGELOG rev-ladder gate (a checker rev bump records itself)
+        run: npm run test:changelog
