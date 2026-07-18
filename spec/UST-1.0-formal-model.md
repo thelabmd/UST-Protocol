@@ -215,6 +215,9 @@ predicate.
    assumption but because they evaluate the same total function. (This is not circular: the CONTENT of the claim
    is the totality and determinism of §14/§14a; a verifier that secretly consults information outside `𝒮_τ`, or
    skips an obligation, is non-conforming — the theorem is exactly what conformance testing checks.)
+   **Realization (rev24 — totality includes malformed non-null on EVERY argument, not just null config):** the public
+   boundary returns a structured verdict for a null/hostile TRAILING argument, not only a null config record — the
+   round-24 grid was extended past `arg1`/`null-only` (*"round-24 P1-01 nine public proof surfaces total for null config (no host throw)"*, *"round-26 L5 malformed non-null on trailing args: resolveCadence(_, _, _, null) + verifyJson(\"{}\", null) return structured (no host throw)"*).
 5. **(INDETERMINATE as a missing σ-algebra — or a declined evaluation.)** If `𝒮_τ(d) ⊄ ℐ` (e.g. the witness is
    unreachable, so the name-authority coordinate `W_n ⊄ ℐ`), then `ℐ` is **in general insufficient** to decide
    `Valid_τ(d)` — there is NO general decision procedure at tier `τ`. (For a PARTICULAR `d` the predicate may
@@ -709,7 +712,13 @@ F.5a servedNoFork discipline), and `trust_domain` flows from CONSUMER config, ne
 consumes lies in `image(VerifyEvidence_C)`: its capabilities are those of a proof-kind that a consumer-admitted
 connector actually SIGNED, over the correct scope and subject. A caller-constructed look-alike is not in the image,
 carries no capability, and lifts no rung — the forge is closed. **B3 attenuation:** no composition step manufactures
-a capability — `Caps(out) ⊆ ⋃ Caps(in)` unless a new `VerifiedEvidence` is admitted. **The class stays a CORE map**
+a capability — `Caps(out) ⊆ ⋃ Caps(in)` unless a new `VerifiedEvidence` is admitted.
+**Realization (rev24 — the ONE input boundary).** A GENUINE branded handle must also carry the EXACT signature-verified
+facts, not just exclude look-alikes: `verifyEvidenceReceipt` takes ONE inert deep snapshot of the receipt at entry
+(`admitDeep`, reads every value once), and canon/verify/id/handle all read THAT snapshot — so a live getter cannot
+return the signed value during verification and an unsigned value during handle construction (the getter-TOCTOU that
+minted a genuine handle with unsigned facts — round-26 P0-03; the same snapshot binds `verifiedGenesisContext`)
+(*"M3/D getter-TOCTOU on receipt facts cannot mint an EvidenceHandle whose facts ≠ the signed facts → INVALID (round-26 P0-03, L3 closed)"*, *"M2/D verifiedGenesisContext: a getter on the genesis (TOCTOU) cannot mint a context whose scope ≠ the verified genesis → null (round-26 D — snapshot once)"*). **The class stays a CORE map**
 `cls : proof_kind → (a σ-sub-algebra of world-coordinates)`: `pow-header-chain ↦` external-commitment/order/time,
 `transparency-log ↦` append-only inclusion+consistency (NOT non-membership — exactly F.3.1/F.5a: inclusion+
 consistency generate the append-only event, not the `¬∃ rival` event), `authenticated-map ↦` keyed

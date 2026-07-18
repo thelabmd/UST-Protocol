@@ -909,6 +909,8 @@ console.log('\n═════════════════════�
   // M2 (rc.35 refactor) — the verifyGenesis seam derives the canonical scope; the publisher never chooses domain/epoch/scope.
   check('M2/K2 verifiedGenesisContext derives scope_id = H("ust:authority-scope", contentHash(g)) — binds the whole genesis', (c => c && c.genesis_epoch === P.genesisEpoch(P.contentHash(genCA)) && c.scope_id === P.authorityScopeId(P.contentHash(genCA)) && c.scope_id === P.H('ust:authority-scope', c.active_genesis) && c.domain === D && c.checkpoint_authority.key_id === K0.key_id)(P.verifiedGenesisContext(genCA)));
   check('M2 verifiedGenesisContext rejects an unsigned genesis → null (P0-2 carried)', P.verifiedGenesisContext({ state: { id: { class: 'genesis' }, data: { genesis: { value: {} } } } }) === null);
+  check('M2/D verifiedGenesisContext: a getter on the genesis (TOCTOU) cannot mint a context whose scope ≠ the verified genesis → null (round-26 D — snapshot once)',
+    (() => { const evil = JSON.parse(JSON.stringify(genCA)); let n = 0; Object.defineProperty(evil.state.id, 'domain_shard', { enumerable: true, get() { return ++n === 1 ? D : 'evil.com'; } }); return P.verifiedGenesisContext(evil) === null; })());
   // C1 (UST-6vj) — downstream takes the CONTEXT: one verified derivation carries scope + authority + recovery.
   const ctx = P.verifiedGenesisContext(genCA);
   check('C1 chain rooted in a VerifiedAuthorityContext → VALID (authority_root verified-context)', (r => r.result === 'VALID' && r.authority_root === 'verified-context')(P.verifyAuthorityCheckpointChain([C0], { context: ctx })));
@@ -999,6 +1001,14 @@ console.log('\n═════════════════════�
       return e.code === 'E-EVIDENCE' && vr(forged).result === 'INVALID'; } })());
   check('M3 receipt: non-canonical genesis_epoch → INVALID(E-EVIDENCE) (M2 hygiene is uniform)',
     (r => r.result === 'INVALID' && r.error === 'E-EVIDENCE')(vr({ ...commit, claim: { ...commit.claim, genesis_epoch: 'sha256:' + 'ee'.repeat(32) } })));
+  // round-26 P0-03 / L3 (rev24 D) — the ADVERSARIAL closure the model asserted but never tested: a genuine
+  //   EvidenceHandle's verified_facts EQUAL the signature-verified facts. A live getter on facts (return the signed
+  //   value during verify, an unsigned value during handle construction) is a getter-TOCTOU; admitDeep snapshots ONCE
+  //   at entry, so a getter-bearing receipt is not an inert record → INVALID, never a branded handle with unsigned facts.
+  check('M3/D getter-TOCTOU on receipt facts cannot mint an EvidenceHandle whose facts ≠ the signed facts → INVALID (round-26 P0-03, L3 closed)',
+    (() => { const ef = { substrate: 'bitcoin' }; let n = 0; Object.defineProperty(ef, 'position', { enumerable: true, get() { return ++n === 1 ? '900' : '999999'; } });
+      const r = P.verifyEvidenceReceipt({ ...commit, claim: { ...commit.claim, facts: ef } }, { subject: commit.claim.subject, scope, connectors });
+      return r.result === 'INVALID' && r.error === 'E-EVIDENCE' && !P.isVerifiedHandle('evidence', r.evidence); })());
   check('M3 admission: issuer not in consumer connectors → INDETERMINATE(evidence_unverified)',
     (r => r.result === 'INDETERMINATE' && r.reason === 'evidence_unverified')(vr(commit, { connectors: {} })));
   check('M3 admission: proof_kind outside allowed_proof_kinds → INDETERMINATE(evidence_unverified) (B4: a content connector never contributes order/time)',
@@ -1063,6 +1073,11 @@ console.log('\n═════════════════════�
   check('round-25 P1-01 a coercible array sequence `["0"]` is dropped (not admitted to the uniqueness quorum)', VU([{ claim: { purpose: 'ust:checkpoint-uniqueness-attestation', domain_shard: D, genesis_epoch: EP, sequence: ['0'], checkpoint: headId }, issuer_id: Wa.key_id, sig: { alg: 'Ed25519', key_id: Wa.key_id, pub: Wa.pubB64, sig: 'AA' } }, ua(Wb)]).attested === false);
   // P1-01 — null-total across ALL the public proof surfaces (the round-23 quorum fix + this sweep + the self-audit pair).
   check('round-24 P1-01 nine public proof surfaces total for null config (no host throw)', (() => { try { P.verifyNoForkEvidence({}, null); P.verifyEvidenceReceipt({}, null); P.verifyEpochTransition({}, null); P.verifyAuthorityCheckpointChain([], null); P.verifyCheckpointMapUniqueness({}, null); P.verifyActiveGenesisUniqueness({}, null); P.verifyKeylogTerminality(null, {}); P.deriveCheckpointFreshness([], null); P.verifyStream([{}], null); return true; } catch { return false; } })());
+  // round-26 L5 (rev24 C) — I4 totality on the boundaries the rev23 grid missed: a null TRAILING arg (not just null
+  //   config) on the public data/verify boundary returns structured, never a host throw (resolveCadence 4th arg,
+  //   verifyJson opts). These drive the PUBLIC entry, per the audit-plan Definition-of-Done.
+  check('round-26 L5 malformed non-null on trailing args: resolveCadence(_, _, _, null) + verifyJson("{}", null) return structured (no host throw)',
+    (() => { try { const a = P.resolveCadence({}, [], 'ust:20260719.03', null); const b = P.verifyJson('{}', null); return typeof a === 'object' && typeof b === 'object'; } catch { return false; } })());
   // round-25 P1-02 — MALFORMED NON-NULL totality (I4): the null matrix was closed in round-24; round-25 sweeps ordinary
   //    non-null junk that still reached a host operation. A numeric-extra claim (canon throws), a null proof deref, a null
   //    seam arg, and a non-binary verifyJson input all now return STRUCTURED verdicts, never a host TypeError/E-CANON.

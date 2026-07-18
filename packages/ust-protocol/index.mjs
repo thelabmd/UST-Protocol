@@ -172,6 +172,49 @@ function admitOpts(v) {
     return out;
   } catch { return null; }
 }
+// round-26 (rev24 Class C+D) — the ONE untrusted-input boundary. `admitDeep` takes a DEEP inert snapshot of a caller
+// object: every value is read EXACTLY ONCE at snapshot time, so a live getter cannot return one value during signature
+// verification and another during handle construction (the getter-TOCTOU that minted a genuine EvidenceHandle with
+// UNSIGNED facts — round-26 P0-03). An accessor at ANY depth, a non-plain prototype, a cycle, or an over-deep graph is
+// NOT an inert record → ADMIT_REJECT (the caller returns a structured malformed result, never a host throw or a
+// second read). For JSON-sourced input (no getters) the snapshot is value-identical, so canon(admitDeep(x)) == canon(x)
+// and no verdict changes. This is admitOpts made total + recursive; it dissolves malformed-non-null (C) and TOCTOU (D)
+// at the same seam. `ADMIT_REJECT` is a module-private sentinel (never null — null is a legal admitted value).
+const ADMIT_REJECT = Symbol('admit-reject');
+const ADMIT_MAX_DEPTH = 64;                                                            // bounded — a signed authority record is shallow; a deeper graph is refused, never walked
+const admitDeep = (v, depth = 0, seen = new WeakSet()) => {
+  if (v === null || typeof v !== 'object') return typeof v === 'function' || typeof v === 'symbol' ? ADMIT_REJECT : v;   // primitives pass; function/symbol are not data
+  if (depth > ADMIT_MAX_DEPTH || seen.has(v)) return ADMIT_REJECT;                     // over-depth or cycle → refuse (total, never infinite)
+  seen.add(v);
+  try {
+    if (Array.isArray(v)) {
+      const out = [];
+      for (let i = 0; i < v.length; i++) {
+        const d = Object.getOwnPropertyDescriptor(v, i);
+        if (d && (d.get || d.set)) return ADMIT_REJECT;                                // no accessor elements
+        const r = admitDeep(v[i], depth + 1, seen);
+        if (r === ADMIT_REJECT) return ADMIT_REJECT;
+        out.push(r);
+      }
+      return Object.freeze(out);
+    }
+    const proto = Object.getPrototypeOf(v);
+    if (proto !== Object.prototype && proto !== null) return ADMIT_REJECT;             // plain / null-proto ONLY (no class instances, Promises, Proxies-with-exotic-proto)
+    const out = Object.create(null);
+    for (const k of Reflect.ownKeys(v)) {
+      if (typeof k === 'symbol') continue;                                             // string keys only
+      if (k === '__proto__' || k === 'prototype' || k === 'constructor') continue;     // never admit a pollution key
+      const d = Object.getOwnPropertyDescriptor(v, k);
+      if (!d) continue;
+      if (d.get || d.set) return ADMIT_REJECT;                                         // an accessor at ANY depth → not inert (the TOCTOU seam)
+      const r = admitDeep(d.value, depth + 1, seen);
+      if (r === ADMIT_REJECT) return ADMIT_REJECT;
+      Object.defineProperty(out, k, { value: r, enumerable: true });                  // read-only own data
+    }
+    return Object.freeze(out);
+  } catch { return ADMIT_REJECT; }
+  finally { seen.delete(v); }                                                          // a DAG (same object in sibling positions) is fine; only a true cycle is refused
+};
 // a caller-supplied array (key-log): a NATIVE array only; snapshot inside try so a Proxy length/index trap → null.
 // null/undefined → [] (default). → inert array | null.
 function admitArray(v) {
@@ -290,9 +333,10 @@ export const isVerifiedHandle = (kind, x) => isHandle(kind, x);   // consumers m
 // K3: the returned context is a BRANDED, frozen GenesisHandle — the chain verifier requires the brand (a caller-shaped
 // look-alike is rejected, closing round-3 P0-1).
 export function verifiedGenesisContext(genesis) {
-  const roots = resolveCheckpointRoots(genesis);                                   // P0-2: verifies class:genesis + self-sig
+  const G = admitDeep(genesis); if (G === ADMIT_REJECT) return null;               // round-26 (rev24 D) — snapshot ONCE; the sig-verified genesis and the hashed/scoped genesis are the SAME bytes (no getter divergence)
+  const roots = resolveCheckpointRoots(G);                                         // P0-2: verifies class:genesis + self-sig
   if (!roots) return null;
-  const active_genesis = contentHash(genesis), domain = genesis.state.id.domain_shard;
+  const active_genesis = contentHash(G), domain = G.state?.id?.domain_shard;
   const genesis_epoch = genesisEpoch(active_genesis);                                // diagnostic / legacy wire only
   const scope_id = authorityScopeId(active_genesis);                                 // K2: scope binds the whole genesis
   return mintHandle('genesis', { scope_id, domain, active_genesis, genesis_epoch,
@@ -915,8 +959,9 @@ export const evidenceReceiptId = (r) => H('ust:evidence-receipt', canon({ claim:
 export function verifyEvidenceReceipt(receipt, config) {
   const c = admitOpts(config); if (c === null) return { result: 'INVALID', error: 'E-EVIDENCE', detail: 'config must be an inert record (round-24 P1-01 totality)' };   // round-24 P1-01 — total for null/hostile config
   const { subject, scope = {}, connectors = {} } = c;
+  const R = admitDeep(receipt); if (R === ADMIT_REJECT) return { result: 'INVALID', error: 'E-EVIDENCE', detail: 'receipt is not an inert record — an accessor/getter input cannot mint an EvidenceHandle (round-26 P0-03: canon/verify/id/handle all read ONE snapshot)' };   // round-26 P0-03 — snapshot ONCE; no getter-TOCTOU between verify and handle construction
   try {
-    const c = receipt?.claim, s = receipt?.sig;
+    const c = R?.claim, s = R?.sig;
     const bad = (detail) => ({ result: 'INVALID', error: 'E-EVIDENCE', detail });
     const unv = (detail) => ({ result: 'INDETERMINATE', reason: 'evidence_unverified', detail });
     if (!c || typeof c !== 'object' || !s || s.alg !== 'Ed25519' || typeof s.pub !== 'string' || typeof s.sig !== 'string') return bad('malformed receipt (claim/sig shape)');
@@ -934,7 +979,7 @@ export function verifyEvidenceReceipt(receipt, config) {
     const conn = connectors?.[s.key_id];
     if (!conn || conn.pub !== s.pub) return unv('issuer is not a consumer-admitted connector (admission, M3.2/5)');
     if (!Array.isArray(conn.allowed_proof_kinds) || !conn.allowed_proof_kinds.includes(c.proof_kind)) return unv(`connector is not admitted for proof_kind '${c.proof_kind}' (role, M3.2/6 — B4)`);
-    const evidence = mintHandle('evidence', { evidence_id: evidenceReceiptId(receipt),
+    const evidence = mintHandle('evidence', { evidence_id: evidenceReceiptId(R),
       authority_scope_id: authorityScopeId(scope.active_genesis),                     // K2: scope = H(tag, contentHash(g))
       subject_id: c.subject, proof_kind: c.proof_kind, verified_facts: Object.freeze({ ...c.facts }), issuer_id: s.key_id,
       ...(conn.trust_domain !== undefined ? { trust_domain: conn.trust_domain } : {}), basis: 'admitted-connector-receipt' });
@@ -1296,7 +1341,10 @@ export function ustGrid(from, to, cadenceSec) {
 // key-log pattern applied to cadence: a signed, prev-chained sequence of changes). Old data verifies under the
 // cadence signed for ITS time, so an operator changing cadence NEVER retroactively invalidates history. Each
 // entry is a normal transcript, verified by §14; the log is genesis-rooted and prev-chained. → {cadence}|{error}.
-export function resolveCadence(genesis, cadenceLog = [], atTime, { keylog } = {}) {
+export function resolveCadence(genesis, cadenceLog = [], atTime, opts) {
+  const { keylog } = (opts && typeof opts === 'object') ? opts : {};                // round-26 (rev24 C) — null-total: a null 4th arg no longer throws on destructuring
+  if (cadenceLog !== undefined && cadenceLog !== null && !Array.isArray(cadenceLog)) return { error: 'E-MALFORMED', detail: 'cadenceLog must be an array' };
+  cadenceLog = Array.isArray(cadenceLog) ? cadenceLog : [];
   // #75 P1-03 — cadence is a canonical positive-integer STRING of seconds ("1.5" / "030" / 1e2 rejected).
   const gCad = genesis?.state?.data?.genesis?.value?.cadence;
   if (gCad !== undefined && parseCadenceInt(gCad) === null) return { error: 'E-MALFORMED', detail: 'genesis cadence not a canonical positive integer of seconds (§11.3)' };
@@ -2154,6 +2202,7 @@ export function noEventBacking(claimWindow, streamResult, frames) {
 //     silently collapses duplicate keys. `verifyJson` scans the raw bytes for duplicate member names BEFORE
 //     constructing the object, then verifies. Untrusted transcripts from the network/storage MUST enter here.
 export function verifyJson(rawBytes, opts = {}) {
+  opts = admitOpts(opts); if (opts === null) return bad('E-MALFORMED', 'opts must be an inert record (round-26 C — a null/hostile opts no longer throws on `opts.maxInputBytes`)');   // round-26 (rev24 C) — totality: opts=null reached `Number(opts.maxInputBytes)` and threw
   // §13 TRANSPORT ADMISSION (rc.12) — distinct from the document verdict. Byte length is read
   // from the buffer BEFORE any decode/materialization (P0-2); an over-budget input is REFUSED as
   // INDETERMINATE('resource_limit') — verification never started, so it is never called INVALID.
@@ -2266,7 +2315,8 @@ const readBounded = async (r, cap = DISCOVERY_MAX_BYTES) => {
   if (Buffer.byteLength(body, 'utf8') > cap) throw new Error(`discovery body exceeds the ${cap} B ceiling (§13)`);
   return body;
 };
-export async function witnessNoFork(shard, genesisHash, { fetchImpl = fetch, substrateVerify, maxWitnessOpMs } = {}) {
+export async function witnessNoFork(shard, genesisHash, opts) {
+  const { fetchImpl = fetch, substrateVerify, maxWitnessOpMs } = (opts && typeof opts === 'object') ? opts : {};   // round-26 (rev24 C) — null-total: witnessNoFork(s, g, null) no longer throws on destructuring
   let log;
   try {
     const r = await fetchImpl(`https://${shard}/.well-known/ust-witness`, { signal: AbortSignal.timeout(10000), redirect: 'error' });
