@@ -38,8 +38,9 @@ function panel(name, title, alt, build, titleStyle) {            // shared frame
   build(P);
   const H = P.y + 26;
   alt = alt.replace(/\[/g, '(').replace(/\]/g, ')');
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(alt)}">
-<title>${esc(alt)}</title>
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" role="img" aria-labelledby="${name}-t ${name}-d">
+<title id="${name}-t">${esc(title)}</title>
+<desc id="${name}-d">${esc(alt)}</desc>
 <g font-family="${MONO}" font-size="15" xml:space="preserve">
   <rect x="1.5" y="1.5" width="${W - 3}" height="${H - 3}" rx="10" fill="${BG}" stroke="${BORDER}" stroke-width="1.5"/>
   <line x1="16" y1="46" x2="${W - 16}" y2="46" stroke="${SEP}" stroke-width="1"/>

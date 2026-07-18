@@ -66,8 +66,9 @@ const H = y + 26;
 // a CURATED, READABLE alt (agents read the alt, not the SVG) — the version stays the FIRST backtick token so the machine
 // status-line remains greppable; the prose mirrors the panel's meaning.
 const alt = 'UST status: `' + VERSION.spec + '` — a release candidate, not a final 1.0. Verify machine-readable state without trusting whoever handed it to you. Multiple external AI reviews incorporated structurally; an independent human cryptographic audit is pending; suitable for evaluation and integration testing. The wire format ust:"1.0" is stable across all release candidates; pin exact versions.';
-const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(alt.replace(/`/g, ''))}">
-<title>${esc(alt.replace(/`/g, ''))}</title>
+const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" role="img" aria-labelledby="st-t st-d">
+<title id="st-t">UST ${VERSION.spec} — release candidate status</title>
+<desc id="st-d">${esc(alt.replace(/`/g, ''))}</desc>
 <g font-family="${MONO}" font-size="15">
   <rect x="1.5" y="1.5" width="${W - 3}" height="${H - 3}" rx="10" fill="${BG}" stroke="${BORDER}" stroke-width="1.5"/>
 ${parts.join('\n')}
