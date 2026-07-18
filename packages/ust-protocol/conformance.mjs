@@ -1085,6 +1085,14 @@ console.log('\n═════════════════════�
   //   verifyJson opts). These drive the PUBLIC entry, per the audit-plan Definition-of-Done.
   check('round-26 L5 malformed non-null on trailing args: resolveCadence(_, _, _, null) + verifyJson("{}", null) return structured (no host throw)',
     (() => { try { const a = P.resolveCadence({}, [], 'ust:20260719.03', null); const b = P.verifyJson('{}', null); return typeof a === 'object' && typeof b === 'object'; } catch { return false; } })());
+  // round-26 B (rev26) — CanonicalSeq at the LAST unswept signed scalars (Merkle index + key-log length): a coercible
+  //   array `["1"]` (String/BigInt of it collapses to the canonical value) is NOT a canonical sequence → not terminal.
+  check('round-26 B key-log terminality: a coercible array Merkle index / length does not decode (isSeq before String/BigInt)',
+    (() => { const kl = P.buildKeylogCommitment(['sha256:' + '22'.repeat(32), 'sha256:' + '33'.repeat(32)]);
+      const ok = P.verifyKeylogTerminality({ root: kl.root, length: kl.length, head: kl.head }, kl.headProof).terminal === true;
+      const idx = P.verifyKeylogTerminality({ root: kl.root, length: kl.length, head: kl.head }, { ...kl.headProof, index: [kl.headProof.index] }).terminal === false;
+      const len = P.verifyKeylogTerminality({ root: kl.root, length: [kl.length], head: kl.head }, kl.headProof).terminal === false;
+      return ok && idx && len; })());
   // round-25 P1-02 — MALFORMED NON-NULL totality (I4): the null matrix was closed in round-24; round-25 sweeps ordinary
   //    non-null junk that still reached a host operation. A numeric-extra claim (canon throws), a null proof deref, a null
   //    seam arg, and a non-binary verifyJson input all now return STRUCTURED verdicts, never a host TypeError/E-CANON.

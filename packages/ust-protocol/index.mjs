@@ -1812,11 +1812,12 @@ export function buildKeylogCommitment(entryHashes) {
 export function verifyKeylogTerminality(head_, proof = {}) {
   const h = admitOpts(head_); if (h === null) return { terminal: false, detail: 'malformed key-log head record (round-24 P1-01 totality)' };   // round-24 P1-01 — the FIRST arg is destructured; total for null/hostile
   const { root, length, head } = h;
-  let L; try { L = BigInt(length); } catch { return { terminal: false, detail: 'length is not an integer' }; }
+  if (!isSeq(length)) return { terminal: false, detail: 'length is not a canonical decimal string (round-26 B — a coercible `["1"]`/non-canonical length no longer decodes via BigInt())' };   // round-26 B — CanonicalSeq before BigInt: BigInt(["1"]) === 1n would coerce an array
+  const L = BigInt(length);
   if (L < 1n) return { terminal: false, detail: 'empty key-log' };
   const p = (proof && typeof proof === 'object') ? proof : {};   // round-25 P1-02 — null-total: `verifyKeylogTerminality(head, null)` no longer dereferences `null.headProof` (default `= {}` only catches undefined)
   const hp = p.headProof || p;
-  if (!hp || !Array.isArray(hp.siblings) || String(hp.index) !== String(L - 1n)) return { terminal: false, detail: 'head proof missing or index ≠ length-1' };
+  if (!hp || !Array.isArray(hp.siblings) || !isSeq(hp.index) || BigInt(hp.index) !== L - 1n) return { terminal: false, detail: 'head proof missing or index ≠ length-1 (round-26 B — the Merkle index is a CanonicalSeq, no String([...]) coercion)' };
   // P0-5 (rc.35 audit) — the proof depth MUST be EXACTLY ceil(log2(width)), width = next-pow2(L). An UNDER-DEPTH proof
   // (fewer siblings than the tree has levels) recomputes the root over a SMALLER tree; with an attacker-chosen `root`
   // it FORGES terminality for a key-log that actually has successors — re-opening the P0-02 false-terminality class.
@@ -2123,7 +2124,7 @@ export function verifyStream(frames, config) {
     // frame), not an arbitrary middle `[from,to]`. A true middle-range verdict needs a PREVIOUS checkpoint and a
     // cumulative-count DELTA (currentCount − previousCount === frames.length) — a tracked follow-up, not silently
     // assumed here. The `complete`/`chain-consistent` verdict below is over this prefix.
-    if (!a || a.head !== prevHash || String(a.frame_count) !== String(frames.length))
+    if (!a || a.head !== prevHash || !isSeq(a.frame_count) || a.frame_count !== String(frames.length))   // round-26 B — the signed frame_count is a CanonicalSeq; a coercible `["N"]` no longer matches via String()
       return { error: 'E-PREV', detail: 'checkpoint contradicts observed set (M5)' };
     // #69 C — no-deletion is proven. no-OMISSION needs the EXPECTED GRID: the operator's SIGNED cadence
     // (genesis value + cadence-log, RESOLVED at the interval — never a free per-checkpoint choice) AND the
