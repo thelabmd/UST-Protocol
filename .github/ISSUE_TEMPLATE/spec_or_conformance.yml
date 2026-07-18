@@ -1,0 +1,40 @@
+name: Spec / conformance / model
+description: A spec ambiguity, a model↔code mismatch, a missing/incorrect conformance vector, or a proposed protocol change.
+labels: [type::task]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Spec and model changes are **issue-first** — open this before a PR that touches `spec/` or the formal model.
+        The model and the code move in lockstep; a claim the model asserts but the code does not realize is a defect.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - spec ambiguity / underspecified behaviour
+        - model ↔ code mismatch (the model claims X, the code does Y)
+        - missing or incorrect conformance vector
+        - proposed protocol change
+    validations:
+      required: true
+  - type: input
+    id: section
+    attributes:
+      label: Spec section / model theorem
+      description: e.g. §12.2 K_n(t), F.5c fork-choice, §14a obligations, M-REL.
+    validations:
+      required: true
+  - type: textarea
+    id: detail
+    attributes:
+      label: The claim vs the behaviour
+      description: quote the passage and describe the mismatch or the gap.
+    validations:
+      required: true
+  - type: textarea
+    id: vector
+    attributes:
+      label: Proposed vector / test (optional)
+      description: the byte-vector or conformance case that would pin the correct behaviour.
+      render: shell

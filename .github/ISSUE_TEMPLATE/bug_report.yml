@@ -1,0 +1,51 @@
+name: Bug report
+description: A wrong verdict, a crash/non-total behaviour, or a cross-implementation divergence (NOT a suspected vulnerability — report those privately, see SECURITY.md).
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A minimal, runnable reproduction is the most useful report: the exact bytes/inputs in, the verdict out.
+        For a suspected **security** issue do not use this form — use private reporting (Security → Report a vulnerability).
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      description: package version (e.g. ust-protocol@1.0.0-rc.x) and/or the git commit SHA.
+      placeholder: ust-protocol@1.0.0-rc.36 · commit 96937c3
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Surface
+      options:
+        - reference verifier (verify / verifyAsync / resolveByDiscovery)
+        - name-binding resolver (resolveKeys / resolveAuthority)
+        - byte checker (checkAuthorityProofBytes)
+        - CLI (ust)
+        - MCP server
+        - spec / conformance vectors
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: expected-actual
+    attributes:
+      label: Expected vs actual
+      description: What verdict/behaviour you expected, and what you got.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: Inputs (bytes/JSON) + the call + the output. A runnable snippet is ideal.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: invariant
+    attributes:
+      label: Invariant you believe is violated (optional)
+      description: cite the spec section / formal-model theorem if you can (e.g. F.5c, I4, K_n(t)).
