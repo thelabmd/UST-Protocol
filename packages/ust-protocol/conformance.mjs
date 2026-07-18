@@ -537,6 +537,32 @@ console.log('\n═════════════════════�
   const r3 = await P.resolveByDiscovery(doc, { context: 'data' }, { fetchImpl: mk(forkLog), substrateVerify: final });
   check('two anchored active genesis = fork = E-GENESIS', r3.verdict.result === 'INVALID' && r3.verdict.error === 'E-GENESIS');
 
+  // ─── round-20 (rev17) — resolver/discovery integration bypasses of the rev16 fixes ──────────────────────────────
+  // P0-01 — the witness is AUTHORITY input, so it crosses the SAME raw-byte duplicate-member boundary as genesis/key-log.
+  // A duplicate `genesis_log` collapses under JS last-wins parsing; a fork-bearing occurrence hidden behind an innocent
+  // one must NOT earn `corroborated` (model: corroborated = "exactly one active anchored binding"; I4 byte determinism).
+  const fMember = JSON.stringify({ content_hash: gHash, superseded_by: null, anchor: anchorOf(gHash) });
+  const rivalM = JSON.stringify({ content_hash: 'sha256:' + 'cd'.repeat(32), superseded_by: null, anchor: anchorOf('sha256:' + 'cd'.repeat(32)) });
+  const dupWitnessRaw = `{"domain_shard":"wit-test.example","genesis_log":[${fMember},${rivalM}],"genesis_log":[${fMember}]}`;   // two genesis_log members: first has a rival, second is clean
+  const mkDup = async (u) => { u = String(u); if (u.endsWith('/.well-known/ust-genesis')) return { ok: true, text: async () => JSON.stringify(gen) }; if (u.endsWith('/.well-known/ust-witness')) return { ok: true, text: async () => dupWitnessRaw }; return { ok: false, status: 404, text: async () => '' }; };
+  const r20a = await P.resolveByDiscovery(doc, { context: 'data' }, { fetchImpl: mkDup, substrateVerify: final });
+  check('round-20 P0-01 duplicate genesis_log in witness → NOT corroborated (raw dup-key boundary; a hidden fork cannot earn HIGH)', r20a.verdict.result !== 'VALID:HIGH' && r20a.verdict.identity?.strength !== 'corroborated');
+  // P1-01 — a normal JSON-parsed opts whose sole own key is "__proto__" must NOT install inherited authority config.
+  const protoOpts = JSON.parse('{"__proto__":{"noForkConfirmed":true,"acceptConsumerOverride":true}}');
+  const r20b = P.resolveAuthority(doc, protoOpts);
+  check('round-20 P1-01 JSON __proto__ opts → inherited config NOT admitted (null-proto admission; ℐ_C own-field only)', r20b.strength !== 'authoritative' && r20b.strength !== 'corroborated' && r20b.strength !== 'consumer-override');
+  // P1-02 — a witness with more distinct active roots than the F.9 structural budget is refused BEFORE any connector
+  // fan-out (resource_limit), never a HIGH — a body under the byte ceiling cannot amplify into unbounded substrate calls.
+  const manyRoots = Array.from({ length: 40 }, (_, i) => ({ content_hash: 'sha256:' + String(i).padStart(64, '0'), superseded_by: null, anchor: anchorOf('sha256:' + String(i).padStart(64, '0')) }));
+  const mkMany = async (u) => { u = String(u); if (u.endsWith('/.well-known/ust-genesis')) return { ok: true, text: async () => JSON.stringify(gen) }; if (u.endsWith('/.well-known/ust-witness')) return { ok: true, text: async () => JSON.stringify({ domain_shard: 'wit-test.example', genesis_log: manyRoots }) }; return { ok: false, status: 404, text: async () => '' }; };
+  let fanCalls = 0; const countSub = async (a, r) => { fanCalls++; return { final: true, time: '2026-07-13T14:05:00Z' }; };
+  const r20c = await P.resolveByDiscovery(doc, { context: 'data' }, { fetchImpl: mkMany, substrateVerify: countSub });
+  check('round-20 P1-02 witness with 40 distinct active roots → resource_limit, ZERO substrate fan-out (F.9 W-budget)', fanCalls === 0 && r20c.verdict.result !== 'VALID:HIGH');
+  // P2-01 — forkChoice now admits opts (rev16 missed it): a hostile Proxy opts is a structured reject, not a host throw.
+  let fcThrew = false, fcRes;
+  try { fcRes = await P.forkChoice([doc], new Proxy({}, { ownKeys() { throw new Error('h'); }, get() { throw new Error('h'); }, getOwnPropertyDescriptor() { throw new Error('h'); } })); } catch { fcThrew = true; }
+  check('round-20 P2-01 forkChoice hostile opts Proxy → structured E-MALFORMED, never a host throw', !fcThrew && fcRes.result === 'E-MALFORMED');
+
   const r4 = await P.resolveByDiscovery(doc, { context: 'data' }, { fetchImpl: mk(okLog), substrateVerify: () => ({ final: false }) });
   check('anchor not final (Bitcoin pending) = no HIGH, honest pending', r4.verdict.result === 'VALID:LIGHT' && r4.resolution.noFork.startsWith('HIGH pending'));
 

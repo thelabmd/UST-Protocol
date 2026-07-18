@@ -155,12 +155,14 @@ function admitOpts(v) {
   if (v === undefined || v === null) return {};
   if (typeof v !== 'object') return null;
   try {
-    const out = {};
+    const out = Object.create(null);                                             // round-20 P1-01 — null-proto: a JSON-native "__proto__" own key becomes plain own data, never a prototype swap
     for (const k of Reflect.ownKeys(v)) {
+      if (typeof k === 'symbol') continue;                                        // string keys only (config is a string-keyed record)
+      if (k === '__proto__' || k === 'prototype' || k === 'constructor') continue;   // round-20 P1-01 — never admit a key that could install inherited authority config (evidence must be an OWN admitted field of C — model ℐ_C)
       const d = Object.getOwnPropertyDescriptor(v, k);
       if (!d) continue;
       if (d.get || d.set) return null;                                            // an accessor is not an inert record field
-      out[k] = d.value;
+      Object.defineProperty(out, k, { value: d.value, writable: true, enumerable: true, configurable: true });   // defineProperty, never assignment through a legacy setter
     }
     return out;
   } catch { return null; }
@@ -333,7 +335,8 @@ const ustIdCalendarOk = (u) => calendarValid(u.slice(4, 8), u.slice(8, 10), u.sl
 const KEYID_FORM = /^sha256:[0-9a-f]{64}$/;
 
 // ─── §13 structural bounds — hard ceilings; exceed ⇒ E-BOUNDS ─────────────────────────────────────────
-const BOUNDS = { depth: 8, array: 4096, partitions: 4096, floorPartitions: 64, breadth: 64, sizeBytes: 67108864, floorSizeBytes: 1048576, cadenceMax: 31622400 };  // cadenceMax = 366 d in seconds (#75: bounded integer cadence)
+const BOUNDS = { depth: 8, array: 4096, partitions: 4096, floorPartitions: 64, breadth: 64, sizeBytes: 67108864, floorSizeBytes: 1048576, cadenceMax: 31622400,  // cadenceMax = 366 d in seconds (#75: bounded integer cadence)
+  witnessEntries: 256, witnessActive: 16, anchorsPerGenesis: 8 };  // round-20 P1-02 — F.9 structural fan-out budget: a body under the byte ceiling still bounds connector CALLS (≤ witnessActive × anchorsPerGenesis substrate invocations per resolution)
 export function checkBounds(doc) {
   // #69 E3 — the normative VOLUME metric is the signed content canon({ust, state}), NOT the transport object:
   // sig/proof are bounded by transport admission (verifyJson maxInputBytes), never by the signed-content ABS.
@@ -1148,7 +1151,8 @@ export async function verifyAsync(doc, opts = {}) {
 // (Proposition F.5c). Async because "anchor-included" means substrate-final, which verifyAsync awaits. Fail-safe:
 // with no substrateVerify NO candidate is anchored ⇒ INDETERMINATE, never a guessed winner. Returns ONE verdict.
 export async function forkChoice(candidates, opts = {}) {
-  opts = opts || {};                                                   // round-19 P1-02 — null-total boundary
+  opts = admitOpts(opts);                                              // round-20 P2-01 — forkChoice missed admitOpts in rev16; a hostile opts Proxy threw at `{...opts}`. Now the same inert admission as the other boundaries.
+  if (opts === null) return { result: 'E-MALFORMED', detail: 'opts must be an inert record (round-20 P2-01 totality)' };
   if (!Array.isArray(candidates) || candidates.length === 0)
     return { result: 'E-MALFORMED', detail: 'forkChoice needs a non-empty array of candidate documents' };
   // round-19 P0-01 — SNAPSHOT every candidate to an inert clone BEFORE ANY read, INCLUDING the ust_id grouping below.
@@ -2122,7 +2126,7 @@ export function isPublicDnsShard(shard) {
 // finality (async — Bitcoin/Rekor, so it MUST be awaited; the earlier sync path silently dropped every
 // real async plugin). `anchors[]` (several substrates) is the norm; a single `anchor` is accepted too.
 async function genesisAnchored(g, substrateVerify) {
-  const proofs = Array.isArray(g.anchors) ? g.anchors : (g.anchor ? [g.anchor] : []);
+  const proofs = (Array.isArray(g.anchors) ? g.anchors : (g.anchor ? [g.anchor] : [])).slice(0, BOUNDS.anchorsPerGenesis);   // round-20 P1-02 — cap anchors per genesis (F.9 fan-out budget); one final anchor is enough to confirm
   for (const proof of proofs) {
     const incl = verifyAnchor(g.content_hash, proof);   // inclusion only (no substrateVerify → sync)
     if (!incl.inclusion || !substrateVerify) continue;
@@ -2163,11 +2167,23 @@ export async function witnessNoFork(shard, genesisHash, { fetchImpl = fetch, sub
   try {
     const r = await fetchImpl(`https://${shard}/.well-known/ust-witness`, { signal: AbortSignal.timeout(10000), redirect: 'error' });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    log = JSON.parse(await readBounded(r));
+    const raw = await readBounded(r);
+    // round-20 P0-01 — the witness is AUTHORITY input like genesis and the key-log, so it crosses the SAME raw-byte
+    // duplicate-member boundary BEFORE JSON.parse. A duplicate `genesis_log` (or member) collapses under JS last-wins
+    // parsing, and a fork-bearing occurrence can be hidden behind an innocent one → false `corroborated`. Fail closed.
+    if (scanDuplicateKeys(raw)) throw new Error('witness log fails the raw-byte duplicate-member check (§6) — a duplicate member can hide a fork under last-wins parsing (round-20 P0-01)');
+    log = JSON.parse(raw);
   } catch (e) { return { status: 'unreachable', detail: 'witness endpoint unreachable: ' + (e && e.message || e) }; }
   if (anyLoneSurrogate(log)) return { status: 'unreachable', detail: 'witness log has an unpaired UTF-16 surrogate — outside the §6 canonical Unicode domain (round-19 P1-01)' };   // round-19 P1-01 — same Unicode domain as genesis/key-log/byte checker
   if (!log || log.domain_shard !== shard || !Array.isArray(log.genesis_log)) return { status: 'unreachable', detail: 'witness log malformed' };
-  const active = log.genesis_log.filter((g) => g && !g.superseded_by && /^sha256:[0-9a-f]{64}$/.test(g.content_hash || ''));
+  // round-20 P1-02 — F.9 structural budget: a witness body under the 2 MiB ceiling can still encode thousands of anchor
+  // records and force thousands of connector calls (μ(R) W-coordinate: authority enlarges VOLUME, never makes STRUCTURE
+  // cheaper). Refuse an oversize log; dedupe active roots by content_hash (identical roots verify once, not N times);
+  // cap distinct active roots — so total substrate calls ≤ witnessActive × anchorsPerGenesis, independent of body size.
+  if (log.genesis_log.length > BOUNDS.witnessEntries) return { status: 'unreachable', detail: `witness genesis_log has ${log.genesis_log.length} entries > ${BOUNDS.witnessEntries} (§F.9 resource_limit — structural fan-out refused; round-20 P1-02)` };
+  const seen = new Set();
+  const active = log.genesis_log.filter((g) => g && !g.superseded_by && /^sha256:[0-9a-f]{64}$/.test(g.content_hash || '') && !seen.has(g.content_hash) && seen.add(g.content_hash));   // dedupe by content_hash
+  if (active.length > BOUNDS.witnessActive) return { status: 'unreachable', detail: `witness has ${active.length} distinct active roots > ${BOUNDS.witnessActive} (§F.9 resource_limit — fan-out refused; round-20 P1-02)` };
   const anchoredActive = [];
   for (const g of active) if (await genesisAnchored(g, substrateVerify)) anchoredActive.push(g);
   if (anchoredActive.length >= 2) return { status: 'fork', detail: `${anchoredActive.length} anchored active genesis roots for ${shard} — a rival name-binding root exists` };
