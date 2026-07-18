@@ -474,7 +474,7 @@ export function verify(doc, opts = {}) {
     // proven upper bound and must never become the coordinate (it made a retired-key doc VALID:HIGH with a forged/absent
     // string while the honest late U rejected it). No proof ⇒ U is undefined ⇒ a closed key lifecycle fails closed.
     let identity;
-    if (opts.genesis) identity = resolveAuthority(doc, { ...opts, anchorTime: provenAnchorTime });
+    if (opts.genesis) identity = resolveAuthority(doc, { ...opts, anchorTime: provenAnchorTime !== undefined ? provenAnchor(provenAnchorTime) : undefined });   // round-17 P0-02 — mint a proven-anchor TOKEN; a raw opts.anchorTime is dropped and can never reach K_n(t)
     else if (opts.pinnedKeys) identity = opts.pinnedKeys.includes(st.id.key_id)
       ? { strength: 'pinned', status: 'verified' }
       : { error: 'E-KEY', detail: 'key_id not in the pinned set (§3.1 TOFU)' };
@@ -625,7 +625,8 @@ const isRealRfc3339Z = (x) => { if (typeof x !== 'string' || !/^\d{4}-\d{2}-\d{2
 // resolveAuthority (name authority) AND resolveCadence — a cadence-log entry MUST be signed by an AUTHORIZED
 // key (not any LIGHT doc with the same domain_shard), the P0 the cadence-log missed.
 export function resolveKeys(genesis, keylog = []) {
-  if (!genesis) return { error: 'E-GENESIS', detail: 'no genesis' };
+  if (!genesis || typeof genesis !== 'object') return { error: 'E-GENESIS', detail: 'no genesis' };
+  if (!Array.isArray(keylog)) return { error: 'E-MALFORMED', detail: 'key-log must be an array (round-17 P1-02 — the reducer is TOTAL: a malformed input is a structured reject, never a host throw)' };
   const gv = verify(genesis);                                                     // genesis is itself a UST transcript
   if (!isValid(gv)) return { error: 'E-GENESIS', detail: 'genesis invalid: ' + gv.error };
   if (genesis.state.id.class !== 'genesis') return { error: 'E-GENESIS', detail: 'not class:genesis' };
@@ -888,7 +889,17 @@ const VERIFIED_SERVED = new WeakSet();
 // requireFreshKeylog). Only resolveByDiscovery, which actually fetched /.well-known/ust-keylog, mints an observation
 // token into this set, bound to (domain, active_genesis, observed_at). A raw string/object is a caller assertion.
 const VERIFIED_FRESH = new WeakSet();
+// round-17 P0-02 — the SAME unforgeable-token discipline for the K_n(t) upper bound U. resolveAuthority is stateless and
+// cannot itself verify an anchor (that needs the async substrate), so U is an input — and a RAW caller string is a
+// forgeable coordinate (F.5e/Reach_C: no coordinate from a bare caller label; the MCP resolver tool exposed exactly this).
+// Only the verified anchor seam (verify/verifyAsync) mints a proven-U token into this set; a raw string yields NO U ⇒
+// a closed key lifecycle fails closed. `provenAnchor` is module-private so a caller cannot forge it.
+const VERIFIED_ANCHOR = new WeakSet();
+const provenAnchor = (t) => { const tok = { anchorTime: t }; VERIFIED_ANCHOR.add(tok); return tok; };
 export function resolveAuthority(doc, { genesis, keylog = [], noForkConfirmed = false, noForkEvidence, nameMap, trustRoots, corroborated = false, servedNoFork, anchorTime, keylogFreshAsOf, keylogHeadAnchor, substrateVerify, trust } = {}) {
+  if (!doc || typeof doc !== 'object' || !doc.state?.id?.domain_shard || !doc.sig?.pub) return { error: 'E-MALFORMED', detail: 'document must be a UST object with state.id and sig (round-17 P1-02 totality)' };
+  // round-17 P0-02 — U comes ONLY from a proven-anchor token (verify/verifyAsync mint it); a raw string never reaches K_n(t).
+  const U = (anchorTime && typeof anchorTime === 'object' && VERIFIED_ANCHOR.has(anchorTime) && isRealRfc3339Z(anchorTime.anchorTime)) ? anchorTime.anchorTime : undefined;
   if (!genesis) return { strength: 'self-asserted', status: 'verified' };         // LIGHT — nothing to resolve
   if (genesis.state?.id?.domain_shard !== doc.state.id.domain_shard) return { error: 'E-GENESIS', detail: 'genesis domain mismatch' };
   const rk = resolveKeys(genesis, keylog);
@@ -908,7 +919,7 @@ export function resolveAuthority(doc, { genesis, keylog = [], noForkConfirmed = 
   let freshness = 'unverified';
   if (keylogFreshAsOf && typeof keylogFreshAsOf === 'object' && VERIFIED_FRESH.has(keylogFreshAsOf)
       && keylogFreshAsOf.domain === doc.state.id.domain_shard && keylogFreshAsOf.active_genesis === contentHash(genesis)
-      && isRealRfc3339Z(keylogFreshAsOf.observed_at) && (!anchorTime || keylogFreshAsOf.observed_at >= anchorTime)) freshness = 'fresh';
+      && isRealRfc3339Z(keylogFreshAsOf.observed_at) && (!U || keylogFreshAsOf.observed_at >= U)) freshness = 'fresh';
   // rc.12: surface the ceremony-declared CAPACITY so callers can pass it as opts.capacity to verify()
   // once authority is established — the grant flows FROM resolution, never from a raw genesis.
   const gvCap = genesis.state?.data?.genesis?.value ?? {};
@@ -922,8 +933,7 @@ export function resolveAuthority(doc, { genesis, keylog = [], noForkConfirmed = 
   // §12.2/#75 ROOT 1 — K_n(t) is a TWO-SIDED window over ORDERED authorization intervals (round-15 P0-02). A document is
   // key-active iff its proven anchor U lands INSIDE some active interval [from, to]; U before the FIRST authorization ⇒
   // premature; U in a retired GAP between intervals (add→retire→re-add→retire) ⇒ expired. Only decidable WITH a proven U.
-  const hk = history.get(doc.state.id.key_id);
-  const U = anchorTime;                                                            // proven "not later than" (§11.2)
+  const hk = history.get(doc.state.id.key_id);                                     // U (the proven anchor upper bound) is resolved from the token at the top of resolveAuthority
   if (U && hk && U < hk.intervals[0].from)
     return { strength: 'self-asserted', status: 'premature', detail: 'document anchored before its signing key was authorized (K_n(t) lower bound §12.2)' };
   // §12.2 X1 — the UPPER bound, decided against the proven anchor U. Compromise is terminal; retirement leaves a GAP.
@@ -1014,7 +1024,11 @@ export function verifyAnchor(contentHash, proof, opts = {}) {
   // which pre-resolve the substrate. Fail-safe either way: a Promise is never mistaken for a final anchor.
   if (sub && typeof sub.then === 'function') return { inclusion: true, time: 'unproven', status: 'unavailable', detail: 'substrate check is ASYNC — use verifyAsync() or resolveByDiscovery() (they await it), not sync verify()' };
   if (!sub) return { inclusion: true, time: 'unproven', status: 'unavailable', detail: 'substrate unreachable' };
-  if (!sub.final) return { inclusion: true, time: 'unproven', status: 'verified', detail: 'substrate not final (e.g. <6 conf)' };
+  // round-17 P1-01 — the substrate result is a CLOSED, TYPED leaf (F.5.0/C3/I4): `final` must be a strict Boolean and
+  // a final anchor MUST carry a REAL RFC3339-Z instant. A truthy non-Boolean ("yes") or a non-string/empty time
+  // ({}) can no longer mint TimeStrength=anchored (and can no longer coerce past the N9 generated_at ≤ anchor check).
+  if (sub.final !== true) return { inclusion: true, time: 'unproven', status: 'verified', detail: 'substrate not final (final must be Boolean true; e.g. <6 conf)' };
+  if (!isRealRfc3339Z(sub.time)) return { inclusion: true, time: 'unproven', status: 'unavailable', detail: 'substrate final but anchor time is not a real RFC3339-Z instant (untyped receipt — no F_t, round-17 P1-01)' };
   // #71 — carry the substrate's ASSURANCE basis so TOP names its trust model honestly (an OTS plugin that
   // corroborates via independent explorers reports `explorer-corroborated`; an operator real-node/SPV plugin
   // would report `bitcoin-node`). TOP is earned either way; assurance says HOW, never inflating the tier.
@@ -1027,8 +1041,15 @@ export function verifyAnchor(contentHash, proof, opts = {}) {
 // through a single contract, and verify() never has to become async. Everything else is identical to verify().
 export async function verifyAsync(doc, opts = {}) {
   if (!doc?.proof || !opts.substrateVerify || opts.offline) return verify(doc, opts);
-  let receipt; try { receipt = await opts.substrateVerify(doc.proof.anchor, doc.proof.root); } catch { receipt = null; }
-  return verify(doc, { ...opts, substrateVerify: () => receipt });   // receipt (or null) → sync verifyAnchor path
+  // round-17 P0-01 — verify an IMMUTABLE SNAPSHOT. The live object could be swapped between the await and the sync
+  // verify (TOCTOU): the substrate receipt is obtained for root A, then a mutated document B with root B reuses it and
+  // gets VALID:TOP for evidence that was never its own (I4/F.5c: TimeStrength=anchored must be evidence for content_hash(d)).
+  // Snapshot before the await; the sync shim ALSO binds the receipt to the captured (anchor, root), so a different root
+  // can never claim it.
+  let snap; try { snap = JSON.parse(JSON.stringify(doc)); } catch { return verify(doc, opts); }
+  const capA = snap.proof?.anchor, capR = snap.proof?.root;
+  let receipt; try { receipt = await opts.substrateVerify(capA, capR); } catch { receipt = null; }
+  return verify(snap, { ...opts, substrateVerify: (a, r) => (a === capA && r === capR ? receipt : null) });   // receipt (or null) → sync verifyAnchor path
 }
 
 // §3.1/F.5c FORK-CHOICE — canonical = anchor-included. One `ust_id` may have several candidate documents with
@@ -2006,12 +2027,28 @@ async function genesisAnchored(g, substrateVerify) {
   return false;
 }
 
+// round-17 P1-03 — a BYTE CEILING for authority discovery (F.9/§13). A §13 key-log is ≤256 entries and genesis/witness
+// are small, so a 2 MiB cap bounds every discovery body. Reject a declared oversize BEFORE accumulating; when the body
+// is a real stream, read with a hard cap and abort past it (no full accumulation); for a mocked response, cap after read.
+const DISCOVERY_MAX_BYTES = 1 << 21;
+const readBounded = async (r, cap = DISCOVERY_MAX_BYTES) => {
+  const cl = Number(r.headers?.get?.('content-length'));
+  if (Number.isFinite(cl) && cl > cap) throw new Error(`discovery body ${cl} B exceeds the ${cap} B ceiling (§13)`);
+  if (r.body && typeof r.body.getReader === 'function') {
+    const reader = r.body.getReader(); let total = 0; const chunks = [];
+    for (;;) { const { done, value } = await reader.read(); if (done) break; total += value.length; if (total > cap) { try { await reader.cancel(); } catch { /* already closed */ } throw new Error(`discovery body exceeds the ${cap} B ceiling (§13)`); } chunks.push(value); }
+    return Buffer.concat(chunks).toString('utf8');
+  }
+  const body = await r.text();
+  if (Buffer.byteLength(body, 'utf8') > cap) throw new Error(`discovery body exceeds the ${cap} B ceiling (§13)`);
+  return body;
+};
 export async function witnessNoFork(shard, genesisHash, { fetchImpl = fetch, substrateVerify } = {}) {
   let log;
   try {
     const r = await fetchImpl(`https://${shard}/.well-known/ust-witness`, { signal: AbortSignal.timeout(10000), redirect: 'error' });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    log = JSON.parse(await r.text());
+    log = JSON.parse(await readBounded(r));
   } catch (e) { return { status: 'unreachable', detail: 'witness endpoint unreachable: ' + (e && e.message || e) }; }
   if (!log || log.domain_shard !== shard || !Array.isArray(log.genesis_log)) return { status: 'unreachable', detail: 'witness log malformed' };
   const active = log.genesis_log.filter((g) => g && !g.superseded_by && /^sha256:[0-9a-f]{64}$/.test(g.content_hash || ''));
@@ -2047,7 +2084,7 @@ export async function resolveByDiscovery(doc, opts = {}, { fetchImpl = fetch, su
   if (!isPublicDnsShard(shard)) return { verdict: base, resolution: { skipped: 'domain_shard is not a public DNS name — discovery refused (SSRF guard)' } };
   let genesis, keylog = [], genesisHash, gRaw, kRaw;
   try {
-    const get = async (p) => { const r = await fetchImpl(`https://${shard}${p}`, { signal: AbortSignal.timeout(10000), redirect: 'error' }); if (!r.ok) throw new Error(`HTTP ${r.status} at ${p}`); return r.text(); };
+    const get = async (p) => { const r = await fetchImpl(`https://${shard}${p}`, { signal: AbortSignal.timeout(10000), redirect: 'error' }); if (!r.ok) throw new Error(`HTTP ${r.status} at ${p}`); return readBounded(r); };   // round-17 P1-03 — bounded read (byte ceiling before accumulate/scan/parse)
     gRaw = await get('/.well-known/ust-genesis');
     try { kRaw = await get('/.well-known/ust-keylog'); } catch { /* key-log not served — resolution may fail on key membership */ }
   } catch (e) { return { verdict: base, resolution: { error: 'discovery fetch failed: ' + (e && e.message || e) } }; }

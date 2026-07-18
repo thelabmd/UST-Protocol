@@ -21,6 +21,13 @@ const clone = (d) => JSON.parse(JSON.stringify(d));
 // mints a consumer-trusted witness's evidence bound to this domain + active genesis, to reach authoritative in tests.
 const W = kp('bb'.repeat(32));
 const nfe = (genesis) => ({ noForkEvidence: P.buildNoForkEvidence({ domain_shard: genesis.state.id.domain_shard, active_genesis: P.contentHash(genesis) }, W.priv, W.pubB64), trustRoots: { [W.key_id]: W.pubB64 } });
+// round-17 P0-02 — the proven anchor upper bound U reaches K_n(t) ONLY through the verified anchor seam (a raw
+// resolveAuthority anchorTime no longer forges U). Supply U by verifying an anchored copy of the doc (a trivial
+// self-consistent inclusion proof: empty path ⇒ root = H_leaf(content_hash)) with a mock substrate returning `time:U`.
+const atU = (doc, genesis, keylog, U, opts = {}) => {
+  const proof = { root: P.Hbytes('ust:leaf', Buffer.from(P.contentHash(doc), 'utf8')), path: [], anchor: { substrate: 'test-anchor' } };
+  return P.verify({ ...doc, proof }, { genesis, keylog, ...nfe(genesis), substrateVerify: () => ({ final: true, time: U }), context: 'data', ...opts });
+};
 
 let pass = 0, fail = 0, note = 0; const fails = [];
 const check = (id, ok, d) => { if (ok) pass++; else { fail++; fails.push(id + (d ? ' — ' + d : '')); } };
@@ -58,7 +65,7 @@ for (const v of V.vectors) {
     // #75 ROOT 2 — the key-log state machine as a language-neutral vector: run resolveKeys over embedded signed docs.
     case 'keylog-state': { const r = P.resolveKeys(v.genesis, v.keylog); check(v.id, v.expect.error ? r.error === v.expect.error : (!r.error && r.active.size === v.expect.active_count && r.validKeys.size === v.expect.all_count)); break; }
     // #75 ROOT 1 — K_n(t): authority resolved at a PROVEN anchor time (lower bound premature · upper bound X1).
-    case 'authority-at-time': { const r = P.resolveAuthority(v.doc, { genesis: v.genesis, keylog: v.keylog, ...nfe(v.genesis), anchorTime: v.anchor_time }); check(v.id, v.expect.error ? r.error === v.expect.error : (r.strength === v.expect.strength && r.status === v.expect.status)); break; }
+    case 'authority-at-time': { const r = atU(v.doc, v.genesis, v.keylog, v.anchor_time); const id = r.identity || {}; check(v.id, v.expect.error ? (r.result === 'INVALID' && new RegExp(v.expect.error).test(r.error || '')) : (id.strength === v.expect.strength && id.status === v.expect.status)); break; }
     // #75 ROOT 3 (math-derived, no manifest) — composition authority: forkChoice/verifyStream resolve per-frame
     // authority (impersonation) + grid equality (off-grid), all language-neutral.
     case 'stream-authority': case 'stream-grid': { const r = P.verifyStream(v.frames, { genesis: v.genesis, checkpoint: v.checkpoint }); check(v.id, v.expect.error ? r.error === v.expect.error : r.complete === v.expect.complete); break; }
@@ -169,16 +176,16 @@ check('F8 impossible ust_id→E-MALFORMED', P.verify(mk({ r: { kind: 'captured',
   // rc.9 (11th audit 7.1/B): revocation boundary U==C is INVALID; a non-strict-Z compromised_since is E-MALFORMED.
   const C = '2026-06-28T15:00:00Z';
   const rev = signG(P.buildKeyLogEntry({ domain_shard: 'noosphere.md', ust_id: 'ust:20260628.1902', key_id: G.key_id }, T, { op: 'revoke', pub: K.pubB64, reason: 'compromised', compromised_since: C }, P.contentHash(add)));
-  check('revocation boundary U == C → E-KEY (X1: VALID only if U < C)', P.resolveAuthority(docK, { genesis: gen, keylog: [add, rev], anchorTime: C }).error === 'E-KEY');
+  check('revocation boundary U == C → E-KEY (X1: VALID only if U < C)', (r => r.result === 'INVALID' && /E-KEY/.test(r.error || ''))(atU(docK, gen, [add, rev], C)));
   // round-16 P1-01 — the compromise estimate C can taint EARLIER signatures but NEVER lengthen the active window past
   // the revoke transition R (F.5e). Here R = the revoke entry time (14:03:12); a doc at U=14:59:59 (R < U < C) is AFTER
   // the key left the active set ⇒ EXPIRED, not suspect. (rev12 used C alone as the upper bound — the reversed bug.)
-  check('revocation R < U < C (after the revoke transition) → expired, not suspect (round-16 P1-01)', (r => r.strength === 'self-asserted' && r.status === 'expired')(P.resolveAuthority(docK, { genesis: gen, keylog: [add, rev], ...nfe(gen), anchorTime: '2026-06-28T14:59:59Z' })));
+  check('revocation R < U < C (after the revoke transition) → expired, not suspect (round-16 P1-01)', (r => (r.identity || {}).strength === 'self-asserted' && (r.identity || {}).status === 'expired')(atU(docK, gen, [add, rev], '2026-06-28T14:59:59Z')));
   // realistic pre-compromise (U < C ≤ R, inside the active window): add@14:04, revoke(compromised, C=14:40)@14:50, doc anchored@14:20 → authoritative/suspect (C is a publisher estimate).
   const teC = (g) => ({ generated_at: g, valid_from: g, valid_to: '2026-06-28T15:00:00Z' });
   const addE = signG(P.buildKeyLogEntry({ domain_shard: 'noosphere.md', ust_id: 'ust:20260628.1921', key_id: G.key_id }, teC('2026-06-28T14:04:00Z'), { op: 'add', pub: K.pubB64, new_key_id: K.key_id }, P.contentHash(gen)));
   const revE = signG(P.buildKeyLogEntry({ domain_shard: 'noosphere.md', ust_id: 'ust:20260628.1922', key_id: G.key_id }, teC('2026-06-28T14:50:00Z'), { op: 'revoke', pub: K.pubB64, reason: 'compromised', compromised_since: '2026-06-28T14:40:00Z' }, P.contentHash(addE)));
-  check('revocation U < C ≤ R (provably pre-compromise, in the active window) → authoritative/suspect', (r => r.strength === 'authoritative' && r.status === 'suspect')(P.resolveAuthority(docK, { genesis: gen, keylog: [addE, revE], ...nfe(gen), anchorTime: '2026-06-28T14:20:00Z' })));
+  check('revocation U < C ≤ R (provably pre-compromise, in the active window) → authoritative/suspect', (r => (r.identity || {}).strength === 'authoritative' && (r.identity || {}).status === 'suspect')(atU(docK, gen, [addE, revE], '2026-06-28T14:20:00Z')));
   const revBad = signG(P.buildKeyLogEntry({ domain_shard: 'noosphere.md', ust_id: 'ust:20260628.1903', key_id: G.key_id }, T, { op: 'revoke', pub: K.pubB64, reason: 'compromised', compromised_since: '2026-06-28T15:00:00.5Z' }, P.contentHash(add)));
   check('fractional compromised_since → E-MALFORMED (strict-Z, §12.2)', P.resolveAuthority(docK, { genesis: gen, keylog: [add, revBad], anchorTime: C }).error === 'E-MALFORMED');
   // round-15 P1-01 — compromised_since must be a REAL calendar instant: "9999-99-99T99:99:99Z" matches the regex but is
@@ -208,6 +215,17 @@ check('F8 impossible ust_id→E-MALFORMED', P.verify(mk({ r: { kind: 'captured',
   // generated_at than a prior entry inverts the intervals and is rejected (M-KEY-INTERVAL), never silently ordered.
   const kBack = signG(P.buildKeyLogEntry({ domain_shard: 'noosphere.md', ust_id: 'ust:20260628.1916', key_id: G.key_id }, Tt('2026-06-28T14:02:00Z'), { op: 'revoke', pub: K.pubB64, reason: 'retired' }, P.contentHash(kAdd1)));
   check('P1-02 non-monotone key-log timeline (entry predates a prior entry) → E-MALFORMED', P.resolveKeys(gen, [kAdd1, kBack]).error === 'E-MALFORMED');
+  // round-17 P0-02 — a RAW anchorTime string to the EXPORTED resolver never becomes U (only the verified anchor seam mints
+  // it): a post-retirement doc stays fail-closed, not authoritative. The proven path (verify + anchor) is atU above.
+  check('P0-02 raw anchorTime string to resolveAuthority → no proven U → retired key NOT authoritative', (r => r.strength !== 'authoritative')(P.resolveAuthority(docK, { genesis: gen, keylog: [kAdd1, kRetOnly], ...nfe(gen), anchorTime: '2026-06-28T14:05:00Z' })));
+  // round-17 P1-02 — the exported resolvers are TOTAL: a malformed input is a STRUCTURED reject, never a host throw.
+  check('P1-02 resolveKeys(gen, non-array keylog) → E-MALFORMED, no throw', (() => { try { return P.resolveKeys(gen, { length: 0 }).error === 'E-MALFORMED'; } catch { return false; } })());
+  check('P1-02 resolveAuthority(null doc) → E-MALFORMED, no throw', (() => { try { return P.resolveAuthority(null, { genesis: gen, keylog: [] }).error === 'E-MALFORMED'; } catch { return false; } })());
+  check('P1-02 resolveAuthority(doc, non-array keylog) → structured error, no throw', (() => { try { return !!P.resolveAuthority(docK, { genesis: gen, keylog: { length: 0 } }).error; } catch { return false; } })());
+  // round-17 P1-01 — an untyped substrate receipt cannot mint TimeStrength=anchored: final must be Boolean true AND carry a real RFC3339-Z instant.
+  const anchoredDoc = (d) => ({ ...d, proof: { root: P.Hbytes('ust:leaf', Buffer.from(P.contentHash(d), 'utf8')), path: [], anchor: { substrate: 'test' } } });
+  check('P1-01 substrate {final:"yes"} (non-Boolean) → NOT anchored (not VALID:TOP)', P.verify(anchoredDoc(docK), { genesis: gen, keylog: [kAdd1], ...nfe(gen), substrateVerify: () => ({ final: 'yes', time: '2026-06-28T16:00:00Z' }), context: 'data' }).result !== 'VALID:TOP');
+  check('P1-01 substrate {final:true, time:{}} (non-RFC3339 time) → NOT anchored (not VALID:TOP)', P.verify(anchoredDoc(docK), { genesis: gen, keylog: [kAdd1], ...nfe(gen), substrateVerify: () => ({ final: true, time: {} }), context: 'data' }).result !== 'VALID:TOP');
   // ─── #45 F.5b DOWNGRADE RESISTANCE — requireAnchored is the symmetric floor to requireAuthoritative. Stripping
   //     the anchor can only LOWER the tier; a TOP-needing consumer REJECTS, never silently accepts a lower tier.
   const anchorSV = () => ({ final: true, time: '2027-01-01T00:00:00Z' });
@@ -584,7 +602,7 @@ console.log('\n═════════════════════�
   const revoke = signG(P.buildKeyLogEntry({ domain_shard: dom, ust_id: 'ust:20260628.1902', key_id: G.key_id }, T, { op: 'revoke', pub: K.pubB64, reason: 'compromised', compromised_since: '2026-06-28T14:30:00Z' }, P.contentHash(add)));
   const docK = P.seal(P.buildState({ domain_shard: dom, ust_id: 'ust:20260628.20', key_id: K.key_id, class: 'observation' }, T, { sw: { kind: 'captured', value: { kp: '5' } } }), K.priv, K.pubB64);
   const Aft = '2026-06-28T14:45:00Z';
-  check('#40 fresh log [add,revoke] → E-KEY (revocation still bites)', P.resolveAuthority(docK, { genesis: gen, keylog: [add, revoke], anchorTime: Aft }).error === 'E-KEY');
+  check('#40 fresh log [add,revoke] → E-KEY (revocation still bites)', (r => r.result === 'INVALID' && /E-KEY/.test(r.error || ''))(atU(docK, gen, [add, revoke], Aft)));
   check('#40 stale cache [add] REPORTS freshness:unverified (no longer silent)', (r => r.strength === 'authoritative' && r.freshness === 'unverified')(P.resolveAuthority(docK, { genesis: gen, keylog: [add], ...nfe(gen), anchorTime: Aft })));
   check('#40 requireFreshKeylog on a stale cache → INDETERMINATE stale_keylog', (r => r.result === 'INDETERMINATE' && r.reason === 'stale_keylog')(P.verify(docK, { genesis: gen, keylog: [add], noForkConfirmed: true, requireFreshKeylog: true, anchorTime: Aft, context: 'data' })));
   // rc.28 AUDIT FIX — a raw self-computed head hash proves nothing (derivable from a stale log): NOT attested.
@@ -600,6 +618,19 @@ console.log('\n═════════════════════�
   const freshMock = (u) => { const p = new URL(u).pathname; const body = p.endsWith('ust-genesis') ? JSON.stringify(gen) : p.endsWith('ust-keylog') ? JSON.stringify([add]) : null; return Promise.resolve(body === null ? { ok: false, status: 404 } : { ok: true, text: () => Promise.resolve(body) }); };
   const rFresh = await P.resolveByDiscovery(docK, { context: 'data', noForkConfirmed: true, acceptConsumerOverride: true }, { fetchImpl: freshMock });
   check('#40/P0-02 resolveByDiscovery key-log fetch → freshness:fresh (EARNED, branded token)', rFresh.verdict?.identity?.freshness === 'fresh');
+  // round-17 P1-03 — authority discovery has a BYTE CEILING (F.9/§13): an oversize key-log body is rejected by size,
+  // before it is fully accumulated / duplicate-scanned / parsed.
+  const bigBody = '"' + '0'.repeat(1 << 22) + '"';   // > the 2 MiB DISCOVERY_MAX_BYTES ceiling
+  const bigMock = (u) => Promise.resolve({ ok: true, text: () => Promise.resolve(bigBody) });   // an oversize authority-discovery body (the genesis fetch, whose error is surfaced, not swallowed)
+  const rBig = await P.resolveByDiscovery(docK, { context: 'data', noForkConfirmed: true, acceptConsumerOverride: true }, { fetchImpl: bigMock });
+  check('P1-03 oversize discovery body → rejected by the §13 byte ceiling (before scan/parse)', /ceiling|§13/.test(JSON.stringify(rBig.resolution || {})));
+  // round-17 P0-01 — verifyAsync verifies an IMMUTABLE SNAPSHOT: mutating the live document during the substrate await
+  // must not swap the verdict target (the receipt for root A cannot be reused for a substituted document B).
+  const aDoc = { ...docK, proof: { root: P.Hbytes('ust:leaf', Buffer.from(P.contentHash(docK), 'utf8')), path: [], anchor: { substrate: 'test' } } };
+  const origCH = P.contentHash(aDoc);
+  const mutSub = async () => { aDoc.proof.root = 'sha256:' + 'ff'.repeat(32); aDoc.state = { ...aDoc.state, id: { ...aDoc.state.id, ust_id: 'ust:20260628.99' } }; return { final: true, time: '2026-06-28T16:00:00Z' }; };
+  const rTocc = await P.verifyAsync(aDoc, { genesis: gen, keylog: [add], ...nfe(gen), substrateVerify: mutSub, context: 'data' });
+  check('P0-01 verifyAsync verifies an immutable snapshot (a live mutation during the await cannot swap the verdict target)', rTocc.content_hash === origCH);
   // ─── P0-2 (audit) — NAME NO-FORK EVIDENCE reclassification (UST-0l5). `authoritative` name-authority is EARNED
   //     from a verified, CONSUMER-trusted witness statement bound to this domain + active genesis; a raw
   //     `noForkConfirmed` boolean is only a transparent `consumer-override`, never silently authoritative.

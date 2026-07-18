@@ -16,7 +16,7 @@ import { canon, H, keyId, edVerifyStrict, contentHash, verify, isValid, verifyKe
   verifyCheckpointMapUniqueness, evidenceCaps, compareEvidenceOrder, authorityScopeId, genesisEpoch,
   resolveKeys, buildKeylogCommitment, authorityCheckpointId, strictB64url, isPublicDnsShard } from './index.mjs';
 
-export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev13';
+export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev14';
 // RULE_CONTRACTS (§2b) — the STRUCTURAL source of truth: exactly one inference rule per name, one switch branch per
 // name, and a fixed (children arity, witness count, allowed params, conclusion kind). DecodeTerm enforces these on
 // decode; a term with an extra child / extra witness / free param / unknown field / stored conclusion is rejected
