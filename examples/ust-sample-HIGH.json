@@ -1,0 +1,34 @@
+{
+  "ust": "1.0",
+  "state": {
+    "id": {
+      "domain_shard": "observatory.example",
+      "ust_id": "ust:20260628.14",
+      "key_id": "sha256:8d30ca5d5f956c5ab9831f3276545dcfed7ac993f3a30c19b5af814e7c9e02fd",
+      "class": "observation"
+    },
+    "time": {
+      "generated_at": "2026-06-28T14:03:09Z",
+      "valid_from": "2026-06-28T14:00:00Z",
+      "valid_to": "2026-06-28T15:00:00Z"
+    },
+    "data": {
+      "space_weather": {
+        "kind": "captured",
+        "value": {
+          "kp": "3.0",
+          "bz": "-2.82"
+        }
+      }
+    },
+    "hashes": {
+      "space_weather": "sha256:bd01cf9f1b1325771d4cd86732150886dd791d2645438e52ac63a8b64cd72a50"
+    }
+  },
+  "sig": {
+    "alg": "Ed25519",
+    "key_id": "sha256:8d30ca5d5f956c5ab9831f3276545dcfed7ac993f3a30c19b5af814e7c9e02fd",
+    "pub": "yVce60qp3hFZhYvGo9SmJsT0hF6O69X1VLLsD1DGiGA",
+    "sig": "P1E8FuUYkUNANoLxDrpLJsNw-tVhxCEmk-bmSc3M4qS8r0HPq3QqT8Y10xaMWaGLTSf89-GdpzRGbtRgDNW5Cw"
+  }
+}

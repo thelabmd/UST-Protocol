@@ -1,0 +1,34 @@
+{
+  "ust": "1.0",
+  "state": {
+    "id": {
+      "domain_shard": "observatory.example",
+      "ust_id": "ust:20260101.000000",
+      "key_id": "sha256:8d30ca5d5f956c5ab9831f3276545dcfed7ac993f3a30c19b5af814e7c9e02fd",
+      "class": "genesis"
+    },
+    "time": {
+      "generated_at": "2026-01-01T00:00:00Z",
+      "valid_from": "2026-01-01T00:00:00Z",
+      "valid_to": "2027-12-31T23:59:59Z"
+    },
+    "data": {
+      "genesis": {
+        "kind": "captured",
+        "value": {
+          "pub": "yVce60qp3hFZhYvGo9SmJsT0hF6O69X1VLLsD1DGiGA",
+          "role": "name-binding-root"
+        }
+      }
+    },
+    "hashes": {
+      "genesis": "sha256:d623ffe7770452891caa472a9653be73c88b4a4dfb316de290120c9051892e95"
+    }
+  },
+  "sig": {
+    "alg": "Ed25519",
+    "key_id": "sha256:8d30ca5d5f956c5ab9831f3276545dcfed7ac993f3a30c19b5af814e7c9e02fd",
+    "pub": "yVce60qp3hFZhYvGo9SmJsT0hF6O69X1VLLsD1DGiGA",
+    "sig": "csfCxLoycQJKkZY1g0ywX5VzJanXDE9C8FUsxJGKeMkrFPjf6YKW3plPEA7KkD4JH2tuMUdZsoAXrBnuNiaDBQ"
+  }
+}
