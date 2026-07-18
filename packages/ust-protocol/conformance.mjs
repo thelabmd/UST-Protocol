@@ -1053,6 +1053,13 @@ console.log('\n═════════════════════�
   check('round-23 P1-01 quorum full output is order-independent (voters/tags sorted)', JSON.stringify(VU([ua(Wa), ua(Wb)])) === JSON.stringify(VU([ua(Wb), ua(Wa)])) && VU([ua(Wa), ua(Wb)]).attested === true);
   // P1-02 — null / non-record config is total on the exported quorum surfaces (structured, never a host throw).
   check('round-23 P1-02 quorum functions total for null config (no host throw)', (() => { try { P.verifyCheckpointUniqueness([], null); P.verifyCheckpointRecovery([], null); P.quorumTrustDomains([], null); return true; } catch { return false; } })());
+  // ─── round-24 (rev22) — the recurring classes on the surfaces they had never reached ────────────────────────────────
+  // P0-03 — a lone UTF-16 surrogate trust-domain is OUTSIDE the §6 scalar domain and must not count as an independent domain.
+  check('round-24 P0-03 lone-surrogate trust-domains → NOT two independent voters → attested:false', P.verifyCheckpointUniqueness([ua(Wa), ua(Wb)], { domain_shard: D, genesis_epoch: EP, sequence: '0', checkpoint: headId, trustRoots, domains: { [Wa.key_id]: '\uD800', [Wb.key_id]: '\uD801' }, threshold: 2 }).attested === false);
+  // P1-01 — null-total across ALL the public proof surfaces (the round-23 quorum fix + this sweep + the self-audit pair).
+  check('round-24 P1-01 nine public proof surfaces total for null config (no host throw)', (() => { try { P.verifyNoForkEvidence({}, null); P.verifyEvidenceReceipt({}, null); P.verifyEpochTransition({}, null); P.verifyAuthorityCheckpointChain([], null); P.verifyCheckpointMapUniqueness({}, null); P.verifyActiveGenesisUniqueness({}, null); P.verifyKeylogTerminality(null, {}); P.deriveCheckpointFreshness([], null); P.verifyStream([{}], null); return true; } catch { return false; } })());
+  // P1-03 — evidenceCaps returns a FROZEN copy: a caller cannot mutate the checker's capability vocabulary.
+  check('round-24 P1-03 evidenceCaps is a frozen copy (mutation cannot make check_C history-dependent)', (() => { const a = P.evidenceCaps('pow-header-chain'); try { a.push('forged'); } catch {} return Object.isFrozen(a) && !P.evidenceCaps('pow-header-chain').includes('forged'); })());
   check('PhC uniqueness for a DIFFERENT checkpoint → not admitted (binding)', VU([P.buildUniquenessAttestation({ domain_shard: D, genesis_epoch: EP, sequence: '0', checkpoint: 'sha256:' + '00'.repeat(32) }, Wa.priv, Wa.pubB64), ua(Wb)]).attested === false);
 
   // ── M5 (UST-6vj) — ONE QUORUM ALGEBRA: admit → group → count → adjudicate; uniqueness and recovery are instances.
@@ -1147,7 +1154,7 @@ console.log('\n═════════════════════�
   const KL = { length: '1', root: 'sha256:' + 'c0'.repeat(32), head: 'sha256:' + 'd0'.repeat(32) };
   const C0a = P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: D, genesis_epoch: EPA, sequence: '0', active_genesis: AGA, current_key_id: KA0.key_id, keylog: KL }), KA0.priv, KA0.pubB64);
   const idA = P.authorityCheckpointId(C0a), gA = { key_id: KA0.key_id, pub: KA0.pubB64 };
-  const etf = (over = {}) => ({ domain_shard: D, from_genesis_epoch: EPA, from_final_checkpoint: idA, to_active_genesis: AGB, to_genesis_epoch: EPB, to_key_id: KB0.key_id, to_pub: KB0.pubB64, to_initial_sequence: '0', ...over });
+  const etf = (over = {}) => ({ domain_shard: D, from_genesis_epoch: EPA, from_final_checkpoint: idA, from_sequence: '0', to_active_genesis: AGB, to_genesis_epoch: EPB, to_key_id: KB0.key_id, to_pub: KB0.pubB64, to_initial_sequence: '0', ...over });   // round-24 P1-02 — epoch A final sequence is 0
   const et = P.buildEpochTransition(etf(), KA0.priv, KA0.pubB64);
   const c0b = (over = {}) => P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: D, genesis_epoch: EPB, sequence: '0', previous_epoch_final_checkpoint: idA, active_genesis: AGB, current_key_id: KB0.key_id, keylog: KL, ...over }), (over._signer || KB0).priv, (over._signer || KB0).pubB64);
   const C0b = c0b();
@@ -1155,6 +1162,9 @@ console.log('\n═════════════════════�
   const VE = (stmt, over = {}) => P.verifyEpochTransition(stmt, { domain_shard: D, from_genesis_epoch: EPA, from_final_checkpoint: idA, fromAuthority: gA, ...over });
 
   check('EPOCH A→B with authenticated transition → chain VALID (initial seq 0)', (r => r.result === 'VALID' && r.sequence === '0')(chain(C0b, { [EPB]: et })));
+  // round-24 P1-02 — the public verifier now checks the signed from_sequence against epoch A's verified final sequence.
+  check('round-24 P1-02 transition claiming a wrong from_sequence (999 ≠ epoch-A final 0) → chain INVALID', chain(C0b, { [EPB]: P.buildEpochTransition(etf({ from_sequence: '999' }), KA0.priv, KA0.pubB64) }).result !== 'VALID');
+  check('round-24 P1-02 transition with a NON-canonical from_sequence ("0x1") → verifyEpochTransition not ok', VE(P.buildEpochTransition(etf({ from_sequence: '0x1' }), KA0.priv, KA0.pubB64)).ok === false);
   check('EPOCH silent reset (no transition supplied) → INVALID(E-MALFORMED)', (r => r.result === 'INVALID' && r.error === 'E-MALFORMED')(chain(C0b, undefined)));
   check('EPOCH transition NOT signed by epoch A authority → INVALID(E-MALFORMED)', (r => r.error === 'E-MALFORMED')(chain(C0b, { [EPB]: P.buildEpochTransition(etf(), KX.priv, KX.pubB64) })));
   check('EPOCH B C₀ does not bind the prior-epoch final checkpoint → INVALID(E-PREV)', (r => r.error === 'E-PREV')(chain(c0b({ previous_epoch_final_checkpoint: 'sha256:' + 'ee'.repeat(32) }), { [EPB]: et })));

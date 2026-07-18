@@ -80,7 +80,7 @@ const add = (id, op, fields) => V.push({ id, op, ...fields });
   const KA0 = kp(s(0x51)), KB0 = kp(s(0x52)), AGB = 'sha256:' + 'b2'.repeat(32), EPB = P.genesisEpoch(AGB);   // canonical epoch for the post-transition genesis
   const C0a = P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: D, genesis_epoch: EP, sequence: '0', active_genesis: AG, current_key_id: KA0.key_id, keylog: KL }), KA0.priv, KA0.pub);
   const idA = P.authorityCheckpointId(C0a);
-  const et = P.buildEpochTransition({ domain_shard: D, from_genesis_epoch: EP, from_final_checkpoint: idA, to_active_genesis: AGB, to_genesis_epoch: EPB, to_key_id: KB0.key_id, to_pub: KB0.pub, to_initial_sequence: '0' }, KA0.priv, KA0.pub);   // M4.4: binds the destination genesis
+  const et = P.buildEpochTransition({ domain_shard: D, from_genesis_epoch: EP, from_final_checkpoint: idA, from_sequence: '0', to_active_genesis: AGB, to_genesis_epoch: EPB, to_key_id: KB0.key_id, to_pub: KB0.pub, to_initial_sequence: '0' }, KA0.priv, KA0.pub);   // M4.4: binds the destination genesis
   const C0b = P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: D, genesis_epoch: EPB, sequence: '0', previous_epoch_final_checkpoint: idA, active_genesis: AGB, current_key_id: KB0.key_id, keylog: KL }), KB0.priv, KB0.pub);
   add('epoch-transition-valid', 'verifyAuthorityCheckpointChain', { chain: [C0a, C0b], opts: { genesisAuthority: gAuth(KA0), epochTransitions: { [EPB]: et } }, expect: { result: 'VALID' } });
   add('epoch-silent-reset', 'verifyAuthorityCheckpointChain', { chain: [C0a, C0b], opts: { genesisAuthority: gAuth(KA0) }, expect: { result: 'INVALID', error: 'E-MALFORMED' } });
@@ -159,8 +159,8 @@ const add = (id, op, fields) => V.push({ id, op, ...fields });
   add('recovery-unit-2of3', 'verifyCheckpointRecovery', { statements: [st(R1), st(R2)], opts: rOpts, expect: { recovered: true } });
   add('recovery-unit-below-threshold', 'verifyCheckpointRecovery', { statements: [st(R1)], opts: rOpts, expect: { recovered: false } });
   const KA = kp(s(0x91)), KB = kp(s(0x92)), KXe = kp(s(0x9f)), idA = 'sha256:' + 'a5'.repeat(32), AGBu = 'sha256:' + 'b6'.repeat(32), EPB = P.genesisEpoch(AGBu);
-  const ef = { domain_shard: D, from_genesis_epoch: EP, from_final_checkpoint: idA, to_active_genesis: AGBu, to_genesis_epoch: EPB, to_key_id: KB.key_id, to_pub: KB.pub, to_initial_sequence: '0' };
-  const eOpts = { domain_shard: D, from_genesis_epoch: EP, from_final_checkpoint: idA, fromAuthority: { key_id: KA.key_id, pub: KA.pub } };
+  const ef = { domain_shard: D, from_genesis_epoch: EP, from_final_checkpoint: idA, from_sequence: '0', to_active_genesis: AGBu, to_genesis_epoch: EPB, to_key_id: KB.key_id, to_pub: KB.pub, to_initial_sequence: '0' };
+  const eOpts = { domain_shard: D, from_genesis_epoch: EP, from_final_checkpoint: idA, from_sequence: '0', fromAuthority: { key_id: KA.key_id, pub: KA.pub } };
   add('epoch-unit-valid', 'verifyEpochTransition', { statement: P.buildEpochTransition(ef, KA.priv, KA.pub), opts: eOpts, expect: { ok: true } });
   add('epoch-unit-wrong-signer', 'verifyEpochTransition', { statement: P.buildEpochTransition(ef, KXe.priv, KXe.pub), opts: eOpts, expect: { ok: false } });
   add('epoch-unit-free-label-rejected', 'verifyEpochTransition', { statement: P.buildEpochTransition({ ...ef, to_active_genesis: undefined }, KA.priv, KA.pub), opts: eOpts, expect: { ok: false } });   // M4.4

@@ -1975,6 +1975,7 @@
               "domain_shard": "noosphere.md",
               "from_genesis_epoch": "sha256:0b47eb1e9f5e6c671fb3dba656126935944a8d393b3be3eec20348a1ba73753f",
               "from_final_checkpoint": "sha256:302bfa1aae6dbdaedb1c0e2ceec86746aa1ab8533fa21ae298881a6ea7ef386f",
+              "from_sequence": "0",
               "to_active_genesis": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
               "to_genesis_epoch": "sha256:cf31942c00b76c90d683338ce3b1d86d71517662b737ea4af012e7494161cacd",
               "to_checkpoint_authority": {
@@ -1988,7 +1989,7 @@
               "alg": "Ed25519",
               "key_id": "sha256:99dc4596f2a33e1a8876a469a028fdaa8353616c293e23c3fd976f21ae8710ad",
               "pub": "wFDFY3pE-oYp__PMzOIwDLNipj2Z2V_FQUUmb0MyRFo",
-              "sig": "wU_IeOS0Fv5HUWklYFlglnoM8YGHazKvPGb039s-n-aTHulmqxtFuFW20P9kFs6Ii4kiN3KnGkvGE7I8HfhMAw"
+              "sig": "RMr2o05t5QLob4NybMButRa1NOZI4Oqr5SwzMAJaOM4nPSgRH7ECHLH6vsBaImjtujcMIgGRzOgCoiBhoiPDBQ"
             }
           }
         }
@@ -4006,6 +4007,7 @@
           "domain_shard": "noosphere.md",
           "from_genesis_epoch": "sha256:0b47eb1e9f5e6c671fb3dba656126935944a8d393b3be3eec20348a1ba73753f",
           "from_final_checkpoint": "sha256:a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5",
+          "from_sequence": "0",
           "to_active_genesis": "sha256:b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6",
           "to_genesis_epoch": "sha256:2f4d7e06ba1630076f29cda2f6e98a8e7bd3948f6f5ca2590ed68bfdceedc9b2",
           "to_checkpoint_authority": {
@@ -4019,13 +4021,14 @@
           "alg": "Ed25519",
           "key_id": "sha256:c70f629aa4aaafe3f1d4239b05ebd556e6e6a211841137b5b0b72f35e0668702",
           "pub": "jKYxRZB6Lmxfs9wHkcAYm4JS2j5BQ3BLOyyk5SbyXdE",
-          "sig": "DCCmEl1dq9TvTfCAovuUOtYJPcBRGhooyicCU8-7ZSwqRTfQWwwtdbTcae4SAx8WSGbHGZyEVRITEZC5sk5tBg"
+          "sig": "Igl6VA7zxWpKPXwrktISngat53KdqkELSFvZd33Z8MsadqcTYj-4qvcSvRM9BdbfVvg-S-v59PcbwNop1UwlBA"
         }
       },
       "opts": {
         "domain_shard": "noosphere.md",
         "from_genesis_epoch": "sha256:0b47eb1e9f5e6c671fb3dba656126935944a8d393b3be3eec20348a1ba73753f",
         "from_final_checkpoint": "sha256:a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5",
+        "from_sequence": "0",
         "fromAuthority": {
           "key_id": "sha256:c70f629aa4aaafe3f1d4239b05ebd556e6e6a211841137b5b0b72f35e0668702",
           "pub": "jKYxRZB6Lmxfs9wHkcAYm4JS2j5BQ3BLOyyk5SbyXdE"
@@ -4044,6 +4047,7 @@
           "domain_shard": "noosphere.md",
           "from_genesis_epoch": "sha256:0b47eb1e9f5e6c671fb3dba656126935944a8d393b3be3eec20348a1ba73753f",
           "from_final_checkpoint": "sha256:a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5",
+          "from_sequence": "0",
           "to_active_genesis": "sha256:b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6",
           "to_genesis_epoch": "sha256:2f4d7e06ba1630076f29cda2f6e98a8e7bd3948f6f5ca2590ed68bfdceedc9b2",
           "to_checkpoint_authority": {
@@ -4057,13 +4061,14 @@
           "alg": "Ed25519",
           "key_id": "sha256:12cf21e417c25004ee597d3eb09842f1c09b75c12511d2ec6acefdb545ebf7b4",
           "pub": "68GYuLi_rncjJ4w7MWKfKd5ygpeXzMjCzM5tlDakz_I",
-          "sig": "69pY72TWcRAjF-swzmdKgU9GUldavuCf1NahbEL2YvSBZgiZwde5J48kZlotkUIrQML2_pq999HnwXpdsgYtCw"
+          "sig": "-_Oqdf1JoLG2QrYaaKW-UKRS1dGZ4CxGMY1QcYW_IszwNOCdUXX--dfViBsXDIAzQwi_Fke0vxGfoW4rRI3cBQ"
         }
       },
       "opts": {
         "domain_shard": "noosphere.md",
         "from_genesis_epoch": "sha256:0b47eb1e9f5e6c671fb3dba656126935944a8d393b3be3eec20348a1ba73753f",
         "from_final_checkpoint": "sha256:a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5",
+        "from_sequence": "0",
         "fromAuthority": {
           "key_id": "sha256:c70f629aa4aaafe3f1d4239b05ebd556e6e6a211841137b5b0b72f35e0668702",
           "pub": "jKYxRZB6Lmxfs9wHkcAYm4JS2j5BQ3BLOyyk5SbyXdE"
@@ -4082,6 +4087,7 @@
           "domain_shard": "noosphere.md",
           "from_genesis_epoch": "sha256:0b47eb1e9f5e6c671fb3dba656126935944a8d393b3be3eec20348a1ba73753f",
           "from_final_checkpoint": "sha256:a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5",
+          "from_sequence": "0",
           "to_genesis_epoch": "sha256:2f4d7e06ba1630076f29cda2f6e98a8e7bd3948f6f5ca2590ed68bfdceedc9b2",
           "to_checkpoint_authority": {
             "key_id": "sha256:ae1879d3b5181bcb824c4e3bd3db8e14011d2a7fb21f089fb6f63502c3e0237d",
@@ -4094,13 +4100,14 @@
           "alg": "Ed25519",
           "key_id": "sha256:c70f629aa4aaafe3f1d4239b05ebd556e6e6a211841137b5b0b72f35e0668702",
           "pub": "jKYxRZB6Lmxfs9wHkcAYm4JS2j5BQ3BLOyyk5SbyXdE",
-          "sig": "vmm5w35NetSE4qTybzWQSAHWt2nJhFqvDsKFAlB9Hsd51lhuaFPePU19yio8zupjE4qHdZkRoG9wrIUGtalwAA"
+          "sig": "Jhsw0Mij4CHqOrMnEDhwNqGxQFB68IdkJBbCtKhQEuEQkYa_FAWcOHChx0H5G57yPv4SJBUbL3tnau0v_6vgBQ"
         }
       },
       "opts": {
         "domain_shard": "noosphere.md",
         "from_genesis_epoch": "sha256:0b47eb1e9f5e6c671fb3dba656126935944a8d393b3be3eec20348a1ba73753f",
         "from_final_checkpoint": "sha256:a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5",
+        "from_sequence": "0",
         "fromAuthority": {
           "key_id": "sha256:c70f629aa4aaafe3f1d4239b05ebd556e6e6a211841137b5b0b72f35e0668702",
           "pub": "jKYxRZB6Lmxfs9wHkcAYm4JS2j5BQ3BLOyyk5SbyXdE"
