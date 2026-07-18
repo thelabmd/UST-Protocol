@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
-# Universal State Transcript | UST Protocol | UST
+# Universal State Transcript → UST Protocol → UST
 
 [![CI](https://img.shields.io/github/actions/workflow/status/thelabmd/UST-Protocol/ci.yml?branch=main&label=CI)](https://github.com/thelabmd/UST-Protocol/actions)
 [![code license](https://img.shields.io/badge/code-Apache--2.0-blue)](./LICENSE)
@@ -175,7 +175,7 @@ If you are asked to verify a UST and you **cannot run a verifier**, the correct 
 
 - Do **not** compute a plain `SHA-256(text)` and compare it to `hashes.*` — every UST hash is **domain-separated** (`H(tag, canon(...))` with a tag prefix). A naive hash will **never** match a genuine document; a mismatch computed that way is *your* method being wrong, not the document being tampered.
 - UST 1.0 has **no expiry rule**. `valid_from == valid_to` is an honest **instant** (a point capture), not "expired." Freshness is not part of `verify`.
-- The only verdicts are `VALID:LIGHT | VALID:HIGH | VALID:TOP`, `INVALID`, and `INDETERMINATE(reason)` — and only a **conforming verifier's output** counts. Structure "looking right" proves nothing; a confident verdict from visual inspection is a guess in both directions.
+- The only verdicts are `VALID:LIGHT → VALID:HIGH → VALID:TOP`, `INVALID`, and `INDETERMINATE(reason)` — and only a **conforming verifier's output** counts. Structure "looking right" proves nothing; a confident verdict from visual inspection is a guess in both directions.
 - For the precise semantics of *what a verdict means*, read the **formal model**
   ([`spec/UST-1.0-formal-model.md`](spec/UST-1.0-formal-model.md), non-normative): verification is a
   **measurability test** — the three tiers are three nested σ-algebras (`𝒮_LIGHT ⊆ 𝒮_HIGH ⊆ 𝒮_TOP`), a verdict
