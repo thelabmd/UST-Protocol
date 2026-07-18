@@ -481,6 +481,46 @@ console.log('\n═════════════════════�
   const badMk = async () => ({ ok: true, headers: { get: () => null }, body: { getReader: () => { let s = false; return { read: async () => (s ? { done: true } : (s = true, { done: false, value: new Uint8Array([0x7b, 0xff, 0x7d]) })), cancel: async () => {} }; } } });
   const rBad = await P.resolveByDiscovery(doc, { context: 'data' }, { fetchImpl: badMk });
   check('round-18 P1-02 invalid-UTF-8 discovery body → rejected (no U+FFFD replacement)', rBad.verdict.result !== 'VALID:HIGH' && /UTF-8|fetch failed/.test(JSON.stringify(rBad.resolution || {})));
+
+  // ─── round-19 (rev16) — narrower structural/domain bypasses of the rev15 remediations ───────────────────────────
+  // P0-01 — forkChoice SNAPSHOTS every candidate BEFORE any read; a snapshot failure is E-MALFORMED, NEVER a live-object
+  // fallback, and the ust_id grouping reads the snapshot (not a lying accessor). (F.5c: canonical = the dᵢ with hash ∈ F_t.)
+  const c19 = { ...gkDoc, proof: anchorOf(P.contentHash(gkDoc)) };
+  const thrower = { ...c19 }; Object.defineProperty(thrower, 'toJSON', { enumerable: false, configurable: true, value() { throw new Error('one-shot clone fail'); } });
+  let r19SubCalled = false;
+  const r19a = await P.forkChoice([thrower], { genesis: gen, keylog: [], ...nfe(gen), substrateVerify: () => { r19SubCalled = true; return { final: true, time: '2026-07-13T14:05:00Z' }; } });
+  check('round-19 P0-01 forkChoice throwing-toJSON candidate → E-MALFORMED, substrate NEVER called (no live-object fallback)', r19a.result === 'E-MALFORMED' && r19SubCalled === false);
+  const slotCand = { ...c19, state: { ...c19.state, id: { ...c19.state.id } } }; const realSlot = c19.state.id.ust_id; let slotReads = 0;
+  Object.defineProperty(slotCand.state.id, 'ust_id', { enumerable: true, configurable: true, get() { slotReads++; return slotReads === 1 ? 'ust:20990101.000000' : realSlot; } });
+  const r19b = await P.forkChoice([slotCand], { genesis: gen, keylog: [], ...nfe(gen), substrateVerify: async () => ({ final: true, time: '2026-07-13T14:05:00Z' }) });
+  check('round-19 P0-01 forkChoice ust_id accessor lies once → NOT canonical (snapshot froze the first read)', r19b.result !== 'CANONICAL');
+  // P0-02 — the substrate seam is a CLOSED TYPED verdict decoded from OWN data: a prototype look-alike earns nothing;
+  // and (contra "reject extra fields") a legitimate `assurance` on a plain receipt SURVIVES.
+  const protoReceipt = Object.create({ final: true, time: '2026-07-13T14:05:00Z' });
+  const r19p02 = await P.resolveByDiscovery(doc, { context: 'data' }, { fetchImpl: mk(okLog), substrateVerify: () => protoReceipt });
+  check('round-19 P0-02 prototype look-alike substrate → witness NOT confirmed (own-data only, F.5.0/C3)', r19p02.verdict.no_fork !== 'served-list');
+  const r19asr = P.verifyAnchor(P.contentHash(gkDoc), anchorOf(P.contentHash(gkDoc)), { substrateVerify: () => ({ final: true, time: '2026-07-13T14:05:00Z', assurance: 'explorer-corroborated' }) });
+  check('round-19 P0-02 legit plain receipt + assurance → anchored, assurance PRESERVED (closed-ADT ≠ reject-extra-fields)', r19asr.time === 'anchored' && r19asr.assurance === 'explorer-corroborated');
+  const r19acc = P.verifyAnchor(P.contentHash(gkDoc), anchorOf(P.contentHash(gkDoc)), { substrateVerify: () => ({ get final() { return true; }, time: '2026-07-13T14:05:00Z' }) });
+  check('round-19 P0-02 accessor `final` getter → earns nothing (unproven, not anchored)', r19acc.time === 'unproven');
+  // P1-01 — discovery has ONE Unicode domain with the byte checker: a leading BOM (byte boundary) and a lone surrogate
+  // (parsed tree) no longer upgrade a document.
+  const bomBytes = Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(JSON.stringify(gen), 'utf8')]);
+  const bomMk = async (u) => { u = String(u); if (u.endsWith('/.well-known/ust-genesis')) return { ok: true, headers: { get: () => null }, body: { getReader() { let s = false; return { read: async () => s ? { done: true } : (s = true, { done: false, value: new Uint8Array(bomBytes) }), cancel: async () => {} }; } } }; if (u.endsWith('/.well-known/ust-witness')) return { ok: true, text: async () => JSON.stringify(okLog) }; return { ok: false, status: 404, text: async () => '' }; };
+  const rBom = await P.resolveByDiscovery(doc, { context: 'data' }, { fetchImpl: bomMk, substrateVerify: final });
+  check('round-19 P1-01 discovery genesis with a leading UTF-8 BOM → NOT upgraded (rejected, byte-checker domain)', rBom.verdict.result !== 'VALID:HIGH' && /BOM/.test(JSON.stringify(rBom.resolution || {})));
+  check('round-19 P1-01 verifyJson BOM bytes → E-CANON (same domain as the byte checker E-BOM)', P.verifyJson(new Uint8Array(Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(JSON.stringify(doc), 'utf8')]))).error === 'E-CANON');
+  check('round-19 P1-01 verifyJson lone-surrogate escape → E-CANON (not a Unicode scalar)', P.verifyJson('{"ust":"1.0","state":{"x":"\\ud800"}}').error === 'E-CANON');
+  // P1-02 — DEFENSIVE boundary totality (hardening; the §14 math domain is BYTES). A hostile accessor/Proxy arg on any
+  // exported boundary maps to a structured E-MALFORMED, never a host throw.
+  const hostile = () => new Proxy({}, { get() { throw new Error('h'); }, ownKeys() { throw new Error('h'); }, getOwnPropertyDescriptor() { throw new Error('h'); } });
+  const arrH = new Proxy([], { get(t, k) { if (k === 'length') throw new Error('h'); return t[k]; } });
+  let p19ok = false, p19throw = false;
+  try {
+    const a1 = P.resolveAuthority(doc, hostile()); const a2 = P.resolveKeys(gen, arrH); const a3 = await P.forkChoice([hostile()], {}); const a4 = await P.verifyAsync(doc, hostile()); const a5 = await P.resolveByDiscovery(doc, {}, hostile());
+    p19ok = a1.error === 'E-MALFORMED' && a2.error === 'E-MALFORMED' && a3.result === 'E-MALFORMED' && a4.result === 'E-MALFORMED' && a5.verdict.result === 'E-MALFORMED';
+  } catch { p19throw = true; }
+  check('round-19 P1-02 hostile accessor/Proxy args (5 boundaries) → structured E-MALFORMED, never a host throw', p19ok && !p19throw);
   // P0-2 — a raw air-gap assertion is NOT independent evidence: it is a `consumer-override`. It reaches the name-
   // authoritative TIER only when the consumer CONSCIOUSLY honors it (acceptConsumerOverride), and the verdict stays
   // transparent (independently_verified:false) — it never silently claims independent `authoritative`.

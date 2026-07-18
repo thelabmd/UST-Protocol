@@ -113,6 +113,65 @@ function strictUtf8(bytes) {
   try { return new TextDecoder('utf-8', { fatal: true, ignoreBOM: false }).decode(bytes instanceof Uint8Array ? bytes : Uint8Array.from(bytes)); }
   catch { return null; }
 }
+// round-19 P1-01 — ONE Unicode byte-admission (§6), shared by the discovery resolver AND the byte-checker TCB, so
+// authority material has ONE canonical Unicode domain (a BOM/surrogate that the byte checker rejects must not upgrade
+// a document via discovery). (1) a leading UTF-8 BOM (EF BB BF) is REJECTED, not silently stripped — TextDecoder would
+// alias two distinct byte-strings to one decoded object (M-BYTE injectivity). → { text } | { err:'BOM' } | { err:'UTF8' }.
+export function admitUtf8(bytes) {
+  const b = bytes instanceof Uint8Array ? bytes : Uint8Array.from(bytes);
+  if (b.length >= 3 && b[0] === 0xEF && b[1] === 0xBB && b[2] === 0xBF) return { err: 'BOM' };
+  const t = strictUtf8(b);
+  return t === null ? { err: 'UTF8' } : { text: t };
+}
+// (2) a JSON `\uD800` escape decodes to a JS string holding an UNPAIRED UTF-16 surrogate — not a Unicode SCALAR; other
+// languages' canonicalizers replace/reject it, so it breaks language-neutral canon. Checked over the PARSED tree (keys +
+// values), ITERATIVE (a recursive walk overflows on deep arrays before a depth guard runs — round-14 P2-01).
+const hasLoneSurrogate = (s) => {
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    if (c >= 0xDC00 && c <= 0xDFFF) return true;                                                   // unpaired low
+    if (c >= 0xD800 && c <= 0xDBFF) { const n = s.charCodeAt(i + 1); if (!(n >= 0xDC00 && n <= 0xDFFF)) return true; i++; }   // unpaired high
+  }
+  return false;
+};
+export function anyLoneSurrogate(root) {
+  const stack = [root];
+  while (stack.length) {
+    const v = stack.pop();
+    if (typeof v === 'string') { if (hasLoneSurrogate(v)) return true; }
+    else if (Array.isArray(v)) { for (let i = 0; i < v.length; i++) stack.push(v[i]); }
+    else if (v !== null && typeof v === 'object') { for (const k of Object.keys(v)) { if (hasLoneSurrogate(k)) return true; stack.push(v[k]); } }
+  }
+  return false;
+}
+// round-19 P1-02 — DEFENSIVE boundary admission (HARDENING, not a §14-domain fix). The math domain of the §14 totality
+// theorem is the received document BYTES (model §I4: "a total deterministic function of `d`'s bytes"), and JSON.parse of
+// bytes NEVER yields a Proxy / throwing accessor — every P1-02 repro passes an INTEGRATOR-supplied hostile object as
+// opts/key-log/transport, not untrusted bytes, so this is not a reachable soundness bug. But the reference checker CLAIMS
+// totality, so a caller record carrying a throwing accessor / Proxy trap maps to a STRUCTURED reject, never a host throw:
+// snapshot OWN data via descriptors (getOwnPropertyDescriptor does NOT fire a getter), contained in try (a Proxy
+// ownKeys/descriptor trap that throws → null). null/undefined → {} (the rev15 null-total default). → inert record | null.
+function admitOpts(v) {
+  if (v === undefined || v === null) return {};
+  if (typeof v !== 'object') return null;
+  try {
+    const out = {};
+    for (const k of Reflect.ownKeys(v)) {
+      const d = Object.getOwnPropertyDescriptor(v, k);
+      if (!d) continue;
+      if (d.get || d.set) return null;                                            // an accessor is not an inert record field
+      out[k] = d.value;
+    }
+    return out;
+  } catch { return null; }
+}
+// a caller-supplied array (key-log): a NATIVE array only; snapshot inside try so a Proxy length/index trap → null.
+// null/undefined → [] (default). → inert array | null.
+function admitArray(v) {
+  if (v === undefined || v === null) return [];
+  if (!Array.isArray(v)) return null;
+  try { const out = []; const n = v.length; for (let i = 0; i < n; i++) out[i] = v[i]; return out; } catch { return null; }
+}
 
 // ─── producer: §7 seal — sign canon({ust,state}) with an Ed25519 private key ─────────────────────────
 export function seal(state, privKeyObj, pubB64url) {
@@ -624,14 +683,33 @@ const isRealRfc3339Z = (x) => { if (typeof x !== 'string' || !/^\d{4}-\d{2}-\d{2
 // verified status from the seam with a real anchored instant — `final` a STRICT Boolean true AND `time` a real
 // RFC3339-Z. Every substrate decision (verifyAnchor AND the witness genesisAnchored path) routes through it, so a
 // truthy-non-Boolean ({final:"yes"}) or a timeless/typeless receipt ({final:true,time:{}}) can never mint F_t anywhere.
-const substrateFinal = (sub) => sub !== null && typeof sub === 'object' && sub.final === true && isRealRfc3339Z(sub.time);
+// round-19 P0-02 — the substrate seam is a CLOSED TYPED verdict (F.5.0/C3: "a bare label or a caller boolean earns
+// nothing"; "a look-alike … earns nothing"). Decode to an INERT record from OWN PRIMITIVE DATA only: an accessor,
+// an inherited field, or a non-plain object earns nothing — Object.create({final:true,time}) has empty own-data and
+// must NOT mint anchored. `assurance` (#71 trust-model basis) is the ONE optional own-string; UNKNOWN extra fields are
+// ignored, NOT rejected (rejecting them would drop a legitimate `assurance`). → inert {final,time,assurance?} | null.
+const decodeSubstrate = (sub) => {
+  if (sub === null || typeof sub !== 'object') return null;
+  const proto = Object.getPrototypeOf(sub);
+  if (proto !== Object.prototype && proto !== null) return null;                 // plain / null-proto ONLY — no class instances, Promises, or prototype look-alikes
+  const fd = Object.getOwnPropertyDescriptor(sub, 'final');
+  if (!fd || !('value' in fd) || fd.value !== true) return null;                 // OWN data `final === true` (an accessor has no `value`; an inherited field has no own descriptor)
+  const td = Object.getOwnPropertyDescriptor(sub, 'time');
+  if (!td || !('value' in td) || !isRealRfc3339Z(td.value)) return null;         // OWN data real RFC3339-Z instant
+  const out = Object.create(null); out.final = true; out.time = td.value;
+  const ad = Object.getOwnPropertyDescriptor(sub, 'assurance');                  // optional #71 basis — OWN string only
+  if (ad && ('value' in ad) && typeof ad.value === 'string') out.assurance = ad.value;
+  return out;
+};
+const substrateFinal = (sub) => decodeSubstrate(sub) !== null;
 // §12.2 — the SHARED key-log walk (genesis self-signed root + prev-chained entries each signed by a CURRENT
 // valid key). Returns { validKeys: Map<key_id,pub>, revoked: Map } or { error, detail }. Used by BOTH
 // resolveAuthority (name authority) AND resolveCadence — a cadence-log entry MUST be signed by an AUTHORIZED
 // key (not any LIGHT doc with the same domain_shard), the P0 the cadence-log missed.
 export function resolveKeys(genesis, keylog = []) {
   if (!genesis || typeof genesis !== 'object') return { error: 'E-GENESIS', detail: 'no genesis' };
-  if (!Array.isArray(keylog)) return { error: 'E-MALFORMED', detail: 'key-log must be an array (round-17 P1-02 — the reducer is TOTAL: a malformed input is a structured reject, never a host throw)' };
+  keylog = admitArray(keylog);                                                    // round-19 P1-02 — a native array snapshot; a Proxy length/index trap is contained → structured reject, never a host throw
+  if (keylog === null) return { error: 'E-MALFORMED', detail: 'key-log must be a native array (round-17 P1-02 / round-19 P1-02 — the reducer is TOTAL: a hostile accessor/Proxy is a structured reject, never a host throw)' };
   const gv = verify(genesis);                                                     // genesis is itself a UST transcript
   if (!isValid(gv)) return { error: 'E-GENESIS', detail: 'genesis invalid: ' + gv.error };
   if (genesis.state.id.class !== 'genesis') return { error: 'E-GENESIS', detail: 'not class:genesis' };
@@ -903,7 +981,9 @@ const VERIFIED_ANCHOR = new WeakSet();
 const provenAnchor = (t) => { const tok = { anchorTime: t }; VERIFIED_ANCHOR.add(tok); return tok; };
 export function resolveAuthority(doc, opts = {}) {
   if (!doc || typeof doc !== 'object' || !doc.state?.id?.domain_shard || !doc.sig?.pub) return { error: 'E-MALFORMED', detail: 'document must be a UST object with state.id and sig (round-17 P1-02 totality)' };
-  const { genesis, keylog = [], noForkConfirmed = false, noForkEvidence, nameMap, trustRoots, corroborated = false, servedNoFork, anchorTime, keylogFreshAsOf, keylogHeadAnchor, substrateVerify, trust } = opts || {};   // round-18 P1-01 — destructure INSIDE from (opts || {}) so a null opts is a structured reject/default, not a host throw
+  const O = admitOpts(opts);   // round-19 P1-02 — inert snapshot of the caller record; a throwing accessor/Proxy trap → null → structured reject (not a host throw)
+  if (O === null) return { error: 'E-MALFORMED', detail: 'opts must be an inert record (round-19 P1-02 totality — a hostile accessor/Proxy is a structured reject)' };
+  const { genesis, keylog = [], noForkConfirmed = false, noForkEvidence, nameMap, trustRoots, corroborated = false, servedNoFork, anchorTime, keylogFreshAsOf, keylogHeadAnchor, substrateVerify, trust } = O;   // round-18 P1-01 — destructure from the admitted record so a null/hostile opts is a structured reject/default, not a host throw
   // round-17 P0-02 — U comes ONLY from a proven-anchor token (verify/verifyAsync mint it); a raw string never reaches K_n(t).
   const U = (anchorTime && typeof anchorTime === 'object' && VERIFIED_ANCHOR.has(anchorTime) && isRealRfc3339Z(anchorTime.anchorTime)) ? anchorTime.anchorTime : undefined;
   if (!genesis) return { strength: 'self-asserted', status: 'verified' };         // LIGHT — nothing to resolve
@@ -1034,11 +1114,12 @@ export function verifyAnchor(contentHash, proof, opts = {}) {
   // round-17 P1-01 — the substrate result is a CLOSED, TYPED leaf (F.5.0/C3/I4): `final` must be a strict Boolean and
   // a final anchor MUST carry a REAL RFC3339-Z instant. A truthy non-Boolean ("yes") or a non-string/empty time
   // ({}) can no longer mint TimeStrength=anchored (and can no longer coerce past the N9 generated_at ≤ anchor check).
-  if (!substrateFinal(sub)) return { inclusion: true, time: 'unproven', status: 'unavailable', detail: 'substrate not a typed FINAL receipt (final must be Boolean true AND carry a real RFC3339-Z instant; e.g. <6 conf or an untyped receipt) — no F_t (round-17 P1-01 / round-18 P0-02)' };
+  const dec = decodeSubstrate(sub);   // round-19 P0-02 — read the anchored instant + assurance from the INERT decoded record, never the live seam object
+  if (!dec) return { inclusion: true, time: 'unproven', status: 'unavailable', detail: 'substrate not a typed FINAL receipt (final must be an OWN Boolean true AND carry an OWN real RFC3339-Z instant on a plain record; a prototype/accessor look-alike earns nothing) — no F_t (round-17 P1-01 / round-18 P0-02 / round-19 P0-02)' };
   // #71 — carry the substrate's ASSURANCE basis so TOP names its trust model honestly (an OTS plugin that
   // corroborates via independent explorers reports `explorer-corroborated`; an operator real-node/SPV plugin
   // would report `bitcoin-node`). TOP is earned either way; assurance says HOW, never inflating the tier.
-  return { inclusion: true, time: 'anchored', status: 'verified', anchorTime: sub.time, ...(sub.assurance ? { assurance: sub.assurance } : {}) };
+  return { inclusion: true, time: 'anchored', status: 'verified', anchorTime: dec.time, ...(dec.assurance ? { assurance: dec.assurance } : {}) };
 }
 
 // #69 E1 — the ONE async entry: verify() is deliberately sync (portable, no await in the hot path), but the
@@ -1046,7 +1127,8 @@ export function verifyAnchor(contentHash, proof, opts = {}) {
 // runs the sync verifier with the resolved receipt as a sync shim — so TOP is reachable with async plugins
 // through a single contract, and verify() never has to become async. Everything else is identical to verify().
 export async function verifyAsync(doc, opts = {}) {
-  opts = opts || {};                                             // round-18 P1-01 — coerce null opts (total boundary)
+  opts = admitOpts(opts);                                        // round-19 P1-02 — inert snapshot; a throwing accessor/Proxy trap → null → structured reject (not a host throw)
+  if (opts === null) return { result: 'E-MALFORMED', tier: 'NONE', detail: 'opts must be an inert record (round-19 P1-02 totality)' };
   if (!doc?.proof || !opts.substrateVerify || opts.offline) return verify(doc, opts);
   // round-17 P0-01 — verify an IMMUTABLE SNAPSHOT. The live object could be swapped between the await and the sync
   // verify (TOCTOU): the substrate receipt is obtained for root A, then a mutated document B with root B reuses it and
@@ -1066,20 +1148,31 @@ export async function verifyAsync(doc, opts = {}) {
 // (Proposition F.5c). Async because "anchor-included" means substrate-final, which verifyAsync awaits. Fail-safe:
 // with no substrateVerify NO candidate is anchored ⇒ INDETERMINATE, never a guessed winner. Returns ONE verdict.
 export async function forkChoice(candidates, opts = {}) {
+  opts = opts || {};                                                   // round-19 P1-02 — null-total boundary
   if (!Array.isArray(candidates) || candidates.length === 0)
     return { result: 'E-MALFORMED', detail: 'forkChoice needs a non-empty array of candidate documents' };
-  const ids = new Set(candidates.map((c) => c?.state?.id?.ust_id));
+  // round-19 P0-01 — SNAPSHOT every candidate to an inert clone BEFORE ANY read, INCLUDING the ust_id grouping below.
+  // rev15 still (a) read `c.state.id.ust_id` off the LIVE object to group, and (b) fell back to the live object (`d=c`)
+  // when JSON cloning threw — so a one-shot throwing toJSON, or a ust_id accessor that lies once, let the classified/
+  // returned value diverge from the verified snapshot. A snapshot failure is now a structured E-MALFORMED, NEVER a
+  // live-object fallback: the value grouped, verified, and returned as canonical is the SAME frozen bytes
+  // (F.5c: canonical(ust_id) = the unique dᵢ whose content_hash ∈ leaves — a mutable original re-read mid-await breaks it).
+  const snaps = [];
+  for (const c of candidates) {
+    let d; try { d = JSON.parse(JSON.stringify(c)); } catch { return { result: 'E-MALFORMED', detail: 'forkChoice candidate is not an inert JSON snapshot (throwing toJSON / hostile accessor) — no live-object fallback (round-19 P0-01)' }; }
+    if (d === null || typeof d !== 'object') return { result: 'E-MALFORMED', detail: 'forkChoice candidate did not snapshot to a JSON object (round-19 P0-01)' };
+    snaps.push(d);
+  }
+  const ids = new Set(snaps.map((d) => d?.state?.id?.ust_id));         // group from the SNAPSHOT, never the live object
   if (ids.size !== 1 || ids.has(undefined))                            // fork-choice is PER-SLOT — a mixed batch is a caller bug, not a fork
     return { result: 'E-MALFORMED', detail: 'forkChoice candidates must all share one ust_id (fork-choice is per-slot)' };
   const ust_id = [...ids][0];
   // verify each at its NATURAL tier (strip the floors — forkChoice does its own tier logic). A candidate is
   // ANCHOR-INCLUDED iff it VERIFIES and its content_hash sits in a substrate-final anchored root (time 'anchored').
   const vopts = { ...opts, requireAnchored: false, requireAuthoritative: false };
-  // round-18 P0-01 — carry the IMMUTABLE SNAPSHOT, not the live candidate: verifyAsync proves content_hash of a clone,
-  // but forkChoice used to keep `doc: d` (the mutable original) and return it as `canonical`, certifying hash A while
-  // returning object B if the live object was swapped mid-await. The object returned as canonical MUST be the exact d
-  // whose content_hash is in F_t (F.5c: canonical(ust_id) = the unique dᵢ with content_hash(dᵢ) ∈ leaves).
-  const verds = await Promise.all(candidates.map(async (c) => { let d; try { d = JSON.parse(JSON.stringify(c)); } catch { d = c; } return { doc: d, v: await verifyAsync(d, vopts) }; }));
+  // the object returned as canonical MUST be the exact snapshot dᵢ whose content_hash is in F_t (F.5c) — verify the
+  // SAME frozen dᵢ that is grouped and returned, so classification, content_hash, and returned value cannot diverge.
+  const verds = await Promise.all(snaps.map(async (d) => ({ doc: d, v: await verifyAsync(d, vopts) })));
   const anchored = [], losers = [], invalid = [], unauthenticated = [];
   for (const { doc, v } of verds) {
     if (!/^VALID:/.test(v.result || '')) { invalid.push({ result: v.result, detail: v.detail }); continue; }
@@ -1983,11 +2076,12 @@ export function verifyJson(rawBytes, opts = {}) {
   // #75 P1-01 — STRICT UTF-8 on the raw path: Buffer.toString('utf8') maps invalid bytes to U+FFFD, so 0xFF and
   // the real 3-byte U+FFFD collapse to ONE string ⇒ distinct byte-strings, one verdict (breaks I4). fatal reject.
   let raw;
-  if (isStr) raw = rawBytes;
-  else { raw = strictUtf8(rawBytes); if (raw === null) return bad('E-CANON', 'raw input is not valid UTF-8 (invalid byte sequence)', { obligation: '§6 canonical UTF-8' }); }
+  if (isStr) { raw = rawBytes; if (raw.charCodeAt(0) === 0xFEFF) return bad('E-CANON', 'raw input has a leading U+FEFF BOM — rejected (round-19 P1-01)', { obligation: '§6 canonical UTF-8' }); }   // round-19 P1-01 — a pre-decoded string with a leading BOM (same domain as the byte checker's E-BOM)
+  else { const a = admitUtf8(rawBytes); if (a.err === 'BOM') return bad('E-CANON', 'raw input has a leading UTF-8 BOM (EF BB BF) — rejected, not stripped (round-19 P1-01)', { obligation: '§6 canonical UTF-8' }); if (a.err) return bad('E-CANON', 'raw input is not valid UTF-8 (invalid byte sequence)', { obligation: '§6 canonical UTF-8' }); raw = a.text; }
   const dup = scanDuplicateKeys(raw);
   if (dup) return bad('E-CANON', dup);
   let obj; try { obj = JSON.parse(raw); } catch { return bad('E-MALFORMED', 'not valid JSON'); }
+  if (anyLoneSurrogate(obj)) return bad('E-CANON', 'unpaired UTF-16 surrogate in a parsed string/key — not a Unicode scalar (round-19 P1-01; §6 canonical domain == byte checker)', { obligation: '§6 canonical UTF-8' });   // round-19 P1-01 — same lone-surrogate reject as the byte checker's E-SURROGATE
   return verify(obj, opts);
 }
 
@@ -2046,7 +2140,7 @@ const KEYLOG_MAX_BYTES = 1 << 23;                                // 8 MiB — a 
 // round-18 P1-02 — authority-discovery bytes are STRICT UTF-8: an invalid sequence is REJECTED (via the existing
 // module strictUtf8 fatal decoder → null), never replacement-decoded to U+FFFD (I4/M-BYTE: an FF byte and a genuine
 // U+FFFD string must not collapse to one transcript — that is a cross-implementation split at the authority byte boundary).
-const strictUtf8OrThrow = (buf) => { const s = strictUtf8(buf); if (s === null) throw new Error('discovery body is not valid UTF-8 (invalid byte sequence) — §6 canonical UTF-8'); return s; };
+const strictUtf8OrThrow = (buf) => { const a = admitUtf8(buf); if (a.err === 'BOM') throw new Error('discovery body has a leading UTF-8 BOM (EF BB BF) — rejected, not stripped (round-19 P1-01; §6 canonical Unicode domain == byte checker)'); if (a.err) throw new Error('discovery body is not valid UTF-8 (invalid byte sequence) — §6 canonical UTF-8'); return a.text; };
 const readBounded = async (r, cap = DISCOVERY_MAX_BYTES) => {
   const cl = Number(r.headers?.get?.('content-length'));
   if (Number.isFinite(cl) && cl > cap) throw new Error(`discovery body ${cl} B exceeds the ${cap} B ceiling (§13)`);
@@ -2071,6 +2165,7 @@ export async function witnessNoFork(shard, genesisHash, { fetchImpl = fetch, sub
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     log = JSON.parse(await readBounded(r));
   } catch (e) { return { status: 'unreachable', detail: 'witness endpoint unreachable: ' + (e && e.message || e) }; }
+  if (anyLoneSurrogate(log)) return { status: 'unreachable', detail: 'witness log has an unpaired UTF-16 surrogate — outside the §6 canonical Unicode domain (round-19 P1-01)' };   // round-19 P1-01 — same Unicode domain as genesis/key-log/byte checker
   if (!log || log.domain_shard !== shard || !Array.isArray(log.genesis_log)) return { status: 'unreachable', detail: 'witness log malformed' };
   const active = log.genesis_log.filter((g) => g && !g.superseded_by && /^sha256:[0-9a-f]{64}$/.test(g.content_hash || ''));
   const anchoredActive = [];
@@ -2097,7 +2192,9 @@ export function combineSubstrates(verifiers) {
 }
 
 export async function resolveByDiscovery(doc, opts = {}, transport = {}) {
-  opts = opts || {}; const { fetchImpl = fetch, substrateVerify } = transport || {};   // round-18 P1-01 — coerce null opts AND null transport (total boundary)
+  opts = admitOpts(opts); const T = admitOpts(transport);   // round-19 P1-02 — inert snapshots; a throwing accessor/Proxy trap on opts OR transport → null → structured reject (not a host throw)
+  if (opts === null || T === null) return { verdict: { result: 'E-MALFORMED', tier: 'NONE', detail: 'opts and transport must be inert records (round-19 P1-02 totality)' }, resolution: null };
+  const { fetchImpl = fetch, substrateVerify } = T;
   const base = verify(doc, opts);
   const shard = doc?.state?.id?.domain_shard || '';
   const worth = !opts.offline && !opts.genesis &&
@@ -2128,6 +2225,7 @@ export async function resolveByDiscovery(doc, opts = {}, transport = {}) {
     const kdup = scanDuplicateKeys(kRaw);
     if (kdup) return { verdict: base, resolution: { error: 'E-CANON: published key-log fails the raw-byte check (' + kdup + ')' } };
     let k; try { k = JSON.parse(kRaw); } catch { return { verdict: base, resolution: { error: 'E-MALFORMED: published key-log is not valid JSON' } }; }
+    if (anyLoneSurrogate(k)) return { verdict: base, resolution: { error: 'E-CANON: published key-log has an unpaired UTF-16 surrogate — outside the §6 canonical Unicode domain (round-19 P1-01)' } };   // round-19 P1-01 — same Unicode domain as the byte checker + genesis
     if (!Array.isArray(k)) return { verdict: base, resolution: { error: 'E-MALFORMED: published key-log is not a JSON array' } };
     keylog = k;
   }

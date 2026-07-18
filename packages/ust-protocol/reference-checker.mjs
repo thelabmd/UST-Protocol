@@ -14,9 +14,10 @@
 // verifications over W (proof: structural induction on π). TCB = this file + the imported leaf primitives.
 import { canon, H, keyId, edVerifyStrict, contentHash, verify, isValid, verifyKeylogTerminality,
   verifyCheckpointMapUniqueness, evidenceCaps, compareEvidenceOrder, authorityScopeId, genesisEpoch,
-  resolveKeys, buildKeylogCommitment, authorityCheckpointId, strictB64url, isPublicDnsShard } from './index.mjs';
+  resolveKeys, buildKeylogCommitment, authorityCheckpointId, strictB64url, isPublicDnsShard,
+  admitUtf8, anyLoneSurrogate } from './index.mjs';   // round-19 P1-01 — ONE Unicode byte-admission, shared with the discovery resolver (no drift)
 
-export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev15';
+export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev16';
 // RULE_CONTRACTS (§2b) — the STRUCTURAL source of truth: exactly one inference rule per name, one switch branch per
 // name, and a fixed (children arity, witness count, allowed params, conclusion kind). DecodeTerm enforces these on
 // decode; a term with an extra child / extra witness / free param / unknown field / stored conclusion is rejected
@@ -198,38 +199,18 @@ function normalizeConfig(raw) {
 
 // ── the byte boundary (§2, M-BYTE/M-DEC) — the TCB is over immutable octets ───────────────────────────────────────
 const TEXT_ENC = new TextEncoder();
-const TEXT_DEC = new TextDecoder('utf-8', { fatal: true });   // invalid UTF-8 throws → E-UTF8
-// strict UTF-8 decode (round-13 P0-01): a leading UTF-8 BOM (EF BB BF) is REJECTED — TextDecoder would silently strip it,
-// aliasing two distinct immutable byte strings to one decoded object (the byte boundary must be injective, M-BYTE).
+// strict UTF-8 decode (round-13 P0-01 / round-19 P1-01): a leading UTF-8 BOM (EF BB BF) is REJECTED — TextDecoder would
+// silently strip it, aliasing two distinct immutable byte strings to one decoded object (the byte boundary must be
+// injective, M-BYTE). The primitive is now the SHARED index.admitUtf8, so the byte checker and the discovery resolver
+// have ONE Unicode domain (round-19 P1-01: a BOM/surrogate the checker rejects must not upgrade a doc via discovery);
+// map its neutral marker to the byte-checker's error codes.
 function utf8Strict(bytes) {
-  if (bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) return { err: 'E-BOM' };
-  let text; try { text = TEXT_DEC.decode(bytes); } catch { return { err: 'E-UTF8' }; }
-  return { text };
+  const a = admitUtf8(bytes);
+  return a.err === 'BOM' ? { err: 'E-BOM' } : a.err ? { err: 'E-UTF8' } : { text: a.text };
 }
-// lone-surrogate rejection (round-13 P1-04): a JSON \uD800 escape yields a JS string holding an UNPAIRED surrogate — not a
-// Unicode SCALAR. Other-language canonicalizers replace/reject it, so it breaks language-neutral canon. Checked over the
-// PARSED tree (keys + values), since it arrives via the escape, not the UTF-8 bytes.
-const hasLoneSurrogate = (s) => {
-  for (let i = 0; i < s.length; i++) {
-    const c = s.charCodeAt(i);
-    if (c >= 0xDC00 && c <= 0xDFFF) return true;                                                    // unpaired low
-    if (c >= 0xD800 && c <= 0xDBFF) { const n = s.charCodeAt(i + 1); if (!(n >= 0xDC00 && n <= 0xDFFF)) return true; i++; }   // unpaired high
-  }
-  return false;
-};
-// ITERATIVE (round-14 P2-01): a recursive pre-walk overflowed the engine stack on a ~15k-deep JSON array BEFORE decodeTerm's
-// maxDepth guard ran — a caught RangeError, not a structured reject. An explicit worklist is stack-safe; the structure is
-// bounded by maxPackageBytes, and the deep TERM is then rejected structurally by decodeTerm (E-TERM-DEPTH).
-function anyLoneSurrogate(root) {
-  const stack = [root];
-  while (stack.length) {
-    const v = stack.pop();
-    if (typeof v === 'string') { if (hasLoneSurrogate(v)) return true; }
-    else if (Array.isArray(v)) { for (let i = 0; i < v.length; i++) stack.push(v[i]); }
-    else if (v !== null && typeof v === 'object') { for (const k of Object.keys(v)) { if (hasLoneSurrogate(k)) return true; stack.push(v[k]); } }
-  }
-  return false;
-}
+// lone-surrogate rejection (round-13 P1-04) is the SHARED index.anyLoneSurrogate (round-19 P1-01) — imported above, no
+// second copy to drift: a JSON \uD800 escape yields a JS string holding an UNPAIRED surrogate (not a Unicode SCALAR), so
+// other-language canonicalizers replace/reject it; checked ITERATIVELY over the parsed tree (keys + values).
 // the intrinsic %TypedArray%.prototype.byteLength getter — it reads the [[ViewedArrayBuffer]] internal slot, so calling
 // it on a Proxy (which has no such slot) THROWS. That distinguishes a NATIVE Uint8Array from a Proxy/subclass that only
 // passes `instanceof` (round-8 P0-01).
