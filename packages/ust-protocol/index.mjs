@@ -2444,7 +2444,7 @@ export async function resolveByDiscovery(doc, opts = {}, transport = {}) {
   let witnessConfirmed = false, noFork = 'unconfirmed', witnessReason;
   const callerNoFork = opts.noForkEvidence !== undefined || opts.noForkConfirmed;
   if (!callerNoFork && !opts.offline) {
-    const w = await witnessNoFork(shard, genesisHash, { fetchImpl, substrateVerify });
+    const w = await witnessNoFork(shard, genesisHash, { fetchImpl, substrateVerify, maxWitnessOpMs: opts.maxWitnessOpMs });   // round-26 P1-03 (rev27 E) — thread the verifier's ρ_v.time policy through the PUBLIC entry; the leaf-only budget was unreachable (F.9)
     if (w.status === 'fork') return { verdict: bad('E-GENESIS', w.detail), resolution: { publisher: shard, fork: true, detail: w.detail } };
     witnessConfirmed = w.status === 'confirmed';
     if (w.reason) witnessReason = w.reason;   // round-21 P2-01 — preserve the machine-readable witness reason (resource_limit) through the resolution, not just a 'HIGH pending' string

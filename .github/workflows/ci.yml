@@ -24,6 +24,8 @@ jobs:
         run: npm run test:byte-vectors && npm run test:reference-checker && npm run test:reference-checker-fuzz
       - name: model <-> code guard (every formal theorem is a real conformance check)
         run: npm run test:model
+      - name: model-lockstep guard (every enforcement realization cites an ADVERSARIAL-closure check, not just the happy path)
+        run: npm run test:model-lockstep
       - name: language-neutral vectors in sync with the reference impl (regenerate == committed)
         run: npm run test:vectors
       - name: spec <-> code registry sync (canonical string sets — spec == REGISTRY == code)

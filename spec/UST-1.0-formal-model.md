@@ -1293,7 +1293,9 @@ necessary. Concrete values are calibration parameters with explicit, falsifiable
   attack the per-leaf bound alone did not cover. It is a VERIFIER-OWNED ceiling, not a protocol constant nor a
   publisher declaration (F.9 assigns `ρ_v` to the verifier; a ceremony declaration can never set it — *assurance is
   never self-declared*): the effective budget is `min(T_witness_default, ρ_v.time_consumer)` — a consumer may only
-  TIGHTEN it. Exceeding it is `INDETERMINATE(resource_limit)` per F.9.3 (`C_v(R) ⋠ ρ_v`), naming the effective budget —
+  TIGHTEN it, and the consumer's `maxWitnessOpMs` is threaded through the PUBLIC entry (`resolveByDiscovery → witnessNoFork
+  → anchoredByProofs`), not only the leaf — rev23 wired the leaf and the principal integration dropped it, so the policy
+  was unreachable; rev27 closes that (*"round-26 P1-03/L4 resolveByDiscovery THREADS the consumer witness budget (maxWitnessOpMs) through the PUBLIC entry → a tight budget resource-limits the witness, no false served-list HIGH (F.9 ρ_v)"*). Exceeding it is `INDETERMINATE(resource_limit)` per F.9.3 (`C_v(R) ⋠ ρ_v`), naming the effective budget —
   a REFUSAL to finish, never a truncation of the served list and never a verdict about the data. `30 s = 3 · T_leaf`
   is a declared engineering premise (a few genuinely-slow real substrate calls in series), recalibratable per §F.9.6;
   the LAW (T_v is a resource coordinate; over-budget ⇒ resource_limit) is derived, the constant is calibrated.

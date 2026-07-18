@@ -463,6 +463,15 @@ console.log('\n═════════════════════�
   // receipt {final:"yes"} (no real time) can no longer confirm the served genesis → NOT corroborated (F.5.0/C3, one core).
   const r18p02 = await P.resolveByDiscovery(doc, { context: 'data' }, { fetchImpl: mk(okLog), substrateVerify: () => ({ final: 'yes' }) });
   check('round-18 P0-02 untyped witness substrate {final:"yes"} → witness NOT confirmed (no served-list corroboration)', r18p02.verdict.no_fork !== 'served-list');
+  // round-26 P1-03 / L4 (rev27 E) — F.9 ρ_v.time belongs to the verifier THROUGH the public entry: resolveByDiscovery
+  //   now threads the consumer's maxWitnessOpMs into witnessNoFork (rev23 wired it only at the leaf → unreachable). A
+  //   tight budget + a never-settling substrate resource-limits the witness (two canon-distinct anchors: the whole-op
+  //   deadline trips on the 2nd leaf, deterministic), so the tier does NOT upgrade to a served-list HIGH after the budget.
+  const leafRoot = P.Hbytes('ust:leaf', Buffer.from(gHash, 'utf8'));
+  const twoAnchorLog = wlog([{ content_hash: gHash, superseded_by: null, anchors: [{ root: leafRoot, path: [], anchor: { substrate: 'bitcoin-ots', block_height: 900001 } }, { root: leafRoot, path: [], anchor: { substrate: 'bitcoin-ots', block_height: 900002 } }] }], gHash);
+  const rBudget = await P.resolveByDiscovery(doc, { context: 'data', maxWitnessOpMs: 20 }, { fetchImpl: mk(twoAnchorLog), substrateVerify: () => new Promise(() => {}) });
+  check('round-26 P1-03/L4 resolveByDiscovery THREADS the consumer witness budget (maxWitnessOpMs) through the PUBLIC entry → a tight budget resource-limits the witness, no false served-list HIGH (F.9 ρ_v)',
+    rBudget.verdict.no_fork !== 'served-list');
   // round-18 P0-01 — forkChoice returns the IMMUTABLE snapshot: a live mutation during the substrate await cannot make the returned canonical object differ from its proven content_hash (F.5c: canonical = the dᵢ with content_hash(dᵢ) ∈ F_t). Genesis-key-signed doc ⇒ authoritative with no key-log.
   const gkDoc = P.seal(P.buildState({ domain_shard: 'wit-test.example', ust_id: 'ust:20260713.150000', key_id: rootW.key_id, class: 'observation' }, T, { r: { kind: 'captured', value: { v: 'A' } } }), rootW.priv, rootW.pubB64);
   const fcCand = { ...gkDoc, proof: anchorOf(P.contentHash(gkDoc)) };
