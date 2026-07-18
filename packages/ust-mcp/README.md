@@ -6,7 +6,7 @@
 [Model Context Protocol](https://modelcontextprotocol.io) tools, so any MCP-capable agent can check that a piece
 of state is what it claims — who published it, when, unchanged — without trusting whoever served the bytes.
 
-> **Release candidate.** The specification is at `1.0.0-rc.17`; this package pins its own rc on npm. Extensively
+> **Release candidate.** The wire format `ust:"1.0"` is stable across all rc's; this package pins its own rc on npm — pin exact versions. Extensively
 > red-teamed; multiple external AI reviews folded in structurally; an independent human cryptographic audit is
 > pending. Suitable for evaluation. Pin exact versions.
 

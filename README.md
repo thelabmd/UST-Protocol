@@ -130,7 +130,7 @@ protocol's real subject: **differentiated, provable access to a shared machine s
 
 ```
 npm install
-npm test          # the conformance runner: 130 checks; asserts spec == package == vectors version
+npm test          # the conformance runner — asserts spec == package == vectors version
 ```
 
 Produce and verify a LIGHT transcript:

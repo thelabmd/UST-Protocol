@@ -1,4 +1,4 @@
-# UST 1.0.0-rc.6 — External Audit Brief
+# UST 1.0 — External Audit Brief
 
 _For an independent cryptographic-protocol reviewer._
 
@@ -142,7 +142,7 @@ residual risk, and what would you require before a `1.0.0` final tag?
 - **26 deterministic conformance vectors** plus a behavioral conformance runner (56 checks total), and the reference impl passes them (one known note: duplicate-key
   rejection needs a raw-bytes JSON parser — `JSON.parse` collapses dups — a harness limitation, not an impl flaw).
 - **Two independent implementations** (`ust-protocol` node + `ust-verify-web` clean-room WebCrypto) cross-checked: **32/32 agree, 0 divergence**.
-- **Five external AI reviews folded in (rc.1 → rc.6):** ChatGPT code + Gemini spec + Gemini 3.1 architecture + ChatGPT 5.5 Max adversarial (details in the on-request `FINDINGS-rc1-to-rc6.md`).
+- **Twenty+ diverse-model adversarial audit rounds folded in STRUCTURALLY** (reference-checker `rev3 → rev17`): each round independently reproduces an external model's findings, adjudicates each against the formal model, and fixes the whole class — not point-wise. The per-round rev-ladder is in [`CHANGELOG.md`](../CHANGELOG.md).
 - **Honest disclosure:** all of the above is one team's work → correlated blind spots. That is precisely the gap
   an external adversarial review closes. Please assume the design is wrong somewhere and find it.
 ```

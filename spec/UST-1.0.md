@@ -4,11 +4,8 @@
 *This specification text is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](../LICENSE-SPEC). Reference code in this repository is licensed Apache-2.0. Use of the name **UST** / **Universal State Transcript** and the **UST-compatible** claim: see [TRADEMARK.md](../TRADEMARK.md).*
 
 > **Release candidate — `1.0.0-rc.36`.** This specification has been extensively red-teamed; an independent
-> external cryptographic audit is pending. It is subject to change until `1.0.0` final (rc.2 folded in two external reviews — 6 impl findings + spec edge cases + removed domain-less `computed`; rc.3 aligned impl to §3.1 pinned + Y3; rc.4 closed a 4th external audit (ChatGPT 5.5 Max): key-binding by KEY not string, TOP needs a genesis origin, embedded proofs fail-closed, class↔schema enforced, canon strict on names too, raw-bytes verify boundary, ust_id valid frames, and REMOVED secret-url as a privacy mode; rc.6 closed a 5th external audit STRUCTURALLY — the §14a obligations table (every commitment-bearing member recomputed: +`E-SEED`), a typed identity namespace (dns-name | self-certifying key-id), real-calendar semantic consistency, document-tier vs range-completeness separation, MTI registry discipline, one version source; rc.7 explicit `completeness:not_evaluated`; rc.8 admissibility pins (duplicate refs, key-log
-ceiling, layer availability); rc.9 edge pass (full reserved-name registry, verified-node budget, strict-Z);
-rc.10 partition-capacity ladder (floor 64 / genesis-declared ≤ 4096); rc.11 SIZE ladder + VOLUME-vs-STRUCTURE
-classification; rc.12 canonical size semantics (UTF-8 signed-content metric), trusted capacity grants,
-`resource_limit`). Pin exact versions.
+> external cryptographic audit is pending. It is subject to change until `1.0.0` final. The wire format `ust:"1.0"`
+> is stable across all rc's — pin exact versions. Per-version history is in [`CHANGELOG.md`](../CHANGELOG.md).
 
 **UST is trust infrastructure.** It gives any machine-published statement about the state of the world its own
 VERIFIABLE trust — WHO asserted it, WHAT exact bytes, for WHICH time-frame, WHEN, and FROM WHAT — checkable

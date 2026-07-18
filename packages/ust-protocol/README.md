@@ -11,7 +11,7 @@ travels *with* the data.
 verification, privacy commitments, chains, and anchoring. Zero-dependency (`node:crypto`; a WebCrypto/`@noble`
 adapter for browsers and Workers — same rules, same results).
 
-> **Release candidate.** The specification is at `1.0.0-rc.17`; this package pins its own rc on npm. Extensively
+> **Release candidate.** The wire format `ust:"1.0"` is stable across all rc's; this package pins its own rc on npm — pin exact versions. Extensively
 > red-teamed; multiple external AI reviews folded in structurally; an independent human cryptographic audit is
 > pending. Suitable for evaluation and integration testing. Pin exact versions.
 
