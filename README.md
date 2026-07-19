@@ -135,6 +135,11 @@ proves the document existed **by** a real point in time (and `generated_at` may 
 
 ## ●  What is a real truth in an agent world?
 
+In an agent world nobody can hand you truth as a boolean. The closest thing to truth an agent can actually *hold* is
+**earned confidence** — made of two honest quantities: how much evidence the publisher **staked** (a signature; a name
+provably bound to the key; an anchor in real time), and how much of it the verifier could actually **confirm**, here and
+now. Not one flattering "yes" — a measured answer to *"how strongly is this proven, to me, at this moment?"*
+
 Trust is **graduated, and the verdict carries its tier** — a conforming verifier never says a bare `VALID`:
 
 ![The verdict ladder — trust is graduated and the verdict carries its tier; a conforming verifier never says a bare VALID. VALID:LIGHT is the floor: exact bytes, the signing key and the claimed time frame (a key, canonical form and a signature — no infrastructure, no fees). VALID:HIGH adds that the NAME is provably bound to the key (a genesis + key-log ceremony, rotation and revocation; strength corroborated or authoritative). VALID:TOP adds that the document existed BY a real point in time (an anchor inclusion proof — Bitcoin/OTS or Rekor, opt-in; stream completeness is a separate range verdict). INVALID is a definite failure (an E-* code); INDETERMINATE means cannot decide — never conflated with forged. A tier is EARNED per verification: there is no field a producer can set to claim it.](.github/ust-tiers.svg)
