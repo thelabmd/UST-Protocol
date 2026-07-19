@@ -1539,6 +1539,12 @@ console.log('\n═════════════════════�
   g('resolveAuthority(opts.genesis)', () => { const clone = JSON.parse(JSON.stringify(gen)); const reads = spy(clone, 'state'); return { call: () => P.resolveAuthority(doc, { genesis: clone }), reads }; });
   g('deriveCheckpointFreshness(chain[i].body)', () => { const clone = JSON.parse(JSON.stringify(cp)); const reads = spy(clone, 'body'); return { call: () => P.deriveCheckpointFreshness([clone], {}), reads }; });
   g('verifyStream(config.checkpoint)', () => { const clone = JSON.parse(JSON.stringify(cp)); const reads = spy(clone, 'state'); return { call: () => P.verifyStream([doc], { checkpoint: clone }), reads }; });
+  // rev39 R3 (round-31, ONE control) — admitOpts now DEEP-admits every nested opts/config DATA value, so resolvers NOT
+  //   individually patched are ALSO immune: these lock the nested-genesis position of four such resolvers at ≤1 read.
+  g('verifyNoForkEvidence(config.genesis)', () => { const clone = JSON.parse(JSON.stringify(gen)); const reads = spy(clone, 'state'); return { call: () => P.verifyNoForkEvidence({ claim: {} }, { genesis: clone }), reads }; });
+  g('verifyCheckpointRecovery(config.genesis)', () => { const clone = JSON.parse(JSON.stringify(gen)); const reads = spy(clone, 'state'); return { call: () => P.verifyCheckpointRecovery([], { genesis: clone }), reads }; });
+  g('verifyEpochTransition(config.fromAuthority)', () => { const clone = JSON.parse(JSON.stringify(gen)); const reads = spy(clone, 'state'); return { call: () => P.verifyEpochTransition({ claim: {} }, { fromAuthority: clone }), reads }; });
+  g('verifyActiveGenesisUniqueness(config.genesis)', () => { const clone = JSON.parse(JSON.stringify(gen)); const reads = spy(clone, 'state'); return { call: () => P.verifyActiveGenesisUniqueness({}, { genesis: clone }), reads }; });
   // round-29 (div1) NEGATIVE CONTROL — prove the grid's await-then-count mechanism OBSERVES a post-await read: a synthetic
   //   verifier that reads its spied input, awaits, then reads AGAIN must be seen as read-count 2 (a sync snapshot sees 1).
   { const o = {}; const rd = spy(o, 'f'); const postAwaitReader = async (x) => { void x.f; await Promise.resolve(); void x.f; }; await postAwaitReader(o).catch(() => {});
@@ -1735,6 +1741,13 @@ console.log('\n═════════════════════�
       const honestN = JSON.stringify(P.resolveAuthority(docN, { genesis: gNA }));
       const attackedN = JSON.stringify(P.resolveAuthority(docN, { genesis: gNP }));
       check('R3 NESTED: a two-face NESTED genesis in a resolver opts/config graph → the output is a projection over the VERIFIED face, never the unsigned re-read (round-31 P0-01/02/03; admitOpts is shallow, nested untrusted docs are deep-admitted once)', honestN === attackedN);
+      // rev39 R3 (ONE control) — the class is closed at admitOpts (it now deep-admits every nested opts/config DATA value),
+      //   NOT per-resolver: a resolver NEVER individually patched (verifyEpochTransition) is ALSO immune to a two-face nested
+      //   doc. The nested Proxy is frozen once at the door → the same face reaches the inner verify and every outer read.
+      let es = 0;
+      const eProxy = new Proxy(gNA, { ownKeys: (t) => Reflect.ownKeys(t), getOwnPropertyDescriptor: (t, k) => Reflect.getOwnPropertyDescriptor(t, k), getPrototypeOf: (t) => Reflect.getPrototypeOf(t), get(t, k, r) { if (k === 'state') { es++; return es === 1 ? gNA.state : gNBraw.state; } return Reflect.get(t, k, r); } });
+      P.verifyEpochTransition({ claim: { purpose: 'ust:genesis-epoch-transition' }, sig: { sig: 'a', pub: 'b' } }, { fromAuthority: eProxy });
+      check('R3 ONE-CONTROL: admitOpts deep-admits EVERY nested opts/config DATA value once, so a resolver NOT individually patched (verifyEpochTransition) reads its nested doc ≤1 and cannot be shown a second face — the whole nested-doc re-read class is closed at ONE boundary (round-31)', es <= 1);
     }
   }
 }

@@ -168,7 +168,13 @@ function admitOpts(v) {
       const d = Object.getOwnPropertyDescriptor(v, k);
       if (!d) continue;
       if (d.get || d.set) return null;                                            // an accessor is not an inert record field
-      Object.defineProperty(out, k, { value: d.value, writable: true, enumerable: true, configurable: true });   // defineProperty, never assignment through a legacy setter
+      // rev39 R3 (round-31) — DEEP-admit each nested DATA value ONCE, closing the whole nested-untrusted-doc class at ONE
+      // control: a resolver can no longer hold a live nested caller object (opts.genesis / config.checkpoint / a chain) to
+      // re-read after verification. A FUNCTION is a capability (fetchImpl/substrateVerify) → preserved as-is; a
+      // verifier-MINTED branded token (anchor/served/fresh/handle) → preserved by admitDeep; everything else is frozen inert.
+      const val = (typeof d.value === 'function') ? d.value : admitDeep(d.value);
+      if (val === ADMIT_REJECT) return null;                                      // a nested non-inert value (accessor at depth, non-plain proto, cycle) → the whole opts record is a structured reject
+      Object.defineProperty(out, k, { value: val, writable: true, enumerable: true, configurable: true });   // defineProperty, never assignment through a legacy setter
     }
     return out;
   } catch { return null; }
@@ -193,7 +199,7 @@ export const admitDeep = (v, seen = new WeakSet()) => {   // THE input-boundary 
   const t = typeof v;
   if (t === 'function' || t === 'symbol') return ADMIT_REJECT;                         // canon throws on a function/symbol value → so do we (canon-exact); the only helper-carrying input (a keylog `prove` closure) is a BUILDER field, never passed as signed proof data
   if (t !== 'object') return v;                                                        // primitive scalar passes through
-  if (HANDLE_BRAND.has(v)) return v;                                                   // round-27 — a branded handle is ALREADY a verified inert (deep-frozen, no getters) snapshot: pass it through, never deep-copy off the brand (a copy loses identity and the K3 gate rejects it)
+  if (HANDLE_BRAND.has(v) || VERIFIED_ANCHOR.has(v) || VERIFIED_SERVED.has(v) || VERIFIED_FRESH.has(v)) return v;   // round-27/31 — a verifier-MINTED brand (a verified handle, or an anchor/served/fresh token) is ALREADY a trusted inert snapshot: pass it through, never deep-copy off the brand (a copy loses the WeakSet identity the resolvers check). A caller cannot forge a brand, so this is sound; it lets admitOpts DEEP-admit nested data (round-31) without stripping branded tokens.
   if (seen.has(v)) return ADMIT_REJECT;                                                // cycle → refuse (total, never infinite); non-cyclic depth is unbounded, matching canon
   seen.add(v);
   try {

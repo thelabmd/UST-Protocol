@@ -806,6 +806,16 @@ pending human review. The model claims only what each layer proves. (round-31 P2
 (`verifyKeylogTerminality`) whose first argument was a domain string short-circuited before the hostile position — replaced
 with a real key-log head record so every declared position is actually reached.)
 
+**Realization (rev39 — the nested-input class is closed at ONE control, not per resolver).** rev38 deep-admitted the
+nested doc of the THREE resolvers the audit named, but a self-sweep found the same shape (`admitOpts` is shallow → a nested
+untrusted DATA object in `opts`/`config` survives) in ~eight resolvers. Point-fixing the found instances is the recurring
+failure — a rule realized at the reported sites but not across the surface. The class is instead closed at its ONE
+boundary: **`admitOpts` now DEEP-admits every nested value** (a function stays a capability; a verifier-MINTED branded token
+— anchor/served/fresh/handle, which a caller cannot forge — is passed through by `admitDeep`; every other nested object or
+array is frozen inert). No resolver — patched or not, present or future — can hold a live nested caller object to re-read
+after verification. Machine-checked on a resolver that was NEVER individually patched (*"R3 ONE-CONTROL: admitOpts deep-admits EVERY nested opts/config DATA value once, so a resolver NOT individually patched (verifyEpochTransition) reads its nested doc ≤1 and cannot be shown a second face — the whole nested-doc re-read class is closed at ONE boundary (round-31)"*), and the read-count grid now covers seven nested positions across the resolver surface. This is the concrete
+form of the controller lesson: close the CLASS at one control, do not chase its instances.
+
 **Definition (VerifiedAuthorityContext).** For a genesis document `g` whose class and self-signature VERIFY
 (`resolveCheckpointRoots` — P0-2: verify-before-extract):
 

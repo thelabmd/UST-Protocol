@@ -68,6 +68,12 @@
       "conformance_check": "CANON-TRANSPARENT FUZZ: 3000 random inputs (pollution names / non-enumerable / sparse / non-plain proto / deep) — admitDeep is never looser than canon and byte-identical when accepted"
     },
     {
+      "id": "R39-r3-one-control",
+      "rev": "rev39",
+      "model_locus": "closed at ONE control, not per resolver",
+      "conformance_check": "R3 ONE-CONTROL: admitOpts deep-admits EVERY nested opts/config DATA value once, so a resolver NOT individually patched (verifyEpochTransition) reads its nested doc ≤1 and cannot be shown a second face — the whole nested-doc re-read class is closed at ONE boundary (round-31)"
+    },
+    {
       "id": "R38-r3-nested",
       "rev": "rev38",
       "model_locus": "R3 spans the NESTED input graph",
