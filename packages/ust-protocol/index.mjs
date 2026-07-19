@@ -1095,7 +1095,13 @@ export function resolveAuthority(doc, opts = {}) {
   if (!doc || typeof doc !== 'object' || !doc.state?.id?.domain_shard || !doc.sig?.pub) return { error: 'E-MALFORMED', detail: 'document must be a UST object with state.id and sig (round-17 P1-02 totality)' };
   const O = admitOpts(opts);   // round-19 P1-02 — inert snapshot of the caller record; a throwing accessor/Proxy trap → null → structured reject (not a host throw)
   if (O === null) return { error: 'E-MALFORMED', detail: 'opts must be an inert record (round-19 P1-02 totality — a hostile accessor/Proxy is a structured reject)' };
-  const { genesis, keylog = [], noForkConfirmed = false, noForkEvidence, nameMap, trustRoots, corroborated = false, servedNoFork, anchorTime, keylogFreshAsOf, keylogHeadAnchor, substrateVerify, trust } = O;   // round-18 P1-01 — destructure from the admitted record so a null/hostile opts is a structured reject/default, not a host throw
+  let { genesis, keylog = [], noForkConfirmed = false, noForkEvidence, nameMap, trustRoots, corroborated = false, servedNoFork, anchorTime, keylogFreshAsOf, keylogHeadAnchor, substrateVerify, trust } = O;   // round-18 P1-01 — destructure from the admitted record so a null/hostile opts is a structured reject/default, not a host throw
+  // rev38 R3 (round-31 P0-01) — admitOpts is SHALLOW (it preserves function capabilities); a NESTED untrusted DATA object in
+  // opts stays a live caller object. resolveAuthority verifies `genesis` via resolveKeys (which admits its OWN snapshot) but
+  // then RE-READS the raw nested genesis for contentHash + max_partitions — a two-face Proxy served the signed face to
+  // resolveKeys and an unsigned face carrying elevated capacity to the outer reads. Every nested untrusted DATA object a
+  // resolver verifies must be DEEP-admitted ONCE and read only from the frozen snapshot (R3 across the WHOLE input graph).
+  if (genesis != null) { const G = admitDeep(genesis); if (G === ADMIT_REJECT) return { error: 'E-GENESIS', detail: 'genesis is not an inert record (round-31 R3 — a nested untrusted object is admitted once and read only from the snapshot)' }; genesis = G; }
   // round-17 P0-02 — U comes ONLY from a proven-anchor token (verify/verifyAsync mint it); a raw string never reaches K_n(t).
   const U = (anchorTime && typeof anchorTime === 'object' && VERIFIED_ANCHOR.has(anchorTime) && isRealRfc3339Z(anchorTime.anchorTime)) ? anchorTime.anchorTime : undefined;
   if (!genesis) return { strength: 'self-asserted', status: 'verified' };         // LIGHT — nothing to resolve
@@ -1920,6 +1926,10 @@ export function verifyKeylogTerminality(head_, proof = {}) {
 export const STABILITY = Object.freeze({ light: 'stable', high: 'stable', corroborated: 'experimental-usable', attested: 'experimental-extension' });
 export function deriveCheckpointFreshness(chain, config) {
   const c = admitOpts(config); if (c === null) return { result: 'INVALID', detail: 'config must be an inert record (round-24 P1-01 totality)' };   // round-24 P1-01 (self-audit) — the parallel freshness surface, total for null/hostile config
+  // rev38 R3 (round-31 P0-03) — admit the CHAIN ONCE here: verifyAuthorityCheckpointChain admits its OWN snapshot, but this
+  // assembler then RE-READ the raw `chain[last].body` for scope/sequence/active-genesis — a two-face Proxy served the signed
+  // chain to the verifier and an unsigned body (sequence "999", fake active genesis) to the assembly. Verify + read the SAME frozen chain.
+  { const Ch = admitDeep(chain); if (Ch === ADMIT_REJECT) return { result: 'INVALID', detail: 'checkpoint chain is not an inert record (round-31 R3 — the chain is admitted once and read only from the snapshot)' }; chain = Ch; }
   const { genesis, context, genesisAuthority, pinnedPrior, keylogEntries, target, commitment, terminality, uniqueness, trust, allowExperimentalAttested = false } = c;
   const chn = verifyAuthorityCheckpointChain(chain, { genesis, context, genesisAuthority, pinnedPrior, keylogEntries });   // K5: forward the prefix witness so a growth chain can reach corroborated (round-3 P0-3)
   if (chn.result !== 'VALID') return chn.result === 'INDETERMINATE' ? chn
@@ -2142,7 +2152,12 @@ export const REGISTRY = deepFreeze({   // round-25 P0-04 — DEEP-frozen: the ca
 export function verifyStream(frames, config) {
   const c = admitOpts(config); if (c === null) return { complete: 'none', detail: 'config must be an inert record (round-24 P1-01 totality)' };   // round-24 P1-01 (self-audit) — the parallel stream surface, total for null/hostile config
   { const Fr = admitDeep(frames); if (Fr === ADMIT_REJECT) return { complete: 'none', detail: 'frames are not an inert record (round-27)' }; frames = Fr; }   // round-27 — snapshot
-  const { genesis, keylog, checkpoint, cadenceLog, requirePerFrameValid = true } = c;
+  let { genesis, keylog, checkpoint, cadenceLog, requirePerFrameValid = true } = c;
+  // rev38 R3 (round-31 P0-02) — admitOpts is SHALLOW: the NESTED `genesis` and `checkpoint` in config stay live caller objects.
+  // verifyStream calls verify(checkpoint) but then re-reads the raw checkpoint's class/head/count (and reads raw genesis for
+  // prevHash) — a two-face Proxy served the signed face to verify and an unsigned face to the reads. Admit both nested docs once.
+  if (genesis != null) { const G = admitDeep(genesis); if (G === ADMIT_REJECT) return { complete: 'none', detail: 'genesis is not an inert record (round-31 R3 — nested config docs are admitted once)' }; genesis = G; }
+  if (checkpoint != null) { const C = admitDeep(checkpoint); if (C === ADMIT_REJECT) return { complete: 'none', detail: 'checkpoint is not an inert record (round-31 R3 — nested config docs are admitted once)' }; checkpoint = C; }
   if (!Array.isArray(frames) || !frames.length) return { complete: 'none' };
   const authority = frames[0]?.state?.id?.domain_shard;                // §11.3: a stream belongs to ONE authority
   if (typeof authority !== 'string') return { complete: 'none', detail: 'malformed first frame — no stream authority (round-24 self-audit totality)' };   // round-24 (self-audit) — a malformed frame is a structured result, never a host throw

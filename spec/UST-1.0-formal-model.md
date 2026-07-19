@@ -784,6 +784,28 @@ only as a human-readable / drift artifact, no longer the proof. Machine-checked 
 adversarial closure that a registered check dropped from the executed set is detected (*"LOCKSTEP IN-PROCESS: a disabled registered check is CAUGHT in-process — the lockstep validation over the LIVE executed set flags any registered adversarial-closure check absent from THIS run (never a committed, forgeable manifest; round-30 P1-02)"*). This completes the R2 lesson from
 rev34: a gate that proves execution must OBSERVE the execution, not trust an artifact that merely names it.
 
+**Realization (rev38 — R3 spans the NESTED input graph; and the honest bound on the R2 self-proof).** A round-31 audit
+showed R3 was STILL realized only at the obvious point: rev35 admitted the PRIMARY argument of each resolver, but the
+untrusted DATA objects NESTED in `opts`/`config` stayed live. `admitOpts` is a SHALLOW admission — it preserves function
+capabilities (`fetchImpl`, `substrateVerify`) and copies top-level keys, but does NOT deep-admit a nested `opts.genesis` /
+`config.checkpoint` / a `chain`. So `resolveAuthority` verified `genesis` via `resolveKeys` (which admits its own snapshot)
+then RE-READ the raw nested genesis for `contentHash` and capacity; `verifyStream` verified `checkpoint` then re-read its
+raw class/head; `deriveCheckpointFreshness` verified the chain then re-read raw `chain[last].body` for scope/sequence. A
+two-face Proxy served the signed face to the inner verify and an unsigned face (elevated capacity, a wrong sequence, a fake
+active genesis) to the outer reads — three false `VALID:HIGH`/corroborated outputs. Fix: EVERY untrusted DATA object a
+resolver verifies is DEEP-admitted ONCE and read only from the frozen snapshot, whether it is the primary argument or
+nested in `opts`/`config`; the read-count grid now covers the nested positions (*"R3 NESTED: a two-face NESTED genesis in a resolver opts/config graph → the output is a projection over the VERIFIED face, never the unsigned re-read (round-31 P0-01/02/03; admitOpts is shallow, nested untrusted docs are deep-admitted once)"*).
+
+The same audit corrected an OVERCLAIM in rev37: the in-process lockstep enforcement over the live executed set closes the
+stale/forged-MANIFEST defect (it proves a registered check RAN and returned truthy in-process), but it does NOT prove the
+check's ADVERSARIAL SEMANTICS — a maintainer who, in the SAME commit, weakens a registered `check(id, …)` to `check(id, true)`
+keeps the label present and the enforcement green. Label membership is a drift/consistency control, not a cryptographic
+proof of test quality. The SEMANTIC trust root for the checker is elsewhere and immutable: the language-neutral BYTE-VECTORS
+(each an input bound to an EXPECTED result — a tautology cannot satisfy them) plus independent implementation and the
+pending human review. The model claims only what each layer proves. (round-31 P2-01: a signature-registry fixture
+(`verifyKeylogTerminality`) whose first argument was a domain string short-circuited before the hostile position — replaced
+with a real key-log head record so every declared position is actually reached.)
+
 **Definition (VerifiedAuthorityContext).** For a genesis document `g` whose class and self-signature VERIFY
 (`resolveCheckpointRoots` — P0-2: verify-before-extract):
 

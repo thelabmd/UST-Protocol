@@ -1533,6 +1533,12 @@ console.log('\n═════════════════════�
   g('resolveKeys(genesis)', () => { const clone = JSON.parse(JSON.stringify(gen)); const reads = spy(clone, 'state'); return { call: () => P.resolveKeys(clone, []), reads }; });
   g('resolveAuthority(doc)', () => { const clone = JSON.parse(JSON.stringify(doc)); const reads = spy(clone, 'state'); return { call: () => P.resolveAuthority(clone, {}), reads }; });
   g('resolveCadence(genesis)', () => { const clone = JSON.parse(JSON.stringify(gen)); const reads = spy(clone, 'state'); return { call: () => P.resolveCadence(clone, [], undefined, {}), reads }; });
+  // rev38 R3 (round-31 P0-01/02/03) — the grid covers NESTED untrusted objects in opts/config too: admitOpts is shallow, so
+  //   a resolver that verifies then re-reads a nested `opts.genesis` / `config.checkpoint` / `chain[i]` fires the getter ≥2.
+  //   These lock the nested-admit fixes across the resolver surface (the class round-30 fixed only for the PRIMARY arg).
+  g('resolveAuthority(opts.genesis)', () => { const clone = JSON.parse(JSON.stringify(gen)); const reads = spy(clone, 'state'); return { call: () => P.resolveAuthority(doc, { genesis: clone }), reads }; });
+  g('deriveCheckpointFreshness(chain[i].body)', () => { const clone = JSON.parse(JSON.stringify(cp)); const reads = spy(clone, 'body'); return { call: () => P.deriveCheckpointFreshness([clone], {}), reads }; });
+  g('verifyStream(config.checkpoint)', () => { const clone = JSON.parse(JSON.stringify(cp)); const reads = spy(clone, 'state'); return { call: () => P.verifyStream([doc], { checkpoint: clone }), reads }; });
   // round-29 (div1) NEGATIVE CONTROL — prove the grid's await-then-count mechanism OBSERVES a post-await read: a synthetic
   //   verifier that reads its spied input, awaits, then reads AGAIN must be seen as read-count 2 (a sync snapshot sees 1).
   { const o = {}; const rd = spy(o, 'f'); const postAwaitReader = async (x) => { void x.f; await Promise.resolve(); void x.f; }; await postAwaitReader(o).catch(() => {});
@@ -1600,13 +1606,14 @@ console.log('\n═════════════════════�
   const oOpts = () => ({ context: 'data' }), oConf = () => ({}), oHash = () => 'sha256:' + '00'.repeat(32);
   const oProof = () => ({ root: 'sha256:' + '00'.repeat(32), path: [] }), oBytes = () => new TextEncoder().encode('{}');
   const oArr = () => [], oStr = () => 'grid.example', oFrames = () => [oDoc()], oGraph = () => ({});
+  const oHead = () => { const k = P.buildKeylogCommitment(['sha256:' + '22'.repeat(32)]); return { root: k.root, length: k.length, head: k.head }; };   // rev38 R1 (round-31 P2-01) — a REAL keylog head record so verifyKeylogTerminality reaches its proof argument (the old `oStr` domain string short-circuited before the hostile position → vacuous totality coverage there)
   const oStmt = () => ({ claim: {}, sig: { sig: 'a', pub: 'b' } }), oChain = () => [{ body: {}, sig: { sig: 'a', pub: 'b' } }];
   const SIG = {
     verify: [oDoc, oOpts], verifyAsync: [oDoc, oOpts], verifyStream: [oFrames, oConf], verifyJson: [oBytes, oOpts],
     verifyAnchor: [oHash, oProof, oOpts], verifyEvidenceReceipt: [oStmt, oConf], verifyActiveGenesisUniqueness: [oProof, oConf],
     verifyAuthorityBundle: [oConf, oConf], verifyAuthorityCheckpointChain: [oChain, oConf], verifyCheckpointMapUniqueness: [oProof, oConf],
     verifyCheckpointRecovery: [oChain, oConf], verifyCheckpointUniqueness: [oChain, oConf], verifyEpochTransition: [oStmt, oConf],
-    verifyKeylogTerminality: [oStr, oProof], verifyNoForkEvidence: [oStmt, oConf], resolveAuthority: [oDoc, oOpts],
+    verifyKeylogTerminality: [oHead, oProof], verifyNoForkEvidence: [oStmt, oConf], resolveAuthority: [oDoc, oOpts],
     resolveByDiscovery: [oDoc, oOpts, netMock], resolveCadence: [oGen, oArr, oStr, oOpts], resolveCheckpointRoots: [oGen],
     resolveKeys: [oGen, oArr], deriveAssurance: [oGraph], deriveCheckpointFreshness: [oChain, oConf], forkChoice: [oFrames, oOpts],
     noEventBacking: [oConf, oConf, oFrames], verifiedGenesisContext: [oGen], checkAuthorityProof: [oConf, oConf],
@@ -1716,6 +1723,18 @@ console.log('\n═════════════════════�
       const face2 = new Proxy(gA, { ownKeys: (t) => Reflect.ownKeys(t), getOwnPropertyDescriptor: (t, k) => Reflect.getOwnPropertyDescriptor(t, k), getPrototypeOf: (t) => Reflect.getPrototypeOf(t), get(t, k, r) { if (k === 'state') { rs++; return rs === 1 ? gA.state : gB.state; } if (k === 'sig') return Reflect.get(t, k, r); return Reflect.get(t, k, r); } });
       const rr = P.resolveKeys(face2, []);
       check('R3 RESOLVER: resolveKeys admits its genesis ONCE — a two-face Proxy (signed A to verify, tampered B to the reducer) emits keys for the VERIFIED face or errors, NEVER the re-read face', !!rr.error || (rr.validKeys && !rr.validKeys.has(RB.kid)));
+      // rev38 R3 (round-31 P0-01/02/03) — the class extends to NESTED untrusted objects: admitOpts is SHALLOW, so a resolver
+      //   that verifies then re-reads `opts.genesis` (or config.checkpoint / a chain body) operated on a LIVE nested object.
+      //   A two-face nested genesis in resolveAuthority's opts must yield the SAME output as the verified face — the unsigned
+      //   re-read face never leaks (deep-admit the nested doc once).
+      const gNA = P.seal(P.buildGenesis({ domain_shard: 'r3nest.example', ust_id: 'ust:20260628.140000', key_id: RA.kid }, tR, RA.pubB), RA.priv, RA.pubB);
+      const gNBraw = structuredClone(gNA); gNBraw.state.data.genesis = { kind: 'computed', value: { max_partitions: '4096' } };
+      let ns = 0;
+      const gNP = new Proxy(gNA, { ownKeys: (t) => Reflect.ownKeys(t), getOwnPropertyDescriptor: (t, k) => Reflect.getOwnPropertyDescriptor(t, k), getPrototypeOf: (t) => Reflect.getPrototypeOf(t), get(t, k, r) { if (k === 'state') { ns++; return ns === 1 ? gNA.state : gNBraw.state; } return Reflect.get(t, k, r); } });
+      const docN = P.seal(P.buildState({ domain_shard: 'r3nest.example', ust_id: 'ust:20260628.140001', key_id: RA.kid, class: 'observation' }, tR, { r: { kind: 'captured', value: { v: 'x' } } }), RA.priv, RA.pubB);
+      const honestN = JSON.stringify(P.resolveAuthority(docN, { genesis: gNA }));
+      const attackedN = JSON.stringify(P.resolveAuthority(docN, { genesis: gNP }));
+      check('R3 NESTED: a two-face NESTED genesis in a resolver opts/config graph → the output is a projection over the VERIFIED face, never the unsigned re-read (round-31 P0-01/02/03; admitOpts is shallow, nested untrusted docs are deep-admitted once)', honestN === attackedN);
     }
   }
 }
