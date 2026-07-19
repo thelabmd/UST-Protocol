@@ -772,6 +772,18 @@ and cannot freeze; the budget is elapsed against an operation-local start, never
 deadline comparison across the witness/substrate path is on this one monotonic scale — mixing it with `Date.now()` was its
 own bug). Machine-checked: the production clock is non-decreasing across reads (*"R4 MONOTONIC: the witness budget clock is a monotonic ELAPSED source (performance.now), non-decreasing across reads — a wall-clock/NTP rollback cannot rewind the deadline and disable the whole-op budget (round-30 P1-01; not a wall clock with a wrapper)"*).
 
+**Realization (rev37 — R2's proof of execution is observed IN-PROCESS, not read from a forgeable artifact).** A round-30
+audit showed the rev34 R2 fix was still insufficient. Binding the executed-check manifest to `sha256(conformance.mjs)` +
+`sha256(index.mjs)` proved which source the manifest CLAIMS to describe, but the manifest's `checks` array is caller-authored
+data: an attacker who DISABLES a registered adversarial check, RECOMPUTES the two source hashes, and keeps the old `checks`
+array produces a fresh-looking, internally-consistent manifest that the standalone gate accepts — no evidence the
+conformance process ever ran it or that it passed. A committed artifact can never be its own proof of execution. The fix:
+the lockstep validation runs in the SAME process that ran the checks, over the IN-MEMORY executed set — a disabled
+registered check is simply ABSENT from that set, so the run hard-fails and exits non-zero; the committed manifest is kept
+only as a human-readable / drift artifact, no longer the proof. Machine-checked by the enforcement itself plus an
+adversarial closure that a registered check dropped from the executed set is detected (*"LOCKSTEP IN-PROCESS: a disabled registered check is CAUGHT in-process — the lockstep validation over the LIVE executed set flags any registered adversarial-closure check absent from THIS run (never a committed, forgeable manifest; round-30 P1-02)"*). This completes the R2 lesson from
+rev34: a gate that proves execution must OBSERVE the execution, not trust an artifact that merely names it.
+
 **Definition (VerifiedAuthorityContext).** For a genesis document `g` whose class and self-signature VERIFY
 (`resolveCheckpointRoots` — P0-2: verify-before-extract):
 

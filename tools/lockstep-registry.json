@@ -68,6 +68,12 @@
       "conformance_check": "CANON-TRANSPARENT FUZZ: 3000 random inputs (pollution names / non-enumerable / sparse / non-plain proto / deep) — admitDeep is never looser than canon and byte-identical when accepted"
     },
     {
+      "id": "R37-lockstep-in-process",
+      "rev": "rev37",
+      "model_locus": "over the IN-MEMORY executed set",
+      "conformance_check": "LOCKSTEP IN-PROCESS: a disabled registered check is CAUGHT in-process — the lockstep validation over the LIVE executed set flags any registered adversarial-closure check absent from THIS run (never a committed, forgeable manifest; round-30 P1-02)"
+    },
+    {
       "id": "R36-r4-monotonic",
       "rev": "rev36",
       "model_locus": "MONOTONIC elapsed-time clock",

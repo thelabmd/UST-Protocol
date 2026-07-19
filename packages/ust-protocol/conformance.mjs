@@ -1720,6 +1720,25 @@ console.log('\n═════════════════════�
   }
 }
 
+// rev37 R2 (round-30 P1-02) — PROOF OF EXECUTION is observed IN-PROCESS, not read from a committed (forgeable) manifest.
+// The rev34 source binding proved which source the manifest CLAIMS to describe, but its `checks` array is caller-authored
+// data: an attacker who disables a registered check, RECOMPUTES the source hash, and keeps the old array forges a
+// fresh-looking manifest that the standalone gate accepts. Here the lockstep validation runs in the SAME process that ran
+// the checks, over the IN-MEMORY `executed` set — a disabled registered check is simply ABSENT from `executed`, so this
+// hard-fails the run. (The committed manifest below is retained only as a human-readable / drift artifact, no longer proof.)
+{
+  const REG = JSON.parse(readFileSync(new URL('../../tools/lockstep-registry.json', import.meta.url), 'utf8'));
+  // the REGISTERED adversarial closure (self-contained): a registered check dropped from a synthetic executed set is
+  // detected. `sample` is a NON-self record so the synthetic test does not reference this very check.
+  const sample = (REG.records || []).map((r) => r.conformance_check).find((c) => c && !c.startsWith('LOCKSTEP IN-PROCESS'));
+  const synthetic = new Set(executed); if (sample) synthetic.delete(sample);
+  check('LOCKSTEP IN-PROCESS: a disabled registered check is CAUGHT in-process — the lockstep validation over the LIVE executed set flags any registered adversarial-closure check absent from THIS run (never a committed, forgeable manifest; round-30 P1-02)', !!sample && !synthetic.has(sample));
+  // the HARD enforcement over the live set — built AFTER the check() above pushed itself, so THIS record is included too;
+  // not a registered check() (fail-closes the whole run if ANY registered check did not run+pass in-process):
+  const ranSet = new Set(executed);
+  const unbacked = (REG.records || []).filter((r) => !r.conformance_check || !ranSet.has(r.conformance_check)).map((r) => r.id);
+  if (unbacked.length) { fail++; fails.push('LOCKSTEP IN-PROCESS: registered checks that did NOT run+pass in-process → ' + unbacked.join(',')); }
+}
 console.log('  ust-protocol ' + P.VERSION.spec + ' conformance vs ' + V.version);
 console.log('  PASS ' + pass + '   FAIL ' + fail + '   NOTES ' + note);
 if (fails.length) { console.log('\n  FAILURES:'); fails.forEach(f => console.log('    ✗ ' + f)); }
