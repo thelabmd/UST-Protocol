@@ -687,7 +687,10 @@ input → must be total) or exempt-with-reason, and a new export fails until cla
 consumer-surface export returns a structured result — never a host throw — on a hostile Proxy in any argument position
 (*"FROM-CODE TOTALITY: every consumer-surface export (the classified untrusted-input entries, not a name regex) returns structured, never a host throw, on a hostile Proxy in any argument position"*). And the lockstep gate now verifies each
 registered adversarial check against the EXECUTED-check manifest conformance emits, so a disabled/renamed check no longer
-passes on source-substring presence.
+passes on source-substring presence. The input-boundary grid AWAITS each verifier to settlement before counting getter
+reads (a synchronous read-count would see only the reads before the first await; an async verifier that re-read a caller
+field AFTER an await would slip it), proven by a negative control that reads its input, awaits, then re-reads and is
+OBSERVED as two reads (*"BOUNDARY-GRID async-aware: a verifier that re-reads its input AFTER an await is OBSERVED as read-count 2 (the grid awaits settlement; a sync snapshot would miss it) — round-29 div1"*).
 
 **Definition (VerifiedAuthorityContext).** For a genesis document `g` whose class and self-signature VERIFY
 (`resolveCheckpointRoots` — P0-2: verify-before-extract):

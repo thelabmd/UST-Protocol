@@ -1491,8 +1491,11 @@ console.log('\n═════════════════════�
   // wrap `obj[key]` in a read-counter getter; returns a reader for the count.
   const spy = (obj, key) => { let n = 0; const real = obj[key]; Object.defineProperty(obj, key, { enumerable: true, configurable: true, get() { n++; return real; } }); return () => n; };
   // each row: [label, () => a fresh input with a spied field, fn]. fn is called; assert the spy fired ≤ 1.
-  let gridAllOk = true;
-  const g = (label, make) => { const c = make(); Promise.resolve(c.call()).catch(() => {}); const ok = c.reads() <= 1; if (!ok) gridAllOk = false; check('BOUNDARY-GRID ' + label + ' admits its input (getter read ≤1 — no TOCTOU re-read)', ok); };
+  let gridAllOk = true; const gridJobs = [];
+  // round-29 (div1, GPT round-28) — AWAIT each verifier to SETTLEMENT before counting getter reads. A synchronous
+  //   read-count sees only the reads BEFORE the first await, so an async verifier that re-read a caller field AFTER an
+  //   await would slip it. The grid now awaits, so a post-await TOCTOU re-read is OBSERVED (proven by the negative control).
+  const g = (label, make) => gridJobs.push((async () => { const c = make(); try { await c.call(); } catch {} const ok = c.reads() <= 1; if (!ok) gridAllOk = false; check('BOUNDARY-GRID ' + label + ' admits its input (getter read ≤1 across settlement — no TOCTOU re-read)', ok); })());
   const wrapTop = (o, key) => { const clone = JSON.parse(JSON.stringify(o)); const reads = spy(clone, key); return { clone, reads }; };
   g('verify(doc)', () => { const { clone, reads } = wrapTop(doc, 'state'); return { call: () => P.verify(clone, { context: 'data' }), reads }; });
   g('verifyEvidenceReceipt(receipt)', () => { const { clone, reads } = wrapTop(rcpt, 'claim'); return { call: () => P.verifyEvidenceReceipt(clone, {}), reads }; });
@@ -1507,6 +1510,11 @@ console.log('\n═════════════════════�
   g('forkChoice(candidates[0])', () => { const clone = JSON.parse(JSON.stringify(doc)); const reads = spy(clone, 'state'); return { call: () => P.forkChoice([clone], {}), reads }; });
   g('resolveByDiscovery(doc)', () => { const clone = JSON.parse(JSON.stringify(doc)); const reads = spy(clone, 'state'); return { call: () => P.resolveByDiscovery(clone, { context: 'data' }, { fetchImpl: async () => ({ ok: false, status: 404, text: async () => '' }) }), reads }; });
   g('verifyAsync(doc)', () => { const clone = JSON.parse(JSON.stringify(doc)); const reads = spy(clone, 'state'); return { call: () => P.verifyAsync(clone, { context: 'data' }), reads }; });
+  // round-29 (div1) NEGATIVE CONTROL — prove the grid's await-then-count mechanism OBSERVES a post-await read: a synthetic
+  //   verifier that reads its spied input, awaits, then reads AGAIN must be seen as read-count 2 (a sync snapshot sees 1).
+  { const o = {}; const rd = spy(o, 'f'); const postAwaitReader = async (x) => { void x.f; await Promise.resolve(); void x.f; }; await postAwaitReader(o).catch(() => {});
+    check('BOUNDARY-GRID async-aware: a verifier that re-reads its input AFTER an await is OBSERVED as read-count 2 (the grid awaits settlement; a sync snapshot would miss it) — round-29 div1', rd() === 2); }
+  await Promise.all(gridJobs);
   check('BOUNDARY-GRID: every exported verifier admits its input once (no TOCTOU re-read across the surface — coverage answered in CI, not from memory)', gridAllOk);
   // round-28 P1-02 (HARDENED after self-audit) — FROM-CODE totality by PARTITION-EXHAUSTIVENESS, not a name regex.
   //   The first fix filtered exports by `/^(verify|resolve|derive|…)/`, which is a hand-list in disguise: it SILENTLY

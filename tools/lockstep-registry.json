@@ -68,6 +68,12 @@
       "conformance_check": "CANON-TRANSPARENT FUZZ: 3000 random inputs (pollution names / non-enumerable / sparse / non-plain proto / deep) — admitDeep is never looser than canon and byte-identical when accepted"
     },
     {
+      "id": "R31-grid-async-aware",
+      "rev": "rev31",
+      "model_locus": "AWAITS each verifier to settlement",
+      "conformance_check": "BOUNDARY-GRID async-aware: a verifier that re-reads its input AFTER an await is OBSERVED as read-count 2 (the grid awaits settlement; a sync snapshot would miss it) — round-29 div1"
+    },
+    {
       "id": "R31-from-code-partition",
       "rev": "rev31",
       "model_locus": "classified FROM the module exports",
