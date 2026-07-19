@@ -217,7 +217,7 @@ predicate.
    skips an obligation, is non-conforming — the theorem is exactly what conformance testing checks.)
    **Realization (rev24 — totality includes malformed non-null on EVERY argument, not just null config):** the public
    boundary returns a structured verdict for a null/hostile TRAILING argument, not only a null config record — the
-   round-24 grid was extended past `arg1`/`null-only` (*"round-24 P1-01 nine public proof surfaces total for null config (no host throw)"*, *"round-26 L5 malformed non-null on trailing args: resolveCadence(_, _, _, null) + verifyJson(\"{}\", null) return structured (no host throw)"*).
+   round-24 grid was extended past `arg1`/`null-only` (*"round-26 L5 malformed non-null on trailing args: resolveCadence and verifyJson accept a null trailing arg and return structured (no host throw)"*).
 5. **(INDETERMINATE as a missing σ-algebra — or a declined evaluation.)** If `𝒮_τ(d) ⊄ ℐ` (e.g. the witness is
    unreachable, so the name-authority coordinate `W_n ⊄ ℐ`), then `ℐ` is **in general insufficient** to decide
    `Valid_τ(d)` — there is NO general decision procedure at tier `τ`. (For a PARTICULAR `d` the predicate may
@@ -648,6 +648,20 @@ layer takes the derived context, never raw fields.
 family (`pinnedPrior`, `genesis`, `genesisAuthority`, `recoveryKeys`, `recoveryThreshold`) alongside it is rejected
 `E-AUTHORITY` — a foreign `pinnedPrior` cannot seize the chain scope/authority and raw recovery cannot be injected,
 neither while reporting `verified-context` (*"C1/L1 a raw pinnedPrior alongside a branded context → INVALID(E-AUTHORITY) — the context is the SOLE root (never raw fields, M2; round-26 P0-01)"*, *"C1/L2 raw recoveryKeys/recoveryThreshold alongside a branded context → INVALID(E-AUTHORITY) — recovery is genesis-fixed, never injected from a call argument (F.5l; round-26 P0-02)"*).
+
+**Realization (rev28 — the whole authority graph crosses ONE snapshot boundary).** rev24 put the inert `admitDeep`
+snapshot on the evidence/genesis-context entries but not the chain verifier, so `verifyAuthorityCheckpointChain` /
+`resolveCheckpointRoots` / `verifyCheckpointRecovery` held LIVE caller references and re-read them after signature
+verification — a getter signed a no-rotation checkpoint body then minted an attacker rotation, a raw genesis TOCTOU
+installed an unsigned authority, and a recovery getter re-signed the quorum (round-27 P0-01/02/03). Now **the WHOLE
+authority graph crosses the ONE inert snapshot boundary**: `(chain, config)`, the genesis, and every recovery statement
+are `admitDeep`-snapshotted at entry (a branded handle passes through; a getter/accessor at any depth is `E-MALFORMED`),
+so classification, signature, ID, state transition, return value and pin are all functions of the SAME frozen bytes
+(*"round-27 P0-02 a getter on a checkpoint body cannot sign one body and mint another → INVALID(E-MALFORMED) (the chain crosses the snapshot boundary)"*). The witness resource budget `ρ_v.time` is checked AFTER every awaited leaf, so
+**a budget exhausted on the FINAL awaited leaf** is `INDETERMINATE(resource_limit)`, not a false `pending`
+(*"round-27 P1-01 a budget exhausted on the FINAL leaf → INDETERMINATE(resource_limit), never reported as pending"*),
+and **ONLY an ABSENT budget selects the reference default** — a supplied non-(finite positive integer) is refused, never
+silently expanded (*"round-27 P2-01 invalid maxWitnessOpMs (0/-1/NaN/Infinity/fractional) is REFUSED (resource_limit), never expanded to the reference default"*).
 
 **Definition (VerifiedAuthorityContext).** For a genesis document `g` whose class and self-signature VERIFY
 (`resolveCheckpointRoots` — P0-2: verify-before-extract):

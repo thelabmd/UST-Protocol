@@ -936,6 +936,14 @@ console.log('\n═════════════════════�
     (r => r.result === 'INVALID' && r.error === 'E-AUTHORITY')(P.verifyAuthorityCheckpointChain([C0], { context: ctx, pinnedPrior: { scope_id: 'sha256:' + '44'.repeat(32), checkpoint_id: 'sha256:' + '44'.repeat(32), sequence: '9', authority_for_next: { key_id: K0.key_id, pub: K0.pubB64 }, keylog_size: '1', keylog_root: 'sha256:' + '44'.repeat(32), keylog_head: 'sha256:' + '44'.repeat(32) } })));
   check('C1/L2 raw recoveryKeys/recoveryThreshold alongside a branded context → INVALID(E-AUTHORITY) — recovery is genesis-fixed, never injected from a call argument (F.5l; round-26 P0-02)',
     (r => r.result === 'INVALID' && r.error === 'E-AUTHORITY')(P.verifyAuthorityCheckpointChain([C0], { context: ctx, recoveryKeys: { [K0.key_id]: K0.pubB64 }, recoveryThreshold: '1' })));
+  // round-27 P0-02 — the WHOLE (chain, config) authority graph crosses the admitDeep boundary: a getter on a checkpoint
+  //   body (sign a no-rotation body, then mint an attacker rotation on the re-read) is not an inert record → E-MALFORMED,
+  //   never a VALID takeover. rev24 put the snapshot on the evidence/genesis entries but NOT the chain verifier (P0-02).
+  check('round-27 P0-02 a getter on a checkpoint body cannot sign one body and mint another → INVALID(E-MALFORMED) (the chain crosses the snapshot boundary)',
+    (() => { const evil = { ...C0, body: { ...C0.body } }; let n = 0; const realCA = C0.body.checkpoint_authority;
+      Object.defineProperty(evil.body, 'checkpoint_authority', { enumerable: true, get() { n++; return realCA; } });   // an accessor at ANY depth of the chain → not inert
+      const r = P.verifyAuthorityCheckpointChain([evil], { context: ctx });
+      return r.error === 'E-MALFORMED' && n === 0; })());   // rejected at the snapshot boundary — the getter never fires
   // K3 — the context MUST be a branded GenesisHandle. A caller-shaped look-alike (round-3 P0-1 forge) is rejected.
   check('K3 forged context (caller-shaped {scope_id, checkpoint_authority}) → INVALID(E-AUTHORITY), not verified-context', (r => r.result === 'INVALID' && r.error === 'E-AUTHORITY')(P.verifyAuthorityCheckpointChain([C0], { context: { scope_id: ctx.scope_id, active_genesis: ctx.active_genesis, domain: D, genesis_epoch: ctx.genesis_epoch, checkpoint_authority: { key_id: K0.key_id, pub: K0.pubB64 } } })));
   check('K3 the genuine context IS a branded handle (isVerifiedHandle true); the look-alike is not', P.isVerifiedHandle('genesis', ctx) === true && P.isVerifiedHandle('genesis', { ...ctx }) === false);
@@ -1093,7 +1101,7 @@ console.log('\n═════════════════════�
   // round-26 L5 (rev24 C) — I4 totality on the boundaries the rev23 grid missed: a null TRAILING arg (not just null
   //   config) on the public data/verify boundary returns structured, never a host throw (resolveCadence 4th arg,
   //   verifyJson opts). These drive the PUBLIC entry, per the audit-plan Definition-of-Done.
-  check('round-26 L5 malformed non-null on trailing args: resolveCadence(_, _, _, null) + verifyJson("{}", null) return structured (no host throw)',
+  check('round-26 L5 malformed non-null on trailing args: resolveCadence and verifyJson accept a null trailing arg and return structured (no host throw)',
     (() => { try { const a = P.resolveCadence({}, [], 'ust:20260719.03', null); const b = P.verifyJson('{}', null); return typeof a === 'object' && typeof b === 'object'; } catch { return false; } })());
   // round-26 B (rev26) — CanonicalSeq at the LAST unswept signed scalars (Merkle index + key-log length): a coercible
   //   array `["1"]` (String/BigInt of it collapses to the canonical value) is NOT a canonical sequence → not terminal.
@@ -1134,6 +1142,21 @@ console.log('\n═════════════════════�
       capped.status === 'indeterminate' && capped.reason === 'resource_limit' && capped.detail.includes('50 ms whole-operation budget'));
     check('F.9 T_v control: the same witness with no consumer cap verifies (confirmed) — the cap lowers decisibility, never flips a verdict',
       (await P.witnessNoFork(shard, AGW, { fetchImpl: fetchW, substrateVerify: fastSV })).status === 'confirmed');
+    // round-27 P2-01 — typed policy admission: an INVALID maxWitnessOpMs (0 / -1 / NaN / Infinity / fractional) is REFUSED
+    //   (resource_limit), never silently expanded to the 30 s default (which admitted a slow connector and returned confirmed).
+    let allRefused = true;
+    for (const bad of [0, -1, NaN, Infinity, 1.5]) {
+      const r = await P.witnessNoFork(shard, AGW, { fetchImpl: fetchW, substrateVerify: fastSV, maxWitnessOpMs: bad });
+      if (!(r.status === 'indeterminate' && r.reason === 'resource_limit')) allRefused = false;
+    }
+    check('round-27 P2-01 invalid maxWitnessOpMs (0/-1/NaN/Infinity/fractional) is REFUSED (resource_limit), never expanded to the reference default', allRefused);
+    // round-27 P1-01 — a budget exhausted on the FINAL/only leaf is INDETERMINATE(resource_limit), not 'pending': the
+    //   deadline is checked AFTER every awaited leaf, not only before (a single never-settling anchor + a tight budget).
+    const oneAnchorLog = JSON.stringify({ domain_shard: shard, genesis_log: [{ content_hash: AGW, anchor: { root: P.Hbytes('ust:leaf', Buffer.from(AGW, 'utf8')), path: [], anchor: { substrate: 'test-anchor', n: '1' } } }] });
+    const fetch1 = async () => ({ ok: true, headers: { get: () => undefined }, arrayBuffer: async () => new TextEncoder().encode(oneAnchorLog).buffer });
+    const lastLeaf = await P.witnessNoFork(shard, AGW, { fetchImpl: fetch1, substrateVerify: neverSV, maxWitnessOpMs: 10 });
+    check('round-27 P1-01 a budget exhausted on the FINAL leaf → INDETERMINATE(resource_limit), never reported as pending',
+      lastLeaf.status === 'indeterminate' && lastLeaf.reason === 'resource_limit');
   }
   // P1-03 — evidenceCaps returns a FROZEN copy: a caller cannot mutate the checker's capability vocabulary.
   check('round-24 P1-03 evidenceCaps is a frozen copy (mutation cannot make check_C history-dependent)', (() => { const a = P.evidenceCaps('pow-header-chain'); try { a.push('forged'); } catch {} return Object.isFrozen(a) && !P.evidenceCaps('pow-header-chain').includes('forged'); })());

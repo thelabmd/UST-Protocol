@@ -181,9 +181,14 @@ function admitOpts(v) {
 // and no verdict changes. This is admitOpts made total + recursive; it dissolves malformed-non-null (C) and TOCTOU (D)
 // at the same seam. `ADMIT_REJECT` is a module-private sentinel (never null — null is a legal admitted value).
 const ADMIT_REJECT = Symbol('admit-reject');
+const ADMIT_DROP = Symbol('admit-drop');                                              // a function/symbol VALUE — not wire data; the parent SKIPS it (canon/JCS drops it too, so canon(admitDeep(x))==canon(x))
 const ADMIT_MAX_DEPTH = 64;                                                            // bounded — a signed authority record is shallow; a deeper graph is refused, never walked
 const admitDeep = (v, depth = 0, seen = new WeakSet()) => {
-  if (v === null || typeof v !== 'object') return typeof v === 'function' || typeof v === 'symbol' ? ADMIT_REJECT : v;   // primitives pass; function/symbol are not data
+  if (v === null) return null;
+  const t = typeof v;
+  if (t === 'function' || t === 'symbol') return ADMIT_DROP;                           // a function/symbol VALUE is not data — DROP it (a helper like a keylog `prove` closure is legal on an input; canon already omits it). An ACCESSOR (get/set) is the TOCTOU seam and is still REJECTED below.
+  if (t !== 'object') return v;                                                        // primitive scalar passes through
+  if (HANDLE_BRAND.has(v)) return v;                                                   // round-27 — a branded handle is ALREADY a verified inert (deep-frozen, no getters) snapshot: pass it through, never deep-copy off the brand (a copy loses identity and the K3 gate rejects it)
   if (depth > ADMIT_MAX_DEPTH || seen.has(v)) return ADMIT_REJECT;                     // over-depth or cycle → refuse (total, never infinite)
   seen.add(v);
   try {
@@ -191,10 +196,10 @@ const admitDeep = (v, depth = 0, seen = new WeakSet()) => {
       const out = [];
       for (let i = 0; i < v.length; i++) {
         const d = Object.getOwnPropertyDescriptor(v, i);
-        if (d && (d.get || d.set)) return ADMIT_REJECT;                                // no accessor elements
+        if (d && (d.get || d.set)) return ADMIT_REJECT;                                // no accessor elements (TOCTOU)
         const r = admitDeep(v[i], depth + 1, seen);
         if (r === ADMIT_REJECT) return ADMIT_REJECT;
-        out.push(r);
+        out.push(r === ADMIT_DROP ? null : r);                                         // a function element → null (JCS maps it the same way), preserving index positions
       }
       return Object.freeze(out);
     }
@@ -209,6 +214,7 @@ const admitDeep = (v, depth = 0, seen = new WeakSet()) => {
       if (d.get || d.set) return ADMIT_REJECT;                                         // an accessor at ANY depth → not inert (the TOCTOU seam)
       const r = admitDeep(d.value, depth + 1, seen);
       if (r === ADMIT_REJECT) return ADMIT_REJECT;
+      if (r === ADMIT_DROP) continue;                                                  // skip a function/symbol-valued property (canon drops it too)
       Object.defineProperty(out, k, { value: r, enumerable: true });                  // read-only own data
     }
     return Object.freeze(out);
@@ -283,8 +289,9 @@ export function resolveCheckpointRoots(genesis) {
   // P0-2 (rc.35 audit) — roots are extracted ONLY from a VERIFIED, self-signed `class:"genesis"` document. Without this,
   // a raw unsigned object {state:{data:{genesis:{value:{checkpoint_authority}}}}} installed an ATTACKER checkpoint root
   // (authority_root:"genesis") and derived corroborated/attested freshness. Verify the doc BEFORE trusting its fields.
-  if (genesis?.state?.id?.class !== 'genesis' || !isValid(verify(genesis, { context: 'key' }))) return null;
-  const gv = genesis?.state?.data?.genesis?.value; if (!gv) return null;
+  const G = admitDeep(genesis); if (G === ADMIT_REJECT) return null;                   // round-27 P0-01 — snapshot ONCE: verify(G) and the .value extraction below read the SAME bytes (a getter can't return the signed authority during verify and an attacker authority on the extraction read)
+  if (G?.state?.id?.class !== 'genesis' || !isValid(verify(G, { context: 'key' }))) return null;
+  const gv = G?.state?.data?.genesis?.value; if (!gv) return null;
   const out = {};
   const ca = gv.checkpoint_authority;
   if (ca && ca.key_id && ca.pub && keyId(ca.pub) === ca.key_id) out.genesisAuthority = { key_id: ca.key_id, pub: ca.pub };
@@ -418,6 +425,13 @@ export function checkBounds(doc) {
 // opts: { requireVersion:'1.0', context:'data'|'key' } ; HIGH/TOP (steps 3,6,7) are separate, later.
 export function verify(doc, opts = {}) {
   try {
+    // round-27 note — verify() itself does NOT re-snapshot `doc`: the authority-bearing PUBLIC entries that mint trusted
+    // outputs (verifyAuthorityCheckpointChain / resolveCheckpointRoots / verifyCheckpointRecovery / verifyEvidenceReceipt /
+    // verifiedGenesisContext / the epoch/uniqueness/stream verifiers) each admitDeep their own input, verifyJson is a bytes
+    // (getter-free) boundary, and the internal async/forkChoice callers JSON-snapshot before calling verify. A consumer who
+    // hand-builds a getter-object and calls verify() directly can only mislead ITSELF (the disclosed view ≠ the signed
+    // bytes on its OWN input); no third party consumes that verdict without re-verifying the bytes. (div1: the boundary is
+    // the authority graph, done above — not a re-clone inside the hot core, which broke the receipt-identity coupling.)
     // step 1 — structural admission (§14.1)
     if (typeof doc !== 'object' || doc === null) return bad('E-MALFORMED', 'not an object');
     if (doc.ust === undefined || doc.state === undefined || doc.sig === undefined) return bad('E-MALFORMED', 'missing ust/state/sig');
@@ -871,6 +885,7 @@ export function buildNoForkEvidence(fields, privKeyObj, issuerPubB64url) {
 export function verifyNoForkEvidence(evidence, config) {
   const c = admitOpts(config); if (c === null) return { ok: false, detail: 'config must be an inert record (round-24 P1-01 totality)' };   // round-24 P1-01 — total for null/hostile config
   const { domain_shard, active_genesis, trustRoots = {} } = c;
+  { const E = admitDeep(evidence); if (E === ADMIT_REJECT) return { ok: false, detail: 'evidence is not an inert record (round-27 — the witness claim is read once; no getter re-read after canon)' }; evidence = E; }   // round-27 — snapshot the primary signed input, uniform with the authority-graph boundary
   if (!evidence || typeof evidence !== 'object') return { ok: false, detail: 'no evidence' };
   const { claim, issuer_id, sig } = evidence;
   if (!claim || typeof claim !== 'object' || !issuer_id || !sig || !sig.sig || !sig.pub) return { ok: false, detail: 'malformed envelope' };
@@ -1207,7 +1222,7 @@ export async function verifyAsync(doc, opts = {}) {
   let snap; try { snap = JSON.parse(JSON.stringify(doc)); } catch { return verify(doc, opts); }
   const capA = snap.proof?.anchor, capR = snap.proof?.root;
   let receipt; try { receipt = await opts.substrateVerify(capA, capR); } catch { receipt = null; }
-  return verify(snap, { ...opts, substrateVerify: (a, r) => (a === capA && r === capR ? receipt : null) });   // receipt (or null) → sync verifyAnchor path
+  return verify(snap, { ...opts, substrateVerify: (a, r) => (a === capA && r === capR ? receipt : null) });   // receipt (or null) → sync verifyAnchor path (identity binding holds: verify() does not re-clone the doc)
 }
 
 // §3.1/F.5c FORK-CHOICE — canonical = anchor-included. One `ust_id` may have several candidate documents with
@@ -1430,6 +1445,8 @@ export function buildRecoveryStatement(fields, privKeyObj, issuerPubB64url) {
 export function verifyCheckpointRecovery(statements, config) {
   const c = admitOpts(config); if (c === null) return { recovered: false, detail: 'config must be an inert record (round-23 P1-02 totality)' };   // round-23 P1-02 — total: admit config BEFORE destructure
   const { domain_shard, genesis_epoch, last_accepted_checkpoint, effective_sequence, recoveryKeys = {}, threshold = 2 } = c;
+  const S = admitDeep(statements); if (S === ADMIT_REJECT) return { recovered: false, detail: 'recovery statements are not an inert record (round-27 P0-03 — a getter on replacement_authority cannot re-sign the quorum after canonicalization)' };   // round-27 P0-03 — snapshot ONCE; the quorum payload is a frozen copy of the exact canonical claim whose signature was checked
+  statements = S;
   if (!Array.isArray(statements) || statements.length === 0) return { recovered: false, detail: 'no recovery statements' };
   // M5 instance — the recovery quorum is the SAME algebra (admit → group → count → adjudicate): voter = the
   // genesis-authorized recovery signer, ValidThreshold bounded by |recoveryKeys| (a closed voter set), >1 winning
@@ -1477,7 +1494,8 @@ export function buildEpochTransition(fields, privKeyObj, issuerPubB64url) {
 export function verifyEpochTransition(statement, config) {
   const c = admitOpts(config); if (c === null) return { ok: false, detail: 'config must be an inert record (round-24 P1-01 totality)' };   // round-24 P1-01 — total for null/hostile config
   const { domain_shard, from_genesis_epoch, from_final_checkpoint, from_sequence, fromAuthority } = c;
-  const { claim, sig } = statement || {};
+  const St = admitDeep(statement); if (St === ADMIT_REJECT) return { ok: false, detail: 'transition statement is not an inert record (round-27 — the returned to_active_genesis/to_checkpoint_authority must equal the SIGNED bytes, no getter re-read)' };   // round-27 — snapshot: the return re-reads claim.* after canon-verify; a getter could sign one destination and hand back another
+  const { claim, sig } = St || {};
   if (!claim || !sig || !sig.sig || !sig.pub || !fromAuthority) return { ok: false, detail: 'malformed transition or no from-authority' };
   if (claim.purpose !== 'ust:genesis-epoch-transition') return { ok: false, detail: 'wrong purpose' };
   if (claim.domain_shard !== domain_shard || claim.from_genesis_epoch !== from_genesis_epoch || claim.from_final_checkpoint !== from_final_checkpoint) return { ok: false, detail: 'transition not bound to this (domain, from-epoch, from-final-checkpoint)' };
@@ -1506,7 +1524,15 @@ const CP_BODY_KEYS = new Set(['version', 'purpose', 'domain_shard', 'genesis_epo
 const CP_CA_KEYS = new Set(['current_key_id', 'next_key_id', 'next_pub', 'effective_sequence']);
 const isHashStr = (s) => typeof s === 'string' && /^sha256:[0-9a-f]{64}$/.test(s);
 export function verifyAuthorityCheckpointChain(chain, config) {
-  const cfg = admitOpts(config); if (cfg === null) return { error: 'E-MALFORMED', detail: 'config must be an inert record (round-24 P1-01 totality)' };   // round-24 P1-01 — total for null/hostile config
+  // round-27 P0-01/P0-02 — snapshot the COMPLETE (chain, config) authority graph ONCE, DEEP. rev24 put admitDeep on the
+  // evidence/genesis-context entries but NOT here, so the chain verifier held live `cp.body` / raw `genesis` / `recoveries`
+  // references and re-read them AFTER signature verification — a getter signed a no-rotation body then minted an attacker
+  // rotation (P0-02), and a raw genesis TOCTOU installed an unsigned authority (P0-01). No live caller reference survives.
+  // admitDeep PASSES BRANDED HANDLES THROUGH (context / a chain-handle pinnedPrior stay branded); raw fields are deep-copied.
+  if (config != null && typeof config !== 'object') return { error: 'E-MALFORMED', detail: 'config must be an inert record (round-24 P1-01 totality)' };
+  const cfg = config == null ? {} : admitDeep(config); if (cfg === ADMIT_REJECT) return { error: 'E-MALFORMED', detail: 'config is not an inert record — an accessor/getter in the authority config cannot re-read after verification (round-27)' };
+  const C = admitDeep(chain); if (C === ADMIT_REJECT) return { error: 'E-MALFORMED', detail: 'chain is not an inert record — a getter on a checkpoint body cannot sign one body and mint another (round-27 P0-02)' };
+  chain = C;
   let { genesis, context, genesisAuthority, pinnedPrior, recoveries, recoveryKeys, recoveryThreshold, epochTransitions, keylogEntries } = cfg;   // let — the body may re-resolve some fields (e.g. recovery)
   if (!Array.isArray(chain) || chain.length === 0) return { error: 'E-MALFORMED', detail: 'empty checkpoint chain' };
   // M4.2 (C4 bounds-before-work) — the optional full prefix-extension witness is the key-log ENTRY vector itself,
@@ -1699,6 +1725,7 @@ function quorumAdjudicate(items, { threshold, maxVoters, admit }) {
 }
 export function verifyCheckpointUniqueness(attestations, config) {
   const c = admitOpts(config); if (c === null) return { attested: false, detail: 'config must be an inert record (round-23 P1-02 totality)' };   // round-23 P1-02 — total: admit config BEFORE destructure (a null/hostile config is a structured result, never a host throw)
+  { const A = admitDeep(attestations); if (A === ADMIT_REJECT) return { attested: false, detail: 'attestations are not an inert record (round-27 — quorum reads each claim once)' }; attestations = A; }   // round-27 — snapshot the signed inputs, uniform boundary
   const { domain_shard, genesis_epoch, sequence, checkpoint, trustRoots = {}, domains = {}, threshold = 2 } = c;
   if (!Array.isArray(attestations) || attestations.length === 0) return { attested: false, detail: 'no attestations' };
   // M5 instance — voter = the CONSUMER-resolved trust domain (many issuers in one domain count once); admission =
@@ -1767,6 +1794,7 @@ export const nameMapLeaf = ({ domain_shard, active_genesis }) => ({ key: H('ust:
 // TWO distinct TYPED predicates over the SAME map infra — never a generic `verifyMapInclusion(flag)`:
 export function verifyCheckpointMapUniqueness(proof, config) {
   const c = admitOpts(config); if (c === null) return { attested: false, detail: 'config must be an inert record (round-24 P1-01 totality)' };   // round-24 P1-01 — total for null/hostile config
+  { const Pf = admitDeep(proof); if (Pf === ADMIT_REJECT) return { attested: false, detail: 'proof is not an inert record (round-27)' }; proof = Pf; }   // round-27 — snapshot
   const { domain_shard, genesis_epoch, sequence, checkpoint, mapRoot } = c;
   if (typeof domain_shard !== 'string' || typeof genesis_epoch !== 'string' || typeof checkpoint !== 'string' || typeof mapRoot !== 'string' || !isSeq(sequence)) return { attested: false, detail: 'missing/invalid uniqueness fields (round-24 P1-01 + round-25 P1-01: sequence must be a CanonicalSeq) — canon over undefined/coercible would throw or ambiguate the leaf' };   // guard the leaf inputs so a null/empty/non-canonical config returns structured, never a thrown E-CANON or a coerced `["0"]` leaf
   const { key, value } = checkpointMapLeaf({ domain_shard, genesis_epoch, sequence, checkpoint });
@@ -1776,6 +1804,7 @@ export function verifyCheckpointMapUniqueness(proof, config) {
 }
 export function verifyActiveGenesisUniqueness(proof, config) {
   const c = admitOpts(config); if (c === null) return { authoritative: false, detail: 'config must be an inert record (round-24 P1-01 totality)' };   // round-24 P1-01 — total for null/hostile config
+  { const Pf = admitDeep(proof); if (Pf === ADMIT_REJECT) return { authoritative: false, detail: 'proof is not an inert record (round-27)' }; proof = Pf; }   // round-27 — snapshot
   const { domain_shard, active_genesis, mapRoot } = c;
   if (typeof domain_shard !== 'string' || typeof active_genesis !== 'string' || typeof mapRoot !== 'string') return { authoritative: false, detail: 'missing/invalid uniqueness fields (round-24 P1-01) — canon over undefined would throw' };   // round-24 P1-01 — guard the leaf inputs (null/empty config → structured, never a thrown E-CANON)
   const { key, value } = nameMapLeaf({ domain_shard, active_genesis });
@@ -1815,7 +1844,7 @@ export function verifyKeylogTerminality(head_, proof = {}) {
   if (!isSeq(length)) return { terminal: false, detail: 'length is not a canonical decimal string (round-26 B — a coercible `["1"]`/non-canonical length no longer decodes via BigInt())' };   // round-26 B — CanonicalSeq before BigInt: BigInt(["1"]) === 1n would coerce an array
   const L = BigInt(length);
   if (L < 1n) return { terminal: false, detail: 'empty key-log' };
-  const p = (proof && typeof proof === 'object') ? proof : {};   // round-25 P1-02 — null-total: `verifyKeylogTerminality(head, null)` no longer dereferences `null.headProof` (default `= {}` only catches undefined)
+  const p0 = admitDeep(proof); const p = (p0 !== ADMIT_REJECT && p0 && typeof p0 === 'object') ? p0 : {};   // round-25 P1-02 null-total + round-27 snapshot: a getter on the Merkle proof (index/siblings) is read once, never re-read after the depth/root check
   const hp = p.headProof || p;
   if (!hp || !Array.isArray(hp.siblings) || !isSeq(hp.index) || BigInt(hp.index) !== L - 1n) return { terminal: false, detail: 'head proof missing or index ≠ length-1 (round-26 B — the Merkle index is a CanonicalSeq, no String([...]) coercion)' };
   // P0-5 (rc.35 audit) — the proof depth MUST be EXACTLY ceil(log2(width)), width = next-pow2(L). An UNDER-DEPTH proof
@@ -2070,6 +2099,7 @@ export const REGISTRY = deepFreeze({   // round-25 P0-04 — DEEP-frozen: the ca
 //     is 'provisional'. 'complete' (no-omission, needs the signed-cadence grid, F.4) is a future rung (#69 C).
 export function verifyStream(frames, config) {
   const c = admitOpts(config); if (c === null) return { complete: 'none', detail: 'config must be an inert record (round-24 P1-01 totality)' };   // round-24 P1-01 (self-audit) — the parallel stream surface, total for null/hostile config
+  { const Fr = admitDeep(frames); if (Fr === ADMIT_REJECT) return { complete: 'none', detail: 'frames are not an inert record (round-27)' }; frames = Fr; }   // round-27 — snapshot
   const { genesis, keylog, checkpoint, cadenceLog, requirePerFrameValid = true } = c;
   if (!Array.isArray(frames) || !frames.length) return { complete: 'none' };
   const authority = frames[0]?.state?.id?.domain_shard;                // §11.3: a stream belongs to ONE authority
@@ -2286,7 +2316,8 @@ async function anchoredByProofs(content_hash, proofs, substrateVerify, opDeadlin
     const incl = verifyAnchor(content_hash, proof);   // inclusion only (no substrateVerify → sync)
     if (!incl.inclusion || !substrateVerify) continue;
     const leafMs = opDeadline ? Math.max(1, Math.min(SUBSTRATE_DEADLINE_MS, opDeadline - Date.now())) : SUBSTRATE_DEADLINE_MS;
-    let sub; try { sub = await withDeadline(substrateVerify(proof.anchor, proof.root), leafMs); } catch { continue; }   // round-21 P1-01 / round-23 P1-05 — a connector throw OR a hang is UNAVAILABLE evidence, never a host exception or an infinite block
+    let sub; try { sub = await withDeadline(substrateVerify(proof.anchor, proof.root, { deadline: opDeadline }), leafMs); } catch { if (opDeadline && Date.now() >= opDeadline) return 'resource_limit'; continue; }   // round-21 P1-01 / round-23 P1-05 — a connector throw OR a hang is UNAVAILABLE evidence; round-27 P1-01 — but a timeout that EXHAUSTED the whole-op budget is resource_limit, not a mere unavailable leaf
+    if (opDeadline && Date.now() >= opDeadline) return 'resource_limit';   // round-27 P1-01 — the budget can expire DURING the await (incl. the final leaf); check after every awaited leaf, not only before
     if (substrateFinal(sub)) return true;               // round-18 P0-02 — same closed decoder as verifyAnchor (a bare truthy `final` no longer confirms the witness genesis)
   }
   return false;
@@ -2365,7 +2396,12 @@ export async function witnessNoFork(shard, genesisHash, opts) {
   const anchoredActive = [];
   // round-25 Div2 (F.9 — ρ_v belongs to the VERIFIER): the reference 30 s is a DEFAULT ceiling, never a universal
   // protocol constant. A consumer with a tighter deadline caps the operation → effective budget = min(reference, consumer).
-  const opBudget = (Number.isFinite(maxWitnessOpMs) && maxWitnessOpMs > 0) ? Math.min(WITNESS_OP_DEADLINE_MS, maxWitnessOpMs) : WITNESS_OP_DEADLINE_MS;
+  // round-27 P2-01 — typed policy admission: ONLY an ABSENT budget selects the reference default. A SUPPLIED value that
+  // is not a finite positive integer (0, -1, NaN, Infinity, fractional, non-number) is a malformed policy → refuse, never
+  // silently expand to the 30 s default (which let 0/-1/NaN/Infinity all admit a 20 ms connector and return 'confirmed').
+  if (maxWitnessOpMs !== undefined && !(Number.isInteger(maxWitnessOpMs) && maxWitnessOpMs > 0))
+    return OVER(`maxWitnessOpMs must be a finite positive integer of milliseconds (got ${typeof maxWitnessOpMs === 'number' ? maxWitnessOpMs : typeof maxWitnessOpMs}); an invalid verifier budget is refused, never expanded to the reference default (round-27 P2-01)`);
+  const opBudget = maxWitnessOpMs === undefined ? WITNESS_OP_DEADLINE_MS : Math.min(WITNESS_OP_DEADLINE_MS, maxWitnessOpMs);
   const opDeadline = Date.now() + opBudget;   // round-24 P1-04 — bound the WHOLE witness resolution, not just each leaf
   for (const a of active) {
     const r = await anchoredByProofs(a.content_hash, a.proofs, substrateVerify, opDeadline);
@@ -2387,11 +2423,18 @@ export async function witnessNoFork(shard, genesisHash, opts) {
 // answered by whichever plugin speaks that substrate. §17 registry is the shared vocabulary.
 export function combineSubstrates(verifiers) {
   const list = (Array.isArray(verifiers) ? verifiers : [verifiers]).filter(Boolean);
-  return async (anchor, root) => {
+  return async (anchor, root, ctx) => {
     // round-22 P1-02 + round-23 P1-05 — ISOLATE each plugin AND bound it: a throwing, unreachable, OR never-settling
     // connector must not shadow a later independent one that CAN verify this substrate. A rejection/timeout from one
-    // plugin is that plugin's unavailability, not the seam's.
-    for (const v of list) { let r; try { r = await withDeadline(v(anchor, root)); } catch { continue; } if (r != null) return r; }
+    // plugin is that plugin's unavailability, not the seam's. round-27 P1-01 — STOP starting new plugins once the whole-op
+    // deadline has passed (was: the loop kept firing plugins after the caller returned — detached work). A plugin may
+    // also honor the AbortSignal to cancel its own in-flight work.
+    const ac = typeof AbortController === 'function' ? new AbortController() : null;
+    for (const v of list) {
+      if (ctx?.deadline && Date.now() >= ctx.deadline) { ac?.abort(); return null; }   // budget spent → no new plugin, cancel any signal-honoring work
+      let r; try { r = await withDeadline(v(anchor, root, { deadline: ctx?.deadline, signal: ac?.signal })); } catch { continue; }
+      if (r != null) return r;
+    }
     return null;   // no plugin claimed this substrate → verifyAnchor reports 'unavailable' (honest, not INVALID)
   };
 }

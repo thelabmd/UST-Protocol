@@ -1,0 +1,59 @@
+{
+  "_comment": "The lockstep enforcement registry — DATA consumed by tools/model-lockstep-gate.mjs (round-27 P1-02). Each record is a model invariant asserted as REALIZED, paired with the EXACT public-entry adversarial-closure conformance check that proves the attack is refused. The gate does NOT infer adversariality from English tokens (round-27 P1-02: a positive check named '...never...' bypassed the old regex); it verifies, per record, that (a) the model still states the claim and (b) the named check exists and (conformance being green) passes. Add an enforcement realization => add a record here, or the exhaustiveness pass fails.",
+  "records": [
+    {
+      "id": "L1-one-authority-root",
+      "rev": "rev25",
+      "model_locus": "every downstream\nlayer takes the derived context, never raw fields.",
+      "conformance_check": "C1/L1 a raw pinnedPrior alongside a branded context → INVALID(E-AUTHORITY) — the context is the SOLE root (never raw fields, M2; round-26 P0-01)"
+    },
+    {
+      "id": "L2-recovery-genesis-fixed",
+      "rev": "rev25",
+      "model_locus": "immutable within the epoch",
+      "conformance_check": "C1/L2 raw recoveryKeys/recoveryThreshold alongside a branded context → INVALID(E-AUTHORITY) — recovery is genesis-fixed, never injected from a call argument (F.5l; round-26 P0-02)"
+    },
+    {
+      "id": "L3-evidence-exact-facts",
+      "rev": "rev24",
+      "model_locus": "the EXACT signature-verified",
+      "conformance_check": "M3/D getter-TOCTOU on receipt facts cannot mint an EvidenceHandle whose facts ≠ the signed facts → INVALID (round-26 P0-03, L3 closed)"
+    },
+    {
+      "id": "L3b-genesis-context-exact",
+      "rev": "rev24",
+      "model_locus": "the same snapshot binds `verifiedGenesisContext`",
+      "conformance_check": "M2/D verifiedGenesisContext: a getter on the genesis (TOCTOU) cannot mint a context whose scope ≠ the verified genesis → null (round-26 D — snapshot once)"
+    },
+    {
+      "id": "L5-total-non-null",
+      "rev": "rev24",
+      "model_locus": "totality includes malformed non-null on EVERY argument",
+      "conformance_check": "round-26 L5 malformed non-null on trailing args: resolveCadence and verifyJson accept a null trailing arg and return structured (no host throw)"
+    },
+    {
+      "id": "L4-witness-budget-public-entry",
+      "rev": "rev27",
+      "model_locus": "threaded through the PUBLIC entry",
+      "conformance_check": "round-26 P1-03/L4 resolveByDiscovery THREADS the consumer witness budget (maxWitnessOpMs) through the PUBLIC entry → a tight budget resource-limits the witness, no false served-list HIGH (F.9 ρ_v)"
+    },
+    {
+      "id": "R27-authority-graph-snapshot",
+      "rev": "rev28",
+      "model_locus": "authority graph crosses the ONE inert snapshot boundary",
+      "conformance_check": "round-27 P0-02 a getter on a checkpoint body cannot sign one body and mint another → INVALID(E-MALFORMED) (the chain crosses the snapshot boundary)"
+    },
+    {
+      "id": "R27-witness-budget-final-leaf",
+      "rev": "rev28",
+      "model_locus": "a budget exhausted on the FINAL awaited leaf",
+      "conformance_check": "round-27 P1-01 a budget exhausted on the FINAL leaf → INDETERMINATE(resource_limit), never reported as pending"
+    },
+    {
+      "id": "R27-witness-budget-typed-admission",
+      "rev": "rev28",
+      "model_locus": "ONLY an ABSENT budget selects the reference default",
+      "conformance_check": "round-27 P2-01 invalid maxWitnessOpMs (0/-1/NaN/Infinity/fractional) is REFUSED (resource_limit), never expanded to the reference default"
+    }
+  ]
+}
