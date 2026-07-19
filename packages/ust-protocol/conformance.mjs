@@ -4,6 +4,8 @@
 import * as P from './index.mjs';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createPrivateKey, createPublicKey } from 'node:crypto';
+import { __setWitnessClockForConformance } from './_clock.mjs';   // rev33 R4 — the witness clock is verifier-owned in an INTERNAL module; the harness drives it deterministically HERE (not through public opts), then restores
+const withWitnessClock = async (clock, body) => { __setWitnessClockForConformance(clock); try { return await body(); } finally { __setWitnessClockForConformance(); } };
 
 const V = JSON.parse(readFileSync(new URL('../../vectors/conformance-vectors.json', import.meta.url)));
 function kp(seedHex) {
@@ -468,15 +470,23 @@ console.log('\n═════════════════════�
   //   tight budget + a never-settling substrate resource-limits the witness (two canon-distinct anchors: the whole-op
   //   deadline trips on the 2nd leaf, deterministic), so the tier does NOT upgrade to a served-list HIGH after the budget.
   const leafRoot = P.Hbytes('ust:leaf', Buffer.from(gHash, 'utf8'));
-  // round-31 — deterministic budget exhaustion THROUGH the public entry via the injected clock (__nowMs survives admitOpts,
-  //   which preserves function capabilities): consulting the leaf's substrate flips the clock past the whole-op deadline, so
-  //   the tier does NOT upgrade to served-list HIGH after the budget. No timer race — the substrate resolves at once.
+  // rev33 R4 — deterministic budget exhaustion driven by the VERIFIER-OWNED clock (set via the internal _clock module,
+  //   NOT a public opts field): consulting the leaf's substrate advances the module clock past the whole-op deadline, so
+  //   the tier does NOT upgrade to served-list HIGH after the budget. No timer race; no caller-writable time surface.
   let bSpent = false; const bNow = () => (bSpent ? 1_000_000 : 1000); const bSV = () => { bSpent = true; return { final: false }; };
   const budgetAnchors = [{ root: leafRoot, path: [], anchor: { substrate: 'bitcoin-ots', block_height: 900001 } }];
   const budgetLog = wlog([{ content_hash: gHash, superseded_by: null, anchors: budgetAnchors }], gHash);
-  const rBudget = await P.resolveByDiscovery(doc, { context: 'data', maxWitnessOpMs: 50, __nowMs: bNow }, { fetchImpl: mk(budgetLog), substrateVerify: bSV });
+  const rBudget = await withWitnessClock(bNow, () => P.resolveByDiscovery(doc, { context: 'data', maxWitnessOpMs: 50 }, { fetchImpl: mk(budgetLog), substrateVerify: bSV }));
   check('round-26 P1-03/L4 resolveByDiscovery THREADS the consumer witness budget (maxWitnessOpMs) through the PUBLIC entry → a tight budget resource-limits the witness, no false served-list HIGH (F.9 ρ_v)',
     rBudget.verdict.no_fork !== 'served-list');
+  // rev33 R4 (round-29 P0-02) — the clock is NOT caller-writable: a hostile non-monotonic `__nowMs` passed in the PUBLIC
+  //   opts is DEAD (never read), so it cannot expand the leaf timeout and mint a served-list HIGH. Same document, same
+  //   tight budget, an adversarial clock in opts → the SAME resource-limited verdict as without it.
+  let eSpent = false; const eNow = () => (eSpent ? 1_000_000 : 1000); const eSV = () => { eSpent = true; return { final: false }; };
+  let ecalls = 0; const evilClock = () => { ecalls++; return ecalls === 1 ? 1000 : 0; };   // non-monotonic: would REWIND the deadline to grant the slow connector time — IF it were read
+  const rEvil = await withWitnessClock(eNow, () => P.resolveByDiscovery(doc, { context: 'data', maxWitnessOpMs: 50, __nowMs: evilClock }, { fetchImpl: mk(budgetLog), substrateVerify: eSV }));
+  check('R4 CLOCK-OWNED: a hostile __nowMs in public opts is DEAD (never read) — it cannot expand the witness budget or flip resource_limit into a served-list HIGH (round-29 P0-02; ρ_v belongs to the verifier)',
+    ecalls === 0 && rEvil.verdict.no_fork !== 'served-list');
   // round-18 P0-01 — forkChoice returns the IMMUTABLE snapshot: a live mutation during the substrate await cannot make the returned canonical object differ from its proven content_hash (F.5c: canonical = the dᵢ with content_hash(dᵢ) ∈ F_t). Genesis-key-signed doc ⇒ authoritative with no key-log.
   const gkDoc = P.seal(P.buildState({ domain_shard: 'wit-test.example', ust_id: 'ust:20260713.150000', key_id: rootW.key_id, class: 'observation' }, T, { r: { kind: 'captured', value: { v: 'A' } } }), rootW.priv, rootW.pubB64);
   const fcCand = { ...gkDoc, proof: anchorOf(P.contentHash(gkDoc)) };
@@ -1134,16 +1144,16 @@ console.log('\n═════════════════════�
     const AGW = 'sha256:' + 'ab'.repeat(32), shard = 'w.example';
     const wRoot = P.Hbytes('ust:leaf', Buffer.from(AGW, 'utf8'));                       // single-leaf inclusion so anchoredByProofs reaches the substrate call
     const wp = (n) => ({ root: wRoot, path: [], anchor: { substrate: 'test-anchor', n } });
-    // round-31 — budget exhaustion is DETERMINISTIC via an INJECTED clock (__nowMs), not wall-clock. Consulting a leaf's
-    //   substrate flips the clock past the whole-op deadline, so resource_limit trips with ZERO timer race — this KILLS the
-    //   recurring round-27/28 CI flake at the root (no anchor-count padding, no never-settling promise; the substrate
-    //   resolves AT ONCE, so no real setTimeout is ever in play). The clock is resource-budget-only, never a security time.
+    // rev33 R4 — budget exhaustion is DETERMINISTIC via the VERIFIER-OWNED module clock (set through the internal _clock
+    //   module, NOT a public opts field). Consulting a leaf's substrate advances that clock past the whole-op deadline, so
+    //   resource_limit trips with ZERO timer race — this KILLS the recurring round-27/28 CI flake at the root (the substrate
+    //   resolves AT ONCE, no real setTimeout in play) WITHOUT exposing any caller-writable time surface (round-29 P0-02).
     const spentClock = () => { let spent = false; return { now: () => (spent ? 1_000_000 : 1000), sv: () => { spent = true; return { final: false }; } }; };
     const log = JSON.stringify({ domain_shard: shard, genesis_log: [{ content_hash: AGW, anchors: [wp('1'), wp('2')] }] });
     const fetchW = async () => ({ ok: true, headers: { get: () => undefined }, arrayBuffer: async () => new TextEncoder().encode(log).buffer });
     const fastSV = () => ({ final: true, time: '2027-01-01T00:00:00Z' });
     const c1 = spentClock();
-    const capped = await P.witnessNoFork(shard, AGW, { fetchImpl: fetchW, substrateVerify: c1.sv, maxWitnessOpMs: 50, __nowMs: c1.now });
+    const capped = await withWitnessClock(c1.now, () => P.witnessNoFork(shard, AGW, { fetchImpl: fetchW, substrateVerify: c1.sv, maxWitnessOpMs: 50 }));
     check('F.9 T_v realization: the whole-operation witness budget is min(reference default, consumer deadline) — a tighter consumer deadline trips INDETERMINATE(resource_limit) naming the effective budget',
       capped.status === 'indeterminate' && capped.reason === 'resource_limit' && capped.detail.includes('50 ms whole-operation budget'));
     check('F.9 T_v control: the same witness with no consumer cap verifies (confirmed) — the cap lowers decisibility, never flips a verdict',
@@ -1161,7 +1171,7 @@ console.log('\n═════════════════════�
     const oneAnchorLog = JSON.stringify({ domain_shard: shard, genesis_log: [{ content_hash: AGW, anchor: wp('1') }] });
     const fetch1 = async () => ({ ok: true, headers: { get: () => undefined }, arrayBuffer: async () => new TextEncoder().encode(oneAnchorLog).buffer });
     const c2 = spentClock();
-    const lastLeaf = await P.witnessNoFork(shard, AGW, { fetchImpl: fetch1, substrateVerify: c2.sv, maxWitnessOpMs: 50, __nowMs: c2.now });   // the ONLY leaf's substrate consult spends the budget → the post-await deadline check returns resource_limit (never falls through to 'pending')
+    const lastLeaf = await withWitnessClock(c2.now, () => P.witnessNoFork(shard, AGW, { fetchImpl: fetch1, substrateVerify: c2.sv, maxWitnessOpMs: 50 }));   // the ONLY leaf's substrate consult spends the budget → the post-await deadline check returns resource_limit (never falls through to 'pending')
     check('round-27 P1-01 a budget exhausted on the FINAL leaf → INDETERMINATE(resource_limit), never reported as pending',
       lastLeaf.status === 'indeterminate' && lastLeaf.reason === 'resource_limit');
   }

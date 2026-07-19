@@ -713,6 +713,19 @@ admission reads through canon's channels), no longer as the load-bearing claim. 
 at its descriptor (the round-26 TOCTOU closure holds); a Proxy that hides behind a data descriptor no longer wins because
 its `[[Get]]` face — not the descriptor face — is the one admitted and verified.
 
+**Realization (rev33 — R4: the verifier's faculties are its own, never caller-supplied).** F.9 places every verifier in the
+PAIR `(ℐ_v, ρ_v)`: the resource budget `ρ_v` (its time coordinate `T_v` among them) belongs to the VERIFIER, not the
+request. A round-29 audit showed the code violated this: the witness-budget clock was exposed as a public `opts.__nowMs`
+field, so a caller could pass a NON-MONOTONIC clock through the DATA PATH (`verify`/`resolveByDiscovery` opts) that rewinds
+the deadline, expands the effective leaf timeout, lets a slow connector return a final receipt, and flips
+`INDETERMINATE(resource_limit)` into a served-list `VALID:HIGH` (reproduced on live code — the "self-limits, mints no
+trust" claim was false). The controller rule R4: the input may carry only a formalized POLICY that TIGHTENS `ρ_v` (the
+scalar `maxWitnessOpMs`, which only lowers the budget), never the MECHANISM of measurement. The clock now lives in an
+INTERNAL module outside the package's public API — a wire caller passing a document cannot reach it — is monotone-guarded
+(a backward source is clamped so it can never grant more time than a forward clock), and the per-leaf timeout is bounded
+independently of it. A hostile `__nowMs` in the public opts is DEAD (*"R4 CLOCK-OWNED: a hostile __nowMs in public opts is DEAD (never read) — it cannot expand the witness budget or flip resource_limit into a served-list HIGH (round-29 P0-02; ρ_v belongs to the verifier)"*). The conformance harness drives the clock deterministically through that same internal
+module (a code-level test capability, not a data-path surface), which also retires the wall-clock CI flake at its root.
+
 **Definition (VerifiedAuthorityContext).** For a genesis document `g` whose class and self-signature VERIFY
 (`resolveCheckpointRoots` — P0-2: verify-before-extract):
 
