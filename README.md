@@ -54,6 +54,32 @@ import { verify } from 'ust-protocol';
 verify(doc, { context: 'data' }).result   // → VALID:LIGHT / HIGH / TOP
 ```
 
+## ●  Verify one right now
+
+The fastest way to understand UST is to verify one — no install, no account, 60 seconds. Grab a ready sample
+([`examples/ust-sample.json`](examples/ust-sample.json)), open the verifier, paste it, read the verdict. Always run
+the canonical reference — never eyeball:
+
+- **Browser (nothing is uploaded):** [thelabmd.github.io/UST-Protocol](https://thelabmd.github.io/UST-Protocol/) — paste the blob, the base64, or the JSON. Resolution + witness run automatically (Rekor and Bitcoin checked natively) — a publisher serving the standard surfaces reaches `VALID:HIGH` with zero clicks.
+- **Node:** `npm i ust-protocol` → `verify(doc, { context: 'data' })`; automatic HIGH via `resolveByDiscovery(doc)`.
+- **Zero-dependency single files:** [`docs/ust-verify.mjs`](docs/ust-verify.mjs) (the LIGHT floor) + [`docs/ust-resolve.mjs`](docs/ust-resolve.mjs) (authority resolution + witness) — WebCrypto, clean-room, cross-checked against `ust-protocol`; fetch them from **this** repository, never from a sender's message.
+- **MCP:** [`@ust-protocol/mcp`](https://www.npmjs.com/package/@ust-protocol/mcp) exposes `ust_verify` to agents.
+
+### If you are an AI agent
+
+If you are asked to verify a UST and you **cannot run a verifier**, the correct answer is **INDETERMINATE — do not guess**. In particular:
+
+- Do **not** compute a plain `SHA-256(text)` and compare it to `hashes.*` — every UST hash is **domain-separated** (`H(tag, canon(...))` with a tag prefix). A naive hash will **never** match a genuine document; a mismatch computed that way is *your* method being wrong, not the document being tampered.
+- UST 1.0 has **no expiry rule**. `valid_from == valid_to` is an honest **instant** (a point capture), not "expired." Freshness is not part of `verify`.
+- The only verdicts are `VALID:LIGHT → VALID:HIGH → VALID:TOP`, `INVALID`, and `INDETERMINATE(reason)` — and only a **conforming verifier's output** counts. Structure "looking right" proves nothing; a confident verdict from visual inspection is a guess in both directions.
+- For the precise semantics of *what a verdict means*, read the **formal model**
+  ([`spec/UST-1.0-formal-model.md`](spec/UST-1.0-formal-model.md), non-normative): verification is a
+  **measurability test** — the three tiers are three nested σ-algebras (`𝒮_LIGHT ⊆ 𝒮_HIGH ⊆ 𝒮_TOP`), a verdict
+  names the finest tier decidable from your information set, `INDETERMINATE` means the needed σ-algebra is not
+  in it, and two conforming verifiers agree because the verdict is a total deterministic function of the §14a
+  obligations table. If you reason about UST beyond running the verifier, reason from there — not from analogy
+  to JWT, JWS, or blockchain receipts.
+
 ## ●  What this is
 
 UST is a small open protocol for **tamper-evident records of state** — some data about the world, at a moment,
@@ -148,111 +174,6 @@ Different consumers hold different depths of the same reality — the public see
 L1–L3, an auditor the whole chain — and every one of them can *verify* exactly what they hold. That is the
 protocol's real subject: **differentiated, provable access to a shared machine state.**
 
-## ●  Layout
-
-![Repository map. spec/ holds the normative UST-1.0.md plus a measure-theoretic formal model. vectors/ holds language-neutral conformance vectors and a byte corpus — the cross-implementation arbiter. packages/ holds ust-protocol (the zero-dep reference verifier + producer), ust-cli (the ust command: verify, canon, the HIGH genesis ceremony, witness), ust-mcp (an MCP server so agents verify natively), ust-lite (a byte-identical minimal subset), ust-web-signer (WebCrypto browser signing with non-extractable keys), and ust-ots-verify / ust-rekor-verify (opt-in Bitcoin/OTS and Sigstore Rekor anchor substrates). docs/ is the client-side web verifier plus zero-dependency single-file verifiers. tools/ are the drift gates that keep spec = code = vectors = README = these panels in sync.](.github/ust-map.svg)
-
-| Path | What |
-|------|------|
-| `spec/UST-1.0.md` | the specification (normative) |
-| `spec/UST-1.0-formal-model.md` | a measure-theoretic semantics (non-normative appendix) |
-| `PORTING.md` | porting UST to another language — the narrowed value model, the vector arbiter, the crypto boundary |
-| `vectors/` | deterministic conformance vectors — any implementation should pass them (the cross-language canon arbiter) |
-| `packages/ust-protocol/` | the stateless reference verifier + producer ([npm](https://www.npmjs.com/package/ust-protocol)) |
-| `packages/ust-mcp/` | an MCP server exposing UST to agents ([npm](https://www.npmjs.com/package/@ust-protocol/mcp)) |
-| `packages/ust-web-signer/` | WebCrypto browser signer ([npm](https://www.npmjs.com/package/@ust-protocol/web-signer)) |
-| `packages/ust-cli/` | the `ust` command — verify / canon / the HIGH genesis ceremony / witness ([npm](https://www.npmjs.com/package/@ust-protocol/cli)) |
-| `packages/ust-ots-verify/` | opt-in Bitcoin (OpenTimestamps) anchor-substrate plugin ([npm](https://www.npmjs.com/package/@ust-protocol/ots-verify)) |
-| `packages/ust-rekor-verify/` | opt-in Sigstore Rekor anchor-substrate plugin ([npm](https://www.npmjs.com/package/@ust-protocol/rekor-verify)) |
-| `extension/` | "Make it UST" — a demo Chrome extension: sign by selection, verify by selection (LIGHT) |
-| `docs/` | the [web verifier](https://thelabmd.github.io/UST-Protocol/) (client-side, GitHub Pages) + `ust-verify.mjs`, a zero-dependency verifier + `llms.txt` |
-| `examples/` | sample documents (valid + tampered) and verification recipes |
-
-## ●  Quickstart
-
-```
-npm install
-npm test          # the conformance runner — asserts spec == package == vectors version
-```
-
-Produce and verify a LIGHT transcript:
-
-```js
-import { generateSigner, signObservation, nowFrame } from '@ust-protocol/web-signer';
-import { verify } from 'ust-protocol';
-const s = await generateSigner();                              // Ed25519, non-extractable
-const { ust_id, time } = nowFrame();                           // instant capture frame
-const doc = await signObservation(s, { ust_id, time, data: { capture: { kind: 'captured', value: { text: 'exact bytes' } } } });
-console.log(verify(doc, { context: 'data' }).result);          // → VALID:LIGHT
-```
-
-## ●  The `ust` CLI
-
-![The ust CLI — one entrypoint, the whole command surface (parsed from the real binary’s help). Install with npm i -g @ust-protocol/cli. The 10 subcommands: verify <file|-> (verify a transcript (exit 0 = VALID, 1 = not; --require-anchored floors at TOP)); canon <file|-> (print canonical bytes + hash (cross-language diff)); genesis --domain <d> (run the HIGH genesis ceremony (add --publish cf for one-click serving)); rotate --domain <d> --root <enc> (APPEND a key rotation to the served log (never re-mint; old docs stay valid)); discovery <domain> (attest the §20.1 serving contract (any infra)); publish cf --domain <d> --genesis <f> (deploy the CF serving adapter for an existing genesis); mirror <domain> (publish + attest a SECOND-vendor mirror (§20.1 vendor-independence)); stream <frames…> (RANGE verdict: chain · forks · completeness (needs --checkpoint for proven)); forkchoice <docs…> (pick the CANONICAL doc among candidates for ONE ust_id (canonical = anchor-included)); witness rekor --domain <d> (log the genesis in a transparency log → automatic no-fork (#68)). Exit 0 = VALID with the tier in the verdict, 1 = not; the ceremony self-verifies its outputs, fail-closed.](.github/ust-cli.svg)
-
-```bash
-npm i -g @ust-protocol/cli    # installs the `ust` command
-ust verify doc.json           # exit 0 = VALID (tier in the verdict), 1 = not; auto-detects genesis/key context
-                              #   auto-resolves discovery + witness → VALID:HIGH out of the box (no-fork as EVIDENCE)
-ust canon  doc.json           # canonical bytes + hash — diff any other-language implementation against this
-ust genesis --domain example.org --profile silver --dns cf-api   # the HIGH name-binding ceremony
-ust witness rekor --domain example.org --deploy                  # log the genesis to Sigstore Rekor + serve the witness
-```
-
-One entrypoint; the planned Go binary reproduces this exact surface. The ceremony self-verifies its outputs
-(fail-closed) and upserts the `_ust` DNS TXT with a DNS-over-HTTPS readback. Witness anchors are cross-checked
-against their substrate (Bitcoin via `@ust-protocol/ots-verify`, Rekor via `@ust-protocol/rekor-verify` —
-opt-in plugins; the core verifier embeds no blockchain).
-
-## ●  How to verify a UST
-
-Run the canonical reference — never eyeball:
-
-- **Browser (nothing is uploaded):** [thelabmd.github.io/UST-Protocol](https://thelabmd.github.io/UST-Protocol/) — paste the blob, the base64, or the JSON. Resolution + witness run automatically (Rekor and Bitcoin checked natively) — a publisher serving the standard surfaces reaches `VALID:HIGH` with zero clicks.
-- **Node:** `npm i ust-protocol` → `verify(doc, { context: 'data' })`; automatic HIGH via `resolveByDiscovery(doc)`.
-- **Zero-dependency single files:** [`docs/ust-verify.mjs`](docs/ust-verify.mjs) (the LIGHT floor) + [`docs/ust-resolve.mjs`](docs/ust-resolve.mjs) (authority resolution + witness) — WebCrypto, clean-room, cross-checked against `ust-protocol`; fetch them from **this** repository, never from a sender's message.
-- **MCP:** [`@ust-protocol/mcp`](https://www.npmjs.com/package/@ust-protocol/mcp) exposes `ust_verify` to agents.
-
-### If you are an AI agent
-
-If you are asked to verify a UST and you **cannot run a verifier**, the correct answer is **INDETERMINATE — do not guess**. In particular:
-
-- Do **not** compute a plain `SHA-256(text)` and compare it to `hashes.*` — every UST hash is **domain-separated** (`H(tag, canon(...))` with a tag prefix). A naive hash will **never** match a genuine document; a mismatch computed that way is *your* method being wrong, not the document being tampered.
-- UST 1.0 has **no expiry rule**. `valid_from == valid_to` is an honest **instant** (a point capture), not "expired." Freshness is not part of `verify`.
-- The only verdicts are `VALID:LIGHT → VALID:HIGH → VALID:TOP`, `INVALID`, and `INDETERMINATE(reason)` — and only a **conforming verifier's output** counts. Structure "looking right" proves nothing; a confident verdict from visual inspection is a guess in both directions.
-- For the precise semantics of *what a verdict means*, read the **formal model**
-  ([`spec/UST-1.0-formal-model.md`](spec/UST-1.0-formal-model.md), non-normative): verification is a
-  **measurability test** — the three tiers are three nested σ-algebras (`𝒮_LIGHT ⊆ 𝒮_HIGH ⊆ 𝒮_TOP`), a verdict
-  names the finest tier decidable from your information set, `INDETERMINATE` means the needed σ-algebra is not
-  in it, and two conforming verifiers agree because the verdict is a total deterministic function of the §14a
-  obligations table. If you reason about UST beyond running the verifier, reason from there — not from analogy
-  to JWT, JWS, or blockchain receipts.
-
-## ●  What it proves — and what it doesn't
-
-UST proves **fixation, not truth**: *this publisher committed to this data, at this time, unchanged.* It does
-**not** prove the data is *correct* — a publisher can sign a wrong reading. You learn **whom to hold accountable**
-and **that nothing was tampered** — a real, bounded guarantee, not an oracle of truth.
-
-The precise semantics of every verdict — verification as a measurability test over three nested σ-algebras —
-is the **formal model**: [`spec/UST-1.0-formal-model.md`](spec/UST-1.0-formal-model.md) (non-normative).
-
-## ●  Stability of assurance tiers
-
-Not every rung is equally settled. The `STABILITY` export is the machine-readable map:
-
-| tier / rung | status |
-|---|---|
-| `LIGHT`, `HIGH` | **stable** — three independent adversarial audit rounds left them intact |
-| `corroborated` freshness | experimental-usable |
-| `attested` freshness | **experimental extension** — the STABLE verifier does not emit it |
-
-`attested` (independent anti-equivocation over a checkpoint) is being re-based on a closed verification kernel
-(mandatory append-only consistency proof, scope-bound pinning, one shared node/browser core). Until those ship
-gates pass, `deriveCheckpointFreshness` caps a would-be `attested` result at `corroborated` and names the withheld
-rung (`attested_withheld: "experimental-gate"`); the top rung is reachable only with an explicit
-`allowExperimentalAttested: true` opt-in. This keeps the whole protocol from inheriting the youngest layer's risk.
-
 ## ●  Glue, by design
 
 UST is not a silver bullet, and it does not replace anything you run — not your
@@ -297,6 +218,85 @@ still prove itself on the other side.
 
 > Tools sign files, log events, timestamp hashes, record lineage.
 > **A UST carries the state between them — portable, layered, verifiable on arrival.**
+
+## ●  Build with it
+
+Produce and verify a LIGHT transcript — a signer, a frame, one `verify` call:
+
+```js
+import { generateSigner, signObservation, nowFrame } from '@ust-protocol/web-signer';
+import { verify } from 'ust-protocol';
+const s = await generateSigner();                              // Ed25519, non-extractable
+const { ust_id, time } = nowFrame();                           // instant capture frame
+const doc = await signObservation(s, { ust_id, time, data: { capture: { kind: 'captured', value: { text: 'exact bytes' } } } });
+console.log(verify(doc, { context: 'data' }).result);          // → VALID:LIGHT
+```
+
+Working on the protocol itself? `npm install && npm test` runs the conformance suite (spec == package == vectors) —
+see [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+## ●  The `ust` CLI
+
+![The ust CLI — one entrypoint, the whole command surface (parsed from the real binary’s help). Install with npm i -g @ust-protocol/cli. The 10 subcommands: verify <file|-> (verify a transcript (exit 0 = VALID, 1 = not; --require-anchored floors at TOP)); canon <file|-> (print canonical bytes + hash (cross-language diff)); genesis --domain <d> (run the HIGH genesis ceremony (add --publish cf for one-click serving)); rotate --domain <d> --root <enc> (APPEND a key rotation to the served log (never re-mint; old docs stay valid)); discovery <domain> (attest the §20.1 serving contract (any infra)); publish cf --domain <d> --genesis <f> (deploy the CF serving adapter for an existing genesis); mirror <domain> (publish + attest a SECOND-vendor mirror (§20.1 vendor-independence)); stream <frames…> (RANGE verdict: chain · forks · completeness (needs --checkpoint for proven)); forkchoice <docs…> (pick the CANONICAL doc among candidates for ONE ust_id (canonical = anchor-included)); witness rekor --domain <d> (log the genesis in a transparency log → automatic no-fork (#68)). Exit 0 = VALID with the tier in the verdict, 1 = not; the ceremony self-verifies its outputs, fail-closed.](.github/ust-cli.svg)
+
+```bash
+npm i -g @ust-protocol/cli    # installs the `ust` command
+ust verify doc.json           # exit 0 = VALID (tier in the verdict), 1 = not; auto-detects genesis/key context
+                              #   auto-resolves discovery + witness → VALID:HIGH out of the box (no-fork as EVIDENCE)
+ust canon  doc.json           # canonical bytes + hash — diff any other-language implementation against this
+ust genesis --domain example.org --profile silver --dns cf-api   # the HIGH name-binding ceremony
+ust witness rekor --domain example.org --deploy                  # log the genesis to Sigstore Rekor + serve the witness
+```
+
+One entrypoint; the planned Go binary reproduces this exact surface. The ceremony self-verifies its outputs
+(fail-closed) and upserts the `_ust` DNS TXT with a DNS-over-HTTPS readback. Witness anchors are cross-checked
+against their substrate (Bitcoin via `@ust-protocol/ots-verify`, Rekor via `@ust-protocol/rekor-verify` —
+opt-in plugins; the core verifier embeds no blockchain).
+
+## ●  What it proves — and what it doesn't
+
+UST proves **fixation, not truth**: *this publisher committed to this data, at this time, unchanged.* It does
+**not** prove the data is *correct* — a publisher can sign a wrong reading. You learn **whom to hold accountable**
+and **that nothing was tampered** — a real, bounded guarantee, not an oracle of truth.
+
+The precise semantics of every verdict — verification as a measurability test over three nested σ-algebras —
+is the **formal model**: [`spec/UST-1.0-formal-model.md`](spec/UST-1.0-formal-model.md) (non-normative).
+
+## ●  Stability of assurance tiers
+
+Not every rung is equally settled. The `STABILITY` export is the machine-readable map:
+
+| tier / rung | status |
+|---|---|
+| `LIGHT`, `HIGH` | **stable** — three independent adversarial audit rounds left them intact |
+| `corroborated` freshness | experimental-usable |
+| `attested` freshness | **experimental extension** — the STABLE verifier does not emit it |
+
+`attested` (independent anti-equivocation over a checkpoint) is being re-based on a closed verification kernel
+(mandatory append-only consistency proof, scope-bound pinning, one shared node/browser core). Until those ship
+gates pass, `deriveCheckpointFreshness` caps a would-be `attested` result at `corroborated` and names the withheld
+rung (`attested_withheld: "experimental-gate"`); the top rung is reachable only with an explicit
+`allowExperimentalAttested: true` opt-in. This keeps the whole protocol from inheriting the youngest layer's risk.
+
+## ●  Layout
+
+![Repository map. spec/ holds the normative UST-1.0.md plus a measure-theoretic formal model. vectors/ holds language-neutral conformance vectors and a byte corpus — the cross-implementation arbiter. packages/ holds ust-protocol (the zero-dep reference verifier + producer), ust-cli (the ust command: verify, canon, the HIGH genesis ceremony, witness), ust-mcp (an MCP server so agents verify natively), ust-lite (a byte-identical minimal subset), ust-web-signer (WebCrypto browser signing with non-extractable keys), and ust-ots-verify / ust-rekor-verify (opt-in Bitcoin/OTS and Sigstore Rekor anchor substrates). docs/ is the client-side web verifier plus zero-dependency single-file verifiers. tools/ are the drift gates that keep spec = code = vectors = README = these panels in sync.](.github/ust-map.svg)
+
+| Path | What |
+|------|------|
+| `spec/UST-1.0.md` | the specification (normative) |
+| `spec/UST-1.0-formal-model.md` | a measure-theoretic semantics (non-normative appendix) |
+| `PORTING.md` | porting UST to another language — the narrowed value model, the vector arbiter, the crypto boundary |
+| `vectors/` | deterministic conformance vectors — any implementation should pass them (the cross-language canon arbiter) |
+| `packages/ust-protocol/` | the stateless reference verifier + producer ([npm](https://www.npmjs.com/package/ust-protocol)) |
+| `packages/ust-mcp/` | an MCP server exposing UST to agents ([npm](https://www.npmjs.com/package/@ust-protocol/mcp)) |
+| `packages/ust-web-signer/` | WebCrypto browser signer ([npm](https://www.npmjs.com/package/@ust-protocol/web-signer)) |
+| `packages/ust-cli/` | the `ust` command — verify / canon / the HIGH genesis ceremony / witness ([npm](https://www.npmjs.com/package/@ust-protocol/cli)) |
+| `packages/ust-ots-verify/` | opt-in Bitcoin (OpenTimestamps) anchor-substrate plugin ([npm](https://www.npmjs.com/package/@ust-protocol/ots-verify)) |
+| `packages/ust-rekor-verify/` | opt-in Sigstore Rekor anchor-substrate plugin ([npm](https://www.npmjs.com/package/@ust-protocol/rekor-verify)) |
+| `extension/` | "Make it UST" — a demo Chrome extension: sign by selection, verify by selection (LIGHT) |
+| `docs/` | the [web verifier](https://thelabmd.github.io/UST-Protocol/) (client-side, GitHub Pages) + `ust-verify.mjs`, a zero-dependency verifier + `llms.txt` |
+| `examples/` | sample documents (valid + tampered) and verification recipes |
 
 ## ●  License
 
