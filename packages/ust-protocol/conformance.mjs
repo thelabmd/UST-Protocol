@@ -3,7 +3,7 @@
 // Negatives are CONSTRUCTED from the live impl (not skipped), so this is a real pass/fail. HIGH/TOP built inline.
 import * as P from './index.mjs';
 import { readFileSync, writeFileSync } from 'node:fs';
-import { createPrivateKey, createPublicKey, createHash } from 'node:crypto';
+import { createPrivateKey, createPublicKey, createHash, sign } from 'node:crypto';
 import { __setWitnessClockForConformance, witnessNow } from './_clock.mjs';   // rev33/36 R4 — the witness clock is verifier-owned in an INTERNAL module; the harness drives it deterministically HERE (not through public opts), then restores
 const withWitnessClock = async (clock, body) => { __setWitnessClockForConformance(clock); try { return await body(); } finally { __setWitnessClockForConformance(); } };
 
@@ -1042,7 +1042,7 @@ console.log('\n═════════════════════�
   const C0 = P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: D, genesis_epoch: EP, sequence: '0', active_genesis: AG, current_key_id: K0.key_id, keylog }), K0.priv, K0.pubB64);
   const headId = P.authorityCheckpointId(C0);
   const KC = kp('61'.repeat(32));                                            // the consumer-admitted connector (M3)
-  const connectors = { [KC.key_id]: { pub: KC.pubB64, trust_domain: 'btc-watch', allowed_proof_kinds: ['pow-header-chain', 'rfc3161-tsa'] } };
+  const connectors = { [KC.key_id]: { pub: KC.pubB64, trust_domain: 'btc-watch', allowed_proof_kinds: ['pow-header-chain', 'rfc3161-tsa', 'transparency-log'] } };
   const trust = { connectors };
   const rcpt = (subj, facts, kind = 'pow-header-chain') => P.buildEvidenceReceipt({ domain_shard: D, active_genesis: AG, subject: subj, proof_kind: kind, facts, issued_at: '2026-01-01T00:00:00Z' }, KC.priv, KC.pubB64);
   const btc = (pos, subj) => rcpt(subj, { substrate: 'bitcoin', position: String(pos) });
@@ -1053,8 +1053,26 @@ console.log('\n═════════════════════�
   check('PhB all conjuncts (authorized × head∈root × proven-after) → corroborated', (r => r.result === 'VALID' && r.keylog_freshness === 'corroborated' && r.head === headId)(F({ target, commitment: commit, terminality: term })));
   check('PhB CEILING: corroborated carries anti_equivocation:unverified and is NEVER attested', (r => r.keylog_freshness === 'corroborated' && r.anti_equivocation === 'unverified' && r.keylog_freshness !== 'attested')(F({ target, commitment: commit, terminality: term })));
   check('PhB commitment NOT proven-after target → INDETERMINATE(order_unproven)', (r => r.result === 'INDETERMINATE' && r.reason === 'order_unproven')(F({ target, commitment: btc(700, headId), terminality: term })));
-  check('PhB two not_after upper bounds → unproven → order_unproven', (r => r.reason === 'order_unproven')(F({ target: { active_genesis: AG, domain_shard: D, subject: 'ust:target', anchor: rcpt('ust:target', { not_after: '2027-01-01T00:00:00Z' }, 'rfc3161-tsa') }, commitment: rcpt(headId, { not_after: '2027-02-01T00:00:00Z' }, 'rfc3161-tsa'), terminality: term })));
+  check('PhB overlapping same-clock intervals prove neither → order_unproven (round-33: rfc3161-tsa facts are CLOSED — clock_id + both real-calendar bounds)', (r => r.reason === 'order_unproven')(F({ target: { active_genesis: AG, domain_shard: D, subject: 'ust:target', anchor: rcpt('ust:target', { clock_id: 'c1', not_before: '2027-01-01T00:00:00Z', not_after: '2027-01-03T00:00:00Z' }, 'rfc3161-tsa') }, commitment: rcpt(headId, { clock_id: 'c1', not_before: '2027-01-02T00:00:00Z', not_after: '2027-01-04T00:00:00Z' }, 'rfc3161-tsa'), terminality: term })));
   check('PhB terminality missing → INDETERMINATE(terminality_unproven)', (r => r.reason === 'terminality_unproven')(F({ target, commitment: commit })));
+  // round-33 P0-01/02 — the PUBLIC receipt admission applies the kernel's CLOSED typed ADT (a receipt the kernel would
+  // reject can no longer mint a branded VerifiedEvidence handle) and reads issuer_id from the ADMITTED snapshot only.
+  const scR33 = { domain_shard: D, active_genesis: AG, genesis_epoch: P.genesisEpoch(AG) };
+  const signRcR33 = (claim, issuer = KC.key_id) => { const sg = sign(null, Buffer.from(P.canon({ purpose: 'ust:evidence-receipt-signature', claim }), 'utf8'), KC.priv).toString('base64url'); return { claim, issuer_id: issuer, sig: { alg: 'Ed25519', key_id: KC.key_id, pub: KC.pubB64, sig: sg } }; };
+  const tlR33 = (over = {}) => ({ version: '1', purpose: 'ust:evidence-receipt', domain_shard: D, active_genesis: AG, genesis_epoch: P.genesisEpoch(AG), subject: 'ust:target', proof_kind: 'transparency-log', facts: { log_id: 'rekor', index: '900' }, issued_at: '2026-01-01T00:00:00Z', ...over });
+  const vrR33 = (rc) => P.verifyEvidenceReceipt(rc, { subject: 'ust:target', scope: scR33, connectors });
+  check('R33 P0-01 signed transparency-log receipt with an EXTRA facts field → INVALID (closed per-kind facts, kernel-aligned)', vrR33(signRcR33(tlR33({ facts: { log_id: 'rekor', index: '900', extra: 'x' } }))).result === 'INVALID');
+  check('R33 P0-01 shape-valid IMPOSSIBLE issued_at 9999-99-99T99:99:99Z → INVALID (real calendar, not just regex)', vrR33(signRcR33(tlR33({ issued_at: '9999-99-99T99:99:99Z' }))).result === 'INVALID');
+  check('R33 P0-01 unregistered proof_kind → INVALID (closed kind registry, own-key)', vrR33(signRcR33(tlR33({ proof_kind: 'made-up', facts: {} }))).result === 'INVALID');
+  check('R33 P0-01 EXTRA claim field → INVALID (exact claim keys)', vrR33(signRcR33({ ...tlR33(), rogue: 'x' })).result === 'INVALID');
+  check('R33 P0-01 EXTRA envelope field → INVALID (envelope exactly { claim, issuer_id, sig })', vrR33({ ...signRcR33(tlR33()), rogue: 'x' }).result === 'INVALID');
+  check('R33 P0-01 wrong per-kind facts (pow {substrate,position} worn by a transparency-log) → INVALID', vrR33(signRcR33(tlR33({ facts: { substrate: 'bitcoin', position: '900' } }))).result === 'INVALID');
+  check('R33 P0-01 a well-typed transparency-log receipt is STILL VALID (kernel-aligned, no over-reject)', vrR33(signRcR33(tlR33())).result === 'VALID');
+  check('R33 P0-02 issuer_id two-face Proxy → INVALID; issuer_id read from the ADMITTED snapshot R, never a raw re-read', (() => {
+    let reads = 0; const base = signRcR33(tlR33());
+    const px = new Proxy(base, { get(t, k, r) { if (k === 'issuer_id') { reads++; return reads === 1 ? 'sha256:' + '00'.repeat(32) : KC.key_id; } return Reflect.get(t, k, r); } });
+    return vrR33(px).result === 'INVALID' && reads <= 1;   // the fixed check reads R.issuer_id (frozen face-1), so the raw second face is never consulted
+  })());
   check('PhB commitment not bound to checkpoint id → INDETERMINATE(evidence_unverified)', (r => r.result === 'INDETERMINATE' && r.reason === 'evidence_unverified')(F({ target, commitment: btc(900, 'sha256:' + '00'.repeat(32)), terminality: term })));
   check('PhB unauthorized chain (wrong signer) → INVALID, freshness unverified', (r => r.result === 'INVALID' && r.keylog_freshness === 'unverified')(P.deriveCheckpointFreshness([P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: D, genesis_epoch: EP, sequence: '0', active_genesis: AG, current_key_id: K0.key_id, keylog }), KX.priv, KX.pubB64)], { genesisAuthority: gAuth, target, commitment: commit, terminality: term })));
   check('PhB checkpoint active_genesis ≠ target → INVALID(E-GENESIS)', (r => r.result === 'INVALID' && r.error === 'E-GENESIS')(F({ target: { active_genesis: 'sha256:' + '99'.repeat(32), domain_shard: D, anchor: btc(800, 'ust:target') }, commitment: commit, terminality: term })));

@@ -162,6 +162,18 @@
       "rev": "rev40",
       "model_locus": "a `key-pinned` atom that lifts no Tier",
       "conformance_check": "R32 Horn≡projectTier: every identity×time cell — max Horn Tier == projectTier"
+    },
+    {
+      "id": "R41-admission-closed-adt",
+      "rev": "rev41",
+      "model_locus": "applies the SAME CLOSED TYPED ADT the kernel's",
+      "conformance_check": "R33 P0-01 signed transparency-log receipt with an EXTRA facts field → INVALID (closed per-kind facts, kernel-aligned)"
+    },
+    {
+      "id": "R41-issuer-admitted-snapshot",
+      "rev": "rev41",
+      "model_locus": "the raw-re-read class is closed at this one residual",
+      "conformance_check": "R33 P0-02 issuer_id two-face Proxy → INVALID; issuer_id read from the ADMITTED snapshot R, never a raw re-read"
     }
   ]
 }

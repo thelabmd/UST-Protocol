@@ -839,6 +839,23 @@ derived `TierHIGH` while `projectTier` returned `LIGHT`. Fix: `pinned` maps to a
 rule, and a grid check pins every derived `Tier*` to `projectTier` over the whole identity×time lattice (*"R32 Horn≡projectTier: every identity×time cell — max Horn Tier == projectTier"*). (round-32 P1-01, conceded: the byte-vectors
 are a portability oracle, not the semantic root — see rev38's corrected R2 bound above.)
 
+**Realization (rev41 — the public receipt ADMISSION applies the kernel's closed typed ADT; and issuer_id is read from the
+admitted snapshot, not the raw receipt).** rev40 mirrored the kernel only at the ORDER COORDINATE (`decodeOrderFacts`),
+but a round-33 audit showed the FULL public-vs-kernel evidence judgment still SPLIT: `verifyEvidenceReceipt` validated the
+receipt loosely — `facts` merely "an object" (extra signed fields allowed), `issued_at` only `RFC3339Z.test` (the SHAPE,
+so `9999-99-99T99:99:99Z` passed), no registered-`proof_kind` check, no exact per-kind facts. So a receipt the KERNEL
+rejects (`decodeRec(FACTS_SCHEMA[kind])` / `bad:issued_at`) was accepted publicly and minted a BRANDED VerifiedEvidence
+handle → corroborated freshness. A VerifiedEvidence brand is a capability certificate for the WHOLE receipt, not only
+the two order fields one consumer reads, so consumer-side typing cannot repair it — admission typing is REQUIRED
+(round-33 divergence_2, conceded). Fix (P0-01): `verifyEvidenceReceipt` applies the SAME CLOSED TYPED ADT the kernel's
+`closedReceipt` does — exact envelope `{ claim, issuer_id, sig }`, typed sig wrapper, exact+typed claim (real-calendar
+`issued_at` via `isRealRfc3339Z` = `pRFC`), registered `proof_kind`, exact per-kind facts — so a kernel-invalid receipt
+mints no handle (*"R33 P0-01 signed transparency-log receipt with an EXTRA facts field → INVALID (closed per-kind facts, kernel-aligned)"*). And (P0-02) the seam re-read the RAW `receipt.issuer_id` after admission — an R3 violation a two-face
+Proxy split (a foreign issuer on the `admitDeep` read, the correct connector key on the raw re-read). Fix: read
+`R.issuer_id` from the admitted snapshot; a whole-surface sweep confirmed every other `admitDeep` site reassigns its
+argument to the admitted value, so the raw-re-read class is closed at this one residual (*"R33 P0-02 issuer_id two-face Proxy → INVALID; issuer_id read from the ADMITTED snapshot R, never a raw re-read"*). Both divergences were overturned; the
+public seam is now the kernel's closed decode at admission, and every emitted handle is a projection over the inert snapshot.
+
 **Definition (VerifiedAuthorityContext).** For a genesis document `g` whose class and self-signature VERIFY
 (`resolveCheckpointRoots` — P0-2: verify-before-extract):
 
@@ -1062,7 +1079,7 @@ anti_equivocation:"unverified"}` and has no `attested` branch.
 - the conjunction holds ⇒ corroborated: *"PhB all conjuncts (authorized × head∈root × proven-after) → corroborated"*.
 - the ceiling: *"PhB CEILING: corroborated carries anti_equivocation:unverified and is NEVER attested"*.
 - `ChainConsistent` (M4.2): *"M4.2 keylog grows across checkpoints (2→3) with the prefix witness → VALID"*, *"K5 growth WITHOUT the prefix witness → INDETERMINATE(chain_consistency_unproven) (round-3 P0-3)"*, *"M4.2 keylog REWIND (length 2→1) → INVALID(E-COMMIT) — a signed rewind is caught without any proof"*, *"M4.2 equal-length keylog with a DIFFERENT root/head → INVALID(E-COMMIT) — same-length history rewrite"*, *"M4.2 prefix-extension witness: every checkpoint is a prefix of the supplied entry vector → VALID"*, *"M4.2 prefix-extension witness: a checkpoint whose keylog is NOT a prefix of the vector → INVALID(E-COMMIT)"*, *"M4.2 witness longer than the checkpoint keylog is fine; checkpoint longer than the witness → INVALID(E-COMMIT)"*, *"M4.2 keylogEntries over the §13 ceiling (257) → INVALID(E-BOUNDS) before any Merkle work"*.
-- named indeterminacy per missing conjunct: *"PhB commitment NOT proven-after target → INDETERMINATE(order_unproven)"*, *"PhB two not_after upper bounds → unproven → order_unproven"*, *"PhB terminality missing → INDETERMINATE(terminality_unproven)"*, *"PhB commitment not bound to checkpoint id → INDETERMINATE(evidence_unverified)"* (M3 — a receipt for a different subject is not admissible evidence here), *"PhB unauthorized chain (wrong signer) → INVALID, freshness unverified"*, *"PhB checkpoint active_genesis ≠ target → INVALID(E-GENESIS)"*, *"PhB cold verifier (no root) → INDETERMINATE(authority_unresolved)"*.
+- named indeterminacy per missing conjunct: *"PhB commitment NOT proven-after target → INDETERMINATE(order_unproven)"*, *"PhB overlapping same-clock intervals prove neither → order_unproven (round-33: rfc3161-tsa facts are CLOSED — clock_id + both real-calendar bounds)"*, *"PhB terminality missing → INDETERMINATE(terminality_unproven)"*, *"PhB commitment not bound to checkpoint id → INDETERMINATE(evidence_unverified)"* (M3 — a receipt for a different subject is not admissible evidence here), *"PhB unauthorized chain (wrong signer) → INVALID, freshness unverified"*, *"PhB checkpoint active_genesis ≠ target → INVALID(E-GENESIS)"*, *"PhB cold verifier (no root) → INDETERMINATE(authority_unresolved)"*.
 
 All green at REV 44 (conformance 266/0); ChainConsistent added at REV 52.
 

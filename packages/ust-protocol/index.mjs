@@ -1001,6 +1001,31 @@ export const evidenceReceiptId = (r) => H('ust:evidence-receipt', canon({ claim:
 // K3: a VerifiedEvidence value is a branded 'evidence' handle (the M3 witness that VerifyEvidence_C produced it) —
 // portability = the signed receipt, safety = the brand.
 // VerifyEvidence_C — the ONLY producer of VerifiedEvidence. Seven checks IN ORDER (M3.2): bounds/shape → signature →
+// round-33 P0-01 — the public receipt admission must apply the SAME CLOSED TYPED ADT the reference KERNEL's
+// `closedReceipt` does (reference-checker.mjs: decodeRec + RECEIPT_CLAIM + SIG_ENV + FACTS_SCHEMA), so a receipt that is
+// KERNEL-INVALID — an extra envelope/claim/facts key, a shape-valid-but-impossible `issued_at`, an unregistered
+// `proof_kind`, or wrong per-kind facts — can NEVER mint a branded VerifiedEvidence handle (the divergence GPT proved in
+// round-33: consumer-side order typing cannot repair a capability handle minted from a kernel-invalid receipt). These
+// schemas MIRROR the kernel field-for-field (isRealRfc3339Z = pRFC, decSeq = decodeSeq); the two independent derivations
+// AGREE (conformance cross-check). `decodeExact` is the kernel `decodeRec`: own-key membership only, exact keys, typed leaves.
+const _evId = (x) => typeof x === 'string' && x.length > 0, _evSeq = (x) => decSeq(x) !== null;
+const decodeExact = (o, schema) => {
+  if (o === null || typeof o !== 'object' || Array.isArray(o)) return false;
+  for (const k of Object.keys(o)) if (!Object.hasOwn(schema, k)) return false;               // no key the schema does not OWN (round-12 P0-01 prototype-name close)
+  for (const k of Object.keys(schema)) { const s = schema[k]; if (!Object.hasOwn(o, k)) { if (!s.opt) return false; continue; } if (!s.t(o[k])) return false; }
+  return true;
+};
+const _evHash = (x) => isHashStr(x);   // arrow-wrapped: isHashStr is declared later in the module (resolved at call time, not load time — no TDZ)
+const EV_SIG_SCHEMA = { alg: { t: (x) => x === 'Ed25519' }, key_id: { t: _evHash }, pub: { t: (x) => strictB64url(x, 32) !== null }, sig: { t: (x) => strictB64url(x, 64) !== null } };
+const EV_CLAIM_SCHEMA = { version: { t: (x) => x === '1' }, purpose: { t: (x) => x === 'ust:evidence-receipt' }, domain_shard: { t: _evId }, active_genesis: { t: _evHash }, genesis_epoch: { t: _evHash }, subject: { t: _evId }, proof_kind: { t: _evId }, facts: { t: (x) => x !== null && typeof x === 'object' && !Array.isArray(x) }, issued_at: { t: (x) => isRealRfc3339Z(x) }, payload_digest: { t: _evHash, opt: true } };
+const EV_FACTS_SCHEMA = Object.freeze(Object.assign(Object.create(null), {   // null-proto (round-12 P0-01) — keyed by an attacker-influenced proof_kind; exact facts per registered kind, mirrors the kernel FACTS_SCHEMA
+  'pow-header-chain':  { substrate: { t: _evId }, position: { t: _evSeq } },
+  'transparency-log':  { log_id: { t: _evId }, index: { t: _evSeq } },
+  'rfc3161-tsa':       { clock_id: { t: _evId }, not_before: { t: isRealRfc3339Z }, not_after: { t: isRealRfc3339Z } },
+  'authenticated-map': {},
+  'content-addressed': {},
+}));
+const isKnownEvidenceKind = (k) => Object.hasOwn(EV_FACTS_SCHEMA, k);   // the CLOSED registry of admissible proof_kinds (own-key, not prototype-name)
 // subject binding → scope binding → admission (consumer connectors) → role (allowed_proof_kinds, B4) → total.
 // Tamper/malformation ⇒ INVALID(E-EVIDENCE); not-admitted-for-THIS-consumer/scope/subject ⇒ INDETERMINATE
 // (evidence_unverified) — absence of admission is not proof of fraud, but it earns nothing (fail-closed).
@@ -1012,15 +1037,16 @@ export function verifyEvidenceReceipt(receipt, config) {
     const c = R?.claim, s = R?.sig;
     const bad = (detail) => ({ result: 'INVALID', error: 'E-EVIDENCE', detail });
     const unv = (detail) => ({ result: 'INDETERMINATE', reason: 'evidence_unverified', detail });
-    if (!c || typeof c !== 'object' || !s || s.alg !== 'Ed25519' || typeof s.pub !== 'string' || typeof s.sig !== 'string') return bad('malformed receipt (claim/sig shape)');
-    if (c.version !== '1' || c.purpose !== 'ust:evidence-receipt') return bad('not an evidence-receipt claim (version/purpose)');
-    if (typeof c.subject !== 'string' || !c.subject || typeof c.proof_kind !== 'string' || !c.proof_kind) return bad('subject/proof_kind missing');
-    if (!c.facts || typeof c.facts !== 'object' || Array.isArray(c.facts)) return bad('facts must be an object');
-    for (const k of BANNED_EVIDENCE_FACTS) if (k in c.facts) return bad(`receipt facts must not carry '${k}' (facts only)`);
-    if (!isHashStr(c.active_genesis) || c.genesis_epoch !== genesisEpoch(c.active_genesis)) return bad('genesis_epoch ≠ canonical H("ust:genesis-epoch", active_genesis) (M2)');
-    if (typeof c.issued_at !== 'string' || !RFC3339Z.test(c.issued_at)) return bad('issued_at not RFC3339 Z');
-    if (keyId(s.pub) !== s.key_id || receipt.issuer_id !== s.key_id) return bad('issuer_id ≠ keyId(sig.pub)');
-    if (strictB64url(s.sig, 64) === null) return bad('sig not canonical b64url of a 64-byte Ed25519 signature');
+    // round-33 P0-01/02 — the CLOSED typed ADT over the ADMITTED snapshot R (NEVER the raw `receipt`), mirroring the
+    // kernel closedReceipt: exact envelope { claim, issuer_id, sig }, typed sig wrapper, exact+typed claim (real-calendar
+    // issued_at), registered proof_kind, exact per-kind facts. A receipt the kernel would reject can no longer mint a handle.
+    if (!decodeExact(R, { claim: { t: (x) => x !== null && typeof x === 'object' && !Array.isArray(x) }, issuer_id: { t: isHashStr }, sig: { t: (x) => x !== null && typeof x === 'object' && !Array.isArray(x) } })) return bad('receipt envelope not closed (exactly { claim, issuer_id, sig })');
+    if (!decodeExact(s, EV_SIG_SCHEMA)) return bad('receipt sig wrapper not typed (exactly { alg:Ed25519, key_id, pub, sig })');
+    if (!decodeExact(c, EV_CLAIM_SCHEMA)) return bad('receipt claim not typed (exact keys + real-calendar issued_at — round-33 P0-01: 9999-99-99T99:99:99Z is shape-valid, not a real instant)');
+    if (!isKnownEvidenceKind(c.proof_kind)) return bad(`proof_kind '${c.proof_kind}' is not a registered kind`);
+    if (!decodeExact(c.facts, EV_FACTS_SCHEMA[c.proof_kind])) return bad(`receipt facts not typed for proof_kind '${c.proof_kind}' (round-33 P0-01: exact per-kind facts, no extra field)`);
+    if (c.genesis_epoch !== genesisEpoch(c.active_genesis)) return bad('genesis_epoch ≠ canonical H("ust:genesis-epoch", active_genesis) (M2)');
+    if (keyId(s.pub) !== s.key_id || R.issuer_id !== s.key_id) return bad('issuer_id ≠ keyId(sig.pub) — read from the ADMITTED snapshot R, not raw receipt (round-33 P0-02, R3: no raw re-read after admission)');
     if (!edVerifyStrict(s.pub, canon({ purpose: 'ust:evidence-receipt-signature', claim: c }), s.sig)) return bad('Ed25519 verify failed');
     if (subject !== undefined && c.subject !== subject) return unv('receipt subject is not the required subject (binding, M3.2/3)');
     if (c.domain_shard !== scope.domain_shard || c.active_genesis !== scope.active_genesis || c.genesis_epoch !== scope.genesis_epoch) return unv('receipt scope ≠ the authority scope (binding, M3.2/4)');
