@@ -2333,14 +2333,14 @@ const withDeadline = (p, ms = SUBSTRATE_DEADLINE_MS) => { let t; const to = new 
 // round-24 P1-04 — a whole-operation deadline, not merely per-leaf: a legal witness (≤16 roots × ≤8 proofs) could burn
 // 16×8×10s ≈ 21 min of SEQUENTIAL per-leaf timeouts. `opDeadline` bounds the whole resolution; before each connector call
 // the remaining budget also caps that leaf. Exhaustion returns the string 'resource_limit' (the caller maps it to F.9).
-async function anchoredByProofs(content_hash, proofs, substrateVerify, opDeadline) {
+async function anchoredByProofs(content_hash, proofs, substrateVerify, opDeadline, nowMs = Date.now) {
   for (const proof of proofs) {
-    if (opDeadline && Date.now() >= opDeadline) return 'resource_limit';
+    if (opDeadline && nowMs() >= opDeadline) return 'resource_limit';
     const incl = verifyAnchorCore(content_hash, proof);   // internal (witness log is JSON-parsed, getter-free); inclusion only
     if (!incl.inclusion || !substrateVerify) continue;
-    const leafMs = opDeadline ? Math.max(1, Math.min(SUBSTRATE_DEADLINE_MS, opDeadline - Date.now())) : SUBSTRATE_DEADLINE_MS;
-    let sub; try { sub = await withDeadline(substrateVerify(proof.anchor, proof.root, { deadline: opDeadline }), leafMs); } catch { if (opDeadline && Date.now() >= opDeadline) return 'resource_limit'; continue; }   // round-21 P1-01 / round-23 P1-05 — a connector throw OR a hang is UNAVAILABLE evidence; round-27 P1-01 — but a timeout that EXHAUSTED the whole-op budget is resource_limit, not a mere unavailable leaf
-    if (opDeadline && Date.now() >= opDeadline) return 'resource_limit';   // round-27 P1-01 — the budget can expire DURING the await (incl. the final leaf); check after every awaited leaf, not only before
+    const leafMs = opDeadline ? Math.max(1, Math.min(SUBSTRATE_DEADLINE_MS, opDeadline - nowMs())) : SUBSTRATE_DEADLINE_MS;
+    let sub; try { sub = await withDeadline(substrateVerify(proof.anchor, proof.root, { deadline: opDeadline }), leafMs); } catch { if (opDeadline && nowMs() >= opDeadline) return 'resource_limit'; continue; }   // round-21 P1-01 / round-23 P1-05 — a connector throw OR a hang is UNAVAILABLE evidence; round-27 P1-01 — but a timeout that EXHAUSTED the whole-op budget is resource_limit, not a mere unavailable leaf
+    if (opDeadline && nowMs() >= opDeadline) return 'resource_limit';   // round-27 P1-01 — the budget can expire DURING the await (incl. the final leaf); check after every awaited leaf, not only before
     if (substrateFinal(sub)) return true;               // round-18 P0-02 — same closed decoder as verifyAnchor (a bare truthy `final` no longer confirms the witness genesis)
   }
   return false;
@@ -2373,7 +2373,12 @@ const readBounded = async (r, cap = DISCOVERY_MAX_BYTES) => {
   return body;
 };
 export async function witnessNoFork(shard, genesisHash, opts) {
-  const { fetchImpl = fetch, substrateVerify, maxWitnessOpMs } = (opts && typeof opts === 'object') ? opts : {};   // round-26 (rev24 C) — null-total: witnessNoFork(s, g, null) no longer throws on destructuring
+  const { fetchImpl = fetch, substrateVerify, maxWitnessOpMs, __nowMs } = (opts && typeof opts === 'object') ? opts : {};   // round-26 (rev24 C) — null-total: witnessNoFork(s, g, null) no longer throws on destructuring
+  // round-31 — the whole-op budget clock is INJECTABLE (default Date.now) so conformance can drive budget-exhaustion
+  // DETERMINISTICALLY instead of racing wall-clock jitter (the recurring round-27/28 CI flake). SAFETY: this clock
+  // governs ONLY the consumer's own resource budget (how long THEIR witness runs); it is NEVER a security time source
+  // (anchor-time / key-validity windows use trusted time elsewhere). A consumer lying here only self-limits — mints no trust.
+  const nowMs = (typeof __nowMs === 'function') ? __nowMs : Date.now;
   let log;
   try {
     const r = await fetchImpl(`https://${shard}/.well-known/ust-witness`, { signal: AbortSignal.timeout(10000), redirect: 'error' });
@@ -2425,9 +2430,9 @@ export async function witnessNoFork(shard, genesisHash, opts) {
   if (maxWitnessOpMs !== undefined && !(Number.isInteger(maxWitnessOpMs) && maxWitnessOpMs > 0))
     return OVER(`maxWitnessOpMs must be a finite positive integer of milliseconds (got ${typeof maxWitnessOpMs === 'number' ? maxWitnessOpMs : typeof maxWitnessOpMs}); an invalid verifier budget is refused, never expanded to the reference default (round-27 P2-01)`);
   const opBudget = maxWitnessOpMs === undefined ? WITNESS_OP_DEADLINE_MS : Math.min(WITNESS_OP_DEADLINE_MS, maxWitnessOpMs);
-  const opDeadline = Date.now() + opBudget;   // round-24 P1-04 — bound the WHOLE witness resolution, not just each leaf
+  const opDeadline = nowMs() + opBudget;   // round-24 P1-04 — bound the WHOLE witness resolution, not just each leaf
   for (const a of active) {
-    const r = await anchoredByProofs(a.content_hash, a.proofs, substrateVerify, opDeadline);
+    const r = await anchoredByProofs(a.content_hash, a.proofs, substrateVerify, opDeadline, nowMs);
     if (r === 'resource_limit') return OVER(`witness anchor verification exceeded the ${opBudget} ms whole-operation budget (§F.9 — a legal fan-out cannot monopolize a verification; the verifier's ρ_v is min(reference ${WITNESS_OP_DEADLINE_MS} ms, consumer deadline); round-24 P1-04 / round-25 Div2)`);
     if (r) anchoredActive.push({ content_hash: a.content_hash });
   }
@@ -2513,7 +2518,7 @@ export async function resolveByDiscovery(doc, opts = {}, transport = {}) {
   let witnessConfirmed = false, noFork = 'unconfirmed', witnessReason;
   const callerNoFork = opts.noForkEvidence !== undefined || opts.noForkConfirmed;
   if (!callerNoFork && !opts.offline) {
-    const w = await witnessNoFork(shard, genesisHash, { fetchImpl, substrateVerify, maxWitnessOpMs: opts.maxWitnessOpMs });   // round-26 P1-03 (rev27 E) — thread the verifier's ρ_v.time policy through the PUBLIC entry; the leaf-only budget was unreachable (F.9)
+    const w = await witnessNoFork(shard, genesisHash, { fetchImpl, substrateVerify, maxWitnessOpMs: opts.maxWitnessOpMs, __nowMs: opts.__nowMs });   // round-26 P1-03 (rev27 E) — thread the verifier's ρ_v.time policy through the PUBLIC entry; the leaf-only budget was unreachable (F.9); round-31 — also the injectable budget clock (resource-limit only)
     if (w.status === 'fork') return { verdict: bad('E-GENESIS', w.detail), resolution: { publisher: shard, fork: true, detail: w.detail } };
     witnessConfirmed = w.status === 'confirmed';
     if (w.reason) witnessReason = w.reason;   // round-21 P2-01 — preserve the machine-readable witness reason (resource_limit) through the resolution, not just a 'HIGH pending' string

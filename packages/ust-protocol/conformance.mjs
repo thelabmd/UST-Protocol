@@ -468,9 +468,13 @@ console.log('\n═════════════════════�
   //   tight budget + a never-settling substrate resource-limits the witness (two canon-distinct anchors: the whole-op
   //   deadline trips on the 2nd leaf, deterministic), so the tier does NOT upgrade to a served-list HIGH after the budget.
   const leafRoot = P.Hbytes('ust:leaf', Buffer.from(gHash, 'utf8'));
-  const budgetAnchors = [900001, 900002, 900003, 900004].map((h) => ({ root: leafRoot, path: [], anchor: { substrate: 'bitcoin-ots', block_height: h } }));   // ≥3 canon-distinct anchors → the whole-op deadline trips deterministically under CI load
+  // round-31 — deterministic budget exhaustion THROUGH the public entry via the injected clock (__nowMs survives admitOpts,
+  //   which preserves function capabilities): consulting the leaf's substrate flips the clock past the whole-op deadline, so
+  //   the tier does NOT upgrade to served-list HIGH after the budget. No timer race — the substrate resolves at once.
+  let bSpent = false; const bNow = () => (bSpent ? 1_000_000 : 1000); const bSV = () => { bSpent = true; return { final: false }; };
+  const budgetAnchors = [{ root: leafRoot, path: [], anchor: { substrate: 'bitcoin-ots', block_height: 900001 } }];
   const budgetLog = wlog([{ content_hash: gHash, superseded_by: null, anchors: budgetAnchors }], gHash);
-  const rBudget = await P.resolveByDiscovery(doc, { context: 'data', maxWitnessOpMs: 50 }, { fetchImpl: mk(budgetLog), substrateVerify: () => new Promise(() => {}) });
+  const rBudget = await P.resolveByDiscovery(doc, { context: 'data', maxWitnessOpMs: 50, __nowMs: bNow }, { fetchImpl: mk(budgetLog), substrateVerify: bSV });
   check('round-26 P1-03/L4 resolveByDiscovery THREADS the consumer witness budget (maxWitnessOpMs) through the PUBLIC entry → a tight budget resource-limits the witness, no false served-list HIGH (F.9 ρ_v)',
     rBudget.verdict.no_fork !== 'served-list');
   // round-18 P0-01 — forkChoice returns the IMMUTABLE snapshot: a live mutation during the substrate await cannot make the returned canonical object differ from its proven content_hash (F.5c: canonical = the dᵢ with content_hash(dᵢ) ∈ F_t). Genesis-key-signed doc ⇒ authoritative with no key-log.
@@ -1129,15 +1133,17 @@ console.log('\n═════════════════════�
   {
     const AGW = 'sha256:' + 'ab'.repeat(32), shard = 'w.example';
     const wRoot = P.Hbytes('ust:leaf', Buffer.from(AGW, 'utf8'));                       // single-leaf inclusion so anchoredByProofs reaches the substrate call
-    const wp = (n) => ({ root: wRoot, path: [], anchor: { substrate: 'test-anchor', n } });   // canon-distinct proofs → the op-deadline check runs between leaves
-    // ≥3 canon-distinct anchors + a comfortable budget make the whole-op deadline trip DETERMINISTICALLY under CI load:
-    // even if an early leaf's withDeadline timer fires slightly under the budget (jitter), a LATER leaf's op-deadline
-    // check reliably sees Date.now() ≥ opDeadline (2 anchors could just miss on a loaded runner → the round-27 CI flake).
-    const log = JSON.stringify({ domain_shard: shard, genesis_log: [{ content_hash: AGW, anchors: [wp('1'), wp('2'), wp('3'), wp('4')] }] });
+    const wp = (n) => ({ root: wRoot, path: [], anchor: { substrate: 'test-anchor', n } });
+    // round-31 — budget exhaustion is DETERMINISTIC via an INJECTED clock (__nowMs), not wall-clock. Consulting a leaf's
+    //   substrate flips the clock past the whole-op deadline, so resource_limit trips with ZERO timer race — this KILLS the
+    //   recurring round-27/28 CI flake at the root (no anchor-count padding, no never-settling promise; the substrate
+    //   resolves AT ONCE, so no real setTimeout is ever in play). The clock is resource-budget-only, never a security time.
+    const spentClock = () => { let spent = false; return { now: () => (spent ? 1_000_000 : 1000), sv: () => { spent = true; return { final: false }; } }; };
+    const log = JSON.stringify({ domain_shard: shard, genesis_log: [{ content_hash: AGW, anchors: [wp('1'), wp('2')] }] });
     const fetchW = async () => ({ ok: true, headers: { get: () => undefined }, arrayBuffer: async () => new TextEncoder().encode(log).buffer });
-    const neverSV = () => new Promise(() => {});                                        // never settles — a leaf can only reach the deadline, never resolve early (no false 'confirmed')
     const fastSV = () => ({ final: true, time: '2027-01-01T00:00:00Z' });
-    const capped = await P.witnessNoFork(shard, AGW, { fetchImpl: fetchW, substrateVerify: neverSV, maxWitnessOpMs: 50 });
+    const c1 = spentClock();
+    const capped = await P.witnessNoFork(shard, AGW, { fetchImpl: fetchW, substrateVerify: c1.sv, maxWitnessOpMs: 50, __nowMs: c1.now });
     check('F.9 T_v realization: the whole-operation witness budget is min(reference default, consumer deadline) — a tighter consumer deadline trips INDETERMINATE(resource_limit) naming the effective budget',
       capped.status === 'indeterminate' && capped.reason === 'resource_limit' && capped.detail.includes('50 ms whole-operation budget'));
     check('F.9 T_v control: the same witness with no consumer cap verifies (confirmed) — the cap lowers decisibility, never flips a verdict',
@@ -1152,9 +1158,10 @@ console.log('\n═════════════════════�
     check('round-27 P2-01 invalid maxWitnessOpMs (0/-1/NaN/Infinity/fractional) is REFUSED (resource_limit), never expanded to the reference default', allRefused);
     // round-27 P1-01 — a budget exhausted on the FINAL/only leaf is INDETERMINATE(resource_limit), not 'pending': the
     //   deadline is checked AFTER every awaited leaf, not only before (a single never-settling anchor + a tight budget).
-    const oneAnchorLog = JSON.stringify({ domain_shard: shard, genesis_log: [{ content_hash: AGW, anchor: { root: P.Hbytes('ust:leaf', Buffer.from(AGW, 'utf8')), path: [], anchor: { substrate: 'test-anchor', n: '1' } } }] });
+    const oneAnchorLog = JSON.stringify({ domain_shard: shard, genesis_log: [{ content_hash: AGW, anchor: wp('1') }] });
     const fetch1 = async () => ({ ok: true, headers: { get: () => undefined }, arrayBuffer: async () => new TextEncoder().encode(oneAnchorLog).buffer });
-    const lastLeaf = await P.witnessNoFork(shard, AGW, { fetchImpl: fetch1, substrateVerify: neverSV, maxWitnessOpMs: 50 });   // 50ms not 10 — timer jitter under CI load must be a small fraction of the budget (deterministic)
+    const c2 = spentClock();
+    const lastLeaf = await P.witnessNoFork(shard, AGW, { fetchImpl: fetch1, substrateVerify: c2.sv, maxWitnessOpMs: 50, __nowMs: c2.now });   // the ONLY leaf's substrate consult spends the budget → the post-await deadline check returns resource_limit (never falls through to 'pending')
     check('round-27 P1-01 a budget exhausted on the FINAL leaf → INDETERMINATE(resource_limit), never reported as pending',
       lastLeaf.status === 'indeterminate' && lastLeaf.reason === 'resource_limit');
   }
