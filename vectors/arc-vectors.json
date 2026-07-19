@@ -3020,8 +3020,7 @@
             "domain_shard": "noosphere.md",
             "genesis_epoch": "sha256:e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1",
             "sequence": "0",
-            "checkpoint": "sha256:cececececececececececececececececececececececececececececececece",
-            "as_of": "2026-01-01T00:00:00Z"
+            "checkpoint": "sha256:cececececececececececececececececececececececececececececececece"
           },
           "issuer_id": "sha256:78596e6ef399b754a1edb227b05ff77bd7bb0767d16524a0b4daee510a64c12e",
           "sig": {
@@ -3088,7 +3087,7 @@
       }
     },
     {
-      "id": "uniqueness-rival-quorums-conflict",
+      "id": "uniqueness-extra-field-claim-dropped",
       "op": "verifyCheckpointUniqueness",
       "attestations": [
         {
@@ -3097,7 +3096,8 @@
             "domain_shard": "noosphere.md",
             "genesis_epoch": "sha256:e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1",
             "sequence": "0",
-            "checkpoint": "sha256:cececececececececececececececececececececececececececececececece"
+            "checkpoint": "sha256:cececececececececececececececececececececececececececececececece",
+            "observed_map_root": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
           },
           "issuer_id": "sha256:78596e6ef399b754a1edb227b05ff77bd7bb0767d16524a0b4daee510a64c12e",
           "sig": {
@@ -3122,40 +3122,6 @@
             "pub": "W2SJycf9Dc9QVF58FkiG70BJHsBsfxsSMEF5foEXU14",
             "sig": "Z4Euz0lExf_Lq2i3AClirj3to4rwkeiupsfAiomdpr8WhQRk0RNSaN79mRKhEgAdC_4uLtzm5sVGhNyXo7WJBw"
           }
-        },
-        {
-          "claim": {
-            "purpose": "ust:checkpoint-uniqueness-attestation",
-            "domain_shard": "noosphere.md",
-            "genesis_epoch": "sha256:e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1",
-            "sequence": "0",
-            "checkpoint": "sha256:cececececececececececececececececececececececececececececececece",
-            "observed_map_root": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-          },
-          "issuer_id": "sha256:8907ee720052e0334a3946bfee4aded2744d350772637243431e35c355e1df74",
-          "sig": {
-            "alg": "Ed25519",
-            "key_id": "sha256:8907ee720052e0334a3946bfee4aded2744d350772637243431e35c355e1df74",
-            "pub": "_sFChnP2r-iSZLOAc0SuiyadElpQOFUgJofbWnEoV58",
-            "sig": "6ekRvKqBuVX5MFFuSd41hI78xKwdunqAZCYuOd7u96TLhldpVsD2osOuvzra33lwfTEOk_K8BJQPu0cA66hwCA"
-          }
-        },
-        {
-          "claim": {
-            "purpose": "ust:checkpoint-uniqueness-attestation",
-            "domain_shard": "noosphere.md",
-            "genesis_epoch": "sha256:e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1",
-            "sequence": "0",
-            "checkpoint": "sha256:cececececececececececececececececececececececececececececececece",
-            "observed_map_root": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-          },
-          "issuer_id": "sha256:d8b8b4404d8d7876ddaea0f0fbd57876d7bf52d3fe6808a3bbc7bead314ebd8e",
-          "sig": {
-            "alg": "Ed25519",
-            "key_id": "sha256:d8b8b4404d8d7876ddaea0f0fbd57876d7bf52d3fe6808a3bbc7bead314ebd8e",
-            "pub": "VV9GnCIYjpABW92FuIlnjUWfhr349700lxsQubOFhgk",
-            "sig": "WydSQHauCBp2BBF1hVvXT7zrTdDu0pcch3pWpjB3x7lFG3_iJ5Hof2tEcchLMTogaqCIKhefLQCyBXTZG8A_CA"
-          }
         }
       ],
       "opts": {
@@ -3178,8 +3144,7 @@
         "threshold": 2
       },
       "expect": {
-        "attested": false,
-        "conflict": true
+        "attested": false
       }
     },
     {

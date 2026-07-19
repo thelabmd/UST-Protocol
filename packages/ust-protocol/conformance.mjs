@@ -1145,7 +1145,7 @@ console.log('\n═════════════════════�
   check('PhC 2 witnesses, SAME domain → quorum not met → stays corroborated', (r => r.keylog_freshness === 'corroborated')(F(uOpts([ua(Wa), ua(Wc)]))));
   check('PhC uniqueness on an UNAUTHORIZED checkpoint → INVALID, never attested', (r => r.result === 'INVALID' && r.keylog_freshness !== 'attested')(P.deriveCheckpointFreshness([P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: D, genesis_epoch: EP, sequence: '0', active_genesis: AG, current_key_id: K0.key_id, keylog }), KX.priv, KX.pubB64)], { genesisAuthority: gAuth, target, commitment: commit, terminality: term, uniqueness: uOpts([ua(Wa), ua(Wb)]) })));
   check('PhC bare observation (wrong purpose) is NOT uniqueness → not admitted', VU([{ claim: { purpose: 'ust:observed', domain_shard: D, genesis_epoch: EP, sequence: '0', checkpoint: headId }, issuer_id: Wa.key_id, sig: { alg: 'Ed25519', key_id: Wa.key_id, pub: Wa.pubB64, sig: 'x' } }, ua(Wb)]).attested === false);
-  check('PhC witnesses signing NON-identical claims → mismatches dropped → quorum not met', VU([ua(Wa, { observed_map_root: 'sha256:' + 'a1'.repeat(32) }), ua(Wb, { observed_map_root: 'sha256:' + 'b2'.repeat(32) })]).attested === false);
+  check('R34 P0-03 a uniqueness claim with an EXTRA signed field (observed_map_root ∉ the closed VOTE_CLAIM) is DROPPED → quorum not met', VU([{ claim: { ...P.checkpointUniquenessClaim({ domain_shard: D, genesis_epoch: EP, sequence: '0', checkpoint: headId }), observed_map_root: 'sha256:' + 'a1'.repeat(32) }, issuer_id: Wa.key_id, sig: ua(Wa).sig }, ua(Wb)]).attested === false);
   check('PhC witness NOT in consumer trustRoots → not admitted', P.verifyCheckpointUniqueness([ua(Wa), ua(Wb)], { domain_shard: D, genesis_epoch: EP, sequence: '0', checkpoint: headId, trustRoots: { [Wa.key_id]: Wa.pubB64 }, domains, threshold: 2 }).attested === false);
   check('PhC self-declared trust_domain inside the claim → rejected', VU([{ claim: { ...P.checkpointUniquenessClaim({ domain_shard: D, genesis_epoch: EP, sequence: '0', checkpoint: headId }), trust_domain: 'independent-7' }, issuer_id: Wa.key_id, sig: ua(Wa).sig }, ua(Wb)]).attested === false);
   // ─── round-23 (rev21) — the quorum evidence surface had the SAME class as witness/forkChoice, never applied to it ────
@@ -1237,10 +1237,9 @@ console.log('\n═════════════════════�
   const VU4 = (atts) => P.verifyCheckpointUniqueness(atts, { domain_shard: D, genesis_epoch: EP, sequence: '0', checkpoint: headId, trustRoots: roots4, domains: doms4, threshold: 2 });
   check('M5 quorum-poison closed: an UNAUTHENTICATED first claim-variant cannot suppress the honest quorum (group AFTER admission)',
     (r => r.attested === true)(VU4([{ claim: P.checkpointUniquenessClaim({ domain_shard: D, genesis_epoch: EP, sequence: '0', checkpoint: headId, as_of: '2026-01-01T00:00:00Z' }), issuer_id: Wa.key_id, sig: { alg: 'Ed25519', key_id: Wa.key_id, pub: Wa.pubB64, sig: 'AA' } }, ua(Wa), ua(Wb)])));
-  check('M5 conflict determinism: two RIVAL claims each reaching quorum → conflict, never first-wins',
-    (r => r.attested === false && r.conflict === true)(VU4([ua(Wa), ua(Wb), P.buildUniquenessAttestation({ domain_shard: D, genesis_epoch: EP, sequence: '0', checkpoint: headId, observed_map_root: 'sha256:' + 'aa'.repeat(32) }, Wc.priv, Wc.pubB64), P.buildUniquenessAttestation({ domain_shard: D, genesis_epoch: EP, sequence: '0', checkpoint: headId, observed_map_root: 'sha256:' + 'aa'.repeat(32) }, Wd.priv, Wd.pubB64)])));
-  check('M5 conflict is order-independent (reversed array → same conflict)',
-    (r => r.attested === false && r.conflict === true)(VU4([P.buildUniquenessAttestation({ domain_shard: D, genesis_epoch: EP, sequence: '0', checkpoint: headId, observed_map_root: 'sha256:' + 'aa'.repeat(32) }, Wd.priv, Wd.pubB64), P.buildUniquenessAttestation({ domain_shard: D, genesis_epoch: EP, sequence: '0', checkpoint: headId, observed_map_root: 'sha256:' + 'aa'.repeat(32) }, Wc.priv, Wc.pubB64), ua(Wb), ua(Wa)])));
+  // round-34 P0-03 — M5 conflict determinism moved to the RECOVERY block: with the closed VOTE_CLAIM + binding, every
+  // admitted uniqueness attestation for one checkpoint is BYTE-IDENTICAL, so a uniqueness quorum can never split into
+  // two rival groups. Conflict is real only where the payload can differ (recovery: rival replacement authorities).
   check('M5 ValidThreshold uniform: quorumTrustDomains threshold 0 → met:false (never satisfied)',
     (r => r.met === false)(P.quorumTrustDomains([{ source_id: 'a' }], { domains: { a: 'op-a' }, threshold: 0 })));
   check('M5 total: a malformed recovery leaf (canon-throwing) admits nothing and never throws',
@@ -1288,7 +1287,7 @@ console.log('\n═════════════════════�
 //     key loss, WITHOUT bypassing checkpoint validation. Dormant emergency mechanism, not a normal rotation.
 {
   const K0 = kp('61'.repeat(32)), K1 = kp('62'.repeat(32)), KR = kp('6a'.repeat(32)), KR2 = kp('6b'.repeat(32));
-  const R1 = kp('71'.repeat(32)), R2 = kp('72'.repeat(32)), R3 = kp('73'.repeat(32)), RX = kp('7f'.repeat(32));
+  const R1 = kp('71'.repeat(32)), R2 = kp('72'.repeat(32)), R3 = kp('73'.repeat(32)), R4 = kp('74'.repeat(32)), RX = kp('7f'.repeat(32));
   const gAuth = { key_id: K0.key_id, pub: K0.pubB64 };
   const AG = 'sha256:' + '99'.repeat(32), EP = P.genesisEpoch(AG), D = 'noosphere.md';
   const KL = { length: '1', root: 'sha256:' + 'c0'.repeat(32), head: 'sha256:' + 'd0'.repeat(32) };
@@ -1305,6 +1304,25 @@ console.log('\n═════════════════════�
   check('RECOVERY 1-of-3 (below threshold) → chain INVALID(E-AUTHORITY)', (r => r.result === 'INVALID' && r.error === 'E-AUTHORITY')(chain([stmt(rf(KR), R1)])));
   check('RECOVERY same signer twice → counts once → quorum not met', VR([stmt(rf(KR), R1), stmt(rf(KR), R1)]).recovered === false);
   check('RECOVERY conflicting replacements (non-identical claims) → no quorum (must agree on ONE)', VR([stmt(rf(KR), R1), stmt(rf(KR2), R2)]).recovered === false);
+  // round-34 P0-03 — M5 conflict determinism now lives HERE (recovery has a differing PAYLOAD; uniqueness cannot conflict
+  // under the closed VOTE_CLAIM). Two RIVAL replacements each reaching the 2-of-4 quorum → conflict, order-independent.
+  { const rKeys4 = { ...rKeys, [R4.key_id]: R4.pubB64 }; const VRc = (recs) => P.verifyCheckpointRecovery(recs, { domain_shard: D, genesis_epoch: EP, last_accepted_checkpoint: id0, effective_sequence: '1', recoveryKeys: rKeys4, threshold: 2 });
+    check('M5 conflict determinism: two RIVAL claims each reaching quorum → conflict, never first-wins', (r => r.recovered === false && r.conflict === true)(VRc([stmt(rf(KR), R1), stmt(rf(KR), R2), stmt(rf(KR2), R3), stmt(rf(KR2), R4)])));
+    check('M5 conflict is order-independent (reversed array → same conflict)', (r => r.recovered === false && r.conflict === true)(VRc([stmt(rf(KR2), R4), stmt(rf(KR2), R3), stmt(rf(KR), R2), stmt(rf(KR), R1)]))); }
+  // round-34 P0-01/P0-02 — the public authority verifiers apply the kernel's closed typed ADT + strict Pub32 to every
+  // signed witness, so a witness the kernel rejects (non-canonical Pub32 authority, unsigned extra sig field) roots/mints nothing.
+  { const T2 = { generated_at: '2026-06-28T14:03:12Z', valid_from: '2026-06-28T14:00:00Z', valid_to: '2026-06-28T15:00:00Z' };
+    const gk = kp('81'.repeat(32)), D2 = 'noosphere.md';
+    const gen2 = P.seal(P.buildGenesis({ domain_shard: D2, ust_id: 'ust:20260701.00', key_id: gk.key_id }, T2, gk.pubB64, undefined, undefined, undefined, { key_id: gk.key_id, pub: gk.pubB64 }), gk.priv, gk.pubB64);
+    const alpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_', raw = Buffer.from(gk.pubB64, 'base64url'); let alias = null;
+    for (const ch of alpha) { const c = gk.pubB64.slice(0, -1) + ch; try { const b = Buffer.from(c, 'base64url'); if (b.length === 32 && b.equals(raw) && b.toString('base64url') !== c) { alias = c; break; } } catch { /* not base64url */ } }
+    check('R34 P0-01 a non-canonical Pub32 alias maps to the SAME key (keyId) but is not canonical', alias !== null && P.keyId(alias) === gk.key_id);
+    const genBad = P.seal(P.buildGenesis({ domain_shard: D2, ust_id: 'ust:20260701.00', key_id: gk.key_id }, T2, gk.pubB64, undefined, undefined, undefined, { key_id: gk.key_id, pub: alias }), gk.priv, gk.pubB64);
+    check('R34 P0-01 a genesis authority carrying a non-canonical Pub32 alias roots NO authority (strict Pub32 before keyId)', !P.resolveCheckpointRoots(genBad)?.genesisAuthority);
+    const kl2 = P.buildKeylogCommitment(['sha256:' + 'ab'.repeat(32)]), ctx2 = P.verifiedGenesisContext(gen2);
+    const cp2 = P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: D2, genesis_epoch: P.genesisEpoch(P.contentHash(gen2)), sequence: '0', active_genesis: P.contentHash(gen2), current_key_id: gk.key_id, keylog: { root: kl2.root, length: kl2.length, head: kl2.head } }), gk.priv, gk.pubB64);
+    check('R34 P0-02 a checkpoint witness with an unsigned EXTRA sig field → INVALID (closed { body, sig } — no checkpoint-id malleability)', (r => r.result === 'INVALID' && r.error === 'E-MALFORMED')(P.verifyAuthorityCheckpointChain([{ ...cp2, sig: { ...cp2.sig, extra: 'unsigned-malleability' } }], { context: ctx2 })));
+    check('R34 P0-02 the genuine checkpoint is STILL VALID (kernel-aligned, no over-reject)', P.verifyAuthorityCheckpointChain([cp2], { context: ctx2 }).result === 'VALID'); }
   check('RECOVERY signer NOT in the genesis recovery set → not counted', VR([stmt(rf(KR), R1), stmt(rf(KR), RX)]).recovered === false);
   check('RECOVERY replacement key_id ≠ keyId(pub) → not recovered', VR([{ claim: { ...P.checkpointRecoveryClaim(rf(KR)), replacement_authority: { key_id: K1.key_id, pub: KR.pubB64 } }, issuer_id: R1.key_id, sig: stmt(rf(KR), R1).sig }, stmt(rf(KR), R2)]).recovered === false);
   check('RECOVERY effective_sequence ≠ last+1 → not recovered (only the next checkpoint)', VR([stmt(rf(KR, '2'), R1), stmt(rf(KR, '2'), R2)]).recovered === false);

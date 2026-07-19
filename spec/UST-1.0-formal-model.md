@@ -856,6 +856,26 @@ Proxy split (a foreign issuer on the `admitDeep` read, the correct connector key
 argument to the admitted value, so the raw-re-read class is closed at this one residual (*"R33 P0-02 issuer_id two-face Proxy → INVALID; issuer_id read from the ADMITTED snapshot R, never a raw re-read"*). Both divergences were overturned; the
 public seam is now the kernel's closed decode at admission, and every emitted handle is a projection over the inert snapshot.
 
+**Realization (rev42 — the closed-ADT-at-admission class, SWEPT across every signed authority witness).** rev41 closed the
+class for evidence receipts and I posed the sweep as a divergence — "does the same class remain open for
+checkpoint/genesis/epoch/uniqueness?" — instead of sweeping it. A round-34 audit answered **P0=4**: the class was open
+across ALL of them. (1) `resolveCheckpointRoots` / `authorityCheckpointSigOk` / `verifyAuthorityCheckpointChain` checked
+only `keyId(pub) === key_id`, never strict Pub32 — and Node's base64url decoder maps a non-canonical trailing-bit alias
+(`…YKc`→`…YKd`) to the same 32 bytes, so a genesis / checkpoint carrying the alias rooted a branded authority the kernel
+`strictPub` rejects. (2) `verifyAuthorityCheckpointChain` closed the body but not the sig envelope, so an unsigned
+`sig.extra` shifted the `authorityCheckpointId` (which hashes `{body, sig}`) and minted a chain pin. (3)
+`verifyCheckpointUniqueness` accepted an `as_of` / extra-field claim and an `alg:"RSA"` sig wrapper the kernel `VOTE_CLAIM`
+/ `SIG_ENV` reject. (4) `verifyEpochTransition` / `verifyCheckpointRecovery` accepted open records + untyped sig wrappers
+the kernel `closedTransition` rejects. Fix: the public authority verifiers apply the SAME closed typed ADT the kernel
+does to EVERY signed witness — a shared strict `Pub32` at every authority-bearing public field, and
+`closedCheckpointWitness` / `closedTransitionWitness` / `closedVoteWitness` / `closedRecoveryWitness` (mirroring the
+kernel `closedCheckpoint`/`closedTransition` + `SIG_ENV` + `CHECKPOINT_BODY`/`TRANSITION_CLAIM`/`VOTE_CLAIM`) BEFORE any
+`keyId`/verify/id/mint — so a witness the kernel rejects roots/mints nothing (*"R34 P0-02 a checkpoint witness with an unsigned EXTRA sig field → INVALID (closed { body, sig } — no checkpoint-id malleability)"*). The `checkpointUniquenessClaim`
+builder was aligned to the kernel `VOTE_CLAIM` (no self-declared `as_of` / `observed_map_root`); with a closed claim +
+binding, every admitted uniqueness attestation for one checkpoint is byte-identical, so a uniqueness quorum cannot split
+— conflict is real only where the payload can differ (recovery). The controller lesson, again: when I SEE the class
+extends (and name the siblings in a divergence), I owe the SWEEP in that rev — not a question.
+
 **Definition (VerifiedAuthorityContext).** For a genesis document `g` whose class and self-signature VERIFY
 (`resolveCheckpointRoots` — P0-2: verify-before-extract):
 
@@ -1135,7 +1155,7 @@ recovery signer and a closed voter set.
 - independence is domain-distinctness: *"PhC 2 witnesses, SAME domain → quorum not met → stays corroborated"*.
 - `attested ⇒ corroborated`: *"PhC uniqueness on an UNAUTHORIZED checkpoint → INVALID, never attested"*.
 - assertion not observation: *"PhC bare observation (wrong purpose) is NOT uniqueness → not admitted"*.
-- byte-identical claim / consumer-admitted / binding: *"PhC witnesses signing NON-identical claims → mismatches dropped → quorum not met"*, *"PhC witness NOT in consumer trustRoots → not admitted"*, *"PhC self-declared trust_domain inside the claim → rejected"*, *"PhC uniqueness for a DIFFERENT checkpoint → not admitted (binding)"*.
+- byte-identical claim / consumer-admitted / binding: *"R34 P0-03 a uniqueness claim with an EXTRA signed field (observed_map_root ∉ the closed VOTE_CLAIM) is DROPPED → quorum not met"*, *"PhC witness NOT in consumer trustRoots → not admitted"*, *"PhC self-declared trust_domain inside the claim → rejected"*, *"PhC uniqueness for a DIFFERENT checkpoint → not admitted (binding)"*.
 - the M5 algebra: *"M5 quorum-poison closed: an UNAUTHENTICATED first claim-variant cannot suppress the honest quorum (group AFTER admission)"*, *"M5 conflict determinism: two RIVAL claims each reaching quorum → conflict, never first-wins"*, *"M5 conflict is order-independent (reversed array → same conflict)"*, *"M5 ValidThreshold uniform: quorumTrustDomains threshold 0 → met:false (never satisfied)"*, *"M5 total: a malformed recovery leaf (canon-throwing) admits nothing and never throws"*.
 
 All green at REV 44 (conformance 274/0).

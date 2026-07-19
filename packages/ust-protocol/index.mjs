@@ -102,6 +102,11 @@ export function strictB64url(s, bytes) {
   if (buf.toString('base64url') !== s) return null;                        // canonical: no non-zero trailing bits, no alias
   return buf;
 }
+// round-34 P0-01 — Pub32: a canonical unpadded base64url of EXACTLY 32 bytes (strictB64url already rejects a non-canonical
+// trailing-bit alias, line 102). MIRRORS the kernel `strictPub`. Every AUTHORITY-bearing public field must pass this
+// BEFORE keyId()/Ed25519 verify — Node's base64url decoder is permissive (a `...YKc`→`...YKd` alias maps to the same 32
+// bytes), so `keyId(pub) === key_id` alone admits a non-canonical alias the kernel rejects (a public↔kernel split).
+const strictPub = (p) => strictB64url(p, 32) !== null;
 // A cadence is SECONDS as a canonical positive integer STRING — no fraction, no leading zero, no sign, bounded.
 export function parseCadenceInt(s) {
   if (typeof s !== 'string' || !/^[1-9][0-9]*$/.test(s)) return null;      // "1.5", "030", "-1", "1e2", 30(number) all fail
@@ -307,11 +312,11 @@ export function resolveCheckpointRoots(genesis) {
   const gv = G?.state?.data?.genesis?.value; if (!gv) return null;
   const out = {};
   const ca = gv.checkpoint_authority;
-  if (ca && ca.key_id && ca.pub && keyId(ca.pub) === ca.key_id) out.genesisAuthority = { key_id: ca.key_id, pub: ca.pub };
+  if (ca && ca.key_id && ca.pub && strictPub(ca.pub) && keyId(ca.pub) === ca.key_id) out.genesisAuthority = { key_id: ca.key_id, pub: ca.pub };   // round-34 P0-01 — strict Pub32 before keyId (a non-canonical alias must not root the authority)
   const rec = gv.recovery;
   if (rec && rec.keys && typeof rec.keys === 'object') {
     const keys = {}; let ok = true;
-    for (const [kid, pub] of Object.entries(rec.keys)) { if (typeof pub !== 'string' || keyId(pub) !== kid) ok = false; else keys[kid] = pub; }
+    for (const [kid, pub] of Object.entries(rec.keys)) { if (typeof pub !== 'string' || !strictPub(pub) || keyId(pub) !== kid) ok = false; else keys[kid] = pub; }
     if (ok && Object.keys(keys).length) { const t = canonUint(rec.threshold); if (t !== undefined && t >= 1) { out.recoveryKeys = keys; out.recoveryThreshold = t; } }   // round-24 P0-02 — canonical decimal threshold ≥1 only; a coercible non-string (`["1"]`) no longer lowers the takeover threshold
   }
   return out;
@@ -929,7 +934,7 @@ export function verifyNoForkEvidence(evidence, config) {
   const root = trustRoots[issuer_id];
   if (!root) return { ok: false, detail: 'issuer not in consumer trustRoots' };
   const rootPub = typeof root === 'string' ? root : root.pub;
-  if (rootPub !== sig.pub || keyId(sig.pub) !== issuer_id) return { ok: false, detail: 'issuer_id/pub not the configured trust root' };
+  if (!strictPub(sig.pub) || rootPub !== sig.pub || keyId(sig.pub) !== issuer_id) return { ok: false, detail: 'issuer_id/pub not the configured trust root' };   // round-34 P0-01 sweep — strict Pub32 on the signed no-fork witness
   if (strictB64url(sig.sig, 64) === null) return { ok: false, detail: 'sig not canonical b64url of a 64-byte Ed25519 signature' };
   let msg; try { msg = canon(claim); } catch { return { ok: false, detail: 'claim not canonicalizable (round-25 P1-02 — a malformed non-null claim returns structured, never a thrown E-CANON)' }; }   // the leaf canon boundary is inside the result algebra (mirrors verifyCheckpointUniqueness)
   if (!edVerifyStrict(sig.pub, msg, sig.sig)) return { ok: false, detail: 'Ed25519 verify failed' };
@@ -1026,6 +1031,26 @@ const EV_FACTS_SCHEMA = Object.freeze(Object.assign(Object.create(null), {   // 
   'content-addressed': {},
 }));
 const isKnownEvidenceKind = (k) => Object.hasOwn(EV_FACTS_SCHEMA, k);   // the CLOSED registry of admissible proof_kinds (own-key, not prototype-name)
+// round-34 P0-01..04 — the PUBLIC authority verifiers must apply the SAME CLOSED TYPED ADT the kernel does to every
+// SIGNED witness (checkpoint / epoch-transition / uniqueness / recovery) BEFORE minting a branded handle or an authority
+// capability — else a witness the kernel rejects (an extra signed field, a shape-valid-impossible value, an unclosed sig
+// wrapper, a non-canonical Pub32) mints a public brand (the round-33 receipt class, swept across ALL witness types).
+// These schemas MIRROR the kernel SIG_ENV / CHECKPOINT_BODY / TRANSITION_CLAIM / VOTE_CLAIM field-for-field (decodeExact
+// = the kernel decodeRec); the two independent derivations AGREE (conformance cross-check).
+const _evRec = (schema) => (x) => decodeExact(x, schema);                 // a nested EXACT typed record — mirrors the kernel rec()
+const _evObj = { t: (x) => x !== null && typeof x === 'object' && !Array.isArray(x) };
+const AUTH_SIG_SCHEMA = { alg: { t: (x) => x === 'Ed25519' }, key_id: { t: _evHash }, pub: { t: strictPub }, sig: { t: (x) => strictB64url(x, 64) !== null } };   // mirrors SIG_ENV
+const KEYLOG_COMMIT_SCHEMA = { root: { t: _evHash }, length: { t: _evSeq }, head: { t: _evHash } };
+const CHK_AUTHORITY_SCHEMA = { current_key_id: { t: _evHash }, next_key_id: { t: _evHash, opt: true }, next_pub: { t: strictPub, opt: true }, effective_sequence: { t: _evSeq, opt: true } };
+const CHECKPOINT_BODY_SCHEMA = { version: { t: (x) => x === '1' }, purpose: { t: (x) => x === 'ust:authority-checkpoint' }, domain_shard: { t: _evId }, genesis_epoch: { t: _evHash }, sequence: { t: _evSeq }, active_genesis: { t: _evHash }, checkpoint_authority: { t: _evRec(CHK_AUTHORITY_SCHEMA) }, keylog: { t: _evRec(KEYLOG_COMMIT_SCHEMA) }, previous_checkpoint: { t: _evHash, opt: true }, previous_epoch_final_checkpoint: { t: _evHash, opt: true } };
+const TRANSITION_CLAIM_SCHEMA = { purpose: { t: (x) => x === 'ust:genesis-epoch-transition' }, domain_shard: { t: _evId }, from_genesis_epoch: { t: _evHash }, from_final_checkpoint: { t: _evHash }, from_sequence: { t: _evSeq }, to_active_genesis: { t: _evHash }, to_initial_sequence: { t: _evSeq }, to_genesis_epoch: { t: _evHash }, to_checkpoint_authority: { t: _evRec({ key_id: { t: _evHash }, pub: { t: strictPub } }) } };
+const VOTE_CLAIM_SCHEMA = { purpose: { t: (x) => x === 'ust:checkpoint-uniqueness-attestation' }, domain_shard: { t: _evId }, genesis_epoch: { t: _evHash }, sequence: { t: _evSeq }, checkpoint: { t: _evHash } };
+const RECOVERY_CLAIM_SCHEMA = { purpose: { t: (x) => x === 'ust:checkpoint-authority-recovery' }, domain_shard: { t: _evId }, genesis_epoch: { t: _evHash }, last_accepted_checkpoint: { t: _evHash }, effective_sequence: { t: _evSeq }, replacement_authority: { t: _evRec({ key_id: { t: _evHash }, pub: { t: strictPub } }) }, reason: { t: (x) => typeof x === 'string', opt: true } };   // reason = optional human-readable annotation the builder emits (does not lift the authority decision)
+// closed-witness decoders (mirror the kernel closedCheckpoint / closedTransition): exact envelope, typed sig wrapper, exact+typed body/claim.
+const closedCheckpointWitness = (cw) => decodeExact(cw, { body: _evObj, sig: _evObj }) && decodeExact(cw.sig, AUTH_SIG_SCHEMA) && decodeExact(cw.body, CHECKPOINT_BODY_SCHEMA);   // exactly { body, sig } (round-34 P0-02: no unsigned extra field can shift the checkpoint id)
+const closedTransitionWitness = (cm) => decodeExact(cm, { claim: _evObj, sig: _evObj, issuer_id: { t: _evHash, opt: true } }) && decodeExact(cm.sig, AUTH_SIG_SCHEMA) && (cm.issuer_id === undefined || cm.issuer_id === cm.sig.key_id) && decodeExact(cm.claim, TRANSITION_CLAIM_SCHEMA);
+const closedVoteWitness = (vw) => decodeExact(vw, { claim: _evObj, issuer_id: { t: _evHash, opt: true }, sig: _evObj }) && decodeExact(vw.sig, AUTH_SIG_SCHEMA) && decodeExact(vw.claim, VOTE_CLAIM_SCHEMA);
+const closedRecoveryWitness = (rw) => decodeExact(rw, { claim: _evObj, issuer_id: { t: _evHash }, sig: _evObj }) && decodeExact(rw.sig, AUTH_SIG_SCHEMA) && decodeExact(rw.claim, RECOVERY_CLAIM_SCHEMA);
 // subject binding → scope binding → admission (consumer connectors) → role (allowed_proof_kinds, B4) → total.
 // Tamper/malformation ⇒ INVALID(E-EVIDENCE); not-admitted-for-THIS-consumer/scope/subject ⇒ INDETERMINATE
 // (evidence_unverified) — absence of admission is not proof of fraud, but it earns nothing (fail-closed).
@@ -1525,7 +1550,7 @@ export function sealAuthorityCheckpoint(body, privKeyObj, pubB64url) {
 export const authorityCheckpointId = (cp) => H('ust:authority-checkpoint', canon({ body: cp.body, sig: cp.sig }));   // ONLY body+sig — external evidence excluded
 const isSeq = (s) => typeof s === 'string' && /^(0|[1-9]\d*)$/.test(s);                                              // canonical decimal, no leading zeroes
 function authorityCheckpointSigOk(cp, expectedKeyId, expectedPub) {
-  const s = cp?.sig; if (!s || s.alg !== 'Ed25519' || !s.pub || !s.sig) return { ok: false, detail: 'malformed sig' };
+  const s = cp?.sig; if (!s || s.alg !== 'Ed25519' || !s.pub || !s.sig || !strictPub(s.pub)) return { ok: false, detail: 'malformed sig' };   // round-34 P0-01 — strict Pub32 before keyId
   if (s.key_id !== expectedKeyId || s.pub !== expectedPub) return { ok: false, detail: 'signer is not the authorized checkpoint authority' };
   if (keyId(s.pub) !== s.key_id) return { ok: false, detail: 'sig.key_id ≠ keyId(pub)' };
   if (strictB64url(s.sig, 64) === null) return { ok: false, detail: 'sig not canonical b64url of a 64-byte Ed25519 signature' };
@@ -1559,17 +1584,14 @@ export function verifyCheckpointRecovery(statements, config) {
   // replacement = CONFLICT never first-wins (P0-05), and a malformed leaf admits nothing instead of throwing
   // (the rc.35 round-2 recovery-DoS: canon(claim) threw through the whole verification).
   const r = quorumAdjudicate(statements, { threshold, maxVoters: Object.keys(recoveryKeys).length, admit: (s) => {
-    const { claim, issuer_id, sig } = s || {};
-    if (!claim || !issuer_id || !sig || !sig.sig || !sig.pub) return null;
-    if (claim.purpose !== 'ust:checkpoint-authority-recovery') return null;
-    if (claim.domain_shard !== domain_shard || claim.genesis_epoch !== genesis_epoch || claim.last_accepted_checkpoint !== last_accepted_checkpoint) return null;
-    if (!isSeq(claim.effective_sequence) || claim.effective_sequence !== String(effective_sequence)) return null;   // authorizes ONLY the next checkpoint — round-25 P1-01: CanonicalSeq, a coercible `["1"]` no longer authorizes a recovery
-    const ra = claim.replacement_authority;
-    if (!ra || !ra.key_id || !ra.pub || keyId(ra.pub) !== ra.key_id) return null;       // replacement well-formed (key_id = keyId(pub))
-    const cc = canon(claim);                                                            // may throw on a malformed leaf → the core skips it (total)
+    if (!closedRecoveryWitness(s)) return null;                                         // round-34 P0-04 — CLOSED envelope { claim, issuer_id, sig } + typed sig wrapper (Ed25519, strict Pub32, Sig64) + exact typed recovery claim (purpose, replacement_authority strict Pub32), mirroring the kernel; an open/untyped statement mints nothing
+    const { claim, issuer_id, sig } = s;
+    if (claim.domain_shard !== domain_shard || claim.genesis_epoch !== genesis_epoch || claim.last_accepted_checkpoint !== last_accepted_checkpoint) return null;   // scope binding (shape/purpose already typed)
+    if (claim.effective_sequence !== String(effective_sequence)) return null;           // authorizes ONLY the next checkpoint (effective_sequence already a CanonicalSeq)
+    const ra = claim.replacement_authority, cc = canon(claim);                          // ra key_id/pub already typed + strict Pub32 by the closed decode
     const pub = recoveryKeys[issuer_id];
     if (!pub || pub !== sig.pub || keyId(sig.pub) !== issuer_id) return null;           // genesis-authorized recovery signer only
-    if (strictB64url(sig.sig, 64) === null || !edVerifyStrict(sig.pub, cc, sig.sig)) return null;
+    if (!edVerifyStrict(sig.pub, cc, sig.sig)) return null;                             // sig bytes already Sig64-typed by the closed decode
     return { key: cc, voter: issuer_id, payload: ra };
   } });
   if (r.outcome === 'conflict') return { recovered: false, conflict: true, detail: 'recovery equivocation: ' + r.count + ' conflicting replacements each reached threshold' };
@@ -1602,8 +1624,8 @@ export function verifyEpochTransition(statement, config) {
   const { domain_shard, from_genesis_epoch, from_final_checkpoint, from_sequence, fromAuthority } = c;
   const St = admitDeep(statement); if (St === ADMIT_REJECT) return { ok: false, detail: 'transition statement is not an inert record (round-27 — the returned to_active_genesis/to_checkpoint_authority must equal the SIGNED bytes, no getter re-read)' };   // round-27 — snapshot: the return re-reads claim.* after canon-verify; a getter could sign one destination and hand back another
   const { claim, sig } = St || {};
-  if (!claim || !sig || !sig.sig || !sig.pub || !fromAuthority) return { ok: false, detail: 'malformed transition or no from-authority' };
-  if (claim.purpose !== 'ust:genesis-epoch-transition') return { ok: false, detail: 'wrong purpose' };
+  if (!fromAuthority) return { ok: false, detail: 'no from-authority' };
+  if (!closedTransitionWitness(St)) return { ok: false, detail: 'transition witness not typed (round-34 P0-04 — CLOSED envelope { claim, sig, issuer_id? } + Ed25519 sig wrapper + strict Pub32 + exact typed transition claim, mirroring the kernel closedTransition; an extra field / alg:RSA / non-canonical pub mints nothing)' };
   if (claim.domain_shard !== domain_shard || claim.from_genesis_epoch !== from_genesis_epoch || claim.from_final_checkpoint !== from_final_checkpoint) return { ok: false, detail: 'transition not bound to this (domain, from-epoch, from-final-checkpoint)' };
   // round-24 P1-02 — the signed `from_sequence` MUST equal epoch A's verified FINAL sequence (the reference checker
   // requires it; the public verifier skipped the coordinate). Require it present + canonical; when the caller supplies the
@@ -1675,7 +1697,7 @@ export function verifyAuthorityCheckpointChain(chain, config) {
     const pp = pinnedPrior, a = pp?.authority_for_next;
     const full = isHandle('chain', pp) || (pp && typeof pp === 'object'
       && isHashStr(pp.scope_id) && isHashStr(pp.checkpoint_id) && isSeq(pp.sequence)
-      && a && typeof a.key_id === 'string' && typeof a.pub === 'string' && keyId(a.pub) === a.key_id
+      && a && typeof a.key_id === 'string' && typeof a.pub === 'string' && strictPub(a.pub) && keyId(a.pub) === a.key_id   // round-34 P0-01 sweep — strict Pub32 on a raw pinnedPrior authority pub
       && isSeq(pp.keylog_size) && isHashStr(pp.keylog_root) && isHashStr(pp.keylog_head));
     if (!full) return { result: 'INVALID', error: 'E-AUTHORITY', detail: 'pinnedPrior must be a branded CheckpointChainHandle or a full PinnedCheckpointState {scope_id, checkpoint_id, sequence, authority_for_next, keylog_size, keylog_root, keylog_head} — a scope-free pin is rejected (round-3 P0-2)' };
     prev = { id: pp.checkpoint_id, authority: a, sequence: pp.sequence, pinScope: pp.scope_id,
@@ -1693,6 +1715,7 @@ export function verifyAuthorityCheckpointChain(chain, config) {
     if (!ca0 || typeof ca0 !== 'object' || Object.keys(ca0).some((k) => !CP_CA_KEYS.has(k))) return { result: 'INVALID', error: 'E-MALFORMED', detail: 'malformed or unknown checkpoint_authority field' };
     const kl0 = b.keylog;
     if (!kl0 || typeof kl0 !== 'object' || Object.keys(kl0).some((k) => !['root', 'length', 'head'].includes(k)) || !isHashStr(kl0.root) || !isSeq(kl0.length) || !isHashStr(kl0.head)) return { result: 'INVALID', error: 'E-MALFORMED', detail: 'malformed keylog {root,length,head}' };
+    if (!closedCheckpointWitness(cp)) return { result: 'INVALID', error: 'E-MALFORMED', detail: 'checkpoint witness is not a closed typed ADT (round-34 P0-02/P0-01 — exactly { body, sig }, typed sig wrapper with strict Pub32, exact typed body, mirroring the kernel closedCheckpoint; an unsigned extra sig field must not shift the checkpoint id, a non-canonical Pub32 must not sign)' };   // BEFORE authorityCheckpointId / sig verify
     // M2 (rc.36 refactor) — genesis_epoch is CANONICAL: it MUST equal H("ust:genesis-epoch", active_genesis). The publisher
     // cannot pick the uniqueness namespace: two rival C₀ with the same active_genesis but different epoch (epoch-split)
     // used to key to DIFFERENT map slots and both attest; now a non-canonical epoch is malformed, so rivals collide in ONE slot.
@@ -1797,9 +1820,8 @@ export function verifyAuthorityCheckpointChain(chain, config) {
 //     threshold DISTINCT consumer-resolved trust domains signing the BYTE-IDENTICAL typed uniqueness claim) — or the
 //     `authenticated-map-uniqueness` map path (#42). Independence is CONSUMER-owned (issuer→domain), never
 //     self-declared; a bare-observation co-sign is corroboration, not uniqueness (wrong purpose ⇒ not admitted).
-export function checkpointUniquenessClaim({ domain_shard, genesis_epoch, sequence, checkpoint, observed_map_root, as_of }) {
-  return { purpose: 'ust:checkpoint-uniqueness-attestation', domain_shard, genesis_epoch, sequence: String(sequence), checkpoint,
-    ...(observed_map_root !== undefined ? { observed_map_root } : {}), ...(as_of !== undefined ? { as_of } : {}) };
+export function checkpointUniquenessClaim({ domain_shard, genesis_epoch, sequence, checkpoint }) {   // round-34 P0-03 — EXACTLY the kernel VOTE_CLAIM: no as_of (a signer can't self-declare time) / observed_map_root; builder == public verifier == kernel
+  return { purpose: 'ust:checkpoint-uniqueness-attestation', domain_shard, genesis_epoch, sequence: String(sequence), checkpoint };
 }
 export function buildUniquenessAttestation(fields, privKeyObj, issuerPubB64url) {
   const claim = checkpointUniquenessClaim(fields);
@@ -1838,15 +1860,13 @@ export function verifyCheckpointUniqueness(attestations, config) {
   // typed purpose + no self-declared independence + binding + consumer-accepted issuer + strict signature, all
   // BEFORE any grouping. P0-4: threshold ≥ 1 (0 distinct ≥ 0 earned attested from an empty set).
   const r = quorumAdjudicate(attestations, { threshold, admit: (a) => {
-    const { claim, issuer_id, sig } = a || {};
-    if (!claim || !issuer_id || !sig || !sig.sig || !sig.pub) return null;
-    if (claim.purpose !== 'ust:checkpoint-uniqueness-attestation') return null;         // uniqueness, not bare observation
-    if ('trust_domain' in claim || 'issuer_id' in claim) return null;                   // self-declared independence rejected (P0-2)
-    if (claim.domain_shard !== domain_shard || claim.genesis_epoch !== genesis_epoch || !isSeq(claim.sequence) || claim.sequence !== String(sequence) || claim.checkpoint !== checkpoint) return null;   // round-25 P1-01: CanonicalSeq on the signed sequence — a coercible `["0"]` no longer attests uniqueness
+    if (!closedVoteWitness(a)) return null;                                             // round-34 P0-03 — CLOSED envelope { claim, issuer_id?, sig } + Ed25519 sig wrapper (strict Pub32, Sig64) + exact VOTE_CLAIM (purpose + no as_of / trust_domain / issuer_id in the claim, no extra field), mirroring the kernel; the official builder emits exactly this claim
+    const { claim, issuer_id, sig } = a;
+    if (claim.domain_shard !== domain_shard || claim.genesis_epoch !== genesis_epoch || claim.sequence !== String(sequence) || claim.checkpoint !== checkpoint) return null;   // scope binding (sequence already a CanonicalSeq by the closed decode)
     const cc = canon(claim);                                                            // may throw on a malformed leaf → the core skips it (total)
     const root = trustRoots[issuer_id]; const pub = typeof root === 'string' ? root : root?.pub;
     if (!pub || pub !== sig.pub || keyId(sig.pub) !== issuer_id) return null;           // consumer-accepted issuer only
-    if (strictB64url(sig.sig, 64) === null || !edVerifyStrict(sig.pub, cc, sig.sig)) return null;
+    if (!edVerifyStrict(sig.pub, cc, sig.sig)) return null;                             // sig bytes already Sig64-typed by the closed decode
     const dom = domains[issuer_id]; if (typeof dom !== 'string' || !dom.length || hasLoneSurrogate(dom)) return null;   // round-23 P0-01 + round-24 P0-03 — a NON-EMPTY Unicode-SCALAR NFC string only (object/array/number/null, or a lone UTF-16 surrogate outside §6, is NOT an admitted domain and would fake an independent quorum)
     return { key: cc, voter: dom.normalize('NFC'), tag: issuer_id };
   } });
