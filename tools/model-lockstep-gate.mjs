@@ -18,15 +18,23 @@
 // `**Realization (revNN` block in the model must have a registry record for that rev — a NEW tagged enforcement note
 // without a record fails the gate. Add an enforcement realization ⇒ add a record, or CI goes red.
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 
 const MODEL = readFileSync(new URL('../spec/UST-1.0-formal-model.md', import.meta.url), 'utf8');
 const REG = JSON.parse(readFileSync(new URL('./lockstep-registry.json', import.meta.url), 'utf8'));
-// round-28 P1-03 — the EXECUTED-check manifest (emitted by conformance.mjs on a green run): the set of check ids that
-// actually RAN and PASSED. A registered adversarial check must be in THIS set, not merely a SOURCE SUBSTRING — else
-// disabling a `check(...)` call while leaving its name in a comment (the round-28 bypass) would still pass the gate.
-const EXECUTED = new Set(JSON.parse(readFileSync(new URL('../vectors/conformance-checks.json', import.meta.url), 'utf8')));
+// round-28 P1-03 / round-29 P1-02 — the EXECUTED-check manifest (emitted by conformance.mjs on a green run): the set of
+// check ids that actually RAN and PASSED. A registered adversarial check must be in THIS set, not merely a SOURCE
+// SUBSTRING. AND the manifest is BOUND to the source it was generated from — it carries the sha256 of conformance.mjs and
+// index.mjs; this gate RECOMPUTES those digests and REJECTS a stale manifest, so disabling a check while leaving the old
+// manifest committed is caught by the gate ITSELF (not merely by external CI ordering / a git-diff step).
+const MANIFEST = JSON.parse(readFileSync(new URL('../vectors/conformance-checks.json', import.meta.url), 'utf8'));
 
 const failures = [];
+const srcHash = (rel) => createHash('sha256').update(readFileSync(new URL(rel, import.meta.url))).digest('hex');
+const curSource = { conformance: srcHash('../packages/ust-protocol/conformance.mjs'), index: srcHash('../packages/ust-protocol/index.mjs') };
+if (!MANIFEST.source || MANIFEST.source.conformance !== curSource.conformance || MANIFEST.source.index !== curSource.index)
+  failures.push('the executed manifest is STALE — its source digests do not match the CURRENT conformance.mjs/index.mjs; regenerate it (a disabled/edited check with an un-regenerated manifest is caught HERE, at the shipped gate, not by CI order)');
+const EXECUTED = new Set(Array.isArray(MANIFEST.checks) ? MANIFEST.checks : []);
 const records = Array.isArray(REG.records) ? REG.records : [];
 if (records.length === 0) failures.push('lockstep-registry.json has no records — the parser or the file changed');
 

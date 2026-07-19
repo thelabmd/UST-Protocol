@@ -1,7 +1,7 @@
 {
   "protocol": "UST",
   "suite": "checker-byte-vectors",
-  "reference_checker": "1.0.0-rc.37-L1-rev33",
+  "reference_checker": "1.0.0-rc.37-L1-rev34",
   "note": "language-neutral: decode base64url → bytes → checkAuthorityProofBytes(package, config); assert result and (for a negative) that reason contains code.",
   "vectors": [
     {

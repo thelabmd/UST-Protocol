@@ -3,7 +3,7 @@
 // Negatives are CONSTRUCTED from the live impl (not skipped), so this is a real pass/fail. HIGH/TOP built inline.
 import * as P from './index.mjs';
 import { readFileSync, writeFileSync } from 'node:fs';
-import { createPrivateKey, createPublicKey } from 'node:crypto';
+import { createPrivateKey, createPublicKey, createHash } from 'node:crypto';
 import { __setWitnessClockForConformance } from './_clock.mjs';   // rev33 R4 — the witness clock is verifier-owned in an INTERNAL module; the harness drives it deterministically HERE (not through public opts), then restores
 const withWitnessClock = async (clock, body) => { __setWitnessClockForConformance(clock); try { return await body(); } finally { __setWitnessClockForConformance(); } };
 
@@ -1542,7 +1542,7 @@ console.log('\n═════════════════════�
     verifyNoForkEvidence: 'surface', resolveAuthority: 'surface', resolveByDiscovery: 'surface', resolveCadence: 'surface',
     resolveCheckpointRoots: 'surface', resolveKeys: 'surface', deriveAssurance: 'surface', deriveCheckpointFreshness: 'surface',
     forkChoice: 'surface', noEventBacking: 'surface', verifiedGenesisContext: 'surface', checkAuthorityProof: 'surface',
-    checkAuthorityProofBytes: 'surface', combineSubstrates: 'surface',
+    checkAuthorityProofBytes: 'surface', combineSubstrates: 'surface', witnessNoFork: 'surface',
     // ── EXEMPT (throw-by-contract): designed to throw on invalid — totality is not the contract ──
     assertValid: 'throws-by-contract', verifyOrThrow: 'throws-by-contract',
     // ── EXEMPT (producer builders): operate on the SIGNER's OWN data; a producer can only hurt themselves ──
@@ -1570,23 +1570,52 @@ console.log('\n═════════════════════�
     UstInvalid: 'result-class', UstIndeterminate: 'result-class',
     // ── EXEMPT (internal, reached only POST-admit through a public door that admits) ──
     provePredicates: 'internal (post-admit reasoning; verify() seals, a direct call mints no trust)',
-    witnessNoFork: 'internal (public door = resolveByDiscovery, which admits the shard + mints the served brand)',
   };
   const allFns = Object.keys(P).filter((k) => typeof P[k] === 'function');
   const unclassified = allFns.filter((k) => !(k in CLASS));
   check('FROM-CODE PARTITION: every function export is classified surface|exempt (no silent drop — a new export fails until classified)' + (unclassified.length ? ' — UNCLASSIFIED: ' + unclassified.join(',') : ''), unclassified.length === 0);
   const HOSTILE = () => new Proxy({}, { get() { throw new Error('HOSTILE_GET'); }, has() { throw new Error('H'); }, ownKeys() { throw new Error('H'); }, getOwnPropertyDescriptor() { throw new Error('H'); }, getPrototypeOf() { return Object.prototype; } });
   const surface = allFns.filter((k) => CLASS[k] === 'surface');
+  // rev34 R1 (round-29 P1-01) — TOTALITY by a machine SIGNATURE REGISTRY, not `fn.length` + `{}`-fill. `fn.length` stops at
+  //   the first DEFAULT parameter (resolveCadence.length === 1 though it takes 4 args → the 4th never tested), and `{}`-fill
+  //   short-circuits many verifiers before they read the hostile position (verifyAnchor returns early on a malformed proof,
+  //   never reaching the contentHash read). The registry declares the REAL arity + a VALID-SHAPED reachability fixture per
+  //   position, so a HOSTILE Proxy at position i is actually REACHED with the OTHER args valid; the call is AWAITED (an
+  //   async host-throw is a rejection). Every surface export MUST have a signature — a new one fails until declared.
+  const netMock = () => ({ fetchImpl: async () => ({ ok: false, status: 404, text: async () => '' }), substrateVerify: () => ({ final: false }) });
+  const oDoc = () => JSON.parse(JSON.stringify(doc)), oGen = () => JSON.parse(JSON.stringify(gen));
+  const oOpts = () => ({ context: 'data' }), oConf = () => ({}), oHash = () => 'sha256:' + '00'.repeat(32);
+  const oProof = () => ({ root: 'sha256:' + '00'.repeat(32), path: [] }), oBytes = () => new TextEncoder().encode('{}');
+  const oArr = () => [], oStr = () => 'grid.example', oFrames = () => [oDoc()], oGraph = () => ({});
+  const oStmt = () => ({ claim: {}, sig: { sig: 'a', pub: 'b' } }), oChain = () => [{ body: {}, sig: { sig: 'a', pub: 'b' } }];
+  const SIG = {
+    verify: [oDoc, oOpts], verifyAsync: [oDoc, oOpts], verifyStream: [oFrames, oConf], verifyJson: [oBytes, oOpts],
+    verifyAnchor: [oHash, oProof, oOpts], verifyEvidenceReceipt: [oStmt, oConf], verifyActiveGenesisUniqueness: [oProof, oConf],
+    verifyAuthorityBundle: [oConf, oConf], verifyAuthorityCheckpointChain: [oChain, oConf], verifyCheckpointMapUniqueness: [oProof, oConf],
+    verifyCheckpointRecovery: [oChain, oConf], verifyCheckpointUniqueness: [oChain, oConf], verifyEpochTransition: [oStmt, oConf],
+    verifyKeylogTerminality: [oStr, oProof], verifyNoForkEvidence: [oStmt, oConf], resolveAuthority: [oDoc, oOpts],
+    resolveByDiscovery: [oDoc, oOpts, netMock], resolveCadence: [oGen, oArr, oStr, oOpts], resolveCheckpointRoots: [oGen],
+    resolveKeys: [oGen, oArr], deriveAssurance: [oGraph], deriveCheckpointFreshness: [oChain, oConf], forkChoice: [oFrames, oOpts],
+    noEventBacking: [oConf, oConf, oFrames], verifiedGenesisContext: [oGen], checkAuthorityProof: [oConf, oConf],
+    checkAuthorityProofBytes: [oBytes, oBytes], combineSubstrates: [oArr], witnessNoFork: [oStr, oHash, netMock],
+  };
+  const sigMissing = surface.filter((k) => !(k in SIG));
+  check('FROM-CODE SIGNATURE REGISTRY: every consumer-surface export has a declared signature (real arity + a valid reachability fixture per position) — no surface export escapes the totality sweep, a new one fails until declared' + (sigMissing.length ? ' — MISSING: ' + sigMissing.join(',') : ''), sigMissing.length === 0);
   let sweepAllOk = true; const sweepThrew = [];
   for (const name of surface) {
-    const fn = P[name]; const arity = Math.max(fn.length, 1);
-    for (let pos = 0; pos < Math.min(arity, 3); pos++) {
-      const args = []; for (let j = 0; j < Math.min(arity, 3); j++) args.push(j === pos ? HOSTILE() : {});
-      try { const r = fn(...args); if (r && typeof r.then === 'function') r.catch(() => {}); }
-      catch { sweepAllOk = false; sweepThrew.push(name + '#' + pos); }
+    const sig = SIG[name]; if (!sig) continue;
+    for (let pos = 0; pos < sig.length; pos++) {
+      const args = sig.map((f, j) => (j === pos ? HOSTILE() : f()));
+      try { await P[name](...args); } catch { sweepAllOk = false; sweepThrew.push(name + '#' + pos); }
     }
   }
   check('FROM-CODE TOTALITY: every consumer-surface export (the classified untrusted-input entries, not a name regex) returns structured, never a host throw, on a hostile Proxy in any argument position' + (sweepThrew.length ? ' — THREW: ' + sweepThrew.join(',') : ''), sweepAllOk);
+  // rev34 R2 (round-29 P1-02) — the executed-check manifest is EVIDENCE, and evidence must be content-bound to its source
+  //   (like a UST receipt to its state). The manifest carries the sha256 of conformance.mjs + index.mjs; the lockstep gate
+  //   recomputes them and rejects a STALE manifest, so a disabled check with an un-regenerated manifest is caught at the
+  //   shipped gate itself, not by external CI ordering.
+  { let mfOk = false; try { const mf = JSON.parse(readFileSync(new URL('../../vectors/conformance-checks.json', import.meta.url), 'utf8')); mfOk = !!(mf && mf.source && /^[0-9a-f]{64}$/.test(mf.source.conformance || '') && /^[0-9a-f]{64}$/.test(mf.source.index || '') && Array.isArray(mf.checks)); } catch { mfOk = false; }
+    check('SOURCE-BOUND MANIFEST: the executed-check manifest carries the sha256 of conformance.mjs and index.mjs — the lockstep gate recomputes them and rejects a stale manifest (evidence content-bound to its source, not trusted by CI order)', mfOk); }
 }
 
 // ─── round-27 (self-audit) CANON-TRANSPARENCY — the soundness linchpin of the input boundary: `admitDeep` must be
@@ -1672,5 +1701,14 @@ else console.log('  ✓ all exercised checks pass (primitives + 6 findings + Gem
 // RAN and PASSED. The model-lockstep gate verifies each registered adversarial check is in THIS set (not a source
 // substring), so disabling a check while leaving its name in a comment no longer fools the gate; the manifest is
 // drift-gated (regenerate == committed) so a deleted check is caught.
-if (!fail) writeFileSync(new URL('../../vectors/conformance-checks.json', import.meta.url), JSON.stringify([...new Set(executed)].sort(), null, 0) + '\n');
+// rev34 R2 (round-29 P1-02) — the executed manifest is BOUND to the source it was generated from: it carries the sha256
+// of THIS conformance.mjs and of index.mjs, so the lockstep gate can recompute those digests and REJECT a stale manifest.
+// Disabling a registered check while leaving the old manifest committed now fails at the SHIPPED gate itself (the source
+// digest no longer matches), not merely by external CI ordering. The manifest is the gate's evidence — content-bound to
+// its source, exactly as a UST receipt is content-bound to the state it attests.
+if (!fail) {
+  const srcHash = (rel) => createHash('sha256').update(readFileSync(new URL(rel, import.meta.url))).digest('hex');
+  const manifest = { source: { conformance: srcHash('./conformance.mjs'), index: srcHash('./index.mjs') }, checks: [...new Set(executed)].sort() };
+  writeFileSync(new URL('../../vectors/conformance-checks.json', import.meta.url), JSON.stringify(manifest, null, 0) + '\n');
+}
 process.exit(fail ? 1 : 0);                                              // fail-closed for CI / `npm test`

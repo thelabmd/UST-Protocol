@@ -726,6 +726,25 @@ INTERNAL module outside the package's public API — a wire caller passing a doc
 independently of it. A hostile `__nowMs` in the public opts is DEAD (*"R4 CLOCK-OWNED: a hostile __nowMs in public opts is DEAD (never read) — it cannot expand the witness budget or flip resource_limit into a served-list HIGH (round-29 P0-02; ρ_v belongs to the verifier)"*). The conformance harness drives the clock deterministically through that same internal
 module (a code-level test capability, not a data-path surface), which also retires the wall-clock CI flake at its root.
 
+**Realization (rev34 — R1/R2 self-verification: the gates that PROVE the controller are themselves machine-grounded).**
+A round-29 audit showed the GATES proving R1 (admission is total) and R2 (processing only emits what registered checks
+enforce) rested on unsound proxies — the controller discipline was violated at the META level, where the gate trusted its
+own un-formalized input. (P1-01) the totality sweep fed a hostile Proxy using `fn.length` for the arity and `{}` for the
+other arguments; `fn.length` stops at the first default parameter (`resolveCadence.length === 1` though it takes four
+args, so the 4th was never tested) and `{}` short-circuits a verifier before it reads the hostile position (`verifyAnchor`
+returns early on a malformed proof, never reaching the `contentHash` read) — so "hostile in ANY argument position" was
+never actually exercised, and `resolveCadence(_,_,_,hostile)` / `verifyAnchor(hostile, validProof)` threw host exceptions.
+Fixed with a machine SIGNATURE REGISTRY: the real arity plus a VALID-SHAPED reachability fixture per position, so the
+Proxy is actually REACHED with the other args valid, and every surface export must be declared or the from-code check
+fails (*"FROM-CODE SIGNATURE REGISTRY: every consumer-surface export has a declared signature (real arity + a valid reachability fixture per position) — no surface export escapes the totality sweep, a new one fails until declared"*); the two
+gaps are now total at their door, and `witnessNoFork` — exported, taking an untrusted endpoint body, its verdict gating
+the served-list basis — is reclassified CONSUMER SURFACE and made total (adjudication div1, adopted). (P1-02) the
+lockstep gate trusted a committed manifest without binding it to the code it describes, so a disabled check with an
+un-regenerated manifest passed. Fixed by making the manifest EVIDENCE content-bound to its source — it carries the sha256
+of `conformance.mjs` and `index.mjs`, and the gate recomputes and rejects a stale manifest, exactly as a UST receipt is
+content-bound to the state it attests (*"SOURCE-BOUND MANIFEST: the executed-check manifest carries the sha256 of conformance.mjs and index.mjs — the lockstep gate recomputes them and rejects a stale manifest (evidence content-bound to its source, not trusted by CI order)"*). The principle: a gate that proves a controller rule must MACHINE-VERIFY it
+self-containedly — reach the real code path, bind evidence to its source — never trust a heuristic or a detached artifact.
+
 **Definition (VerifiedAuthorityContext).** For a genesis document `g` whose class and self-signature VERIFY
 (`resolveCheckpointRoots` — P0-2: verify-before-extract):
 

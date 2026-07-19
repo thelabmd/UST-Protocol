@@ -1197,6 +1197,7 @@ export function resolveAuthority(doc, opts = {}) {
 // internal verifyCore calls verifyAnchorCore over the ALREADY-admitted doc.proof, so the substrate-receipt identity shim
 // (`a === capA`) is not broken by a re-clone. Same public-door/internal-core split as verify.
 export function verifyAnchor(contentHash, proof, opts = {}) {
+  if (typeof contentHash !== 'string') return { inclusion: false, error: 'E-ANCHOR', detail: 'contentHash must be a string (round-29 P1-01 totality — a hostile object at arg 0 cannot throw at this door)' };
   const Pf = admitDeep(proof);
   if (Pf === ADMIT_REJECT) return { inclusion: false, error: 'E-ANCHOR', detail: 'proof is not an inert record (round-28 totality — a hostile getter cannot throw at this door)' };
   return verifyAnchorCore(contentHash, Pf, opts);
@@ -1386,7 +1387,8 @@ export function ustGrid(from, to, cadenceSec) {
 // entry is a normal transcript, verified by §14; the log is genesis-rooted and prev-chained. → {cadence}|{error}.
 export function resolveCadence(genesis, cadenceLog = [], atTime, opts) {
   { const G = admitDeep(genesis); if (G === ADMIT_REJECT) return { error: 'E-MALFORMED', detail: 'genesis is not an inert record (round-28 totality)' }; genesis = G; const C = admitDeep(cadenceLog); if (C === ADMIT_REJECT) return { error: 'E-MALFORMED', detail: 'cadenceLog is not an inert record (round-28 totality)' }; cadenceLog = C; }   // round-28 P1-02 — admit at the door
-  const { keylog } = (opts && typeof opts === 'object') ? opts : {};                // round-26 (rev24 C) — null-total: a null 4th arg no longer throws on destructuring
+  const _o = admitOpts(opts); if (_o === null) return { error: 'E-MALFORMED', detail: 'opts is not an inert record (round-29 P1-01 totality — a hostile 4th arg cannot throw at this door)' };   // round-26/29 — admit the opts at the door (a hostile Proxy 4th arg → structured, never a host throw)
+  const { keylog } = _o;
   if (cadenceLog !== undefined && cadenceLog !== null && !Array.isArray(cadenceLog)) return { error: 'E-MALFORMED', detail: 'cadenceLog must be an array' };
   cadenceLog = Array.isArray(cadenceLog) ? cadenceLog : [];
   // #75 P1-03 — cadence is a canonical positive-integer STRING of seconds ("1.5" / "030" / 1e2 rejected).
@@ -2380,7 +2382,15 @@ const readBounded = async (r, cap = DISCOVERY_MAX_BYTES) => {
   return body;
 };
 export async function witnessNoFork(shard, genesisHash, opts) {
-  const { fetchImpl = fetch, substrateVerify, maxWitnessOpMs } = (opts && typeof opts === 'object') ? opts : {};   // round-26 (rev24 C) — null-total: witnessNoFork(s, g, null) no longer throws on destructuring
+  // rev34 R1 (round-29 P1-01 / div1) — witnessNoFork is CONSUMER SURFACE: it is exported, takes an untrusted endpoint body,
+  // and its verdict gates whether resolveByDiscovery mints a served-list basis. So it must be TOTAL on EVERY argument — a
+  // hostile shard/genesisHash/opts yields a STRUCTURED result, never a host throw. Admit the opts at the door (admitOpts
+  // preserves the fetchImpl/substrateVerify capabilities, rejects a hostile Proxy → null); a non-string shard/hash is not
+  // a witnessable target.
+  const o = admitOpts(opts);
+  if (o === null || typeof shard !== 'string' || typeof genesisHash !== 'string')
+    return { status: 'indeterminate', reason: 'unavailable', detail: 'witnessNoFork requires a string shard + genesisHash and an inert opts record (round-29 P1-01 totality)' };
+  const { fetchImpl = fetch, substrateVerify, maxWitnessOpMs } = o;
   let log;
   try {
     const r = await fetchImpl(`https://${shard}/.well-known/ust-witness`, { signal: AbortSignal.timeout(10000), redirect: 'error' });
