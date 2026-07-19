@@ -57,11 +57,12 @@ verify(doc, { context: 'data' }).result   // → VALID:LIGHT / HIGH / TOP
 ## ●  Verify one right now
 
 The fastest way to understand UST is to verify one — no install, no account, 60 seconds. Grab a ready sample
-([`examples/ust-sample.json`](examples/ust-sample.json)), open the verifier, paste it, read the verdict. Always run
-the canonical reference — never eyeball:
+([`examples/ust-sample.json`](examples/ust-sample.json)), open the verifier, paste it, read the verdict — `VALID:LIGHT`
+for a bare signed document, climbing to `HIGH`/`TOP` as the publisher adds name-binding and an anchor. Always run the
+canonical reference — never eyeball:
 
-- **Browser (nothing is uploaded):** [thelabmd.github.io/UST-Protocol](https://thelabmd.github.io/UST-Protocol/) — paste the blob, the base64, or the JSON. Resolution + witness run automatically (Rekor and Bitcoin checked natively) — a publisher serving the standard surfaces reaches `VALID:HIGH` with zero clicks.
-- **Node:** `npm i ust-protocol` → `verify(doc, { context: 'data' })`; automatic HIGH via `resolveByDiscovery(doc)`.
+- **Browser (nothing is uploaded):** [thelabmd.github.io/UST-Protocol](https://thelabmd.github.io/UST-Protocol/) — paste the blob, the base64, or the JSON. A bare signed document (like the sample) reads `VALID:LIGHT`; when its publisher also serves the standard name-binding surfaces, resolution + witness (Rekor and Bitcoin checked natively) climb it to `VALID:HIGH` automatically.
+- **Node:** `npm i ust-protocol` → `verify(doc, { context: 'data' })` gives the `VALID:LIGHT` floor; `resolveByDiscovery(doc)` climbs to `VALID:HIGH` when the publisher serves discovery.
 - **Zero-dependency single files:** [`docs/ust-verify.mjs`](docs/ust-verify.mjs) (the LIGHT floor) + [`docs/ust-resolve.mjs`](docs/ust-resolve.mjs) (authority resolution + witness) — WebCrypto, clean-room, cross-checked against `ust-protocol`; fetch them from **this** repository, never from a sender's message.
 - **MCP:** [`@ust-protocol/mcp`](https://www.npmjs.com/package/@ust-protocol/mcp) exposes `ust_verify` to agents.
 
