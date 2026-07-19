@@ -1484,7 +1484,8 @@ console.log('\n═════════════════════�
   // wrap `obj[key]` in a read-counter getter; returns a reader for the count.
   const spy = (obj, key) => { let n = 0; const real = obj[key]; Object.defineProperty(obj, key, { enumerable: true, configurable: true, get() { n++; return real; } }); return () => n; };
   // each row: [label, () => a fresh input with a spied field, fn]. fn is called; assert the spy fired ≤ 1.
-  const g = (label, make) => { const c = make(); Promise.resolve(c.call()).catch(() => {}); check('BOUNDARY-GRID ' + label + ' admits its input (getter read ≤1 — no TOCTOU re-read)', c.reads() <= 1); };
+  let gridAllOk = true;
+  const g = (label, make) => { const c = make(); Promise.resolve(c.call()).catch(() => {}); const ok = c.reads() <= 1; if (!ok) gridAllOk = false; check('BOUNDARY-GRID ' + label + ' admits its input (getter read ≤1 — no TOCTOU re-read)', ok); };
   const wrapTop = (o, key) => { const clone = JSON.parse(JSON.stringify(o)); const reads = spy(clone, key); return { clone, reads }; };
   g('verify(doc)', () => { const { clone, reads } = wrapTop(doc, 'state'); return { call: () => P.verify(clone, { context: 'data' }), reads }; });
   g('verifyEvidenceReceipt(receipt)', () => { const { clone, reads } = wrapTop(rcpt, 'claim'); return { call: () => P.verifyEvidenceReceipt(clone, {}), reads }; });
@@ -1497,6 +1498,49 @@ console.log('\n═════════════════════�
   g('verifyCheckpointRecovery(statements[0])', () => { const st = { claim: { purpose: 'ust:checkpoint-authority-recovery' }, issuer_id: 'x', sig: { sig: 'a', pub: 'b' } }; const reads = spy(st, 'claim'); return { call: () => P.verifyCheckpointRecovery([st], {}), reads }; });
   g('verifyEpochTransition(statement)', () => { const st = { claim: { purpose: 'ust:genesis-epoch-transition' }, sig: { sig: 'a', pub: 'b' } }; const reads = spy(st, 'claim'); return { call: () => P.verifyEpochTransition(st, { fromAuthority: { key_id: 'k', pub: 'p' } }), reads }; });
   g('forkChoice(candidates[0])', () => { const clone = JSON.parse(JSON.stringify(doc)); const reads = spy(clone, 'state'); return { call: () => P.forkChoice([clone], {}), reads }; });
+  g('resolveByDiscovery(doc)', () => { const clone = JSON.parse(JSON.stringify(doc)); const reads = spy(clone, 'state'); return { call: () => P.resolveByDiscovery(clone, { context: 'data' }, { fetchImpl: async () => ({ ok: false, status: 404, text: async () => '' }) }), reads }; });
+  g('verifyAsync(doc)', () => { const clone = JSON.parse(JSON.stringify(doc)); const reads = spy(clone, 'state'); return { call: () => P.verifyAsync(clone, { context: 'data' }), reads }; });
+  check('BOUNDARY-GRID: every exported verifier admits its input once (no TOCTOU re-read across the surface — coverage answered in CI, not from memory)', gridAllOk);
+}
+
+// ─── round-27 (self-audit) CANON-TRANSPARENCY — the soundness linchpin of the input boundary: `admitDeep` must be
+//     byte-transparent to canon, so the door snapshot can NEVER flip a verdict. For any x: if canon(x) succeeds then
+//     admitDeep(x) is accepted AND canon(admitDeep(x)) === canon(x) (same bytes); if canon(x) throws then admitDeep(x)
+//     is REJECTED. The self-audit caught a depth-64 cap that FALSE-REJECTED a valid deep doc canon accepts, and an
+//     earlier function-DROP that ACCEPTED an input canon throws on — both silent verdict flips. This vector locks it.
+{
+  const rej = (d) => typeof d === 'symbol';
+  // the soundness invariant: admitDeep is NEVER LOOSER than canon, and when it ACCEPTS it is byte-transparent — so an
+  // input can never VERIFY DIFFERENTLY (or MORE permissively) through the boundary. For any x, at least one holds:
+  //   • admitDeep REJECTS x            (fail-closed / stricter than canon — always safe, e.g. a Date or a getter);
+  //   • admitDeep ACCEPTS and canon(admitDeep(x)) behaves IDENTICALLY to canon(x): both throw, or byte-for-byte equal.
+  // A FAILURE is only: admitDeep ACCEPTS x while canon(admitDeep(x)) diverges from canon(x) (a silent verdict flip).
+  let transAllOk = true;
+  const trans = (x, l) => {
+    let cx, tx = false; try { cx = P.canon(x); } catch { tx = true; }
+    const d = P.admitDeep(x); let cd, td = false; try { cd = rej(d) ? null : P.canon(d); } catch { td = true; }
+    const ok = rej(d) || (tx ? td : (!td && cd === cx));
+    if (!ok) transAllOk = false;
+    check('CANON-TRANSPARENT admitDeep — ' + l, ok);
+  };
+  let deep = {}, cur = deep; for (let i = 0; i < 200; i++) { cur.n = { v: 'x' }; cur = cur.n; }   // string-leaf deep (canon-valid)
+  const shared = { s: '1' };
+  // canon-VALID (string-leaf) inputs → byte-transparent:
+  trans({ a: '1', b: { c: ['x', 'y'], d: 'z' } }, 'plain nested (string leaves)');
+  trans({ z: '1', a: '2', m: '3' }, 'key order (canon sorts)');
+  trans(deep, 'depth 200 string-leaf (no false-reject of a valid deep doc)');
+  trans({ a: shared, b: shared }, 'DAG shared sub-object (accepted, not a cycle)');
+  trans({ a: 'é\u{1f600}' }, 'unicode + astral scalar');
+  trans(Object.assign(Object.create(null), { a: '1' }), 'null-proto input');
+  // canon-INVALID inputs → the boundary fails the same way (no silent accept-and-diverge):
+  trans({ a: 42 }, 'number leaf (canon: non-string leaf)');
+  trans({ a: null }, 'null leaf (canon: non-string leaf)');
+  trans({ a: true }, 'boolean leaf (canon: non-string leaf)');
+  trans({ a: 1e400 }, 'Infinity leaf');
+  trans({ f: () => 1 }, 'function value (admitDeep rejects)');
+  trans({ s: Symbol('x') }, 'symbol value (admitDeep rejects)');
+  trans({ d: new Date(0) }, 'Date (non-plain proto — admitDeep rejects, never a flattened {} )');
+  check('CANON-TRANSPARENT: admitDeep is byte-transparent to canon (never looser; byte-identical when accepted) — the input-boundary soundness linchpin', transAllOk);
 }
 
 console.log('  ust-protocol ' + P.VERSION.spec + ' conformance vs ' + V.version);

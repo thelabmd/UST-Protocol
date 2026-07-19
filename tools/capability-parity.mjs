@@ -63,7 +63,7 @@ const CAPS = {
 };
 
 // Internal primitives — not user-capability units (raw hash, encoders, error types, the registry itself).
-const PRIMITIVES = new Set(['VERSION', 'STABILITY', 'REFERENCE_CHECKER_VERSION', 'REFERENCE_CHECKER_RULES', 'RULE_CONTRACTS', 'H', 'Hbytes', 'edVerifyStrict', 'strictB64url', 'parseCadenceInt', 'UstInvalid', 'UstIndeterminate', 'REGISTRY', 'noFraudProof', 'admitUtf8', 'anyLoneSurrogate']);   // round-19 P1-01 — the shared Unicode byte-admission leaf, imported by the byte-checker TCB
+const PRIMITIVES = new Set(['VERSION', 'STABILITY', 'REFERENCE_CHECKER_VERSION', 'REFERENCE_CHECKER_RULES', 'RULE_CONTRACTS', 'H', 'Hbytes', 'edVerifyStrict', 'strictB64url', 'parseCadenceInt', 'UstInvalid', 'UstIndeterminate', 'REGISTRY', 'noFraudProof', 'admitUtf8', 'anyLoneSurrogate', 'admitDeep']);   // round-19 P1-01 — shared Unicode byte-admission leaf; round-27 (3) — admitDeep, THE input-boundary primitive (canon-transparent inert snapshot), exported so its transparency is testable
 
 // A connector exposes the substrate seam (verifyAnchor delegate + typed evidence emit), not core names.
 const connector = (X) => (cap) => ['anchor-verify', 'typed-evidence', 'substrate-registry'].includes(cap) && typeof X.substrateVerify !== 'undefined' && typeof X.toVerifiedEvidence === 'function';

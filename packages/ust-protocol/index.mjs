@@ -181,18 +181,19 @@ function admitOpts(v) {
 // and no verdict changes. This is admitOpts made total + recursive; it dissolves malformed-non-null (C) and TOCTOU (D)
 // at the same seam. `ADMIT_REJECT` is a module-private sentinel (never null — null is a legal admitted value).
 const ADMIT_REJECT = Symbol('admit-reject');
-const ADMIT_MAX_DEPTH = 64;                                                            // bounded — a signed authority record is shallow; a deeper graph is refused, never walked
-// round-27 (canon-exactness): admitDeep must be BYTE-TRANSPARENT to canon — for any x, `canon(admitDeep(x))` is the SAME
-// bytes as `canon(x)`, and admitDeep REJECTS exactly what canon THROWS on — else the snapshot silently flips a verdict
-// (an input canon rejects becoming VALID after the snapshot dropped the offending value). canon throws on a function/
-// symbol value, so admitDeep REJECTS it (an earlier DROP diverged: canon({f:()=>1}) throws but canon(admitDeep) did not).
-const admitDeep = (v, depth = 0, seen = new WeakSet()) => {
+// round-27 (canon-exactness, self-audit): admitDeep must be BYTE-TRANSPARENT to canon — for any x, `canon(admitDeep(x))`
+// is the SAME bytes as `canon(x)`, and admitDeep REJECTS exactly what canon THROWS on — else the snapshot silently flips
+// a verdict. canon throws on a function/symbol value, so admitDeep REJECTS it (an earlier DROP diverged). canon has NO
+// depth cap (it recurses to the stack limit, bounded by the §13 transport size); so admitDeep has NONE either — an earlier
+// depth-64 cap FALSE-REJECTED a valid deep `class:data` doc that canon accepts. Cycles are refused by the `seen` visited
+// set; a pathological non-cyclic depth overflows the stack in BOTH canon and admitDeep and is caught as a structured reject.
+export const admitDeep = (v, seen = new WeakSet()) => {   // THE input-boundary primitive — exported so its canon-transparency is TESTABLE (and a consumer can admit its own untrusted object)
   if (v === null) return null;
   const t = typeof v;
   if (t === 'function' || t === 'symbol') return ADMIT_REJECT;                         // canon throws on a function/symbol value → so do we (canon-exact); the only helper-carrying input (a keylog `prove` closure) is a BUILDER field, never passed as signed proof data
   if (t !== 'object') return v;                                                        // primitive scalar passes through
   if (HANDLE_BRAND.has(v)) return v;                                                   // round-27 — a branded handle is ALREADY a verified inert (deep-frozen, no getters) snapshot: pass it through, never deep-copy off the brand (a copy loses identity and the K3 gate rejects it)
-  if (depth > ADMIT_MAX_DEPTH || seen.has(v)) return ADMIT_REJECT;                     // over-depth or cycle → refuse (total, never infinite)
+  if (seen.has(v)) return ADMIT_REJECT;                                                // cycle → refuse (total, never infinite); non-cyclic depth is unbounded, matching canon
   seen.add(v);
   try {
     if (Array.isArray(v)) {
@@ -200,7 +201,7 @@ const admitDeep = (v, depth = 0, seen = new WeakSet()) => {
       for (let i = 0; i < v.length; i++) {
         const d = Object.getOwnPropertyDescriptor(v, i);
         if (d && (d.get || d.set)) return ADMIT_REJECT;                                // no accessor elements (TOCTOU)
-        const r = admitDeep(v[i], depth + 1, seen);
+        const r = admitDeep(v[i], seen);
         if (r === ADMIT_REJECT) return ADMIT_REJECT;
         out.push(r);
       }
@@ -215,7 +216,7 @@ const admitDeep = (v, depth = 0, seen = new WeakSet()) => {
       const d = Object.getOwnPropertyDescriptor(v, k);
       if (!d) continue;
       if (d.get || d.set) return ADMIT_REJECT;                                         // an accessor at ANY depth → not inert (the TOCTOU seam)
-      const r = admitDeep(d.value, depth + 1, seen);
+      const r = admitDeep(d.value, seen);
       if (r === ADMIT_REJECT) return ADMIT_REJECT;
       Object.defineProperty(out, k, { value: r, enumerable: true });                  // read-only own data
     }
@@ -2450,6 +2451,9 @@ export function combineSubstrates(verifiers) {
 export async function resolveByDiscovery(doc, opts = {}, transport = {}) {
   opts = admitOpts(opts); const T = admitOpts(transport);   // round-19 P1-02 — inert snapshots; a throwing accessor/Proxy trap on opts OR transport → null → structured reject (not a host throw)
   if (opts === null || T === null) return { verdict: { result: 'E-MALFORMED', tier: 'NONE', detail: 'opts and transport must be inert records (round-19 P1-02 totality)' }, resolution: null };
+  const D = admitDeep(doc);   // round-27 (3, self-audit) — admit the doc ONCE at THIS door: the discovery `shard` (the fetch URL) and the verify verdict must read the SAME bytes, else a getter fetches one domain's genesis/witness while the verdict is over another.
+  if (D === ADMIT_REJECT) return { verdict: { result: 'E-MALFORMED', tier: 'NONE', detail: 'document is not an inert record (round-27: the ONE input boundary)' }, resolution: null };
+  doc = D;
   const { fetchImpl = fetch, substrateVerify } = T;
   const base = verify(doc, opts);
   const shard = doc?.state?.id?.domain_shard || '';

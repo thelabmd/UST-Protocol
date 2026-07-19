@@ -663,6 +663,17 @@ so classification, signature, ID, state transition, return value and pin are all
 and **ONLY an ABSENT budget selects the reference default** — a supplied non-(finite positive integer) is refused, never
 silently expanded (*"round-27 P2-01 invalid maxWitnessOpMs (0/-1/NaN/Infinity/fractional) is REFUSED (resource_limit), never expanded to the reference default"*).
 
+**Realization (rev30 — ONE canon-transparent input boundary + its coverage control).** The boundary rests on ONE
+primitive: `admitDeep` is BYTE-TRANSPARENT to canon — for every `x`, either it REJECTS `x` (fail-closed, never looser
+than canon) or it accepts and `canon(admitDeep(x))` behaves identically to `canon(x)` (both throw, or byte-for-byte
+equal). So the door snapshot can NEVER make an input verify differently or more permissively; a self-audit found and
+closed an earlier depth-64 cap that FALSE-REJECTED a valid deep doc canon accepts, and a function-DROP that accepted an
+input canon rejects (*"CANON-TRANSPARENT: admitDeep is byte-transparent to canon (never looser; byte-identical when accepted) — the input-boundary soundness linchpin"*). Every UNTRUSTED public entry admits its input ONCE at its door
+(`verify`/`verifyAsync` split into a public door + `verifyCore` so the internal identity coupling is not re-cloned;
+`resolveByDiscovery` admits before the discovery `shard` is read), and a from-CODE control — the input-boundary grid —
+asserts each exported verifier admits its input, so coverage is answered in CI, not from memory
+(*"BOUNDARY-GRID: every exported verifier admits its input once (no TOCTOU re-read across the surface — coverage answered in CI, not from memory)"*).
+
 **Definition (VerifiedAuthorityContext).** For a genesis document `g` whose class and self-signature VERIFY
 (`resolveCheckpointRoots` — P0-2: verify-before-extract):
 

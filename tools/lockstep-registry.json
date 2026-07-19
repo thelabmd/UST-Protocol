@@ -50,6 +50,18 @@
       "conformance_check": "round-27 P1-01 a budget exhausted on the FINAL leaf → INDETERMINATE(resource_limit), never reported as pending"
     },
     {
+      "id": "R30-admitDeep-canon-transparent",
+      "rev": "rev30",
+      "model_locus": "BYTE-TRANSPARENT to canon",
+      "conformance_check": "CANON-TRANSPARENT: admitDeep is byte-transparent to canon (never looser; byte-identical when accepted) — the input-boundary soundness linchpin"
+    },
+    {
+      "id": "R30-input-boundary-grid",
+      "rev": "rev30",
+      "model_locus": "the input-boundary grid",
+      "conformance_check": "BOUNDARY-GRID: every exported verifier admits its input once (no TOCTOU re-read across the surface — coverage answered in CI, not from memory)"
+    },
+    {
       "id": "R27-witness-budget-typed-admission",
       "rev": "rev28",
       "model_locus": "ONLY an ABSENT budget selects the reference default",
