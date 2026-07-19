@@ -1321,9 +1321,9 @@ console.log('\n═════════════════════�
 {
   const e0 = 'sha256:' + '01'.repeat(32), e1 = 'sha256:' + '02'.repeat(32);
   const kl1 = P.buildKeylogCommitment([e0]);
-  check('TERM honest length-1 log (head at pos0, nothing at pos1) → terminal', P.verifyKeylogTerminality({ root: kl1.root, length: kl1.length, head: kl1.head }, kl1).terminal === true);
+  check('TERM honest length-1 log (head at pos0, nothing at pos1) → terminal', P.verifyKeylogTerminality({ root: kl1.root, length: kl1.length, head: kl1.head }, kl1.headProof).terminal === true);
   const kl2 = P.buildKeylogCommitment([e0, e1]);
-  check('TERM honest length-2 log (head at pos1, nothing at pos2) → terminal', P.verifyKeylogTerminality({ root: kl2.root, length: kl2.length, head: kl2.head }, kl2).terminal === true);
+  check('TERM honest length-2 log (head at pos1, nothing at pos2) → terminal', P.verifyKeylogTerminality({ root: kl2.root, length: kl2.length, head: kl2.head }, kl2.headProof).terminal === true);
   const lie = P.verifyKeylogTerminality({ root: kl2.root, length: '1', head: e0 }, { headProof: kl2.prove(0) });   // present a length-2 log as length-1, hiding e1
   check('TERM strict catches a HIDDEN SUCCESSOR (length lies) → not terminal (depth-mismatch or right subtree not empty)', lie.terminal === false && /beyond|right subtree|proof depth/.test(lie.detail));   // P0-5: an under-depth proof for the lied length is now caught earlier by the depth check
   check('TERM wrong head at position L-1 → not terminal', P.verifyKeylogTerminality({ root: kl1.root, length: '1', head: 'sha256:' + '99'.repeat(32) }, kl1).terminal === false);

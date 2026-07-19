@@ -181,12 +181,15 @@ function admitOpts(v) {
 // and no verdict changes. This is admitOpts made total + recursive; it dissolves malformed-non-null (C) and TOCTOU (D)
 // at the same seam. `ADMIT_REJECT` is a module-private sentinel (never null — null is a legal admitted value).
 const ADMIT_REJECT = Symbol('admit-reject');
-const ADMIT_DROP = Symbol('admit-drop');                                              // a function/symbol VALUE — not wire data; the parent SKIPS it (canon/JCS drops it too, so canon(admitDeep(x))==canon(x))
 const ADMIT_MAX_DEPTH = 64;                                                            // bounded — a signed authority record is shallow; a deeper graph is refused, never walked
+// round-27 (canon-exactness): admitDeep must be BYTE-TRANSPARENT to canon — for any x, `canon(admitDeep(x))` is the SAME
+// bytes as `canon(x)`, and admitDeep REJECTS exactly what canon THROWS on — else the snapshot silently flips a verdict
+// (an input canon rejects becoming VALID after the snapshot dropped the offending value). canon throws on a function/
+// symbol value, so admitDeep REJECTS it (an earlier DROP diverged: canon({f:()=>1}) throws but canon(admitDeep) did not).
 const admitDeep = (v, depth = 0, seen = new WeakSet()) => {
   if (v === null) return null;
   const t = typeof v;
-  if (t === 'function' || t === 'symbol') return ADMIT_DROP;                           // a function/symbol VALUE is not data — DROP it (a helper like a keylog `prove` closure is legal on an input; canon already omits it). An ACCESSOR (get/set) is the TOCTOU seam and is still REJECTED below.
+  if (t === 'function' || t === 'symbol') return ADMIT_REJECT;                         // canon throws on a function/symbol value → so do we (canon-exact); the only helper-carrying input (a keylog `prove` closure) is a BUILDER field, never passed as signed proof data
   if (t !== 'object') return v;                                                        // primitive scalar passes through
   if (HANDLE_BRAND.has(v)) return v;                                                   // round-27 — a branded handle is ALREADY a verified inert (deep-frozen, no getters) snapshot: pass it through, never deep-copy off the brand (a copy loses identity and the K3 gate rejects it)
   if (depth > ADMIT_MAX_DEPTH || seen.has(v)) return ADMIT_REJECT;                     // over-depth or cycle → refuse (total, never infinite)
@@ -199,7 +202,7 @@ const admitDeep = (v, depth = 0, seen = new WeakSet()) => {
         if (d && (d.get || d.set)) return ADMIT_REJECT;                                // no accessor elements (TOCTOU)
         const r = admitDeep(v[i], depth + 1, seen);
         if (r === ADMIT_REJECT) return ADMIT_REJECT;
-        out.push(r === ADMIT_DROP ? null : r);                                         // a function element → null (JCS maps it the same way), preserving index positions
+        out.push(r);
       }
       return Object.freeze(out);
     }
@@ -214,7 +217,6 @@ const admitDeep = (v, depth = 0, seen = new WeakSet()) => {
       if (d.get || d.set) return ADMIT_REJECT;                                         // an accessor at ANY depth → not inert (the TOCTOU seam)
       const r = admitDeep(d.value, depth + 1, seen);
       if (r === ADMIT_REJECT) return ADMIT_REJECT;
-      if (r === ADMIT_DROP) continue;                                                  // skip a function/symbol-valued property (canon drops it too)
       Object.defineProperty(out, k, { value: r, enumerable: true });                  // read-only own data
     }
     return Object.freeze(out);
