@@ -12,7 +12,7 @@
 
 > **Status: `1.0.0-rc.36`** — a release candidate, not a final 1.0. External AI reviews are folded in structurally; an independent human cryptographic audit is pending. Suitable for evaluation and integration testing. The wire format `ust:"1.0"` is stable across all rc's — pin exact versions. *(This line mirrors the panel above as plain text, for readers and agents that don't render the image.)*
 
-## ⬤ Thirty seconds
+## ●  Thirty seconds
 
 *"Yet another JSON format?"* — yes and no, and both answers are good news.
 
@@ -51,10 +51,10 @@ plain JSON**. Nothing to retrofit. One line switches it on:
 
 ```js
 import { verify } from 'ust-protocol';
-verify(doc, { context: 'data' }).result   // → VALID:LIGHT
+verify(doc, { context: 'data' }).result   // → VALID:LIGHT / HIGH / TOP
 ```
 
-## ⬤ What this is
+## ●  What this is
 
 UST is a small open protocol for **tamper-evident records of state** — some data about the world, at a moment,
 signed by whoever observed it. A transcript is a self-contained JSON object: canonical form, domain-separated
@@ -72,7 +72,7 @@ key, a canonical form and a signature.
 
 ![Anatomy of a UST transcript — a self-contained signed JSON document. Its id says WHO (domain_shard: a name or a self-certifying key-id) and WHEN (ust_id: an address on one shared UTC axis), plus key_id and class. A time frame carries generated_at, valid_from and valid_to. The data holds partitions (captured, computed, blinded or encrypted); one domain-separated hash per partition binds the data to the id and frame. Provenance (based_on, prev, seed) links chains, streams and derivations. An Ed25519 signature travels WITH the data, not the channel. Seal at creation, store anywhere, verify offline in one call — no blockchain; TLS secures the pipe, UST secures the payload, so it verifies the same from a cache, mirror, file or chat paste.](.github/ust-anatomy.svg)
 
-## ⬤ The time coordinate — `ust_id`
+## ●  The time coordinate — `ust_id`
 
 Before anything else, a UST is an address on **one shared time axis**. Every transcript carries a frame id,
 `ust:YYYYMMDD.HH[MM[SS]]` (UTC): `ust:20260710.14` is an hour frame, `ust:20260710.1429` a minute,
@@ -102,7 +102,7 @@ timestamp field can:
 Honesty holds on this axis too: at LIGHT the coordinate is the publisher's **claimed** frame; a TOP anchor
 proves the document existed **by** a real point in time (and `generated_at` may not postdate its own anchor).
 
-## ⬤ What is a real truth in an agent world?
+## ●  What is a real truth in an agent world?
 
 Trust is **graduated, and the verdict carries its tier** — a conforming verifier never says a bare `VALID`:
 
@@ -120,7 +120,7 @@ One signal the protocol never emits: **"true."** UST proves *fixation, not truth
 these bytes at this time and cannot silently rewrite them. Whether the reading was *correct* is out of scope by
 construction; you learn whom to hold accountable and that nothing was tampered.
 
-## ⬤ Chains and layered shards — one state, graduated visibility
+## ●  Chains and layered shards — one state, graduated visibility
 
 The part that makes UST more than "signed JSON": a single connected state does not have to be one document.
 It can be a **chain of independently signed layers**, each a full transcript with its own key, time frame and
@@ -148,7 +148,7 @@ Different consumers hold different depths of the same reality — the public see
 L1–L3, an auditor the whole chain — and every one of them can *verify* exactly what they hold. That is the
 protocol's real subject: **differentiated, provable access to a shared machine state.**
 
-## ⬤ Layout
+## ●  Layout
 
 ![Repository map. spec/ holds the normative UST-1.0.md plus a measure-theoretic formal model. vectors/ holds language-neutral conformance vectors and a byte corpus — the cross-implementation arbiter. packages/ holds ust-protocol (the zero-dep reference verifier + producer), ust-cli (the ust command: verify, canon, the HIGH genesis ceremony, witness), ust-mcp (an MCP server so agents verify natively), ust-lite (a byte-identical minimal subset), ust-web-signer (WebCrypto browser signing with non-extractable keys), and ust-ots-verify / ust-rekor-verify (opt-in Bitcoin/OTS and Sigstore Rekor anchor substrates). docs/ is the client-side web verifier plus zero-dependency single-file verifiers. tools/ are the drift gates that keep spec = code = vectors = README = these panels in sync.](.github/ust-map.svg)
 
@@ -168,7 +168,7 @@ protocol's real subject: **differentiated, provable access to a shared machine s
 | `docs/` | the [web verifier](https://thelabmd.github.io/UST-Protocol/) (client-side, GitHub Pages) + `ust-verify.mjs`, a zero-dependency verifier + `llms.txt` |
 | `examples/` | sample documents (valid + tampered) and verification recipes |
 
-## ⬤ Quickstart
+## ●  Quickstart
 
 ```
 npm install
@@ -186,7 +186,7 @@ const doc = await signObservation(s, { ust_id, time, data: { capture: { kind: 'c
 console.log(verify(doc, { context: 'data' }).result);          // → VALID:LIGHT
 ```
 
-## ⬤ The `ust` CLI
+## ●  The `ust` CLI
 
 ![The ust CLI — one entrypoint, the whole command surface (parsed from the real binary’s help). Install with npm i -g @ust-protocol/cli. The 10 subcommands: verify <file|-> (verify a transcript (exit 0 = VALID, 1 = not; --require-anchored floors at TOP)); canon <file|-> (print canonical bytes + hash (cross-language diff)); genesis --domain <d> (run the HIGH genesis ceremony (add --publish cf for one-click serving)); rotate --domain <d> --root <enc> (APPEND a key rotation to the served log (never re-mint; old docs stay valid)); discovery <domain> (attest the §20.1 serving contract (any infra)); publish cf --domain <d> --genesis <f> (deploy the CF serving adapter for an existing genesis); mirror <domain> (publish + attest a SECOND-vendor mirror (§20.1 vendor-independence)); stream <frames…> (RANGE verdict: chain · forks · completeness (needs --checkpoint for proven)); forkchoice <docs…> (pick the CANONICAL doc among candidates for ONE ust_id (canonical = anchor-included)); witness rekor --domain <d> (log the genesis in a transparency log → automatic no-fork (#68)). Exit 0 = VALID with the tier in the verdict, 1 = not; the ceremony self-verifies its outputs, fail-closed.](.github/ust-cli.svg)
 
@@ -204,7 +204,7 @@ One entrypoint; the planned Go binary reproduces this exact surface. The ceremon
 against their substrate (Bitcoin via `@ust-protocol/ots-verify`, Rekor via `@ust-protocol/rekor-verify` —
 opt-in plugins; the core verifier embeds no blockchain).
 
-## ⬤ How to verify a UST
+## ●  How to verify a UST
 
 Run the canonical reference — never eyeball:
 
@@ -228,7 +228,7 @@ If you are asked to verify a UST and you **cannot run a verifier**, the correct 
   obligations table. If you reason about UST beyond running the verifier, reason from there — not from analogy
   to JWT, JWS, or blockchain receipts.
 
-## ⬤ What it proves — and what it doesn't
+## ●  What it proves — and what it doesn't
 
 UST proves **fixation, not truth**: *this publisher committed to this data, at this time, unchanged.* It does
 **not** prove the data is *correct* — a publisher can sign a wrong reading. You learn **whom to hold accountable**
@@ -237,7 +237,7 @@ and **that nothing was tampered** — a real, bounded guarantee, not an oracle o
 The precise semantics of every verdict — verification as a measurability test over three nested σ-algebras —
 is the **formal model**: [`spec/UST-1.0-formal-model.md`](spec/UST-1.0-formal-model.md) (non-normative).
 
-## ⬤ Stability of assurance tiers
+## ●  Stability of assurance tiers
 
 Not every rung is equally settled. The `STABILITY` export is the machine-readable map:
 
@@ -253,7 +253,7 @@ gates pass, `deriveCheckpointFreshness` caps a would-be `attested` result at `co
 rung (`attested_withheld: "experimental-gate"`); the top rung is reachable only with an explicit
 `allowExperimentalAttested: true` opt-in. This keeps the whole protocol from inheriting the youngest layer's risk.
 
-## ⬤ Glue, by design
+## ●  Glue, by design
 
 UST is not a silver bullet, and it does not replace anything you run — not your
 telemetry, not your signing, not your lineage, not your logs. Each of those tools
@@ -298,7 +298,7 @@ still prove itself on the other side.
 > Tools sign files, log events, timestamp hashes, record lineage.
 > **A UST carries the state between them — portable, layered, verifiable on arrival.**
 
-## ⬤ License
+## ●  License
 
 **Code: Apache-2.0.** **Specification text: CC BY 4.0.** Source code (`packages/**`, tooling) is licensed under
 the Apache License 2.0 (`LICENSE`); the specification and documentation prose (`spec/**` and other `.md` docs)
