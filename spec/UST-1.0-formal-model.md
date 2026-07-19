@@ -674,6 +674,21 @@ input canon rejects (*"CANON-TRANSPARENT: admitDeep is byte-transparent to canon
 asserts each exported verifier admits its input, so coverage is answered in CI, not from memory
 (*"BOUNDARY-GRID: every exported verifier admits its input once (no TOCTOU re-read across the surface — coverage answered in CI, not from memory)"*).
 
+**Realization (rev31 — the boundary proven, not asserted).** A round-28 audit disproved the rev30 canon-transparency
+claim three ways; each is now closed at the primitive and PROVEN by a test rather than a hand-enumerated corpus.
+`admitDeep` traverses EXACTLY canon's domain — `Object.keys` (enumerable own STRING names, INCLUDING `__proto__`/
+`constructor`/`prototype` as own data, so the exact-key grammar REJECTS an extra member instead of the old silent DROP
+that produced a false VALID), non-enumerable keys and symbols excluded like canon, array HOLES preserved like canon's
+`.map`, and non-plain prototypes rejected (fail-closed). A **differential FUZZ** over thousands of random inputs asserts
+`admitDeep` is never looser than canon and byte-identical when it accepts (*"CANON-TRANSPARENT FUZZ: 3000 random inputs (pollution names / non-enumerable / sparse / non-plain proto / deep) — admitDeep is never looser than canon and byte-identical when accepted"*). Coverage is answered FROM code by PARTITION, not a name regex (a self-audit caught the first
+attempt filtering exports by `/^(verify|resolve|…)/`, which SILENTLY dropped real consumer entries like
+`checkAuthorityProof`): every function export is classified FROM the module exports as consumer-surface (untrusted wire
+input → must be total) or exempt-with-reason, and a new export fails until classified (*"FROM-CODE PARTITION: every function export is classified surface|exempt (no silent drop — a new export fails until classified)"*); then every
+consumer-surface export returns a structured result — never a host throw — on a hostile Proxy in any argument position
+(*"FROM-CODE TOTALITY: every consumer-surface export (the classified untrusted-input entries, not a name regex) returns structured, never a host throw, on a hostile Proxy in any argument position"*). And the lockstep gate now verifies each
+registered adversarial check against the EXECUTED-check manifest conformance emits, so a disabled/renamed check no longer
+passes on source-substring presence.
+
 **Definition (VerifiedAuthorityContext).** For a genesis document `g` whose class and self-signature VERIFY
 (`resolveCheckpointRoots` — P0-2: verify-before-extract):
 

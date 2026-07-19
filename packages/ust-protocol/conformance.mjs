@@ -2,7 +2,7 @@
 // Conformance runner (rc.2): every primitive vector + every negative class verified against ust-protocol.
 // Negatives are CONSTRUCTED from the live impl (not skipped), so this is a real pass/fail. HIGH/TOP built inline.
 import * as P from './index.mjs';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { createPrivateKey, createPublicKey } from 'node:crypto';
 
 const V = JSON.parse(readFileSync(new URL('../../vectors/conformance-vectors.json', import.meta.url)));
@@ -29,8 +29,8 @@ const atU = (doc, genesis, keylog, U, opts = {}) => {
   return P.verify({ ...doc, proof }, { genesis, keylog, ...nfe(genesis), substrateVerify: () => ({ final: true, time: U }), context: 'data', ...opts });
 };
 
-let pass = 0, fail = 0, note = 0; const fails = [];
-const check = (id, ok, d) => { if (ok) pass++; else { fail++; fails.push(id + (d ? ' — ' + d : '')); } };
+let pass = 0, fail = 0, note = 0; const fails = []; const executed = [];
+const check = (id, ok, d) => { executed.push(id); if (ok) pass++; else { fail++; fails.push(id + (d ? ' — ' + d : '')); } };   // round-28 P1-03 — record EVERY executed check id for the executed-manifest the lockstep gate consumes (not source-substring)
 const noted = (id, m) => { note++; };
 
 // ─── 1. primitive vectors from the deterministic suite ───
@@ -1501,6 +1501,67 @@ console.log('\n═════════════════════�
   g('resolveByDiscovery(doc)', () => { const clone = JSON.parse(JSON.stringify(doc)); const reads = spy(clone, 'state'); return { call: () => P.resolveByDiscovery(clone, { context: 'data' }, { fetchImpl: async () => ({ ok: false, status: 404, text: async () => '' }) }), reads }; });
   g('verifyAsync(doc)', () => { const clone = JSON.parse(JSON.stringify(doc)); const reads = spy(clone, 'state'); return { call: () => P.verifyAsync(clone, { context: 'data' }), reads }; });
   check('BOUNDARY-GRID: every exported verifier admits its input once (no TOCTOU re-read across the surface — coverage answered in CI, not from memory)', gridAllOk);
+  // round-28 P1-02 (HARDENED after self-audit) — FROM-CODE totality by PARTITION-EXHAUSTIVENESS, not a name regex.
+  //   The first fix filtered exports by `/^(verify|resolve|derive|…)/`, which is a hand-list in disguise: it SILENTLY
+  //   dropped real consumer entries (checkAuthorityProof, verifiedGenesisContext, combineSubstrates) — the very
+  //   "completeness control that isn't complete" class we keep closing. The sound shape: CLASSIFY every function export
+  //   as either 'surface' (untrusted wire input → MUST be total) or an EXEMPTION REASON, and fail from code if ANY
+  //   export is unclassified — so a newly-added export cannot be silently omitted; the author must consciously decide.
+  //   Then feed a HOSTILE Proxy to every 'surface' entry and assert NO host exception escapes (I4 totality).
+  const CLASS = {
+    // ── SURFACE: a consumer calls these DIRECTLY with an untrusted, over-the-wire document/proof/receipt ──
+    verify: 'surface', verifyAsync: 'surface', verifyStream: 'surface', verifyJson: 'surface', verifyAnchor: 'surface',
+    verifyEvidenceReceipt: 'surface', verifyActiveGenesisUniqueness: 'surface', verifyAuthorityBundle: 'surface',
+    verifyAuthorityCheckpointChain: 'surface', verifyCheckpointMapUniqueness: 'surface', verifyCheckpointRecovery: 'surface',
+    verifyCheckpointUniqueness: 'surface', verifyEpochTransition: 'surface', verifyKeylogTerminality: 'surface',
+    verifyNoForkEvidence: 'surface', resolveAuthority: 'surface', resolveByDiscovery: 'surface', resolveCadence: 'surface',
+    resolveCheckpointRoots: 'surface', resolveKeys: 'surface', deriveAssurance: 'surface', deriveCheckpointFreshness: 'surface',
+    forkChoice: 'surface', noEventBacking: 'surface', verifiedGenesisContext: 'surface', checkAuthorityProof: 'surface',
+    checkAuthorityProofBytes: 'surface', combineSubstrates: 'surface',
+    // ── EXEMPT (throw-by-contract): designed to throw on invalid — totality is not the contract ──
+    assertValid: 'throws-by-contract', verifyOrThrow: 'throws-by-contract',
+    // ── EXEMPT (producer builders): operate on the SIGNER's OWN data; a producer can only hurt themselves ──
+    seal: 'producer-builder', sealAuthorityCheckpoint: 'producer-builder', verifiedEvidence: 'producer-builder (raw-facts shape)',
+    buildAbsence: 'producer-builder', buildAttestation: 'producer-builder', buildAuthorityCheckpoint: 'producer-builder',
+    buildAuthorityProof: 'producer-builder', buildCadenceEntry: 'producer-builder', buildCheckpoint: 'producer-builder',
+    buildDerivation: 'producer-builder', buildEpochTransition: 'producer-builder', buildEvidenceReceipt: 'producer-builder',
+    buildGap: 'producer-builder', buildGenesis: 'producer-builder', buildKeyLogEntry: 'producer-builder',
+    buildKeylogCommitment: 'producer-builder', buildNoForkEvidence: 'producer-builder', buildRecoveryStatement: 'producer-builder',
+    buildState: 'producer-builder', buildUniquenessAttestation: 'producer-builder', buildVerifiableMap: 'producer-builder',
+    // ── EXEMPT (pure primitive/crypto/id/leaf/lattice): consume TRUSTED post-verification values, not untrusted wire ──
+    canon: 'primitive', keyId: 'primitive', contentHash: 'primitive', merkleRoot: 'primitive', H: 'primitive', Hbytes: 'primitive',
+    seed: 'primitive', strictB64url: 'primitive', admitUtf8: 'primitive', admitDeep: 'primitive (the door itself; canon-transparent)',
+    anyLoneSurrogate: 'primitive', edVerifyStrict: 'primitive', signedContent: 'primitive', partitionHash: 'primitive',
+    blindedCommit: 'primitive', blindPartition: 'primitive', assuranceLE: 'primitive', assuranceState: 'primitive',
+    axisRank: 'primitive', joinAssurance: 'primitive', meetAssurance: 'primitive', projectTier: 'primitive', capAssurance: 'primitive',
+    evidenceCaps: 'primitive', ustGrid: 'primitive', checkBounds: 'primitive', compareEvidenceOrder: 'primitive',
+    quorumTrustDomains: 'primitive', evidenceClass: 'primitive', parseCadenceInt: 'primitive', authorityCheckpointId: 'primitive',
+    authorityScopeId: 'primitive', checkpointMapLeaf: 'primitive', checkpointRecoveryClaim: 'primitive',
+    checkpointUniquenessClaim: 'primitive', epochTransitionClaim: 'primitive', evidenceReceiptClaim: 'primitive',
+    evidenceReceiptId: 'primitive', genesisEpoch: 'primitive', keylogLeaf: 'primitive', nameMapLeaf: 'primitive', noForkClaim: 'primitive',
+    // ── EXEMPT (pure predicate/accessor) ──
+    isValid: 'predicate', isVerifiedHandle: 'predicate', isPublicDnsShard: 'predicate',
+    // ── EXEMPT (result class) ──
+    UstInvalid: 'result-class', UstIndeterminate: 'result-class',
+    // ── EXEMPT (internal, reached only POST-admit through a public door that admits) ──
+    provePredicates: 'internal (post-admit reasoning; verify() seals, a direct call mints no trust)',
+    witnessNoFork: 'internal (public door = resolveByDiscovery, which admits the shard + mints the served brand)',
+  };
+  const allFns = Object.keys(P).filter((k) => typeof P[k] === 'function');
+  const unclassified = allFns.filter((k) => !(k in CLASS));
+  check('FROM-CODE PARTITION: every function export is classified surface|exempt (no silent drop — a new export fails until classified)' + (unclassified.length ? ' — UNCLASSIFIED: ' + unclassified.join(',') : ''), unclassified.length === 0);
+  const HOSTILE = () => new Proxy({}, { get() { throw new Error('HOSTILE_GET'); }, has() { throw new Error('H'); }, ownKeys() { throw new Error('H'); }, getOwnPropertyDescriptor() { throw new Error('H'); }, getPrototypeOf() { return Object.prototype; } });
+  const surface = allFns.filter((k) => CLASS[k] === 'surface');
+  let sweepAllOk = true; const sweepThrew = [];
+  for (const name of surface) {
+    const fn = P[name]; const arity = Math.max(fn.length, 1);
+    for (let pos = 0; pos < Math.min(arity, 3); pos++) {
+      const args = []; for (let j = 0; j < Math.min(arity, 3); j++) args.push(j === pos ? HOSTILE() : {});
+      try { const r = fn(...args); if (r && typeof r.then === 'function') r.catch(() => {}); }
+      catch { sweepAllOk = false; sweepThrew.push(name + '#' + pos); }
+    }
+  }
+  check('FROM-CODE TOTALITY: every consumer-surface export (the classified untrusted-input entries, not a name regex) returns structured, never a host throw, on a hostile Proxy in any argument position' + (sweepThrew.length ? ' — THREW: ' + sweepThrew.join(',') : ''), sweepAllOk);
 }
 
 // ─── round-27 (self-audit) CANON-TRANSPARENCY — the soundness linchpin of the input boundary: `admitDeep` must be
@@ -1541,10 +1602,37 @@ console.log('\n═════════════════════�
   trans({ s: Symbol('x') }, 'symbol value (admitDeep rejects)');
   trans({ d: new Date(0) }, 'Date (non-plain proto — admitDeep rejects, never a flattened {} )');
   check('CANON-TRANSPARENT: admitDeep is byte-transparent to canon (never looser; byte-identical when accepted) — the input-boundary soundness linchpin', transAllOk);
+  // round-28 P0-01 fix — the LOCK: a DIFFERENTIAL FUZZ of admitDeep vs canon over a random corpus, so canon-exactness is
+  //   answered by a test (not my hand-enumeration, which MISSED pollution names / non-enumerable keys / sparse arrays).
+  //   Seeded LCG (deterministic); the generator deliberately emits the classes that diverged: __proto__/constructor/
+  //   prototype keys, non-enumerable own props, sparse arrays, numeric-string keys, non-plain protos, deep nesting.
+  let s = 0x2f6e2b1 >>> 0; const rnd = () => (s = (s * 1103515245 + 12345) >>> 0) / 0x100000000;
+  const POLLUTE = ['__proto__', 'constructor', 'prototype', 'a', 'b', 'toString'];
+  const gen = (depth) => {
+    const r = rnd();
+    if (depth <= 0 || r < 0.4) { const k = rnd(); return k < 0.5 ? String.fromCharCode(97 + ((rnd() * 26) | 0)) + (rnd() * 9 | 0) : (k < 0.7 ? (rnd() * 100 | 0) : (k < 0.85 ? null : (k < 0.95 ? (rnd() < 0.5) : (rnd() < 0.5 ? new Date(0) : Symbol('x')))));  }
+    if (r < 0.7) { const n = (rnd() * 4) | 0; const a = []; for (let i = 0; i < n; i++) { if (rnd() < 0.25) { a.length = a.length + 1; } else a.push(gen(depth - 1)); } return a; }
+    const o = {}; const n = (rnd() * 4) | 0;
+    for (let i = 0; i < n; i++) { const key = POLLUTE[(rnd() * POLLUTE.length) | 0]; Object.defineProperty(o, key, { value: gen(depth - 1), enumerable: rnd() >= 0.2, configurable: true, writable: true }); }   // defineProperty (never assignment) so `__proto__` is a DATA key exactly as JSON.parse produces; ~20% non-enumerable
+    return o;
+  };
+  let fuzzOk = true; const fuzzN = 3000;   // NOTE: the check label below hardcodes "3000" as a LITERAL (not `+ fuzzN +`) so the ONE string aligns across all four surfaces — conformance source (model-correspondence grep), the executed manifest (lockstep gate), the registry, and the model citation. Keep in sync if fuzzN changes.
+  for (let i = 0; i < fuzzN; i++) {
+    const x = gen(3);
+    let cx, tx = false; try { cx = P.canon(x); } catch { tx = true; }
+    const d = P.admitDeep(x); const dr = typeof d === 'symbol'; let cd, td = false; try { cd = dr ? null : P.canon(d); } catch { td = true; }
+    if (!(dr || (tx ? td : (!td && cd === cx)))) { fuzzOk = false; break; }   // reject, OR (canon throws ⇒ admit throws too) OR (canon ok ⇒ byte-identical)
+  }
+  check('CANON-TRANSPARENT FUZZ: 3000 random inputs (pollution names / non-enumerable / sparse / non-plain proto / deep) — admitDeep is never looser than canon and byte-identical when accepted', fuzzOk);
 }
 
 console.log('  ust-protocol ' + P.VERSION.spec + ' conformance vs ' + V.version);
 console.log('  PASS ' + pass + '   FAIL ' + fail + '   NOTES ' + note);
 if (fails.length) { console.log('\n  FAILURES:'); fails.forEach(f => console.log('    ✗ ' + f)); }
 else console.log('  ✓ all exercised checks pass (primitives + 6 findings + Gemini-B + HIGH + TOP)');
+// round-28 P1-03 — emit the EXECUTED-check manifest on a green run: the sorted unique set of check ids that actually
+// RAN and PASSED. The model-lockstep gate verifies each registered adversarial check is in THIS set (not a source
+// substring), so disabling a check while leaving its name in a comment no longer fools the gate; the manifest is
+// drift-gated (regenerate == committed) so a deleted check is caught.
+if (!fail) writeFileSync(new URL('../../vectors/conformance-checks.json', import.meta.url), JSON.stringify([...new Set(executed)].sort(), null, 0) + '\n');
 process.exit(fail ? 1 : 0);                                              // fail-closed for CI / `npm test`

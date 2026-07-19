@@ -62,6 +62,24 @@
       "conformance_check": "BOUNDARY-GRID: every exported verifier admits its input once (no TOCTOU re-read across the surface — coverage answered in CI, not from memory)"
     },
     {
+      "id": "R31-admitDeep-canon-fuzz",
+      "rev": "rev31",
+      "model_locus": "differential FUZZ",
+      "conformance_check": "CANON-TRANSPARENT FUZZ: 3000 random inputs (pollution names / non-enumerable / sparse / non-plain proto / deep) — admitDeep is never looser than canon and byte-identical when accepted"
+    },
+    {
+      "id": "R31-from-code-partition",
+      "rev": "rev31",
+      "model_locus": "classified FROM the module exports",
+      "conformance_check": "FROM-CODE PARTITION: every function export is classified surface|exempt (no silent drop — a new export fails until classified)"
+    },
+    {
+      "id": "R31-from-code-totality",
+      "rev": "rev31",
+      "model_locus": "hostile Proxy in any argument position",
+      "conformance_check": "FROM-CODE TOTALITY: every consumer-surface export (the classified untrusted-input entries, not a name regex) returns structured, never a host throw, on a hostile Proxy in any argument position"
+    },
+    {
       "id": "R27-witness-budget-typed-admission",
       "rev": "rev28",
       "model_locus": "ONLY an ABSENT budget selects the reference default",

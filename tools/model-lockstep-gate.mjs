@@ -20,8 +20,11 @@
 import { readFileSync } from 'node:fs';
 
 const MODEL = readFileSync(new URL('../spec/UST-1.0-formal-model.md', import.meta.url), 'utf8');
-const CONF = readFileSync(new URL('../packages/ust-protocol/conformance.mjs', import.meta.url), 'utf8');
 const REG = JSON.parse(readFileSync(new URL('./lockstep-registry.json', import.meta.url), 'utf8'));
+// round-28 P1-03 — the EXECUTED-check manifest (emitted by conformance.mjs on a green run): the set of check ids that
+// actually RAN and PASSED. A registered adversarial check must be in THIS set, not merely a SOURCE SUBSTRING — else
+// disabling a `check(...)` call while leaving its name in a comment (the round-28 bypass) would still pass the gate.
+const EXECUTED = new Set(JSON.parse(readFileSync(new URL('../vectors/conformance-checks.json', import.meta.url), 'utf8')));
 
 const failures = [];
 const records = Array.isArray(REG.records) ? REG.records : [];
@@ -33,7 +36,7 @@ for (const r of records) {
   if (!r.id || ids.has(r.id)) failures.push(`registry record has a missing/duplicate id: ${JSON.stringify(r.id)}`);
   ids.add(r.id);
   if (!r.model_locus || !MODEL.includes(r.model_locus)) failures.push(`[${r.id}] model no longer states its claim verbatim (model_locus not found): ${JSON.stringify((r.model_locus || '').slice(0, 60))}`);
-  if (!r.conformance_check || !CONF.includes(r.conformance_check)) failures.push(`[${r.id}] its adversarial-closure check is not in conformance.mjs: ${JSON.stringify((r.conformance_check || '').slice(0, 70))}`);
+  if (!r.conformance_check || !EXECUTED.has(r.conformance_check)) failures.push(`[${r.id}] its adversarial-closure check did not RUN+PASS in the executed manifest (a disabled/renamed check no longer fools the gate): ${JSON.stringify((r.conformance_check || '').slice(0, 70))}`);
 }
 
 // 2) EXHAUSTIVENESS by rev tag: every `**Realization (revNN` enforcement note must be registered for that rev.

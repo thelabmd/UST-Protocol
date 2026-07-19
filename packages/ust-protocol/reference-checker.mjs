@@ -17,7 +17,7 @@ import { canon, H, keyId, edVerifyStrict, contentHash, verify, isValid, verifyKe
   resolveKeys, buildKeylogCommitment, authorityCheckpointId, strictB64url, isPublicDnsShard,
   admitUtf8, anyLoneSurrogate } from './index.mjs';   // round-19 P1-01 — ONE Unicode byte-admission, shared with the discovery resolver (no drift)
 
-export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev30';
+export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev31';
 // RULE_CONTRACTS (§2b) — the STRUCTURAL source of truth: exactly one inference rule per name, one switch branch per
 // name, and a fixed (children arity, witness count, allowed params, conclusion kind). DecodeTerm enforces these on
 // decode; a term with an extra child / extra witness / free param / unknown field / stored conclusion is rejected
@@ -773,6 +773,7 @@ export function buildAuthorityProof(inputs = {}) {
 // ONLY from config, never from inputs (§2.w / round-4 P0-02). D1: returns base + anti-equivocation basis, never a
 // collapsed scalar `attested`; the legacy `attested` label is a projection requiring MapUnique behind the K1 gate.
 export function verifyAuthorityBundle(inputs = {}, config = {}) {
+ try {   // round-28 P1-02 — I4 totality: a hostile getter/Proxy in inputs/config yields a STRUCTURED result, never a host throw (this self-contained byte-checker cannot reach admitDeep; the inner decoders are already total, this is the outer boundary guard)
   const trust = config?.trust || {}, policy = config?.policy || {};
   if (!inputs?.genesis) return Object.freeze({ result: 'INDETERMINATE', reason: 'authority_unresolved', detail: 'no genesis — an authority bundle roots in a verified genesis' });
   const chkCfg = { connectors: trust.connectors || {}, mapRoots: trust.mapRoots || [], witnesses: trust.witnesses || {}, domains: trust.domains || {},
@@ -788,4 +789,5 @@ export function verifyAuthorityBundle(inputs = {}, config = {}) {
     keylog_freshness: j.base, label, anti_equivocation: { quorum: aeq.quorum || null, map: aeq.map || null },
     ...(aeq.map && !chkCfg.policy.allowExperimentalAttested ? { attested_withheld: 'experimental-gate' } : {}),
     legacy_freshness: legacy, support: j.support, proof_hash: r.proof_hash, config_id: r.config_id });
+ } catch { return Object.freeze({ result: 'E-MALFORMED', detail: 'authority bundle inputs/config are not inert records (round-28 P1-02 totality)' }); }
 }

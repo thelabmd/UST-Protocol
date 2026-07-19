@@ -17,7 +17,7 @@
     "test": "node packages/ust-protocol/conformance.mjs && node packages/ust-protocol/run-arc-vectors.mjs",
     "test:cli": "node packages/ust-cli/regression.mjs",
     "test:model": "node packages/ust-protocol/model-correspondence.mjs",
-    "test:model-lockstep": "node tools/model-lockstep-gate.mjs",
+    "test:model-lockstep": "node packages/ust-protocol/conformance.mjs > /dev/null && git diff --exit-code vectors/conformance-checks.json && node tools/model-lockstep-gate.mjs",
     "test:vectors": "node packages/ust-protocol/gen-arc-vectors.mjs && git diff --exit-code vectors/arc-vectors.json && node packages/ust-protocol/run-arc-vectors.mjs",
     "test:spec-sync": "node tools/gen-spec-registry.mjs && node tools/gen-readme-version.mjs && node tools/gen-status-svg.mjs && node tools/gen-readme-panels.mjs && git diff --exit-code spec/UST-1.0.md README.md package.json .github/status.svg '.github/ust-*.svg' && node tools/spec-code-sync.mjs",
     "test:parity": "node tools/capability-parity.mjs",

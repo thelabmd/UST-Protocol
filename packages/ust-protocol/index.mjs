@@ -197,28 +197,31 @@ export const admitDeep = (v, seen = new WeakSet()) => {   // THE input-boundary 
   seen.add(v);
   try {
     if (Array.isArray(v)) {
-      const out = [];
+      const out = new Array(v.length);                                                // round-28 P1-01 — PRESERVE holes + length (canon uses `.map`, which SKIPS holes); densifying to `undefined` diverged
       for (let i = 0; i < v.length; i++) {
+        if (!(i in v)) continue;                                                       // a HOLE — leave it a hole (canon's `.map` skips it); do not densify
         const d = Object.getOwnPropertyDescriptor(v, i);
-        if (d && (d.get || d.set)) return ADMIT_REJECT;                                // no accessor elements (TOCTOU)
+        if (d.get || d.set) return ADMIT_REJECT;                                       // no accessor elements (TOCTOU)
         const r = admitDeep(v[i], seen);
         if (r === ADMIT_REJECT) return ADMIT_REJECT;
-        out.push(r);
+        out[i] = r;
       }
-      return Object.freeze(out);
+      return Object.freeze(out);                                                       // non-index own props are ignored, exactly as canon's `.map` ignores them
     }
     const proto = Object.getPrototypeOf(v);
-    if (proto !== Object.prototype && proto !== null) return ADMIT_REJECT;             // plain / null-proto ONLY (no class instances, Promises, Proxies-with-exotic-proto)
+    if (proto !== Object.prototype && proto !== null) return ADMIT_REJECT;             // plain / null-proto ONLY (Date/Map/Set/class instances rejected — fail-closed per round-28 div2: stricter-than-canon means REJECT the whole input, never accept-and-rewrite)
     const out = Object.create(null);
-    for (const k of Reflect.ownKeys(v)) {
-      if (typeof k === 'symbol') continue;                                             // string keys only
-      if (k === '__proto__' || k === 'prototype' || k === 'constructor') continue;     // never admit a pollution key
+    // round-28 P0-01 — the EXACT canon key domain: `Object.keys` (ENUMERABLE OWN STRING keys). This DROPS non-enumerable
+    // keys and symbols (canon does too) and — critically — INCLUDES `__proto__`/`constructor`/`prototype` as OWN DATA
+    // (dropping them let an attacker attach an unsigned member under those names and still get VALID — a false accept).
+    // On a null-proto target these names are plain data via defineProperty; the verifier's exact-key grammar then REJECTS
+    // the extra member (E-MALFORMED), never erases it. admitDeep must be NEVER LOOSER than canon.
+    for (const k of Object.keys(v)) {
       const d = Object.getOwnPropertyDescriptor(v, k);
-      if (!d) continue;
       if (d.get || d.set) return ADMIT_REJECT;                                         // an accessor at ANY depth → not inert (the TOCTOU seam)
       const r = admitDeep(d.value, seen);
       if (r === ADMIT_REJECT) return ADMIT_REJECT;
-      Object.defineProperty(out, k, { value: r, enumerable: true });                  // read-only own data
+      Object.defineProperty(out, k, { value: r, enumerable: true });                  // read-only own data (safe for __proto__ on a null-proto object)
     }
     return Object.freeze(out);
   } catch { return ADMIT_REJECT; }
@@ -600,7 +603,7 @@ function verifyCore(doc, opts = {}) {
     // ⇒ E-ANCHOR, never a VALID doc beside an unchecked proof); the availability STATUS is carried, never flattened.
     let timeField = { strength: 'unproven', status: 'none' };
     if (doc.proof !== undefined) {
-      const a = verifyAnchor(ch, doc.proof, opts);
+      const a = verifyAnchorCore(ch, doc.proof, opts);   // internal: doc.proof already admitted at the verify door
       if (!a.inclusion) return bad('E-ANCHOR', a.detail || 'embedded proof does not verify');
       // §14.6 N9 — a document cannot be generated AFTER the anchor that contains it (pinned RFC3339-Z compare as instants).
       if (a.time === 'anchored' && a.anchorTime && st.time.generated_at > a.anchorTime)
@@ -1070,6 +1073,7 @@ const VERIFIED_FRESH = new WeakSet();
 const VERIFIED_ANCHOR = new WeakSet();
 const provenAnchor = (t) => { const tok = { anchorTime: t }; VERIFIED_ANCHOR.add(tok); return tok; };
 export function resolveAuthority(doc, opts = {}) {
+  { const D = admitDeep(doc); if (D === ADMIT_REJECT) return { error: 'E-MALFORMED', detail: 'document is not an inert record (round-28 totality — a hostile getter cannot throw a host exception at this door)' }; doc = D; }   // round-28 P1-02 — admit at the door; totality
   if (!doc || typeof doc !== 'object' || !doc.state?.id?.domain_shard || !doc.sig?.pub) return { error: 'E-MALFORMED', detail: 'document must be a UST object with state.id and sig (round-17 P1-02 totality)' };
   const O = admitOpts(opts);   // round-19 P1-02 — inert snapshot of the caller record; a throwing accessor/Proxy trap → null → structured reject (not a host throw)
   if (O === null) return { error: 'E-MALFORMED', detail: 'opts must be an inert record (round-19 P1-02 totality — a hostile accessor/Proxy is a structured reject)' };
@@ -1182,7 +1186,15 @@ export function resolveAuthority(doc, opts = {}) {
 // ─── TOP §11.2 anchor-proof: recompute the Merkle inclusion path content_hash→root (RFC 6962, domain-sep
 //     ust:leaf/ust:node). The SUBSTRATE check (e.g. bitcoin-ots) is DELEGATED to opts.substrateVerify (needs
 //     external Bitcoin access — the caller/ustate's job). Returns { inclusion, time, status, anchorTime? }.
+// round-28 P1-02 — public DOOR admits the proof once (a hostile getter → structured E-ANCHOR, never a host throw); the
+// internal verifyCore calls verifyAnchorCore over the ALREADY-admitted doc.proof, so the substrate-receipt identity shim
+// (`a === capA`) is not broken by a re-clone. Same public-door/internal-core split as verify.
 export function verifyAnchor(contentHash, proof, opts = {}) {
+  const Pf = admitDeep(proof);
+  if (Pf === ADMIT_REJECT) return { inclusion: false, error: 'E-ANCHOR', detail: 'proof is not an inert record (round-28 totality — a hostile getter cannot throw at this door)' };
+  return verifyAnchorCore(contentHash, Pf, opts);
+}
+function verifyAnchorCore(contentHash, proof, opts = {}) {
   opts = opts || {};                                             // round-18 P1-01 — a default param only catches `undefined`; coerce `null` too (total boundary)
   // fail-closed on a malformed proof: validate shape BEFORE recomputing (no TypeError, no dir!=L ⇒ R fallthrough).
   const HASH = /^sha256:[0-9a-f]{64}$/;
@@ -1366,6 +1378,7 @@ export function ustGrid(from, to, cadenceSec) {
 // cadence signed for ITS time, so an operator changing cadence NEVER retroactively invalidates history. Each
 // entry is a normal transcript, verified by §14; the log is genesis-rooted and prev-chained. → {cadence}|{error}.
 export function resolveCadence(genesis, cadenceLog = [], atTime, opts) {
+  { const G = admitDeep(genesis); if (G === ADMIT_REJECT) return { error: 'E-MALFORMED', detail: 'genesis is not an inert record (round-28 totality)' }; genesis = G; const C = admitDeep(cadenceLog); if (C === ADMIT_REJECT) return { error: 'E-MALFORMED', detail: 'cadenceLog is not an inert record (round-28 totality)' }; cadenceLog = C; }   // round-28 P1-02 — admit at the door
   const { keylog } = (opts && typeof opts === 'object') ? opts : {};                // round-26 (rev24 C) — null-total: a null 4th arg no longer throws on destructuring
   if (cadenceLog !== undefined && cadenceLog !== null && !Array.isArray(cadenceLog)) return { error: 'E-MALFORMED', detail: 'cadenceLog must be an array' };
   cadenceLog = Array.isArray(cadenceLog) ? cadenceLog : [];
@@ -2221,6 +2234,7 @@ export function verifyStream(frames, config) {
 // stream about partition X does not, on its own, deny an event about Y (agent-found). Pass `frames` (the same array
 // verifyStream verified) to check observational coverage; without it the strongest verdict is withheld.
 export function noEventBacking(claimWindow, streamResult, frames) {
+  { const W = admitDeep(claimWindow), S = admitDeep(streamResult), F = admitDeep(frames); if (W === ADMIT_REJECT || S === ADMIT_REJECT || F === ADMIT_REJECT) return 'not-applicable'; claimWindow = W; streamResult = S; frames = F; }   // round-28 P1-02 — admit at the door; a hostile getter → the safe floor, never a host throw
   if (!claimWindow || claimWindow.from === undefined || claimWindow.to === undefined) return 'not-applicable';
   if (streamResult?.complete !== 'chain-consistent' && streamResult?.complete !== 'complete') return 'publisher-asserted';
   const iv = streamResult.interval;   // the range verifyStream ITSELF validated (first==from,last==to,no frame outside) — not a caller checkpoint, so unspoofable
@@ -2322,7 +2336,7 @@ const withDeadline = (p, ms = SUBSTRATE_DEADLINE_MS) => { let t; const to = new 
 async function anchoredByProofs(content_hash, proofs, substrateVerify, opDeadline) {
   for (const proof of proofs) {
     if (opDeadline && Date.now() >= opDeadline) return 'resource_limit';
-    const incl = verifyAnchor(content_hash, proof);   // inclusion only (no substrateVerify → sync)
+    const incl = verifyAnchorCore(content_hash, proof);   // internal (witness log is JSON-parsed, getter-free); inclusion only
     if (!incl.inclusion || !substrateVerify) continue;
     const leafMs = opDeadline ? Math.max(1, Math.min(SUBSTRATE_DEADLINE_MS, opDeadline - Date.now())) : SUBSTRATE_DEADLINE_MS;
     let sub; try { sub = await withDeadline(substrateVerify(proof.anchor, proof.root, { deadline: opDeadline }), leafMs); } catch { if (opDeadline && Date.now() >= opDeadline) return 'resource_limit'; continue; }   // round-21 P1-01 / round-23 P1-05 — a connector throw OR a hang is UNAVAILABLE evidence; round-27 P1-01 — but a timeout that EXHAUSTED the whole-op budget is resource_limit, not a mere unavailable leaf
