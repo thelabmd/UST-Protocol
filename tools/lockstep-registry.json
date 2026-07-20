@@ -186,6 +186,18 @@
       "rev": "rev42",
       "model_locus": "never strict Pub32",
       "conformance_check": "R34 P0-01 a genesis authority carrying a non-canonical Pub32 alias roots NO authority (strict Pub32 before keyId)"
+    },
+    {
+      "id": "R43-admitsigner-chokepoint",
+      "rev": "rev43",
+      "model_locus": "the signer-admission class closed at ONE primitive",
+      "conformance_check": "R35 P0-01 uniqueness sig.key_id ≠ issuer (admitSigner binds issuer===key_id===keyId(pub)) → NOT attested"
+    },
+    {
+      "id": "R43-admitsigner-gate",
+      "rev": "rev43",
+      "model_locus": "asserts the choke-point rejects EVERY sig-wrapper tampering class",
+      "conformance_check": "R35 admitSigner gate: every sig-wrapper tampering on a genuine attestation → NOT attested; only the genuine wrapper passes"
     }
   ]
 }

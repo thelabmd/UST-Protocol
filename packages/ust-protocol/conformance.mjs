@@ -1323,6 +1323,25 @@ console.log('\n═════════════════════�
     const cp2 = P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: D2, genesis_epoch: P.genesisEpoch(P.contentHash(gen2)), sequence: '0', active_genesis: P.contentHash(gen2), current_key_id: gk.key_id, keylog: { root: kl2.root, length: kl2.length, head: kl2.head } }), gk.priv, gk.pubB64);
     check('R34 P0-02 a checkpoint witness with an unsigned EXTRA sig field → INVALID (closed { body, sig } — no checkpoint-id malleability)', (r => r.result === 'INVALID' && r.error === 'E-MALFORMED')(P.verifyAuthorityCheckpointChain([{ ...cp2, sig: { ...cp2.sig, extra: 'unsigned-malleability' } }], { context: ctx2 })));
     check('R34 P0-02 the genuine checkpoint is STILL VALID (kernel-aligned, no over-reject)', P.verifyAuthorityCheckpointChain([cp2], { context: ctx2 }).result === 'VALID'); }
+  // round-35 P0-01/03 — the ONE admitSigner choke-point: EVERY signed authority witness binds issuer_id === sig.key_id
+  // === keyId(pub) over an EXACT Ed25519 wrapper. A foreign sig.key_id / alg:RSA / extra wrapper or envelope field admits nothing.
+  { const W1 = kp('92'.repeat(32)), W2 = kp('93'.repeat(32)), D3 = 'noosphere.md', EP3 = P.genesisEpoch('sha256:' + '33'.repeat(32)), CK3 = 'sha256:' + 'bb'.repeat(32), AG3 = 'sha256:' + 'aa'.repeat(32), foreign = 'sha256:' + 'cc'.repeat(32);
+    const ua3 = (W) => P.buildUniquenessAttestation({ domain_shard: D3, genesis_epoch: EP3, sequence: '0', checkpoint: CK3 }, W.priv, W.pubB64);
+    const fk = (att) => ({ ...att, sig: { ...att.sig, key_id: foreign } });   // swap sig.key_id to a foreign valid hash (issuer_id + sig.pub stay genuine)
+    const uCfg = { domain_shard: D3, genesis_epoch: EP3, sequence: '0', checkpoint: CK3, trustRoots: { [W1.key_id]: W1.pubB64, [W2.key_id]: W2.pubB64 }, domains: { [W1.key_id]: 'op-a', [W2.key_id]: 'op-b' }, threshold: 2 };
+    check('R35 P0-01 uniqueness sig.key_id ≠ issuer (admitSigner binds issuer===key_id===keyId(pub)) → NOT attested', P.verifyCheckpointUniqueness([fk(ua3(W1)), fk(ua3(W2))], uCfg).attested === false);
+    check('R35 P0-01 the genuine uniqueness quorum is STILL attested (no over-reject)', P.verifyCheckpointUniqueness([ua3(W1), ua3(W2)], uCfg).attested === true);
+    const nf = P.buildNoForkEvidence({ domain_shard: D3, active_genesis: AG3 }, W1.priv, W1.pubB64), nfCfg = { domain_shard: D3, active_genesis: AG3, trustRoots: { [W1.key_id]: W1.pubB64 } };
+    check('R35 P0-03 no-fork GENUINE witness → ok (now in the closed-ADT sweep)', P.verifyNoForkEvidence(nf, nfCfg).ok === true);
+    check('R35 P0-03 no-fork open sig (alg:RSA + foreign key_id + extra wrapper field) → ok:false', P.verifyNoForkEvidence({ ...nf, sig: { ...nf.sig, alg: 'RSA', key_id: foreign, extra: 'x' } }, nfCfg).ok === false);
+    check('R35 P0-03 no-fork extra ENVELOPE field → ok:false (closed { claim, issuer_id, sig })', P.verifyNoForkEvidence({ ...nf, rogue: 'x' }, nfCfg).ok === false);
+    check('R35 P0-03 no-fork foreign sig.key_id → ok:false', P.verifyNoForkEvidence({ ...nf, sig: { ...nf.sig, key_id: foreign } }, nfCfg).ok === false);
+    // structural gate — the admitSigner choke-point rejects EVERY sig-wrapper tampering class (machine-check: a wrapper divergence can't ship)
+    check('R35 admitSigner gate: every sig-wrapper tampering on a genuine attestation → NOT attested; only the genuine wrapper passes', (() => {
+      if (P.verifyCheckpointUniqueness([ua3(W1), ua3(W2)], uCfg).attested !== true) return false;
+      const muts = [(s) => ({ ...s, alg: 'RSA' }), (s) => ({ ...s, alg: '' }), (s) => ({ ...s, alg: 'Ed448' }), (s) => ({ ...s, key_id: foreign }), (s) => { const { key_id, ...r } = s; return r; }, (s) => ({ ...s, pub: W2.pubB64 }), (s) => ({ ...s, extra: 'x' }), (s) => { const { sig, ...r } = s; return r; }];
+      return muts.every((m) => P.verifyCheckpointUniqueness([{ ...ua3(W1), sig: m(ua3(W1).sig) }, ua3(W2)], uCfg).attested === false);
+    })()); }
   check('RECOVERY signer NOT in the genesis recovery set → not counted', VR([stmt(rf(KR), R1), stmt(rf(KR), RX)]).recovered === false);
   check('RECOVERY replacement key_id ≠ keyId(pub) → not recovered', VR([{ claim: { ...P.checkpointRecoveryClaim(rf(KR)), replacement_authority: { key_id: K1.key_id, pub: KR.pubB64 } }, issuer_id: R1.key_id, sig: stmt(rf(KR), R1).sig }, stmt(rf(KR), R2)]).recovered === false);
   check('RECOVERY effective_sequence ≠ last+1 → not recovered (only the next checkpoint)', VR([stmt(rf(KR, '2'), R1), stmt(rf(KR, '2'), R2)]).recovered === false);
@@ -1331,6 +1350,7 @@ console.log('\n═════════════════════�
   check('round-25 P1-01 a coercible array effective_sequence `["1"]` is dropped (cannot authorize a recovery)', VR([{ claim: { ...P.checkpointRecoveryClaim(rf(KR)), effective_sequence: ['1'] }, issuer_id: R1.key_id, sig: stmt(rf(KR), R1).sig }, stmt(rf(KR), R2)]).recovered === false);
   check('RECOVERY stale last_accepted_checkpoint → not recovered (bound to the prior)', VR([stmt(rf(KR, '1', 'sha256:' + 'ee'.repeat(32)), R1), stmt(rf(KR, '1', 'sha256:' + 'ee'.repeat(32)), R2)]).recovered === false);
   check('RECOVERY valid 2-of-3 → replacement_authority + threshold + 2 signers', (r => r.recovered === true && r.replacement_authority.key_id === KR.key_id && r.threshold === '2' && r.signers.length === 2)(VR([stmt(rf(KR), R1), stmt(rf(KR), R2)])));
+  check('R35 P0-02 recovery sig.key_id ≠ issuer (admitSigner binds issuer===key_id===keyId(pub)) → NOT recovered', VR([{ ...stmt(rf(KR), R1), sig: { ...stmt(rf(KR), R1).sig, key_id: 'sha256:' + 'cc'.repeat(32) } }, { ...stmt(rf(KR), R2), sig: { ...stmt(rf(KR), R2).sig, key_id: 'sha256:' + 'cc'.repeat(32) } }]).recovered === false);
   // recovery re-authorizes the SIGNER only — it does NOT bypass the rest of checkpoint validation
   const C1bad = P.sealAuthorityCheckpoint({ ...bc('1', id0, KR, null), checkpoint_authority: { current_key_id: KR.key_id, next_key_id: K1.key_id } }, KR.priv, KR.pubB64);
   check('RECOVERY does NOT bypass checkpoint validation (recovered signer, but malformed rotation → E-MALFORMED)', (r => r.result === 'INVALID' && r.error === 'E-MALFORMED')(chain([stmt(rf(KR), R1), stmt(rf(KR), R2)], 2, C1bad)));

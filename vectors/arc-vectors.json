@@ -1765,7 +1765,6 @@
                   "key_id": "sha256:07afeb50a85c1222e3d9f74e0bc35e61752f04ae228a4c2def3c7188c9223470",
                   "pub": "A1KKhM818z2-8bMhktk1FE6dYjOE0LB5ymh8ABCbgZY"
                 },
-                "reason": "lost",
                 "effective_sequence": "1"
               },
               "issuer_id": "sha256:bddfe17a01326681e6f86659de1b85bfe9755649ed793e2848da3a9f9fb86bb5",
@@ -1773,7 +1772,7 @@
                 "alg": "Ed25519",
                 "key_id": "sha256:bddfe17a01326681e6f86659de1b85bfe9755649ed793e2848da3a9f9fb86bb5",
                 "pub": "25lf4lFp0UHKubu6krqgH58uHs599MsqwFGQ83_MH50",
-                "sig": "FJfsY8sFgBlG9R19ee61gw1KrcRqv9pz_iybPziVS7bCYKYbBZWrVnWcc1MyyKS0RfPh3jfoutGk-xgXgrWDBA"
+                "sig": "URpx_GR2Iuo-c8QYW3yx13T9Yym1MGydWkQVMFgsehXi-gpBvs2TsHzIQ2O1_IFi3odLGt9QHtwDKiL0lNOPCA"
               }
             },
             {
@@ -1786,7 +1785,6 @@
                   "key_id": "sha256:07afeb50a85c1222e3d9f74e0bc35e61752f04ae228a4c2def3c7188c9223470",
                   "pub": "A1KKhM818z2-8bMhktk1FE6dYjOE0LB5ymh8ABCbgZY"
                 },
-                "reason": "lost",
                 "effective_sequence": "1"
               },
               "issuer_id": "sha256:16e18dca6d65996f10d05eb2ec93e6a8bbda03a6512b70156816bf05b9ce718b",
@@ -1794,7 +1792,7 @@
                 "alg": "Ed25519",
                 "key_id": "sha256:16e18dca6d65996f10d05eb2ec93e6a8bbda03a6512b70156816bf05b9ce718b",
                 "pub": "IVL40Zt5HSRFMkLhXy6rbLfP-ntqXtMAl5YOBpiB2xI",
-                "sig": "Ll3y7we1xp6tdwBbi5U17usgevKNZRkzBVh68e8oFH2QIT8u5SFL4-JaxK-bY3vMnNXZq-cmDB5RSrKm5PUoCw"
+                "sig": "jmGg-bHcritEAKhfFN1p12uBcBR3IFqZABILceaawRs0rSJgoGdRlbB4gL0-zYWptUieCHxmrcb4w6sYAK5RDw"
               }
             }
           ]
@@ -1884,7 +1882,6 @@
                   "key_id": "sha256:07afeb50a85c1222e3d9f74e0bc35e61752f04ae228a4c2def3c7188c9223470",
                   "pub": "A1KKhM818z2-8bMhktk1FE6dYjOE0LB5ymh8ABCbgZY"
                 },
-                "reason": "lost",
                 "effective_sequence": "1"
               },
               "issuer_id": "sha256:bddfe17a01326681e6f86659de1b85bfe9755649ed793e2848da3a9f9fb86bb5",
@@ -1892,7 +1889,7 @@
                 "alg": "Ed25519",
                 "key_id": "sha256:bddfe17a01326681e6f86659de1b85bfe9755649ed793e2848da3a9f9fb86bb5",
                 "pub": "25lf4lFp0UHKubu6krqgH58uHs599MsqwFGQ83_MH50",
-                "sig": "FJfsY8sFgBlG9R19ee61gw1KrcRqv9pz_iybPziVS7bCYKYbBZWrVnWcc1MyyKS0RfPh3jfoutGk-xgXgrWDBA"
+                "sig": "URpx_GR2Iuo-c8QYW3yx13T9Yym1MGydWkQVMFgsehXi-gpBvs2TsHzIQ2O1_IFi3odLGt9QHtwDKiL0lNOPCA"
               }
             }
           ]
@@ -3982,7 +3979,6 @@
               "key_id": "sha256:33e79620d46655473c61fe5dada234c1c36971ee9de0a1fe058b21e5a684e9e9",
               "pub": "_RUD8Z9ZcxwW8d_O6R0npBb_Aks8rErjGTYtXj3328o"
             },
-            "reason": "lost",
             "effective_sequence": "1"
           },
           "issuer_id": "sha256:bbf6edc7ef91a4e3ddc011999bc937f32ab822bc3fee28bd26fc9e77979938db",
@@ -3990,7 +3986,7 @@
             "alg": "Ed25519",
             "key_id": "sha256:bbf6edc7ef91a4e3ddc011999bc937f32ab822bc3fee28bd26fc9e77979938db",
             "pub": "k9ufLuD3456UL7WUQRkL8gucQ8_MigUaFSSZzzkrejc",
-            "sig": "A5tBL43yWn-81kLb-sSU_1puPhwGgnvpqLaf6u12oURNI9WhHT0fBApPSLnuz6zCG6aMp82zky9sb6DRATNOCA"
+            "sig": "eazp-YyQw561acqfOWQ_yIMRsbpSfD2S1iuGCfiYlkmIOcoutgP3n5z6XU1xIySod1_sfTSLEyYbyy0YjwmoCg"
           }
         },
         {
@@ -4003,7 +3999,6 @@
               "key_id": "sha256:33e79620d46655473c61fe5dada234c1c36971ee9de0a1fe058b21e5a684e9e9",
               "pub": "_RUD8Z9ZcxwW8d_O6R0npBb_Aks8rErjGTYtXj3328o"
             },
-            "reason": "lost",
             "effective_sequence": "1"
           },
           "issuer_id": "sha256:e7c5eeb26a85e3a4878793945059b84534fdf23dbb683522a7745ba675cb8a29",
@@ -4011,7 +4006,7 @@
             "alg": "Ed25519",
             "key_id": "sha256:e7c5eeb26a85e3a4878793945059b84534fdf23dbb683522a7745ba675cb8a29",
             "pub": "-gE0epkeBK4PGm2B2yml6k7rWWX1d6ye-0TnsfL7sCg",
-            "sig": "oWmQmr3w5OK0QrTECSY8JulBBUs1YQ3Ogd_vMsuLuFx3CT5t4vkEF_o5RYBINvtVVmdP6twu9M8Evi80_X58BQ"
+            "sig": "tem9NX4FPkpFHwU8LXm0MbJU6EMI2WtDmg58f3ec9jhqjbtgMQcrN3Q3zyIGWz41GgsvwsiJfS6f3tKaCH5JCQ"
           }
         }
       ],
@@ -4045,7 +4040,6 @@
               "key_id": "sha256:33e79620d46655473c61fe5dada234c1c36971ee9de0a1fe058b21e5a684e9e9",
               "pub": "_RUD8Z9ZcxwW8d_O6R0npBb_Aks8rErjGTYtXj3328o"
             },
-            "reason": "lost",
             "effective_sequence": "1"
           },
           "issuer_id": "sha256:bbf6edc7ef91a4e3ddc011999bc937f32ab822bc3fee28bd26fc9e77979938db",
@@ -4053,7 +4047,7 @@
             "alg": "Ed25519",
             "key_id": "sha256:bbf6edc7ef91a4e3ddc011999bc937f32ab822bc3fee28bd26fc9e77979938db",
             "pub": "k9ufLuD3456UL7WUQRkL8gucQ8_MigUaFSSZzzkrejc",
-            "sig": "A5tBL43yWn-81kLb-sSU_1puPhwGgnvpqLaf6u12oURNI9WhHT0fBApPSLnuz6zCG6aMp82zky9sb6DRATNOCA"
+            "sig": "eazp-YyQw561acqfOWQ_yIMRsbpSfD2S1iuGCfiYlkmIOcoutgP3n5z6XU1xIySod1_sfTSLEyYbyy0YjwmoCg"
           }
         }
       ],

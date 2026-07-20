@@ -876,6 +876,23 @@ binding, every admitted uniqueness attestation for one checkpoint is byte-identi
 — conflict is real only where the payload can differ (recovery). The controller lesson, again: when I SEE the class
 extends (and name the siblings in a divergence), I owe the SWEEP in that rev — not a question.
 
+**Realization (rev43 — the signer-admission class closed at ONE primitive (`admitSigner`), not per witness).** rev42 swept
+the closed-ADT across the witnesses but hand-mirrored each sig wrapper, and the hand-work left the SAME sub-check out at
+three sites: `verifyCheckpointUniqueness`, `verifyCheckpointRecovery` and `verifyNoForkEvidence` bound `keyId(pub) ===
+issuer_id` but never bound `sig.key_id` — so a witness carrying a FOREIGN `sig.key_id` (or, for no-fork, `alg:"RSA"` + an
+open wrapper/envelope) was admitted publicly and minted the strong coordinate (`attested` / a recovery `ChainHandle` /
+`authoritative` → `VALID:HIGH`), while the kernel binds `sig.key_id === issuer_id === keyId(pub)` and rejects it. The
+audit's recommendation and the meta-lesson agree: **do not repair the sites independently — introduce ONE shared
+signer-admission primitive** and route EVERY signed authority witness through it. Fix: `admitSigner(sig, expectedKeyId)`
+succeeds iff the wrapper is an EXACT Ed25519 `{ alg, key_id, pub, sig }` with `expectedKeyId === sig.key_id ===
+keyId(pub)` and canonical Pub32/Sig64; it returns the pub. Receipt, checkpoint, transition, uniqueness, recovery AND
+no-fork all consume it BEFORE grouping / identity / verdict / mint — no-fork is now inside the closed-ADT sweep with an
+exact envelope + typed claim (*"R35 P0-01 uniqueness sig.key_id ≠ issuer (admitSigner binds issuer===key_id===keyId(pub)) → NOT attested"*). A machine-check gate asserts the choke-point rejects EVERY sig-wrapper tampering class, so a wrapper
+divergence cannot ship (*"R35 admitSigner gate: every sig-wrapper tampering on a genuine attestation → NOT attested; only the genuine wrapper passes"*). The recovery `reason` (rev42) was removed from the signed claim (P1-01) — the normative
+recovery tuple is `(domain, genesis_epoch, last_accepted, effective_sequence, replacement_authority)`; a human annotation
+is not part of the signed authority claim. Meta: across rounds the audit P0 count ran 1→2→4→3; the fix that finally
+converges is a single choke-point + a gate, not another hand-mirror.
+
 **Definition (VerifiedAuthorityContext).** For a genesis document `g` whose class and self-signature VERIFY
 (`resolveCheckpointRoots` — P0-2: verify-before-extract):
 
