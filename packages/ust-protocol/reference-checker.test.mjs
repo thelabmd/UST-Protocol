@@ -145,18 +145,18 @@ const CFG = { ...CONN, witnesses: { [Wa.key_id]: Wa.pub, [Wb.key_id]: Wb.pub }, 
   check('BOUNDS: a cyclic/shared term node → INVALID (not a tree), never infinite loop', r.result === 'INVALID');
 }
 
-// ── cluster A — §2 byte-semantics: the checker reads each caller input EXACTLY ONCE into an inert value ─────────────
-// P0-05 INSTRUMENTATION GATE: a witness exposed as a getter is read exactly once by the checker (rules read the inert
-// snapshot, not the live object) — so a value cannot differ between the hash read and a rule read.
+// ── cluster A — §2 byte-semantics (round-46 Theorem R): the checker REDUCES each caller input to an inert value; a witness
+// exposed as a declared ACCESSOR is REJECTED and its getter is NEVER executed (an automaton reads its input as DATA, not code).
+// This SUPERSEDES the old "read the getter exactly once" semantics — a getter witness is now malformed, not a read-once input.
 {
   let reads = 0;
-  const evil = { get headProof() { reads++; return kl.headProof; } };   // returns the CORRECT value; counts reads
-  const evilW = witnessId(evil);                                        // (this addressing read is the prover's, not the checker's)
-  witnesses[evilW] = evil;
-  reads = 0;                                                            // count ONLY the checker's reads of the live object
+  const evil = { get headProof() { reads++; return kl.headProof; } };   // a declared accessor witness (returns the correct value; counts executions)
+  const evilW = witnessId(evil);                                        // (this addressing read is the prover's; it computes the SAME id as the plain terminality witness — hence a LOCAL map below, never the shared accumulator, so it cannot overwrite the plain witness at that id)
+  const localW = Object.assign(Object.create(null), witnesses, { [evilW]: evil });   // LOCAL: never pollute the shared `witnesses`
+  reads = 0;                                                            // count ONLY the checker's executions of the live getter
   const πCorrEvil = node('Corroborated', [πChain, πCommit, πTarget, πAfter], [evilW]);
-  const r = checkAuthorityProof({ term: πCorrEvil, witnesses }, CFG);
-  check('BYTE-SEMANTICS single-read (P0-05): checker reads a live witness EXACTLY once → VALID and reads===1 (no hash/rule divergence)', r.result === 'VALID' && reads === 1);
+  const r = checkAuthorityProof({ term: πCorrEvil, witnesses: localW }, CFG);
+  check('BYTE-SEMANTICS (P0-05 / round-46): a witness with a declared ACCESSOR is REJECTED and its getter is NEVER executed → not VALID + reads === 0 (ρ_package reads the [[Get]] face of PLAIN DATA; a getter property is not inert)', r.result !== 'VALID' && reads === 0);
 }
 // P1-02 prototype-planted witness: own-keys + null-proto store → an INHERITED witness is invisible AND unreachable.
 {

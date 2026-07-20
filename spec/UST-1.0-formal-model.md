@@ -1111,8 +1111,14 @@ a signed argument is read once + hash-checked, and the reductions are independen
 `checkAuthorityProofBytes` (which held every round: 4007-probe fuzz, 0 false accepts) IS `A`; the object adapters that failed
 were `E`s that had NOT been decomposed as `A ∘ ρ`. **Realization (rev55):** the authority adapters' TRUST config is now
 reduced by `admitInert` (side-effect-free) — a config getter/`toJSON` never executes (*"R46 checkAuthorityProof REDUCES the config side-effect-free — a config accessor getter is NEVER executed (the automaton reads DATA, never runs it; this SUPERSEDES the rev45 source-level admission order — no code runs at the boundary at all)"*). The residual `E`s (the signed-proof reads) are
-sound by discipline 2 (read-once + content-hash); the direction of travel is to decompose every remaining `E` as `A ∘ ρ` so
-the automaton, not a case-by-case boundary guard, carries the totality.
+sound by discipline 2 (read-once + content-hash). **Realization (rev56):** `checkAuthorityProof` is now literally
+`A ∘ (ρ_package, ρ_config)` — `ρ_config = admitInert → canonJSON` (unsigned, side-effect-free), `ρ_package` (new) reads the
+SIGNED proof's `[[Get]]` face ONCE (`admitDeep` the term, collect the referenced witness ids from the inert term, admit each
+REFERENCED witness once; an unreferenced witness is not part of the canonical package, so it is never read), and
+`A = checkAuthorityProofBytes` over the two reduced byte strings. The whole proof is now read ONCE — a two-face term cannot
+show one face to `referencedIds` and another to `canon` (*"R46 (Theorem R — ρ_package) checkAuthorityProof reads the SIGNED package ONCE — a two-face term Proxy (a different term on re-read) yields the SAME verdict as the honest package (referencedIds and canon see the ONE admitted [[Get]] face; no split)"*). Both arguments are reduced INDEPENDENTLY to canonical
+bytes, so cross-argument mutation and admission order are structurally impossible; the automaton, not a case-by-case boundary
+guard, carries the totality.
 
 **Definition (VerifiedAuthorityContext).** For a genesis document `g` whose class and self-signature VERIFY
 (`resolveCheckpointRoots` — P0-2: verify-before-extract):

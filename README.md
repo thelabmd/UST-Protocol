@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 # Universal State Transcript → UST Protocol → UST
 
-[![CI](https://img.shields.io/github/actions/workflow/status/thelabmd/UST-Protocol/ci.yml?branch=main&label=CI)](https://github.com/thelabmd/UST-Protocol/actions) [![conformance](https://img.shields.io/badge/conformance-607%20checks%20%C2%B7%20136%20vectors%20%C2%B7%204007%20fuzz-brightgreen)](https://github.com/thelabmd/UST-Protocol/actions/workflows/ci.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/thelabmd/UST-Protocol/ci.yml?branch=main&label=CI)](https://github.com/thelabmd/UST-Protocol/actions) [![conformance](https://img.shields.io/badge/conformance-609%20checks%20%C2%B7%20136%20vectors%20%C2%B7%204007%20fuzz-brightgreen)](https://github.com/thelabmd/UST-Protocol/actions/workflows/ci.yml)
 [![code license](https://img.shields.io/badge/code-Apache--2.0-blue)](./LICENSE)
 [![docs license](https://img.shields.io/badge/docs-CC--BY--4.0-blue)](./LICENSE-SPEC)
 [![ust-protocol](https://img.shields.io/npm/v/ust-protocol?label=ust-protocol)](https://www.npmjs.com/package/ust-protocol) [![pulls](https://img.shields.io/npm/dt/ust-protocol?label=pulls&color=informational)](https://www.npmjs.com/package/ust-protocol)

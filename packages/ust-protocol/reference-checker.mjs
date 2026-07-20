@@ -17,7 +17,7 @@ import { canon, H, keyId, edVerifyStrict, contentHash, verify, isValid, verifyKe
   resolveKeys, buildKeylogCommitment, authorityCheckpointId, strictB64url, isPublicDnsShard,
   admitUtf8, anyLoneSurrogate, admitDeep } from './index.mjs';   // round-19 P1-01 — ONE Unicode byte-admission, shared with the discovery resolver. round-46 — admitDeep is the proven canon-transparent side-effect-free reduction for the PACKAGE domain (canon: string leaves); admitInert (below) is its canonJSON-domain sibling for the CONFIG (numeric leaves). Both read DATA descriptors and never execute a getter/toJSON.
 
-export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev55';
+export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev56';
 // RULE_CONTRACTS (§2b) — the STRUCTURAL source of truth: exactly one inference rule per name, one switch branch per
 // name, and a fixed (children arity, witness count, allowed params, conclusion kind). DecodeTerm enforces these on
 // decode; a term with an extra child / extra witness / free param / unknown field / stored conclusion is rejected
@@ -399,15 +399,45 @@ const encodeLive = (x, kind) => {
     return { bytes: TEXT_ENC.encode(kind === 'package' ? canon(v) : canonJSON(v ?? null)) };
   } catch { return { error: 'E-ENCODE' }; }
 };
+// round-46 (Theorem R — ρ_package) — reduce a live proof object to its CANONICAL package form by reading it ONCE. Admit the
+// term's [[Get]] face once (admitDeep — the SIGNED face, round-29 P0-01), collect the REFERENCED witness ids from the inert
+// term, and admit each referenced witness [[Get]]-once; an UNREFERENCED witness is not part of the canonical package, so it is
+// never read and never a reject surface (matching the encodeLive filter). The PROVEN encodeLive then canonicalizes the inert
+// form (no getter can fire during canon). The whole package is read ONCE — a two-face term/witness cannot show one face to
+// referencedIds and another to canon.
+const reducePackage = (x) => {
+  if (x === null || typeof x !== 'object' || Array.isArray(x)) return { error: 'E-ENCODE' };
+  let term; try { term = admitDeep(x.term); } catch { return { error: 'E-ENCODE' }; }
+  if (typeof term === 'symbol') return { error: 'E-ENCODE' };
+  const ref = referencedIds(term);
+  const inert = Object.create(null);
+  try {
+    for (const k of Object.keys(x)) {                                          // every top-level field, [[Get]] once (term reused, not re-read)
+      if (k === 'witnesses') continue;
+      const r = (k === 'term') ? term : admitDeep(x[k]);
+      if (typeof r === 'symbol') return { error: 'E-ENCODE' };
+      inert[k] = r;
+    }
+    const wIn = x.witnesses, w = Object.create(null);
+    if (wIn !== null && typeof wIn === 'object' && !Array.isArray(wIn))
+      for (const id of ref) {                                                  // ONLY referenced witnesses, own keys, [[Get]] once each
+        if (!Object.prototype.hasOwnProperty.call(wIn, id)) continue;
+        const wi = admitDeep(wIn[id]);
+        if (typeof wi === 'symbol') return { error: 'E-ENCODE' };
+        w[id] = wi;
+      }
+    inert.witnesses = w;
+  } catch { return { error: 'E-ENCODE' }; }
+  return encodeLive(inert, 'package');                                          // encodeLive on the INERT form is byte-correct (re-filters harmlessly; no getter fires during canon)
+};
+// Theorem R made concrete: checkAuthorityProof = A ∘ (ρ_package, ρ_config). ρ_config (admitInert → canonJSON bytes) reads the
+// UNSIGNED trust config as DATA (no getter/toJSON EVER executes); ρ_package reads the SIGNED proof's [[Get]] face ONCE; the two
+// reductions are INDEPENDENT, so cross-argument mutation and admission ORDER are structurally impossible; A = checkAuthorityProofBytes.
 export function checkAuthorityProof(obj, config) {
-  // round-46 (the REDUCTION metatheorem) — reduce EACH argument through the ONE side-effect-free admission BEFORE the automaton:
-  // admitDeep reads DATA descriptors and REJECTS any accessor (getter/setter/toJSON), so NO caller code executes at the boundary.
-  // Cross-argument mutation and admission ORDER are then STRUCTURALLY impossible (a getter that would rewrite the other argument
-  // never runs), superseding the rev45 config-first ordering with the automaton-faithful rule: an automaton reads its input as DATA.
-  const ci = admitInert(config); if (ci === INERT_REJECT) return { result: 'INVALID', reason: 'config: not an inert record — an accessor/getter/toJSON is REJECTED, never executed' };   // the TRUSTED config (canonJSON domain, NOT signature-verified) is reduced side-effect-free FIRST: read from DATA descriptors, no getter/toJSON executes, so it is captured inertly BEFORE the untrusted package is touched — a package getter can no longer rewrite the config the verdict uses (cross-argument admission order + no code execution on the config)
-  const c = encodeLive(ci, 'config'); if (c.error) return { result: 'INVALID', reason: 'config: ' + c.error };   // canonJSON runs on the INERT config clone (no getter fires)
-  const p = encodeLive(obj, 'package'); if (p.error) return { result: 'INVALID', reason: 'package: ' + p.error };   // the package's INTEGRITY is content-hash/signature verified downstream (a two-face witness fails its id = H(canon)); only its unreferenced witnesses are filtered, so it is read here (config already captured inertly)
-  return checkAuthorityProofBytes(p.bytes, c.bytes);
+  const ci = admitInert(config); if (ci === INERT_REJECT) return { result: 'INVALID', reason: 'config: not an inert record — an accessor/getter/toJSON is REJECTED, never executed' };
+  const c = encodeLive(ci, 'config'); if (c.error) return { result: 'INVALID', reason: 'config: ' + c.error };   // ρ_config: canonJSON over the inert config
+  const p = reducePackage(obj); if (p.error) return { result: 'INVALID', reason: 'package: ' + p.error };         // ρ_package: read the proof ONCE ([[Get]] face) into the inert canonical form
+  return checkAuthorityProofBytes(p.bytes, c.bytes);                                                              // A: the pure byte automaton
 }
 
 const stripExpected = (n) => ({ rule: n.rule, ...(n.params !== undefined ? { params: n.params } : {}), ...(n.witnesses ? { witnesses: n.witnesses } : {}), children: (n.children || []).map(stripExpected) });
