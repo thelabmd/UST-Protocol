@@ -698,7 +698,7 @@ function verifyCore(doc, opts = {}) {
     if (opts.provenanceDepth > 0 && typeof opts.resolveRef === 'function') {
       // §13 P4: a GLOBAL verified-node budget (default 256, opts.refBudget) — exhaustion fails the WHOLE
       // walk (E-BOUNDS), never a partial success, so traversal order cannot affect any verdict (I4).
-      const refBudget = { left: Number(opts.refBudget) > 0 ? Math.floor(Number(opts.refBudget)) : 256 };
+      const refBudget = { left: admitBudget(opts.refBudget, 256) ?? 256 };   // round-38 R4 sweep — a caller refBudget may only TIGHTEN below the 256-node reference cap, never expand it (a sibling of the maxInputBytes escape)
       const walked = walkReferents(st, opts, Math.min(opts.provenanceDepth, BOUNDS.depth), new Set([ch]), refBudget);
       if (walked.error) return bad(walked.error, walked.detail);
       provenanceReport = { depth: walked.depth, referents: walked.referents };
@@ -1054,6 +1054,10 @@ const admitAuthorityKey = (a) => decodeExact(a, AUTH_KEY_SCHEMA) && keyId(a.pub)
 // `[]` sibling coerced to '' forged a root under a non-protocol grammar, and a null-proto object threw a host TypeError.
 // Both Merkle verifiers (key-log terminality + SMT map) route through it, matching the kernel's typed hash arrays (pHashArr).
 const admitHashPath = (siblings, expectedLen) => (Array.isArray(siblings) && siblings.length === expectedLen && siblings.every(isHashStr)) ? siblings : null;
+// round-38 P1-03 (R4 — the input may only TIGHTEN a faculty, never expand or disable its mechanism) — a caller resource
+// scalar: a finite positive integer → min(reference, supplied); undefined → the reference default; anything else
+// (Infinity / NaN / fractional / ≤0) → null (a structured refusal). Applied at EVERY public resource-policy scalar.
+const admitBudget = (supplied, reference) => supplied === undefined ? reference : ((Number.isInteger(supplied) && supplied >= 1) ? Math.min(reference, supplied) : null);
 const KEYLOG_COMMIT_SCHEMA = { root: { t: _evHash }, length: { t: _evSeq }, head: { t: _evHash } };
 const CHK_AUTHORITY_SCHEMA = { current_key_id: { t: _evHash }, next_key_id: { t: _evHash, opt: true }, next_pub: { t: strictPub, opt: true }, effective_sequence: { t: _evSeq, opt: true } };
 const CHECKPOINT_BODY_SCHEMA = { version: { t: (x) => x === '1' }, purpose: { t: (x) => x === 'ust:authority-checkpoint' }, domain_shard: { t: _evId }, genesis_epoch: { t: _evHash }, sequence: { t: _evSeq }, active_genesis: { t: _evHash }, checkpoint_authority: { t: _evRec(CHK_AUTHORITY_SCHEMA) }, keylog: { t: _evRec(KEYLOG_COMMIT_SCHEMA) }, previous_checkpoint: { t: _evHash, opt: true }, previous_epoch_final_checkpoint: { t: _evHash, opt: true } };
@@ -1141,8 +1145,10 @@ function decodeOrderFacts(proof_kind, facts) {
 // b.not_after` proves after, `b.not_before ≥ a.not_after` proves not-after). Cross-kind, cross-namespace, cross-clock,
 // or two-bounds-unrelated inputs prove nothing ⇒ `unproven`.
 export function compareEvidenceOrder(a, b) {
-  const da = decodeOrderFacts(a?.proof_kind, a?.verified_facts ?? a?.facts ?? (a && typeof a === 'object' ? a : {}));   // M3: VerifiedEvidence carries proof_kind + verified_facts
-  const db = decodeOrderFacts(b?.proof_kind, b?.verified_facts ?? b?.facts ?? (b && typeof b === 'object' ? b : {}));
+  const A = admitDeep(a), B = admitDeep(b);   // round-38 P1-02 (R1) — ADMIT both operands once (branded evidence handles pass through); a hostile Proxy is a structured 'unproven', never a host throw
+  if (A === ADMIT_REJECT || B === ADMIT_REJECT) return 'unproven';
+  const da = decodeOrderFacts(A?.proof_kind, A?.verified_facts ?? A?.facts ?? (A && typeof A === 'object' ? A : {}));   // M3: VerifiedEvidence carries proof_kind + verified_facts
+  const db = decodeOrderFacts(B?.proof_kind, B?.verified_facts ?? B?.facts ?? (B && typeof B === 'object' ? B : {}));
   if (!da || !db) return 'unproven';
   if (da.order && db.order && da.order.ns === db.order.ns)                                 // same kind + same substrate/log ⇒ one total order
     return BigInt(da.order.pos) > BigInt(db.order.pos) ? 'proven-after' : 'not-after';
@@ -1159,7 +1165,8 @@ export function quorumTrustDomains(list, config) {
   const c = admitOpts(config); if (c === null) return { count: 0, domains: [], met: false, detail: 'config must be an inert record (round-23 P1-02)' };   // round-23 P1-02 — total boundary
   const { domains = {}, threshold } = c;
   const seen = new Set();
-  for (const e of Array.isArray(list) ? list : []) {
+  const admittedList = admitDeep(list);   // round-38 P1-02 (R1) — admit the list once (read by index, not by a caller-controlled Symbol.iterator); a hostile Proxy is a structured count:0, never a host throw
+  for (const e of (admittedList !== ADMIT_REJECT && Array.isArray(admittedList)) ? admittedList : []) {
     const sid = e?.source_id ?? e?.facts?.source_id;
     const dom = sid !== undefined ? domains[sid] : undefined;                          // consumer-resolved ONLY
     if (typeof dom === 'string' && dom.length && !hasLoneSurrogate(dom)) seen.add(dom.normalize('NFC'));   // round-23 P0-01 + round-24 P0-03 — a non-empty Unicode-SCALAR NFC string only (a lone surrogate is outside the §6 domain and would fake an independent domain)
@@ -2108,8 +2115,9 @@ export const axisRank = (axis, v) => ASSURANCE_AXES[axis].indexOf(v);          /
 const axisLE = (axis, a, b) => { const ra = axisRank(axis, a), rb = axisRank(axis, b); return ra >= 0 && rb >= 0 && ra <= rb; };
 // AssuranceState = a full 5-tuple; every axis present with an in-range value, else E-ASSURANCE (fail-closed).
 export function assuranceState(s = {}) {
+  const S = admitDeep(s); if (S === ADMIT_REJECT) throw Object.assign(new Error('E-ASSURANCE: assurance state is not an inert record'), { code: 'E-ASSURANCE' });   // round-38 P1-01 (R1) — admit ONCE into a frozen snapshot: a hostile getter is a coded E-ASSURANCE, never a host throw
   const out = {};
-  for (const ax of AXES) { if (axisRank(ax, s[ax]) < 0) throw Object.assign(new Error(`E-ASSURANCE: axis '${ax}' missing or out of range`), { code: 'E-ASSURANCE' }); out[ax] = s[ax]; }
+  for (const ax of AXES) { const v = S[ax]; if (axisRank(ax, v) < 0) throw Object.assign(new Error(`E-ASSURANCE: axis '${ax}' missing or out of range`), { code: 'E-ASSURANCE' }); out[ax] = v; }   // (R3) read each axis ONCE from the admitted snapshot, validate v, emit v: a two-face Proxy cannot pass a weak face to the rank check and emit a strong one
   return out;
 }
 // The product order (F.5 gap 1): a ≤ b iff a ≤ b on EVERY axis — a PARTIAL order (identity & freshness independent,
@@ -2402,7 +2410,7 @@ export function verifyJson(rawBytes, opts = {}) {
   if (!isStr && !(rawBytes instanceof ArrayBuffer || ArrayBuffer.isView(rawBytes)))
     return bad('E-MALFORMED', 'raw input must be a UTF-8 string or a byte buffer (ArrayBuffer/TypedArray/Buffer) — a non-binary argument returns structured, never a host TypeError (round-25 P1-02)');
   const byteLen = isStr ? Buffer.byteLength(rawBytes, 'utf8') : (rawBytes.byteLength ?? Buffer.from(rawBytes).length);
-  const inputBudget = Number(opts.maxInputBytes ?? BOUNDS.sizeBytes);
+  const inputBudget = admitBudget(opts.maxInputBytes, BOUNDS.sizeBytes); if (inputBudget === null) return bad('E-MALFORMED', 'maxInputBytes must be a finite positive integer of bytes (round-38 P1-03/R4 — a caller resource scalar may only TIGHTEN the 64 MiB ceiling, never expand or disable it via Infinity/NaN)');
   if (byteLen > inputBudget)
     return { result: 'INDETERMINATE', reason: 'resource_limit', detail: `raw input ${byteLen} B > input budget ${inputBudget} B — transport admission refused, verification not started` };
   // #75 P1-01 — STRICT UTF-8 on the raw path: Buffer.toString('utf8') maps invalid bytes to U+FFFD, so 0xFF and

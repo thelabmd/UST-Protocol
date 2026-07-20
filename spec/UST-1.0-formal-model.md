@@ -931,6 +931,25 @@ LAST gap: every exported verifier and algebra op now routes its untrusted struct
 processing — R1 is uniform between input and output at every level, which is the invariant the recurring findings were
 tracing toward all along.
 
+**Realization (rev47 — R1/R3/R4 made uniform at the last three exported ops: a two-read admission, un-admitted algebra
+operands, and a caller-expandable resource ceiling).** rev46 claimed R1 uniform, but the audit found the SAME three
+controller rules still broken one level below — the deeper the frame is applied, the more the residual shifts from R1 to
+R3 and R4. (P1-01, R1/R3) `assuranceState` read each axis `s[ax]` TWICE — once for the rank check, once for the output
+copy — so a two-face Proxy passed a weak face to the check and emitted a strong one, and `projectTier` returned a false
+`TOP` from a value it never validated. Fix: admit `s` ONCE with `admitDeep` (total — a hostile getter is a coded
+`E-ASSURANCE`, never a host throw) and read each axis ONCE from the frozen snapshot (*"R38 P1-01 (R1/R3) assuranceState on a two-face Proxy emits the ADMITTED (first) face, not a stronger re-read"*). (P1-02, R1) the exported evidence algebra
+`quorumTrustDomains` (iterated the raw `list`) and `compareEvidenceOrder` (admitted neither operand) were classified
+`primitive` and escaped the whole-surface sweep — a hostile Proxy threw a host exception. Fix: admit each operand with
+`admitDeep` (fail-closed to `count:0` / `unproven`) and RECLASSIFY both as consumer surfaces in the from-code totality
+registry, so the sweep now covers them. (P1-03, R4) `verifyJson`'s `maxInputBytes` was `Number(opts.maxInputBytes ?? …)`
+with no clamp — a caller passing `Infinity` EXPANDED the verifier-owned 64 MiB ceiling and turned a resource refusal into
+a full verification. Fix: **`admitBudget(supplied, reference)`** — a caller resource scalar may only TIGHTEN
+(`min(reference, supplied)` for a finite positive integer; `Infinity`/`NaN`/≤0 → refused), applied at `maxInputBytes` AND
+at a sibling the round-38 sweep found the auditor missed (`refBudget`, the referent-walk node budget) (*"R38 P1-03 (R4) verifyJson maxInputBytes:Infinity → structured E-MALFORMED, never an expanded ceiling"*). The controller frame is now
+uniform in all four rules across the exported surface: every op admits its input ONCE (R1), computes over the admitted
+snapshot + its own faculties (R2), emits only projections of that snapshot (R3), and lets caller policy only TIGHTEN a
+verifier-owned faculty (R4).
+
 **Definition (VerifiedAuthorityContext).** For a genesis document `g` whose class and self-signature VERIFY
 (`resolveCheckpointRoots` — P0-2: verify-before-extract):
 

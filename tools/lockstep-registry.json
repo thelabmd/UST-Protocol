@@ -222,6 +222,18 @@
       "rev": "rev46",
       "model_locus": "R1 is uniform between input and output at every level",
       "conformance_check": "R37 P1-01 joinAssurance with an OUT-OF-DOMAIN operand → E-ASSURANCE (never a synthesized TOP)"
+    },
+    {
+      "id": "R47-assurance-single-admit",
+      "rev": "rev47",
+      "model_locus": "R1/R3/R4 made uniform at the last three exported ops",
+      "conformance_check": "R38 P1-01 (R1/R3) assuranceState on a two-face Proxy emits the ADMITTED (first) face, not a stronger re-read"
+    },
+    {
+      "id": "R47-budget-tighten-only",
+      "rev": "rev47",
+      "model_locus": "a caller resource scalar may only TIGHTEN",
+      "conformance_check": "R38 P1-03 (R4) verifyJson maxInputBytes:Infinity → structured E-MALFORMED, never an expanded ceiling"
     }
   ]
 }
