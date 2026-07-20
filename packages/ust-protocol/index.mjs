@@ -906,11 +906,10 @@ export function resolveKeys(genesis, keylog = []) {
 //     (self-declared `trust_domain`/`issuer_id` inside a claim is rejected). A raw `noForkConfirmed` boolean is NOT
 //     evidence: it is a distinct `consumer-override` (independently_verified:false), never silently `authoritative`
 //     (the removed overclaim class — the same as `mapInclusion:true`). Independent-map `authoritative` stays #42.
-export function noForkClaim({ domain_shard, active_genesis, map_checkpoint, map_sequence, valid_as_of }) {
+export function noForkClaim({ domain_shard, active_genesis, map_checkpoint, map_sequence }) {   // round-35 — no `valid_as_of`: a signer cannot self-declare TIME in a signed authority claim (assurance-never-self-declared; time comes from an external anchor, not the witness)
   return { purpose: 'ust:name-no-fork', domain_shard, active_genesis,
     ...(map_checkpoint !== undefined ? { map_checkpoint } : {}),
-    ...(map_sequence !== undefined ? { map_sequence } : {}),
-    ...(valid_as_of !== undefined ? { valid_as_of } : {}) };
+    ...(map_sequence !== undefined ? { map_sequence } : {}) };
 }
 export function buildNoForkEvidence(fields, privKeyObj, issuerPubB64url) {
   const claim = noForkClaim(fields);
@@ -1048,7 +1047,7 @@ const CHECKPOINT_BODY_SCHEMA = { version: { t: (x) => x === '1' }, purpose: { t:
 const TRANSITION_CLAIM_SCHEMA = { purpose: { t: (x) => x === 'ust:genesis-epoch-transition' }, domain_shard: { t: _evId }, from_genesis_epoch: { t: _evHash }, from_final_checkpoint: { t: _evHash }, from_sequence: { t: _evSeq }, to_active_genesis: { t: _evHash }, to_initial_sequence: { t: _evSeq }, to_genesis_epoch: { t: _evHash }, to_checkpoint_authority: { t: _evRec({ key_id: { t: _evHash }, pub: { t: strictPub } }) } };
 const VOTE_CLAIM_SCHEMA = { purpose: { t: (x) => x === 'ust:checkpoint-uniqueness-attestation' }, domain_shard: { t: _evId }, genesis_epoch: { t: _evHash }, sequence: { t: _evSeq }, checkpoint: { t: _evHash } };
 const RECOVERY_CLAIM_SCHEMA = { purpose: { t: (x) => x === 'ust:checkpoint-authority-recovery' }, domain_shard: { t: _evId }, genesis_epoch: { t: _evHash }, last_accepted_checkpoint: { t: _evHash }, effective_sequence: { t: _evSeq }, replacement_authority: { t: _evRec({ key_id: { t: _evHash }, pub: { t: strictPub } }) } };   // round-35 P1-01 — the NORMATIVE recovery tuple (domain, epoch, last_accepted, effective_sequence, replacement_authority); a human annotation is NOT part of the signed authority claim
-const NOFORK_CLAIM_SCHEMA = { purpose: { t: (x) => x === 'ust:name-no-fork' }, domain_shard: { t: _evId }, active_genesis: { t: _evHash }, map_checkpoint: { t: _evHash, opt: true }, map_sequence: { t: _evSeq, opt: true }, valid_as_of: { t: (x) => isRealRfc3339Z(x), opt: true } };
+const NOFORK_CLAIM_SCHEMA = { purpose: { t: (x) => x === 'ust:name-no-fork' }, domain_shard: { t: _evId }, active_genesis: { t: _evHash }, map_checkpoint: { t: _evHash, opt: true }, map_sequence: { t: _evSeq, opt: true } };   // round-35 — no self-declared time (valid_as_of removed): a signer-declared instant is not part of the signed authority claim
 // closed-witness decoders — exact envelope + the ONE admitSigner signer-admission + exact+typed body/claim. Every witness
 // that carries its own issuer_id binds the signer HERE (round-35 P0-01/02/03); checkpoint/transition bind against the
 // resolved authority key at the verifier (no envelope issuer_id).

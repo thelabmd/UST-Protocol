@@ -1336,6 +1336,7 @@ console.log('\n═════════════════════�
     check('R35 P0-03 no-fork open sig (alg:RSA + foreign key_id + extra wrapper field) → ok:false', P.verifyNoForkEvidence({ ...nf, sig: { ...nf.sig, alg: 'RSA', key_id: foreign, extra: 'x' } }, nfCfg).ok === false);
     check('R35 P0-03 no-fork extra ENVELOPE field → ok:false (closed { claim, issuer_id, sig })', P.verifyNoForkEvidence({ ...nf, rogue: 'x' }, nfCfg).ok === false);
     check('R35 P0-03 no-fork foreign sig.key_id → ok:false', P.verifyNoForkEvidence({ ...nf, sig: { ...nf.sig, key_id: foreign } }, nfCfg).ok === false);
+    check('R35 no-fork self-declared valid_as_of in the signed claim → ok:false (assurance-never-self-declared; time is not a signer field)', (() => { const cl = { purpose: 'ust:name-no-fork', domain_shard: D3, active_genesis: AG3, valid_as_of: '2026-01-01T00:00:00Z' }; const sg = sign(null, Buffer.from(P.canon(cl), 'utf8'), W1.priv).toString('base64url'); return P.verifyNoForkEvidence({ claim: cl, issuer_id: W1.key_id, sig: { alg: 'Ed25519', key_id: W1.key_id, pub: W1.pubB64, sig: sg } }, nfCfg).ok === false; })());
     // structural gate — the admitSigner choke-point rejects EVERY sig-wrapper tampering class (machine-check: a wrapper divergence can't ship)
     check('R35 admitSigner gate: every sig-wrapper tampering on a genuine attestation → NOT attested; only the genuine wrapper passes', (() => {
       if (P.verifyCheckpointUniqueness([ua3(W1), ua3(W2)], uCfg).attested !== true) return false;
