@@ -17,7 +17,7 @@ import { canon, H, keyId, edVerifyStrict, contentHash, verify, isValid, verifyKe
   resolveKeys, buildKeylogCommitment, authorityCheckpointId, strictB64url, isPublicDnsShard,
   admitUtf8, anyLoneSurrogate, admitDeep } from './index.mjs';   // round-19 P1-01 — ONE Unicode byte-admission, shared with the discovery resolver. round-46 — admitDeep is the proven canon-transparent side-effect-free reduction for the PACKAGE domain (canon: string leaves); admitInert (below) is its canonJSON-domain sibling for the CONFIG (numeric leaves). Both read DATA descriptors and never execute a getter/toJSON.
 
-export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev58';
+export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev59';
 // RULE_CONTRACTS (§2b) — the STRUCTURAL source of truth: exactly one inference rule per name, one switch branch per
 // name, and a fixed (children arity, witness count, allowed params, conclusion kind). DecodeTerm enforces these on
 // decode; a term with an extra child / extra witness / free param / unknown field / stored conclusion is rejected

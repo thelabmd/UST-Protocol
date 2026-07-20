@@ -336,6 +336,12 @@
       "rev": "rev58",
       "model_locus": "the totality of every reduction door is enforced from the SOURCE export list",
       "conformance_check": "R46 self-audit (totality, from-code) — NO public verifier/resolver export SYNC-throws a host exception on a hostile Proxy in every arg position (the SOURCE list is the roster; closes the combineSubstrates gate-completeness gap)"
+    },
+    {
+      "id": "R59-totality-exhaustive-sync-async",
+      "rev": "rev59",
+      "model_locus": "the totality roster is made EXHAUSTIVE: every export, sync AND async, accounted for",
+      "conformance_check": "R46 self-audit (rev59, totality from-code EXHAUSTIVE) — EVERY exported function is TOTAL on a hostile Proxy (no sync host-throw, no async promise-rejection) UNLESS explicitly classified MAY-THROW (trusted-input producer / byte-string primitive / throw-by-contract); no export unaccounted, sync AND async"
     }
   ]
 }

@@ -2227,7 +2227,8 @@ const hornClosure = (atomSet) => {                                              
   return { closed, trace };
 };
 export function provePredicates(seams = {}) {
-  const { identity, freshness, anchor, evidence = [] } = (seams && typeof seams === 'object') ? seams : {};   // round-25 P1-02 — null-total: `provePredicates(null)` no longer throws on destructuring (a malformed non-null arg floors to LIGHT)
+  const S = admitDeep(seams);   // round-46 self-audit (totality) — extend the round-25 P1-02 null-tolerance to a HOSTILE Proxy: a getter/accessor seams object would fire on destructuring below → a host throw at this public (unbranded) door. admitDeep → an inert snapshot (or ADMIT_REJECT → the LIGHT floor); the output is unbranded regardless (only verify() seals), so a hostile input simply floors, never throws.
+  const { identity, freshness, anchor, evidence = [] } = (S && typeof S === 'object' && S !== ADMIT_REJECT) ? S : {};   // round-25 P1-02 — null-total: `provePredicates(null)` no longer throws on destructuring (a malformed non-null arg floors to LIGHT)
   const verified = identity?.status === 'verified';                                  // 'suspect' (pre-compromise window) never name-binds — mirrors §14 exactly
   const idStr = !verified ? 'self-asserted'
     : identity.strength === 'authoritative' ? 'authoritative'

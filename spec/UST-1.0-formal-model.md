@@ -1138,6 +1138,17 @@ is rebuilt so that the totality of every reduction door is enforced from the SOU
 verify*/resolve*/derive*/check*/combine*/fork*/no* export is driven through its entrypoint with a hostile Proxy and asserted
 not to sync-throw, with a small PRINCIPLED exclusion (a `*Claim` PRODUCER constructs prover data from TRUSTED args, and
 `verifyOrThrow` throws by contract). A new verifier is auto-covered; a new producer auto-excluded (*"R46 self-audit (totality, from-code) — NO public verifier/resolver export SYNC-throws a host exception on a hostile Proxy in every arg position (the SOURCE list is the roster; closes the combineSubstrates gate-completeness gap)"*).
+**Realization (rev59 — the totality roster is made EXHAUSTIVE: every export, sync AND async, accounted for).** The rev58
+roster covered only the verify*/resolve*/… prefix family and only SYNC throws, so the assurance/evidence ALGEBRA ops
+(`assuranceState`/`capAssurance`/`compareEvidenceOrder`/`quorumTrustDomains`/`projectTier`/`deriveAssurance`) and the four
+ASYNC entries (`verifyAsync`/`forkChoice`/`witnessNoFork`/`resolveByDiscovery`) sat outside it — total in fact, but held only by
+hand-checks. rev59 enumerates EVERY exported function and asserts each is TOTAL on a hostile Proxy — no sync host-throw AND no
+async promise-REJECTION — UNLESS it is explicitly classified MAY-THROW (a trusted-input PRODUCER `build*`/`seal*`/`*Claim`, a
+byte/string PRIMITIVE, the connector-side `verifiedEvidence`, or the throw-by-contract `assertValid`/`verifyOrThrow`). The one
+residual boundary that host-threw — `provePredicates` on a hostile Proxy (a getter fired on destructuring; the round-25 null
+tolerance did not reach a Proxy) — is now reduced by `admitDeep` and floors instead of throwing (its output is unbranded, sealed
+only by `verify`, so a hostile input floors to LIGHT, never a host throw). No export — present or future, sync or async, verifier
+or algebra — is unaccounted (*"R46 self-audit (rev59, totality from-code EXHAUSTIVE) — EVERY exported function is TOTAL on a hostile Proxy (no sync host-throw, no async promise-rejection) UNLESS explicitly classified MAY-THROW (trusted-input producer / byte-string primitive / throw-by-contract); no export unaccounted, sync AND async"*).
 
 **Definition (VerifiedAuthorityContext).** For a genesis document `g` whose class and self-signature VERIFY
 (`resolveCheckpointRoots` — P0-2: verify-before-extract):
