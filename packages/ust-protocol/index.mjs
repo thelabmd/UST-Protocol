@@ -250,7 +250,12 @@ function admitArray(v) {
 // round-42 P1-02 (R1) — a STRICT optional-boolean admission for GRANTING policy coordinates (acceptConsumerOverride /
 // noForkConfirmed / corroborated): undefined/null → false (absent/default); a real boolean → itself; ANY other present
 // value → ADMIT_REJECT (a wrong-typed grant like the string "false" is truthy and would activate the override — malformed, not truthy).
-const admitBool = (x) => (x === undefined || x === null) ? false : (typeof x === 'boolean' ? x : ADMIT_REJECT);
+const admitBool = (x, dflt = false) => (x === undefined || x === null) ? dflt : (typeof x === 'boolean' ? x : ADMIT_REJECT);   // round-43 — per-field DEFAULT (requirePerFrameValid defaults true; the grants default false): a wrong-typed present value is always ADMIT_REJECT
+// round-43 P1-02 — the ONE optional authority-SELECTOR admission: undefined/null → absent (a sentinel); a present array is DEEP-admitted
+// (frozen elements, never a live two-face element); anything else (a falsy scalar / non-array) → ADMIT_REJECT. Replaces every
+// `Array.isArray(x) ? x : []` coalesce that silently turned a present malformed key-log into an empty (retirement-erasing) log.
+const ABSENT_SELECTOR = Symbol('absent-selector');
+const admitOptionalKeylog = (x) => (x === undefined || x === null) ? ABSENT_SELECTOR : (Array.isArray(x) ? admitArray(x) : null);
 
 // ─── producer: §7 seal — sign canon({ust,state}) with an Ed25519 private key ─────────────────────────
 export function seal(state, privKeyObj, pubB64url) {
@@ -649,6 +654,8 @@ function verifyCore(doc, opts = {}) {
     // proven upper bound and must never become the coordinate (it made a retired-key doc VALID:HIGH with a forged/absent
     // string while the honest late U rejected it). No proof ⇒ U is undefined ⇒ a closed key lifecycle fails closed.
     const acceptOverride = admitBool(opts.acceptConsumerOverride);   // round-42 P1-02 (R1) — strict: the string "false" (or any non-boolean) is TRUTHY and would activate the HIGH override projection; a wrong-typed grant is malformed, not truthy
+    const reqAuth = admitBool(opts.requireAuthoritative), reqFresh = admitBool(opts.requireFreshKeylog), reqAnch = admitBool(opts.requireAnchored);   // round-43 — strict: a falsy-coerced restriction (requireAuthoritative:0) would SILENTLY DROP the caller's policy (a coerced value is malformed, never a dropped requirement — the measured-input rule applies to restrictions too)
+    if (reqAuth === ADMIT_REJECT || reqFresh === ADMIT_REJECT || reqAnch === ADMIT_REJECT) return bad('E-MALFORMED', 'requireAuthoritative/requireFreshKeylog/requireAnchored must be booleans (round-43 — a coerced restriction must not silently drop the caller policy)');
     if (acceptOverride === ADMIT_REJECT) return bad('E-MALFORMED', 'acceptConsumerOverride must be a boolean (round-42 P1-02 — a non-boolean grant would flip the consumer-override projection by truthiness)');
     let identity;
     if (opts.genesis != null) identity = resolveAuthority(doc, { ...opts, anchorTime: provenAnchorTime !== undefined ? provenAnchor(provenAnchorTime) : undefined });   // round-41 P1-02 — a PRESENT genesis (incl. a falsy one) resolves authority; a malformed genesis returns E-GENESIS (propagated below), never a silent self-asserted (round-17 P0-02 — mint a proven-anchor TOKEN; a raw opts.anchorTime is dropped and can never reach K_n(t))
@@ -657,14 +664,14 @@ function verifyCore(doc, opts = {}) {
       : { error: 'E-MALFORMED', detail: 'pinnedKeys must be an array of key_ids (round-41 P1-02 — a present non-array pin set is MALFORMED, not absent; a silently dropped pin restriction would accept any key as self-asserted)' };
     else identity = { strength: 'self-asserted', status: 'verified' };
     if (identity.error) return bad(identity.error, identity.detail);              // forked genesis / broken key-log / not pinned
-    if (opts.requireAuthoritative && !(identity.strength === 'authoritative' && identity.status === 'verified'))
+    if (reqAuth && !(identity.strength === 'authoritative' && identity.status === 'verified'))
       return identity.status === 'unavailable'
         ? { result: 'INDETERMINATE', reason: 'unavailable', identity, detail: identity.detail }   // W1: retry, NOT failure
         : bad('E-GENESIS', 'authoritative required but ' + identity.strength + '/' + identity.status);
     // §12.2a #40 — a consumer that needs a CURRENT key-log (revocation may have propagated) sets requireFreshKeylog:
     // an `unverified` freshness (a possibly-stale cache) ⇒ INDETERMINATE (retry: re-fetch the key-log from the
     // authoritative discovery surface or supply a VERIFIED keylogHeadAnchor), NEVER a silent accept on a stale view.
-    if (opts.requireFreshKeylog && identity.freshness === 'unverified')
+    if (reqFresh && identity.freshness === 'unverified')
       return { result: 'INDETERMINATE', reason: 'stale_keylog', identity, detail: 'key-log freshness unverified (possibly-stale cache); re-fetch from authoritative discovery or supply a verified keylogHeadAnchor (§12.2a)' };
     // step 8 — privacy (§14.8/§10): if the caller discloses {nonce,value}, REPRODUCE the commit; for
     // `encrypted`, AEAD-decrypt must reproduce the SAME committed plaintext (E-COMMIT on mismatch). Never brute-force.
@@ -751,7 +758,7 @@ function verifyCore(doc, opts = {}) {
     // requireAuthoritative); an authoritative doc with NO proof attached is a structural downgrade (E-ANCHOR); a
     // proof that is PRESENT + inclusion-valid but whose substrate is unreachable / not-yet-buried is retryable,
     // not a forgery (INDETERMINATE). (A malformed / non-reaching proof already returned E-ANCHOR above, ln 410.)
-    if (opts.requireAnchored && tier !== 'TOP') {
+    if (reqAnch && tier !== 'TOP') {
       if (!authoritative)
         return identity.status === 'unavailable'
           ? { result: 'INDETERMINATE', reason: 'unavailable', identity, detail: identity.detail }
@@ -1535,7 +1542,7 @@ export function resolveCadence(genesis, cadenceLog = [], atTime, opts) {
   const _o = admitOpts(opts); if (_o === null) return { error: 'E-MALFORMED', detail: 'opts is not an inert record (round-29 P1-01 totality — a hostile 4th arg cannot throw at this door)' };   // round-26/29 — admit the opts at the door (a hostile Proxy 4th arg → structured, never a host throw)
   const { keylog } = _o;
   if (cadenceLog !== undefined && cadenceLog !== null && !Array.isArray(cadenceLog)) return { error: 'E-MALFORMED', detail: 'cadenceLog must be an array' };
-  cadenceLog = Array.isArray(cadenceLog) ? cadenceLog : [];
+  cadenceLog = cadenceLog ?? [];   // round-43 — ONLY an absent (undefined/null) cadence-log defaults to empty; a present non-array already returned E-MALFORMED above (never the `Array.isArray(X)?X:[]` coalesce that hides a malformed selector)
   // #75 P1-03 — cadence is a canonical positive-integer STRING of seconds ("1.5" / "030" / 1e2 rejected).
   const gCad = genesis?.state?.data?.genesis?.value?.cadence;
   if (gCad !== undefined && parseCadenceInt(gCad) === null) return { error: 'E-MALFORMED', detail: 'genesis cadence not a canonical positive integer of seconds (§11.3)' };
@@ -1545,7 +1552,9 @@ export function resolveCadence(genesis, cadenceLog = [], atTime, opts) {
   // #71-followup P0 — a cadence CHANGE is an OPERATOR AUTHORITY parameter, not "any LIGHT doc with the same
   // domain_shard". Resolve the authorized key set ONCE (genesis + key-log) and reject an entry signed OUTSIDE
   // it. Without the key-log only the genesis key can authorize a change (fail-closed, not fail-open).
-  const rk = resolveKeys(genesis, Array.isArray(keylog) ? keylog : []);
+  const kl = admitOptionalKeylog(keylog);   // round-43 P1-02 — a PRESENT non-array keylog is MALFORMED, never coalesced to [] (that erased a retirement entry and accepted a change signed by a retired key)
+  if (kl === null) return { error: 'E-MALFORMED', detail: 'keylog must be a native array of inert key-log entries (round-43 P1-02 — a present non-array selector must not silently become an empty log)' };
+  const rk = resolveKeys(genesis, kl === ABSENT_SELECTOR ? [] : kl);
   if (rk.error) return { error: rk.error, detail: 'cadence authority: ' + rk.detail };
   // #75 P0-02c — a cadence entry MUST be signed by a currently-ACTIVE key (not merely ever-seen): a retired or
   // rotated-out or revoked key can no longer move the grid. `active` already excludes all of them (state machine).
@@ -1730,7 +1739,9 @@ export function verifyAuthorityCheckpointChain(chain, config) {
       return { result: 'INVALID', error: 'E-AUTHORITY', detail: 'a verified GenesisHandle context is the SOLE authority root — no raw pinnedPrior / genesis / genesisAuthority / recoveryKeys / recoveryThreshold may accompany it (round-26 P0-01/P0-02: never raw fields, M2/F.5l)' };
     genesisAuthority = context.checkpoint_authority; ctxGenesis = context.active_genesis; authority_root = 'verified-context';
     if (context.recoveryKeys) { recoveryKeys = context.recoveryKeys; recoveryThreshold = context.recoveryThreshold; }   // recovery is FIXED by the genesis, never a call argument
-  } else if (genesis) { const gr = resolveCheckpointRoots(genesis); if (gr?.genesisAuthority) { genesisAuthority = gr.genesisAuthority; authority_root = 'genesis'; } if (gr?.recoveryKeys && recoveryKeys === undefined) { recoveryKeys = gr.recoveryKeys; recoveryThreshold = recoveryThreshold ?? gr.recoveryThreshold; } }
+  } else if (genesis != null) {   // round-43 P1-02 — a PRESENT genesis selector must be a record; a falsy/scalar `genesis:false` is MALFORMED, never silently skipped to a pinned/fallback root
+    if (typeof genesis !== 'object' || Array.isArray(genesis)) return { result: 'INVALID', error: 'E-GENESIS', detail: 'genesis must be an inert record (round-43 P1-02 — a present falsy/scalar genesis is malformed, not absent)' };
+    const gr = resolveCheckpointRoots(genesis); if (gr?.genesisAuthority) { genesisAuthority = gr.genesisAuthority; authority_root = 'genesis'; } if (gr?.recoveryKeys && recoveryKeys === undefined) { recoveryKeys = gr.recoveryKeys; recoveryThreshold = recoveryThreshold ?? gr.recoveryThreshold; } }
   if (!genesisAuthority && !pinnedPrior) return { result: 'INDETERMINATE', reason: 'authority_unresolved', detail: 'no genesis-rooted or pinned-prior checkpoint authority to resolve the first signer' };
   // K5 (round-3 P0-2) — a mid-chain cold start roots ONLY in a full PinnedCheckpointState (a SCOPED snapshot), never a
   // bare {id, authority, sequence}. Admissible as a branded CheckpointChainHandle (produced by a prior verification) OR
@@ -2053,6 +2064,8 @@ export function deriveCheckpointFreshness(chain, config) {
   // chain to the verifier and an unsigned body (sequence "999", fake active genesis) to the assembly. Verify + read the SAME frozen chain.
   { const Ch = admitDeep(chain); if (Ch === ADMIT_REJECT) return { result: 'INVALID', detail: 'checkpoint chain is not an inert record (round-31 R3 — the chain is admitted once and read only from the snapshot)' }; chain = Ch; }
   const { genesis, context, genesisAuthority, pinnedPrior, keylogEntries, target, commitment, terminality, uniqueness, trust, allowExperimentalAttested = false } = c;
+  const aea = admitBool(allowExperimentalAttested, false);   // round-43 P1-02 — strict: a truthy non-boolean (the string "false") would ENABLE the experimental attested rung the stable verifier must withhold
+  if (aea === ADMIT_REJECT) return { result: 'INVALID', detail: 'allowExperimentalAttested must be a boolean (round-43 P1-02 — a coerced value must not enable the experimental attested rung)' };
   const chn = verifyAuthorityCheckpointChain(chain, { genesis, context, genesisAuthority, pinnedPrior, keylogEntries });   // K5: forward the prefix witness so a growth chain can reach corroborated (round-3 P0-3)
   if (chn.result !== 'VALID') return chn.result === 'INDETERMINATE' ? chn
     : { result: 'INVALID', error: chn.error, detail: 'checkpoint chain not authorized: ' + (chn.detail || chn.error), keylog_freshness: 'unverified' };
@@ -2089,7 +2102,7 @@ export function deriveCheckpointFreshness(chain, config) {
       // K1 ship-gate: the STABLE verifier does not emit `attested`. Without the explicit experimental opt-in the
       // proof still HOLDS (uniqueness verified) but the reported rung is capped at `corroborated`, with the withheld
       // rung named — an honest downgrade, never a silent one.
-      if (!allowExperimentalAttested) return { result: 'VALID', keylog_freshness: 'corroborated', basis: uq.basis, anti_equivocation: 'attested',
+      if (aea !== true) return { result: 'VALID', keylog_freshness: 'corroborated', basis: uq.basis, anti_equivocation: 'attested',
         attested_withheld: 'experimental-gate', stability: 'experimental-extension',
         ...(uq.map_root ? { map_root: uq.map_root } : {}), head: headId, sequence: b.sequence, active_genesis: b.active_genesis };
       return { result: 'VALID', keylog_freshness: 'attested', basis: uq.basis, anti_equivocation: 'attested', stability: 'experimental-extension',
@@ -2290,6 +2303,8 @@ export function verifyStream(frames, config) {
   const c = admitOpts(config); if (c === null) return { complete: 'none', detail: 'config must be an inert record (round-24 P1-01 totality)' };   // round-24 P1-01 (self-audit) — the parallel stream surface, total for null/hostile config
   { const Fr = admitDeep(frames); if (Fr === ADMIT_REJECT) return { complete: 'none', detail: 'frames are not an inert record (round-27)' }; frames = Fr; }   // round-27 — snapshot
   let { genesis, keylog, checkpoint, cadenceLog, requirePerFrameValid = true } = c;
+  const rpfv = admitBool(requirePerFrameValid, true);   // round-43 P1-02 — strict: a present falsy non-boolean (0/"") would DISABLE X2 per-frame signature verification and pass a tampered frame as complete
+  if (rpfv === ADMIT_REJECT) return { complete: 'none', detail: 'requirePerFrameValid must be a boolean (round-43 P1-02 — a coerced value must not disable per-frame signature verification)' };
   // rev38 R3 (round-31 P0-02) — admitOpts is SHALLOW: the NESTED `genesis` and `checkpoint` in config stay live caller objects.
   // verifyStream calls verify(checkpoint) but then re-reads the raw checkpoint's class/head/count (and reads raw genesis for
   // prevHash) — a two-face Proxy served the signed face to verify and an unsigned face to the reads. Admit both nested docs once.
@@ -2313,7 +2328,7 @@ export function verifyStream(frames, config) {
   const seenUstId = new Set(), seenPrev = new Set();
   let lastE = null;
   for (const [i, f] of frames.entries()) {
-    if (requirePerFrameValid) { const v = verify(f, { context: 'data' }); if (!isValid(v)) return { error: 'E-SIG', detail: 'frame ' + i + ' invalid: ' + v.error }; } // X2
+    if (rpfv) { const v = verify(f, { context: 'data' }); if (!isValid(v)) return { error: 'E-SIG', detail: 'frame ' + i + ' invalid: ' + v.error }; } // X2 (round-43 — the ADMITTED boolean, never the coerced opts field)
     if (f.state.id.domain_shard !== authority) return { error: 'E-AUTHORITY', detail: 'frame ' + i + ' domain_shard != stream authority (' + authority + ') — mixed-authority stream' };
     if (boundKeys && boundKeys.get(f.state.id.key_id) !== f.sig.pub) return { error: 'E-AUTHORITY', detail: 'frame ' + i + ' key not bound to the authority key-log — impersonation (key ∉ K_A, §12.2)' };
     if (seenUstId.has(f.state.id.ust_id)) return { error: 'E-PREV', detail: 'duplicate ust_id (fork, Y1): ' + f.state.id.ust_id };

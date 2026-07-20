@@ -1034,6 +1034,22 @@ value → `E-MALFORMED`), and `verifyStream` no longer coalesces a present non-a
 **a security decision reads a MEASURED input, never a coerced one — a live array element, a truthy look-alike, and a truthy
 non-boolean are all inputs that were used without being admitted.**
 
+**Realization (rev52 — the coerced-input class is closed at a FROM-CODE GATE, not per-site).** rev52 fixes four more
+instances of the same two classes — but the point of rev52 is that "fix the instance" was the wrong loop: the
+coerced-boolean and falsy-selector classes recurred for FOUR rounds (rev48 `maxSupportedBytes`, rev50 `genesis`/`pinnedKeys`,
+rev51 three grant booleans, and now `requirePerFrameValid` (a falsy `0` DISABLED per-frame signature verification and passed
+a tampered frame as complete), `allowExperimentalAttested` (a truthy `"false"` ENABLED the withheld experimental rung),
+`resolveCadence`'s `keylog` (a present `false` erased a retirement and accepted a change signed by a retired key), and
+`verifyAuthorityCheckpointChain`'s `else if (genesis)` (a present `false` fell through to a pinned fallback root)) because
+each fix was per-SITE. The structural closure is a REGISTRY + a from-code GATE (conformance): (1) NO authority selector may
+use the `Array.isArray(X) ? X : default` coalesce — a present malformed selector is admitted, never silently emptied; (2)
+every `require*`/`allow*`/`acceptConsumerOverride` grant boolean in the source is REGISTERED and admitted through `admitBool`
+(a wrong-typed value → `E-MALFORMED`), so a NEW grant flag fails the gate until admitted and adversarially probed; (3) the
+RESTRICTION booleans (`requireAuthoritative`/`requireFreshKeylog`/`requireAnchored`) are measured too — a coerced `0` must
+not silently DROP the caller's policy (*"R43 STRUCTURAL: every require*/allow*/acceptConsumerOverride security-policy boolean in index.mjs is REGISTERED (a new grant flag fails until admitted via admitBool + adversarially probed)"*). **The lesson
+is meta: a defect CLASS is not closed by fixing its known instances — it is closed by a from-code invariant that FAILS when
+a new instance appears. The measured-input rule is now enforced by the gate, not by memory.**
+
 **Definition (VerifiedAuthorityContext).** For a genesis document `g` whose class and self-signature VERIFY
 (`resolveCheckpointRoots` — P0-2: verify-before-extract):
 

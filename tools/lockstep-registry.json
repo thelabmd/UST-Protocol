@@ -282,6 +282,12 @@
       "rev": "rev51",
       "model_locus": "The evidence/axiom boundary is a PROVENANCE gate",
       "conformance_check": "R42 P1-01 (R1) an unminted servedNoFork + acceptConsumerOverride does NOT reach HIGH (override_liftable:false), yet still ≠ corroborated (rc35-P0a)"
+    },
+    {
+      "id": "R52-coerced-input-registry-gate",
+      "rev": "rev52",
+      "model_locus": "a defect CLASS is not closed by fixing its known instances",
+      "conformance_check": "R43 STRUCTURAL: every require*/allow*/acceptConsumerOverride security-policy boolean in index.mjs is REGISTERED (a new grant flag fails until admitted via admitBool + adversarially probed)"
     }
   ]
 }
