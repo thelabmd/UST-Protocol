@@ -15,9 +15,9 @@
 import { canon, H, keyId, edVerifyStrict, contentHash, verify, isValid, verifyKeylogTerminality,
   verifyCheckpointMapUniqueness, evidenceCaps, authorityScopeId, genesisEpoch,
   resolveKeys, buildKeylogCommitment, authorityCheckpointId, strictB64url, isPublicDnsShard,
-  admitUtf8, anyLoneSurrogate } from './index.mjs';   // round-19 P1-01 — ONE Unicode byte-admission, shared with the discovery resolver (no drift)
+  admitUtf8, anyLoneSurrogate, admitDeep } from './index.mjs';   // round-19 P1-01 — ONE Unicode byte-admission, shared with the discovery resolver. round-46 — admitDeep is the proven canon-transparent side-effect-free reduction for the PACKAGE domain (canon: string leaves); admitInert (below) is its canonJSON-domain sibling for the CONFIG (numeric leaves). Both read DATA descriptors and never execute a getter/toJSON.
 
-export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev54';
+export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev55';
 // RULE_CONTRACTS (§2b) — the STRUCTURAL source of truth: exactly one inference rule per name, one switch branch per
 // name, and a fixed (children arity, witness count, allowed params, conclusion kind). DecodeTerm enforces these on
 // decode; a term with an extra child / extra witness / free param / unknown field / stored conclusion is rejected
@@ -349,6 +349,45 @@ export function checkAuthorityProofBytes(packageBytes, configBytes) {
 // (round-10 P1-03) — the same canonicalization the TCB then re-checks on the bytes; a caller who hands raw bytes with a
 // dangling witness still gets E-WITNESS-UNREFERENCED. checkAuthorityProof(obj,cfg) := checkAuthorityProofBytes(EncodeLive…).
 const referencedIds = (term) => { const r = new Set(); (function walk(t) { if (t && typeof t === 'object') { for (const w of (Array.isArray(t.witnesses) ? t.witnesses : [])) r.add(w); for (const c of (Array.isArray(t.children) ? t.children : [])) walk(c); } })(term); return r; };
+// round-46 (the REDUCTION metatheorem) — the ONE side-effect-free reduction at the authority OBJECT boundary. It reads DATA
+// descriptors only and REJECTS any accessor (getter/setter), function, symbol, non-plain prototype, or cycle, so NO caller code
+// (a getter / a toJSON) EVER EXECUTES — an automaton reads its input as DATA, it never runs it. JSON scalars (number/boolean/
+// null/string) are valid leaves (the authority domain is canonJSON, not the canon-string document domain). This SUPERSEDES the
+// rev45 config-first ordering AND the JSON.stringify/inertRead admission (both of which FIRED the input's getters): a hostile
+// getter that would rewrite the OTHER argument now never runs, so cross-argument mutation and admission ORDER are STRUCTURALLY
+// impossible. Bounded depth (§13). Returns the inert null-proto clone (pollution-safe) or INERT_REJECT.
+const INERT_REJECT = Symbol('inert-reject');
+const admitInert = (v, seen = new WeakSet()) => {
+  if (v === null) return null;
+  const t = typeof v;
+  if (t === 'string' || t === 'number' || t === 'boolean') return v;         // a JSON scalar leaf (the config is the canonJSON domain, not the canon string-only document domain)
+  if (t !== 'object') return INERT_REJECT;                                    // function / symbol / bigint / undefined → reject (never a callable at the boundary)
+  if (seen.has(v)) return INERT_REJECT;                                       // a TRUE cycle (v is its own ancestor) → refuse; a DAG (sibling re-reference) is fine via the finally-delete below
+  seen.add(v);
+  try {
+    if (Array.isArray(v)) {
+      const out = new Array(v.length);
+      for (let i = 0; i < v.length; i++) {
+        if (!(i in v)) continue;                                             // PRESERVE a hole (round-28 P1-01: canon/JSON treat a preserved hole the same as the original; densifying to null diverged)
+        const d = Object.getOwnPropertyDescriptor(v, i);
+        if (d.get || d.set) return INERT_REJECT;                             // an accessor element is REJECTED, NEVER executed
+        const r = admitInert(d.value, seen); if (r === INERT_REJECT) return INERT_REJECT; out[i] = r;   // read DATA descriptor (the config is not a signature-verified object, so no [[Get]] face to snapshot — a descriptor read is side-effect-free AND sound here)
+      }
+      return Object.freeze(out);
+    }
+    const proto = Object.getPrototypeOf(v);
+    if (proto !== Object.prototype && proto !== null) return INERT_REJECT;    // plain / null-proto ONLY (Date/Map/class instance rejected)
+    const out = Object.create(null);
+    for (const k of Object.keys(v)) {
+      const d = Object.getOwnPropertyDescriptor(v, k);
+      if (d.get || d.set) return INERT_REJECT;                               // a declared accessor at ANY depth → REJECTED, never executed (no getter/toJSON runs)
+      const r = admitInert(d.value, seen); if (r === INERT_REJECT) return INERT_REJECT;
+      Object.defineProperty(out, k, { value: r, enumerable: true });         // read-only own data via defineProperty (safe for __proto__ on a null-proto object)
+    }
+    return Object.freeze(out);
+  } catch { return INERT_REJECT; }
+  finally { seen.delete(v); }                                                 // ancestor-path tracking: a DAG (same object in sibling positions) is fine, only a true cycle is refused (matches admitDeep)
+};
 const encodeLive = (x, kind) => {
   try {
     let v = x;
@@ -361,8 +400,13 @@ const encodeLive = (x, kind) => {
   } catch { return { error: 'E-ENCODE' }; }
 };
 export function checkAuthorityProof(obj, config) {
-  const c = encodeLive(config, 'config'); if (c.error) return { result: 'INVALID', reason: 'config: ' + c.error };   // round-45 P0-01 (R1/R3) — encode the TRUSTED config to bytes FIRST, then the untrusted package: a hostile getter/toJSON in the package can then mutate only the ORIGINAL config object, never the already-captured config bytes (cross-argument admission order — trusted before untrusted)
-  const p = encodeLive(obj, 'package'); if (p.error) return { result: 'INVALID', reason: 'package: ' + p.error };
+  // round-46 (the REDUCTION metatheorem) — reduce EACH argument through the ONE side-effect-free admission BEFORE the automaton:
+  // admitDeep reads DATA descriptors and REJECTS any accessor (getter/setter/toJSON), so NO caller code executes at the boundary.
+  // Cross-argument mutation and admission ORDER are then STRUCTURALLY impossible (a getter that would rewrite the other argument
+  // never runs), superseding the rev45 config-first ordering with the automaton-faithful rule: an automaton reads its input as DATA.
+  const ci = admitInert(config); if (ci === INERT_REJECT) return { result: 'INVALID', reason: 'config: not an inert record — an accessor/getter/toJSON is REJECTED, never executed' };   // the TRUSTED config (canonJSON domain, NOT signature-verified) is reduced side-effect-free FIRST: read from DATA descriptors, no getter/toJSON executes, so it is captured inertly BEFORE the untrusted package is touched — a package getter can no longer rewrite the config the verdict uses (cross-argument admission order + no code execution on the config)
+  const c = encodeLive(ci, 'config'); if (c.error) return { result: 'INVALID', reason: 'config: ' + c.error };   // canonJSON runs on the INERT config clone (no getter fires)
+  const p = encodeLive(obj, 'package'); if (p.error) return { result: 'INVALID', reason: 'package: ' + p.error };   // the package's INTEGRITY is content-hash/signature verified downstream (a two-face witness fails its id = H(canon)); only its unreferenced witnesses are filtered, so it is read here (config already captured inertly)
   return checkAuthorityProofBytes(p.bytes, c.bytes);
 }
 
@@ -781,7 +825,12 @@ export function buildAuthorityProof(inputs = {}) {
 // collapsed scalar `attested`; the legacy `attested` label is a projection requiring MapUnique behind the K1 gate.
 export function verifyAuthorityBundle(inputs = {}, config = {}) {
  try {   // round-28 P1-02 — I4 totality: a hostile getter/Proxy in inputs/config yields a STRUCTURED result, never a host throw (this self-contained byte-checker cannot reach admitDeep; the inner decoders are already total, this is the outer boundary guard)
-  const C = JSON.parse(JSON.stringify(config)), I = JSON.parse(JSON.stringify(inputs));   // round-45 P0-01 (R1/R3) — snapshot the TRUSTED config FIRST, then the untrusted inputs: an inputs.toJSON that mutates the consumer config runs AFTER config is already captured (cross-argument admission ORDER — trusted before untrusted); round-44 P1-02 — one-read inert JSON snapshot (like forkChoice), never a two-face getter
+  // round-46 (the REDUCTION metatheorem) — reduce EACH argument through the ONE side-effect-free admission (admitDeep reads DATA
+  // descriptors, REJECTS accessors, never executes a getter/toJSON), replacing JSON.stringify which FIRED the input's getters/
+  // toJSON. No caller code runs at the boundary, so a hostile inputs.toJSON that would rewrite the consumer config is IMPOSSIBLE —
+  // structurally, not by admission order. This is the automaton reading its input as DATA (rev45 order + rev44 one-read subsumed).
+  const C = admitInert(config), I = admitDeep(inputs);   // config = canonJSON domain; inputs → buildAuthorityProof → package = canon domain
+  if (C === INERT_REJECT || typeof I === 'symbol') return Object.freeze({ result: 'E-MALFORMED', detail: 'authority bundle inputs/config are not inert records — an accessor/getter/toJSON is REJECTED, never executed (round-46)' });
   const trust = C?.trust ?? {}, policy = C?.policy ?? {};
   if ((C?.trust != null && (typeof trust !== 'object' || Array.isArray(trust))) || (C?.policy != null && (typeof policy !== 'object' || Array.isArray(policy)))) return Object.freeze({ result: 'INVALID', reason: 'config: E-CONFIG-POLICY (round-45 P1-01 — a present malformed trust/policy record is rejected, never normalized away to {}; the adapter defers to the sole-checker contract)' });
   if (!I?.genesis) return Object.freeze({ result: 'INDETERMINATE', reason: 'authority_unresolved', detail: 'no genesis — an authority bundle roots in a verified genesis' });

@@ -1093,6 +1093,27 @@ Cf. *"R45 P0-01 (R1/R3) checkAuthorityProof ISOLATES the trusted config — a ho
 invariant is SEMANTIC (order, mutation, agreement) is closed by a BEHAVIORAL from-entrypoint gate, not a source regex — the
 regex checks the symptom's spelling, the behavioral gate checks the invariant.**
 
+**Theorem R (the Reduction metatheorem — the verifier is an AUTOMATON over canonical bytes, not a COMPUTER over live objects).**
+Every public entry `E(x₁, …, xₙ)` decomposes as `E = A ∘ (ρ₁, …, ρₙ)` where each `ρᵢ` is a TOTAL reduction of argument `xᵢ`
+to its canonical form and `A` is a pure automaton over those forms. The reductions are INDEPENDENT (each `ρᵢ` is a function of
+`xᵢ` alone) and the automaton is a pure function of the reduced forms alone. Two admissible reduction disciplines, by whether
+the argument is signature-bound:
+1. **Unsigned input (a consumer TRUST config / policy):** `ρ` reads DATA descriptors only and REJECTS any accessor
+   (getter/setter), function, symbol, non-plain prototype, or cycle. **No caller code (a getter, a `toJSON`) EVER EXECUTES —
+   the automaton reads its input as DATA, it never runs it.** (`admitInert`.)
+2. **Signed input (a proof / a UST document):** `ρ` reads the `[[Get]]` face — the face the signature/`content_hash` is over
+   — EXACTLY ONCE into a frozen snapshot, then INTEGRITY is verified by content-address (a two-face proof fails `id = H(canon)`).
+   (`admitDeep` / `encodeLive` + the content-hash check.)
+**Corollary (why 46 rounds of boundary bugs collapse):** the recurring P0/P1 class — a two-face getter, a cross-argument
+mutation (an untrusted arg's getter rewriting a trusted arg mid-verdict), an admission-order dependency, an adapter that
+re-reads a live field — is IMPOSSIBLE under Theorem R: an unsigned argument's code never runs (so it cannot mutate a sibling),
+a signed argument is read once + hash-checked, and the reductions are independent (so ORDER is irrelevant). The byte kernel
+`checkAuthorityProofBytes` (which held every round: 4007-probe fuzz, 0 false accepts) IS `A`; the object adapters that failed
+were `E`s that had NOT been decomposed as `A ∘ ρ`. **Realization (rev55):** the authority adapters' TRUST config is now
+reduced by `admitInert` (side-effect-free) — a config getter/`toJSON` never executes (*"R46 checkAuthorityProof REDUCES the config side-effect-free — a config accessor getter is NEVER executed (the automaton reads DATA, never runs it; this SUPERSEDES the rev45 source-level admission order — no code runs at the boundary at all)"*). The residual `E`s (the signed-proof reads) are
+sound by discipline 2 (read-once + content-hash); the direction of travel is to decompose every remaining `E` as `A ∘ ρ` so
+the automaton, not a case-by-case boundary guard, carries the totality.
+
 **Definition (VerifiedAuthorityContext).** For a genesis document `g` whose class and self-signature VERIFY
 (`resolveCheckpointRoots` — P0-2: verify-before-extract):
 

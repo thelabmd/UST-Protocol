@@ -180,12 +180,14 @@ const CFG = { ...CONN, witnesses: { [Wa.key_id]: Wa.pub, [Wb.key_id]: Wb.pub }, 
   const bogus = checkAuthorityProof({ term: node('ReinforceQuorum', [πCorr, node('QuorumAgreement', [πChain], uaW, { n: '999', h: 'sha256:' + 'ff'.repeat(32) })]), witnesses }, CFG);
   check('COORDINATE PROVENANCE (B.1): a coordinate param on QuorumAgreement is REJECTED at decode (term cannot carry a coordinate)', clean.result === 'VALID' && bogus.result === 'INVALID' && /E-TERM-PARAM/.test(bogus.reason));
 }
-// P1-05 config snapshot: the consumer config is read once into an inert value; a getter fires exactly once.
+// P1-05 config snapshot (round-46 REDUCTION metatheorem): the consumer config is reduced SIDE-EFFECT-FREE — an accessor is
+// REJECTED and its getter is NEVER executed (the automaton reads its input as DATA, it does not run it). This SUPERSEDES the
+// old read-once semantics (fire the getter once): a config with a getter is now malformed (not inert), never a VALID verdict.
 {
   let creads = 0;
   const cfgAccessor = { get connectors() { creads++; return CONN.connectors; }, witnesses: CFG.witnesses, domains: CFG.domains, policy: CFG.policy };
   const r = checkAuthorityProof({ term: πCorr, witnesses }, cfgAccessor);
-  check('CONFIG snapshot (P1-05): config read once into an inert value → VALID and connectors getter read exactly once', r.result === 'VALID' && creads === 1);
+  check('CONFIG snapshot (P1-05 / round-46): a config accessor is REJECTED and its getter is NEVER executed → INVALID + creads === 0 (an automaton reads its input as DATA, never runs it)', r.result === 'INVALID' && creads === 0);
 }
 
 // ── cluster B — proof-relevant indexed judgments (M-REL / M-ERA): a relation is indexed by every object it relates ──
