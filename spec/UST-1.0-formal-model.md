@@ -1046,9 +1046,30 @@ use the `Array.isArray(X) ? X : default` coalesce — a present malformed select
 every `require*`/`allow*`/`acceptConsumerOverride` grant boolean in the source is REGISTERED and admitted through `admitBool`
 (a wrong-typed value → `E-MALFORMED`), so a NEW grant flag fails the gate until admitted and adversarially probed; (3) the
 RESTRICTION booleans (`requireAuthoritative`/`requireFreshKeylog`/`requireAnchored`) are measured too — a coerced `0` must
-not silently DROP the caller's policy (*"R43 STRUCTURAL: every require*/allow*/acceptConsumerOverride security-policy boolean in index.mjs is REGISTERED (a new grant flag fails until admitted via admitBool + adversarially probed)"*). **The lesson
+not silently DROP the caller's policy (*"R43/R44 STRUCTURAL: every require*/allow*/acceptConsumerOverride security-policy boolean in index.mjs + reference-checker.mjs is REGISTERED (a new grant flag fails until admitted + adversarially probed)"*). **The lesson
 is meta: a defect CLASS is not closed by fixing its known instances — it is closed by a from-code invariant that FAILS when
 a new instance appears. The measured-input rule is now enforced by the gate, not by memory.**
+
+**Realization (rev53 — the PUBLIC adapter must not manufacture what the sole-checker refuses, and it is an admission
+boundary).** rev52 closed the coerced-input class at a gate — but the gate scanned only `index.mjs`, and the P0 lived one
+file over. (P0-01) `verifyAuthorityBundle` (the public authority adapter, in `reference-checker.mjs`) built the checker
+config with `uniqueness_threshold: Number.isInteger(trust.uniqueness_threshold) ? trust.uniqueness_threshold : 2` — so an
+ABSENT or MALFORMED consumer threshold was replaced with a MANUFACTURED `2`, and two independent witnesses returned
+`VALID`/`witness-attested` under a quorum policy the consumer never selected. The inner `checkAuthorityProof` is explicit
+(«no `uniqueness_threshold` configured — quorum fails closed», «never a silent default»); the ADAPTER contradicted the
+SOLE-CHECKER. This is the recurring two-derivations-must-agree class at the strongest boundary: a public path may PROJECT
+the checker's verdict but must never inject a policy the checker would refuse. Fix: the adapter passes the consumer policy
+THROUGH — absent → omitted → the checker's `INDETERMINATE` fail-closed; malformed → passed → the checker's
+`E-CONFIG-THRESHOLD` (*"R44 P0-01 verifyAuthorityBundle injects NO threshold DEFAULT — the adapter passes the consumer policy through (no `Number.isInteger(...) ? ... : 2` fallback that manufactures a quorum the sole-checker refuses)"*). (P1-02,
+R1/R3) the adapter also read `config.trust.uniqueness_threshold` TWICE off the LIVE nested config (once for
+`Number.isInteger`, once for the value), so a two-face getter returned `2` to the check and `1` to the value and upgraded
+one witness into a quorum; this byte-checker cannot reach `admitDeep`, so it now takes a one-read inert JSON snapshot of
+BOTH graphs (`JSON.parse(JSON.stringify)`, like `forkChoice`) and reads only the snapshot. (P1-01) `verifyAuthorityCheckpointChain`'s `recoveryKeys`/`genesisAuthority` selectors were coalesced (`recoveryKeys || {}`) or
+silently overridden, so a present `recoveryKeys:false` erased the genesis-authorized recovery set — now the authority
+selectors fail closed on a present non-record; and the from-code gate scans BOTH `index.mjs` and `reference-checker.mjs`,
+bans `X || {}` / `X || []` as well as the `Array.isArray(X)?X` coalesce, and covers the recovery/authority selectors. **A
+public adapter around a sound kernel is a TCB surface too: it must admit its input once and defer to the kernel's contract,
+never re-read the live graph or inject a default the kernel would reject.**
 
 **Definition (VerifiedAuthorityContext).** For a genesis document `g` whose class and self-signature VERIFY
 (`resolveCheckpointRoots` — P0-2: verify-before-extract):

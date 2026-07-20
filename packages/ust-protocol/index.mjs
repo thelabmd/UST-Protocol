@@ -1715,6 +1715,8 @@ export function verifyAuthorityCheckpointChain(chain, config) {
   const C = admitDeep(chain); if (C === ADMIT_REJECT) return { error: 'E-MALFORMED', detail: 'chain is not an inert record — a getter on a checkpoint body cannot sign one body and mint another (round-27 P0-02)' };
   chain = C;
   let { genesis, context, genesisAuthority, pinnedPrior, recoveries, recoveryKeys, recoveryThreshold, epochTransitions, keylogEntries } = cfg;   // let — the body may re-resolve some fields (e.g. recovery)
+  for (const [nm, v] of [['genesisAuthority', genesisAuthority], ['recoveryKeys', recoveryKeys], ['pinnedPrior', pinnedPrior]])   // round-44 P1-01 — the authority SELECTORS fail closed: a PRESENT falsy/scalar/array value is malformed, never silently overridden by a genesis-derived root or coalesced to {} (a `recoveryKeys:false` erased the genesis-authorized recovery set)
+    if (v != null && (typeof v !== 'object' || Array.isArray(v))) return { result: 'INVALID', error: 'E-MALFORMED', detail: nm + ' must be an inert record (round-44 P1-01 — a present falsy/scalar authority selector is malformed, not absent)' };
   if (!Array.isArray(chain) || chain.length === 0) return { error: 'E-MALFORMED', detail: 'empty checkpoint chain' };
   // M4.2 (C4 bounds-before-work) — the optional full prefix-extension witness is the key-log ENTRY vector itself,
   // capped by the §13 resolution ceiling BEFORE any Merkle work.
@@ -1843,7 +1845,7 @@ export function verifyAuthorityCheckpointChain(chain, config) {
     const candidates = [expected];
     let recoveredWith = null;
     if (recoveries && prev && recoveries[b.sequence]) {
-      const rec = verifyCheckpointRecovery(recoveries[b.sequence], { domain_shard: b.domain_shard, genesis_epoch: b.genesis_epoch, last_accepted_checkpoint: prev.id, effective_sequence: b.sequence, recoveryKeys: recoveryKeys || {}, threshold: recoveryThreshold });
+      const rec = verifyCheckpointRecovery(recoveries[b.sequence], { domain_shard: b.domain_shard, genesis_epoch: b.genesis_epoch, last_accepted_checkpoint: prev.id, effective_sequence: b.sequence, recoveryKeys: recoveryKeys ?? {}, threshold: recoveryThreshold });
       if (rec.recovered) { recoveredWith = rec.replacement_authority; candidates.push(recoveredWith); }
     }
     const matched = candidates.find((c) => c && c.key_id && c.pub && authorityCheckpointSigOk(cp, c.key_id, c.pub).ok);

@@ -287,7 +287,19 @@
       "id": "R52-coerced-input-registry-gate",
       "rev": "rev52",
       "model_locus": "a defect CLASS is not closed by fixing its known instances",
-      "conformance_check": "R43 STRUCTURAL: every require*/allow*/acceptConsumerOverride security-policy boolean in index.mjs is REGISTERED (a new grant flag fails until admitted via admitBool + adversarially probed)"
+      "conformance_check": "R43/R44 STRUCTURAL: every require*/allow*/acceptConsumerOverride security-policy boolean in index.mjs + reference-checker.mjs is REGISTERED (a new grant flag fails until admitted + adversarially probed)"
+    },
+    {
+      "id": "R53-adapter-defers-to-kernel",
+      "rev": "rev53",
+      "model_locus": "must never inject a policy the checker would refuse",
+      "conformance_check": "R44 P0-01 verifyAuthorityBundle injects NO threshold DEFAULT — the adapter passes the consumer policy through (no `Number.isInteger(...) ? ... : 2` fallback that manufactures a quorum the sole-checker refuses)"
+    },
+    {
+      "id": "R53-adapter-selector-fails-closed",
+      "rev": "rev53",
+      "model_locus": "public adapter around a sound kernel is a TCB surface too",
+      "conformance_check": "R44 P1-01 verifyAuthorityCheckpointChain rejects a PRESENT malformed authority selector (genesisAuthority:false / recoveryKeys:0) → E-MALFORMED, never silently overridden or coalesced to {}"
     }
   ]
 }

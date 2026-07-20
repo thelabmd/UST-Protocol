@@ -17,7 +17,7 @@ import { canon, H, keyId, edVerifyStrict, contentHash, verify, isValid, verifyKe
   resolveKeys, buildKeylogCommitment, authorityCheckpointId, strictB64url, isPublicDnsShard,
   admitUtf8, anyLoneSurrogate } from './index.mjs';   // round-19 P1-01 — ONE Unicode byte-admission, shared with the discovery resolver (no drift)
 
-export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev52';
+export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev53';
 // RULE_CONTRACTS (§2b) — the STRUCTURAL source of truth: exactly one inference rule per name, one switch branch per
 // name, and a fixed (children arity, witness count, allowed params, conclusion kind). DecodeTerm enforces these on
 // decode; a term with an extra child / extra witness / free param / unknown field / stored conclusion is rejected
@@ -781,11 +781,12 @@ export function buildAuthorityProof(inputs = {}) {
 // collapsed scalar `attested`; the legacy `attested` label is a projection requiring MapUnique behind the K1 gate.
 export function verifyAuthorityBundle(inputs = {}, config = {}) {
  try {   // round-28 P1-02 — I4 totality: a hostile getter/Proxy in inputs/config yields a STRUCTURED result, never a host throw (this self-contained byte-checker cannot reach admitDeep; the inner decoders are already total, this is the outer boundary guard)
-  const trust = config?.trust || {}, policy = config?.policy || {};
-  if (!inputs?.genesis) return Object.freeze({ result: 'INDETERMINATE', reason: 'authority_unresolved', detail: 'no genesis — an authority bundle roots in a verified genesis' });
+  const I = JSON.parse(JSON.stringify(inputs)), C = JSON.parse(JSON.stringify(config));   // round-44 P1-02 (R1/R3) — admit BOTH graphs ONCE into an inert JSON snapshot (this self-contained byte-checker cannot reach admitDeep; JSON.parse(JSON.stringify) is the local one-read snapshot, like forkChoice): a hostile getter is read ONCE, or throws → E-MALFORMED via the catch — never a two-face that shows 2 to Number.isInteger and 1 to the value read
+  const trust = C?.trust || {}, policy = C?.policy || {};
+  if (!I?.genesis) return Object.freeze({ result: 'INDETERMINATE', reason: 'authority_unresolved', detail: 'no genesis — an authority bundle roots in a verified genesis' });
   const chkCfg = { connectors: trust.connectors || {}, mapRoots: trust.mapRoots || [], witnesses: trust.witnesses || {}, domains: trust.domains || {},
-    policy: { uniqueness_threshold: Number.isInteger(trust.uniqueness_threshold) ? trust.uniqueness_threshold : 2, allowExperimentalAttested: policy.allowExperimentalAttested === true } };
-  const r = checkAuthorityProof(buildAuthorityProof(inputs), chkCfg);
+    policy: { ...(trust.uniqueness_threshold !== undefined ? { uniqueness_threshold: trust.uniqueness_threshold } : {}), allowExperimentalAttested: policy.allowExperimentalAttested === true } };   // round-44 P0-01 — NO threshold DEFAULT: pass the consumer value THROUGH the admitted snapshot (absent → omitted → kernel INDETERMINATE fail-closed; malformed → passed → kernel E-CONFIG-THRESHOLD). The adapter must not MANUFACTURE a quorum threshold the consumer never selected — the sole-checker contract is the law.
+  const r = checkAuthorityProof(buildAuthorityProof(I), chkCfg);
   if (r.result !== 'VALID' || !r.judgment || r.judgment.kind !== 'Freshness')
     return Object.freeze({ result: r.result, ...(r.reason ? { reason: r.reason } : {}), ...(r.judgment ? { judgment_kind: r.judgment.kind } : {}) });
   const j = r.judgment, aeq = j.aeq || {};
