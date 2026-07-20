@@ -210,6 +210,18 @@
       "rev": "rev45",
       "model_locus": "canonical wire at the crypto LEAF",
       "conformance_check": "R36 P1-02 edVerifyStrict REJECTS a non-canonical Sig64 alias (same 64 bytes, different wire) — canonical enforced at the crypto leaf"
+    },
+    {
+      "id": "R46-merkle-copath-admit",
+      "rev": "rev46",
+      "model_locus": "R1 (admit the input) UNIFIED at every exported operation",
+      "conformance_check": "R37 P0-01 key-log Merkle sibling [] (not a canonical hash) → not terminal, NO host throw"
+    },
+    {
+      "id": "R46-lattice-operand-admit",
+      "rev": "rev46",
+      "model_locus": "R1 is uniform between input and output at every level",
+      "conformance_check": "R37 P1-01 joinAssurance with an OUT-OF-DOMAIN operand → E-ASSURANCE (never a synthesized TOP)"
     }
   ]
 }

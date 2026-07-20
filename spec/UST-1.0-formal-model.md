@@ -912,6 +912,25 @@ malformed quorum that exercises the actual property. Round-36 was the FIRST **0-
 class converges when each recurring shape is closed at a single primitive (`admitSigner`, `admitAuthorityKey`) or the
 leaf, with a machine-check gate, rather than hand-mirrored per site.
 
+**Realization (rev46 — R1 (admit the input) UNIFIED at every exported operation: the last two un-admitted inputs were a
+Merkle co-path and the lattice operands).** The authority primitives held (round-37 divergence_1 conceded), but the audit
+found the SAME controller rule — **R1: admission reads x into an inert typed value or REJECTS, totally** — was NOT applied
+at two exported ops one level below the authority surface. (P0-01) `verifyKeylogTerminality` and
+`verifyCheckpointMapUniqueness` checked only that `siblings` was an array of the right length, then built node preimages
+with JavaScript `+`: a `[]` sibling coerced to `''` computed a root under a NON-protocol grammar (so a malformed witness
+minted `corroborated` / experimental `attested` freshness), and a null-proto object threw a host `TypeError` (a totality
+break) — while the kernel already types its co-paths (`pHashArr`), a public↔kernel split. (P1-01) `joinAssurance` /
+`meetAssurance` / `assuranceLE` compared RAW per-axis ranks, bypassing `assuranceState` (the domain admission that
+`projectTier` already uses): an out-of-domain axis has rank −1, so the other operand's value silently replaced it and a
+`join` SYNTHESIZED a valid-looking `TOP`. Fix, the same shape as every prior primitive: **`admitHashPath(siblings, len)`**
+admits a co-path only if it is a length-`len` array of canonical sha256 hashes, and node preimages are built from admitted
+hash strings (both Merkle verifiers route through it, matching the kernel) (*"R37 P0-01 a GENUINE key-log terminality proof is still terminal (no over-reject)"*); and every exported lattice op ADMITS both operands with `assuranceState`
+before comparing, so an out-of-domain operand throws `E-ASSURANCE`, never a synthesized state (*"R37 P1-01 joinAssurance with an OUT-OF-DOMAIN operand → E-ASSURANCE (never a synthesized TOP)"*). A whole-surface sweep confirmed this was the
+LAST gap: every exported verifier and algebra op now routes its untrusted structured input through ONE admission primitive
+(`admitDeep`, `admitOpts`, `admitSigner`, `admitAuthorityKey`, `admitHashPath`, `assuranceState`, `decodeExact`) before
+processing — R1 is uniform between input and output at every level, which is the invariant the recurring findings were
+tracing toward all along.
+
 **Definition (VerifiedAuthorityContext).** For a genesis document `g` whose class and self-signature VERIFY
 (`resolveCheckpointRoots` — P0-2: verify-before-extract):
 

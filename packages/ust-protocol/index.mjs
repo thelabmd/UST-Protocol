@@ -1049,6 +1049,11 @@ const admitSigner = (sig, expectedKeyId) => (decodeExact(sig, AUTH_SIG_SCHEMA) &
 // authority, pinned prior — routes through this so a contradictory pair mints nothing.
 const AUTH_KEY_SCHEMA = { key_id: { t: _evHash }, pub: { t: strictPub } };
 const admitAuthorityKey = (a) => decodeExact(a, AUTH_KEY_SCHEMA) && keyId(a.pub) === a.key_id;
+// round-37 P0-01 — the ONE Merkle co-path admission: `siblings` is an array of the EXPECTED length whose EVERY element is
+// a canonical sha256 hash. Node preimages are then built from admitted hash STRINGS, never a generic `+` coercion — a
+// `[]` sibling coerced to '' forged a root under a non-protocol grammar, and a null-proto object threw a host TypeError.
+// Both Merkle verifiers (key-log terminality + SMT map) route through it, matching the kernel's typed hash arrays (pHashArr).
+const admitHashPath = (siblings, expectedLen) => (Array.isArray(siblings) && siblings.length === expectedLen && siblings.every(isHashStr)) ? siblings : null;
 const KEYLOG_COMMIT_SCHEMA = { root: { t: _evHash }, length: { t: _evSeq }, head: { t: _evHash } };
 const CHK_AUTHORITY_SCHEMA = { current_key_id: { t: _evHash }, next_key_id: { t: _evHash, opt: true }, next_pub: { t: strictPub, opt: true }, effective_sequence: { t: _evSeq, opt: true } };
 const CHECKPOINT_BODY_SCHEMA = { version: { t: (x) => x === '1' }, purpose: { t: (x) => x === 'ust:authority-checkpoint' }, domain_shard: { t: _evId }, genesis_epoch: { t: _evHash }, sequence: { t: _evSeq }, active_genesis: { t: _evHash }, checkpoint_authority: { t: _evRec(CHK_AUTHORITY_SCHEMA) }, keylog: { t: _evRec(KEYLOG_COMMIT_SCHEMA) }, previous_checkpoint: { t: _evHash, opt: true }, previous_epoch_final_checkpoint: { t: _evHash, opt: true } };
@@ -1919,10 +1924,10 @@ export function buildVerifiableMap(leaves) {
 }
 // verify inclusion (value present) or non-membership (value=null) of key under root, using the co-path
 function smtVerify(root, key, value, proof) {
-  if (!proof || !Array.isArray(proof.siblings) || proof.siblings.length !== SMT_DEPTH) return false;
+  const sibs = admitHashPath(proof?.siblings, SMT_DEPTH); if (sibs === null) return false;   // round-37 P0-01 — every SMT co-path element is a canonical sha256 hash (no `+` coercion grammar, no host throw on a null-proto object)
   const hex = smtHex(key);
   let node = value === null ? smtDefaults[SMT_DEPTH] : smtLeaf(key, value);
-  for (let d = SMT_DEPTH - 1; d >= 0; d--) node = smtBit(hex, d) === 0 ? H('ust:smt-node', node + '|' + proof.siblings[d]) : H('ust:smt-node', proof.siblings[d] + '|' + node);
+  for (let d = SMT_DEPTH - 1; d >= 0; d--) node = smtBit(hex, d) === 0 ? H('ust:smt-node', node + '|' + sibs[d]) : H('ust:smt-node', sibs[d] + '|' + node);
   return node === root;
 }
 // TYPED, domain-separated key/value spaces — one map may serve both predicates with NO collision (a checkpoint proof
@@ -1989,10 +1994,10 @@ export function verifyKeylogTerminality(head_, proof = {}) {
   // (fewer siblings than the tree has levels) recomputes the root over a SMALLER tree; with an attacker-chosen `root`
   // it FORGES terminality for a key-log that actually has successors — re-opening the P0-02 false-terminality class.
   let width = 1n, depth = 0n; while (width < L) { width <<= 1n; depth++; }
-  if (BigInt(hp.siblings.length) !== depth) return { terminal: false, detail: 'proof depth ' + hp.siblings.length + ' ≠ ceil(log2(width))=' + depth + ' for length ' + L + ' (under/over-depth proof)' };
+  const sibs = admitHashPath(hp.siblings, Number(depth)); if (sibs === null) return { terminal: false, detail: 'proof depth/co-path invalid: siblings must be a length-' + depth + ' co-path of canonical sha256 hashes (round-37 P0-01 — under/over-depth or a non-hash element earns nothing; no coercion grammar)' };
   let node = keylogLeaf(head), i = L - 1n;
-  for (let d = 0; d < hp.siblings.length; d++) {
-    const sib = hp.siblings[d], weAreLeft = (i & 1n) === 0n;                            // LEFT child ⇒ sibling is to the RIGHT (higher indices) ⇒ MUST be an empty subtree
+  for (let d = 0; d < sibs.length; d++) {
+    const sib = sibs[d], weAreLeft = (i & 1n) === 0n;                                   // LEFT child ⇒ sibling is to the RIGHT (higher indices) ⇒ MUST be an empty subtree
     if (weAreLeft && sib !== klEmptyDefault(d)) return { terminal: false, detail: 'a later key-log entry exists beyond the head (right subtree at level ' + d + ' is not empty)' };
     node = weAreLeft ? klNode(node, sib) : klNode(sib, node);                           // combine using the INDEX-derived side, not a proof field
     i >>= 1n;
@@ -2109,11 +2114,11 @@ export function assuranceState(s = {}) {
 }
 // The product order (F.5 gap 1): a ≤ b iff a ≤ b on EVERY axis — a PARTIAL order (identity & freshness independent,
 // so most pairs are incomparable). meet/join make it a LATTICE.
-export const assuranceLE = (a, b) => AXES.every((ax) => axisLE(ax, a[ax], b[ax]));
+export const assuranceLE = (a, b) => { const A = assuranceState(a), B = assuranceState(b); return AXES.every((ax) => axisLE(ax, A[ax], B[ax])); };   // round-37 P1-01 — ADMIT both operands into the full in-range product before comparing (an out-of-domain axis → E-ASSURANCE, never a silent rank -1)
 const axisMin = (axis, a, b) => (axisRank(axis, a) <= axisRank(axis, b) ? a : b);
 const axisMax = (axis, a, b) => (axisRank(axis, a) >= axisRank(axis, b) ? a : b);
-export const meetAssurance = (a, b) => Object.fromEntries(AXES.map((ax) => [ax, axisMin(ax, a[ax], b[ax])]));
-export const joinAssurance = (a, b) => Object.fromEntries(AXES.map((ax) => [ax, axisMax(ax, a[ax], b[ax])]));
+export const meetAssurance = (a, b) => { const A = assuranceState(a), B = assuranceState(b); return Object.fromEntries(AXES.map((ax) => [ax, axisMin(ax, A[ax], B[ax])])); };   // round-37 P1-01 — ADMIT both operands (no lattice op repairs a malformed operand into an earned state)
+export const joinAssurance = (a, b) => { const A = assuranceState(a), B = assuranceState(b); return Object.fromEntries(AXES.map((ax) => [ax, axisMax(ax, A[ax], B[ax])])); };   // round-37 P1-01 — ADMIT both operands: a join with an out-of-domain axis throws E-ASSURANCE, never synthesizes a valid TOP
 // PolicyProjection (F.5 gap 1 / F.5b): the classic tier reads ONLY identity+time. TOP = authoritative name ∧ anchored
 // time; HIGH = name-bound (identity ≥ corroborated); LIGHT = the integrity floor; below the floor there is NO tier.
 // This is the CANONICAL projection; the inline §14 verify tier is conformance-pinned to agree with it (no 2nd truth).
