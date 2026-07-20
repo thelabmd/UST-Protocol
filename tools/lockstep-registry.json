@@ -324,6 +324,12 @@
       "rev": "rev56",
       "model_locus": "The whole proof is now read ONCE",
       "conformance_check": "R46 (Theorem R — ρ_package) checkAuthorityProof reads the SIGNED package ONCE — a two-face term Proxy (a different term on re-read) yields the SAME verdict as the honest package (referencedIds and canon see the ONE admitted [[Get]] face; no split)"
+    },
+    {
+      "id": "R57-sync-verify-trusted-opts-first",
+      "rev": "rev57",
+      "model_locus": "the OBJECT-form sync verify path admits the trusted opts BEFORE the untrusted signed",
+      "conformance_check": "R46 self-audit (Theorem R) verify admits the TRUSTED opts BEFORE the untrusted doc — a doc getter that drops requireAuthoritative cannot rewrite the consumer policy the verdict uses (INVALID stays INVALID; cross-argument order, sync path)"
     }
   ]
 }

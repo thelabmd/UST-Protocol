@@ -1119,6 +1119,15 @@ REFERENCED witness once; an unreferenced witness is not part of the canonical pa
 show one face to `referencedIds` and another to `canon` (*"R46 (Theorem R — ρ_package) checkAuthorityProof reads the SIGNED package ONCE — a two-face term Proxy (a different term on re-read) yields the SAME verdict as the honest package (referencedIds and canon see the ONE admitted [[Get]] face; no split)"*). Both arguments are reduced INDEPENDENTLY to canonical
 bytes, so cross-argument mutation and admission order are structurally impossible; the automaton, not a case-by-case boundary
 guard, carries the totality.
+**Realization (rev57 — Theorem R's ordering discipline swept to the OBJECT-form sync verify path).** The rev55/56
+decomposition closed the cross-argument class on the authority (byte) path; the round-46 self-audit found the SAME class live
+on the sync verify surface. `verify`, `resolveAuthority`, and `verifyAnchor` reduce their SIGNED argument by discipline 2
+(`admitDeep` reads the `[[Get]]` face), which FIRES a hostile getter — and each admitted its TRUSTED `opts` AFTER, so a
+signed-argument getter could mutate the still-live `opts` (drop `requireAuthoritative`, inject `trustRoots`, plant
+`substrateVerify`) that the verdict then read. Because a discipline-2 reduction runs code, the reductions are independent only
+once BOTH are captured; therefore the OBJECT-form sync verify path admits the trusted opts BEFORE the untrusted signed
+argument — the trusted form is captured before any signed-argument getter can run. A behavioral, from-entrypoint gate drives
+each entry with an `opts`-mutating signed-argument getter and asserts the verdict is invariant vs the benign call (*"R46 self-audit (Theorem R) verify admits the TRUSTED opts BEFORE the untrusted doc — a doc getter that drops requireAuthoritative cannot rewrite the consumer policy the verdict uses (INVALID stays INVALID; cross-argument order, sync path)"*).
 
 **Definition (VerifiedAuthorityContext).** For a genesis document `g` whose class and self-signature VERIFY
 (`resolveCheckpointRoots` — P0-2: verify-before-extract):

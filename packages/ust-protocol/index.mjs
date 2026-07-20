@@ -462,10 +462,10 @@ function boundsOf(doc) {
 // substrate-receipt identity shim, forkChoice) calls `verifyCore` directly — so the door snapshot does not re-clone inside
 // the hot core and break the internal identity coupling. One place admits; the core trusts. This is the single seat.
 export function verify(doc, opts = {}) {
+  const O = admitOpts(opts);   // round-46 self-audit (Theorem R — trusted before untrusted) — admit the TRUSTED opts FIRST, THEN the untrusted doc: admitDeep(doc) reads the doc's [[Get]] face (the SIGNED face, round-29 P0-01), which FIRES a hostile doc getter; if opts were admitted after, that getter would mutate the still-live opts (drop requireAuthoritative, set acceptConsumerOverride) and rewrite the consumer policy the verdict uses — the r45 cross-argument mutation class, found in the MAIN verify path. (round-40 P1-01 — one opts admission → one inert snapshot, every opts read consistent; functions preserved.)
+  if (O === null) return bad('E-MALFORMED', 'opts must be an inert record (round-40 P1-01 — a two-face opts Proxy cannot show one maxSupportedBytes to the budget and another to the enforcement guard)');
   const D = admitDeep(doc);
   if (D === ADMIT_REJECT) return bad('E-MALFORMED', 'document is not an inert record — an accessor/getter cannot sign one payload and disclose another (round-27: the ONE input boundary)');
-  const O = admitOpts(opts);   // round-40 P1-01 (R1) — the SYNC verify door admits opts too (every OTHER public entry already does): verifyCore reads opts.maxSupportedBytes (and other scalars) more than once, so a two-face opts Proxy could show a 1-byte capability to the budget and `undefined` to the guard → a resource refusal turned into VALID. One admission → one inert snapshot → every opts read is consistent (functions preserved).
-  if (O === null) return bad('E-MALFORMED', 'opts must be an inert record (round-40 P1-01 — a two-face opts Proxy cannot show one maxSupportedBytes to the budget and another to the enforcement guard)');
   const verdict = verifyCore(D, O);
   // rev32 R3 (non-bypass output) — EMIT id(x̂): the content hash of the ADMITTED snapshot the verdict is about. A consumer
   // addresses the transcript by THIS returned id (a projection of the admitted artifact), never by re-hashing the raw input
@@ -1223,10 +1223,10 @@ const VERIFIED_FRESH = new WeakSet();
 const VERIFIED_ANCHOR = new WeakSet();
 const provenAnchor = (t) => { const tok = { anchorTime: t }; VERIFIED_ANCHOR.add(tok); return tok; };
 export function resolveAuthority(doc, opts = {}) {
+  const O = admitOpts(opts);   // round-46 self-audit (Theorem R — trusted before untrusted) — admit opts BEFORE admitDeep(doc): admitDeep reads the doc's [[Get]] face (round-29 P0-01), which FIRES a hostile doc getter; if opts were admitted after, that getter would mutate the still-live opts (genesis / trustRoots / the noForkConfirmed & corroborated override grants) the resolution reads — the r45 cross-argument mutation class. (round-19 P1-02 — a throwing accessor/Proxy trap → null → structured reject, not a host throw.)
+  if (O === null) return { error: 'E-MALFORMED', detail: 'opts must be an inert record (round-19 P1-02 totality — a hostile accessor/Proxy is a structured reject)' };
   { const D = admitDeep(doc); if (D === ADMIT_REJECT) return { error: 'E-MALFORMED', detail: 'document is not an inert record (round-28 totality — a hostile getter cannot throw a host exception at this door)' }; doc = D; }   // round-28 P1-02 — admit at the door; totality
   if (!doc || typeof doc !== 'object' || !doc.state?.id?.domain_shard || !doc.sig?.pub) return { error: 'E-MALFORMED', detail: 'document must be a UST object with state.id and sig (round-17 P1-02 totality)' };
-  const O = admitOpts(opts);   // round-19 P1-02 — inert snapshot of the caller record; a throwing accessor/Proxy trap → null → structured reject (not a host throw)
-  if (O === null) return { error: 'E-MALFORMED', detail: 'opts must be an inert record (round-19 P1-02 totality — a hostile accessor/Proxy is a structured reject)' };
   let { genesis, keylog = [], noForkConfirmed = false, noForkEvidence, nameMap, trustRoots, corroborated = false, servedNoFork, anchorTime, keylogFreshAsOf, keylogHeadAnchor, substrateVerify, trust } = O;   // round-18 P1-01 — destructure from the admitted record so a null/hostile opts is a structured reject/default, not a host throw
   const ncf = admitBool(noForkConfirmed), cor = admitBool(corroborated);   // round-42 P1-02 (R1) — the consumer-override GRANT booleans admit strictly: a wrong-typed truthy ("yes"/1/{}) must not activate the override
   if (ncf === ADMIT_REJECT || cor === ADMIT_REJECT) return { error: 'E-MALFORMED', detail: 'noForkConfirmed/corroborated must be booleans (round-42 P1-02 — a wrong-typed grant is malformed, not truthy)' };
@@ -1350,9 +1350,11 @@ export function resolveAuthority(doc, opts = {}) {
 // (`a === capA`) is not broken by a re-clone. Same public-door/internal-core split as verify.
 export function verifyAnchor(contentHash, proof, opts = {}) {
   if (typeof contentHash !== 'string') return { inclusion: false, error: 'E-ANCHOR', detail: 'contentHash must be a string (round-29 P1-01 totality — a hostile object at arg 0 cannot throw at this door)' };
+  const O = admitOpts(opts);   // round-46 self-audit (Theorem R — trusted before untrusted) — admit opts BEFORE admitDeep(proof) fires the proof's [[Get]] face: else a hostile proof getter mutates the still-live opts.substrateVerify (the substrate oracle verifyAnchorCore trusts) — the r45 cross-argument class. admitOpts ALSO freezes → the guard read `if(!opts.substrateVerify)` and the call `opts.substrateVerify(...)` see the SAME oracle (a two-face opts cannot pass the guard with one function and be called with another).
+  if (O === null) return { inclusion: false, error: 'E-ANCHOR', detail: 'opts must be an inert record (round-46 totality — a hostile accessor/Proxy at opts is a structured reject)' };
   const Pf = admitDeep(proof);
   if (Pf === ADMIT_REJECT) return { inclusion: false, error: 'E-ANCHOR', detail: 'proof is not an inert record (round-28 totality — a hostile getter cannot throw at this door)' };
-  return verifyAnchorCore(contentHash, Pf, opts);
+  return verifyAnchorCore(contentHash, Pf, O);
 }
 function verifyAnchorCore(contentHash, proof, opts = {}) {
   opts = opts || {};                                             // round-18 P1-01 — a default param only catches `undefined`; coerce `null` too (total boundary)
