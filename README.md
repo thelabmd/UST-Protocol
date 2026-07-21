@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
-# Universal State Transcript → UST Protocol → UST
+# Universal State Transcript ➝ UST Protocol ➝ ust:
 
 [![CI](https://img.shields.io/github/actions/workflow/status/thelabmd/UST-Protocol/ci.yml?branch=main&label=CI)](https://github.com/thelabmd/UST-Protocol/actions) [![conformance](https://img.shields.io/badge/conformance-622%20checks%20%C2%B7%20141%20vectors%20%C2%B7%204007%20fuzz-brightgreen)](https://github.com/thelabmd/UST-Protocol/actions/workflows/ci.yml)
 [![code license](https://img.shields.io/badge/code-Apache--2.0-blue)](./LICENSE)
@@ -110,6 +110,10 @@ Before anything else, a UST is an address on **one shared time axis**. Every tra
 `ust:20260710.142900` a second. This is not metadata — it is part of the document's *identity*, and the
 per-partition hashes **bind** it: a signed value cannot be replayed into another hour or re-attributed to
 another frame.
+
+> **Update — `ust:` is now a registered URI scheme.** The identifier is no longer a house convention: `ust:`
+> is recorded in the IANA URI-scheme registry ([provisional](https://www.iana.org/assignments/uri-schemes/prov/ust)),
+> so `ust:20260710.142900` is a first-class address wherever URIs are read.
 
 ![One shared time axis — every transcript carries a frame id ust:YYYYMMDD.HH(MM(SS)) in UTC. The hour ust:20260710.14 contains the minute ust:20260710.1429 contains the second ust:20260710.142900: containment is literal string prefixing, so roll-ups are prefix scans and sortable equals streamable. Because every publisher shares the grid by construction, “what was the world doing at 14:29Z?” is a query, not a metaphor — the same coordinate from unrelated publishers means the same moment, joinable after the fact.](.github/ust-time.svg)
 
