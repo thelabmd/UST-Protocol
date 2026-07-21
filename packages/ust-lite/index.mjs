@@ -65,7 +65,7 @@ const ustIdCalOk = (u) => calOk(u.slice(4, 8), u.slice(8, 10), u.slice(10, 12));
 // round-50 P0-01 — lite must enforce the SAME LIGHT semantic obligations as the full verifier, or a lite-VALID doc is
 // core-INVALID (GPT round-50: an omitted-schema partition + a raw-Unicode domain read VALID:LIGHT in lite / INVALID in core).
 // Kept BYTE-IDENTICAL to core (§4.4 closed envelope XOR, §4.3a A-label homograph guard, AEAD enc block); the differential pins it.
-const AEAD_ALGS = ['AES-256-GCM', 'XChaCha20-Poly1305'], B64URL = /^[A-Za-z0-9_-]+$/;
+const AEAD_ALGS = ['AES-256-GCM', 'XChaCha20-Poly1305'], B64URL = /^[A-Za-z0-9_-]+$/, HASH = /^sha256:[0-9a-f]{64}$/;
 const FLOOR = { partitions: 64, sizeBytes: 1048576 };   // §13 anonymous LIGHT floor (full UST raises these via a genesis grant)
 
 // ─── producer: keypair → buildState (auto per-partition hashes) → seal (sign the carried key) ─────────
@@ -126,6 +126,7 @@ export function verify(doc) {
       if (part.value === undefined) return bad('E-MALFORMED', 'public partition requires value (§4.4): ' + name);
     } else {
       if (part.commit === undefined) return bad('E-MALFORMED', 'private partition requires commit (§4.4): ' + name);
+      if (!HASH.test(part.commit)) return bad('E-MALFORMED', 'private partition commit not sha256:hex (§4.4): ' + name);   // round-51 P0-01 — TYPE the commitment (core does); a non-hash commit was lite-VALID/core-INVALID
       if (part.value !== undefined) return bad('E-MALFORMED', 'private partition must not carry a plaintext value (§4.4): ' + name);
       if (part.privacy === 'encrypted') { const e = part.enc; if (!e || typeof e !== 'object' || !AEAD_ALGS.includes(e.alg) || typeof e.key_id !== 'string' || !B64URL.test(e.ct || '')) return bad('E-MALFORMED', 'encrypted partition missing/invalid enc{alg,key_id,ct} (§4.4): ' + name); }
     }

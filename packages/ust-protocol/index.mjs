@@ -284,8 +284,10 @@ export const admitDeep = (v, seen = new WeakSet()) => {   // THE input-boundary 
 // null/undefined → [] (default). → inert array | null.
 function admitArray(v) {
   if (v === undefined || v === null) return [];
-  if (!Array.isArray(v)) return null;
-  try { const out = []; const n = v.length; for (let i = 0; i < n; i++) { const el = admitDeep(v[i]); if (el === ADMIT_REJECT) return null; out[i] = el; } return Object.freeze(out); } catch { return null; }
+  try {   // round-51 — `Array.isArray` THROWS on a REVOKED Proxy; it must be INSIDE the try (the type-probe runs caller-reachable ES semantics, like instanceof/getPrototypeOf — round-50/51 totality class)
+    if (!Array.isArray(v)) return null;
+    const out = []; const n = v.length; for (let i = 0; i < n; i++) { const el = admitDeep(v[i]); if (el === ADMIT_REJECT) return null; out[i] = el; } return Object.freeze(out);
+  } catch { return null; }
 }   // round-42 P0-01 (R1/R3) — DEEP-admit each element into a frozen snapshot (was a shallow ref-copy): the resolveKeys reducer verifies verify(e) then RE-READS e.state/e.sig/contentHash(e), so a two-face key-log entry showed a SIGNED key B to verify and an UNSIGNED key C to the re-reads → authorized C. One frozen graph, one face.
 // round-42 P1-02 (R1) — a STRICT optional-boolean admission for GRANTING policy coordinates (acceptConsumerOverride /
 // noForkConfirmed / corroborated): undefined/null → false (absent/default); a real boolean → itself; ANY other present
@@ -1483,8 +1485,8 @@ export async function verifyAsync(doc, opts = {}) {
 export async function forkChoice(candidates, opts = {}) {
   opts = admitOpts(opts);                                              // round-20 P2-01 — forkChoice missed admitOpts in rev16; a hostile opts Proxy threw at `{...opts}`. Now the same inert admission as the other boundaries.
   if (opts === null) return { result: 'E-MALFORMED', detail: 'opts must be an inert record (round-20 P2-01 totality)' };
-  if (!Array.isArray(candidates) || candidates.length === 0)
-    return { result: 'E-MALFORMED', detail: 'forkChoice needs a non-empty array of candidate documents' };
+  try { if (!Array.isArray(candidates) || candidates.length === 0) return { result: 'E-MALFORMED', detail: 'forkChoice needs a non-empty array of candidate documents' }; }
+  catch { return { result: 'E-MALFORMED', detail: 'forkChoice needs a non-empty array of candidate documents' }; }   // round-51 — Array.isArray/.length THROW on a revoked Proxy; guard the first type-probe (totality class)
   if (candidates.length > BOUNDS.forkCandidates)                      // round-21 P1-02 — F.9 fan-out: refuse an over-budget candidate count BEFORE snapshotting/verifying (never truncate a fork-choice input)
     return { result: 'INDETERMINATE', reason: 'resource_limit', detail: `forkChoice got ${candidates.length} candidates > ${BOUNDS.forkCandidates} (§F.9 fan-out — refused, never truncated; round-21 P1-02)` };
   // round-19 P0-01 — SNAPSHOT every candidate to an inert clone BEFORE ANY read, INCLUDING the ust_id grouping below.

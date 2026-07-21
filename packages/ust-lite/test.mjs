@@ -110,6 +110,27 @@ let obligOk = true;
 for (const b of obligations) { if (b.buildErr) continue; if (lite.verify(b.doc).result === 'VALID:LIGHT' && !full.isValid(full.verify(b.doc))) { obligOk = false; F.push('P0-01 OBLIGATION lite-VALID/core-INVALID'); } }
 ok('round-50 P0-01 exhaustive LIGHT-obligation differential: lite VALID ⇒ core VALID over §4.4 envelope XOR (public+commit/enc, private-no-commit/plaintext, encrypted-enc) + §4.3a A-label homograph', obligOk);
 
+// round-51 P0-01 (owner: "структурно невозможное повторение из-за неполного покрытия") — the hand corpus above kept MISSING an
+// obligation (calendar→rev76, envelope/A-label→rev78, private-commit-hash→rev79). GENERATE the doc-shape space by CONSTRUCTION —
+// id forms × time forms × partition ENVELOPE shapes — build+sign each, assert lite VALID ⇒ core VALID over ALL. A new lite-vs-core
+// drift (any obligation lite omits) fails HERE; I never hand-enumerate obligations again. Exhaustive-by-construction, not a corpus.
+const H64 = 'sha256:' + 'cd'.repeat(32), enc0 = { alg: 'AES-256-GCM', key_id: 'k', ct: 'AA' };
+const gen1 = (idO, timeO, part) => { try { return lite.seal(lite.buildState({ ...id, ...idO }, { ...time, ...timeO }, { p: part }), kp.privateKey, kp.pub); } catch { return null; } };
+const partForms = [
+  { kind: 'captured', value: { x: '1' } }, { kind: 'captured', value: { x: '1' }, commit: H64 }, { kind: 'captured', value: { x: '1' }, enc: enc0 },
+  { kind: 'captured' }, { kind: 'bogus', value: { x: '1' } }, { kind: 'captured', privacy: 'blinded', commit: H64 },
+  { kind: 'captured', privacy: 'blinded', commit: 'not-a-hash' }, { kind: 'captured', privacy: 'blinded' }, { kind: 'captured', privacy: 'blinded', commit: H64, value: { x: '1' } },
+  { kind: 'captured', privacy: 'encrypted', commit: H64, enc: enc0 }, { kind: 'captured', privacy: 'encrypted', commit: H64 },
+  { kind: 'captured', privacy: 'encrypted', commit: H64, enc: { alg: 'ROT13', key_id: 'k', ct: 'AA' } }, { kind: 'captured', privacy: 'bogus', value: { x: '1' } },
+];
+const idForms = [{}, { domain_shard: 'аpple.com' }, { domain_shard: 'bad name' }, { domain_shard: 'sha256:' + '00'.repeat(32) }, { ust_id: 'ust:20260231.12' }, { ust_id: 'ust:20260722.24' }, { class: undefined }, { class: 'attestation' }, { class: 'bogus' }];
+const timeForms = [{}, { generated_at: '2026-02-31T00:00:00Z' }, { valid_to: '2020-01-01T00:00:00Z' }];
+let genOk = true, genN = 0;
+const probe = (d) => { if (!d) return; genN++; if (lite.verify(d).result === 'VALID:LIGHT' && !full.isValid(full.verify(d))) { genOk = false; F.push('P0-01 GEN lite-VALID/core-INVALID'); } };
+for (const part of partForms) probe(gen1({}, {}, part));                                                     // envelope shapes at a valid id/time
+for (const idO of idForms) for (const timeO of timeForms) probe(gen1(idO, timeO, { kind: 'captured', value: { x: '1' } }));   // id × time forms at a valid public partition
+ok(`round-51 P0-01 GENERATED differential (${genN} built shapes): lite VALID ⇒ core VALID over the constructed doc-shape space — a new lite-vs-core drift fails here, no hand corpus`, genOk);
+
 console.log(`\n  ust-lite validity vs full ust-protocol   PASS ${pass}   FAIL ${fail}`);
 if (F.length) { F.forEach((f) => console.log('    ✗ ' + f)); process.exit(1); }
 console.log('  ✓ a ust-lite document IS a valid UST document — byte-identical, cross-verified both ways, AND lite VALID ⇒ core VALID over adversarial shapes (round-49 P0-01 differential)');

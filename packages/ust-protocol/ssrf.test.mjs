@@ -5,9 +5,11 @@ import assert from 'node:assert/strict';
 import { isPrivateIp, makeSsrfSafeFetch } from './ssrf.mjs';
 
 test('isPrivateIp classifies v4 ranges', () => {
-  for (const ip of ['127.0.0.1', '10.1.2.3', '172.16.0.1', '172.31.255.255', '192.168.1.1', '169.254.169.254', '100.64.0.1', '0.0.0.0', '224.0.0.1'])
+  for (const ip of ['127.0.0.1', '10.1.2.3', '172.16.0.1', '172.31.255.255', '192.168.1.1', '169.254.169.254', '100.64.0.1', '0.0.0.0', '224.0.0.1',
+    // round-51 P1-01 — the complete IANA special-purpose registry: benchmarking + documentation + deprecated-relay + reserved:
+    '198.18.0.1', '198.19.255.254', '192.0.2.1', '198.51.100.1', '203.0.113.1', '192.88.99.1', '240.0.0.1', '255.255.255.255'])
     assert.equal(isPrivateIp(ip), true, ip + ' should be private');
-  for (const ip of ['8.8.8.8', '1.1.1.1', '172.15.0.1', '172.32.0.1', '93.184.216.34'])
+  for (const ip of ['8.8.8.8', '1.1.1.1', '172.15.0.1', '172.32.0.1', '93.184.216.34', '198.20.0.1', '192.0.3.1'])   // round-51 — just outside the special ranges stays public
     assert.equal(isPrivateIp(ip), false, ip + ' should be public');
 });
 

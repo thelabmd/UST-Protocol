@@ -67,7 +67,10 @@ const PRIMITIVES = new Set(['VERSION', 'STABILITY', 'REFERENCE_CHECKER_VERSION',
 
 // A connector exposes the substrate seam (verifyAnchor delegate + typed evidence emit), not core names.
 const connector = (X) => (cap) => ['anchor-verify', 'typed-evidence', 'substrate-registry'].includes(cap) && typeof X.substrateVerify !== 'undefined' && typeof X.toVerifiedEvidence === 'function';
-const exportIntersect = (X) => (cap) => CAPS[cap].core.some((n) => n in X);
+// round-51 P1-03 (owner: set-COMPLETE predicate, not `some`) — a `full` stance means EVERY core export of the capability is
+// exposed; `some`-intersection wrongly certified a surface as full when it had ONE of many (GPT round-51: lite declared full for
+// build-transcript with only buildState, missing buildAttestation/…). `full` ⇒ every; a genuine reduced surface declares `subset`.
+const exportIntersect = (X) => (cap, stance) => (stance === 'full' ? CAPS[cap].core.every((n) => n in X) : CAPS[cap].core.some((n) => n in X));
 const mcpProbe = (cap) => { const tok = CAPS[cap].mcp; return !!tok && (mcpTools.has(tok) || mcpSrc.includes(tok)); };
 const cliProbe = (cap) => { const tok = CAPS[cap].cli; return !!tok && cliSrc.includes(tok); };
 
@@ -75,8 +78,8 @@ const cliProbe = (cap) => { const tok = CAPS[cap].cli; return !!tok && cliSrc.in
 //    everything else defaults to `na` with the surface's `naReason` (a specific override lives in `naSpecific`). This
 //    encodes the owner's decisions: cli grows to full authoritative; mcp stays agent-facing (operator caps na).
 const SURFACES = {
-  'ust-lite':         { probe: exportIntersect(LITE), full: ['canon', 'content-address', 'build-transcript', 'sign', 'verify'], subset: [], naReason: 'outside the standalone zero-dependency LIGHT floor (lite = sign/verify subset, gated by test:lite)' },
-  'ust-web-signer':   { probe: exportIntersect(WEB), full: ['canon', 'content-address', 'build-transcript', 'sign'], subset: [], naReason: 'producer-only surface', naSpecific: { 'verify': 'by design: the private key never enters a verifier — verification is ust-protocol / ust-lite (README)' } },
+  'ust-lite':         { probe: exportIntersect(LITE), full: ['canon', 'sign'], subset: ['content-address', 'build-transcript', 'verify'], naReason: 'outside the standalone zero-dependency LIGHT floor — lite is a documented SUBSET (round-51 P1-03: build-transcript = buildState/seal only, not the full builder family; verify = the LIGHT floor, not the HIGH/TOP verifiers; content-address = the partition/content hashes it needs)' },
+  'ust-web-signer':   { probe: exportIntersect(WEB), full: ['canon', 'sign'], subset: ['content-address', 'build-transcript'], naReason: 'producer-only surface — a documented SUBSET (round-51 P1-03: browser signer builds+signs a state, not the full builder family)', naSpecific: { 'verify': 'by design: the private key never enters a verifier — verification is ust-protocol / ust-lite (README)' } },
   'ust-ots-verify':   { probe: connector(OTS), full: ['anchor-verify', 'typed-evidence', 'substrate-registry'], subset: [], naReason: 'a Bitcoin/OTS substrate connector (plugs into verifyAnchor via substrateVerify), not a general surface', naSpecific: { 'evidence-receipt': 'THE connector job per M3 — emit signed receipts (buildEvidenceReceipt with its own key) instead of raw verifiedEvidence facts; planned follow-up, tracked under UST-6vj C4/legacy' } },
   'ust-rekor-verify': { probe: connector(REKOR), full: ['anchor-verify', 'typed-evidence', 'substrate-registry'], subset: [], naReason: 'a Rekor transparency-log substrate connector, not a general surface', naSpecific: { 'evidence-receipt': 'THE connector job per M3 — emit signed receipts instead of raw verifiedEvidence facts; planned follow-up, tracked under UST-6vj C4/legacy' } },
   // Agent MCP TARGET (owner, 2026-07-15) = full for EVERY non-operator capability + the single conditionally-operator
@@ -111,7 +114,7 @@ for (const s of surfaceIds) {
   for (const cap of capIds) {
     cells++;
     const stance = stanceOf(s, cap);
-    const real = def.probe(cap);
+    const real = def.probe(cap, stance);   // round-51 P1-03 — stance-aware: full ⇒ EVERY export, subset ⇒ some
     if (stance !== 'na' && !real) { fail++; drift++; report.push(`  ✗ REALITY: ${s} declares ${cap}=${stance} but does NOT expose it (dropped/renamed? UST-3dj-class regression)`); }
     if (stance === 'na' && real) { fail++; drift++; report.push(`  ✗ REALITY: ${s} exposes ${cap} but the matrix says na — promote to full/subset (under-declared)`); }
     if (stance === 'na' && !def.naReason && !(def.naSpecific && def.naSpecific[cap])) { fail++; report.push(`  ✗ ${s}/${cap}=na has no reason`); }

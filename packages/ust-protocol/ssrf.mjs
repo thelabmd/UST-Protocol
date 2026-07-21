@@ -18,15 +18,13 @@ export function isPrivateIp(ip) {
   if (v === 4) {
     const o = ip.split('.').map(Number);
     if (o.length !== 4 || o.some((n) => !(n >= 0 && n <= 255))) return true;   // malformed → refuse
-    return (
-      o[0] === 0 || o[0] === 10 || o[0] === 127 ||                              // 0/8, 10/8, loopback
-      (o[0] === 100 && o[1] >= 64 && o[1] <= 127) ||                            // 100.64/10 CGNAT
-      (o[0] === 169 && o[1] === 254) ||                                         // link-local
-      (o[0] === 172 && o[1] >= 16 && o[1] <= 31) ||                             // 172.16/12
-      (o[0] === 192 && o[1] === 168) ||                                         // 192.168/16
-      (o[0] === 192 && o[1] === 0 && o[2] === 0) ||                             // 192.0.0/24
-      o[0] >= 224                                                              // multicast/reserved 224+
-    );
+    // round-51 P1-01 (owner: complete registry, not a hand list) — the IANA IPv4 Special-Purpose Address Registry: every
+    // globally_reachable=false range + non-unicast blocks. A hand subset kept missing rows (198.18/15 benchmark, 192.0.2/24 &
+    // 198.51.100/24 & 203.0.113/24 doc, 192.88.99/24 deprecated 6to4 relay — round-51). This is the whole table, prefix-matched.
+    const p4 = (a, b, c, d, bits) => { const w = [a, b, c, d], nb = bits >> 3, r = bits & 7; for (let i = 0; i < nb; i++) if (o[i] !== w[i]) return false; return !r || !(((o[nb] ^ w[nb]) & (0xff << (8 - r)))); };
+    return p4(0, 0, 0, 0, 8) || p4(10, 0, 0, 0, 8) || p4(100, 64, 0, 0, 10) || p4(127, 0, 0, 0, 8) || p4(169, 254, 0, 0, 16)
+      || p4(172, 16, 0, 0, 12) || p4(192, 0, 0, 0, 24) || p4(192, 0, 2, 0, 24) || p4(192, 88, 99, 0, 24) || p4(192, 168, 0, 0, 16)
+      || p4(198, 18, 0, 0, 15) || p4(198, 51, 100, 0, 24) || p4(203, 0, 113, 0, 24) || o[0] >= 224;   // 224/4 multicast + 240/4 reserved + 255.255.255.255 broadcast
   }
   if (v === 6) {
     // round-49/50 P1-01 — classify by BYTE RANGE from a special-use PREFIX TABLE (IANA IPv6 Special-Purpose registry subset), not
@@ -46,7 +44,9 @@ export function isPrivateIp(ip) {
       || (b[0] === 0xfe && (b[1] & 0xc0) === 0x80)       // fe80::/10 link-local
       || b[0] === 0xff                                   // ff00::/8 multicast (never a unicast fetch target)
       || pfx([0x20, 0x01, 0x0d, 0xb8], 32)               // 2001:db8::/32 documentation
-      || pfx([1, 0, 0, 0, 0, 0, 0, 0], 64);              // 100::/64 discard-only
+      || pfx([0x3f, 0xff], 20)                           // 3fff::/20 documentation (RFC 9637, round-51)
+      || pfx([0x5f, 0x00], 16)                           // 5f00::/16 SRv6 SIDs (RFC 9602, round-51)
+      || pfx([0x01, 0, 0, 0, 0, 0, 0, 0], 64);           // 100::/64 discard-only
   }
   return true;                                                                  // not an IP literal → caller resolves
 }

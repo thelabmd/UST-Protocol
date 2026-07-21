@@ -143,7 +143,7 @@
       "id": "R31-from-code-totality",
       "rev": "rev31",
       "model_locus": "hostile Proxy in any argument position",
-      "conformance_check": "FROM-CODE TOTALITY: every consumer-surface export (the classified untrusted-input entries, not a name regex) returns structured, never a host throw, on a hostile Proxy in any argument position"
+      "conformance_check": "FROM-CODE TOTALITY (hostile BATTERY): every consumer-surface export returns structured, never a host throw, on EACH escape shape (throwing-trap Proxy, REVOKED Proxy, throwing-index array-like) in any argument position — the fixture is exhaustive, so a new non-total path fails HERE (round-51)"
     },
     {
       "id": "R27-witness-budget-typed-admission",

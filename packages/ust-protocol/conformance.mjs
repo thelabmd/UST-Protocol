@@ -1657,15 +1657,28 @@ console.log('\n═════════════════════�
     const MAY_THROW = (n) => /^(build|seal|make)/.test(n) || /(Claim|Leaf|Id|Epoch)$/.test(n) || /^Ust[A-Z]/.test(n)
       || ['canon', 'H', 'Hbytes', 'keyId', 'merkleRoot', 'partitionHash', 'contentHash', 'signedContent', 'admitUtf8', 'anyLoneSurrogate', 'ustGrid', 'blindPartition', 'blindedCommit', 'seed', 'axisRank', 'evidenceCaps', 'admitDeep', 'isValid', 'verifiedEvidence'].includes(n)
       || ['verifyOrThrow', 'assertValid'].includes(n);
-    const mk = () => new Proxy([{}], { get() { throw new Error('HOSTILE'); }, ownKeys() { throw new Error('HOSTILE'); }, getOwnPropertyDescriptor() { throw new Error('HOSTILE'); }, has() { throw new Error('HOSTILE'); } });
+    // round-51 (owner: "структурно невозможное повторение из-за неполного покрытия") — the hostile fixture was ONE shape (a
+    // throwing-trap Proxy), so a REVOKED Proxy (which throws on `Array.isArray`/`instanceof` ITSELF, before any trap) escaped
+    // admitArray/reducePackage. The fixture is now a BATTERY of every escape shape × every export: a non-total function on ANY
+    // of them fails HERE, so I never hand-hunt the next one. Enumerate the escape shapes exhaustively, not from my head.
+    const BATTERY = () => [
+      new Proxy([{}], { get() { throw new Error('H'); }, ownKeys() { throw new Error('H'); }, getOwnPropertyDescriptor() { throw new Error('H'); }, has() { throw new Error('H'); }, getPrototypeOf() { throw new Error('H'); } }),   // throwing traps (incl. getPrototypeOf → instanceof)
+      (() => { const r = Proxy.revocable({}, {}); r.revoke(); return r.proxy; })(),   // REVOKED — throws on Array.isArray / instanceof / every operation
+      (() => { const r = Proxy.revocable([], {}); r.revoke(); return r.proxy; })(),   // revoked ARRAY proxy (Array.isArray still throws)
+      (() => { const o = { length: 4 }; for (let i = 0; i < 4; i++) Object.defineProperty(o, i, { enumerable: true, get() { throw new Error('idx'); } }); return o; })(),   // throwing-index array-like
+      (() => { const o = Object.create(null); Object.defineProperty(o, 'x', { enumerable: true, get() { throw new Error('np'); } }); return o; })(),   // null-proto with a throwing own getter (defineProperty, not Object.assign which would read the getter)
+    ];
     const fns = Object.keys(P).filter((k) => typeof P[k] === 'function');
-    const bad = [];
+    const bad = new Set();
     for (const n of fns) {
       if (MAY_THROW(n)) continue;
-      try { const r = P[n](mk(), mk(), mk(), mk()); if (r && typeof r.then === 'function') { try { await r; } catch { bad.push(n + ' (async reject)'); } } }
-      catch { bad.push(n + ' (sync throw)'); }
+      for (const h of BATTERY()) {
+        try { const r = P[n](h, h, h, h); if (r && typeof r.then === 'function') { try { await r; } catch { bad.add(n + ' (async reject)'); } } }
+        catch { bad.add(n + ' (sync throw)'); }
+      }
     }
-    return bad.length === 0 && fns.length >= 100;   // ≥100 = the runtime namespace, never a regression to the 64-name source-regex subset
+    if (bad.size) console.error('    R47 roster non-total:', [...bad].join(', '));
+    return bad.size === 0 && fns.length >= 100;   // ≥100 = the runtime namespace, never a regression to the 64-name source-regex subset
   })());
   // round-46 self-audit (crypto — Ed25519 signature MALLEABILITY) — a verifier MUST reject a non-canonical scalar S (S ≥ L, the
   // group order): S and S+L are two byte-strings for the same signature, so accepting both is malleability. edVerifyStrict
@@ -2028,6 +2041,16 @@ console.log('\n═════════════════════�
   const unclassified = allFns.filter((k) => !(k in CLASS));
   check('FROM-CODE PARTITION: every function export is classified surface|exempt (no silent drop — a new export fails until classified)' + (unclassified.length ? ' — UNCLASSIFIED: ' + unclassified.join(',') : ''), unclassified.length === 0);
   const HOSTILE = () => new Proxy({}, { get() { throw new Error('HOSTILE_GET'); }, has() { throw new Error('H'); }, ownKeys() { throw new Error('H'); }, getOwnPropertyDescriptor() { throw new Error('H'); }, getPrototypeOf() { return Object.prototype; } });
+  // round-51 (owner: "структурно невозможное повторение из-за неполного покрытия") — the totality sweep drove ONE hostile shape,
+  // so a REVOKED Proxy (throws on `Array.isArray`/`instanceof` ITSELF) escaped admitArray/reducePackage. Drive a BATTERY of EVERY
+  // escape shape at each position (others valid) — enumerate the shapes exhaustively, never hand-hunt the next one.
+  const BATTERY = () => [
+    HOSTILE(),                                                                     // throwing get/has/ownKeys/descriptor traps
+    new Proxy([{}], { get() { throw new Error('H'); }, getPrototypeOf() { throw new Error('H'); }, ownKeys() { throw new Error('H'); }, has() { throw new Error('H'); } }),   // + throwing getPrototypeOf (instanceof)
+    (() => { const r = Proxy.revocable({}, {}); r.revoke(); return r.proxy; })(),   // REVOKED — Array.isArray / instanceof / any op throws
+    (() => { const r = Proxy.revocable([], {}); r.revoke(); return r.proxy; })(),   // revoked ARRAY proxy
+    (() => { const o = { length: 4 }; for (let i = 0; i < 4; i++) Object.defineProperty(o, i, { enumerable: true, get() { throw new Error('idx'); } }); return o; })(),   // throwing-index array-like
+  ];
   const surface = allFns.filter((k) => CLASS[k] === 'surface');
   // rev34 R1 (round-29 P1-01) — TOTALITY by a machine SIGNATURE REGISTRY, not `fn.length` + `{}`-fill. `fn.length` stops at
   //   the first DEFAULT parameter (resolveCadence.length === 1 though it takes 4 args → the 4th never tested), and `{}`-fill
@@ -2063,11 +2086,13 @@ console.log('\n═════════════════════�
   for (const name of surface) {
     const sig = SIG[name]; if (!sig) continue;
     for (let pos = 0; pos < sig.length; pos++) {
-      const args = sig.map((f, j) => (j === pos ? HOSTILE() : f()));
-      try { await P[name](...args); } catch { sweepAllOk = false; sweepThrew.push(name + '#' + pos); }
+      for (const h of BATTERY()) {   // round-51 — EACH escape shape at position `pos`, the other positions VALID (so the hostile arg is actually REACHED)
+        const args = sig.map((f, j) => (j === pos ? h : f()));
+        try { await P[name](...args); } catch { sweepAllOk = false; sweepThrew.push(name + '#' + pos); }
+      }
     }
   }
-  check('FROM-CODE TOTALITY: every consumer-surface export (the classified untrusted-input entries, not a name regex) returns structured, never a host throw, on a hostile Proxy in any argument position' + (sweepThrew.length ? ' — THREW: ' + sweepThrew.join(',') : ''), sweepAllOk);
+  check('FROM-CODE TOTALITY (hostile BATTERY): every consumer-surface export returns structured, never a host throw, on EACH escape shape (throwing-trap Proxy, REVOKED Proxy, throwing-index array-like) in any argument position — the fixture is exhaustive, so a new non-total path fails HERE (round-51)' + (sweepThrew.length ? ' — THREW: ' + [...new Set(sweepThrew)].join(',') : ''), sweepAllOk);
   // rev34 R2 (round-29 P1-02) — the executed-check manifest is EVIDENCE, and evidence must be content-bound to its source
   //   (like a UST receipt to its state). The manifest carries the sha256 of conformance.mjs + index.mjs; the lockstep gate
   //   recomputes them and rejects a STALE manifest, so a disabled check with an un-regenerated manifest is caught at the
