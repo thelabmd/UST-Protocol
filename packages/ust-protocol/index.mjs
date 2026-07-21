@@ -845,9 +845,16 @@ export function resolveKeys(genesis, keylog = []) {
   // reducer called verify(genesis) but then RE-READ the raw genesis (genesis.state, contentHash(genesis), genesis.sig) — a
   // stateful Proxy showed the SIGNED face to verify and a DIFFERENT face to the reducer, so it emitted keys for a genesis
   // verify never vouched for. R3: every emitted quantity is a projection over the admitted x̂, nothing re-reads raw x.
-  { const G = admitDeep(genesis); if (G === ADMIT_REJECT) return { error: 'E-GENESIS', detail: 'genesis is not an inert record (round-30 R3 — the reducer verifies and reads ONE admitted snapshot, never a live re-read)' }; genesis = G; }
-  keylog = admitArray(keylog);                                                    // round-19 P1-02 — a native array snapshot; a Proxy length/index trap is contained → structured reject, never a host throw
-  if (keylog === null) return { error: 'E-MALFORMED', detail: 'key-log must be a native array (round-17 P1-02 / round-19 P1-02 — the reducer is TOTAL: a hostile accessor/Proxy is a structured reject, never a host throw)' };
+  // round-47 P0-01 (the CALCULATOR boundary) — signed-vs-signed cross-argument mutation: admitDeep(genesis) executes the [[Get]]
+  // face (round-29 P0-01), so a genesis getter can empty the still-live keylog before its own reduction (round-47 GPT audit P0,
+  // bd UST-5t8). Reduce every live argument to canonical BYTES at the door — the mutation-vulnerable keylog BEFORE the
+  // self-verifying genesis (whose own mutation fails its signature) — then process ONLY the re-parsed inert forms (byte-strings
+  // are immutable; no getter survives). round-30 R3 (the reducer reads ONE snapshot, never a live re-read) holds a fortiori.
+  { const _kl = admitArray(keylog);   // round-19 P1-02 — a native array snapshot; a Proxy length/index trap is a structured reject, never a host throw
+    if (_kl === null) return { error: 'E-MALFORMED', detail: 'key-log must be a native array (round-17 P1-02 / round-19 P1-02 — the reducer is TOTAL: a hostile accessor/Proxy is a structured reject)' };
+    let kB, gB;
+    try { kB = canon(_kl); gB = canon(admitDeep(genesis)); } catch { return { error: 'E-GENESIS', detail: 'genesis/keylog is not an inert record (round-47 — reduced to canonical bytes at the door)' }; }
+    keylog = JSON.parse(kB); genesis = JSON.parse(gB); }
   const gv = verify(genesis);                                                     // genesis is the ADMITTED snapshot (frozen inert) — verify re-admits it idempotently; every read below is of this snapshot
   if (!isValid(gv)) return { error: 'E-GENESIS', detail: 'genesis invalid: ' + gv.error };
   if (genesis.state.id.class !== 'genesis') return { error: 'E-GENESIS', detail: 'not class:genesis' };
@@ -1540,8 +1547,18 @@ export function ustGrid(from, to, cadenceSec) {
 // cadence signed for ITS time, so an operator changing cadence NEVER retroactively invalidates history. Each
 // entry is a normal transcript, verified by §14; the log is genesis-rooted and prev-chained. → {cadence}|{error}.
 export function resolveCadence(genesis, cadenceLog = [], atTime, opts) {
-  { const G = admitDeep(genesis); if (G === ADMIT_REJECT) return { error: 'E-MALFORMED', detail: 'genesis is not an inert record (round-28 totality)' }; genesis = G; const C = admitDeep(cadenceLog); if (C === ADMIT_REJECT) return { error: 'E-MALFORMED', detail: 'cadenceLog is not an inert record (round-28 totality)' }; cadenceLog = C; }   // round-28 P1-02 — admit at the door
+  // round-47 P0-01 (the CALCULATOR boundary) — Theorem R's "independent reductions, order irrelevant" is FALSE for ≥2 live
+  // signed arguments: admitDeep executes the [[Get]] face (round-29 P0-01), so reducing `genesis` can fire a getter that empties
+  // the still-live `cadenceLog` BEFORE its own reduction — a signed-vs-signed cross-argument mutation the config-first rev57 fix
+  // never covered (round-47 GPT audit P0). The sound boundary is canonical BYTES: reduce every live argument to an IMMUTABLE
+  // canonical byte-string up front (no getter can reach a byte-string once captured), capturing the MUTATION-VULNERABLE
+  // structural argument (cadenceLog carries no self-signature to fail-close a mutation) BEFORE the self-verifying genesis (whose
+  // own mutation fails E-GENESIS), then process ONLY the re-parsed inert forms. The exact sound form is bytes-in from the caller;
+  // this is the object-adapter realization on the way there.
   const _o = admitOpts(opts); if (_o === null) return { error: 'E-MALFORMED', detail: 'opts is not an inert record (round-29 P1-01 totality — a hostile 4th arg cannot throw at this door)' };   // round-26/29 — admit the opts at the door (a hostile Proxy 4th arg → structured, never a host throw)
+  let cB, gB;
+  try { cB = canon(admitDeep(cadenceLog)); gB = canon(admitDeep(genesis)); } catch { return { error: 'E-MALFORMED', detail: 'genesis/cadenceLog is not an inert record (round-47 — reduced to canonical bytes at the door)' }; }
+  cadenceLog = JSON.parse(cB); genesis = JSON.parse(gB);   // fresh inert forms from immutable bytes — no getters, no cross-argument aliasing survives
   const { keylog } = _o;
   if (cadenceLog !== undefined && cadenceLog !== null && !Array.isArray(cadenceLog)) return { error: 'E-MALFORMED', detail: 'cadenceLog must be an array' };
   cadenceLog = cadenceLog ?? [];   // round-43 — ONLY an absent (undefined/null) cadence-log defaults to empty; a present non-array already returned E-MALFORMED above (never the `Array.isArray(X)?X:[]` coalesce that hides a malformed selector)

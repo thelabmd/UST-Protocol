@@ -1507,6 +1507,25 @@ console.log('\n═════════════════════�
       const opts = {}; const evilProof = new Proxy(proof, { get(t, k, r) { opts.substrateVerify = () => ({ final: true, time: '2026-07-20T02:00:00Z' }); return Reflect.get(t, k, r); } });
       const base = JSON.stringify(P.verifyAnchor(ch, proof, {})), evil = JSON.stringify(P.verifyAnchor(ch, evilProof, opts));
       check('R46 self-audit (Theorem R) verifyAnchor admits opts BEFORE the proof — a proof getter cannot inject substrateVerify (the substrate oracle) into the live opts; guard read and call read see the same frozen opts (identical status)', base === evil); } }
+  // round-47 P0-01 (the CALCULATOR boundary — signed-vs-signed cross-argument mutation) — Theorem R's "reductions independent,
+  // ORDER irrelevant" was FALSE for ≥2 live SIGNED arguments (GPT round-47): admitDeep executes the [[Get]] face, so reducing a
+  // signed `genesis` fires a getter that empties the still-live signed `cadenceLog`/`keylog` BEFORE its own reduction, turning
+  // E-KEY into a success. resolveCadence + resolveKeys now reduce every live argument to canonical BYTES at the door (the
+  // mutation-vulnerable structural arg BEFORE the self-verifying genesis). This BEHAVIORAL gate drives each entry with a hostile
+  // genesis getter that empties the sibling and asserts the verdict is INVARIANT vs the benign call — a future multi-signed-arg
+  // entry that reduces a live signed arg before capturing its sibling fails HERE, from the entrypoint.
+  { const gK47 = kp('9a8b'.repeat(16));
+    const T47 = { generated_at: '2026-07-20T00:00:00Z', valid_from: '2026-07-20T00:00:00Z', valid_to: '2026-08-20T00:00:00Z' };
+    const gen47 = P.seal(P.buildGenesis({ domain_shard: 'noosphere.md', ust_id: 'ust:20260720.00', key_id: gK47.key_id }, T47, gK47.pubB64, 256, 1048576, '3600'), gK47.priv, gK47.pubB64);
+    { const benign = JSON.stringify(P.resolveCadence(gen47, [{ x: '1' }], 'ust:20260720.01', {}));
+      const log = [{ x: '1' }]; const evilGen = new Proxy(gen47, { get(t, k, r) { log.length = 0; return Reflect.get(t, k, r); } });
+      const evil = JSON.stringify(P.resolveCadence(evilGen, log, 'ust:20260720.01', {}));
+      check('R47 P0-01 (calculator boundary) resolveCadence — a signed genesis getter cannot empty the still-live signed cadenceLog before its reduction (canonical bytes captured at the door; attacked verdict == benign)', benign === evil); }
+    { const rkSig = (r) => r.error ? 'E:' + r.error : [...r.active.keys()].sort().join(',') + '|' + [...r.validKeys.keys()].sort().join(',');
+      const benign = rkSig(P.resolveKeys(gen47, [{ x: '1' }]));
+      const kl = [{ x: '1' }]; const evilGen = new Proxy(gen47, { get(t, k, r) { kl.length = 0; return Reflect.get(t, k, r); } });
+      const evil = rkSig(P.resolveKeys(evilGen, kl));
+      check('R47 P0-01 (calculator boundary) resolveKeys — a signed genesis getter cannot empty the still-live signed keylog before its reduction (canonical bytes captured at the door; attacked resolved-set == benign)', benign === evil); } }
   // round-46 self-audit (totality) — combineSubstrates was the LONE public door the hand-maintained totality sweep
   // (round-17/18/19/24/38/39) never listed: a hostile `verifiers` Proxy (Array.isArray→true, then a throwing .filter/length
   // trap) SYNC-threw a host exception at its array-normalization. Now it fails CLOSED to an empty plugin list.

@@ -1095,8 +1095,12 @@ regex checks the symptom's spelling, the behavioral gate checks the invariant.**
 
 **Theorem R (the Reduction metatheorem — the verifier is an AUTOMATON over canonical bytes, not a COMPUTER over live objects).**
 Every public entry `E(x₁, …, xₙ)` decomposes as `E = A ∘ (ρ₁, …, ρₙ)` where each `ρᵢ` is a TOTAL reduction of argument `xᵢ`
-to its canonical form and `A` is a pure automaton over those forms. The reductions are INDEPENDENT (each `ρᵢ` is a function of
-`xᵢ` alone) and the automaton is a pure function of the reduced forms alone. Two admissible reduction disciplines, by whether
+to its canonical form and `A` is a pure automaton over those forms. **Independence of the reductions is NOT free
+(round-47 correction — the original claim "each `ρᵢ` is a function of `xᵢ` alone, so ORDER is irrelevant" is FALSE for
+multiple live signed arguments; see the Correction below).** It holds EXACTLY at the canonical-BYTES boundary (immutable
+strings; `JSON.parse` invokes no caller code) and for a discipline-1 reduction (which executes no caller code). A discipline-2
+reduction EXECUTES the `[[Get]]` face, so two or more discipline-2 reductions over LIVE objects are NOT independent —
+reducing `xᵢ` can fire a getter that mutates a still-live `xⱼ`. Two admissible reduction disciplines, by whether
 the argument is signature-bound:
 1. **Unsigned input (a consumer TRUST config / policy):** `ρ` reads DATA descriptors only and REJECTS any accessor
    (getter/setter), function, symbol, non-plain prototype, or cycle. **No caller code (a getter, a `toJSON`) EVER EXECUTES —
@@ -1104,12 +1108,23 @@ the argument is signature-bound:
 2. **Signed input (a proof / a UST document):** `ρ` reads the `[[Get]]` face — the face the signature/`content_hash` is over
    — EXACTLY ONCE into a frozen snapshot, then INTEGRITY is verified by content-address (a two-face proof fails `id = H(canon)`).
    (`admitDeep` / `encodeLive` + the content-hash check.)
-**Corollary (why 46 rounds of boundary bugs collapse):** the recurring P0/P1 class — a two-face getter, a cross-argument
-mutation (an untrusted arg's getter rewriting a trusted arg mid-verdict), an admission-order dependency, an adapter that
-re-reads a live field — is IMPOSSIBLE under Theorem R: an unsigned argument's code never runs (so it cannot mutate a sibling),
-a signed argument is read once + hash-checked, and the reductions are independent (so ORDER is irrelevant). The byte kernel
-`checkAuthorityProofBytes` (which held every round: 4007-probe fuzz, 0 false accepts) IS `A`; the object adapters that failed
-were `E`s that had NOT been decomposed as `A ∘ ρ`. **Realization (rev55):** the authority adapters' TRUST config is now
+**Corollary (why the boundary bugs collapse — at the byte boundary):** the recurring P0/P1 class — a two-face getter, a
+cross-argument mutation, an admission-order dependency, an adapter that re-reads a live field — is impossible AT THE CANONICAL-BYTES
+BOUNDARY and for a discipline-1 reduction: an unsigned argument's code never runs (so it cannot mutate a sibling) and byte-strings
+are immutable. It is **NOT** impossible for two or more discipline-2 (signed, `[[Get]]`) reductions over LIVE objects — reducing one
+signed argument can fire a getter that mutates a still-live sibling signed argument (round-47 P0-01). A signed argument is read
+once + hash-checked, but ORDER is NOT free when several live signed arguments coexist. The byte kernel `checkAuthorityProofBytes`
+(which held every round: 4007-probe fuzz, 0 false accepts) IS `A`; the object adapters that failed were `E`s that had NOT been
+decomposed as `A ∘ ρ`.
+**Correction (rev65 — round-47 GPT audit refuted the universal-independence claim; the exact boundary is BYTES).** The audit
+(`resolveCadence(genesis, cadenceLog, atTime, opts)`) reduced the signed `genesis` before the signed `cadenceLog`; a getter on
+`genesis` emptied the still-live `cadenceLog` before its own reduction, turning `E-KEY` into a successful cadence resolution — so
+`ρ_cadenceLog` was **not** a function of `cadenceLog` alone and order was **not** irrelevant. The metatheorem is corrected: the
+EXACT sound boundary is CANONICAL BYTES — an entry that is a pure function of immutable byte-strings (as `checkAuthorityProofBytes`
+already is). An object-form entry with two or more live signed arguments is an ADAPTER that must reduce every live argument to
+canonical bytes at the door (the CALCULATOR boundary), capturing the mutation-vulnerable/structural arguments before the
+self-verifying ones — or accept bytes directly. The methodical remediation migrates the multi-signed-argument object entries to
+this bytes boundary, class-wide; `resolveCadence` is the first (round-47 P0-01, bd UST-5t8). **Realization (rev55):** the authority adapters' TRUST config is now
 reduced by `admitInert` (side-effect-free) — a config getter/`toJSON` never executes (*"R46 checkAuthorityProof REDUCES the config side-effect-free — a config accessor getter is NEVER executed (the automaton reads DATA, never runs it; this SUPERSEDES the rev45 source-level admission order — no code runs at the boundary at all)"*). The residual `E`s (the signed-proof reads) are
 sound by discipline 2 (read-once + content-hash). **Realization (rev56):** `checkAuthorityProof` is now literally
 `A ∘ (ρ_package, ρ_config)` — `ρ_config = admitInert → canonJSON` (unsigned, side-effect-free), `ρ_package` (new) reads the
