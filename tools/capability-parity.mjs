@@ -33,7 +33,7 @@ const CAPS = {
   'build-transcript':   { core: ['buildState', 'buildAttestation', 'buildDerivation', 'buildGenesis', 'buildKeyLogEntry', 'buildCheckpoint', 'buildGap', 'buildCadenceEntry'], mcp: 'ust_build_observation', cli: 'buildState' },
   'sign':               { core: ['seal'], cli: 'seal' },
   'verify':             { core: ['verify', 'verifyJson', 'verifyAsync', 'isValid', 'checkBounds', 'assertValid', 'verifyOrThrow'], mcp: 'ust_verify', cli: 'verifyRaw' },
-  'resolve-authority':  { core: ['resolveAuthority', 'resolveKeys', 'resolveByDiscovery'], mcp: 'ust_resolve', cli: '--genesis' },
+  'resolve-authority':  { core: ['resolveAuthority', 'resolveKeys', 'resolveKeysBytes', 'resolveByDiscovery'], mcp: 'ust_resolve', cli: '--genesis' },
   'no-fork-evidence':   { core: ['noForkClaim', 'buildNoForkEvidence', 'verifyNoForkEvidence', 'witnessNoFork'], mcp: 'noForkEvidence', cli: '--witness' },
   'consumer-trust-root':{ core: ['quorumTrustDomains'], mcp: 'trustRoots', cli: '--trust-root' },
   'anchor-verify':      { core: ['verifyAnchor'], mcp: 'ust_anchor_verify', cli: '--require-anchored' },

@@ -839,23 +839,20 @@ const substrateFinal = (sub) => decodeSubstrate(sub) !== null;
 // valid key). Returns { validKeys: Map<key_id,pub>, revoked: Map } or { error, detail }. Used by BOTH
 // resolveAuthority (name authority) AND resolveCadence — a cadence-log entry MUST be signed by an AUTHORIZED
 // key (not any LIGHT doc with the same domain_shard), the P0 the cadence-log missed.
-export function resolveKeys(genesis, keylog = []) {
+// The SOUND bytes-in boundary for the key-log reducer (round-47 rev70 — the same split as `resolveCadenceBytes`): a pure
+// function of IMMUTABLE byte-strings, order-independent BY CONSTRUCTION (a byte-string cannot mutate a sibling; `JSON.parse`
+// runs no caller code). THIS is the sound public boundary; `resolveKeys` (below) is a CONVENIENCE object adapter over it.
+export function resolveKeysBytes(genesisBytes, keylogBytes) {
+  let genesis, keylog;
+  try {
+    genesis = JSON.parse(Buffer.from(genesisBytes).toString('utf8'));
+    keylog = (keylogBytes === undefined || keylogBytes === null) ? [] : JSON.parse(Buffer.from(keylogBytes).toString('utf8'));
+  } catch { return { error: 'E-GENESIS', detail: 'resolveKeys arguments must be canonical UTF-8 JSON byte-strings' }; }
   if (!genesis || typeof genesis !== 'object') return { error: 'E-GENESIS', detail: 'no genesis' };
-  // rev35 R3 (round-30 P0-01) — ADMIT the genesis ONCE at THIS door and operate ONLY on the frozen snapshot. Previously the
-  // reducer called verify(genesis) but then RE-READ the raw genesis (genesis.state, contentHash(genesis), genesis.sig) — a
-  // stateful Proxy showed the SIGNED face to verify and a DIFFERENT face to the reducer, so it emitted keys for a genesis
-  // verify never vouched for. R3: every emitted quantity is a projection over the admitted x̂, nothing re-reads raw x.
-  // round-47 P0-01 (the CALCULATOR boundary) — signed-vs-signed cross-argument mutation: admitDeep(genesis) executes the [[Get]]
-  // face (round-29 P0-01), so a genesis getter can empty the still-live keylog before its own reduction (round-47 GPT audit P0,
-  // bd UST-5t8). Reduce every live argument to canonical BYTES at the door — the mutation-vulnerable keylog BEFORE the
-  // self-verifying genesis (whose own mutation fails its signature) — then process ONLY the re-parsed inert forms (byte-strings
-  // are immutable; no getter survives). round-30 R3 (the reducer reads ONE snapshot, never a live re-read) holds a fortiori.
-  { const _kl = admitArray(keylog);   // round-19 P1-02 — a native array snapshot; a Proxy length/index trap is a structured reject, never a host throw
-    if (_kl === null) return { error: 'E-MALFORMED', detail: 'key-log must be a native array (round-17 P1-02 / round-19 P1-02 — the reducer is TOTAL: a hostile accessor/Proxy is a structured reject)' };
-    let kB, gB;
-    try { kB = canon(_kl); gB = canon(admitDeep(genesis)); } catch { return { error: 'E-GENESIS', detail: 'genesis/keylog is not an inert record (round-47 — reduced to canonical bytes at the door)' }; }
-    keylog = JSON.parse(kB); genesis = JSON.parse(gB); }
-  const gv = verify(genesis);                                                     // genesis is the ADMITTED snapshot (frozen inert) — verify re-admits it idempotently; every read below is of this snapshot
+  if (!Array.isArray(keylog)) return { error: 'E-MALFORMED', detail: 'key-log must be an array' };
+  // rev35 R3 (round-30 P0-01) — the reducer reads ONE inert snapshot; every emitted quantity is a projection over it, nothing
+  // re-reads a raw live object (the byte-in form makes this hold a fortiori — there is no live object to re-read).
+  const gv = verify(genesis);                                                     // genesis is inert (parsed from immutable bytes) — verify re-admits it idempotently; every read below is of this snapshot
   if (!isValid(gv)) return { error: 'E-GENESIS', detail: 'genesis invalid: ' + gv.error };
   if (genesis.state.id.class !== 'genesis') return { error: 'E-GENESIS', detail: 'not class:genesis' };
   if (genesis.sig.key_id !== genesis.state.id.key_id) return { error: 'E-GENESIS', detail: 'genesis not self-signed' };
@@ -927,6 +924,18 @@ export function resolveKeys(genesis, keylog = []) {
     prevHash = contentHash(e);
   }
   return { validKeys: all, active, revoked, history, head: prevHash };            // validKeys = the all-ever BINDING map; head (§12.2a) = last entry content_hash (genesis if empty)
+}
+// CONVENIENCE object adapter over `resolveKeysBytes` (round-47 rev70) — serialize each live argument to canonical bytes (the
+// structural keylog before the self-verifying genesis, whose own mutation fails its signature), then call the SOUND bytes-core.
+// NOT the hostile-getter security boundary: there is no fully order-independent multi-live-object reduction in JS (a getter fires
+// on any traversal) — a caller needing soundness against a hostile Proxy passes pre-serialized bytes to `resolveKeysBytes`.
+export function resolveKeys(genesis, keylog = []) {
+  const _kl = admitArray(keylog);   // round-19 P1-02 — a native array snapshot; a Proxy length/index trap is a structured reject, never a host throw
+  if (_kl === null) return { error: 'E-MALFORMED', detail: 'key-log must be a native array (round-17 P1-02 / round-19 P1-02 — the reducer is TOTAL: a hostile accessor/Proxy is a structured reject)' };
+  const enc = (s) => new Uint8Array(Buffer.from(s, 'utf8'));
+  let kEnc, gEnc;
+  try { kEnc = enc(canon(_kl)); gEnc = enc(canon(admitDeep(genesis))); } catch { return { error: 'E-GENESIS', detail: 'genesis/keylog is not an inert record (round-47 — reduced to canonical bytes at the door)' }; }
+  return resolveKeysBytes(gEnc, kEnc);
 }
 
 // ─── §12 HIGH name-authority resolution. STATELESS: the caller (ustate/engine) supplies the genesis +

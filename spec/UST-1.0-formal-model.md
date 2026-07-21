@@ -1142,9 +1142,10 @@ IS the sound public boundary; `resolveCadence` is a CONVENIENCE object adapter o
 self-verifying) documented in-code as NOT the hostile-getter boundary. HONEST scope (correcting the rev65 over-label "migrated to the
 bytes boundary"): there is NO fully order-independent multi-live-OBJECT reduction in JS — a getter fires on any traversal — so the
 object adapter closes the common object-caller case but the SOLE order-free boundary is bytes-in; a caller needing soundness against a
-hostile Proxy passes PRE-SERIALIZED bytes to `resolveCadenceBytes`. `resolveCadence` is the FIRST exemplar of this split; the rest of
-the multi-signed-argument class (`resolveKeys`, …) is being migrated the same way (still ordering-disciplined adapters at rev69 — not
-yet a claim of a bytes-in export each), the object form staying for backward-compatibility. (round-47 P0-01, bd UST-5t8.) **Realization (rev55):** the authority adapters' TRUST config is now
+hostile Proxy passes PRE-SERIALIZED bytes to `resolveCadenceBytes`. `resolveCadence` (rev69) and `resolveKeys` (rev70) now EACH
+have a bytes-in export (`resolveCadenceBytes` / `resolveKeysBytes`) — the sound order-free boundary — plus an object adapter; the
+two genesis-anchored reducers are the split done, and the remaining multi-argument surfaces follow the same pattern, the object
+forms staying for backward-compatibility as honest adapters. (round-47 P0-01, bd UST-5t8.) **Realization (rev55):** the authority adapters' TRUST config is now
 reduced by `admitInert` (side-effect-free) — a config getter/`toJSON` never executes (*"R46 checkAuthorityProof REDUCES the config side-effect-free — a config accessor getter is NEVER executed (the automaton reads DATA, never runs it; this SUPERSEDES the rev45 source-level admission order — no code runs at the boundary at all)"*). The residual `E`s (the signed-proof reads) are
 sound by discipline 2 (read-once + content-hash). **Realization (rev56):** `checkAuthorityProof` is now literally
 `A ∘ (ρ_package, ρ_config)` — `ρ_config = admitInert → canonJSON` (unsigned, side-effect-free), `ρ_package` (new) reads the

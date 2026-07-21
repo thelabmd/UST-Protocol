@@ -1536,7 +1536,9 @@ console.log('\n═════════════════════�
     const enc69 = (o) => new Uint8Array(Buffer.from(P.canon(o), 'utf8'));
     const rBytes = P.resolveCadenceBytes(enc69(gen69), enc69([]), 'ust:20260720.01', undefined);
     const rObj = P.resolveCadence(gen69, [], 'ust:20260720.01', {});
-    check('R47 (rev69 structural) resolveCadenceBytes IS the sound bytes-in boundary (pure function of immutable byte-strings, order-independent by construction) and the object resolveCadence adapter faithfully delegates to it (identical verdict on the same data)', JSON.stringify(rBytes) === JSON.stringify(rObj) && rBytes.cadence === 3600); }
+    check('R47 (rev69 structural) resolveCadenceBytes IS the sound bytes-in boundary (pure function of immutable byte-strings, order-independent by construction) and the object resolveCadence adapter faithfully delegates to it (identical verdict on the same data)', JSON.stringify(rBytes) === JSON.stringify(rObj) && rBytes.cadence === 3600);
+    const kBytes = P.resolveKeysBytes(enc69(gen69), enc69([])), kObj = P.resolveKeys(gen69, []);
+    check('R47 (rev70 structural) resolveKeysBytes IS the sound bytes-in boundary (immutable byte-strings, order-independent by construction) and the object resolveKeys adapter faithfully delegates (same resolved active-set on the same data)', !kBytes.error && kBytes.active.size === 1 && !kObj.error && kObj.active.size === 1); }
   // round-46 self-audit (totality) — combineSubstrates was the LONE public door the hand-maintained totality sweep
   // (round-17/18/19/24/38/39) never listed: a hostile `verifiers` Proxy (Array.isArray→true, then a throwing .filter/length
   // trap) SYNC-threw a host exception at its array-normalization. Now it fails CLOSED to an empty plugin list.
@@ -1928,7 +1930,7 @@ console.log('\n═════════════════════�
     verifyCheckpointUniqueness: 'surface', verifyEpochTransition: 'surface', verifyKeylogTerminality: 'surface',
     verifyNoForkEvidence: 'surface', resolveAuthority: 'surface', resolveByDiscovery: 'surface', resolveCadence: 'surface',
     resolveCadenceBytes: 'surface',   // round-47 rev69 — the SOUND bytes-in boundary (a pure function of immutable byte-strings; resolveCadence is its object adapter)
-    resolveCheckpointRoots: 'surface', resolveKeys: 'surface', deriveAssurance: 'surface', deriveCheckpointFreshness: 'surface',
+    resolveCheckpointRoots: 'surface', resolveKeys: 'surface', resolveKeysBytes: 'surface', deriveAssurance: 'surface', deriveCheckpointFreshness: 'surface',
     forkChoice: 'surface', noEventBacking: 'surface', verifiedGenesisContext: 'surface', checkAuthorityProof: 'surface',
     checkAuthorityProofBytes: 'surface', combineSubstrates: 'surface', witnessNoFork: 'surface',
     // ── EXEMPT (throw-by-contract): designed to throw on invalid — totality is not the contract ──
@@ -1988,7 +1990,7 @@ console.log('\n═════════════════════�
     compareEvidenceOrder: [oEv, oEv], quorumTrustDomains: [oList, oConf],   // round-38 P1-02 — the exported evidence algebra is now a consumer surface in the totality sweep (admits its operands)
     assuranceLE: [oAssur, oAssur], meetAssurance: [oAssur, oAssur], joinAssurance: [oAssur, oAssur], projectTier: [oAssur], capAssurance: [oAssur, oAssur], checkBounds: [oDoc],   // round-39 P1-02 — the assurance lattice + the exported bounds validator are consumer surfaces now that the door returns a sentinel (total-by-return, never a throw)
     resolveByDiscovery: [oDoc, oOpts, netMock], resolveCadence: [oGen, oArr, oStr, oOpts], resolveCadenceBytes: [oBytes, oBytes, oStr, oBytes], resolveCheckpointRoots: [oGen],
-    resolveKeys: [oGen, oArr], deriveAssurance: [oGraph], deriveCheckpointFreshness: [oChain, oConf], forkChoice: [oFrames, oOpts],
+    resolveKeys: [oGen, oArr], resolveKeysBytes: [oBytes, oBytes], deriveAssurance: [oGraph], deriveCheckpointFreshness: [oChain, oConf], forkChoice: [oFrames, oOpts],
     noEventBacking: [oConf, oConf, oFrames], verifiedGenesisContext: [oGen], checkAuthorityProof: [oConf, oConf],
     checkAuthorityProofBytes: [oBytes, oBytes], combineSubstrates: [oArr], witnessNoFork: [oStr, oHash, netMock],
   };
