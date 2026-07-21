@@ -13,6 +13,18 @@
 import { promises as dns } from 'node:dns';
 import net from 'node:net';
 
+// round-51 — the IANA IPv6 Special-Purpose Address Registry, globally_reachable=false, as DATA (prefix bytes, prefix bits).
+// EMBED-IPv4 forms (::ffff:0:0/96, 64:ff9b::/96, 2002::/16, ::/96) are handled separately (classify the embedded octets); this
+// is the "refuse outright" set. fc00::/7, fe80::/10, ff00::/8 stay inline (bitmask). A new IANA allocation is one ROW here.
+const V6_SPECIAL = [
+  [[0, 0x64, 0xff, 0x9b, 0, 1], 48],          // 64:ff9b:1::/48 IPv4/IPv6 translation, local-use (RFC 8215)
+  [[0x20, 0x01, 0, 2, 0, 0], 48],             // 2001:2::/48 Benchmarking (RFC 5180)
+  [[0x20, 0x01, 0, 0x10], 28],                // 2001:10::/28 ORCHID, deprecated (RFC 4843)
+  [[0x20, 0x01, 0x0d, 0xb8], 32],             // 2001:db8::/32 Documentation (RFC 3849)
+  [[0x3f, 0xff], 20],                         // 3fff::/20 Documentation (RFC 9637)
+  [[0x5f, 0x00], 16],                         // 5f00::/16 Segment Routing (SRv6) SIDs (RFC 9602)
+  [[1, 0, 0, 0, 0, 0, 0, 0], 64],             // 100::/64 Discard-Only (RFC 6666)
+];
 export function isPrivateIp(ip) {
   const v = net.isIP(ip);
   if (v === 4) {
@@ -38,15 +50,13 @@ export function isPrivateIp(ip) {
     if (pfx([0, 0x64, 0xff, 0x9b, 0, 0, 0, 0, 0, 0, 0, 0], 96)) return isPrivateIp(b.slice(12).join('.'));  // 64:ff9b::/96 NAT64 well-known
     if (pfx([0x20, 0x02], 16)) return isPrivateIp(b.slice(2, 6).join('.'));                                 // 2002::/16 6to4 → embedded relay IPv4 (bytes 2..5)
     if (b.slice(0, 12).every((x) => x === 0)) return isPrivateIp(b.slice(12).join('.'));                    // ::/96 IPv4-compatible — covers ::1 loopback + :: unspecified (→ 0.0.0.x, private)
-    // (2) every OTHER non-globally-reachable special-use prefix → refuse
-    return pfx([0, 0x64, 0xff, 0x9b, 0, 1], 48)          // 64:ff9b:1::/48 NAT64 local-use (RFC 8215)
-      || (b[0] & 0xfe) === 0xfc                          // fc00::/7 unique-local
+    // (2) every OTHER non-globally-reachable special-use prefix → refuse. round-51 (owner: IPv6 as complete as IPv4) — the whole
+    // IANA IPv6 Special-Purpose Address Registry (globally_reachable=false) as a data TABLE, not a hand list: a new allocation is a
+    // ROW. A hand list had leaked 2001:2::/48 (benchmarking) + 2001:10::/28 (ORCHID). The v6 registry-completeness test pins it.
+    return (b[0] & 0xfe) === 0xfc                        // fc00::/7 unique-local
       || (b[0] === 0xfe && (b[1] & 0xc0) === 0x80)       // fe80::/10 link-local
       || b[0] === 0xff                                   // ff00::/8 multicast (never a unicast fetch target)
-      || pfx([0x20, 0x01, 0x0d, 0xb8], 32)               // 2001:db8::/32 documentation
-      || pfx([0x3f, 0xff], 20)                           // 3fff::/20 documentation (RFC 9637, round-51)
-      || pfx([0x5f, 0x00], 16)                           // 5f00::/16 SRv6 SIDs (RFC 9602, round-51)
-      || pfx([0x01, 0, 0, 0, 0, 0, 0, 0], 64);           // 100::/64 discard-only
+      || V6_SPECIAL.some(([p, bits]) => pfx(p, bits));
   }
   return true;                                                                  // not an IP literal → caller resolves
 }

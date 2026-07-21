@@ -18,10 +18,14 @@ test('isPrivateIp classifies v6 ranges', () => {
     // round-49 P1-01 — the mapped range must be caught in EVERY spelling, not only dotted-decimal:
     '::ffff:7f00:1', '::ffff:0a00:1', '::ffff:a9fe:a9fe', '::ffff:169.254.169.254', '::127.0.0.1', '64:ff9b::7f00:1',
     // round-50 P1-01 — the special-use PREFIX TABLE: local-use NAT64 (64:ff9b:1::/48), 6to4-to-private, documentation, discard, multicast:
-    '64:ff9b:1::7f00:1', '64:ff9b:1::a00:1', '2002:c0a8:0101::1', '2001:db8::1', '100::1', 'ff02::1'])
+    '64:ff9b:1::7f00:1', '64:ff9b:1::a00:1', '2002:c0a8:0101::1', '2001:db8::1', '100::1', 'ff02::1',
+    // round-51 — the COMPLETE IANA IPv6 Special-Purpose registry (globally_reachable=false): benchmarking + ORCHID + doc9637 + SRv6:
+    '2001:2::1', '2001:2:0:ffff::1', '2001:10::1', '2001:1f::1', '3fff::1', '5f00::1'])
     assert.equal(isPrivateIp(ip), true, ip + ' should be private');
-  for (const ip of ['2606:4700:4700::1111', '2001:4860:4860::8888', '::ffff:8.8.8.8', '::ffff:808:808', '2002:5db8:d877::1'])
-    assert.equal(isPrivateIp(ip), false, ip + ' should be public');   // round-50 — 6to4 with a PUBLIC embedded IPv4 stays public
+  for (const ip of ['2606:4700:4700::1111', '2001:4860:4860::8888', '::ffff:8.8.8.8', '::ffff:808:808', '2002:5db8:d877::1',
+    // round-51 — the boundaries: ORCHIDv2 (2001:20::/28) is globally reachable; just-outside doc/benchmark/orchid stays public:
+    '2001:20::1', '2001:db9::1', '2000::1', '3ffe::1', '2001:3::1'])
+    assert.equal(isPrivateIp(ip), false, ip + ' should be public');   // round-50/51 — 6to4-public + genuinely-global special ranges stay public
 });
 
 test('public name → public IP: fetch proceeds', async () => {
