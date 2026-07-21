@@ -111,9 +111,16 @@ for (const vv of valids) {
   for (const vv of valids) { const pkg = JSON.parse(Buffer.from(vv.package_b64url, 'base64url').toString('utf8')); Object.assign(allWit, pkg.witnesses || {}); (function walk(n) { if (!n || typeof n !== 'object' || !n.rule) return; const k = RULE_KIND[n.rule]; if (k && !wk[k]) wk[k] = n; for (const c of n.children || []) walk(c); })(pkg.term); }
   const cfg3 = new Uint8Array(Buffer.from(valids[0].config_b64url, 'base64url'));
   const runT = (term) => { try { return P.checkAuthorityProofBytes(new Uint8Array(Buffer.from(P.canon({ term, witnesses: allWit }), 'utf8')), cfg3); } catch { return { result: 'INVALID' }; } };
+  // round-47 step 3/3 — bind the claim to the mechanism: track EVERY (rule,position) pair and report which are exercised vs
+  // which are SKIPPED and WHY. A skip is no longer silent (the old `continue` hid ReinforceMap[0] behind a missing MapUnique
+  // witness → the "every composite rule" claim was false). With the accept.reinforce-map baseline the MapUnique kind is now
+  // present, so the residual should be EMPTY; if a future kind drops out, the harness SAYS SO instead of quietly narrowing.
+  let coveredPositions = 0; const skippedPositions = [];
   for (const [rule, sig] of Object.entries(CHILD_SIG)) {
     for (let i = 0; i < sig.length; i++) {
-      if (!sig.every((k, j) => j === i || wk[k])) continue;   // need correct witnesses for the OTHER positions to isolate position i
+      const missing = [...new Set(sig.filter((k, j) => j !== i && !wk[k]))];   // sibling kinds with no witness to hold position ≠ i
+      if (missing.length) { skippedPositions.push(`${rule}[${i}] (no ${missing.join('/')} witness for a sibling)`); continue; }
+      coveredPositions++;
       for (const [wrongKind, wrongTerm] of Object.entries(wk)) {
         if (wrongKind === sig[i]) continue;                   // that would be the CORRECT kind
         phase3++;
@@ -122,8 +129,10 @@ for (const vv of valids) {
       }
     }
   }
+  console.log(`bmc Phase 3 coverage: ${coveredPositions} composite child-positions exercised over ${Object.keys(wk).length} witness kinds (${Object.keys(wk).sort().join(', ')}); ${skippedPositions.length ? 'RESIDUAL (declared, not silent): ' + skippedPositions.join('; ') : 'NO skipped positions — every composite child-position covered'}`);
+  if (skippedPositions.length) fails.push(`P3 COVERAGE: ${skippedPositions.length} composite child-position(s) skipped for a missing witness kind — the child-algebra claim must not silently narrow (round-47 step 3/3): ${skippedPositions.join('; ')}`);
 }
 
 console.log(`bmc: Phase 1 (per-rule inductive step) ${phase1} probes; Phase 2 (exhaustive single-mutation) ${phase2} tampers over ${baselines} VALID baselines; Phase 3 (child-judgment algebra) ${phase3} wrong-kind-child probes`);
 if (fails.length) { console.error('✗ BMC FAILED — a totality/determinism/soundness counterexample:'); for (const f of fails.slice(0, 20)) console.error('   • ' + f); process.exit(1); }
-console.log('✓ BMC: every rule is TOTAL + DETERMINISTIC + CONTRACT-GATED over its immediate-shape space; NO single-edit mutation of a VALID proof is accepted; and every composite rule REJECTS a wrong-kind child judgment (the induction step over the child-judgment algebra, not just syntax) — structural induction ⇒ all depths');
+console.log('✓ BMC: every rule is TOTAL + DETERMINISTIC + CONTRACT-GATED over its immediate-shape space; NO single-edit mutation of a VALID proof is accepted; and over EVERY coverable composite child-position a WRONG-KIND child judgment is rejected. SCOPE (bound to the mechanism, round-47 step 3/3): this exercises the KIND dimension of the induction step; child-COORDINATE mismatch (a right-kind child from the wrong (s,n,h)) and any judgment kind absent from the baseline witness library are the DECLARED residual for the injectable-child-verdict tier — not claimed here, not silently skipped (a missing kind now FAILS the coverage gate).');

@@ -180,6 +180,10 @@ add('terminality.headproof-extra', 'a terminality headProof with an extra interi
 const r11leaf = P.checkpointMapLeaf({ domain_shard: 'good.example', genesis_epoch: EP, sequence: '0', checkpoint: head });
 const r11map = P.buildVerifiableMap([r11leaf]);
 add('map.proof-extra', 'an authenticated-map proof with an extra interior field (round-11 P1-03)', b64u(canonPkg(N('MapUnique', [πChain], [put({ proof: { ...r11map.prove(r11leaf.key), extension: 'ignored' }, mapRoot: r11map.root })]))), { mapRoots: [r11map.root] }, { result: 'INVALID', code: 'map-uniqueness witness' });
+// positive ReinforceMap — the ONLY VALID vector exercising the ReinforceMap/MapUnique acceptance path (round-47 step 3/3: the
+// valid set never drove these two rules, so the BMC Phase-3 child-algebra had no MapUnique witness → ReinforceMap[0] was
+// silently skipped). This closes that hole AND gives the checker positive conformance coverage for a rule it accepts.
+add('accept.reinforce-map', 'a corroborated basis reinforced by a genuine map-uniqueness proof', b64u(canonPkg(N('ReinforceMap', [πCorr, N('MapUnique', [πChain], [put({ proof: r11map.prove(r11leaf.key), mapRoot: r11map.root })])]))), { ...CFG, mapRoots: [r11map.root] }, { result: 'VALID', judgment_kind: 'Freshness' });
 const voteX = (() => { const v = JSON.parse(JSON.stringify(ua(Wa))); v.sig.extension = 'ignored'; return v; })();
 add('vote.sig-extra', 'a uniqueness vote whose sig wrapper carries an extra field → not counted (round-11 P1-04)', b64u(canonPkg(N('QuorumAgreement', [πChain], [put(voteX)]))), { witnesses: { [Wa.key_id]: Wa.pub }, domains: { [Wa.key_id]: 'op-a' }, policy: { uniqueness_threshold: 1 } }, { result: 'INDETERMINATE', code: 'quorum not met' });
 // P0-04 epoch-transition claim is closed+typed (an extra signed field is rejected).
