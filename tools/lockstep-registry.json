@@ -142,7 +142,7 @@
     {
       "id": "R31-from-code-totality",
       "rev": "rev31",
-      "model_locus": "hostile Proxy in any argument position",
+      "model_locus": "hostile-fixture BATTERY (throwing-trap Proxy, revoked Proxy, throwing-index array-like) in any argument position",
       "conformance_check": "FROM-CODE TOTALITY (hostile BATTERY): every consumer-surface export returns structured, never a host throw, on EACH escape shape (throwing-trap Proxy, REVOKED Proxy, throwing-index array-like) in any argument position — the fixture is exhaustive, so a new non-total path fails HERE (round-51)"
     },
     {
