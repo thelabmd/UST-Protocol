@@ -62,7 +62,7 @@ const buildEntry = (ev, prevHash, n) => {
 // ── enumerate every reachable event sequence up to LEN, DFS over the abstract model ────────────────────────────────
 const LEN = 3;
 const fails = [];
-let sequences = 0, differentials = 0, attacks = 0;
+let sequences = 0, differentials = 0, attacks = 0, illegals = 0;
 const S0 = { active: new Set([G.key_id]), all: new Set([G.key_id]), compromised: new Set() };
 
 const legalEvents = (s) => {
@@ -105,6 +105,23 @@ function dfs(absState, log, prevHash, n) {
         const ra = P.resolveKeys(genesis, [...log, evil]);
         if (!ra.error) fails.push(`ATTACK @len${log.length}: a NON-ACTIVE key ${short(kid)} (rotated-out/revoked/compromised) signed entry ${log.length} and resolveKeys ACCEPTED — temporal soundness break`);
       }
+
+      // (C) ILLEGAL-TARGET TRANSITION (round-47 P1-02) — the COMPROMISE-TERMINALITY transitions the F.5e target precondition
+      // EXCLUDES, signed by an ACTIVE key, must be REJECTED (E-KEY). This tests target-state legality DIRECTLY, not via the
+      // differential (whose abstract model had copied the terminality rule from the impl — the shared blind spot the audit
+      // exposed) — and it enumerates the re-revoke-of-compromised the old `legalEvents` never produced. ADJUDICATION (round-47):
+      // a revoke of a rotated-out NON-compromised target is NOT illegal — the impl accepts it and it is harmless (the key is
+      // already inactive; a nondecreasing timeline means a redundant revoke can only move the retirement time LATER, never
+      // un-retire), so target-active is NOT required for revoke; only compromise is terminal.
+      const asigner = [...absState.active][0];
+      const illegalEvs = [];
+      for (const kid of absState.compromised) illegalEvs.push({ op: 'retire', signer: asigner, target: kid }, { op: 'compromise', signer: asigner, target: kid }, { op: 'add', signer: asigner, target: kid }, { op: 'rotate', signer: asigner, target: kid });   // compromise is TERMINAL — no re-revoke, no re-authorize
+      for (const ev of illegalEvs) {
+        illegals++;
+        const entry = buildEntry(ev, prevHash, n);
+        const ri = P.resolveKeys(genesis, [...log, entry]);
+        if (!ri.error) fails.push(`ILLEGAL @len${log.length}: ${ev.op}(${short(ev.target)}) re-touched a COMPROMISED key (terminal) — resolveKeys ACCEPTED it (target-state legality break)`);
+      }
     }
   }
   if (n >= LEN) return;
@@ -119,6 +136,6 @@ function short(kid) { if (kid === G.key_id) return 'G'; const i = POOL.findIndex
 
 dfs(S0, [], P.contentHash(genesis), 0);
 
-console.log(`temporal-bmc: ${sequences} reachable event sequences (len ≤ ${LEN}, ${POOL.length + 1} keys); ${differentials} differential checks vs an independent abstract model; ${attacks} non-active-signer attacks`);
+console.log(`temporal-bmc: ${sequences} reachable event sequences (len ≤ ${LEN}, ${POOL.length + 1} keys); ${differentials} differential checks vs an independent abstract model; ${attacks} non-active-signer attacks; ${illegals} illegal-target transitions (F.5e-excluded, incl. re-revoke-of-compromised)`);
 if (fails.length) { console.error('✗ TEMPORAL BMC FAILED — a counterexample in the key-log state machine:'); for (const f of fails.slice(0, 20)) console.error('   • ' + f); process.exit(1); }
-console.log('✓ TEMPORAL BMC: over EVERY reachable key-log event sequence, resolveKeys agrees with an independent abstract state machine (active/all/compromised), and NO non-active key (rotated-out / retired / compromised) can authorize a later entry (bounded-exhaustive temporal soundness)');
+console.log('✓ TEMPORAL BMC: over EVERY reachable key-log event sequence, resolveKeys agrees with an independent abstract state machine; NO non-active key can authorize a later entry; and EVERY compromise-terminality transition (re-revoke or re-authorize a compromised key) is REJECTED — target-state legality tested DIRECTLY, not only via the differential whose model shared the impl\'s rules (round-47 P1-02)');

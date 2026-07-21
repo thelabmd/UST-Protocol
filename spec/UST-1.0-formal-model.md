@@ -585,6 +585,20 @@ if its signer was active in the state the PREVIOUS events produced. This is exac
 `k` appears somewhere in the log" (`k ∈ bind`) is strictly weaker than "`k` was active when it signed" (`k ∈
 active` at that prefix), and conflating them is the P0-02 class (a revoked / rotated-out key still signing).
 
+**Event preconditions — COMPROMISE is TERMINAL (made normative rev67, round-47 P1-02).** Beyond the signer being active, one
+TARGET precondition is load-bearing: once `revoked[k] = (compromised, ·)`, `k` is TERMINAL — no later `add(k)`, `rotate(→k)`,
+or `revoke(k, ·)` is admissible (compromise is monotonic; it can never be re-authorized, re-revoked, or downgraded to
+`retired`). An event violating it is INADMISSIBLE (the reducer errors `E-KEY`), exactly as a non-active-signer event is.
+`revoke(k, r)` also requires `k ∈ bind` (a never-authorized key cannot be revoked). It does NOT require `k ∈ active`: a
+redundant revoke of an already rotated-out / retired (non-compromised) key is admissible and harmless — the key is already
+inactive, and a nondecreasing timeline means the redundant revoke can only move the retirement time LATER, never un-retire (so
+soundness is untouched). This terminality precondition was realized in `resolveKeys` from the start but was NOT stated here —
+the round-47 audit showed the temporal model check had copied it from the IMPLEMENTATION rather than this spec, so its
+differential could not adjudicate it (a shared blind spot); the audit also probed a stricter `revoke ⇒ target-active` rule and
+this spec ADJUDICATES it as unnecessary (harmless). Terminality is now normative, and `temporal-bmc.mjs` enumerates EVERY
+one-step transition it excludes (re-revoke a compromised key, re-authorize a compromised key) as an ATTACK and asserts the
+reducer rejects it — the differential is no longer the sole witness.
+
 **Realization (representation note).** `K_n` is realized by `resolveKeys(genesis, keylog)` → `{active, validKeys
 (=bind), revoked, history, head}`; the invariant is the `active.get(keyId(sig.pub)) === sig.pub` gate per entry;
 the closed per-`op` schema is the well-formedness of each event. Document authority reads `bind` (continuity) then
