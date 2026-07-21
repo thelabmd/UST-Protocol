@@ -1567,6 +1567,22 @@ console.log('\n═════════════════════�
     }
     return bad.length === 0;
   })());
+  // round-46 self-audit (crypto — Ed25519 signature MALLEABILITY) — a verifier MUST reject a non-canonical scalar S (S ≥ L, the
+  // group order): S and S+L are two byte-strings for the same signature, so accepting both is malleability. edVerifyStrict
+  // delegates to OpenSSL (RFC-8032, which enforces S < L) AFTER strictB64url canonicalizes the wire bytes — the property was
+  // SOUND but UNTESTED. This vector proves the rejection, so a future swap to a lax/cofactored/ZIP-215 verify that accepts S+L fails HERE.
+  check('R46 self-audit (crypto) edVerifyStrict REJECTS a malleated signature (S += L) — Ed25519 non-malleability (RFC-8032 S<L); the valid signature still verifies', (() => {
+    const priv = createPrivateKey({ key: Buffer.concat([Buffer.from('302e020100300506032b657004220420', 'hex'), Buffer.from('ab'.repeat(32), 'hex')]), format: 'der', type: 'pkcs8' });
+    const pubB64 = createPublicKey(priv).export({ format: 'der', type: 'spki' }).slice(-32).toString('base64url');
+    const msg = 'ust-malleability-vector';
+    const sig = sign(null, Buffer.from(msg, 'utf8'), priv);
+    const okBase = P.edVerifyStrict(pubB64, msg, sig.toString('base64url')) === true;
+    const L = Buffer.from('edd3f55c1a631258d69cf7a2def9de1400000000000000000000000000000010', 'hex');   // Ed25519 group order, little-endian
+    const S = sig.subarray(32, 64), Sm = Buffer.alloc(32); let carry = 0;
+    for (let i = 0; i < 32; i++) { const v = S[i] + L[i] + carry; Sm[i] = v & 0xff; carry = v >> 8; }
+    const mauled = Buffer.concat([sig.subarray(0, 32), Sm]).toString('base64url');
+    return okBase && P.edVerifyStrict(pubB64, msg, mauled) === false;
+  })());
   check('RECOVERY signer NOT in the genesis recovery set → not counted', VR([stmt(rf(KR), R1), stmt(rf(KR), RX)]).recovered === false);
   check('RECOVERY threshold-complete malformed replacement (BOTH signers agree on key_id ≠ keyId(pub)) → NOT recovered (admitAuthorityKey binds the pair; round-36 P1-01/P2-01 — the vacuous single-malformed vector could not see it)', (() => { const bad = { ...P.checkpointRecoveryClaim(rf(KR)), replacement_authority: { key_id: K1.key_id, pub: KR.pubB64 } }; const st = (W) => { const sg = sign(null, Buffer.from(P.canon(bad), 'utf8'), W.priv).toString('base64url'); return { claim: bad, issuer_id: W.key_id, sig: { alg: 'Ed25519', key_id: W.key_id, pub: W.pubB64, sig: sg } }; }; return VR([st(R1), st(R2)]).recovered === false; })());
   check('RECOVERY effective_sequence ≠ last+1 → not recovered (only the next checkpoint)', VR([stmt(rf(KR, '2'), R1), stmt(rf(KR, '2'), R2)]).recovered === false);
