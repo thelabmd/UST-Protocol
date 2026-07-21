@@ -1162,6 +1162,18 @@ position (the whole 1-edit neighbourhood, not a sample), asserting no single edi
 The byte kernel `checkAuthorityProofBytes` (the realization of `A`) passes both. (A machine-checked mechanization in a proof
 assistant is the tier beyond this; the bounded-exhaustive check is the executable, regression-gated approximation.)
 
+**Verification (rev64 — TEMPORAL model check of the key-log state machine, the time dimension the automaton BMC does not
+reach).** `bmc.mjs` covers the STRUCTURAL dimension (the proof term); the key-log (§12.2 #75 ROOT 2) is a TEMPORAL state
+machine whose keys move active → rotated-out / revoked(retired) / revoked(compromised), with the safety property that a key
+NOT ACTIVE at step k cannot authorize a key-log entry at step k. Interleaving bugs (add→retire→re-add, rotate-then-sign-with-
+the-old-key, re-revoke a compromised key) hide in specific ORDERINGS a hand-written vector rarely hits. `temporal-bmc.mjs`
+enumerates EVERY reachable event sequence up to a bound (LEN 3, four keys → 1020 sequences) and for each: (A) a DIFFERENTIAL
+against an INDEPENDENT abstract reference model of the state machine — `resolveKeys` must agree on the resolved (active, all,
+compromised) sets, any divergence a counterexample; and (B) an ATTACK — appending an entry signed by EVERY currently
+non-active key (retired / rotated-out / compromised) must be rejected `E-KEY` (1008 attacks, all rejected). This is
+bounded-exhaustive temporal soundness + implementation-vs-model conformance over the whole interleaving space, complementing
+the structural automaton BMC.
+
 **Definition (VerifiedAuthorityContext).** For a genesis document `g` whose class and self-signature VERIFY
 (`resolveCheckpointRoots` — P0-2: verify-before-extract):
 

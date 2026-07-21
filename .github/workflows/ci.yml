@@ -24,6 +24,8 @@ jobs:
         run: npm run test:byte-vectors && npm run test:reference-checker && npm run test:reference-checker-fuzz
       - name: bounded-exhaustive model check — per-rule induction step (total/deterministic/contract-gated) + exhaustive single-mutation soundness
         run: npm run test:bmc
+      - name: temporal model check — key-log state machine vs an independent abstract model + exhaustive non-active-signer soundness over every reachable interleaving
+        run: npm run test:temporal-bmc
       - name: model <-> code guard (every formal theorem is a real conformance check)
         run: npm run test:model
       - name: model-lockstep guard (every enforcement realization cites an ADVERSARIAL-closure check, not just the happy path)

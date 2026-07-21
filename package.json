@@ -32,6 +32,7 @@
     "test:byte-vectors": "node packages/ust-protocol/gen-byte-vectors.mjs && git diff --exit-code vectors/checker-byte-vectors.json vectors/checker-security-manifest.json && node packages/ust-protocol/run-byte-vectors.mjs",
     "test:reference-checker": "node packages/ust-protocol/reference-checker.test.mjs",
     "test:reference-checker-fuzz": "node packages/ust-protocol/reference-checker.fuzz.mjs",
-    "test:bmc": "node packages/ust-protocol/bmc.mjs"
+    "test:bmc": "node packages/ust-protocol/bmc.mjs",
+    "test:temporal-bmc": "node packages/ust-protocol/temporal-bmc.mjs"
   }
 }
