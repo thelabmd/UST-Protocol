@@ -1150,6 +1150,18 @@ tolerance did not reach a Proxy) — is now reduced by `admitDeep` and floors in
 only by `verify`, so a hostile input floors to LIGHT, never a host throw). No export — present or future, sync or async, verifier
 or algebra — is unaccounted (*"R46 self-audit (rev59, totality from-code EXHAUSTIVE) — EVERY exported function is TOTAL on a hostile Proxy (no sync host-throw, no async promise-rejection) UNLESS explicitly classified MAY-THROW (trusted-input producer / byte-string primitive / throw-by-contract); no export unaccounted, sync AND async"*).
 
+**Verification (rev63 — BOUNDED-EXHAUSTIVE model check of the automaton `A`, beyond sampled fuzz).** The Checker Soundness
+theorem is proved BY STRUCTURAL INDUCTION on the proof term `π`. Because totality and determinism are COMPOSITIONAL over a
+structural recursion, it suffices to verify the INDUCTION STEP for every rule of the closed enum plus the leaf base case, and
+induction then extends them to ALL depths. `bmc.mjs` does exactly this, EXHAUSTIVELY up to a bound (not the random sampling of
+`reference-checker.fuzz.mjs`): Phase 1 drives every rule × every arity in {want−1, want, want+1} × every witness count in
+{0 … max+1} (an unbounded-witness contract capped) × representative children, and asserts each rule's interpreter is TOTAL (no
+host throw), DETERMINISTIC (same bytes → same verdict), and CONTRACT-GATED (an off-contract arity/witness count is rejected at
+DECODE as `E-TERM-*`, never interpreted to VALID). Phase 2 takes each VALID byte-vector baseline and mutates EVERY string-leaf
+position (the whole 1-edit neighbourhood, not a sample), asserting no single edit is accepted — bounded-exhaustive soundness.
+The byte kernel `checkAuthorityProofBytes` (the realization of `A`) passes both. (A machine-checked mechanization in a proof
+assistant is the tier beyond this; the bounded-exhaustive check is the executable, regression-gated approximation.)
+
 **Definition (VerifiedAuthorityContext).** For a genesis document `g` whose class and self-signature VERIFY
 (`resolveCheckpointRoots` — P0-2: verify-before-extract):
 
