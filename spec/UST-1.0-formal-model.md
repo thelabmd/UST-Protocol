@@ -297,14 +297,14 @@ INCOMPARABILITY: `(id₂, fresh₁)` and `(id₁, fresh₂)` are incomparable in
 *"LATTICE (4) A_id"* / `A_fresh` product-incomparability. The linear tower collapsed this; the product keeps them
 apart.
 
-**M1.2 — Reachability: laws on the ambient product, security on the image.** The 64-state product contains states no
+**M1.2 — Reachability: laws on the ambient product, security on the image.** The 48-state product contains states no
 honest derivation emits (e.g. `Time = anchored ∧ Freshness = unverified` where the anchor IS fresh evidence). Define
 `Reach_C := image(deriveAssurance_C) ⊆ Strength` — the tuples the verifier can actually output under consumer config
 `C`. Lattice LAWS (meet/join/monotone `Π`) are proved on the ambient product (above); SECURITY properties
 (no-upward-forge, downgrade-resistance, no-rung-without-its-predicate) are stated on `Reach_C` — the
-evidence→assurance transition where the rc.35 findings lived; the exhaustive 64-state checks exercise the rank
+evidence→assurance transition where the rc.35 findings lived; the exhaustive 48-state checks exercise the rank
 ALGEBRA, not that transition. The confinement property (`deriveAssurance_C` never leaves `Reach_C`) is REALIZED as a running sweep:
-*"V1 Reach_C confinement: 264-combination verdict grid — every coordinate earned by its own predicate, tier = projection"*
+*"V1 Reach_C confinement: 240-combination verdict grid — every coordinate earned by its own predicate, tier = projection"*
 and *"V1 Reach_C per-coordinate locality: a coordinate is a function of ITS verdict alone (no cross-coordinate lift)"*.
 The C3 seam is realized: `provePredicates({identity, freshness, anchor, evidence})` — the UNBRANDED pure mapper (round-25 P0-01) whose graph `deriveAssurance` projects
 — pure/total/frozen, strength coordinates derived from SEAM VERDICTS by fixed rules (a bare label or a caller boolean
@@ -320,7 +320,7 @@ earns nothing: *"C3 a bare strength LABEL without a verified status earns nothin
 head∈committed-root, terminal, chain-consistent, proven-after)`; `ℐ_attested := ℐ_corrob ∨ σ(independent
 anti-equivocation: distinct-domain quorum ∨ authenticated-map uniqueness)`. Each inclusion is STRICT exactly under
 the non-degeneracy hypothesis below — the P0 fixes (consumer-rooted §B2, capability-checked F.5g) ENFORCE it. The
-identity ladder `ℐ_self ⊊ ℐ_pinned ⊊ ℐ_corrob-id ⊊ ℐ_auth` has the same shape (F.5a).
+identity ladder `ℐ_self ⊊ ℐ_corrob-id ⊊ ℐ_auth` has the same shape (F.5a).
 
 **Non-degeneracy (P2-01) — the STRICT inclusions need a NAMED hypothesis.** Claims like `corroborated ⊊ authoritative`
 (F.5a) and `corroborated ⊊ attested` (F.5j) are STRICT only under an explicit assumption, made here: the independent

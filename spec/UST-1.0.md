@@ -2233,7 +2233,7 @@ provenance and will be lifted into this ledger when the spec is published.
   the math-consistency guard.** The rc.35 F.5.0 was SELF-contradictory: EvidenceBasis was defined as "a SET of
   capabilities" yet counted as a 4-chain in a five-axis product (`2·4·4·2·4 = 256` — and the realized code axis was a
   phantom the live verifier pinned to `opaque`). M1.1 separates STRENGTH from SUPPORT: `AssuranceState` is now the
-  product of FOUR chains (integrity·identity·freshness·time, **2·4·4·2 = 64**); capability support is the separate
+  product of FOUR chains (integrity·identity·freshness·time, **2·3·4·2 = 48**); capability support is the separate
   Boolean lattice `(P(Caps), ⊆)` over the 8-capability universe (`EVIDENCE_CAPS_UNIVERSE`, single-sourced from
   `EVIDENCE_CAPS`); support DERIVES strength, it is never a coordinate. M1.2 `Reach_C` — lattice laws on the ambient
   product, SECURITY on `image(deriveAssurance_C)` (confinement lands with C3/V). M1.3 — strict rungs restated over
@@ -2274,7 +2274,7 @@ provenance and will be lifted into this ledger when the spec is published.
   through verified chain roots + the receipt seam + consumer config (uniqueness quorum/map) — no parallel old/new
   paths remain. Gates: conformance 374/0, model guard green (+C3 citations), parity (deriveAssurance triaged).
 - **REV 57 (2026-07-15, `rc.36`)** — **authority-layer refactor, phase V (verification of the refactor itself).**
-  V1: the M1.2 `Reach_C` confinement is now a RUNNING conformance sweep — a 264-combination grid over
+  V1: the M1.2 `Reach_C` confinement is now a RUNNING conformance sweep — a 240-combination grid over
   identity/freshness/anchor seam verdicts asserts every emitted coordinate is earned by ITS OWN independently
   restated predicate, the carried tier always equals the projection of the carried strength, and each coordinate is
   a function of its verdict ALONE (no cross-coordinate lift). V2: the security-regression census now covers EVERY

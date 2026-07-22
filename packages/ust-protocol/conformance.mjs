@@ -1807,21 +1807,21 @@ console.log('\n═════════════════════�
   let refl = true, antisym = true; for (const a of all) { if (!P.assuranceLE(a, a)) refl = false; for (const b of all) if (P.assuranceLE(a, b) && P.assuranceLE(b, a) && !eq(a, b)) antisym = false; }
   check('LATTICE (2) product order reflexive + antisymmetric', refl && antisym);
 
-  // (3) LATTICE laws pairwise (64²): meet a lower bound, join an upper bound, both commutative + absorptive
+  // (3) LATTICE laws pairwise (48²): meet a lower bound, join an upper bound, both commutative + absorptive
   let latOK = true; for (const a of all) for (const b of all) {
     const m = P.meetAssurance(a, b), j = P.joinAssurance(a, b);
     if (!(P.assuranceLE(m, a) && P.assuranceLE(m, b) && P.assuranceLE(a, j) && P.assuranceLE(b, j))) latOK = false;
     if (!(eq(m, P.meetAssurance(b, a)) && eq(j, P.joinAssurance(b, a)))) latOK = false;                 // commutative
     if (!(eq(P.meetAssurance(a, j), a) && eq(P.joinAssurance(a, m), a))) latOK = false;                 // absorption
   }
-  check('LATTICE (3) meet=glb, join=lub, commutative + absorption (64² pairs)', latOK);
+  check('LATTICE (3) meet=glb, join=lub, commutative + absorption (48² pairs)', latOK);
 
   // (4) A_id ⊥ A_fresh — the axes strengthen INDEPENDENTLY (gap 1/3): id-up/fresh-fixed vs fresh-up/id-fixed is INCOMPARABLE
   const idUp = { integrity: 'valid', identity: 'authoritative', freshness: 'unverified', time: 'unproven' };
   const frUp = { integrity: 'valid', identity: 'self-asserted', freshness: 'attested', time: 'unproven' };
   check('LATTICE (4) A_id / A_fresh product-incomparability (M1.4 — no ⊥): id-up vs fresh-up incomparable', !P.assuranceLE(idUp, frUp) && !P.assuranceLE(frUp, idUp));
 
-  // (5) projectTier MONOTONE over every comparable pair (64²): a ≤ b ⇒ tier(a) ≤ tier(b)
+  // (5) projectTier MONOTONE over every comparable pair (48²): a ≤ b ⇒ tier(a) ≤ tier(b)
   let monoOK = true; for (const a of all) for (const b of all) if (P.assuranceLE(a, b) && !(P.TIER_RANK[P.projectTier(a)] <= P.TIER_RANK[P.projectTier(b)])) monoOK = false;
   check('LATTICE (5) projectTier is monotone (order-preserving)', monoOK);
 
@@ -1905,7 +1905,7 @@ console.log('\n═════════════════════�
       const base = DA({ identity: id }).strength.identity;
       for (const fr of frs) for (const an of ans) if (DA({ identity: id, freshness: fr, anchor: an }).strength.identity !== base) coordinateLocal = false;
     }
-    check('V1 Reach_C confinement: 264-combination verdict grid — every coordinate earned by its own predicate, tier = projection', confined);
+    check('V1 Reach_C confinement: 240-combination verdict grid — every coordinate earned by its own predicate, tier = projection', confined);
     check('V1 Reach_C per-coordinate locality: a coordinate is a function of ITS verdict alone (no cross-coordinate lift)', coordinateLocal);
   }
 }
