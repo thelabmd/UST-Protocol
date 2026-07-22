@@ -25,6 +25,8 @@
     "test:security": "node packages/ust-protocol/security-regression.mjs",
     "test:ssrf": "node packages/ust-protocol/ssrf.test.mjs && node packages/ust-mcp/ssrf-guard.test.mjs",
     "test:drift-guards": "node packages/ust-protocol/drift-guards.test.mjs",
+    "test:module-seam": "node packages/ust-protocol/module-seam-totality.test.mjs",
+    "test:rule-lockstep": "node tools/rule-lockstep.mjs",
     "test:connectors": "node packages/ust-ots-verify/index.test.mjs && node packages/ust-rekor-verify/index.test.mjs",
     "test:web-signer": "node packages/ust-web-signer/test.mjs",
     "test:mcp-live": "node packages/ust-mcp/live-test.mjs",

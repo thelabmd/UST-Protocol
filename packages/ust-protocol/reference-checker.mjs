@@ -17,7 +17,7 @@ import { canon, H, keyId, edVerifyStrict, contentHash, verify, isValid, verifyKe
   resolveKeys, buildKeylogCommitment, authorityCheckpointId, strictB64url, isPublicDnsShard,
   admitUtf8, anyLoneSurrogate, admitDeep, snapshotBytes } from './index.mjs';   // round-19 P1-01 — ONE Unicode byte-admission, shared with the discovery resolver. round-46 — admitDeep is the proven canon-transparent side-effect-free reduction for the PACKAGE domain (canon: string leaves); admitInert (below) is its canonJSON-domain sibling for the CONFIG (numeric leaves). Both read DATA descriptors and never execute a getter/toJSON. round-48 P0-01 — snapshotBytes is the ONE byte-admission door (was defined here; moved to index.mjs so the two resolvers admit through the SAME door — no drift).
 
-export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev81';
+export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev82';
 // round-50 P1-04 — the L1 proof-checker's OWN error namespace (distinct from the §15 document-verifier codes in index.mjs's
 // REGISTRY). spec-code-sync scans index.mjs against REGISTRY but NOT this module, so 54 checker codes were unregistered and its
 // "spec == registry == code" claim was false over the TCB. This is the checker's registered code set; spec-code-sync now diffs
@@ -61,8 +61,7 @@ export const RULE_CONTRACTS = deepFreeze(Object.assign(Object.create(null), {   
   Anchored:                { children: 0, witnesses: wc(1),        params: { s: rp, subject: rp },  conclusion: 'Time' },
   ProjectAssurance:        { children: 3, witnesses: wc(0),        params: {},                conclusion: 'Assurance' },
 }));
-export const REFERENCE_CHECKER_RULES = Object.freeze(Object.keys(RULE_CONTRACTS));   // parity DERIVES from the registry
-const RULES = new Set(REFERENCE_CHECKER_RULES);
+export const REFERENCE_CHECKER_RULES = Object.freeze(Object.keys(RULE_CONTRACTS));   // parity DERIVES from the registry (rule-lockstep gate asserts this == the dispatched cases == 15, FROZEN)
 const DEFAULT_LIMITS = { maxNodes: 512, maxDepth: 32, maxWitnesses: 1024, maxWitnessBytes: 1 << 20, maxPackageBytes: 1 << 22, maxWitnessRefs: 4096, maxConfigBytes: 1 << 20 };   // maxConfigBytes (round-14 P1-02): the config has its OWN independent 1 MiB ceiling, not silently the package limit   // maxWitnessRefs (round-13 P1-03): total witness REFERENCES across the term, independent of unique store count — bounds crypto ops
 const isHash = (s) => typeof s === 'string' && /^sha256:[0-9a-f]{64}$/.test(s);
 export const witnessId = (obj) => H('ust:witness', canon(obj));   // content address a witness (for provers building packages)

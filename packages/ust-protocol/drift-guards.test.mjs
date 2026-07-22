@@ -41,6 +41,9 @@ probe('interpreter rule dropped from CHILD_SIG → BMC', 'packages/ust-protocol/
 // 4) a model enforcement Realization without a registry record must be caught
 probe('model Realization without a registry record → model-lockstep', 'spec/UST-1.0-formal-model.md',
   (s) => s + '\n**Realization (rev99 — drift probe).** A fake enforcement claim with no registry record.\n', 'node tools/model-lockstep-gate.mjs');
+// 5) a 16th inference rule (a new RULE_CONTRACTS key) must be caught — the §14 decision-relation is FROZEN at 15 (round-52 S1 / Q1)
+probe('new inference rule (16th RULE_CONTRACTS key) → rule-lockstep', 'packages/ust-protocol/reference-checker.mjs',
+  (s) => s.replace('RULE_CONTRACTS = deepFreeze(Object.assign(Object.create(null), {', 'RULE_CONTRACTS = deepFreeze(Object.assign(Object.create(null), {\n  __DriftRule16: 1,'), 'node tools/rule-lockstep.mjs');
 
 console.log(`\n  drift-guards (meta — every from-code gate is fail-closed)   PASS ${pass}   FAIL ${F.length}`);
 if (F.length) { F.forEach((f) => console.log('    ✗ ' + f)); process.exit(1); }

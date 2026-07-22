@@ -297,7 +297,7 @@ const admitBool = (x, dflt = false) => (x === undefined || x === null) ? dflt : 
 // (frozen elements, never a live two-face element); anything else (a falsy scalar / non-array) → ADMIT_REJECT. Replaces every
 // `Array.isArray(x) ? x : []` coalesce that silently turned a present malformed key-log into an empty (retirement-erasing) log.
 const ABSENT_SELECTOR = Symbol('absent-selector');
-const admitOptionalKeylog = (x) => (x === undefined || x === null) ? ABSENT_SELECTOR : (Array.isArray(x) ? admitArray(x) : null);
+const admitOptionalKeylog = (x) => { if (x === undefined || x === null) return ABSENT_SELECTOR; try { return Array.isArray(x) ? admitArray(x) : null; } catch { return null; } };   // round-52 S1 — Array.isArray THROWS on a revoked Proxy; total door (the class round-51 closed at admitArray/reducePackage)
 
 // ─── producer: §7 seal — sign canon({ust,state}) with an Ed25519 private key ─────────────────────────
 export function seal(state, privKeyObj, pubB64url) {
@@ -864,17 +864,24 @@ const isRealRfc3339Z = (x) => { if (typeof x !== 'string' || !/^\d{4}-\d{2}-\d{2
 // must NOT mint anchored. `assurance` (#71 trust-model basis) is the ONE optional own-string; UNKNOWN extra fields are
 // ignored, NOT rejected (rejecting them would drop a legitimate `assurance`). → inert {final,time,assurance?} | null.
 const decodeSubstrate = (sub) => {
-  if (sub === null || typeof sub !== 'object') return null;
-  const proto = Object.getPrototypeOf(sub);
-  if (proto !== Object.prototype && proto !== null) return null;                 // plain / null-proto ONLY — no class instances, Promises, or prototype look-alikes
-  const fd = Object.getOwnPropertyDescriptor(sub, 'final');
-  if (!fd || !('value' in fd) || fd.value !== true) return null;                 // OWN data `final === true` (an accessor has no `value`; an inherited field has no own descriptor)
-  const td = Object.getOwnPropertyDescriptor(sub, 'time');
-  if (!td || !('value' in td) || !isRealRfc3339Z(td.value)) return null;         // OWN data real RFC3339-Z instant
-  const out = Object.create(null); out.final = true; out.time = td.value;
-  const ad = Object.getOwnPropertyDescriptor(sub, 'assurance');                  // optional #71 basis — OWN string only
-  if (ad && ('value' in ad) && typeof ad.value === 'string') out.assurance = ad.value;
-  return out;
+  // THE total+inert door for a NOT-OURS substrate module return (trust-boundary law UST-5tm). Every caller — the sync
+  // seam verifyAnchorCore AND the async seam anchoredByProofs (via substrateFinal) — becomes total BY CONSTRUCTION
+  // through this one door: the intrinsic reflection reads below (getPrototypeOf / getOwnPropertyDescriptor) THROW on a
+  // revoked Proxy or a throwing reflection trap, so the body is guarded — a hostile module return is a structured reject
+  // (null), never a host throw (round-52 P1 / S1 module-seam totality).
+  try {
+    if (sub === null || typeof sub !== 'object') return null;
+    const proto = Object.getPrototypeOf(sub);
+    if (proto !== Object.prototype && proto !== null) return null;                 // plain / null-proto ONLY — no class instances, Promises, or prototype look-alikes
+    const fd = Object.getOwnPropertyDescriptor(sub, 'final');
+    if (!fd || !('value' in fd) || fd.value !== true) return null;                 // OWN data `final === true` (an accessor has no `value`; an inherited field has no own descriptor)
+    const td = Object.getOwnPropertyDescriptor(sub, 'time');
+    if (!td || !('value' in td) || !isRealRfc3339Z(td.value)) return null;         // OWN data real RFC3339-Z instant
+    const out = Object.create(null); out.final = true; out.time = td.value;
+    const ad = Object.getOwnPropertyDescriptor(sub, 'assurance');                  // optional #71 basis — OWN string only
+    if (ad && ('value' in ad) && typeof ad.value === 'string') out.assurance = ad.value;
+    return out;
+  } catch { return null; }
 };
 const substrateFinal = (sub) => decodeSubstrate(sub) !== null;
 // §12.2 — the SHARED key-log walk (genesis self-signed root + prev-chained entries each signed by a CURRENT
@@ -1104,10 +1111,12 @@ export const evidenceReceiptId = (r) => H('ust:evidence-receipt', canon({ claim:
 // AGREE (conformance cross-check). `decodeExact` is the kernel `decodeRec`: own-key membership only, exact keys, typed leaves.
 const _evId = (x) => typeof x === 'string' && x.length > 0, _evSeq = (x) => decSeq(x) !== null;
 const decodeExact = (o, schema) => {
-  if (o === null || typeof o !== 'object' || Array.isArray(o)) return false;
-  for (const k of Object.keys(o)) if (!Object.hasOwn(schema, k)) return false;               // no key the schema does not OWN (round-12 P0-01 prototype-name close)
-  for (const k of Object.keys(schema)) { const s = schema[k]; if (!Object.hasOwn(o, k)) { if (!s.opt) return false; continue; } if (!s.t(o[k])) return false; }
-  return true;
+  try {   // round-52 S1 — total on a hostile `o` (Array.isArray/Object.keys THROW on a revoked Proxy); callers feed inert JSON/admitted data, this closes the class defensively
+    if (o === null || typeof o !== 'object' || Array.isArray(o)) return false;
+    for (const k of Object.keys(o)) if (!Object.hasOwn(schema, k)) return false;               // no key the schema does not OWN (round-12 P0-01 prototype-name close)
+    for (const k of Object.keys(schema)) { const s = schema[k]; if (!Object.hasOwn(o, k)) { if (!s.opt) return false; continue; } if (!s.t(o[k])) return false; }
+    return true;
+  } catch { return false; }
 };
 const _evHash = (x) => isHashStr(x);   // arrow-wrapped: isHashStr is declared later in the module (resolved at call time, not load time — no TDZ)
 const EV_SIG_SCHEMA = { alg: { t: (x) => x === 'Ed25519' }, key_id: { t: _evHash }, pub: { t: (x) => strictB64url(x, 32) !== null }, sig: { t: (x) => strictB64url(x, 64) !== null } };
@@ -1145,7 +1154,7 @@ const admitAuthorityKey = (a) => decodeExact(a, AUTH_KEY_SCHEMA) && keyId(a.pub)
 // a canonical sha256 hash. Node preimages are then built from admitted hash STRINGS, never a generic `+` coercion — a
 // `[]` sibling coerced to '' forged a root under a non-protocol grammar, and a null-proto object threw a host TypeError.
 // Both Merkle verifiers (key-log terminality + SMT map) route through it, matching the kernel's typed hash arrays (pHashArr).
-const admitHashPath = (siblings, expectedLen) => (Array.isArray(siblings) && siblings.length === expectedLen && siblings.every(isHashStr)) ? siblings : null;
+const admitHashPath = (siblings, expectedLen) => { try { return (Array.isArray(siblings) && siblings.length === expectedLen && siblings.every(isHashStr)) ? siblings : null; } catch { return null; } };   // round-52 S1 — Array.isArray/.every THROW on a revoked Proxy; total door
 // round-38 P1-03 (R4 — the input may only TIGHTEN a faculty, never expand or disable its mechanism) — a caller resource
 // scalar: a finite positive integer → min(reference, supplied); undefined → the reference default; anything else
 // (Infinity / NaN / fractional / ≤0) → null (a structured refusal). Applied at EVERY public resource-policy scalar.
@@ -1437,16 +1446,26 @@ function verifyAnchorCore(contentHash, proof, opts = {}) {
   const inclusion = node === proof.root;
   if (!inclusion) return { inclusion: false, time: 'unproven', status: 'verified', detail: 'inclusion path does not reach root' };
   if (!opts.substrateVerify) return { inclusion: true, time: 'unproven', status: 'unavailable', detail: 'inclusion OK; substrate not verified (caller job)' };
-  const sub = opts.substrateVerify(proof.anchor, proof.root);          // → { final, time }
-  // #69 E1 — the official substrate plugins are ASYNC; a sync verify() cannot await one. Detect the thenable
-  // and say so HONESTLY (not a silent 'unproven') — the caller must use verifyAsync / resolveByDiscovery,
-  // which pre-resolve the substrate. Fail-safe either way: a Promise is never mistaken for a final anchor.
-  if (sub && typeof sub.then === 'function') return { inclusion: true, time: 'unproven', status: 'unavailable', detail: 'substrate check is ASYNC — use verifyAsync() or resolveByDiscovery() (they await it), not sync verify()' };
-  if (!sub) return { inclusion: true, time: 'unproven', status: 'unavailable', detail: 'substrate unreachable' };
-  // round-17 P1-01 — the substrate result is a CLOSED, TYPED leaf (F.5.0/C3/I4): `final` must be a strict Boolean and
-  // a final anchor MUST carry a REAL RFC3339-Z instant. A truthy non-Boolean ("yes") or a non-string/empty time
-  // ({}) can no longer mint TimeStrength=anchored (and can no longer coerce past the N9 generated_at ≤ anchor check).
-  const dec = decodeSubstrate(sub);   // round-19 P0-02 — read the anchored instant + assurance from the INERT decoded record, never the live seam object
+  // The substrate oracle is a NOT-OURS module (OTS/Rekor/git/IPFS/Bitcoin — open-ended, third-party). Per the
+  // trust-boundary law (UST-5tm), its INVOCATION and its RETURN are HOSTILE input: a hostile plugin may throw on
+  // the call itself, or return a revoked/throwing-getter Proxy that host-throws when we touch `.then` / decode it.
+  // The whole seam is ONE TOTAL door — any host throw becomes a structured `unavailable` reject, never propagates
+  // (round-52 P1 / S1 module-seam totality). The behavioral gate drives this seam with the hostile BATTERY.
+  let dec;
+  try {
+    const sub = opts.substrateVerify(proof.anchor, proof.root);          // → { final, time }
+    // #69 E1 — the official substrate plugins are ASYNC; a sync verify() cannot await one. Detect the thenable
+    // and say so HONESTLY (not a silent 'unproven') — the caller must use verifyAsync / resolveByDiscovery,
+    // which pre-resolve the substrate. Fail-safe either way: a Promise is never mistaken for a final anchor.
+    if (sub && typeof sub.then === 'function') return { inclusion: true, time: 'unproven', status: 'unavailable', detail: 'substrate check is ASYNC — use verifyAsync() or resolveByDiscovery() (they await it), not sync verify()' };
+    if (!sub) return { inclusion: true, time: 'unproven', status: 'unavailable', detail: 'substrate unreachable' };
+    // round-17 P1-01 — the substrate result is a CLOSED, TYPED leaf (F.5.0/C3/I4): `final` must be a strict Boolean and
+    // a final anchor MUST carry a REAL RFC3339-Z instant. A truthy non-Boolean ("yes") or a non-string/empty time
+    // ({}) can no longer mint TimeStrength=anchored (and can no longer coerce past the N9 generated_at ≤ anchor check).
+    dec = decodeSubstrate(sub);   // round-19 P0-02 — read the anchored instant + assurance from the INERT decoded record, never the live seam object
+  } catch {
+    return { inclusion: true, time: 'unproven', status: 'unavailable', detail: 'substrate seam is not-ours (trust-boundary law UST-5tm): a hostile module return/throw is a structured reject, never a host throw (round-52 P1 / S1 module-seam totality)' };
+  }
   if (!dec) return { inclusion: true, time: 'unproven', status: 'unavailable', detail: 'substrate not a typed FINAL receipt (final must be an OWN Boolean true AND carry an OWN real RFC3339-Z instant on a plain record; a prototype/accessor look-alike earns nothing) — no F_t (round-17 P1-01 / round-18 P0-02 / round-19 P0-02)' };
   // #71 — carry the substrate's ASSURANCE basis so TOP names its trust model honestly (an OTS plugin that
   // corroborates via independent explorers reports `explorer-corroborated`; an operator real-node/SPV plugin
