@@ -293,6 +293,13 @@ check('F8 impossible ust_id→E-MALFORMED', P.verify(mk({ r: { kind: 'captured',
   const coexistBad = P.buildState({ ...ID, class: 'derivation' }, T, { d: { kind: 'computed', value: { x: '1' } } },
     { based_on: [{ hash: hA }], seed: P.seed([hA]), constituents: [hA], root: 'sha256:' + 'ee'.repeat(32) });
   check('coexistence: wrong root still E-ROOT (one never waives the other)', P.verify(P.seal(coexistBad, A.priv, A.pubB64), { context: 'data' }).error === 'E-ROOT');
+  // round-54 (UST-0q7) — PRODUCER-FORWARD url cut. (a) a producer stops emitting `url`; (b) a verifier still TOLERATES + IGNORES a url
+  // present, so pre-rule docs (incl. the #79 audit chain) stay VALID — NOT retroactively invalidated. The hard-reject that closes the
+  // residual attack surface (a hostile doc's signed url misleads a non-conforming consumer) is a RELEASE-BLOCKER, deferred: bd UST-my0.
+  const urlDeriv = P.seal(P.buildState({ ...ID, class: 'derivation' }, T, { d: { kind: 'computed', value: { x: '1' } } }, { based_on: [{ hash: hA, url: 'https://mirror.example/x' }], seed: P.seed([hA]) }), A.priv, A.pubB64);
+  check('round-54 based_on carrying a url still VALID (verifier tolerates advisory url; pre-rule docs NOT invalidated — UST-0q7; hard-reject deferred UST-my0)', P.isValid(P.verify(urlDeriv, { context: 'data' })));
+  const hoDeriv = P.buildDerivation(ID, T, { d: { kind: 'computed', value: { x: '1' } } }, [{ hash: hA, url: 'https://drop.me/x' }]);
+  check('round-54 buildDerivation emits HASH-ONLY based_on (producer drops url — UST-0q7)', hoDeriv.provenance.based_on.every((b) => Object.keys(b).length === 1 && typeof b.hash === 'string'));
   const five = Array.from({ length: 5 }, (_, i) => mk({ ['v' + i]: { kind: 'captured', value: { x: String(i) } } })); const fiveMap = new Map(five.map((d) => [P.contentHash(d), d]));
   const wideDeriv = P.seal(P.buildDerivation(ID, T, { d: { kind: 'computed', value: { x: '1' } } }, [...fiveMap.keys()].map((h) => ({ hash: h }))), A.priv, A.pubB64);
   check('verified-node budget exceeded → E-BOUNDS whole walk (§13 P4)', P.verify(wideDeriv, { context: 'data', provenanceDepth: 1, resolveRef: (h) => fiveMap.get(h), refBudget: 2 }).error === 'E-BOUNDS');

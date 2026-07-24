@@ -498,7 +498,7 @@ PER-PARTITION hash, §4.4).
 Provenance := {
   "sources":     { <source_id>: { "addr": content_hash, "src_sig": string } },   // OPTIONAL (§9.1)
   "constituents":[ content_hash, ... ],                                          // OPTIONAL (§9.2)
-  "based_on":    [ { "hash": content_hash, "url": string } , ... ],              // OPTIONAL (§9.3)
+  "based_on":    [ { "hash": content_hash } , ... ],                             // OPTIONAL (§9.3) — hash-only; `url` deprecated (producers MUST NOT emit; verifiers ignore any present)
   "root":        content_hash,                                                   // OPTIONAL (§9.2)
   "seed":        content_hash,                                                   // OPTIONAL (§9.4)
   "prev":        content_hash                                                    // present in a SEQUENCED stream (operator completeness guarantee, §11.3); else absent
@@ -520,9 +520,14 @@ with `root` = the RFC 6962 Merkle root over the constituent `content_hash`es **s
 inside the signed State, `root` is signed (closing the "signature binds nothing but a frame" gap): a valid
 attestation binds its root, AND the root's un-backdatable time comes from the anchor (§11).
 
-### 9.3 based_on — advisory lineage
-`based_on[i].hash` is authoritative and content-addressed; `based_on[i].url` is ADVISORY only and MUST NOT be
-a basis for any integrity decision (a URL may be swapped; a hash cannot). Referencing another record is a
+### 9.3 based_on — content-addressed lineage
+`based_on[i].hash` is authoritative and content-addressed. A producer **MUST NOT emit** any `url` (or other key) in a
+signed based_on entry — a signed based_on entry is **hash-only**: a URL may be swapped and can never be confirmed, so a
+signed location lends false authority to a pointer a verifier does not read (the same class as a name-form `domain_shard`
+lent identity authority it cannot back, §3.1). Location/resolution hints belong to the UNSIGNED discovery layer (§20.1),
+already content-hash-matched and, per §1, never a verification input. A verifier **IGNORES** any `url` present (it was
+never an integrity input), so documents authored before this rule that carry a `url` remain **valid** — the tightening is
+producer-forward, not a retroactive invalidation. Referencing another record is a
 **directional** claim by this State and does NOT implicate or endorse the referent (§18.2). **Symmetrically
 (Y4): an INBOUND reference confers NOTHING — a consumer MUST NOT infer endorsement or association from a
 reference it did not itself originate, and a referent cannot control who points at it (reference-spam is free).**
@@ -1399,7 +1404,7 @@ unresolved dependency ⇒ the corresponding error (never `VALID`).
    REAL failure. **`referents:"verified"` asserts integrity, signatures and hash identity of the referenced
    documents — NEVER the semantic truth of their claims, and NEVER the correctness of a declared derivation
    function (a derivation may honestly cite its inputs and still compute nonsense; that is fixation, not
-   truth, applied to lineage).** `url`s advisory only.
+   truth, applied to lineage).** A signed based_on entry is hash-only — no `url` (§9.3).
 10. **Result.** `VALID` REQUIRES the FLOOR terminal checks: steps 1,2 (structure/canon), 4 (authenticity — the signature),
    5 (shape), 8 (per-partition private commitments when present), 9 (provenance when present). Step 3 (name
    authority) rejects (E-GENESIS) ONLY if the consumer requires `authoritative`; else it is a STRENGTH. Step 7
@@ -1731,7 +1736,7 @@ One shape, five shorts across domains and modes. All obey §4–§10: string lea
 whole-`state` signature. (`sig`/hashes abbreviated.)
 
 ### 21.1 Derivation that CHAINS to another publisher (by content hash, not URL)
-A derived state (e.g. an audio rendering) built on another publisher's reading — `based_on[].hash` is authoritative; `url` is advisory.
+A derived state (e.g. an audio rendering) built on another publisher's reading — `based_on[].hash` is authoritative and content-addressed (hash-only; a signed entry carries no `url`, §9.3).
 ```json
 { "ust": "1.0",
   "state": {
@@ -1740,7 +1745,7 @@ A derived state (e.g. an audio rendering) built on another publisher's reading �
     "data": { "sound": { "kind":"computed", "value":{ "chord":"Am7add9", "noise_color":"brown", "texture_mode":"WHITE_AMBIENT", "tithi":"8" } } },
     "hashes": { "sound":"sha256:…" },
     "provenance": {
-      "based_on": [ { "hash":"sha256:<helioradar content_hash>", "url":"https://helioradar.com/ust/20260424.15" } ],
+      "based_on": [ { "hash":"sha256:<helioradar content_hash>" } ],
       "seed": "sha256:<H_seed over the based_on hashes>" } },
   "sig": { "alg":"Ed25519", "key_id":"sha256:11a…", "sig":"…" } }
 ```

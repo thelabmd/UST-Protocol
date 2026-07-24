@@ -341,7 +341,7 @@ export function buildState(id, time, data, provenance, opts) {
 export const buildAttestation = (id, time, data, constituents, prev) =>            // §9.2 constituents + Merkle root
   buildState({ ...id, class: 'attestation' }, time, data, { constituents, root: merkleRoot(constituents), ...(prev !== undefined ? { prev } : {}) });
 export const buildDerivation = (id, time, data, basedOn, prev) =>                  // §9.3/§9.4 based_on + seed
-  buildState({ ...id, class: 'derivation' }, time, data, { based_on: basedOn, seed: seed(basedOn.map(b => b.hash)), ...(prev !== undefined ? { prev } : {}) });
+  buildState({ ...id, class: 'derivation' }, time, data, { based_on: basedOn.map((b) => ({ hash: b.hash })), seed: seed(basedOn.map(b => b.hash)), ...(prev !== undefined ? { prev } : {}) });   // round-54 (UST-0q7) — PRODUCER-FORWARD: emit HASH-ONLY based_on; a `url` in the signed provenance is a swappable location hint that lends false authority, so producers stop emitting it (location → unsigned discovery §20.1). Verifiers still IGNORE any url present, so existing docs stay valid — NOT invalidated.
 export const buildGenesis = (id, time, pub, maxPartitions, maxTranscriptBytes, cadence, checkpointAuthority, recovery) =>  // §12.1 self-signed name-binding root
   buildState({ ...id, class: 'genesis' }, time, { genesis: { kind: 'captured', value: {
     pub, role: 'name-binding-root',

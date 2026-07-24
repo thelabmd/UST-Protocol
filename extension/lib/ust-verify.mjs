@@ -176,6 +176,13 @@ export async function verify(doc, opts = {}) {
       return { result: 'VALID:HIGH', tier: 'HIGH', identity: { strength: 'authoritative', status: 'verified', mode: 'name' }, publisher: id.domain_shard, ust_id: id.ust_id, class: id.class, content_hash: ch,
         provenance: provOut, completeness: 'not_evaluated' };
     }
+    // round-53 (UST-ybn) — PARITY with ust-protocol: at the LIGHT floor (no authority above) a NAME-FORM domain_shard is a
+    // domain claim this verifier cannot confirm ⇒ INDETERMINATE (never a bare VALID — the forgery-misread). A key-form shard
+    // = a self-asserted key-identity stays VALID:LIGHT. Exempt the authority-establishing classes (a genesis DECLARES its name;
+    // key/cadence continue the key-log) — they are name-form by nature and verified via their own chain.
+    if (!KEYID_FORM.test(id.domain_shard) && id.class !== 'genesis' && id.class !== 'key' && id.class !== 'cadence')
+      return { result: 'INDETERMINATE', reason: 'unavailable', identity: { strength, status: 'verified', mode: 'name' }, ust_id: id.ust_id, class: id.class, content_hash: ch,
+        detail: 'name-form domain_shard is a domain claim the LIGHT floor cannot confirm — supply genesis to bind the name (→ HIGH), or use key-form domain_shard = key_id for a key-identity document (→ VALID:LIGHT). "cannot confirm" ⇒ INDETERMINATE (UST-ybn)', provenance: provOut, completeness: 'not_evaluated' };
     return { result: 'VALID:LIGHT', tier: 'LIGHT', identity: { strength, status: 'verified', mode: KEYID_FORM.test(id.domain_shard) ? 'key' : 'name' }, publisher_claimed: id.domain_shard, ust_id: id.ust_id, class: id.class, content_hash: ch,
       provenance: provOut,
       completeness: 'not_evaluated' };

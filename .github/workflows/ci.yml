@@ -36,6 +36,8 @@ jobs:
         run: npm run test:spec-sync
       - name: capability parity (every surface's stance matches the spec's capability set — no silent lag, UST-3dj class)
         run: npm run test:parity
+      - name: docs verifier parity (clean-room web verifier agrees with the reference — no silent verdict drift, UST-ybn)
+        run: npm run test:docs-parity
       - name: CLI ceremony regression (9th-audit — the seven points cannot regress)
         run: npm run test:cli
       - name: ust-lite is a valid UST subset (byte-identical to the reference impl, both directions)

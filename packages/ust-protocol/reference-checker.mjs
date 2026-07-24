@@ -17,7 +17,7 @@ import { canon, H, keyId, edVerifyStrict, contentHash, verify, isValid, verifyKe
   resolveKeys, buildKeylogCommitment, authorityCheckpointId, strictB64url, isPublicDnsShard,
   admitUtf8, anyLoneSurrogate, admitDeep, snapshotBytes } from './index.mjs';   // round-19 P1-01 — ONE Unicode byte-admission, shared with the discovery resolver. round-46 — admitDeep is the proven canon-transparent side-effect-free reduction for the PACKAGE domain (canon: string leaves); admitInert (below) is its canonJSON-domain sibling for the CONFIG (numeric leaves). Both read DATA descriptors and never execute a getter/toJSON. round-48 P0-01 — snapshotBytes is the ONE byte-admission door (was defined here; moved to index.mjs so the two resolvers admit through the SAME door — no drift).
 
-export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev83';
+export const REFERENCE_CHECKER_VERSION = '1.0.0-rc.37-L1-rev84';
 // round-50 P1-04 — the L1 proof-checker's OWN error namespace (distinct from the §15 document-verifier codes in index.mjs's
 // REGISTRY). spec-code-sync scans index.mjs against REGISTRY but NOT this module, so 54 checker codes were unregistered and its
 // "spec == registry == code" claim was false over the TCB. This is the checker's registered code set; spec-code-sync now diffs
