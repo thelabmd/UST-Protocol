@@ -43,7 +43,7 @@ gives you — verification is your right, not your duty. The day you need to —
   decision was made on it, not backdated after the outcome;
 - **hold someone accountable** — every value is signed: you know *whose*
   reading it was and that nobody, the publisher included, has rewritten it since;
-- **answer an audit, a claim, a post-mortem** — replay exactly what was known
+- [**answer an audit, a claim, a post-mortem**](https://github.com/thelabmd/UST-Protocol/issues/79) — replay exactly what was known
   at that moment, and show how strongly it is proven (`VALID:LIGHT → HIGH → TOP`);
 
 — all of that is **already inside every transcript you have been reading as
