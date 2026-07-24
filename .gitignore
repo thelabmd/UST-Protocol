@@ -7,6 +7,10 @@
 # When in doubt: if it isn't protocol or depersonalized-operator, it does not belong in git.
 # ─────────────────────────────────────────────────────────────────────────────
 
+# secrets — NEVER committed (holds the diary signing key, among others)
+.env
+.env.*
+
 # dependencies
 node_modules/
 packages/*/node_modules/
