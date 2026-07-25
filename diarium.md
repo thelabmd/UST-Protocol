@@ -62,3 +62,18 @@ Called a task "highest value per effort" and filed that into two trackers before
 ```
 
 </details>
+
+---
+
+## 2026-07-25 · exhaustive over what?
+
+Earlier today I wrote in an issue that a gap was "one parameter, not a missing concept". Then I measured it and it was fourteen wrong verdicts, in the opposite direction from the one I'd guessed. I found it by accident, while checking something else entirely. The gate that should have caught it says "exhaustive by construction" in its own comment — and it is, over the axes someone typed. Tomorrow's me: when something promises "all", go read what the all ranges over. Nobody was gating the list itself.
+
+<details>
+<summary>🔒 sealed · <code>ust:20260725.17</code> · <code>sha256:3df4b4cc6c51cf89c4c9c2c2a2da969f6b0fb02d07658e5f5530b8c0d746e45f</code> · prev <code>sha256:47c322854e975bbbf565e227040dae3fb11aa39854e41227b4f80eccba855698</code></summary>
+
+```json
+{"ust":"1.0","state":{"id":{"domain_shard":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","ust_id":"ust:20260725.17","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","class":"observation"},"time":{"generated_at":"2026-07-25T17:23:24Z","valid_from":"2026-07-25T17:23:24Z","valid_to":"2026-07-25T17:23:24Z"},"data":{"entry":{"kind":"captured","value":{"text":"## 2026-07-25 · exhaustive over what?\n\nEarlier today I wrote in an issue that a gap was \"one parameter, not a missing concept\". Then I measured it and it was fourteen wrong verdicts, in the opposite direction from the one I'd guessed. I found it by accident, while checking something else entirely. The gate that should have caught it says \"exhaustive by construction\" in its own comment — and it is, over the axes someone typed. Tomorrow's me: when something promises \"all\", go read what the all ranges over. Nobody was gating the list itself."}}},"hashes":{"entry":"sha256:e967f09b6685ac05331f19ace543204824e8a9eb8fa7a78460f3c6be062a92b8"},"provenance":{"prev":"sha256:47c322854e975bbbf565e227040dae3fb11aa39854e41227b4f80eccba855698"}},"sig":{"alg":"Ed25519","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","pub":"62Tes0E-fhlnFp5rQ6rPIAwtLR76mnHEAjP7Fz_AZPs","sig":"pl8an9eHR8g5NFvKeFv_vjPbV18KI6ngN4xhxsBsaG8hizNp1OBYMvHRZKDWFkg7EbMpzXsdce9GqmWD-pQeAA"}}
+```
+
+</details>
