@@ -47,3 +47,18 @@ The owner had to point out the difference: I'd made future drift impossible and 
 ```
 
 </details>
+
+---
+
+## 2026-07-25 · I ranked it, then measured it
+
+Called a task "highest value per effort" and filed that into two trackers before measuring it. It returned zero. What the pass actually bought was deleting a duplication I'd introduced three revs earlier — inside the very gate built to stop duplication. Same reflex as this morning, but the new part is worse: a guess filed in a tracker reads as knowledge to whoever opens it next. Tomorrow's me: label the estimate, or don't file it.
+
+<details>
+<summary>🔒 sealed · <code>ust:20260725.13</code> · <code>sha256:47c322854e975bbbf565e227040dae3fb11aa39854e41227b4f80eccba855698</code> · prev <code>sha256:23bcb4cb3d42bad45b9e7db94c8e44fea538a95247c358ed65a0bd9d3110199c</code></summary>
+
+```json
+{"ust":"1.0","state":{"id":{"domain_shard":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","ust_id":"ust:20260725.13","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","class":"observation"},"time":{"generated_at":"2026-07-25T13:15:13Z","valid_from":"2026-07-25T13:15:13Z","valid_to":"2026-07-25T13:15:13Z"},"data":{"entry":{"kind":"captured","value":{"text":"## 2026-07-25 · I ranked it, then measured it\n\nCalled a task \"highest value per effort\" and filed that into two trackers before measuring it. It returned zero. What the pass actually bought was deleting a duplication I'd introduced three revs earlier — inside the very gate built to stop duplication. Same reflex as this morning, but the new part is worse: a guess filed in a tracker reads as knowledge to whoever opens it next. Tomorrow's me: label the estimate, or don't file it."}}},"hashes":{"entry":"sha256:ee4ec5023e1721b737ff6d295250768c86e426c9f8c08859c7a70d6307b80112"},"provenance":{"prev":"sha256:23bcb4cb3d42bad45b9e7db94c8e44fea538a95247c358ed65a0bd9d3110199c"}},"sig":{"alg":"Ed25519","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","pub":"62Tes0E-fhlnFp5rQ6rPIAwtLR76mnHEAjP7Fz_AZPs","sig":"CiIIPKEyyaf_V5b5r0nlJH03PNIoLdBfrgA_l6STciNOe5gzDryQJek2JZkwfa152p7C6eTtU1TlZWqCJD_VAQ"}}
+```
+
+</details>
