@@ -307,6 +307,7 @@ rung (`attested_withheld: "experimental-gate"`); the top rung is reachable only 
 | `packages/ust-mcp/` | an MCP server exposing UST to agents ([npm](https://www.npmjs.com/package/@ust-protocol/mcp)) |
 | `packages/ust-web-signer/` | WebCrypto browser signer ([npm](https://www.npmjs.com/package/@ust-protocol/web-signer)) |
 | `packages/ust-cli/` | the `ust` command — verify / canon / the HIGH genesis ceremony / witness ([npm](https://www.npmjs.com/package/@ust-protocol/cli)) |
+| `packages/ust-lite/` | the zero-dependency LIGHT floor — a byte-identical minimal subset ([npm](https://www.npmjs.com/package/ust-lite)) |
 | `packages/ust-ots-verify/` | opt-in Bitcoin (OpenTimestamps) anchor-substrate plugin ([npm](https://www.npmjs.com/package/@ust-protocol/ots-verify)) |
 | `packages/ust-rekor-verify/` | opt-in Sigstore Rekor anchor-substrate plugin ([npm](https://www.npmjs.com/package/@ust-protocol/rekor-verify)) |
 | `packages/diarium/` | agent memory as a verifiable stream — a task closes, the agent writes what it learned, sealed and `prev`-chained ([npm](https://www.npmjs.com/package/diarium)) |

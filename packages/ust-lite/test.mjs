@@ -4,6 +4,7 @@
 // VALID:LIGHT under full UST, and lite accepts any UST doc at the LIGHT floor".
 import * as lite from './index.mjs';
 import * as full from '../ust-protocol/index.mjs';
+import { readFileSync } from 'node:fs';
 
 let pass = 0, fail = 0; const F = [];
 const ok = (id, cond) => { if (cond) pass++; else { fail++; F.push(id); } };
@@ -25,6 +26,24 @@ ok('full doc → lite.verify == VALID:LIGHT', lite.verify(fullDoc).result === 'V
 // 3) BYTE-IDENTITY: same primitives ⇒ the two documents are the same bytes (Ed25519 is deterministic)
 ok('lite doc == full doc (byte-identical canon/hash/sig)', JSON.stringify(liteDoc) === JSON.stringify(fullDoc));
 ok('lite.contentHash == full.contentHash', lite.contentHash(liteDoc) === full.contentHash(fullDoc));
+
+// UST-jls — lite BUILDS a chain, not just verifies one. It was already reading prev-carrying documents as VALID:LIGHT
+// while being unable to produce one: a floor that verifies chains but cannot make them is asymmetric, and chaining is
+// what UST is for. Byte-identity is the contract, so the same inputs must give the same document under either builder.
+const PREV = lite.contentHash(liteDoc);
+const liteChained = lite.seal(lite.buildState(id, time, data, { prev: PREV }), kp.privateKey, kp.pub);
+const fullChained = full.seal(full.buildState(id, time, data, { prev: PREV }), kp.privateKey, kp.pub);
+ok('lite builds a prev-chained doc byte-identical to the reference builder', JSON.stringify(liteChained) === JSON.stringify(fullChained));
+ok('the chained lite doc verifies VALID:LIGHT under BOTH', lite.verify(liteChained).result === 'VALID:LIGHT' && full.verify(liteChained).result === 'VALID:LIGHT');
+const BO = 'sha256:' + 'e'.repeat(64);
+const liteCited = lite.seal(lite.buildState(id, time, data, { based_on: [{ hash: BO }], seed: lite.seed([BO]) }), kp.privateKey, kp.pub);
+const fullCited = full.seal(full.buildState(id, time, data, { based_on: [{ hash: BO }], seed: full.seed([BO]) }), kp.privateKey, kp.pub);
+ok('lite.seed == full.seed and a cited doc is byte-identical', JSON.stringify(liteCited) === JSON.stringify(fullCited));
+// The builder must refuse what its own verifier refuses — otherwise it mints documents nobody can verify.
+let bs = 0;
+for (const p of [{ prev: 'nope' }, { based_on: [{ hash: BO }] }, { based_on: [{ hash: BO }], seed: 'sha256:' + '0'.repeat(64) }, { constituents: [BO], root: BO }, { based_on: [{ hash: BO }, { hash: BO }], seed: lite.seed([BO, BO]) }])
+  { try { lite.buildState(id, time, data, p); } catch { bs++; } }
+ok('lite.buildState refuses the 5 provenance shapes its own verifier rejects', bs === 5);
 
 // 4) negatives — a tampered value and a bad signature must FAIL in BOTH verifiers
 const tampered = JSON.parse(JSON.stringify(liteDoc)); tampered.state.data.temp.value.celsius = '99.9';
@@ -125,11 +144,40 @@ const partForms = [
 ];
 const idForms = [{}, { domain_shard: 'аpple.com' }, { domain_shard: 'bad name' }, { domain_shard: 'sha256:' + '00'.repeat(32) }, { ust_id: 'ust:20260231.12' }, { ust_id: 'ust:20260722.24' }, { class: undefined }, { class: 'attestation' }, { class: 'bogus' }];
 const timeForms = [{}, { generated_at: '2026-02-31T00:00:00Z' }, { valid_to: '2020-01-01T00:00:00Z' }];
+// UST-jls — the provenance axis. It was absent, and 14 shapes read VALID:LIGHT here while core called them INVALID:
+// a `prev` that was any string at all, a `based_on` whose seed bound it to nothing, attestation provenance on an
+// observation. Shapes are signed by HAND-BUILDING the state, because a shape our own builder refuses is exactly the
+// shape an attacker will send — the verifier is what has to hold, not the producer.
+const PA = 'sha256:' + 'a'.repeat(64), PB = 'sha256:' + 'b'.repeat(64), PC = 'sha256:' + 'cc'.repeat(32);
+const provForms = [
+  undefined, { prev: PA }, { prev: 'nope' }, { prev: 'sha256:' + 'A'.repeat(64) }, { prev: 'sha512:' + 'a'.repeat(128) }, { prev: '' },
+  { based_on: [{ hash: PB }], seed: lite.seed([PB]) }, { based_on: [{ hash: PB }] }, { based_on: [{ hash: PB }], seed: PA },
+  { based_on: [{ hash: PB }, { hash: PB }], seed: lite.seed([PB, PB]) }, { based_on: [{ hash: 'nope' }], seed: lite.seed(['nope']) },
+  { based_on: { hash: PB }, seed: lite.seed([PB]) }, { based_on: [] },
+  { constituents: [PB, PC] }, { constituents: [PB, PC], root: PA }, { constituents: [PB, PB], root: PA }, { constituents: ['nope'] },
+  { root: PA }, { seed: PA }, { prev: PA, based_on: [{ hash: PB }], seed: lite.seed([PB]) }, { sources: { s1: { addr: 'x' } } },
+];
+const genProv = (prov) => { try { const s = lite.buildState(id, time, data); if (prov !== undefined) s.provenance = prov; return lite.seal(s, kp.privateKey, kp.pub); } catch { return null; } };
+
 let genOk = true, genN = 0;
-const probe = (d) => { if (!d) return; genN++; if (lite.verify(d).result === 'VALID:LIGHT' && !full.isValid(full.verify(d))) { genOk = false; F.push('P0-01 GEN lite-VALID/core-INVALID'); } };
-for (const part of partForms) probe(gen1({}, {}, part));                                                     // envelope shapes at a valid id/time
-for (const idO of idForms) for (const timeO of timeForms) probe(gen1(idO, timeO, { kind: 'captured', value: { x: '1' } }));   // id × time forms at a valid public partition
+const varied = new Set();                                     // which state MEMBERS the corpus actually exercises
+const probe = (d, member) => { if (!d) return; genN++; if (member) varied.add(member); if (lite.verify(d).result === 'VALID:LIGHT' && !full.isValid(full.verify(d))) { genOk = false; F.push('P0-01 GEN lite-VALID/core-INVALID'); } };
+for (const part of partForms) probe(gen1({}, {}, part), 'data');                                             // envelope shapes at a valid id/time
+for (const idO of idForms) for (const timeO of timeForms) { probe(gen1(idO, timeO, { kind: 'captured', value: { x: '1' } }), Object.keys(idO).length ? 'id' : 'time'); }
+for (const prov of provForms) probe(genProv(prov), 'provenance');
+// `hashes` is varied by the tampered-value case above (§4.4 recompute), which is what breaking a hash IS.
+varied.add('hashes');
 ok(`round-51 P0-01 GENERATED differential (${genN} built shapes): lite VALID ⇒ core VALID over the constructed doc-shape space — a new lite-vs-core drift fails here, no hand corpus`, genOk);
+
+// UST-jls ROOT FIX — the round-51 comment above promised "exhaustive-by-construction, I never hand-enumerate
+// obligations again", and it kept that promise about OBLIGATIONS while the AXES stayed hand-written. provenance was
+// simply not in the list, so no obligation under it could ever be reached. Take the axis set from the code's own
+// registry and fail closed when a member of a state is never varied: the next unnamed axis cannot go missing quietly.
+const liteSrc = readFileSync(new URL('./index.mjs', import.meta.url), 'utf8');
+const STATE_MEMBERS = (/state:\s*\[([^\]]*)\]/.exec(liteSrc)?.[1] || '').split(',').map((s) => s.trim().replace(/^'|'$/g, '')).filter(Boolean);
+const unvaried = STATE_MEMBERS.filter((m) => !varied.has(m));
+ok(`UST-jls axis totality: every member of RESERVED.state (${STATE_MEMBERS.join(', ')}) is varied by the differential`, STATE_MEMBERS.length > 0 && unvaried.length === 0);
+if (unvaried.length) F.push('AXIS NEVER VARIED: ' + unvaried.join(', ') + ' — an obligation under it can never be reached');
 
 console.log(`\n  ust-lite validity vs full ust-protocol   PASS ${pass}   FAIL ${fail}`);
 if (F.length) { F.forEach((f) => console.log('    ✗ ' + f)); process.exit(1); }

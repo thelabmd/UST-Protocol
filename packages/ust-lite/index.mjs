@@ -34,6 +34,7 @@ const partitionHash = ({ domain_shard, ust_id, name, value, commit }) => commit 
   ? Hbytes('ust:shard', Buffer.from(commit, 'utf8'))
   : H('ust:shard', canon({ domain_shard, ust_id, partition: name, value }));
 // §7 signed content + content_hash.
+export const seed = (contentHashes) => H('ust:seed', canon(contentHashes));           // pinned signed order — byte-identical to core §9.4
 export const signedContent = (doc) => canon({ ust: doc.ust, state: doc.state });
 export const contentHash = (doc) => H('ust:state', signedContent(doc));
 
@@ -74,7 +75,7 @@ export function keypair() {
   const pub = publicKey.export({ format: 'der', type: 'spki' }).subarray(-32).toString('base64url');
   return { privateKey, pub, key_id: keyId(pub) };
 }
-export function buildState(id, time, data) {
+export function buildState(id, time, data, provenance) {
   if (id.class !== undefined && id.class !== 'observation') throw err('E-MALFORMED', 'ust-lite builds class:"observation" only — use ust-protocol for attestation/derivation/genesis/key/cadence');
   id = { ...id, class: 'observation' };   // round-49 P0-01 — class is REQUIRED (the verifier now rejects an absent class); ust-lite always stamps observation
   const n = Object.keys(data).length;
@@ -84,6 +85,20 @@ export function buildState(id, time, data) {
     hashes[name] = part.commit !== undefined ? partitionHash({ commit: part.commit })
       : partitionHash({ domain_shard: id.domain_shard, ust_id: id.ust_id, name, value: part.value });
   const state = { id, time, data, hashes };
+  // UST-jls — lite can now BUILD the chains it was already verifying. The producer refuses what its own verifier would
+  // refuse: a builder that emits documents its verifier rejects is worse than one that cannot build them at all.
+  // Member insertion order matches core exactly, because canon is order-preserving and byte-identity is the contract.
+  if (provenance !== undefined) {
+    if (typeof provenance !== 'object' || provenance === null || Array.isArray(provenance)) throw err('E-MALFORMED', 'provenance must be an object');
+    if (provenance.constituents !== undefined || provenance.root !== undefined) throw err('E-MALFORMED', 'observation MUST NOT carry constituents/root — an attestation is ust-protocol');
+    if (provenance.based_on !== undefined) {
+      if (!Array.isArray(provenance.based_on) || provenance.based_on.some((b) => !b || !HASH.test(b.hash || ''))) throw err('E-MALFORMED', 'based_on entries must carry sha256:hex `hash`');
+      if (new Set(provenance.based_on.map((b) => b.hash)).size !== provenance.based_on.length) throw err('E-MALFORMED', 'duplicate hash in based_on (§9.4)');
+      if (seed(provenance.based_on.map((b) => b.hash)) !== provenance.seed) throw err('E-SEED', 'seed must be H(ust:seed, canon(based_on hashes)) — build it with the exported seed()');
+    }
+    if (provenance.prev !== undefined && !HASH.test(provenance.prev)) throw err('E-MALFORMED', 'prev must be a sha256:hex content_hash');
+    state.provenance = provenance;
+  }
   const bytes = Buffer.byteLength(signedContent({ ust: '1.0', state }), 'utf8');
   if (bytes > FLOOR.sizeBytes) throw err('E-BOUNDS', `signed content ${bytes} B > LIGHT floor ${FLOOR.sizeBytes}`);
   return state;
@@ -147,11 +162,27 @@ export function verify(doc) {
   if (!TS.test(st.time.generated_at) || !TS.test(st.time.valid_from) || !TS.test(st.time.valid_to)) return bad('E-MALFORMED', 'timestamp not RFC3339-Z');
   if (!tsCalOk(st.time.generated_at) || !tsCalOk(st.time.valid_from) || !tsCalOk(st.time.valid_to)) return bad('E-MALFORMED', 'timestamp date not on the calendar');   // round-49 P0-01 — real date, not just shape
   if (st.time.valid_from > st.time.valid_to) return bad('E-MALFORMED', 'valid_from > valid_to');
-  // §14.5 / N10 class↔provenance: ust-lite carries NO provenance, so it handles `observation` (data) ONLY, and class is
-  // REQUIRED — the full verifier rejects an absent/unknown class (round-49 P0-01: an omitted class read VALID:LIGHT here while
-  // core returned INVALID). `attestation`/`derivation` REQUIRE provenance; `genesis`/`key`/`cadence` are the HIGH/TOP layer.
+  // §14.5 / N10 class↔provenance: ust-lite handles `observation` (data) ONLY, and class is REQUIRED — the full verifier
+  // rejects an absent/unknown class (round-49 P0-01: an omitted class read VALID:LIGHT here while core returned INVALID).
+  // `attestation`/`derivation` are the classes lite does not build; `genesis`/`key`/`cadence` are the HIGH/TOP layer.
   if (st.id.class !== 'observation')
-    return bad('E-MALFORMED', `ust-lite verifies class:"observation" only (class is required) — "${st.id.class}" needs provenance or the HIGH/TOP layer; use ust-protocol`);
+    return bad('E-MALFORMED', `ust-lite verifies class:"observation" only (class is required) — "${st.id.class}" needs the HIGH/TOP layer or the full builder family; use ust-protocol`);
+  // UST-jls — every §14a provenance obligation reachable at LIGHT, in CORE'S ORDER and with core's reasons, so a document
+  // violating several rules gets the same code from both. lite previously carried NO provenance checks at all while
+  // HAPPILY VERIFYING chained documents: 14 shapes read VALID:LIGHT here that core calls INVALID. A floor that admits what
+  // the ceiling rejects is not a subset — it is different semantics wearing the same name.
+  const pr = st.provenance;
+  if (pr !== undefined && (typeof pr !== 'object' || pr === null || Array.isArray(pr))) return bad('E-MALFORMED', 'provenance must be an object');
+  // §S4/F4 — an observation may chain (`prev`) and may cite (`based_on`), but attestation provenance is not its shape.
+  if (pr?.constituents !== undefined || pr?.root !== undefined) return bad('E-MALFORMED', 'observation MUST NOT carry constituents/root');
+  if (pr?.based_on !== undefined) {
+    if (!Array.isArray(pr.based_on) || pr.based_on.some((b) => !b || !HASH.test(b.hash || ''))) return bad('E-MALFORMED', 'based_on entries must carry sha256:hex `hash`');
+    if (new Set(pr.based_on.map((b) => b.hash)).size !== pr.based_on.length) return bad('E-MALFORMED', 'duplicate hash in based_on (citing a referent twice has no composite meaning, §9.4)');
+    // The seed is the ONLY thing binding a document to the set of inputs it cites. Accepting a based_on whose seed does
+    // not recompute accepts a provenance claim bound to nothing.
+    if (seed(pr.based_on.map((b) => b.hash)) !== pr.seed) return bad('E-SEED', 'derivation seed != H(ust:seed, canon(based_on hashes))');
+  }
+  if (pr?.prev !== undefined && !HASH.test(pr.prev)) return bad('E-MALFORMED', 'prev must be a sha256:hex content_hash');
   const shardKeyForm = /^sha256:[0-9a-f]{64}$/.test(st.id.domain_shard);
   if (shardKeyForm && st.id.domain_shard !== st.id.key_id) return bad('E-MALFORMED', 'key-form domain_shard ≠ key_id');
   // round-50 P0-01 — §4.3a homograph guard: a NAME-form domain_shard MUST be an A-label (ASCII; punycode xn-- for IDN), never
