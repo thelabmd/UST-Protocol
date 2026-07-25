@@ -68,6 +68,8 @@ coarsenings) — continuous-time pathologies (right-continuity, usual conditions
 A **state** at frame `t` is the tuple `(X₁,ₜ, …, Xₙ,ₜ)`; a **record** (transcript) `R` is a publisher's signed
 commitment to the observed values of that tuple.
 
+**Binding: none — definitional.** It fixes the ambient objects (Ω, the coordinate random variables) that every later section quantifies over; no party owes code for a naming of the ambient space.
+
 ## F.2 Measurement vs reality — the origin of "fixation, not truth"
 
 Distinguish two maps into `V`:
@@ -83,6 +85,8 @@ differs from the truth in whatever way), not an additive noise term.
 error*. This is the entire content of "fixation, not truth" (§1): the protocol certifies `M`, and is silent on
 the deviation between `M` and `Y`. Accountability follows — you learn *which publisher committed which `M` at which `t`* — but truth
 (`Y`) is out of scope by construction.
+
+**Binding: none — definitional.** It separates a measurement from the reality it measures — the framing that makes "fixation, not truth" precise. Nothing here is an obligation on an implementation.
 
 ## F.3 The anchor journal is a filtration
 
@@ -118,6 +122,8 @@ UNCONFIRMED; with authenticated non-membership it is REFUTED. (The reference jou
 snapshot — every slot of the hour listed — so non-membership there is checkable by construction.) This is
 exactly why a **retro-seal after an outage is fatal** — against a snapshot-complete journal it is a provably
 false claim about the realized history, not a mere policy breach.
+
+**Binding: none — substrate-assumption.** Monotonicity of the anchor journal (`F_s ⊆ F_t`, an entry never leaves) is REQUIRED OF the substrate profile (§17) and probed through `substrateVerify`; the checker cannot enforce a foreign log's append-only discipline, so a checker-side binding here would be the overclaim. The part UST does enforce — chain linkage and well-foundedness — is realized in F.5h.
 
 ## F.4 Streams are adapted processes
 
@@ -158,6 +164,8 @@ honest verdict is the strictly coarser **chain-consistent** (no-deletion), never
 change: the checkpoint is the existing `class:"attestation"` with two interval bounds added to its value, the
 grid is COMPUTED not stored, and the gap record already exists (§11.1) — completeness is earned by adding the
 cadence coordinate to `ℐ`, not by any new document shape.
+
+**Realization (rev85 — domain totality).** a frame is measurable with respect to its own anchored interval: adaptedness is refused when the covering interval is not chain-consistent — *"#39 chain-consistent covering interval ⇒ no-deletion-only (omission still possible)"*
 
 ## F.5 Verification is a measurability test — and the tiers are nested σ-algebras
 
@@ -417,6 +425,8 @@ non-membership on the time axis: both are F.3.1 authenticated non-membership ove
 structure already commits (the frame grid for completeness, the anchored name-map for no-fork). The strong word
 is EARNED by bringing that non-membership coordinate into `ℐ`, not bought by weakening the definition.
 
+**Realization (rev85 — domain totality).** authenticated non-membership is proven, never assumed: an absent key yields proven non-membership that stops short of authoritative — *"#42 SMT non-membership: absent key → proven non-membership (absent:true), not authoritative"*
+
 ## F.5a.1 Independence is CONSUMER-owned; the raw override is a distinct axiom (P0-2, REV 44)
 
 F.5a gives ONE independent-authority witness (the anchored name-map, mechanism b). REV 44 adds a second — an
@@ -511,6 +521,8 @@ PRESENT and inclusion-valid but whose substrate is unreachable or not-yet-buried
 the evidence may still arrive — this is unavailability, not a forgery). Absence of a floor is the LIGHT default,
 where `T` is surfaced as-is; the floors exist precisely so a TOP-needing consumer cannot be handed a LIGHT doc.
 
+**Realization (rev85 — domain totality).** the floor is the consumer's, so a stripped proof cannot pass it: stripping the proof under an anchored floor is rejected rather than silently downgraded — *"#45 requireAnchored: proof STRIPPED (authoritative HIGH) → E-ANCHOR (downgrade rejected)"*
+
 ## F.5c Fork-choice — anchor-inclusion is the choice function
 
 A single time coordinate `ust_id` may have SEVERAL candidate documents `{d₁, …, dₙ}` with DISTINCT
@@ -550,6 +562,8 @@ is a function of `(candidates, A_{auth})` alone. ∎ This is exactly the propert
 "canonical = anchor-included" turns an operator-side race into a consumer-side FUNCTION — the loser is decided by
 the chain, not by whichever document a given agent happened to fetch first.
 
+**Realization (rev85 — domain totality).** equivocation is detected rather than resolved by guessing: two anchored rivals under one authority are an error, not a winner — *"#45 forkChoice: both anchored, one authority, distinct hash → E-PREV (equivocation)"*
+
 ## F.5d Key-log freshness is the third face of authenticated non-membership
 
 The revocation predicate "key `k` is still valid at time `t`" is `¬∃ e : e revokes k ∧ e ∈ keylog ∧ time(e) ⪯ t`
@@ -568,6 +582,8 @@ independent uniqueness. A fetch from the authoritative surface timestamped `≥ 
 report); neither ⇒ `unverified`. Emitting `unverified` (never a forged "valid") and letting the consumer floor on it
 (`requireFreshKeylog`) is the F.5b discipline: the strong word is earned by the composed predicate, not bought by
 assuming a cached prefix is the whole log.
+
+**Realization (rev85 — domain totality).** a stale key-log cache cannot pass as fresh: a stale cache is INDETERMINATE, never quietly fresh — *"#40 requireFreshKeylog on a stale cache → INDETERMINATE stale_keylog"*
 
 ## F.5e The key-authority process `K_n(t)` — a state machine, not a set (MATH-04, #75)
 
@@ -612,6 +628,8 @@ window; the `keylog-state` vectors exercise the reducer invariant — both are e
 implementation runs through its own `K_n` and must match. (The `authorized_at` lower bound uses the key's CLAIMED
 authorization time; making it an ANCHORED lower bound is the operator manifest, ROOT 3.)
 
+**Realization (rev85 — domain totality).** the process needs a PROVEN U, not an assumed one: a retired key with an unanchored document is refused authority — *"P0-01 retired key + UNANCHORED doc → NOT authoritative (fail-closed, K_n needs a proven U)"*
+
 ## F.5f Composite authority is TRANSITIVE — the impersonation fix needs no new signed object (#75 ROOT 3)
 
 An external audit proposed closing the composition holes (an impostor becoming `canonical` / `complete` under a
@@ -650,6 +668,8 @@ not a new protocol primitive. (c) The remaining `latest-head` freshness (P0-05) 
 non-membership — the one composition problem that genuinely needs the anchored monitorable single-head, tracked
 separately. The audit's manifest collapses, by the math, to "per-frame `K_A` + `A`-signed cadence + the existing
 substrate anchor" — less machinery, each omission proven, not cut.
+
+**Realization (rev85 — domain totality).** transitivity is what refuses the impersonation, with no new signed object: a checkpoint whose carried key is not the prior-authorized signer is refused — *"AC carried current_key_id ≠ prior-authorized signer → INVALID(E-AUTHORITY)"*
 
 ## F.5g.0 The verified authority context — scope is DERIVED, never chosen (M2, rc.36)
 
@@ -1716,6 +1736,8 @@ The §9 combinators are exactly this closure:
 
 So "combine" never manufactures information — it only takes measurable functions of already-measurable events.
 
+**Realization (rev85 — domain totality).** composition is an algebra over constituents, not a free-form merge: an attestation whose root does not equal its constituents is refused — *"#44 E-ROOT → obligation §9.4 attestation-root + expected/actual"*
+
 ## F.7 The certainty predicate — and where probability is (and isn't) load-bearing
 
 For a committed record with event `A ∈ Fₜ`, no probability measure is needed to state the certainty claim —
@@ -1743,6 +1765,8 @@ it fixes `M` (with `ε` baked in) and stops. So the honest scoping is:
 Conflating the two — reading `P(...) = 1` as if UST asserted something probabilistic about *reality* — is the
 formal shape of the "signed = true" over-read the whole protocol exists to forbid.
 
+**Binding: none — definitional.** The certainty predicate names when a record is certain GIVEN the filtration; its operational content is the tier projection, realized in F.5.0.
+
 ## F.7a Scope note — private layers
 
 Private partitions and layer chains (§10/§10a) are REPRESENTED here only through their commitments: a blinded
@@ -1751,6 +1775,8 @@ public facts), while its VALUE remains outside every `ℐ` that lacks the disclo
 in this language, a controlled enlargement of a particular consumer's `ℐ` — the σ-algebras of §F.5 do not
 change; what changes is who holds which generators. A fuller treatment of multi-party layer graphs (who can
 prove membership of which layer to whom) is future work and NOT claimed by this appendix.
+
+**Binding: none — definitional.** A scope note delimiting the private layers; it states no property of the verifier.
 
 ## F.7b Ω, concretely (instantiation note)
 
@@ -1762,6 +1788,8 @@ of coordinates of ω, never the true `Y` (F.2). Implementations never instantiat
 "verification is a measurability test" is precise. Two conforming verifiers agree not because they share an
 interpretation of Ω but because they evaluate the same TOTAL function of the same record (I4) — Ω-independence
 is the point, not a gap.
+
+**Binding: none — definitional.** An instantiation note showing one concrete reading of Ω; illustrative, not obligating.
 
 ## F.8 What this model does NOT claim
 
@@ -1775,6 +1803,8 @@ is the point, not a gap.
   precision, not a machine-checked or journal-refereed development. An independent professional measure-theory
   review is an OPEN assurance gate (it pairs with the pending human cryptographic audit); until it lands, cite
   this appendix as the protocol's semantics, not as a peer-reviewed theorem set.
+
+**Binding: none — definitional.** It enumerates what the model does NOT claim. A negative scope statement has no realization by construction.
 
 ## F.9 Resource-bounded verification (non-normative; the numbers stay normative in §13)
 
@@ -1795,6 +1825,8 @@ by `v` only when BOTH hold: `𝒮_τ ⊆ ℐ_v` (information) and `C_v(R) ⪯ ρ
 yields `INDETERMINATE(unavailable)`; insufficient local resources yield `INDETERMINATE(resource_limit)`
 (the wire reasons of §15). Neither makes a protocol-valid transcript INVALID.
 
+**Binding: none — numbers-normative-in-§13.** The section says so itself: the numbers stay normative in §13, and the bounds checks realize them there.
+
 ### F.9.1 Extensive and structural metrics
 
 A metric is a **VOLUME** metric when legitimate publisher data increases it extensively (≈ additively under
@@ -1811,6 +1843,8 @@ increase. `D, A, F, W, K` are STRUCTURE metrics. Hence the law:
 
 That is why VOLUME bounds are ceremony-declarable and STRUCTURE bounds are protocol-wide laws (§13).
 
+**Binding: none — numbers-normative-in-§13.** Metric definitions feeding §13; the obligations are the §13 bounds.
+
 ### F.9.2 Capacity earned by authority
 
 Let `κ₀ = (B₀, P₀)` be the universal LIGHT floor, `κ_ABS = (B_ABS, P_ABS)` the protocol ceiling, and let an
@@ -1823,6 +1857,8 @@ verifier's authority information: `G_κ ∈ 𝒜` and `𝒜 ⊆ ℐ_v`. Effectiv
 A self-signed declaration does not enlarge capacity because key possession alone never places it in the
 name-authority σ-algebra: `𝒜 ⊄ ℒ`. On the wire this is rc.12's TRUSTED GRANT: the grant flows FROM
 `resolveAuthority` (or the caller's pin/policy), never from a caller-attached genesis document.
+
+**Binding: none — numbers-normative-in-§13.** Capacity is a reading of the §13 constants, not an independent obligation.
 
 ### F.9.3 Bounded-verification verdict
 
@@ -1843,6 +1879,8 @@ resources are distinct states.
 Transport admission (refusing an over-budget RAW input before decoding) is a fourth, pre-verdict state: a
 refusal to start, reported as `resource_limit`, never a statement about the document.
 
+**Binding: none — numbers-normative-in-§13.** The bounded verdict shape is normative in §13 and realized by its bounds checks.
+
 ### F.9.4 Portability of the LIGHT floor
 
 Let `𝓔₀` be the declared class of baseline environments and `ρ₀ = inf_{e∈𝓔₀} ρ_e`. The floor is PORTABLE
@@ -1852,6 +1890,8 @@ environment and a light-but-tight one can each pass their own condition while fa
 information-decidable from its own bytes and computationally decidable by every baseline implementation. This
 is the resource form of LIGHT self-containment.
 
+**Binding: none — numbers-normative-in-§13.** Portability of the LIGHT floor is a consequence of the §13 numbers.
+
 ### F.9.5 Structural escape transformations
 
 An absolute STRUCTURE bound does not reduce expressive power when a protocol-native, commitment-preserving
@@ -1859,6 +1899,8 @@ transformation exists: `4096 = 64²` (a two-level attestation tree carries the f
 breadth 64); oversized arrays chunk; deep data restructures; long key histories split into re-genesis epochs;
 long walks continue across bounded calls. Each transformation preserves the existence and hash-binding of the
 represented state while keeping every single verification inside a universal resource envelope.
+
+**Binding: none — numbers-normative-in-§13.** Escape transformations are arithmetic over the §13 constants.
 
 ### F.9.6 Calibration of the numerical constants
 

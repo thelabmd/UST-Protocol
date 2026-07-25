@@ -45,6 +45,15 @@ probe('model Realization without a registry record → model-lockstep', 'spec/US
 probe('new inference rule (16th RULE_CONTRACTS key) → rule-lockstep', 'packages/ust-protocol/reference-checker.mjs',
   (s) => s.replace('RULE_CONTRACTS = deepFreeze(Object.assign(Object.create(null), {', 'RULE_CONTRACTS = deepFreeze(Object.assign(Object.create(null), {\n  __DriftRule16: 1,'), 'node tools/rule-lockstep.mjs');
 
+// 6) a NEW model section that binds nothing must be caught — the domain, not a joined population (rev85).
+//    This is the probe the whole arc was missing: silence used to be invisible to every gate at once.
+probe('new UNBOUND model section → model-domain totality', 'spec/UST-1.0-formal-model.md',
+  (s) => s + '\n## F.99 Drift probe — a section that binds nothing\n\nIt asserts a property and cites no check.\n', 'node tools/model-domain-totality.mjs');
+// 7) a Binding marker whose reason is OUTSIDE the closed set must be caught — an unknown reason is not a licence.
+probe('Binding reason outside the closed set → model-domain totality', 'spec/UST-1.0-formal-model.md',
+  (s) => s.replace('**Binding: none — definitional.** It fixes the ambient objects', '**Binding: none — because-i-said-so.** It fixes the ambient objects'),
+  'node tools/model-domain-totality.mjs');
+
 console.log(`\n  drift-guards (meta — every from-code gate is fail-closed)   PASS ${pass}   FAIL ${F.length}`);
 if (F.length) { F.forEach((f) => console.log('    ✗ ' + f)); process.exit(1); }
 console.log(`  ✓ all ${pass} from-code drift gates REJECT their injected drift — a weakened gate (or a moved anchor) fails HERE, not silently`);

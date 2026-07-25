@@ -348,6 +348,54 @@
       "rev": "rev69",
       "model_locus": "IS the sound public boundary",
       "conformance_check": "R47 (rev69 structural) resolveCadenceBytes IS the sound bytes-in boundary (pure function of immutable byte-strings, order-independent by construction) and the object resolveCadence adapter faithfully delegates to it (identical verdict on the same data)"
+    },
+    {
+      "id": "R85-f4-adapted-stream",
+      "rev": "rev85",
+      "model_locus": "a frame is measurable with respect to its own anchored interval",
+      "conformance_check": "#39 chain-consistent covering interval ⇒ no-deletion-only (omission still possible)"
+    },
+    {
+      "id": "R85-f5a-nonmembership",
+      "rev": "rev85",
+      "model_locus": "authenticated non-membership is proven, never assumed",
+      "conformance_check": "#42 SMT non-membership: absent key → proven non-membership (absent:true), not authoritative"
+    },
+    {
+      "id": "R85-f5b-downgrade",
+      "rev": "rev85",
+      "model_locus": "the floor is the consumer's, so a stripped proof cannot pass it",
+      "conformance_check": "#45 requireAnchored: proof STRIPPED (authoritative HIGH) → E-ANCHOR (downgrade rejected)"
+    },
+    {
+      "id": "R85-f5c-forkchoice",
+      "rev": "rev85",
+      "model_locus": "equivocation is detected rather than resolved by guessing",
+      "conformance_check": "#45 forkChoice: both anchored, one authority, distinct hash → E-PREV (equivocation)"
+    },
+    {
+      "id": "R85-f5d-keylog-fresh",
+      "rev": "rev85",
+      "model_locus": "a stale key-log cache cannot pass as fresh",
+      "conformance_check": "#40 requireFreshKeylog on a stale cache → INDETERMINATE stale_keylog"
+    },
+    {
+      "id": "R85-f5e-kn-proven-u",
+      "rev": "rev85",
+      "model_locus": "the process needs a PROVEN U, not an assumed one",
+      "conformance_check": "P0-01 retired key + UNANCHORED doc → NOT authoritative (fail-closed, K_n needs a proven U)"
+    },
+    {
+      "id": "R85-f5f-transitive",
+      "rev": "rev85",
+      "model_locus": "transitivity is what refuses the impersonation, with no new signed object",
+      "conformance_check": "AC carried current_key_id ≠ prior-authorized signer → INVALID(E-AUTHORITY)"
+    },
+    {
+      "id": "R85-f6-event-algebra",
+      "rev": "rev85",
+      "model_locus": "composition is an algebra over constituents, not a free-form merge",
+      "conformance_check": "#44 E-ROOT → obligation §9.4 attestation-root + expected/actual"
     }
   ]
 }
