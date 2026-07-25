@@ -11,7 +11,8 @@
     "packages/ust-cli",
     "packages/ust-lite",
     "packages/ust-ots-verify",
-    "packages/ust-rekor-verify"
+    "packages/ust-rekor-verify",
+    "packages/diarium"
   ],
   "scripts": {
     "test": "node packages/ust-protocol/conformance.mjs && node packages/ust-protocol/run-arc-vectors.mjs",
@@ -40,6 +41,7 @@
     "test:reference-checker": "node packages/ust-protocol/reference-checker.test.mjs",
     "test:reference-checker-fuzz": "node packages/ust-protocol/reference-checker.fuzz.mjs",
     "test:bmc": "node packages/ust-protocol/bmc.mjs",
-    "test:temporal-bmc": "node packages/ust-protocol/temporal-bmc.mjs"
+    "test:temporal-bmc": "node packages/ust-protocol/temporal-bmc.mjs",
+    "test:diarium": "node --test packages/diarium/test/*.test.mjs"
   }
 }

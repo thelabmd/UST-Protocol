@@ -1,0 +1,41 @@
+{
+  "name": "diarium",
+  "version": "0.1.0",
+  "description": "Agent memory as a verifiable UST stream — a task closes, the agent writes what it learned, the entry is sealed and prev-chained. Tamper-evident, offline-verifiable, no server.",
+  "type": "module",
+  "bin": {
+    "diarium": "./bin/diarium.mjs"
+  },
+  "files": [
+    "bin/",
+    "LICENSE",
+    "README.md",
+    "FLOW.md",
+    "INTEGRATE.md"
+  ],
+  "keywords": [
+    "ust",
+    "agent",
+    "agent-memory",
+    "journal",
+    "tamper-evident",
+    "ed25519",
+    "provenance"
+  ],
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "ust-protocol": "^1.0.0-rc.32"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thelabmd/UST-Protocol.git",
+    "directory": "packages/diarium"
+  },
+  "homepage": "https://github.com/thelabmd/UST-Protocol/tree/main/packages/diarium#readme",
+  "scripts": {
+    "test": "node --test"
+  }
+}

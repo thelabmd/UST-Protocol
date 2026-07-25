@@ -46,6 +46,8 @@ jobs:
         run: npm run test:docs-parity
       - name: CLI ceremony regression (9th-audit — the seven points cannot regress)
         run: npm run test:cli
+      - name: diarium store discipline (chain-derived order, refusal to extend damage, the cap, one closure one entry)
+        run: npm run test:diarium
       - name: ust-lite is a valid UST subset (byte-identical to the reference impl, both directions)
         run: npm run test:lite
       - name: security regression (external-audit P0/P1 reproductions must stay closed — epic UST-1o6)
