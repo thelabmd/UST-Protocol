@@ -54,6 +54,10 @@ probe('Binding reason outside the closed set → model-domain totality', 'spec/U
   (s) => s.replace('**Binding: none — definitional.** It fixes the ambient objects', '**Binding: none — because-i-said-so.** It fixes the ambient objects'),
   'node tools/model-domain-totality.mjs');
 
+// 8) a RETIRED mechanism re-appearing in the documents must be caught (rev88) — an abandoned path cannot walk back in.
+probe('retired mechanism re-specified → retired-mechanisms', 'spec/UST-1.0.md',
+  (s) => s + '\n\nThe key log MAY instead be committed as a positioned SMT keyed by `H(index)`.\n', 'node tools/retired-mechanisms-gate.mjs');
+
 console.log(`\n  drift-guards (meta — every from-code gate is fail-closed)   PASS ${pass}   FAIL ${F.length}`);
 if (F.length) { F.forEach((f) => console.log('    ✗ ' + f)); process.exit(1); }
 console.log(`  ✓ all ${pass} from-code drift gates REJECT their injected drift — a weakened gate (or a moved anchor) fails HERE, not silently`);

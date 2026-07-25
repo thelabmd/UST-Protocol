@@ -2129,7 +2129,7 @@ provenance and will be lifted into this ledger when the spec is published.
     (`verifyEpochTransition`, wired into `verifyAuthorityCheckpointChain`).
   - **Strict last-index terminality** (F.5n): `deriveCheckpointFreshness` now proves the head is the LAST key-log
     entry — inclusion at position `L-1` AND authenticated non-membership at `L` (positioned SMT) — replacing the
-    weaker `head ∈ root` and catching a hidden successor (a lying `length`).
+    weaker `head ∈ root` and catching a hidden successor (a lying `length`). **This construction was LATER found unsound by external audit (P0-02) and replaced by a size-bound ordered vector commitment — see §12.3.3; the entry stands as shipped.**
   conformance 305/0, cli 130/0, mcp live 11/0, ssrf 7/0, model↔code 85/85.
 - **REV 46 (2026-07-14)** — **the authority-checkpoint chain made NORMATIVE** (#76/#77 → UST-t6x, the last design
   artifact). A SPEC-ONLY pass: the mechanism was already realized + conformance-tested + vectored in REV 44/45, so
@@ -2138,7 +2138,7 @@ provenance and will be lifted into this ledger when the spec is published.
   re-implementation: the three-layer checkpoint object (`CheckpointBody` → `ust:authority-checkpoint-signature`
   preimage → `checkpoint_id = H("ust:authority-checkpoint", canon({body,sig}))`, external evidence EXCLUDED from
   the id); the ordered resolve-signer-before-trust verify (§12.3.1); rotation / 2-of-3 recovery / genesis-epoch
-  transition (§12.3.2); strict last-index key-log terminality via a positioned SMT (§12.3.3); the two typed
+  transition (§12.3.2); strict last-index key-log terminality via a positioned SMT (§12.3.3 — that construction was LATER found unsound by external audit and replaced by a size-bound ordered vector commitment; the history entry stands as shipped, the section is authoritative); the two typed
   authenticated-map predicates + accepted-witness quorum (§12.3.4); the `unverified ⊊ fresh ⊊ corroborated ⊊
   attested` freshness ladder + facts-only `VerifiedEvidence` (§12.3.5); and the distinct verdict vocabulary
   (§12.3.6). §15 now lists `E-AUTHORITY`/`E-SEQ`/`E-EVIDENCE` (already emitted by the impl) and scopes the
