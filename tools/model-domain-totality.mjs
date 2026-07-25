@@ -118,6 +118,35 @@ for (let i = 0; i < heads.length; i++) {
   rows.push({ id, bound, byRegistry, nCites: executedCites.length, marker });
 }
 
+// ── THE NORMATIVE SPEC (rev87) ─────────────────────────────────────────────────────────────────────────────────────
+// The appendix above is non-normative; `spec/UST-1.0.md` is the document third parties implement, and it had NO
+// traceability convention at all. Note carefully what is and is not being claimed: the wire format IS tested — the
+// conformance vectors exercise it and `spec-code-sync` generates whole regions FROM code. What is missing is a
+// machine-verifiable link from a normative STATEMENT to the check that realizes it. So this block does NOT force a
+// marker onto 49 sections (that would manufacture paperwork and call it coverage). It enumerates the domain, counts
+// what is genuinely bound, and PINS the unbound remainder so the number can be driven down deliberately and can never
+// drift up unnoticed. Binding sources: a generated `spec-sync:` region, an executed citation, a named existing gate,
+// or the same explicit marker the appendix uses.
+const SPEC = readFileSync(new URL('../spec/UST-1.0.md', import.meta.url), 'utf8');
+// A section covered by a DIFFERENT existing gate — declared, because the coverage lives in that gate, not here.
+const GATE_COVERAGE = { '14.': 'rule-lockstep (the §14 decision relation is frozen: case labels == RULE_CONTRACTS keys, both directions)' };
+const PINNED_SPEC_UNBOUND = 48;
+
+const specHeads = [...SPEC.matchAll(/\n#{2,3} ([^\n]+)/g)].map((m) => ({ pos: m.index, title: m[1].trim() }));
+const specBounds = specHeads.map((h) => h.pos).concat(SPEC.length);
+if (specHeads.length < 40) failures.push(`spec section extraction broke — only ${specHeads.length} sections found`);
+const specUnbound = [];
+for (let i = 0; i < specHeads.length; i++) {
+  const title = specHeads[i].title, body = SPEC.slice(specHeads[i].pos, specBounds[i + 1]);
+  const generated = body.includes('spec-sync:');
+  const cited = [...body.matchAll(/\*"([^"]+)"\*/g)].map((m) => m[1]).some(citationExecuted);
+  const byGate = Object.keys(GATE_COVERAGE).some((k) => title.startsWith(k));
+  const marked = MARKER.test(body);
+  if (!(generated || cited || byGate || marked)) specUnbound.push(title.split('—')[0].trim().slice(0, 54));
+}
+if (specUnbound.length > PINNED_SPEC_UNBOUND)
+  failures.push(`the NORMATIVE SPEC untraced remainder grew: ${specUnbound.length} sections have no machine-verifiable link to a check, pinned at ${PINNED_SPEC_UNBOUND}. Bind the new section (cite an executed check, generate its region, or declare it) — this number may only go down`);
+
 if (failures.length) {
   console.error(`✗ model-domain totality FAILED — ${failures.length} finding(s) over ${rows.length} enumerated sections:`);
   for (const f of failures) console.error('   • ' + f);
@@ -131,4 +160,9 @@ console.log(`✓ model-domain totality: ${rows.length}/${rows.length} enumerated
 if (pending.length) {
   console.log(`  named residuals (a deferral is reported, never silent):`);
   for (const p of pending) console.log(`    ${p.id} — pending: ${p.marker.reason}`);
+}
+console.log(`  normative spec: ${specHeads.length - specUnbound.length}/${specHeads.length} sections traceable to a check (generated region, executed citation, named gate, or declaration); ${specUnbound.length} untraced (pinned ≤ ${PINNED_SPEC_UNBOUND}) — the wire format IS tested by the vectors, what is pinned here is the missing STATEMENT→check link:`);
+for (const s of specUnbound.slice(0, 8)) console.log(`    ${s}`);
+if (specUnbound.length > 8) console.log(`    … and ${specUnbound.length - 8} more`);
+{
 }
