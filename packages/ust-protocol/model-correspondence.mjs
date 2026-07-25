@@ -4,26 +4,47 @@
 // is a REAL check in conformance.mjs — so a theorem cannot claim a property the running suite does not verify. Pair it
 // with `node conformance.mjs` (which must be green): together they show each formal claim maps to a passing check.
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { ASSURANCE_AXES, EVIDENCE_CAPS_UNIVERSE } from './index.mjs';
 
 const model = readFileSync(new URL('../../spec/UST-1.0-formal-model.md', import.meta.url), 'utf8');
 const conf = readFileSync(new URL('./conformance.mjs', import.meta.url), 'utf8');
 
+// rev86 (C2, presence → EXECUTION): a citation used to resolve against the conformance SOURCE TEXT. A source substring
+// proves the label was TYPED, not that the check RAN — disable it, rename it, or strand it behind a branch that never
+// executes and the citation still resolved, so the model kept claiming a realization the suite no longer performed.
+// The bar is now the EXECUTED manifest (the ids that actually ran and passed), bound to the source it came from by
+// recomputed digests so a stale manifest cannot restore the weaker behaviour. Measured at introduction: all 208
+// citations already resolved against the manifest (173 exact + 35 by fragment), so this costs nothing today and closes
+// the class permanently — the same shape the lockstep gate already applies to its registry records.
+const MANIFEST = JSON.parse(readFileSync(new URL('../../vectors/conformance-checks.json', import.meta.url), 'utf8'));
+const srcHash = (rel) => createHash('sha256').update(readFileSync(new URL(rel, import.meta.url))).digest('hex');
+if (!MANIFEST.source
+  || MANIFEST.source.conformance !== srcHash('./conformance.mjs')
+  || MANIFEST.source.index !== srcHash('./index.mjs')) {
+  console.log('  ✗ the executed manifest is STALE — regenerate it; a citation must resolve against checks that RAN, not against source text');
+  process.exit(1);
+}
+const EXECUTED = Array.isArray(MANIFEST.checks) ? MANIFEST.checks : [];
+const EXECUTED_SET = new Set(EXECUTED);
+
 const cites = [...model.matchAll(/\*"([^"]+)"\*/g)].map((m) => m[1]);
 let ok = 0; const miss = [];
 for (const c of cites) {
-  // a citation may be fragmented with "..." (shared prefix elided); require its LONGEST verbatim fragment in conformance
+  // a citation may be fragmented with "..." (shared prefix elided); require its LONGEST verbatim fragment to name a
+  // check that RAN AND PASSED — exact id first, then the fragment inside an executed id.
   const frag = c.split('...').map((s) => s.trim()).filter((s) => s.length >= 12).sort((a, b) => b.length - a.length)[0] || c.trim();
-  if (conf.includes(frag)) ok++; else miss.push({ c, frag });
+  if (EXECUTED_SET.has(c) || EXECUTED.some((label) => label.includes(frag))) ok++;
+  else miss.push({ c, frag, inSource: conf.includes(frag) });
 }
 
-console.log(`\n  model ↔ conformance: ${ok}/${cites.length} cited theorem checks found in conformance.mjs`);
+console.log(`\n  model ↔ conformance: ${ok}/${cites.length} cited theorem checks RAN AND PASSED in the executed manifest`);
 if (miss.length) {
   console.log('  ✗ a formal-model theorem cites a check that does not exist:');
-  for (const m of miss) console.log('    MISSING: "' + m.frag + '"   (cited as: "' + m.c + '")');
+  for (const m of miss) console.log('    ' + (m.inSource ? 'TYPED BUT NEVER EXECUTED' : 'MISSING') + ': "' + m.frag + '"   (cited as: "' + m.c + '")');
   process.exit(1);
 }
-console.log('  ✓ every theorem the formal model cites is a real conformance check (math ⇒ code)');
+console.log('  ✓ every theorem the formal model cites is a check that actually RAN (math ⇒ executed code, not merely typed)');
 
 // ── INTERNAL MATH-CONSISTENCY (UST-1n1) — the rc.35 M1 contradiction class: the model DEFINED EvidenceBasis as a
 //    SET yet COUNTED it as a 4-chain (2·4·4·2·4 = 256), and the citation guard above could not see it (it checks
