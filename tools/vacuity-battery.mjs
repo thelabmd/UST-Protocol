@@ -31,52 +31,15 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { MUTATIONS, applyMutation } from './mutations.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const REG = JSON.parse(readFileSync(root + 'tools/lockstep-registry.json', 'utf8')).records || [];
 
-// Each mutant names a VERDICT-PRODUCING seam and breaks it in one direction. `from` must appear exactly once.
-const MUTANTS = [
-  {
-    id: 'verifier-stops-refusing',
-    why: 'the single seam that constructs a refusal. Broken, the verifier accepts everything it should reject — every check whose evidence is "the attack is refused" must go red.',
-    file: 'packages/ust-protocol/index.mjs',
-    from: "function bad(code, detail, fields) { return { result: 'INVALID', error: code, detail, ...(fields || null) }; }",
-    to: "function bad(code, detail, fields) { return { result: 'VALID', tier: 'LIGHT' }; }",
-  },
-  {
-    id: 'signature-always-verifies',
-    why: 'the Ed25519 leaf. Broken, every forged or tampered signature passes — checks whose evidence is "a bad signature is refused" must go red.',
-    file: 'packages/ust-protocol/index.mjs',
-    from: 'export function edVerifyStrict(pubB64url, msgUtf8, sigB64url) {',
-    to: 'export function edVerifyStrict(pubB64url, msgUtf8, sigB64url) { return true; /* mutant */',
-  },
-  {
-    id: 'tier-always-top',
-    why: 'the tier projection. Broken, every document reads as the strongest tier — checks whose evidence is "this evidence does NOT earn TOP/authoritative" must go red.',
-    file: 'packages/ust-protocol/index.mjs',
-    from: 'export function projectTier(state) {',
-    to: "export function projectTier(state) { return 'TOP'; /* mutant */",
-  },
-  {
-    // rev87 (a) — reaches the normative TCB itself, which no earlier mutant touched. Its evidence channel is the
-    // byte-vector corpus, not conformance, so this mutant is observed through BOTH.
-    id: 'tcb-stops-refusing',
-    why: 'the refusal seam inside the reference checker — the normative TCB. Broken, `checkAuthorityProofBytes` accepts every package it should reject, so the language-neutral byte corpus must go red.',
-    file: 'packages/ust-protocol/reference-checker.mjs',
-    from: "  const INVALID = (reason) => ({ result: 'INVALID', reason });",
-    to: "  const INVALID = (reason) => ({ result: 'VALID', tier: 'LIGHT' });",
-    channels: ['conformance', 'byte-vectors'],
-  },
-  {
-    // rev87 (b) — the STRUCTURAL family: from-code rosters/partitions do not fail when a verdict seam breaks, so the
-    // verdict mutants above could never reach them. This one breaks what they actually guard: an unclassified export.
-    id: 'unclassified-export',
-    why: 'the from-code partition. A new export that no one classified must fail the roster checks — the family whose evidence is "a new surface cannot ship silently".',
-    file: 'packages/ust-protocol/index.mjs',
-    append: '\nexport function __vacuityProbeExport(x) { return x; }\n',
-  },
-];
+// rev89 — the mutation corpus is SHARED with drift-guards (tools/mutations.mjs): one definition per deliberate break,
+// two observers. This gate runs the ones whose channel list reaches the suite; the doc-only mutations are gate-only and
+// would burn a suite execution to observe a guaranteed zero, so they are skipped here by their own declaration.
+const MUTANTS = MUTATIONS.filter((m) => (m.observe || []).length > 0);
 
 // The residual is pinned: registered checks not yet reached by any mutant. Lower it as the battery grows; it must
 // never rise. (A new registered check with no mutant reaching it is EXPECTED to raise this — that is the point.)
@@ -90,23 +53,17 @@ for (const m of MUTANTS) {
   const path = root + m.file;
   const backup = readFileSync(path);
   const orig = backup.toString('utf8');
-  let mutated;
-  if (m.append) {
-    mutated = orig + m.append;                                       // an ADDITIVE mutant (a new unclassified surface)
-  } else {
-    const occurrences = orig.split(m.from).length - 1;
-    if (occurrences !== 1) {
-      failures.push(`[${m.id}] its seam appears ${occurrences} times (need exactly 1) — the source moved; update the mutant, do not weaken it`);
-      continue;
-    }
-    mutated = orig.replace(m.from, m.to);
+  const mutated = applyMutation(m, orig);
+  if (mutated === null) {
+    failures.push(`[${m.id}] its seam is absent or ambiguous — the source moved; update the mutation in tools/mutations.mjs, do not weaken it`);
+    continue;
   }
 
   // Observation channels. `conformance` names the registered checks that noticed; `byte-vectors` is the TCB's own
   // language-neutral corpus, whose evidence is a vector count, not a registry id — the only way to reach the reference
   // checker at all. Neither suite writes a committed artifact on a red run, but both are protected anyway: this gate
   // must never be the reason a committed file changes.
-  const channels = m.channels || ['conformance'];
+  const channels = m.observe;
   const mfPath = root + 'vectors/conformance-checks.json';
   const mfBackup = readFileSync(mfPath);
   const bvPath = root + 'vectors/checker-byte-vectors.json';
@@ -139,8 +96,10 @@ for (const m of MUTANTS) {
   // only a break that NO channel notices is a failure.
   for (const ch of stayedGreen)
     console.log(`    note: the ${ch} suite did not notice this seam — a coverage boundary, not a defect (another channel did)`);
-  if (!detected)
+  if (!detected && m.mustDetect)
     failures.push(`[${m.id}] NOTHING noticed this break on any channel — the mutant is decorative, or the checks that should cover this seam are vacuous`);
+  if (!detected && !m.mustDetect)
+    console.log(`    note: no registered check noticed it — harvest only; its own gate covers it (drift-guards)`);
   for (const r of hit) caught.add(r.id);
   corpusEvidence = Math.max(corpusEvidence, vectorHits);
   const bv = channels.includes('byte-vectors') ? `, ${vectorHits} byte-vector(s)` : '';
