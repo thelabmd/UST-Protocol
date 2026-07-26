@@ -182,7 +182,14 @@ check('G1 name-form domain_shard, no binding → INDETERMINATE (cannot confirm t
   const a0 = P.seal(P.buildState({ domain_shard: 'x.com', ust_id: 'ust:20260628.2001', key_id: A.key_id, class: 'observation' }, T, { r: { kind: 'captured', value: { n: '1' } } }), A.priv, A.pubB64);
   const a1 = P.seal(P.buildState({ domain_shard: 'x.com', ust_id: 'ust:20260628.2002', key_id: A.key_id, class: 'observation' }, T, { r: { kind: 'captured', value: { n: '2' } } }, { prev: P.contentHash(a0) }), A.priv, A.pubB64);
   const h = P.contentHash(a1), cp = P.seal(P.buildCheckpoint({ domain_shard: 'x.com', ust_id: 'ust:20260628.2003', key_id: A.key_id }, T, h, 2, h), A.priv, A.pubB64);
-  check('F2 stream checkpoint w/o genesis→not proven', P.verifyStream([a0, a1], { checkpoint: cp }).complete !== 'proven');
+  // Was `complete !== 'proven'` — VACUOUS by construction: the reference vocabulary is
+  // none | provisional | chain-consistent | complete, so 'proven' can never appear and the assertion was free. The word
+  // came from the clean-room verifier, which really did mint it until 2026-07-26. Now it asserts the verdict that must
+  // ACTUALLY hold: an origin-unbound stream is `provisional` and says why.
+  check('F2 stream checkpoint w/o genesis → provisional (origin-unbound), never a stronger verdict', (() => {
+    const r = P.verifyStream([a0, a1], { checkpoint: cp });
+    return r.complete === 'provisional' && /origin-unbound/.test(r.reason || '');
+  })());
 }
 check('F3 embedded bad proof→E-ANCHOR', (() => { const b = clone(mk()); b.proof = { root: 'sha256:' + '00'.repeat(32), path: [], anchor: { substrate: 'bitcoin-ots' } }; return P.verify(b, { context: 'data' }).error === 'E-ANCHOR'; })());
 check('F4 derivation no-provenance→E-MALFORMED', P.verify(mk({ r: { kind: 'computed', value: { x: '1' } } }, { ...ID, class: 'derivation' }), { context: 'data' }).error === 'E-MALFORMED');
