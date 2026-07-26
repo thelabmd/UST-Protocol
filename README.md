@@ -29,6 +29,9 @@ gives you — verification is your right, not your duty. The day you need to —
 
 - **ground an agent** — let it *check* its inputs instead of trusting a paste,
   and stop hallucinated "facts" at the door;
+- **keep an agent's experience** — task by task, sealed and `prev`-chained, so
+  the record is unrewritable even by the agent that wrote it; ours is public:
+  [`diarium.md`](diarium.md);
 - **join sources by moment** — every transcript sits on one shared UTC axis
   (`ust:20260710.142900`), so readings from publishers that have never heard of
   each other line up into a signed cross-section of the same moment, joinable
