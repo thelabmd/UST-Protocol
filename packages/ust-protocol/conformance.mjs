@@ -167,6 +167,34 @@ check('#95 an async connector is NAMED, never silently taken as unproven-or-true
 })());
 check('#95 with NO connector the bundled walk still refuses a foreign-shape proof (no silent acceptance)',
   P.verifyAnchor(A_CH, A_ALIEN).inclusion === false);
+// §3.1/F.5.0 — the tier is the SUFFIX of a VALID verdict, never a field on a refusal. NONE is what Π returns when
+// ranking an assurance STATE whose floor is unmet; it is not an answer about a verdict, and four admission doors used
+// to emit it as one. Uniformity is the property: no refusal path may grow a tier again.
+{
+  // MEASURED, three tries deep: an EMPTY throwing Proxy is not hostile — `{}` has no own keys, so the trap never fires
+  // and the document is refused later as merely malformed, never reaching the admission door the mutation targets.
+  // These three DO reach it: a keyed throwing Proxy, a function nested in the value, and a throwing ownKeys.
+  const refusals = [
+    ['keyed throwing Proxy (admission door)', P.verify(new Proxy({ ust: '1.0' }, { get() { throw new Error('h'); } }), { context: 'data' })],
+    ['function nested in the document (admission door)', P.verify({ ust: '1.0', state: { fn: () => 1 } }, { context: 'data' })],
+    ['throwing ownKeys (admission door)', P.verify(new Proxy({}, { ownKeys() { throw new Error('h'); } }), { context: 'data' })],
+    // ENUMERATE THE ENTRY POINTS, not one of them: the admission door exists separately in verify, verifyAsync and
+    // resolveByDiscovery, and a check that calls only the first cannot see a tier grow back on the other two.
+    ['verifyAsync admission door', await P.verifyAsync(new Proxy({ ust: '1.0' }, { get() { throw new Error('h'); } }), { context: 'data' })],
+    ['resolveByDiscovery admission door', (await P.resolveByDiscovery(new Proxy({ ust: '1.0' }, { get() { throw new Error('h'); } }), { context: 'data' })).verdict],
+    ['malformed document', P.verify({ ust: '1.0' }, { context: 'data' })],
+    ['bad signature', (() => { const d = clone(mk()); d.sig.sig = 'A'.repeat(d.sig.sig.length); return P.verify(d, { context: 'data' }); })()],
+    // NOT included: hostile opts. MEASURED — verify() DEGRADES to the floor there rather than refusing (options only
+    // ever ADD context, so losing them can only LOWER a verdict), so it is a VALID:LIGHT and not a refusal at all.
+    // verifyAnchor refuses the same input instead; both directions lower, and the difference is recorded, not fixed here.
+  ];
+  check('§3.1 a REFUSAL carries no tier — the tier is the suffix of a VALID verdict, and NONE ranks a STATE not a verdict',
+    refusals.every(([, r]) => r.result !== undefined && !String(r.result).startsWith('VALID') && r.tier === undefined),
+    refusals.filter(([, r]) => r.tier !== undefined).map(([n, r]) => n + ' → tier=' + JSON.stringify(r.tier)).join(' · '));
+  check('§3.1 a VALID verdict DOES carry its tier — the check above is not vacuously satisfied by dropping tiers everywhere',
+    P.verify(mk(), { context: 'data' }).tier === 'LIGHT');
+}
+
 check('#6 sig-alg-none→E-SIG', (() => { const b = clone(mk()); b.sig.alg = 'none'; return P.verify(b, { context: 'data' }).error === 'E-SIG'; })());
 check('B leap-second→E-MALFORMED', P.verify(mk({ r: { kind: 'captured', value: { x: '1' } } }, ID, { generated_at: '2026-12-31T23:59:60Z', valid_from: '2026-12-31T23:00:00Z', valid_to: '2027-01-01T00:00:00Z' }), { context: 'data' }).error === 'E-MALFORMED');
 // G1 — round-53 (UST-ybn): the `pinned`/TOFU rung was REMOVED; LIGHT identity = the KEY (key-form domain_shard = key_id).

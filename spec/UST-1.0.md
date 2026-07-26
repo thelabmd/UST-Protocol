@@ -139,8 +139,14 @@ the tier as a monotone projection `Π : 𝓐 → {NONE ≺ LIGHT ≺ HIGH ≺ TO
 floor holds and `NONE` sits below it: a document whose bytes do not carry their own integrity earns `NONE`, and
 that is a decided answer rather than a missing field. Only the three EARNED tiers correspond to σ-algebras
 (`𝒮_LIGHT ⊆ 𝒮_HIGH ⊆ 𝒮_TOP`), which is why this section's title names those three — `NONE` decides nothing, so it
-has no σ-algebra of its own. An implementation MUST treat `NONE` as a value of the tier vocabulary; a consumer
-parsing a tier MUST accept it.
+has no σ-algebra of its own.
+
+`NONE` is a value of the PROJECTION, not a field on the wire. The tier a verdict carries is the suffix of a VALID
+verdict and nothing else: a verifier emits `VALID:LIGHT`/`VALID:HIGH`/`VALID:TOP` with a matching `tier`, and a
+refusal (`INVALID`, `INDETERMINATE`) carries NO tier at all — there is no `INVALID:NONE`. An implementation MUST NOT
+attach a tier to a refusal, and a consumer MUST NOT read one from it. `NONE` is what `Π` returns when asked to rank
+an assurance state whose integrity floor is unmet; it answers a question about a STATE, not a question about a
+verdict.
 
 - **LIGHT — trust in a minute (THE FLOOR).** A signed, canonical, addressable state document. *Publish* =
   generate a keypair, sign your canonical JSON, serve it (the pubkey travels in `sig.pub`). *Verify* = recompute

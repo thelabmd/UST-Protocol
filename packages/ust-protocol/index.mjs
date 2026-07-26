@@ -1537,9 +1537,9 @@ function verifyAnchorCore(contentHash, proof, opts = {}) {
 // through a single contract, and verify() never has to become async. Everything else is identical to verify().
 export async function verifyAsync(doc, opts = {}) {
   opts = admitOpts(opts);                                        // round-19 P1-02 — inert snapshot; a throwing accessor/Proxy trap → null → structured reject (not a host throw)
-  if (opts === null) return { result: 'E-MALFORMED', tier: 'NONE', detail: 'opts must be an inert record (round-19 P1-02 totality)' };
+  if (opts === null) return { result: 'E-MALFORMED', detail: 'opts must be an inert record (round-19 P1-02 totality)' };
   const D = admitDeep(doc);                                      // round-27 (3) — admit ONCE at this public door; below runs verifyCore over the inert snapshot (a getter can't split the substrate await from the sync verify)
-  if (D === ADMIT_REJECT) return { result: 'E-MALFORMED', tier: 'NONE', detail: 'document is not an inert record (round-27: the ONE input boundary)' };
+  if (D === ADMIT_REJECT) return { result: 'E-MALFORMED', detail: 'document is not an inert record (round-27: the ONE input boundary)' };
   doc = D;
   if (!doc?.proof || !opts.substrateVerify || opts.offline) return verifyCore(doc, opts);
   // round-17 P0-01 — verify an IMMUTABLE SNAPSHOT. The live object could be swapped between the await and the sync
@@ -2887,9 +2887,9 @@ export function combineSubstrates(verifiers) {
 
 export async function resolveByDiscovery(doc, opts = {}, transport = {}) {
   opts = admitOpts(opts); const T = admitOpts(transport);   // round-19 P1-02 — inert snapshots; a throwing accessor/Proxy trap on opts OR transport → null → structured reject (not a host throw)
-  if (opts === null || T === null) return { verdict: { result: 'E-MALFORMED', tier: 'NONE', detail: 'opts and transport must be inert records (round-19 P1-02 totality)' }, resolution: null };
+  if (opts === null || T === null) return { verdict: { result: 'E-MALFORMED', detail: 'opts and transport must be inert records (round-19 P1-02 totality)' }, resolution: null };
   const D = admitDeep(doc);   // round-27 (3, self-audit) — admit the doc ONCE at THIS door: the discovery `shard` (the fetch URL) and the verify verdict must read the SAME bytes, else a getter fetches one domain's genesis/witness while the verdict is over another.
-  if (D === ADMIT_REJECT) return { verdict: { result: 'E-MALFORMED', tier: 'NONE', detail: 'document is not an inert record (round-27: the ONE input boundary)' }, resolution: null };
+  if (D === ADMIT_REJECT) return { verdict: { result: 'E-MALFORMED', detail: 'document is not an inert record (round-27: the ONE input boundary)' }, resolution: null };
   doc = D;
   const { fetchImpl = fetch, substrateVerify } = T;
   const base = verify(doc, opts);
