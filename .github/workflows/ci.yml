@@ -36,6 +36,8 @@ jobs:
         run: npm run test:vacuity
       - name: retired mechanisms (an abandoned path cannot walk back into the spec or the model)
         run: npm run test:retired
+      - name: ust_id tier containment (§8 ABNF has no separator; a coarser frame is a literal prefix — the IANA-registered scheme, UST-gqj)
+        run: npm run test:ustid
       - name: language-neutral vectors in sync with the reference impl (regenerate == committed)
         run: npm run test:vectors
       - name: package enumeration (packages/ == README table == map panel; both directions, UST-l63)

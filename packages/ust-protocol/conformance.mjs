@@ -62,6 +62,26 @@ for (const v of V.vectors) {
     case 'commit': check(v.id, P.H('ust:shard', P.canon(v.input)) === v.expect); break;
     case 'seed': check(v.id, P.seed(v.input) === v.expect); break;
     case 'merkle-root': check(v.id, P.merkleRoot(v.input) === v.expect); break;
+    // UST-gqj — §8 tier containment. A coarser frame is a LITERAL STRING PREFIX of every finer frame inside it, and
+    // that holds only because HH/MM/SS carry no separator. It is the property the IANA-registered `ust` scheme commits
+    // to, so a separator introduced later would break the registration and every prefix-derived parent at once.
+    // Two vector shapes: a (coarse, fine) containment pair, or a single `invalid` string that must not be a ust_id.
+    // Validity is decided by BUILDING a document and asking the verifier, never by a local regex — so another
+    // implementation reads the same vectors and answers from its own verifier.
+    case 'ustid-tier': {
+      // Build and seal WITH the candidate, never patch a signed document: mutating `ust_id` after the fact breaks the
+      // partition hash, so verify answers E-CANON and the shape rule is never reached. The first version of this check
+      // did exactly that and passed every negative vector by accident — the four rejects caught it immediately.
+      const valid = (id) => {
+        let doc; try { doc = mk(undefined, { ...ID, ust_id: id }); } catch { return false; }   // a builder refusal is also "not a ust_id"
+        return P.verify(doc, { context: 'data' }).result === 'VALID:LIGHT';
+      };
+      if (v.invalid !== undefined) { check(v.id, valid(v.invalid) === false, `${v.invalid} must not be a ust_id — a separator there would break the registered scheme`); break; }
+      const contained = v.fine.startsWith(v.coarse);
+      check(v.id, contained === v.expect && valid(v.coarse) && valid(v.fine),
+        `${v.coarse} ${v.expect ? 'must' : 'must NOT'} be a literal prefix of ${v.fine}, and both must be well-formed frames`);
+      break;
+    }
     case 'signature': { const ok = P.edVerifyStrict(v.pub_b64url, v.signed_content, v.sig); check(v.id, (ok && v.expect === 'VALID') || (!ok && v.expect === 'E-SIG')); break; }
     case 'malleability-reject': check(v.id, P.edVerifyStrict(v.pub_b64url, v.signed_content, v.sig_malleable) === false, 'strict verifier MUST reject non-canonical S'); break;
     case 'version-reject': { const b = clone(mk()); b.ust = v.id.includes('major') ? '2.0' : '1.9'; check(v.id, P.verify(b).error === 'E-MALFORMED'); break; }
