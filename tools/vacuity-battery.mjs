@@ -53,6 +53,7 @@ const PINNED_UNPROVEN = 54;
 
 const failures = [];
 const caught = new Set();
+const reachedOutputs = [];      // every mutant's conformance output, for suite-level coverage below
 let corpusEvidence = 0;                       // byte-vectors that detected a broken TCB — a claim about the CORPUS, not the registry
 
 for (const m of MUTANTS) {
@@ -107,11 +108,27 @@ for (const m of MUTANTS) {
   if (!detected && !m.mustDetect)
     console.log(`    note: no registered check noticed it — harvest only; its own gate covers it (drift-guards)`);
   for (const r of hit) caught.add(r.id);
+  reachedOutputs.push(confOut);
   corpusEvidence = Math.max(corpusEvidence, vectorHits);
   const bv = channels.includes('byte-vectors') ? `, ${vectorHits} byte-vector(s)` : '';
   console.log(`  mutant ${m.id}: ${hit.length} registered check(s)${bv} detected the break`);
 }
 
+// SUITE-LEVEL coverage (2026-07-26). The residual below is over the REGISTERED enforcement records, and it already NAMES
+// its members — I claimed otherwise before measuring and was wrong. The real gap is larger: the suite has ~666 checks, so
+// the great majority are never assessed for non-vacuity AT ALL. The vacuous check found today — `complete !== 'proven'`,
+// an assertion against a word the vocabulary cannot produce — was one of those: not hidden inside a count, outside the
+// measured set entirely.
+//
+// Reported as a RATIO with no pin, deliberately. A pin would fail on every new conformance check that has no mutant, which
+// is most of them and legitimately so (positive-shape checks, vector-driven checks whose data no code mutation touches). A
+// number that can only improve is honest; a tax on adding checks would simply get removed. For the class this number
+// cannot pinpoint — an assertion against an impossible literal — the instrument is tools/verdict-vocabulary-gate.mjs,
+// which derives the vocabulary from the core rather than guessing at it.
+const suiteIds = (() => { try { return JSON.parse(readFileSync(root + 'vectors/conformance-checks.json', 'utf8')).checks || []; } catch { return []; } })();
+const suiteReached = suiteIds.filter((id) => reachedOutputs.some((o) => o.includes(id)));
+if (suiteIds.length) console.log(`  suite-level non-vacuity: ${suiteReached.length}/${suiteIds.length} conformance checks are reached by at least one mutant `
+  + `(${suiteIds.length - suiteReached.length} unassessed — a BOUND on what this battery can speak for, NOT a claim they are vacuous)`);
 const unproven = REG.filter((r) => !caught.has(r.id));
 if (unproven.length > PINNED_UNPROVEN)
   failures.push(`the UNPROVEN residual grew: ${unproven.length} registered checks are reached by no mutant, pinned at ${PINNED_UNPROVEN}. Extend the battery to cover the new check, or lower the pin deliberately — the residual must never rise silently`);

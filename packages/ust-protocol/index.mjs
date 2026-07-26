@@ -1466,6 +1466,14 @@ function verifyAnchorCore(contentHash, proof, opts = {}) {
   // The default is kept deliberately: every anchor proof issued before this is still confirmed with no adapter, so
   // delegation costs nothing already in the field. What changes is normativity — the core no longer NAMES a substrate's
   // tree, which is the boundary the operator-side split recorded and the code had drifted from.
+  // The BUNDLED reference connector, NAMED because two call sites need it: no connector supplied at all, and a composed
+  // router that declined every plugin. Two copies of one hash walk is precisely the drift class this repo keeps paying for.
+  const bundledWalk = () => {
+    for (const p of proof.path) if (!p || (p.dir !== 'L' && p.dir !== 'R') || !HASH.test(p.hash || '')) return { shapeError: true };
+    let node = Hbytes('ust:leaf', Buffer.from(contentHash, 'utf8'));
+    for (const p of proof.path) node = Hbytes('ust:node', Buffer.from(p.dir === 'L' ? p.hash + node : node + p.hash, 'utf8'));
+    return { ok: node === proof.root };
+  };
   let inclusion;
   if (typeof opts.inclusionVerify === 'function') {
     // A not-ours module: its INVOCATION and its RETURN are hostile (trust-boundary law UST-5tm). The whole seam is ONE
@@ -1475,19 +1483,24 @@ function verifyAnchorCore(contentHash, proof, opts = {}) {
       if (inc && typeof inc.then === 'function')
         return { inclusion: false, time: 'unproven', status: 'unavailable', detail: 'inclusion connector is ASYNC — use verifyAsync() or resolveByDiscovery(), not sync verify()' };
       // A CLOSED, TYPED leaf: strict Boolean only. A truthy non-Boolean ('yes', {}) must never mint inclusion.
-      if (inc !== true && inc !== false)
+      // `null` is the ROUTER's "no installed connector claimed this proof" — distinct from a refusal. Falling through to
+      // the bundled walk keeps a composed router safe to pass unconditionally: a caller need not know in advance whether it
+      // holds a connector for this substrate. Any OTHER non-Boolean is still a refusal (a typed closed leaf, F.5.0/C3/I4).
+      if (inc === null || inc === undefined) { inclusion = undefined; }
+      else if (inc !== true && inc !== false)
         return { inclusion: false, time: 'unproven', status: 'unavailable', detail: 'inclusion connector must return a strict Boolean (a typed closed leaf, F.5.0/C3/I4)' };
-      inclusion = inc;
+      else inclusion = inc;
     } catch {
       return { inclusion: false, time: 'unproven', status: 'unavailable', detail: 'inclusion seam is not-ours (UST-5tm): a hostile connector return/throw is a structured reject, never a host throw' };
     }
-  } else {
-    // the bundled reference connector — and its proof SHAPE is its own, so it validates it here rather than in the core
-    for (const s of proof.path) if (!s || (s.dir !== 'L' && s.dir !== 'R') || !HASH.test(s.hash || ''))
-      return { inclusion: false, time: 'unproven', status: 'verified', error: 'E-ANCHOR', detail: 'malformed path entry (dir must be "L"|"R", hash sha256:hex) — shape of the BUNDLED inclusion connector; another tree supplies opts.inclusionVerify' };
-    let node = Hbytes('ust:leaf', Buffer.from(contentHash, 'utf8'));
-    for (const s of proof.path) node = Hbytes('ust:node', Buffer.from(s.dir === 'L' ? s.hash + node : node + s.hash, 'utf8'));
-    inclusion = node === proof.root;
+  }
+  if (inclusion === undefined) {
+    // No connector, or a router that claimed nothing. MEASURED before this existed: an empty router killed a VALID proof
+    // with 'inclusion path does not reach root' — blaming the proof for the caller having no plugin installed. The shape
+    // error names the BUNDLED connector, not the protocol, and points at where another tree plugs in.
+    const w = bundledWalk();
+    if (w.shapeError) return { inclusion: false, time: 'unproven', status: 'verified', error: 'E-ANCHOR', detail: 'malformed path entry (dir must be "L"|"R", hash sha256:hex) — shape of the BUNDLED inclusion connector; another tree supplies opts.inclusionVerify' };
+    inclusion = w.ok;
   }
   if (!inclusion) return { inclusion: false, time: 'unproven', status: 'verified', detail: 'inclusion path does not reach root' };
   if (!opts.substrateVerify) return { inclusion: true, time: 'unproven', status: 'unavailable', detail: 'inclusion OK; substrate not verified (caller job)' };
@@ -2830,6 +2843,24 @@ export async function witnessNoFork(shard, genesisHash, opts) {
 // combineSubstrates tries them in order and returns the first non-null verdict. This is how a heterogeneous
 // witness world stays coherent — not one substrate, but one QUESTION ("is this root committed & final?")
 // answered by whichever plugin speaks that substrate. §17 registry is the shared vocabulary.
+// ─── §11.3/#95 INCLUSION ROUTER — the same shape as `combineSubstrates`, deliberately not a second pattern.
+// A wire cannot carry a function, so a caller composes the connectors it has INSTALLED and passes the result as
+// `opts.inclusionVerify`; the selection is then by the substrate NAME already inside the proof, which means no surface
+// (MCP, CLI) needs a new input to reach a foreign tree. Same isolation discipline: one plugin that throws or never
+// settles must not shadow a later one that CAN verify this proof, and a plugin that declines (null) is not a refusal.
+// Returning null from every plugin means NO connector claimed the proof — the caller falls back to the bundled walk.
+export function combineInclusion(verifiers) {
+  let list;
+  try { list = (Array.isArray(verifiers) ? verifiers : [verifiers]).filter(Boolean); } catch { list = []; }
+  return (contentHash, proof) => {
+    for (const v of list) {
+      let r; try { r = v(contentHash, proof); } catch { continue; }        // per-plugin hostility is that plugin's problem
+      if (r === true || r === false) return r;                            // a CLAIM: strict Boolean only, same typed leaf as the seam
+    }
+    return null;                                                          // nobody claimed it → the seam applies its default
+  };
+}
+
 export function combineSubstrates(verifiers) {
   // round-46 self-audit (totality) — normalize the plugin list DEFENSIVELY: a hostile `verifiers` Proxy (a throwing get/ownKeys trap)
   // makes `Array.isArray(...) ? ... : [...]` + `.filter(Boolean)` throw a HOST exception at this public door — the lone door the

@@ -67,6 +67,33 @@ ok('substrate still delegated separately (inclusion OK, substrate is the caller 
 ok('a connector cannot mint anchored TIME — that is still the substrate seam',
   P.verifyAnchor(CH, alien, { inclusionVerify: () => true }).time === 'unproven');
 
+// ── the ROUTER (#95 finish): a caller composes what it has INSTALLED and passes it unconditionally ─────────────────
+// The point of `null` meaning "not claimed" is that a caller need not know in advance whether it holds a connector for
+// this substrate — so MCP and the CLI can pass a composed router always. MEASURED before this existed: an empty router
+// killed a VALID proof with "inclusion path does not reach root", blaming the proof for the caller having no plugin.
+ok('an EMPTY router does not kill a valid proof — it declines and the bundled walk decides',
+  P.verifyAnchor(CH, goodProof, { inclusionVerify: P.combineInclusion([]) }).inclusion === true);
+ok('a router whose every plugin DECLINES falls through to the bundled walk',
+  P.verifyAnchor(CH, goodProof, { inclusionVerify: P.combineInclusion([() => null, () => undefined]) }).inclusion === true);
+ok('a plugin that CLAIMS false is believed — a claim is not a decline',
+  P.verifyAnchor(CH, goodProof, { inclusionVerify: P.combineInclusion([() => false]) }).inclusion === false);
+ok('a THROWING plugin does not shadow a later one that claims',
+  P.verifyAnchor(CH, alien, { inclusionVerify: P.combineInclusion([() => { throw new Error('x'); }, () => true]) }).inclusion === true);
+ok('the FIRST plugin to claim wins; a later one cannot overturn it',
+  P.verifyAnchor(CH, alien, { inclusionVerify: P.combineInclusion([() => false, () => true]) }).inclusion === false);
+ok('a router still cannot mint anchored TIME',
+  P.verifyAnchor(CH, alien, { inclusionVerify: P.combineInclusion([() => true]) }).time === 'unproven');
+ok('a hostile verifiers ARRAY (throwing Proxy) fails CLOSED to an empty router, never a host throw', (() => {
+  const hostile = new Proxy([], { get() { throw new Error('H'); }, ownKeys() { throw new Error('H'); } });
+  try { return P.verifyAnchor(CH, goodProof, { inclusionVerify: P.combineInclusion(hostile) }).inclusion === true; } catch { return false; }
+})());
+
+// the rekor connector claims ONLY a declared rfc6962-raw tree, and never guesses a leaf convention
+ok('the rekor inclusion connector DECLINES a proof that does not declare its scheme (returns null, not false)', await (async () => {
+  let mod; try { mod = await import('../packages/ust-rekor-verify/index.mjs'); } catch { return true; }
+  if (typeof mod.inclusionVerify !== 'function') return false;
+  return mod.inclusionVerify(CH, goodProof) === null && P.verifyAnchor(CH, goodProof, { inclusionVerify: P.combineInclusion([mod.inclusionVerify]) }).inclusion === true;
+})(), 'it must not answer for a tree the publisher never declared — a guessed leaf convention verifies somebody else\'s entry');
 console.log(`\n  inclusion connector   PASS ${pass}   FAIL ${fail.length}`);
 if (fail.length) { fail.forEach((f) => console.log('    ✗ ' + f)); process.exit(1); }
 console.log('  ✓ inclusion is delegable, the bundled connector still confirms everything already in the field, and the seam is total');

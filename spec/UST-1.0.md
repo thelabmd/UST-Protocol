@@ -674,11 +674,16 @@ the transcript (or supplied by the caller):
 AnchorProof := { "root": ContentHash, "path": [ {"dir":"L"|"R","hash":ContentHash}, ... ], "anchor": Locator }
 ```
 The verifier establishes that the State's `content_hash` is a member of the leaf-set committed by `root`, then
-validates `root`'s commitment under the **substrate's verification profile**. **BOTH halves come from that
-profile** — the membership procedure as much as the finality parameter — because a substrate's inclusion evidence
-is in its own tree: `rekor` proves RFC 6962 inclusion to a witness-cosigned tree head (leaf `SHA256(0x00‖·)`, node
-`SHA256(0x01‖L‖R)` over RAW digests), which this document's `ust:leaf`/`ust:node` over ASCII `sha256:`-prefixed
-strings (§7) cannot express. A core that fixed ONE tree made a registered substrate unsatisfiable (#95). The
+validates `root`'s commitment under the **substrate's verification profile**. These are TWO INDEPENDENT proofs and
+must not be conflated: membership carries `content_hash` to `root` in the PUBLISHER's own tree, and the substrate
+profile then decides whether that `root` is committed. A substrate's own inclusion machinery (`rekor`'s
+`inclusionProof`, for instance) belongs to the second proof — it shows the ROOT was logged — and is never the
+first.
+
+**The membership tree is the publisher's, not the protocol's** (#95). A publisher that already commits hours with
+an RFC 6962 tree over raw digests (leaf `SHA256(0x00‖·)`, node `SHA256(0x01‖L‖R)`) cannot express those paths in
+this document's `ust:leaf`/`ust:node` over ASCII `sha256:`-prefixed strings (§7); a core that fixed ONE
+construction would force it to build a SECOND tree over the same leaves purely to satisfy the verifier. The
 protocol therefore fixes the proof's SHAPE and its self-containment, not the hash construction that walks it:
 `root` is the commitment handed to the substrate check, and the profile decides membership. A verifier MAY be
 given the procedure as a connector; **absent one, the REFERENCE construction applies** — the `ust:leaf`/`ust:node`

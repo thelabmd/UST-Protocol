@@ -855,11 +855,12 @@ async function cmdVerify() {
     // verified against Bitcoin (→ live HIGH); if not, the anchor stays unproven (→ honest HIGH pending).
     // opt-in substrate plugins: Bitcoin (ots-verify) + Rekor (rekor-verify), combined via the protocol
     // router. Whichever are installed contribute; none installed → anchor unproven → honest HIGH-pending.
-    const plugins = [];
+    const plugins = [], incPlugins = [];
     for (const pkg of ['@ust-protocol/ots-verify', '@ust-protocol/rekor-verify']) {
-      try { const m = await import(pkg); if (m.substrateVerify) plugins.push(m.substrateVerify); } catch { /* absent */ }
+      try { const m = await import(pkg); if (m.substrateVerify) plugins.push(m.substrateVerify); if (m.inclusionVerify) incPlugins.push(m.inclusionVerify); } catch { /* absent */ }
     }
     const substrateVerify = plugins.length ? P.combineSubstrates(plugins) : undefined;
+    const inclusionVerify = incPlugins.length ? P.combineInclusion(incPlugins) : undefined;   // #95 — same plugins, other question
     // #71 — the discovery target comes from an UNTRUSTED document; the SSRF guard (resolve → reject private IPs)
     // wraps the fetch on the CLI too, not only the MCP. Core's lexical isPublicDnsShard is the floor beneath it.
     const guardedFetch = makeSsrfSafeFetch(async (u, init) => { console.error(`  ⏳ resolving identity from ${new URL(u).origin} … (--offline to skip)`); return fetch(u, init); });
@@ -1069,11 +1070,12 @@ async function cmdForkChoice() {
   const offline = !!arg('offline', false);
   // anchor-inclusion is a SUBSTRATE fact — load the same opt-in plugins as `verify`. None installed ⇒ nothing is
   // anchor-included ⇒ honest INDETERMINATE, never a guessed winner.
-  const plugins = [];
+  const plugins = [], incPlugins = [];
   if (!offline) for (const pkg of ['@ust-protocol/ots-verify', '@ust-protocol/rekor-verify']) {
-    try { const m = await import(pkg); if (m.substrateVerify) plugins.push(m.substrateVerify); } catch { /* absent */ }
+    try { const m = await import(pkg); if (m.substrateVerify) plugins.push(m.substrateVerify); if (m.inclusionVerify) incPlugins.push(m.inclusionVerify); } catch { /* absent */ }
   }
   const substrateVerify = plugins.length ? P.combineSubstrates(plugins) : undefined;
+  const inclusionVerify = incPlugins.length ? P.combineInclusion(incPlugins) : undefined;   // #95 — same plugins, other question
   if (!substrateVerify && !offline) console.error('  ℹ️  no substrate plugin installed — anchor-inclusion cannot be checked → INDETERMINATE. `npm i @ust-protocol/ots-verify` to decide.');
   const r = await P.forkChoice(candidates, { ...(genesis ? { genesis } : {}), ...(keylog ? { keylog } : {}), noForkConfirmed: noFork, offline, context: 'data', substrateVerify });
   const ust = r.ust_id ? `  ust_id ${r.ust_id}` : '';

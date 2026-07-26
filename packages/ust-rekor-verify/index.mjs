@@ -145,3 +145,27 @@ export function toVerifiedEvidence(subject, result, source_id = 'rekor') {
 }
 
 export const substrateVerify = makeSubstrateVerify();
+
+// ─── §11.3/#95 INCLUSION connector. Distinct from `substrateVerify` above, and the distinction is the whole point: that
+// one proves the anchored ROOT was logged (finality, and it binds the logged entry to OUR root by the hashedrekord
+// schema). THIS one answers a different question — is `content_hash` a member of the leaf-set the root commits — and it
+// is the PUBLISHER's tree, not rekor's.
+//
+// So this connector claims a proof only when the publisher has declared its membership tree to be RFC 6962 over raw
+// digests, by carrying `anchor.inclusion: { scheme: "rfc6962-raw", index, tree_size, hashes[] }`. Absent that field it
+// returns null — "not mine" — and the router falls through to whatever the caller has, ultimately the bundled walk.
+// It NEVER guesses a scheme: a wrong leaf convention would verify a proof for somebody else's entry, which is the
+// proof-substitution hole this repo is built to refuse.
+export function inclusionVerify(contentHash, proof) {
+  try {
+    const a = proof?.anchor;
+    const inc = a?.inclusion;
+    if (!inc || inc.scheme !== 'rfc6962-raw') return null;                      // not ours — let the next connector try
+    if (typeof contentHash !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(contentHash)) return false;
+    if (typeof proof.root !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(proof.root)) return false;
+    // The leaf is bound to OUR content_hash by construction: leaf = SHA256(0x00 ‖ the 32 raw bytes of content_hash).
+    // That binding is what makes this an inclusion proof FOR THIS DOCUMENT rather than for an arbitrary entry.
+    const leaf = sha256(Buffer.concat([Buffer.from([0x00]), Buffer.from(contentHash.slice(7), 'hex')]));
+    return verifyInclusion({ leafHash: leaf, index: inc.index, treeSize: inc.tree_size, hashes: inc.hashes, rootHash: proof.root.slice(7) });
+  } catch { return false; }                                                     // untrusted input: a hostile getter is a refusal, never a throw
+}

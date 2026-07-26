@@ -49,11 +49,14 @@ export const tools = [
       };
       // `json` (raw text) = the safe conformance boundary — duplicate-key + NFC scan BEFORE parse (F7).
       const ro = { ...o, offline };
-      const _plugins = [];
+      const _plugins = [], _incPlugins = [];
       for (const pkg of ['@ust-protocol/ots-verify', '@ust-protocol/rekor-verify']) {
-        try { const m = await import(pkg); if (m.substrateVerify) _plugins.push(m.substrateVerify); } catch { /* absent */ }
+        try { const m = await import(pkg); if (m.substrateVerify) _plugins.push(m.substrateVerify); if (m.inclusionVerify) _incPlugins.push(m.inclusionVerify); } catch { /* absent */ }
       }
       const substrateVerify = _plugins.length ? P.combineSubstrates(_plugins) : undefined;
+      // #95 — the SAME installed plugins, asked the OTHER question. Safe to pass unconditionally: a router that claims
+      // nothing returns null and the seam falls through to the bundled walk, so the caller need not know what it holds.
+      const inclusionVerify = _incPlugins.length ? P.combineInclusion(_incPlugins) : undefined;
       if (json !== undefined) {
         const raw = P.verifyJson(json, o);
         if (offline || genesis !== undefined || !(raw.result === 'VALID:LIGHT' || (raw.result === 'INDETERMINATE' && raw.reason === 'unavailable'))) return gate(raw);
@@ -124,11 +127,14 @@ export const tools = [
     description: 'FORK-CHOICE for one ust_id — when you hold TWO OR MORE documents that claim the SAME ust_id with DIFFERENT content (a dual-writer race: main + failover both sealed the slot; or an adversary offering two states), this decides WHICH is canonical so you never accept both. The rule (§3.1/F.5c): canonical = the one whose content_hash is INCLUDED in the authority\'s anchored hour root. Returns { result:"CANONICAL", canonical, content_hash, losers } when exactly one is anchor-included; "INDETERMINATE" when none is anchored yet (wait for the hour anchor or resolve at HIGH); "E-PREV" when one authority anchored TWO distinct states for the slot (operator equivocation — a punishable fault); "MULTI_AUTHORITY" when distinct names share the ust_id string (not a fork); "E-MALFORMED" if the candidates do not all share one ust_id. Deterministic: the chain decides, never local fetch order. Pass all candidate documents (each with its own embedded proof); the tool cross-checks each anchor against its substrate automatically.',
     inputSchema: { type: 'object', required: ['candidates'], properties: { candidates: { type: 'array', description: 'the competing documents for one ust_id, each with its embedded `proof`' }, genesis: { type: 'object' }, keylog: { type: 'array' }, noForkConfirmed: { type: 'boolean' }, offline: { type: 'boolean' } } },
     handler: async ({ candidates, genesis, keylog, noForkConfirmed, offline }) => {
-      const _plugins = [];
+      const _plugins = [], _incPlugins = [];
       if (!offline) for (const pkg of ['@ust-protocol/ots-verify', '@ust-protocol/rekor-verify']) {
-        try { const m = await import(pkg); if (m.substrateVerify) _plugins.push(m.substrateVerify); } catch { /* absent */ }
+        try { const m = await import(pkg); if (m.substrateVerify) _plugins.push(m.substrateVerify); if (m.inclusionVerify) _incPlugins.push(m.inclusionVerify); } catch { /* absent */ }
       }
       const substrateVerify = _plugins.length ? P.combineSubstrates(_plugins) : undefined;
+      // #95 — the SAME installed plugins, asked the OTHER question. Safe to pass unconditionally: a router that claims
+      // nothing returns null and the seam falls through to the bundled walk, so the caller need not know what it holds.
+      const inclusionVerify = _incPlugins.length ? P.combineInclusion(_incPlugins) : undefined;
       return P.forkChoice(candidates, { genesis, keylog, noForkConfirmed, offline, context: 'data', substrateVerify });
     },
   },

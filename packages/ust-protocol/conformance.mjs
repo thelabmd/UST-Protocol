@@ -2098,7 +2098,7 @@ console.log('\n═════════════════════�
     resolveCadenceBytes: 'surface',   // round-47 rev69 — the SOUND bytes-in boundary (a pure function of immutable byte-strings; resolveCadence is its object adapter)
     resolveCheckpointRoots: 'surface', resolveKeys: 'surface', resolveKeysBytes: 'surface', deriveAssurance: 'surface', deriveCheckpointFreshness: 'surface',
     forkChoice: 'surface', noEventBacking: 'surface', verifiedGenesisContext: 'surface', checkAuthorityProof: 'surface',
-    checkAuthorityProofBytes: 'surface', combineSubstrates: 'surface', witnessNoFork: 'surface',
+    checkAuthorityProofBytes: 'surface', combineSubstrates: 'surface', combineInclusion: 'surface', witnessNoFork: 'surface',
     // ── EXEMPT (throw-by-contract): designed to throw on invalid — totality is not the contract ──
     assertValid: 'throws-by-contract', verifyOrThrow: 'throws-by-contract',
     // ── EXEMPT (producer builders): operate on the SIGNER's OWN data; a producer can only hurt themselves ──
@@ -2175,7 +2175,7 @@ console.log('\n═════════════════════�
     resolveByDiscovery: [oDoc, oOpts, netMock], resolveCadence: [oGen, oArr, oStr, oOpts], resolveCadenceBytes: [oBytes, oBytes, oStr, oBytes], resolveCheckpointRoots: [oGen],
     resolveKeys: [oGen, oArr], resolveKeysBytes: [oBytes, oBytes], deriveAssurance: [oGraph], deriveCheckpointFreshness: [oChain, oConf], forkChoice: [oFrames, oOpts],
     noEventBacking: [oConf, oConf, oFrames], verifiedGenesisContext: [oGen], checkAuthorityProof: [oConf, oConf],
-    checkAuthorityProofBytes: [oBytes, oBytes], combineSubstrates: [oArr], witnessNoFork: [oStr, oHash, netMock],
+    checkAuthorityProofBytes: [oBytes, oBytes], combineSubstrates: [oArr], combineInclusion: [oArr], witnessNoFork: [oStr, oHash, netMock],
   };
   const sigMissing = surface.filter((k) => !(k in SIG));
   check('FROM-CODE SIGNATURE REGISTRY: every consumer-surface export has a declared signature (real arity + a valid reachability fixture per position) — no surface export escapes the totality sweep, a new one fails until declared' + (sigMissing.length ? ' — MISSING: ' + sigMissing.join(',') : ''), sigMissing.length === 0);

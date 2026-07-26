@@ -42,8 +42,10 @@ export const MUTATIONS = [
     id: 'inclusion-connector-leaf-not-typed', mustDetect: true, observe: ['conformance'],
     why: 'the CLOSED TYPED leaf. Broken, any truthy connector return mints inclusion — the string "yes" would anchor a document.',
     file: 'packages/ust-protocol/index.mjs',
-    from: '      if (inc !== true && inc !== false)',
-    to: '      if (false) /* mutant: truthy accepted */',
+    // The anchor moved when the router's `null` = not-claimed branch landed (#95 finish), so it is now the `else if`.
+    // The battery REFUSED to run until this was updated rather than silently matching something else — which is the point.
+    from: '      else if (inc !== true && inc !== false)',
+    to: '      else if (false) /* mutant: truthy accepted */',
   },
   {
     id: 'inclusion-seam-not-total', mustDetect: true, observe: ['conformance'],
@@ -56,8 +58,9 @@ export const MUTATIONS = [
     id: 'inclusion-connector-mints-time', mustDetect: true, observe: ['conformance'],
     why: 'the rung separation (C3). Broken, delegating inclusion also delegates anchored TIME — a connector answering true would forge the substrate half.',
     file: 'packages/ust-protocol/index.mjs',
-    from: '      inclusion = inc;',
-    to: "      inclusion = inc;\n      if (inc) return { inclusion: true, time: 'anchored', status: 'verified', anchorTime: '2027-01-01T00:00:00Z', detail: 'mutant: connector minted time' };",
+    // Same anchor drift as its sibling: the router branch made this `else inclusion = inc;`.
+    from: '      else inclusion = inc;',
+    to: "      else { inclusion = inc; if (inc) return { inclusion: true, time: 'anchored', status: 'verified', anchorTime: '2027-01-01T00:00:00Z', detail: 'mutant: connector minted time' }; }",
   },
   {
     id: 'tier-always-top', mustDetect: true, observe: ['conformance'],

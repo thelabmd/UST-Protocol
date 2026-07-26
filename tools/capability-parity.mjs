@@ -56,7 +56,7 @@ const CAPS = {
   'verifiable-map':     { core: ['buildVerifiableMap', 'checkpointMapLeaf', 'nameMapLeaf', 'verifyCheckpointMapUniqueness', 'verifyActiveGenesisUniqueness'] },
   'keylog-commitment':  { core: ['keylogLeaf', 'buildKeylogCommitment', 'verifyKeylogTerminality'], cli: 'rotateKeylog' },
   'cadence-grid':       { core: ['ustGrid', 'resolveCadence', 'resolveCadenceBytes'] },
-  'substrate-registry': { core: ['combineSubstrates'] },
+  'substrate-registry': { core: ['combineSubstrates', 'combineInclusion'] },   // #95 — finality AND membership route by substrate name, one pattern
   'discovery-shard':    { core: ['isPublicDnsShard'], cli: 'attestDiscovery' },
   'disclosure':         { core: ['blindedCommit', 'blindPartition'] },
   'negative-observation':{ core: ['buildAbsence', 'noEventBacking'] },   // #39 — a normative absence assertion + the no-event↔completeness tie; core-only for now, no surface exposes it yet
