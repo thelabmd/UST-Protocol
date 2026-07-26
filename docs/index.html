@@ -202,7 +202,17 @@ import { resolveAuthority, fetchIdentity, witnessNoFork } from './ust-resolve.mj
 
 const $ = (id) => document.getElementById(id);
 const inEl = $('in'), outEl = $('out');
-const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+// #73 display safety — integrity is byte-exact, so an invisible or RTL control inside a VALUE is harmless to
+// verification; it is harmful to the EYE. `100‮DSU‬` renders as "100USD". So every Unicode FORMAT character
+// is made visible before anything else happens to the string.
+// The class is `\p{Cf}`, not a list of codepoints: a hand-list is how this repository has repeatedly lost exactly one
+// member (rev76 calendar, rev78 envelope, and the provenance axis today). The property IS the domain — it also covers
+// LRM, RLM, ALM, word-joiner, soft-hyphen and MVS, none of which #73 enumerated.
+// The marker is deliberately HTML-INERT — `[U+hhhh]`, no character in it has meaning in markup. That, not the order
+// of the two steps, is what keeps this safe: escape-then-neutralize and neutralize-then-escape produce the same bytes.
+// Measured, after an earlier version of this comment claimed the order was load-bearing and its test could not fail.
+const visCtl = (s) => String(s).replace(/\p{Cf}/gu, (c) => `[U+${c.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}]`);
+const esc = (s) => visCtl(s).replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 
 function b64decodeUtf8(b64) {
   const bin = atob(b64.replace(/\s+/g, ''));

@@ -81,5 +81,8 @@ That is a feature — the vectors are the contract, and passing them is a defini
 Integrity is byte-exact, so invisible/RTL Unicode inside a VALUE is harmless to verification (bytes are bytes).
 But a HUMAN RENDERER (a Pages viewer, an extension md-reader) must neutralize bidi / zero-width controls when
 showing untrusted values — an RTL-override can flip displayed order and deceive the eye. Escape-first (already
-required for HTML) plus bidi-isolation in the reader view. This is a display-safety rule for verifier UIs, not a
+required for HTML) plus neutralization of the whole Unicode FORMAT class `\p{Cf}` — not a list of codepoints: a
+hand-list loses exactly one member, and the class is the domain (it also covers LRM, RLM, ALM, word-joiner and
+soft-hyphen). Render each one visibly, e.g. `[U+202E]`, with a marker that carries no markup meaning so the two steps
+commute. This is a display-safety rule for verifier UIs, not a
 canon change; `domain_shard` names have the stronger A-label guard (§4.3a).

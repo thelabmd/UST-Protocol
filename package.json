@@ -43,6 +43,7 @@
     "test:bmc": "node packages/ust-protocol/bmc.mjs",
     "test:temporal-bmc": "node packages/ust-protocol/temporal-bmc.mjs",
     "test:diarium": "node --test packages/diarium/test/*.test.mjs",
-    "test:diary": "node tools/diarium-render.mjs --check"
+    "test:diary": "node tools/diarium-render.mjs --check",
+    "test:display": "node tools/display-safety-gate.mjs"
   }
 }
