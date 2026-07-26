@@ -9,7 +9,7 @@
     "packages/ust-mcp",
     "packages/ust-web-signer",
     "packages/ust-cli",
-    "packages/ust-lite",
+    "packages/ust-light",
     "packages/ust-ots-verify",
     "packages/ust-rekor-verify",
     "packages/diarium"
@@ -26,7 +26,7 @@
     "test:spec-sync": "node tools/gen-spec-registry.mjs && node tools/gen-readme-version.mjs && node tools/gen-status-svg.mjs && node tools/gen-readme-panels.mjs && node tools/gen-conformance-badge.mjs && git diff --exit-code spec/UST-1.0.md README.md package.json .github/status.svg '.github/ust-*.svg' && node tools/spec-code-sync.mjs",
     "test:parity": "node tools/capability-parity.mjs",
     "test:docs-parity": "node tools/docs-verifier-parity.mjs",
-    "test:lite": "node packages/ust-lite/test.mjs",
+    "test:light": "node packages/ust-light/test.mjs",
     "test:security": "node packages/ust-protocol/security-regression.mjs",
     "test:ssrf": "node packages/ust-protocol/ssrf.test.mjs && node packages/ust-mcp/ssrf-guard.test.mjs",
     "test:drift-guards": "node packages/ust-protocol/drift-guards.test.mjs",

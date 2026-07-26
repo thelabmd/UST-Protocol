@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-// ust-lite — the UST 1.0 LIGHT floor, standalone. Publish and verify a signed, canonical, addressable,
+// ust-light — the UST 1.0 LIGHT floor, standalone. Publish and verify a signed, canonical, addressable,
 // string-only, bounded JSON state with a CARRIED key — no genesis, key-log, anchoring, checkpoints, or the
-// assurance lattice. A ust-lite document is a valid UST document: it verifies VALID:LIGHT under the full
+// assurance lattice. A ust-light document is a valid UST document: it verifies VALID:LIGHT under the full
 // `ust-protocol` verifier, and this verifier accepts any UST document at the LIGHT floor. Zero-dependency
 // (node:crypto: Ed25519 + SHA-256). The canon/hash/sign primitives are BYTE-IDENTICAL to the reference impl;
 // the point of "lite" is the SMALL surface, readable and re-implementable in an afternoon. §-refs are UST-1.0.md.
@@ -76,8 +76,8 @@ export function keypair() {
   return { privateKey, pub, key_id: keyId(pub) };
 }
 export function buildState(id, time, data, provenance) {
-  if (id.class !== undefined && id.class !== 'observation') throw err('E-MALFORMED', 'ust-lite builds class:"observation" only — use ust-protocol for attestation/derivation/genesis/key/cadence');
-  id = { ...id, class: 'observation' };   // round-49 P0-01 — class is REQUIRED (the verifier now rejects an absent class); ust-lite always stamps observation
+  if (id.class !== undefined && id.class !== 'observation') throw err('E-MALFORMED', 'ust-light builds class:"observation" only — use ust-protocol for attestation/derivation/genesis/key/cadence');
+  id = { ...id, class: 'observation' };   // round-49 P0-01 — class is REQUIRED (the verifier now rejects an absent class); ust-light always stamps observation
   const n = Object.keys(data).length;
   if (n > FLOOR.partitions) throw err('E-BOUNDS', `${n} partitions > LIGHT floor ${FLOOR.partitions} (raise via a genesis grant on full UST)`);
   const hashes = {};
@@ -162,11 +162,11 @@ export function verify(doc) {
   if (!TS.test(st.time.generated_at) || !TS.test(st.time.valid_from) || !TS.test(st.time.valid_to)) return bad('E-MALFORMED', 'timestamp not RFC3339-Z');
   if (!tsCalOk(st.time.generated_at) || !tsCalOk(st.time.valid_from) || !tsCalOk(st.time.valid_to)) return bad('E-MALFORMED', 'timestamp date not on the calendar');   // round-49 P0-01 — real date, not just shape
   if (st.time.valid_from > st.time.valid_to) return bad('E-MALFORMED', 'valid_from > valid_to');
-  // §14.5 / N10 class↔provenance: ust-lite handles `observation` (data) ONLY, and class is REQUIRED — the full verifier
+  // §14.5 / N10 class↔provenance: ust-light handles `observation` (data) ONLY, and class is REQUIRED — the full verifier
   // rejects an absent/unknown class (round-49 P0-01: an omitted class read VALID:LIGHT here while core returned INVALID).
   // `attestation`/`derivation` are the classes lite does not build; `genesis`/`key`/`cadence` are the HIGH/TOP layer.
   if (st.id.class !== 'observation')
-    return bad('E-MALFORMED', `ust-lite verifies class:"observation" only (class is required) — "${st.id.class}" needs the HIGH/TOP layer or the full builder family; use ust-protocol`);
+    return bad('E-MALFORMED', `ust-light verifies class:"observation" only (class is required) — "${st.id.class}" needs the HIGH/TOP layer or the full builder family; use ust-protocol`);
   // UST-jls — every §14a provenance obligation reachable at LIGHT, in CORE'S ORDER and with core's reasons, so a document
   // violating several rules gets the same code from both. lite previously carried NO provenance checks at all while
   // HAPPILY VERIFYING chained documents: 14 shapes read VALID:LIGHT here that core calls INVALID. A floor that admits what
@@ -196,10 +196,10 @@ export function verify(doc) {
   if (strictB64url(s.sig, 64) === null) return bad('E-SIG', 'sig not canonical 64-byte b64url');
   if (keyId(s.pub) !== s.key_id || s.key_id !== st.id.key_id) return bad('E-SIG', 'key_id ≠ H(ust:keylog, pub) or ≠ state.id.key_id');
   if (!edVerifyStrict(s.pub, S, s.sig)) return bad('E-SIG', 'Ed25519 verify failed');
-  // round-53 (UST-ybn — the LIGHT ambiguity fix, unified rule): authentic, but ust-lite is the LIGHT floor with NO
+  // round-53 (UST-ybn — the LIGHT ambiguity fix, unified rule): authentic, but ust-light is the LIGHT floor with NO
   // binding capability (no genesis/key-log), so it CANNOT confirm a name-form DOMAIN CLAIM ⇒ "cannot confirm ⇒
   // INDETERMINATE", never a bare VALID (the forgery-misread). A self-asserted KEY-IDENTITY uses key-form domain_shard.
-  if (!shardKeyForm) return { result: 'INDETERMINATE', reason: 'unavailable', ust_id: st.id.ust_id, key_id: st.id.key_id, content_hash: contentHash(doc), detail: 'name-form domain_shard is a domain claim ust-lite cannot confirm (no binding): use key-form domain_shard = key_id for a self-asserted key-identity document (→ VALID:LIGHT), or verify with genesis+key-log via ust-protocol (→ HIGH). "cannot confirm" ⇒ INDETERMINATE (UST-ybn)' };
+  if (!shardKeyForm) return { result: 'INDETERMINATE', reason: 'unavailable', ust_id: st.id.ust_id, key_id: st.id.key_id, content_hash: contentHash(doc), detail: 'name-form domain_shard is a domain claim ust-light cannot confirm (no binding): use key-form domain_shard = key_id for a self-asserted key-identity document (→ VALID:LIGHT), or verify with genesis+key-log via ust-protocol (→ HIGH). "cannot confirm" ⇒ INDETERMINATE (UST-ybn)' };
   return { result: 'VALID:LIGHT', tier: 'LIGHT', identity: 'self-asserted', publisher_claimed: st.id.domain_shard,
     ust_id: st.id.ust_id, key_id: st.id.key_id, content_hash: contentHash(doc), completeness: 'not_evaluated' };
 }

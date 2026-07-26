@@ -14,7 +14,7 @@
 // Granularity is deliberate: capabilities that live as a FIELD inside an existing tool/command (no-fork-evidence,
 // trust-roots) are separate units with field-level probes — coarse tool-presence checks would miss a dropped field.
 import * as P from '../packages/ust-protocol/index.mjs';
-import * as LITE from '../packages/ust-lite/index.mjs';
+import * as LITE from '../packages/ust-light/index.mjs';
 import * as WEB from '../packages/ust-web-signer/index.mjs';
 import * as OTS from '../packages/ust-ots-verify/index.mjs';
 import * as REKOR from '../packages/ust-rekor-verify/index.mjs';
@@ -78,8 +78,8 @@ const cliProbe = (cap) => { const tok = CAPS[cap].cli; return !!tok && cliSrc.in
 //    everything else defaults to `na` with the surface's `naReason` (a specific override lives in `naSpecific`). This
 //    encodes the owner's decisions: cli grows to full authoritative; mcp stays agent-facing (operator caps na).
 const SURFACES = {
-  'ust-lite':         { probe: exportIntersect(LITE), full: ['canon', 'sign'], subset: ['content-address', 'build-transcript', 'verify'], naReason: 'outside the standalone zero-dependency LIGHT floor — lite is a documented SUBSET (round-51 P1-03: build-transcript = buildState/seal for class:observation, WITH provenance (prev/based_on+seed) since UST-jls, but not the full builder family; verify = the WHOLE LIGHT floor including every §14a provenance obligation — UST-jls closed 14 lite-VALID/core-INVALID shapes — but not the HIGH/TOP verifiers; content-address = the partition/content/seed hashes it needs)' },
-  'ust-web-signer':   { probe: exportIntersect(WEB), full: ['canon', 'sign'], subset: ['content-address', 'build-transcript'], naReason: 'producer-only surface — a documented SUBSET (round-51 P1-03: browser signer builds+signs a state, not the full builder family)', naSpecific: { 'verify': 'by design: the private key never enters a verifier — verification is ust-protocol / ust-lite (README)' } },
+  'ust-light':         { probe: exportIntersect(LITE), full: ['canon', 'sign'], subset: ['content-address', 'build-transcript', 'verify'], naReason: 'outside the standalone zero-dependency LIGHT floor — lite is a documented SUBSET (round-51 P1-03: build-transcript = buildState/seal for class:observation, WITH provenance (prev/based_on+seed) since UST-jls, but not the full builder family; verify = the WHOLE LIGHT floor including every §14a provenance obligation — UST-jls closed 14 lite-VALID/core-INVALID shapes — but not the HIGH/TOP verifiers; content-address = the partition/content/seed hashes it needs)' },
+  'ust-web-signer':   { probe: exportIntersect(WEB), full: ['canon', 'sign'], subset: ['content-address', 'build-transcript'], naReason: 'producer-only surface — a documented SUBSET (round-51 P1-03: browser signer builds+signs a state, not the full builder family)', naSpecific: { 'verify': 'by design: the private key never enters a verifier — verification is ust-protocol / ust-light (README)' } },
   'ust-ots-verify':   { probe: connector(OTS), full: ['anchor-verify', 'typed-evidence', 'substrate-registry'], subset: [], naReason: 'a Bitcoin/OTS substrate connector (plugs into verifyAnchor via substrateVerify), not a general surface', naSpecific: { 'evidence-receipt': 'THE connector job per M3 — emit signed receipts (buildEvidenceReceipt with its own key) instead of raw verifiedEvidence facts; planned follow-up, tracked under UST-6vj C4/legacy' } },
   'ust-rekor-verify': { probe: connector(REKOR), full: ['anchor-verify', 'typed-evidence', 'substrate-registry'], subset: [], naReason: 'a Rekor transparency-log substrate connector, not a general surface', naSpecific: { 'evidence-receipt': 'THE connector job per M3 — emit signed receipts instead of raw verifiedEvidence facts; planned follow-up, tracked under UST-6vj C4/legacy' } },
   // Agent MCP TARGET (owner, 2026-07-15) = full for EVERY non-operator capability + the single conditionally-operator

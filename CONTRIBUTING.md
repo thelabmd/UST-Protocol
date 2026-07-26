@@ -7,7 +7,7 @@ spec has a formal model behind it. This guide is short and it is honest about th
 ## Ground rules
 
 - **The conformance vectors are the canon.** `vectors/` (byte vectors + language-neutral conformance + arc vectors)
-  are the cross-implementation arbiter. Any implementation — this one, a clean-room port, the `ust-lite` subset —
+  are the cross-implementation arbiter. Any implementation — this one, a clean-room port, the `ust-light` subset —
   must pass them byte-for-byte. A behaviour that is not pinned by a vector is not a guarantee.
 - **math → code → vector → test.** A change to a normative behaviour lands with its vector in the SAME commit:
   a new negative condition gets a byte vector; a resolver behaviour gets a conformance check. See `PORTING.md` for

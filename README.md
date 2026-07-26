@@ -295,7 +295,7 @@ rung (`attested_withheld: "experimental-gate"`); the top rung is reachable only 
 
 ## ●  Layout
 
-![Repository map. spec/ holds the normative UST-1.0.md plus a measure-theoretic formal model. vectors/ holds language-neutral conformance vectors and a byte corpus — the cross-implementation arbiter. packages/ holds ust-protocol (the zero-dep reference verifier + producer), ust-cli (the ust command: verify, canon, the HIGH genesis ceremony, witness), ust-mcp (an MCP server so agents verify natively), ust-lite (a byte-identical minimal subset), ust-web-signer (WebCrypto browser signing with non-extractable keys), and ust-ots-verify / ust-rekor-verify (opt-in Bitcoin/OTS and Sigstore Rekor anchor substrates). docs/ is the client-side web verifier plus zero-dependency single-file verifiers. tools/ are the drift gates that keep spec = code = vectors = README = these panels in sync.](.github/ust-map.svg)
+![Repository map. spec/ holds the normative UST-1.0.md plus a measure-theoretic formal model. vectors/ holds language-neutral conformance vectors and a byte corpus — the cross-implementation arbiter. packages/ holds ust-protocol (the zero-dep reference verifier + producer), ust-cli (the ust command: verify, canon, the HIGH genesis ceremony, witness), ust-mcp (an MCP server so agents verify natively), ust-light (a byte-identical minimal subset), ust-web-signer (WebCrypto browser signing with non-extractable keys), and ust-ots-verify / ust-rekor-verify (opt-in Bitcoin/OTS and Sigstore Rekor anchor substrates). docs/ is the client-side web verifier plus zero-dependency single-file verifiers. tools/ are the drift gates that keep spec = code = vectors = README = these panels in sync.](.github/ust-map.svg)
 
 | Path | What |
 |------|------|
@@ -307,7 +307,7 @@ rung (`attested_withheld: "experimental-gate"`); the top rung is reachable only 
 | `packages/ust-mcp/` | an MCP server exposing UST to agents ([npm](https://www.npmjs.com/package/@ust-protocol/mcp)) |
 | `packages/ust-web-signer/` | WebCrypto browser signer ([npm](https://www.npmjs.com/package/@ust-protocol/web-signer)) |
 | `packages/ust-cli/` | the `ust` command — verify / canon / the HIGH genesis ceremony / witness ([npm](https://www.npmjs.com/package/@ust-protocol/cli)) |
-| `packages/ust-lite/` | the zero-dependency LIGHT floor — a byte-identical minimal subset ([npm](https://www.npmjs.com/package/ust-lite)) |
+| `packages/ust-light/` | the zero-dependency LIGHT floor — a byte-identical minimal subset ([npm](https://www.npmjs.com/package/ust-light)) |
 | `packages/ust-ots-verify/` | opt-in Bitcoin (OpenTimestamps) anchor-substrate plugin ([npm](https://www.npmjs.com/package/@ust-protocol/ots-verify)) |
 | `packages/ust-rekor-verify/` | opt-in Sigstore Rekor anchor-substrate plugin ([npm](https://www.npmjs.com/package/@ust-protocol/rekor-verify)) |
 | `packages/diarium/` | agent memory as a verifiable stream — a task closes, the agent writes what it learned, sealed and `prev`-chained ([npm](https://www.npmjs.com/package/diarium)) |

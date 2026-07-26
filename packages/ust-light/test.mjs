@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// ust-lite validity: prove a ust-lite document IS a valid UST document. Cross-verify BOTH directions against the
+// ust-light validity: prove a ust-light document IS a valid UST document. Cross-verify BOTH directions against the
 // full reference verifier, and prove byte-identity (same canon/hash/sig) — the whole point of "a lite doc verifies
 // VALID:LIGHT under full UST, and lite accepts any UST doc at the LIGHT floor".
 import * as lite from './index.mjs';
@@ -60,8 +60,8 @@ ok('unknown top-level member → INVALID', lite.verify({ ...liteDoc, evil: 1 }).
 const badId = lite.seal(lite.buildState({ ...id, ust_id: 'ust:BADSHAPE' }, time, data), kp.privateKey, kp.pub);
 ok('bad ust_id shape → INVALID', lite.verify(badId).error === 'E-MALFORMED');
 
-// 6) class↔provenance floor (§14.5/N10) — caught via MCP dogfood: ust-lite is observation-only. A class:attestation
-//    doc needs constituents+root; ust-lite must REJECT it, in PARITY with full (never read VALID:LIGHT what full rejects).
+// 6) class↔provenance floor (§14.5/N10) — caught via MCP dogfood: ust-light is observation-only. A class:attestation
+//    doc needs constituents+root; ust-light must REJECT it, in PARITY with full (never read VALID:LIGHT what full rejects).
 let liteBuildRej = false; try { lite.buildState({ ...id, class: 'attestation' }, time, data); } catch (e) { liteBuildRej = e.code === 'E-MALFORMED'; }
 ok('lite buildState rejects class:attestation (observation-only)', liteBuildRej);
 const attState = { id: { ...id, class: 'attestation' }, time, data: liteDoc.state.data, hashes: liteDoc.state.hashes };
@@ -179,6 +179,6 @@ const unvaried = STATE_MEMBERS.filter((m) => !varied.has(m));
 ok(`UST-jls axis totality: every member of RESERVED.state (${STATE_MEMBERS.join(', ')}) is varied by the differential`, STATE_MEMBERS.length > 0 && unvaried.length === 0);
 if (unvaried.length) F.push('AXIS NEVER VARIED: ' + unvaried.join(', ') + ' — an obligation under it can never be reached');
 
-console.log(`\n  ust-lite validity vs full ust-protocol   PASS ${pass}   FAIL ${fail}`);
+console.log(`\n  ust-light validity vs full ust-protocol   PASS ${pass}   FAIL ${fail}`);
 if (F.length) { F.forEach((f) => console.log('    ✗ ' + f)); process.exit(1); }
-console.log('  ✓ a ust-lite document IS a valid UST document — byte-identical, cross-verified both ways, AND lite VALID ⇒ core VALID over adversarial shapes (round-49 P0-01 differential)');
+console.log('  ✓ a ust-light document IS a valid UST document — byte-identical, cross-verified both ways, AND lite VALID ⇒ core VALID over adversarial shapes (round-49 P0-01 differential)');

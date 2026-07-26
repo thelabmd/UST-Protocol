@@ -1,9 +1,9 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
-# ust-lite — the UST 1.0 LIGHT floor, standalone
+# ust-light — the UST 1.0 LIGHT floor, standalone
 
 Publish and verify a **signed, canonical, addressable, string-only, bounded JSON state** with a **carried key** —
 in a minute, with zero dependencies (Node `crypto`: Ed25519 + SHA-256). No genesis, key-log, anchoring, checkpoints,
-or the assurance lattice. **A `ust-lite` document is a valid UST document**: it verifies `VALID:LIGHT` under the full
+or the assurance lattice. **A `ust-light` document is a valid UST document**: it verifies `VALID:LIGHT` under the full
 `ust-protocol` verifier, and this verifier accepts any UST document at the LIGHT floor. The canon/hash/sign
 primitives are byte-identical to the reference implementation (`test.mjs` proves both directions + byte-identity).
 
@@ -26,7 +26,7 @@ use the full `ust-protocol`. LIGHT identity is reported `self-asserted`.
 ## Use
 
 ```js
-import { keypair, buildState, seal, verify } from 'ust-lite';
+import { keypair, buildState, seal, verify } from 'ust-light';
 
 const kp = keypair();
 const doc = seal(buildState(
@@ -42,7 +42,7 @@ verify(doc);   // → { result: 'VALID:LIGHT', identity: 'self-asserted', conten
 
 ## Boundary (honest)
 
-`ust-lite`'s verifier applies the **structural** floor (canon / hash / strict-signature / shape). The full
+`ust-light`'s verifier applies the **structural** floor (canon / hash / strict-signature / shape). The full
 `ust-protocol` verifier adds semantic hardening at LIGHT (real-calendar date existence, homograph A-label guard) and
-the HIGH/TOP tiers (genesis name-authority, anchored time, stream completeness, the assurance lattice). Use `ust-lite`
+the HIGH/TOP tiers (genesis name-authority, anchored time, stream completeness, the assurance lattice). Use `ust-light`
 to adopt in a minute and to independently re-check the floor; use `ust-protocol` for authority and time.

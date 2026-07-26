@@ -2,7 +2,7 @@
 // docs/ VERIFIER PARITY gate (round-53/54 — UST-ybn / UST-0q7). The clean-room web verifier (docs/ust-verify.mjs, the
 // zero-dependency LIGHT floor served by GitHub Pages) and the reference verifier (ust-protocol) MUST return the SAME
 // verdict on every LIGHT-floor case — the README promises "two conforming verifiers agree because the verdict is a total
-// deterministic function". rev83's name-form→INDETERMINATE rule ONCE diverged: it was swept into index.mjs + ust-lite but
+// deterministic function". rev83's name-form→INDETERMINATE rule ONCE diverged: it was swept into index.mjs + ust-light but
 // NOT docs/ust-verify.mjs, and NO gate covered the clean-room verifier, so it silently returned VALID:LIGHT where the
 // reference returned INDETERMINATE. This gate drives a battery through BOTH and fails RED on any divergence — a third
 // verifier can never drift unnoticed again.
