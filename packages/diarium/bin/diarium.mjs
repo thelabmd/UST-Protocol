@@ -271,8 +271,16 @@ if (cmd === 'write') {
 }
 
 if (cmd === 'read') {
-  const depth = Number(flag('depth', '3'));
+  const rawDepth = flag('depth', '3');
   const { ordered, problems } = chain();
+  const depth = rawDepth === 'all' ? ordered.length : Number(rawDepth);
+  // --json emits the ordered DOCUMENTS so a caller can render its own view without re-deriving the chain. Without it,
+  // anyone wanting a different presentation writes a second chain walk, which is the duplication this tool exists to avoid.
+  if (args.includes('--json')) {
+    if (problems.length) { console.error('✗ refusing to emit an order derived from a broken store:'); for (const p of problems) console.error('   • ' + p); process.exit(1); }
+    console.log(JSON.stringify(ordered.slice(-depth).map((x) => x.d)));
+    process.exit(0);
+  }
   if (!ordered.length) { console.log('  (no entries yet)'); process.exit(0); }
   if (problems.length) console.log(`  ! ${problems.length} structural problem(s) — run: diarium verify\n`);
   console.log(`  walking back ${depth} hop(s) from the head of ${ordered.length} entries\n`);
