@@ -32,6 +32,33 @@ export const MUTATIONS = [
     from: 'export function edVerifyStrict(pubB64url, msgUtf8, sigB64url) {',
     to: 'export function edVerifyStrict(pubB64url, msgUtf8, sigB64url) { return true; /* mutant */',
   },
+  // ── #95 the anchor INCLUSION seam. Delegating the tree opens exactly four forgery surfaces (F.5c.1 rev86); one
+  // mutant per surface, so each closure is shown CAPABLE of going red rather than merely being green today.
+  // MEASURED, not assumed: a mutant for the doc-borne surface was written and REMOVED. The insertion point is
+  // reachable (diagnostically confirmed), but `admitDeep` STRIPS every field the verifier does not declare, so a
+  // publisher's `inclusionVerify` — function or inert look-alike — never arrives for the mutant to honour. The surface is
+  // closed by admission, one layer above the seam; a mutant there would be decorative, which this corpus does not keep.
+  {
+    id: 'inclusion-connector-leaf-not-typed', mustDetect: true, observe: ['conformance'],
+    why: 'the CLOSED TYPED leaf. Broken, any truthy connector return mints inclusion — the string "yes" would anchor a document.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: '      if (inc !== true && inc !== false)',
+    to: '      if (false) /* mutant: truthy accepted */',
+  },
+  {
+    id: 'inclusion-seam-not-total', mustDetect: true, observe: ['conformance'],
+    why: 'the not-ours door (UST-5tm). Broken, a hostile connector throws THROUGH the verifier instead of becoming a structured verdict.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "      return { inclusion: false, time: 'unproven', status: 'unavailable', detail: 'inclusion seam is not-ours (UST-5tm): a hostile connector return/throw is a structured reject, never a host throw' };",
+    to: '      throw new Error("mutant: hostile connector rethrown");',
+  },
+  {
+    id: 'inclusion-connector-mints-time', mustDetect: true, observe: ['conformance'],
+    why: 'the rung separation (C3). Broken, delegating inclusion also delegates anchored TIME — a connector answering true would forge the substrate half.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: '      inclusion = inc;',
+    to: "      inclusion = inc;\n      if (inc) return { inclusion: true, time: 'anchored', status: 'verified', anchorTime: '2027-01-01T00:00:00Z', detail: 'mutant: connector minted time' };",
+  },
   {
     id: 'tier-always-top', mustDetect: true, observe: ['conformance'],
     why: 'the tier projection. Broken, every document reads as the strongest tier — checks whose evidence is "this evidence does NOT earn TOP/authoritative" must go red.',

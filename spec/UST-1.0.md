@@ -673,16 +673,27 @@ the transcript (or supplied by the caller):
 ```
 AnchorProof := { "root": ContentHash, "path": [ {"dir":"L"|"R","hash":ContentHash}, ... ], "anchor": Locator }
 ```
-The verifier recomputes the Merkle path from the State's `content_hash` to `root` (RFC 6962, domain-separated
-leaves/nodes per §7), then validates `root`'s commitment under the **substrate's verification profile**:
+The verifier establishes that the State's `content_hash` is a member of the leaf-set committed by `root`, then
+validates `root`'s commitment under the **substrate's verification profile**. **BOTH halves come from that
+profile** — the membership procedure as much as the finality parameter — because a substrate's inclusion evidence
+is in its own tree: `rekor` proves RFC 6962 inclusion to a witness-cosigned tree head (leaf `SHA256(0x00‖·)`, node
+`SHA256(0x01‖L‖R)` over RAW digests), which this document's `ust:leaf`/`ust:node` over ASCII `sha256:`-prefixed
+strings (§7) cannot express. A core that fixed ONE tree made a registered substrate unsatisfiable (#95). The
+protocol therefore fixes the proof's SHAPE and its self-containment, not the hash construction that walks it:
+`root` is the commitment handed to the substrate check, and the profile decides membership. A verifier MAY be
+given the procedure as a connector; **absent one, the REFERENCE construction applies** — the `ust:leaf`/`ust:node`
+walk over `path` below, which every proof issued under earlier revisions still satisfies:
 ```
 Locator := { "substrate": string, ... }   // substrate ∈ the anchor-substrate registry (§17); remaining
                                           // fields are that substrate's evidence (see its registry entry)
 ```
 **The anchor SUBSTRATE is an operator choice (like the signature scheme), NOT the protocol.** The protocol
-fixes only: (1) the proof is self-contained/in-band (the inclusion path above — no mutable lookup, I12); (2)
+fixes only: (1) the proof is self-contained/in-band (the inclusion evidence travels WITH the document — no mutable
+lookup, I12); (2)
 `root` MUST be committed to a PUBLIC append-only log; (3) the substrate MUST be a REGISTERED substrate (§17)
-whose verification procedure is deterministic, and the operator MUST declare which one (§20). A verifier loads
+whose verification procedure — membership AND finality — is deterministic, and the operator MUST declare which one
+(§20). Determinism is what preserves agreement between verifiers: two consumers loading the same DECLARED profile
+reach the same verdict, the same condition the finality parameter has always carried. A verifier loads
 that substrate's verification profile (its evidence format, its "public append-only log" check, its minimum
 confirmation/finality parameter) and applies it; an unregistered or unverifiable substrate ⇒ time = UNPROVEN.
 A **not-yet-final** commitment (per the substrate's finality rule) yields UNPROVEN, NEVER `VALID`-time. No
@@ -1529,7 +1540,10 @@ Independent re-implementation is expected; the vectors make "verify without trus
 - **key-log entry** (a `class:"key"` transcript, §12.2): `state.data.key_op.value` keys `op,pub,reason,compromised_since`; `op` ∈ `add|rotate|revoke`;
   `reason` ∈ `retired|compromised`. `key_id` = `H("ust:keylog", pub_raw)` (raw public-key octets, domain-separated §7 — not plain SHA256(pub)).
 - **anchor substrate (operator choice, extensible):** an entry defines the substrate's `Locator` evidence
-  fields, its public-append-only-log check, and its finality parameter. Registered: **`bitcoin-ots`**
+  fields, its public-append-only-log check, its finality parameter, and — since #95 — its **inclusion
+  procedure** (the hash construction that decides `content_hash ∈ leaves(root)`; supplied to a verifier as a
+  connector, and where absent the reference `ust:leaf`/`ust:node` walk over `AnchorProof.path` applies).
+  Registered: **`bitcoin-ots`**
   (`Locator = {substrate:"bitcoin-ots", ots:b64url, block_height:int}`; OTS attestation → Bitcoin header;
   finality = ≥6 confirmations) · **`rekor`** (`Locator = {substrate:"rekor", logIndex:int, inclusionProof:{
   logIndex, treeSize, rootHash, hashes[], checkpoint}, integratedTime:int}`; Sigstore transparency log →

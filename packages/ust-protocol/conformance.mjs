@@ -99,6 +99,12 @@ for (const v of V.vectors) {
     // authority (impersonation) + grid equality (off-grid), all language-neutral.
     case 'stream-authority': case 'stream-grid': { const r = P.verifyStream(v.frames, { genesis: v.genesis, checkpoint: v.checkpoint }); check(v.id, v.expect.error ? r.error === v.expect.error : r.complete === v.expect.complete); break; }
     case 'fork-choice': { const sv = (a, root) => v.anchored_roots.includes(root) ? { final: true, time: '2027-01-01T00:00:00Z' } : null; const r = await P.forkChoice(v.candidates, { genesis: v.genesis, ...nfe(v.genesis), substrateVerify: sv }); check(v.id, r.result === v.expect.result); break; }
+    // #95 — the REFERENCE inclusion connector, pinned language-neutrally. Now that the protocol calls the tagged walk one
+    // connector among several, a second implementation needs the bytes to reproduce it; the DELEGATION seam itself cannot
+    // be a vector (JSON carries no function), which is why it lives in the checks + mutation corpus instead.
+    case 'anchor-inclusion': { const r = P.verifyAnchor(v.content_hash, { root: v.root, path: v.path, anchor: { substrate: 'bitcoin-ots' } });
+      check(v.id, r.inclusion === v.expect.inclusion && (v.expect.error ? r.error === v.expect.error : true),
+        `inclusion=${r.inclusion} error=${r.error || '-'} expected inclusion=${v.expect.inclusion}${v.expect.error ? ' error=' + v.expect.error : ''}`); break; }
     default: noted(v.id, 'kind ' + v.kind + ' not exercised');
   }
 }
@@ -120,6 +126,35 @@ check('#3 unknown-top-level→E-MALFORMED', (() => { const b = clone(mk()); b.su
 check('#4 unknown-kind→E-MALFORMED', P.verify(mk({ r: { kind: 'observation', value: { x: '1' } } }), { context: 'data' }).error === 'E-MALFORMED');
 check('#5 anchor-bad-dir→fail-closed', (() => { const r = P.verifyAnchor('sha256:' + 'ab'.repeat(32), { root: 'sha256:' + 'cd'.repeat(32), path: [{ dir: 'BOGUS', hash: 'sha256:' + 'ef'.repeat(32) }] }); return r.inclusion === false && r.error === 'E-ANCHOR'; })());
 check('#5 anchor-missing-path→no-throw', (() => { try { P.verifyAnchor('sha256:' + 'ab'.repeat(32), { root: 'sha256:' + 'cd'.repeat(32) }); return true; } catch { return false; } })());
+// #95 — inclusion is a substrate-profile capability (F.3 rev86), so the SEAM must be closed where delegation could forge.
+// A registered substrate (`rekor`) proves RFC 6962 inclusion to its own tree head, which the core's `ust:leaf`/`ust:node`
+// walk cannot express; the walk is now the BUNDLED connector. These close the attacks that delegation opens.
+const A_CH = 'sha256:' + 'ab'.repeat(32);
+const A_ALIEN = { root: 'sha256:' + 'cd'.repeat(32), path: [{ shape: 'rfc6962-raw-digests' }], anchor: { substrate: 'rekor' } };
+// Two layers, so two checks — a single one would pass for a reason its name does not state. A FUNCTION never reaches the
+// seam (admitDeep refuses a non-inert proof); a DATA look-alike does reach it, and must still earn nothing.
+check('#95 a proof carrying a FUNCTION is refused at the door as non-inert — a capability cannot travel in data', (() =>
+  P.verifyAnchor(A_CH, { ...A_ALIEN, inclusionVerify: () => true }).error === 'E-ANCHOR')());
+check('#95 a doc-borne DATA look-alike (anchor.inclusionVerify: true) earns nothing — the connector is read from opts only', (() => {
+  const r = P.verifyAnchor(A_CH, { ...A_ALIEN, anchor: { substrate: 'rekor', inclusionVerify: true }, inclusionVerify: true });
+  return r.inclusion === false;   // inert booleans SURVIVE admission, so this is the surface a publisher can actually reach
+})());
+check('#95 a non-Boolean connector return cannot mint inclusion — typed closed leaf', (() =>
+  ['yes', 1, {}, [], 'true', null].every((bad) => P.verifyAnchor(A_CH, A_ALIEN, { inclusionVerify: () => bad }).inclusion === false))());
+check('#95 a hostile connector (throw / revoked Proxy) → structured reject, never a host throw', (() => {
+  for (const fn of [() => { throw new Error('h'); }, () => { const r = Proxy.revocable({}, {}); r.revoke(); return r.proxy; }]) {
+    try { if (P.verifyAnchor(A_CH, A_ALIEN, { inclusionVerify: fn }).inclusion !== false) return false; } catch { return false; }
+  }
+  return true;
+})());
+check('#95 an inclusion connector cannot mint anchored TIME — the substrate seam still gates it (C3)', (() =>
+  P.verifyAnchor(A_CH, A_ALIEN, { inclusionVerify: () => true }).time === 'unproven')());
+check('#95 an async connector is NAMED, never silently taken as unproven-or-true', (() => {
+  const r = P.verifyAnchor(A_CH, A_ALIEN, { inclusionVerify: async () => true });
+  return r.inclusion === false && /ASYNC/.test(r.detail || '');
+})());
+check('#95 with NO connector the bundled walk still refuses a foreign-shape proof (no silent acceptance)',
+  P.verifyAnchor(A_CH, A_ALIEN).inclusion === false);
 check('#6 sig-alg-none→E-SIG', (() => { const b = clone(mk()); b.sig.alg = 'none'; return P.verify(b, { context: 'data' }).error === 'E-SIG'; })());
 check('B leap-second→E-MALFORMED', P.verify(mk({ r: { kind: 'captured', value: { x: '1' } } }, ID, { generated_at: '2026-12-31T23:59:60Z', valid_from: '2026-12-31T23:00:00Z', valid_to: '2027-01-01T00:00:00Z' }), { context: 'data' }).error === 'E-MALFORMED');
 // G1 — round-53 (UST-ybn): the `pinned`/TOFU rung was REMOVED; LIGHT identity = the KEY (key-form domain_shard = key_id).

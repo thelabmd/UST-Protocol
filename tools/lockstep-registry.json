@@ -396,6 +396,30 @@
       "rev": "rev85",
       "model_locus": "composition is an algebra over constituents, not a free-form merge",
       "conformance_check": "#44 E-ROOT → obligation §9.4 attestation-root + expected/actual"
+    },
+    {
+      "id": "R86-f3-inclusion-consumer-owned",
+      "rev": "rev86",
+      "model_locus": "the connector is read from `opts` only",
+      "conformance_check": "#95 a doc-borne DATA look-alike (anchor.inclusionVerify: true) earns nothing — the connector is read from opts only"
+    },
+    {
+      "id": "R86-f3-inclusion-typed-leaf",
+      "rev": "rev86",
+      "model_locus": "the leaf is CLOSED and TYPED",
+      "conformance_check": "#95 a non-Boolean connector return cannot mint inclusion — typed closed leaf"
+    },
+    {
+      "id": "R86-f3-inclusion-totality",
+      "rev": "rev86",
+      "model_locus": "the door is TOTAL",
+      "conformance_check": "#95 a hostile connector (throw / revoked Proxy) → structured reject, never a host throw"
+    },
+    {
+      "id": "R86-f3-inclusion-no-time",
+      "rev": "rev86",
+      "model_locus": "delegation does NOT lift the time rung",
+      "conformance_check": "#95 an inclusion connector cannot mint anchored TIME — the substrate seam still gates it (C3)"
     }
   ]
 }

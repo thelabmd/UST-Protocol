@@ -43,7 +43,13 @@ const MUTANTS = MUTATIONS.filter((m) => (m.observe || []).length > 0);
 
 // The residual is pinned: registered checks not yet reached by any mutant. Lower it as the battery grows; it must
 // never rise. (A new registered check with no mutant reaching it is EXPECTED to raise this — that is the point.)
-const PINNED_UNPROVEN = 53;
+// 53 → 54 (#95, rev86), and the one addition is NAMED rather than absorbed: `R86-f3-inclusion-consumer-owned` — "the
+// connector is read from `opts` only" — is defended by TWO independent layers, so no SINGLE mutant can turn it red.
+// `admitDeep` strips every field the verifier does not declare (measured: the seam's insertion point IS reachable, the
+// planted field is not), and a function makes the whole proof non-inert and refused at the door. Breaking one layer
+// leaves the other answering. The check asserts real behaviour; it is simply not singly falsifiable, and the corpus
+// records that instead of carrying a decorative mutant to make the number look better.
+const PINNED_UNPROVEN = 54;
 
 const failures = [];
 const caught = new Set();
