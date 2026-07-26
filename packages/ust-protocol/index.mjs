@@ -1457,11 +1457,38 @@ function verifyAnchorCore(contentHash, proof, opts = {}) {
   const HASH = /^sha256:[0-9a-f]{64}$/;
   if (!proof || typeof proof !== 'object' || !Array.isArray(proof.path) || !HASH.test(proof.root || ''))
     return { inclusion: false, time: 'unproven', status: 'verified', error: 'E-ANCHOR', detail: 'malformed anchor proof' };
-  for (const s of proof.path) if (!s || (s.dir !== 'L' && s.dir !== 'R') || !HASH.test(s.hash || ''))
-    return { inclusion: false, time: 'unproven', status: 'verified', error: 'E-ANCHOR', detail: 'malformed path entry (dir must be "L"|"R", hash sha256:hex)' };
-  let node = Hbytes('ust:leaf', Buffer.from(contentHash, 'utf8'));
-  for (const s of proof.path) node = Hbytes('ust:node', Buffer.from(s.dir === 'L' ? s.hash + node : node + s.hash, 'utf8'));
-  const inclusion = node === proof.root;
+  // ── inclusion is a CONNECTOR, not a protocol constant (owner call 2026-07-26; core+connectors at every level is what
+  // makes this adoptable). The tagged `ust:leaf`/`ust:node` walk below is the BUNDLED reference connector — one tree
+  // convention among several, not the convention. An operator anchoring with an RFC 6962 log (leaf = SHA256(0x00‖·),
+  // node = SHA256(0x01‖L‖R) over raw digests, which is what Certificate Transparency uses and what the reference
+  // operator already runs in production) supplies `opts.inclusionVerify` and needs no protocol change.
+  //
+  // The default is kept deliberately: every anchor proof issued before this is still confirmed with no adapter, so
+  // delegation costs nothing already in the field. What changes is normativity — the core no longer NAMES a substrate's
+  // tree, which is the boundary the operator-side split recorded and the code had drifted from.
+  let inclusion;
+  if (typeof opts.inclusionVerify === 'function') {
+    // A not-ours module: its INVOCATION and its RETURN are hostile (trust-boundary law UST-5tm). The whole seam is ONE
+    // total door — identical discipline to the substrate seam below, deliberately not a second pattern.
+    try {
+      const inc = opts.inclusionVerify(contentHash, proof);
+      if (inc && typeof inc.then === 'function')
+        return { inclusion: false, time: 'unproven', status: 'unavailable', detail: 'inclusion connector is ASYNC — use verifyAsync() or resolveByDiscovery(), not sync verify()' };
+      // A CLOSED, TYPED leaf: strict Boolean only. A truthy non-Boolean ('yes', {}) must never mint inclusion.
+      if (inc !== true && inc !== false)
+        return { inclusion: false, time: 'unproven', status: 'unavailable', detail: 'inclusion connector must return a strict Boolean (a typed closed leaf, F.5.0/C3/I4)' };
+      inclusion = inc;
+    } catch {
+      return { inclusion: false, time: 'unproven', status: 'unavailable', detail: 'inclusion seam is not-ours (UST-5tm): a hostile connector return/throw is a structured reject, never a host throw' };
+    }
+  } else {
+    // the bundled reference connector — and its proof SHAPE is its own, so it validates it here rather than in the core
+    for (const s of proof.path) if (!s || (s.dir !== 'L' && s.dir !== 'R') || !HASH.test(s.hash || ''))
+      return { inclusion: false, time: 'unproven', status: 'verified', error: 'E-ANCHOR', detail: 'malformed path entry (dir must be "L"|"R", hash sha256:hex) — shape of the BUNDLED inclusion connector; another tree supplies opts.inclusionVerify' };
+    let node = Hbytes('ust:leaf', Buffer.from(contentHash, 'utf8'));
+    for (const s of proof.path) node = Hbytes('ust:node', Buffer.from(s.dir === 'L' ? s.hash + node : node + s.hash, 'utf8'));
+    inclusion = node === proof.root;
+  }
   if (!inclusion) return { inclusion: false, time: 'unproven', status: 'verified', detail: 'inclusion path does not reach root' };
   if (!opts.substrateVerify) return { inclusion: true, time: 'unproven', status: 'unavailable', detail: 'inclusion OK; substrate not verified (caller job)' };
   // The substrate oracle is a NOT-OURS module (OTS/Rekor/git/IPFS/Bitcoin — open-ended, third-party). Per the
