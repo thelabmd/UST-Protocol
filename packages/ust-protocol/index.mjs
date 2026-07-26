@@ -2724,7 +2724,11 @@ async function anchoredByProofs(content_hash, proofs, substrateVerify, opDeadlin
 // are small, so a 2 MiB cap bounds every discovery body. Reject a declared oversize BEFORE accumulating; when the body
 // is a real stream, read with a hard cap and abort past it (no full accumulation); for a mocked response, cap after read.
 const DISCOVERY_MAX_BYTES = 1 << 21;                              // 2 MiB — a single genesis/witness doc
-const KEYLOG_MAX_BYTES = 1 << 23;                                // 8 MiB — a ≤256-entry key-log of ordinary small key docs (round-18 P0-03: rev14's 2 MiB was below a valid K≤256 log). This is a RESOURCE BUDGET, not the K bound: a genuinely huge valid log honestly hits INDETERMINATE(resource_limit), never keylog=[].
+// §11.3 — the cadence log is bounded at 256 ENTRIES by `resolveCadenceBytes`, and an entry is one small key-form doc
+// (~700 B), so 256 of them is ~180 KiB. 1 MiB is ~5× headroom and deliberately far tighter than the key-log's ceiling:
+// a smaller surface for the same 256-entry bound means less to read before the bound itself rejects.
+const CADENCE_MAX_BYTES = 1 << 20;
+const KEYLOG_MAX_BYTES = 1 << 23;                             // 8 MiB — a ≤256-entry key-log of ordinary small key docs (round-18 P0-03: rev14's 2 MiB was below a valid K≤256 log). This is a RESOURCE BUDGET, not the K bound: a genuinely huge valid log honestly hits INDETERMINATE(resource_limit), never keylog=[].
 // round-18 P1-02 — authority-discovery bytes are STRICT UTF-8: an invalid sequence is REJECTED (via the existing
 // module strictUtf8 fatal decoder → null), never replacement-decoded to U+FFFD (I4/M-BYTE: an FF byte and a genuine
 // U+FFFD string must not collapse to one transcript — that is a cross-implementation split at the authority byte boundary).
@@ -2863,10 +2867,22 @@ export async function resolveByDiscovery(doc, opts = {}, transport = {}) {
     (base.result === 'VALID:LIGHT' || (base.result === 'INDETERMINATE' && base.reason === 'unavailable'));
   if (!worth) return { verdict: base, resolution: null };
   if (!isPublicDnsShard(shard)) return { verdict: base, resolution: { skipped: 'domain_shard is not a public DNS name — discovery refused (SSRF guard)' } };
-  let genesis, keylog = [], genesisHash, gRaw, kRaw;
+  let genesis, keylog = [], cadenceLog = [], genesisHash, gRaw, kRaw, cRaw;
   try {
     const get = async (p, cap) => { const r = await fetchImpl(`https://${shard}${p}`, { signal: AbortSignal.timeout(10000), redirect: 'error' }); if (!r.ok) { const e = new Error(`HTTP ${r.status} at ${p}`); e.httpStatus = r.status; throw e; } return readBounded(r, cap); };   // round-17 P1-03 — bounded read (byte ceiling before accumulate/scan/parse)
     gRaw = await get('/.well-known/ust-genesis');
+    try { cRaw = await get('/.well-known/ust-cadence', CADENCE_MAX_BYTES); }
+    catch (e) {
+      // §11.3 — the cadence log is AUTHORITY over the completeness GRID, so it inherits the key-log's distinction
+      // exactly (round-18 P0-03) rather than a looser one. ABSENT (404/410) means the publisher declares no change and
+      // the genesis value stands: the honest common case, since a publisher with one fixed cadence never writes a log,
+      // and an event-driven publisher declares none at all. PRESENT-but-UNREADABLE must NEVER collapse to `[]`, because
+      // that silently ERASES a cadence change and the range is then judged against the OLD grid — a finer new cadence
+      // reads as holes, a coarser one reads as `complete` while frames are in fact missing. Either way a completeness
+      // verdict manufactured by a transport failure, which is the one thing a completeness claim must never be.
+      if (e.httpStatus !== 404 && e.httpStatus !== 410)
+        return { verdict: base, resolution: { status: 'INDETERMINATE', reason: /ceiling|§13/.test(e.message || '') ? 'resource_limit' : 'unavailable', error: 'cadence-log present but unreadable: ' + (e && e.message || e) } };
+    }
     try { kRaw = await get('/.well-known/ust-keylog', KEYLOG_MAX_BYTES); }
     catch (e) {
       // round-18 P0-03 — an ABSENT key-log (404/410) is genuinely not served (fail-safe: only genesis-key docs stay
@@ -2891,6 +2907,17 @@ export async function resolveByDiscovery(doc, opts = {}, transport = {}) {
     if (!Array.isArray(k)) return { verdict: base, resolution: { error: 'E-MALFORMED: published key-log is not a JSON array' } };
     keylog = k;
   }
+  // Same four checks in the same order, because the cadence log crosses the same untrusted-byte boundary (I4) and moves
+  // the grid: dup-key scan on the RAW bytes (JSON.parse collapses duplicates silently), then parse, then the §6 Unicode
+  // domain, then the shape. A broken authority surface is reported, never downgraded to "no cadence declared".
+  if (cRaw !== undefined) {
+    const cdup = scanDuplicateKeys(cRaw);
+    if (cdup) return { verdict: base, resolution: { error: 'E-CANON: published cadence-log fails the raw-byte check (' + cdup + ')' } };
+    let cl; try { cl = JSON.parse(cRaw); } catch { return { verdict: base, resolution: { error: 'E-MALFORMED: published cadence-log is not valid JSON' } }; }
+    if (anyLoneSurrogate(cl)) return { verdict: base, resolution: { error: 'E-CANON: published cadence-log has an unpaired UTF-16 surrogate — outside the §6 canonical Unicode domain' } };
+    if (!Array.isArray(cl)) return { verdict: base, resolution: { error: 'E-MALFORMED: published cadence-log is not a JSON array' } };
+    cadenceLog = cl;
+  }
 
   // no-fork EVIDENCE (default): query the witness UNLESS the caller air-gap-asserts it or forbids the network.
   // #69 B / F.5a — the publisher's OWN served witness list is CORROBORATION, not independent non-membership: a
@@ -2913,12 +2940,24 @@ export async function resolveByDiscovery(doc, opts = {}, transport = {}) {
   // round-16 P0-02 — key-log freshness is EARNED here: we JUST fetched /.well-known/ust-keylog for THIS domain+genesis,
   // so mint an unforgeable observation token (observed_at = the fetch instant). A raw caller string can never do this.
   let keylogFreshAsOf; if (kRaw !== undefined) { keylogFreshAsOf = { observed_at: new Date().toISOString().slice(0, 19) + 'Z', domain: shard, active_genesis: genesisHash }; VERIFIED_FRESH.add(keylogFreshAsOf); }
+  // Resolve the grid the publisher has SIGNED for this document's own moment, and hand the log back. Without this the
+  // fetch buys the consumer nothing: a completeness claim is checked by `verifyStream`, which needs the log, and making
+  // it fetch the same bytes again is both a wasted round-trip and a second chance to read a DIFFERENT log. A broken log
+  // is an error here, not a silent `null` — "no cadence declared" and "your cadence log does not verify" are different
+  // facts, and only the first one is benign.
+  const cadRes = resolveCadence(genesis, cadenceLog, doc?.state?.id?.ust_id, { keylog });
+  if (cadRes.error) return { verdict: base, resolution: { error: cadRes.error + ': published cadence-log does not resolve — ' + (cadRes.detail || '') } };
   const authOpts = { genesis, keylog, noForkConfirmed: opts.noForkConfirmed, noForkEvidence: opts.noForkEvidence, trustRoots: opts.trustRoots, servedNoFork, keylogFreshAsOf };
   const auth = resolveAuthority(doc, authOpts);
   if (auth.error) return { verdict: base, resolution: { error: auth.error + (auth.detail ? ' — ' + auth.detail : '') } };
   if (callerNoFork) noFork = auth.independently_verified ? 'accepted-external-witness (authoritative)' : 'caller-asserted (consumer-override)';
   const verdict = await verifyAsync(doc, { ...opts, genesis, keylog, noForkConfirmed: opts.noForkConfirmed, servedNoFork, keylogFreshAsOf, capacity: auth.capacity, substrateVerify });   // #69 E1 — await the doc's own anchor substrate (TOP); carry the EARNED freshness token (round-16 P0-02) into the final verdict
-  return { verdict, resolution: { publisher: auth.publisher ?? shard, strength: auth.strength, capacity: auth.capacity, noFork, ...(witnessReason ? { witness_reason: witnessReason } : {}), source: `https://${shard}/.well-known/ (§20.1 discovery + §12.1a witness)` } };
+  return { verdict, resolution: { publisher: auth.publisher ?? shard, strength: auth.strength, capacity: auth.capacity, noFork, ...(witnessReason ? { witness_reason: witnessReason } : {}),
+    // `cadence: null` is a POSITIVE fact, not a missing field: this publisher declares no grid, so it can never earn
+    // more than `chain-consistent` — no-deletion — and can never claim no-omission. Reported, not omitted, so a
+    // consumer reads the ceiling rather than inferring one.
+    cadence: cadRes.cadence === null ? null : String(cadRes.cadence), ...(cadenceLog.length ? { cadence_log: cadenceLog } : {}),
+    source: `https://${shard}/.well-known/ (§20.1 discovery + §12.1a witness)` } };
 }
 
 // minimal duplicate-key-detecting JSON scanner (zero-dep). Returns an error string or null. Keys are parsed

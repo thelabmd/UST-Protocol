@@ -64,6 +64,8 @@ jobs:
         run: npm run test:ssrf
       - name: drift-guards (meta — every from-code gate is fail-closed; injects a fake drift, asserts the gate rejects it, restores)
         run: npm run test:drift-guards
+      - name: cadence discovery (a declared grid is reachable; unreadable ≠ undeclared)
+        run: npm run test:cadence
       - name: inclusion connector (anchor inclusion is delegable; the bundled tree is one connector; the seam is total)
         run: npm run test:inclusion
       - name: module-seam totality (S1 — a NOT-OURS module return/throw is a structured verdict, never a host throw; invocation roster pinned from source)

@@ -2885,6 +2885,1161 @@
    "expect": {
     "inclusion": false
    }
+  },
+  {
+   "kind": "cadence-resolve",
+   "id": "cadr-01-none-declared",
+   "rule": "§11.3 no genesis cadence and no log ⇒ cadence null (the publisher can never claim no-omission)",
+   "genesis": {
+    "ust": "1.0",
+    "state": {
+     "id": {
+      "domain_shard": "cadence.example",
+      "ust_id": "ust:20260726.08",
+      "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "class": "genesis"
+     },
+     "time": {
+      "generated_at": "2026-07-26T08:00:00Z",
+      "valid_from": "2026-07-26T08:00:00Z",
+      "valid_to": "2026-07-26T08:00:00Z"
+     },
+     "data": {
+      "genesis": {
+       "kind": "captured",
+       "value": {
+        "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+        "role": "name-binding-root",
+        "max_partitions": "512"
+       }
+      }
+     },
+     "hashes": {
+      "genesis": "sha256:52c2baa2283c909cc948aaf88192621f26aabc83a1197446f31a1338ede178dd"
+     }
+    },
+    "sig": {
+     "alg": "Ed25519",
+     "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+     "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+     "sig": "x_JOdw14DZDUGNglFJTfc3-q7okQA1RJYGt9fD1G2Z5jEU6pkKQXI6e-xEPIP7uxRpvOVkru0GYkXc91zqPuAw"
+    }
+   },
+   "cadence_log": [],
+   "at": "ust:20260726.11",
+   "expect": {
+    "cadence": null
+   }
+  },
+  {
+   "kind": "cadence-resolve",
+   "id": "cadr-02-genesis-value",
+   "rule": "§11.3 the genesis cadence is authorized by construction (self-signed) — no log needed",
+   "genesis": {
+    "ust": "1.0",
+    "state": {
+     "id": {
+      "domain_shard": "cadence.example",
+      "ust_id": "ust:20260726.08",
+      "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "class": "genesis"
+     },
+     "time": {
+      "generated_at": "2026-07-26T08:00:00Z",
+      "valid_from": "2026-07-26T08:00:00Z",
+      "valid_to": "2026-07-26T08:00:00Z"
+     },
+     "data": {
+      "genesis": {
+       "kind": "captured",
+       "value": {
+        "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+        "role": "name-binding-root",
+        "max_partitions": "512",
+        "cadence": "60"
+       }
+      }
+     },
+     "hashes": {
+      "genesis": "sha256:fd05f0c8aa127f715b0feb482e82ed84410d5f8aaa26d0d8a81c0ac648628064"
+     }
+    },
+    "sig": {
+     "alg": "Ed25519",
+     "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+     "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+     "sig": "roSwj4CzlhpAb_gicjLTwuJYKHRbjcyYm8wWOa7de0qU45KmnIYKQZd_X4r-54pBgC1_ul2WkROK5LNL0d5ZAQ"
+    }
+   },
+   "cadence_log": [],
+   "at": "ust:20260726.11",
+   "expect": {
+    "cadence": "60"
+   }
+  },
+  {
+   "kind": "cadence-resolve",
+   "id": "cadr-03-before-effective",
+   "rule": "§11.3 a change is NOT retroactive — at a moment before effective_from the prior value stands",
+   "genesis": {
+    "ust": "1.0",
+    "state": {
+     "id": {
+      "domain_shard": "cadence.example",
+      "ust_id": "ust:20260726.08",
+      "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "class": "genesis"
+     },
+     "time": {
+      "generated_at": "2026-07-26T08:00:00Z",
+      "valid_from": "2026-07-26T08:00:00Z",
+      "valid_to": "2026-07-26T08:00:00Z"
+     },
+     "data": {
+      "genesis": {
+       "kind": "captured",
+       "value": {
+        "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+        "role": "name-binding-root",
+        "max_partitions": "512"
+       }
+      }
+     },
+     "hashes": {
+      "genesis": "sha256:52c2baa2283c909cc948aaf88192621f26aabc83a1197446f31a1338ede178dd"
+     }
+    },
+    "sig": {
+     "alg": "Ed25519",
+     "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+     "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+     "sig": "x_JOdw14DZDUGNglFJTfc3-q7okQA1RJYGt9fD1G2Z5jEU6pkKQXI6e-xEPIP7uxRpvOVkru0GYkXc91zqPuAw"
+    }
+   },
+   "cadence_log": [
+    {
+     "ust": "1.0",
+     "state": {
+      "id": {
+       "domain_shard": "cadence.example",
+       "ust_id": "ust:20260726.08",
+       "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+       "class": "cadence"
+      },
+      "time": {
+       "generated_at": "2026-07-26T08:10:00Z",
+       "valid_from": "2026-07-26T08:10:00Z",
+       "valid_to": "2026-07-26T08:10:00Z"
+      },
+      "data": {
+       "cadence_op": {
+        "kind": "computed",
+        "value": {
+         "cadence": "30",
+         "effective_from": "ust:20260726.10"
+        }
+       }
+      },
+      "hashes": {
+       "cadence_op": "sha256:7175f55e2c4dab6b3ae0906881ce996c1c7977e6a1f7cd5cb3e2783f51c63431"
+      },
+      "provenance": {
+       "prev": "sha256:5ff2df591d72b88ab650e8849d4c3420b5dd064d9faa08d42e3e49ee95e45aa7"
+      }
+     },
+     "sig": {
+      "alg": "Ed25519",
+      "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+      "sig": "sNUR2CHVzKYN-M7I4padlk4-oVuskHMoxsOqvdm1RjchhKBIb3xsmEl0PtkkruhK6C_Ec6JW_tXKGhgNOYu7Bg"
+     }
+    }
+   ],
+   "at": "ust:20260726.09",
+   "expect": {
+    "cadence": null
+   }
+  },
+  {
+   "kind": "cadence-resolve",
+   "id": "cadr-04-after-effective",
+   "rule": "§11.3 at a moment at/after effective_from the change is in force",
+   "genesis": {
+    "ust": "1.0",
+    "state": {
+     "id": {
+      "domain_shard": "cadence.example",
+      "ust_id": "ust:20260726.08",
+      "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "class": "genesis"
+     },
+     "time": {
+      "generated_at": "2026-07-26T08:00:00Z",
+      "valid_from": "2026-07-26T08:00:00Z",
+      "valid_to": "2026-07-26T08:00:00Z"
+     },
+     "data": {
+      "genesis": {
+       "kind": "captured",
+       "value": {
+        "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+        "role": "name-binding-root",
+        "max_partitions": "512"
+       }
+      }
+     },
+     "hashes": {
+      "genesis": "sha256:52c2baa2283c909cc948aaf88192621f26aabc83a1197446f31a1338ede178dd"
+     }
+    },
+    "sig": {
+     "alg": "Ed25519",
+     "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+     "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+     "sig": "x_JOdw14DZDUGNglFJTfc3-q7okQA1RJYGt9fD1G2Z5jEU6pkKQXI6e-xEPIP7uxRpvOVkru0GYkXc91zqPuAw"
+    }
+   },
+   "cadence_log": [
+    {
+     "ust": "1.0",
+     "state": {
+      "id": {
+       "domain_shard": "cadence.example",
+       "ust_id": "ust:20260726.08",
+       "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+       "class": "cadence"
+      },
+      "time": {
+       "generated_at": "2026-07-26T08:10:00Z",
+       "valid_from": "2026-07-26T08:10:00Z",
+       "valid_to": "2026-07-26T08:10:00Z"
+      },
+      "data": {
+       "cadence_op": {
+        "kind": "computed",
+        "value": {
+         "cadence": "30",
+         "effective_from": "ust:20260726.10"
+        }
+       }
+      },
+      "hashes": {
+       "cadence_op": "sha256:7175f55e2c4dab6b3ae0906881ce996c1c7977e6a1f7cd5cb3e2783f51c63431"
+      },
+      "provenance": {
+       "prev": "sha256:5ff2df591d72b88ab650e8849d4c3420b5dd064d9faa08d42e3e49ee95e45aa7"
+      }
+     },
+     "sig": {
+      "alg": "Ed25519",
+      "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+      "sig": "sNUR2CHVzKYN-M7I4padlk4-oVuskHMoxsOqvdm1RjchhKBIb3xsmEl0PtkkruhK6C_Ec6JW_tXKGhgNOYu7Bg"
+     }
+    }
+   ],
+   "at": "ust:20260726.10",
+   "expect": {
+    "cadence": "30"
+   }
+  },
+  {
+   "kind": "cadence-resolve",
+   "id": "cadr-05-latest-in-force-wins",
+   "rule": "§11.3 two changes: the latest one in force at the moment wins, earlier slots keep the older grid",
+   "genesis": {
+    "ust": "1.0",
+    "state": {
+     "id": {
+      "domain_shard": "cadence.example",
+      "ust_id": "ust:20260726.08",
+      "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "class": "genesis"
+     },
+     "time": {
+      "generated_at": "2026-07-26T08:00:00Z",
+      "valid_from": "2026-07-26T08:00:00Z",
+      "valid_to": "2026-07-26T08:00:00Z"
+     },
+     "data": {
+      "genesis": {
+       "kind": "captured",
+       "value": {
+        "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+        "role": "name-binding-root",
+        "max_partitions": "512"
+       }
+      }
+     },
+     "hashes": {
+      "genesis": "sha256:52c2baa2283c909cc948aaf88192621f26aabc83a1197446f31a1338ede178dd"
+     }
+    },
+    "sig": {
+     "alg": "Ed25519",
+     "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+     "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+     "sig": "x_JOdw14DZDUGNglFJTfc3-q7okQA1RJYGt9fD1G2Z5jEU6pkKQXI6e-xEPIP7uxRpvOVkru0GYkXc91zqPuAw"
+    }
+   },
+   "cadence_log": [
+    {
+     "ust": "1.0",
+     "state": {
+      "id": {
+       "domain_shard": "cadence.example",
+       "ust_id": "ust:20260726.08",
+       "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+       "class": "cadence"
+      },
+      "time": {
+       "generated_at": "2026-07-26T08:10:00Z",
+       "valid_from": "2026-07-26T08:10:00Z",
+       "valid_to": "2026-07-26T08:10:00Z"
+      },
+      "data": {
+       "cadence_op": {
+        "kind": "computed",
+        "value": {
+         "cadence": "30",
+         "effective_from": "ust:20260726.10"
+        }
+       }
+      },
+      "hashes": {
+       "cadence_op": "sha256:7175f55e2c4dab6b3ae0906881ce996c1c7977e6a1f7cd5cb3e2783f51c63431"
+      },
+      "provenance": {
+       "prev": "sha256:5ff2df591d72b88ab650e8849d4c3420b5dd064d9faa08d42e3e49ee95e45aa7"
+      }
+     },
+     "sig": {
+      "alg": "Ed25519",
+      "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+      "sig": "sNUR2CHVzKYN-M7I4padlk4-oVuskHMoxsOqvdm1RjchhKBIb3xsmEl0PtkkruhK6C_Ec6JW_tXKGhgNOYu7Bg"
+     }
+    },
+    {
+     "ust": "1.0",
+     "state": {
+      "id": {
+       "domain_shard": "cadence.example",
+       "ust_id": "ust:20260726.08",
+       "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+       "class": "cadence"
+      },
+      "time": {
+       "generated_at": "2026-07-26T08:10:00Z",
+       "valid_from": "2026-07-26T08:10:00Z",
+       "valid_to": "2026-07-26T08:10:00Z"
+      },
+      "data": {
+       "cadence_op": {
+        "kind": "computed",
+        "value": {
+         "cadence": "5",
+         "effective_from": "ust:20260726.12"
+        }
+       }
+      },
+      "hashes": {
+       "cadence_op": "sha256:075e5b5afdd08f4c653a7ead07fa03e13a3c40ab18467cb996d04dba2da189d6"
+      },
+      "provenance": {
+       "prev": "sha256:aa737ff521abdb1304b4bb50a878918255c5822d09984d2f870194b9736c4599"
+      }
+     },
+     "sig": {
+      "alg": "Ed25519",
+      "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+      "sig": "HQHp7p1mrFQ751hrycB6YV2PqdJOP0gLU7SBcknYhUgxr7WYgC3WEmWXccEXY1gcNR7gTq0HLthS9vGf2cxcBw"
+     }
+    }
+   ],
+   "at": "ust:20260726.11",
+   "expect": {
+    "cadence": "30"
+   }
+  },
+  {
+   "kind": "cadence-resolve",
+   "id": "cadr-06-second-change-applies",
+   "rule": "§11.3 the same log resolved later gives the newer grid — one log, time-relative answers",
+   "genesis": {
+    "ust": "1.0",
+    "state": {
+     "id": {
+      "domain_shard": "cadence.example",
+      "ust_id": "ust:20260726.08",
+      "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "class": "genesis"
+     },
+     "time": {
+      "generated_at": "2026-07-26T08:00:00Z",
+      "valid_from": "2026-07-26T08:00:00Z",
+      "valid_to": "2026-07-26T08:00:00Z"
+     },
+     "data": {
+      "genesis": {
+       "kind": "captured",
+       "value": {
+        "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+        "role": "name-binding-root",
+        "max_partitions": "512"
+       }
+      }
+     },
+     "hashes": {
+      "genesis": "sha256:52c2baa2283c909cc948aaf88192621f26aabc83a1197446f31a1338ede178dd"
+     }
+    },
+    "sig": {
+     "alg": "Ed25519",
+     "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+     "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+     "sig": "x_JOdw14DZDUGNglFJTfc3-q7okQA1RJYGt9fD1G2Z5jEU6pkKQXI6e-xEPIP7uxRpvOVkru0GYkXc91zqPuAw"
+    }
+   },
+   "cadence_log": [
+    {
+     "ust": "1.0",
+     "state": {
+      "id": {
+       "domain_shard": "cadence.example",
+       "ust_id": "ust:20260726.08",
+       "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+       "class": "cadence"
+      },
+      "time": {
+       "generated_at": "2026-07-26T08:10:00Z",
+       "valid_from": "2026-07-26T08:10:00Z",
+       "valid_to": "2026-07-26T08:10:00Z"
+      },
+      "data": {
+       "cadence_op": {
+        "kind": "computed",
+        "value": {
+         "cadence": "30",
+         "effective_from": "ust:20260726.10"
+        }
+       }
+      },
+      "hashes": {
+       "cadence_op": "sha256:7175f55e2c4dab6b3ae0906881ce996c1c7977e6a1f7cd5cb3e2783f51c63431"
+      },
+      "provenance": {
+       "prev": "sha256:5ff2df591d72b88ab650e8849d4c3420b5dd064d9faa08d42e3e49ee95e45aa7"
+      }
+     },
+     "sig": {
+      "alg": "Ed25519",
+      "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+      "sig": "sNUR2CHVzKYN-M7I4padlk4-oVuskHMoxsOqvdm1RjchhKBIb3xsmEl0PtkkruhK6C_Ec6JW_tXKGhgNOYu7Bg"
+     }
+    },
+    {
+     "ust": "1.0",
+     "state": {
+      "id": {
+       "domain_shard": "cadence.example",
+       "ust_id": "ust:20260726.08",
+       "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+       "class": "cadence"
+      },
+      "time": {
+       "generated_at": "2026-07-26T08:10:00Z",
+       "valid_from": "2026-07-26T08:10:00Z",
+       "valid_to": "2026-07-26T08:10:00Z"
+      },
+      "data": {
+       "cadence_op": {
+        "kind": "computed",
+        "value": {
+         "cadence": "5",
+         "effective_from": "ust:20260726.12"
+        }
+       }
+      },
+      "hashes": {
+       "cadence_op": "sha256:075e5b5afdd08f4c653a7ead07fa03e13a3c40ab18467cb996d04dba2da189d6"
+      },
+      "provenance": {
+       "prev": "sha256:aa737ff521abdb1304b4bb50a878918255c5822d09984d2f870194b9736c4599"
+      }
+     },
+     "sig": {
+      "alg": "Ed25519",
+      "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+      "sig": "HQHp7p1mrFQ751hrycB6YV2PqdJOP0gLU7SBcknYhUgxr7WYgC3WEmWXccEXY1gcNR7gTq0HLthS9vGf2cxcBw"
+     }
+    }
+   ],
+   "at": "ust:20260726.12",
+   "expect": {
+    "cadence": "5"
+   }
+  },
+  {
+   "kind": "cadence-resolve",
+   "id": "cadr-07-not-chained",
+   "rule": "§11.3 an entry whose prev is not the genesis content_hash is refused (a spliced log cannot move the grid)",
+   "genesis": {
+    "ust": "1.0",
+    "state": {
+     "id": {
+      "domain_shard": "cadence.example",
+      "ust_id": "ust:20260726.08",
+      "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "class": "genesis"
+     },
+     "time": {
+      "generated_at": "2026-07-26T08:00:00Z",
+      "valid_from": "2026-07-26T08:00:00Z",
+      "valid_to": "2026-07-26T08:00:00Z"
+     },
+     "data": {
+      "genesis": {
+       "kind": "captured",
+       "value": {
+        "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+        "role": "name-binding-root",
+        "max_partitions": "512"
+       }
+      }
+     },
+     "hashes": {
+      "genesis": "sha256:52c2baa2283c909cc948aaf88192621f26aabc83a1197446f31a1338ede178dd"
+     }
+    },
+    "sig": {
+     "alg": "Ed25519",
+     "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+     "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+     "sig": "x_JOdw14DZDUGNglFJTfc3-q7okQA1RJYGt9fD1G2Z5jEU6pkKQXI6e-xEPIP7uxRpvOVkru0GYkXc91zqPuAw"
+    }
+   },
+   "cadence_log": [
+    {
+     "ust": "1.0",
+     "state": {
+      "id": {
+       "domain_shard": "cadence.example",
+       "ust_id": "ust:20260726.08",
+       "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+       "class": "cadence"
+      },
+      "time": {
+       "generated_at": "2026-07-26T08:10:00Z",
+       "valid_from": "2026-07-26T08:10:00Z",
+       "valid_to": "2026-07-26T08:10:00Z"
+      },
+      "data": {
+       "cadence_op": {
+        "kind": "computed",
+        "value": {
+         "cadence": "30",
+         "effective_from": "ust:20260726.10"
+        }
+       }
+      },
+      "hashes": {
+       "cadence_op": "sha256:7175f55e2c4dab6b3ae0906881ce996c1c7977e6a1f7cd5cb3e2783f51c63431"
+      },
+      "provenance": {
+       "prev": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+      }
+     },
+     "sig": {
+      "alg": "Ed25519",
+      "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+      "sig": "X65O9xaYaOHSYYOJ4VlFtza2Jy6LwZHfJORtyOKlhll5SgranmxasxxZ0hqk5FievO-I0J650MpiJEf0qZQbDQ"
+     }
+    }
+   ],
+   "at": "ust:20260726.11",
+   "expect": {
+    "error": "E-PREV"
+   }
+  },
+  {
+   "kind": "cadence-resolve",
+   "id": "cadr-08-unauthorized-signer",
+   "rule": "§11.3/§12.2 without a key-log only the genesis key authorizes a change — fail-closed, never fail-open",
+   "genesis": {
+    "ust": "1.0",
+    "state": {
+     "id": {
+      "domain_shard": "cadence.example",
+      "ust_id": "ust:20260726.08",
+      "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "class": "genesis"
+     },
+     "time": {
+      "generated_at": "2026-07-26T08:00:00Z",
+      "valid_from": "2026-07-26T08:00:00Z",
+      "valid_to": "2026-07-26T08:00:00Z"
+     },
+     "data": {
+      "genesis": {
+       "kind": "captured",
+       "value": {
+        "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+        "role": "name-binding-root",
+        "max_partitions": "512"
+       }
+      }
+     },
+     "hashes": {
+      "genesis": "sha256:52c2baa2283c909cc948aaf88192621f26aabc83a1197446f31a1338ede178dd"
+     }
+    },
+    "sig": {
+     "alg": "Ed25519",
+     "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+     "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+     "sig": "x_JOdw14DZDUGNglFJTfc3-q7okQA1RJYGt9fD1G2Z5jEU6pkKQXI6e-xEPIP7uxRpvOVkru0GYkXc91zqPuAw"
+    }
+   },
+   "cadence_log": [
+    {
+     "ust": "1.0",
+     "state": {
+      "id": {
+       "domain_shard": "cadence.example",
+       "ust_id": "ust:20260726.08",
+       "key_id": "sha256:eea63f9cacad592e3cdafe1cb944faae1bad01f9f4abfcd40d3383ecde93285d",
+       "class": "cadence"
+      },
+      "time": {
+       "generated_at": "2026-07-26T08:10:00Z",
+       "valid_from": "2026-07-26T08:10:00Z",
+       "valid_to": "2026-07-26T08:10:00Z"
+      },
+      "data": {
+       "cadence_op": {
+        "kind": "computed",
+        "value": {
+         "cadence": "30",
+         "effective_from": "ust:20260726.10"
+        }
+       }
+      },
+      "hashes": {
+       "cadence_op": "sha256:7175f55e2c4dab6b3ae0906881ce996c1c7977e6a1f7cd5cb3e2783f51c63431"
+      },
+      "provenance": {
+       "prev": "sha256:5ff2df591d72b88ab650e8849d4c3420b5dd064d9faa08d42e3e49ee95e45aa7"
+      }
+     },
+     "sig": {
+      "alg": "Ed25519",
+      "key_id": "sha256:eea63f9cacad592e3cdafe1cb944faae1bad01f9f4abfcd40d3383ecde93285d",
+      "pub": "Lk6D_bLYj4jF8D5mPDnqP5x1NjErYqKwmpVxLczxGkA",
+      "sig": "Zik8GAwZu4cT2KPBeczyFjiAxW2UcU-dO_XmD7Hga3Om-48Q5LdtG_xRsoRlBDvZm_qJmsDA_pCUj4WlSaLXAw"
+     }
+    }
+   ],
+   "at": "ust:20260726.11",
+   "expect": {
+    "error": "E-KEY"
+   }
+  },
+  {
+   "kind": "cadence-resolve",
+   "id": "cadr-09-keylog-authorized-signer",
+   "rule": "§11.3/§12.2 a key ADDED by the key-log is active and may move the grid",
+   "genesis": {
+    "ust": "1.0",
+    "state": {
+     "id": {
+      "domain_shard": "cadence.example",
+      "ust_id": "ust:20260726.08",
+      "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "class": "genesis"
+     },
+     "time": {
+      "generated_at": "2026-07-26T08:00:00Z",
+      "valid_from": "2026-07-26T08:00:00Z",
+      "valid_to": "2026-07-26T08:00:00Z"
+     },
+     "data": {
+      "genesis": {
+       "kind": "captured",
+       "value": {
+        "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+        "role": "name-binding-root",
+        "max_partitions": "512"
+       }
+      }
+     },
+     "hashes": {
+      "genesis": "sha256:52c2baa2283c909cc948aaf88192621f26aabc83a1197446f31a1338ede178dd"
+     }
+    },
+    "sig": {
+     "alg": "Ed25519",
+     "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+     "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+     "sig": "x_JOdw14DZDUGNglFJTfc3-q7okQA1RJYGt9fD1G2Z5jEU6pkKQXI6e-xEPIP7uxRpvOVkru0GYkXc91zqPuAw"
+    }
+   },
+   "keylog": [
+    {
+     "ust": "1.0",
+     "state": {
+      "id": {
+       "domain_shard": "cadence.example",
+       "ust_id": "ust:20260726.08",
+       "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+       "class": "key"
+      },
+      "time": {
+       "generated_at": "2026-07-26T08:05:00Z",
+       "valid_from": "2026-07-26T08:05:00Z",
+       "valid_to": "2026-07-26T08:05:00Z"
+      },
+      "data": {
+       "key_op": {
+        "kind": "captured",
+        "value": {
+         "op": "add",
+         "pub": "Lk6D_bLYj4jF8D5mPDnqP5x1NjErYqKwmpVxLczxGkA",
+         "new_key_id": "sha256:eea63f9cacad592e3cdafe1cb944faae1bad01f9f4abfcd40d3383ecde93285d"
+        }
+       }
+      },
+      "hashes": {
+       "key_op": "sha256:9f444149e90903383671e3937c25e5ea9eb5facd4d55892ae8f0458e06eb79a5"
+      },
+      "provenance": {
+       "prev": "sha256:5ff2df591d72b88ab650e8849d4c3420b5dd064d9faa08d42e3e49ee95e45aa7"
+      }
+     },
+     "sig": {
+      "alg": "Ed25519",
+      "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+      "sig": "qLGd7FiNfWGac1O0V9K9WeJB5HAq-oOX6JKMTNzJbC5A1-wmCzn5niYds4lhTZ_-g9nJiCB6b20Mm6TCH122CQ"
+     }
+    }
+   ],
+   "cadence_log": [
+    {
+     "ust": "1.0",
+     "state": {
+      "id": {
+       "domain_shard": "cadence.example",
+       "ust_id": "ust:20260726.08",
+       "key_id": "sha256:eea63f9cacad592e3cdafe1cb944faae1bad01f9f4abfcd40d3383ecde93285d",
+       "class": "cadence"
+      },
+      "time": {
+       "generated_at": "2026-07-26T08:10:00Z",
+       "valid_from": "2026-07-26T08:10:00Z",
+       "valid_to": "2026-07-26T08:10:00Z"
+      },
+      "data": {
+       "cadence_op": {
+        "kind": "computed",
+        "value": {
+         "cadence": "30",
+         "effective_from": "ust:20260726.10"
+        }
+       }
+      },
+      "hashes": {
+       "cadence_op": "sha256:7175f55e2c4dab6b3ae0906881ce996c1c7977e6a1f7cd5cb3e2783f51c63431"
+      },
+      "provenance": {
+       "prev": "sha256:5ff2df591d72b88ab650e8849d4c3420b5dd064d9faa08d42e3e49ee95e45aa7"
+      }
+     },
+     "sig": {
+      "alg": "Ed25519",
+      "key_id": "sha256:eea63f9cacad592e3cdafe1cb944faae1bad01f9f4abfcd40d3383ecde93285d",
+      "pub": "Lk6D_bLYj4jF8D5mPDnqP5x1NjErYqKwmpVxLczxGkA",
+      "sig": "Zik8GAwZu4cT2KPBeczyFjiAxW2UcU-dO_XmD7Hga3Om-48Q5LdtG_xRsoRlBDvZm_qJmsDA_pCUj4WlSaLXAw"
+     }
+    }
+   ],
+   "at": "ust:20260726.11",
+   "expect": {
+    "cadence": "30"
+   }
+  },
+  {
+   "kind": "cadence-resolve",
+   "id": "cadr-10-non-monotonic",
+   "rule": "§11.3 effective_from MUST be monotonic across the log — an out-of-order change is refused",
+   "genesis": {
+    "ust": "1.0",
+    "state": {
+     "id": {
+      "domain_shard": "cadence.example",
+      "ust_id": "ust:20260726.08",
+      "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "class": "genesis"
+     },
+     "time": {
+      "generated_at": "2026-07-26T08:00:00Z",
+      "valid_from": "2026-07-26T08:00:00Z",
+      "valid_to": "2026-07-26T08:00:00Z"
+     },
+     "data": {
+      "genesis": {
+       "kind": "captured",
+       "value": {
+        "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+        "role": "name-binding-root",
+        "max_partitions": "512"
+       }
+      }
+     },
+     "hashes": {
+      "genesis": "sha256:52c2baa2283c909cc948aaf88192621f26aabc83a1197446f31a1338ede178dd"
+     }
+    },
+    "sig": {
+     "alg": "Ed25519",
+     "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+     "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+     "sig": "x_JOdw14DZDUGNglFJTfc3-q7okQA1RJYGt9fD1G2Z5jEU6pkKQXI6e-xEPIP7uxRpvOVkru0GYkXc91zqPuAw"
+    }
+   },
+   "cadence_log": [
+    {
+     "ust": "1.0",
+     "state": {
+      "id": {
+       "domain_shard": "cadence.example",
+       "ust_id": "ust:20260726.08",
+       "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+       "class": "cadence"
+      },
+      "time": {
+       "generated_at": "2026-07-26T08:10:00Z",
+       "valid_from": "2026-07-26T08:10:00Z",
+       "valid_to": "2026-07-26T08:10:00Z"
+      },
+      "data": {
+       "cadence_op": {
+        "kind": "computed",
+        "value": {
+         "cadence": "30",
+         "effective_from": "ust:20260726.10"
+        }
+       }
+      },
+      "hashes": {
+       "cadence_op": "sha256:7175f55e2c4dab6b3ae0906881ce996c1c7977e6a1f7cd5cb3e2783f51c63431"
+      },
+      "provenance": {
+       "prev": "sha256:5ff2df591d72b88ab650e8849d4c3420b5dd064d9faa08d42e3e49ee95e45aa7"
+      }
+     },
+     "sig": {
+      "alg": "Ed25519",
+      "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+      "sig": "sNUR2CHVzKYN-M7I4padlk4-oVuskHMoxsOqvdm1RjchhKBIb3xsmEl0PtkkruhK6C_Ec6JW_tXKGhgNOYu7Bg"
+     }
+    },
+    {
+     "ust": "1.0",
+     "state": {
+      "id": {
+       "domain_shard": "cadence.example",
+       "ust_id": "ust:20260726.08",
+       "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+       "class": "cadence"
+      },
+      "time": {
+       "generated_at": "2026-07-26T08:10:00Z",
+       "valid_from": "2026-07-26T08:10:00Z",
+       "valid_to": "2026-07-26T08:10:00Z"
+      },
+      "data": {
+       "cadence_op": {
+        "kind": "computed",
+        "value": {
+         "cadence": "5",
+         "effective_from": "ust:20260726.09"
+        }
+       }
+      },
+      "hashes": {
+       "cadence_op": "sha256:95e6f04220aad062993dcd34b5b5f1033196181eaadfee00f94c9cbc7cefbeca"
+      },
+      "provenance": {
+       "prev": "sha256:aa737ff521abdb1304b4bb50a878918255c5822d09984d2f870194b9736c4599"
+      }
+     },
+     "sig": {
+      "alg": "Ed25519",
+      "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+      "sig": "BCroEsmosm0K04uOjBaPLQV7HDfuQagsjR1Dz6Pbz80MuSX8-2pxoo2YQ5naQ_S78l8kMJHhqTwafE6XHEI-BQ"
+     }
+    }
+   ],
+   "at": "ust:20260726.11",
+   "expect": {
+    "error": "E-PREV"
+   }
+  },
+  {
+   "kind": "cadence-resolve",
+   "id": "cadr-11-tampered-value",
+   "rule": "§11.3 the signature covers the grid — rewriting cadence without re-signing is refused",
+   "genesis": {
+    "ust": "1.0",
+    "state": {
+     "id": {
+      "domain_shard": "cadence.example",
+      "ust_id": "ust:20260726.08",
+      "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "class": "genesis"
+     },
+     "time": {
+      "generated_at": "2026-07-26T08:00:00Z",
+      "valid_from": "2026-07-26T08:00:00Z",
+      "valid_to": "2026-07-26T08:00:00Z"
+     },
+     "data": {
+      "genesis": {
+       "kind": "captured",
+       "value": {
+        "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+        "role": "name-binding-root",
+        "max_partitions": "512"
+       }
+      }
+     },
+     "hashes": {
+      "genesis": "sha256:52c2baa2283c909cc948aaf88192621f26aabc83a1197446f31a1338ede178dd"
+     }
+    },
+    "sig": {
+     "alg": "Ed25519",
+     "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+     "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+     "sig": "x_JOdw14DZDUGNglFJTfc3-q7okQA1RJYGt9fD1G2Z5jEU6pkKQXI6e-xEPIP7uxRpvOVkru0GYkXc91zqPuAw"
+    }
+   },
+   "cadence_log": [
+    {
+     "ust": "1.0",
+     "state": {
+      "id": {
+       "domain_shard": "cadence.example",
+       "ust_id": "ust:20260726.08",
+       "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+       "class": "cadence"
+      },
+      "time": {
+       "generated_at": "2026-07-26T08:10:00Z",
+       "valid_from": "2026-07-26T08:10:00Z",
+       "valid_to": "2026-07-26T08:10:00Z"
+      },
+      "data": {
+       "cadence_op": {
+        "kind": "computed",
+        "value": {
+         "cadence": "1",
+         "effective_from": "ust:20260726.10"
+        }
+       }
+      },
+      "hashes": {
+       "cadence_op": "sha256:7175f55e2c4dab6b3ae0906881ce996c1c7977e6a1f7cd5cb3e2783f51c63431"
+      },
+      "provenance": {
+       "prev": "sha256:5ff2df591d72b88ab650e8849d4c3420b5dd064d9faa08d42e3e49ee95e45aa7"
+      }
+     },
+     "sig": {
+      "alg": "Ed25519",
+      "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+      "sig": "sNUR2CHVzKYN-M7I4padlk4-oVuskHMoxsOqvdm1RjchhKBIb3xsmEl0PtkkruhK6C_Ec6JW_tXKGhgNOYu7Bg"
+     }
+    }
+   ],
+   "at": "ust:20260726.11",
+   "expect": {
+    "error": "E-KEY"
+   }
+  },
+  {
+   "kind": "cadence-resolve",
+   "id": "cadr-12-observation-in-the-log",
+   "rule": "§11.3 an ordinary observation is not a key-context document — refused before the class check is reached",
+   "genesis": {
+    "ust": "1.0",
+    "state": {
+     "id": {
+      "domain_shard": "cadence.example",
+      "ust_id": "ust:20260726.08",
+      "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "class": "genesis"
+     },
+     "time": {
+      "generated_at": "2026-07-26T08:00:00Z",
+      "valid_from": "2026-07-26T08:00:00Z",
+      "valid_to": "2026-07-26T08:00:00Z"
+     },
+     "data": {
+      "genesis": {
+       "kind": "captured",
+       "value": {
+        "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+        "role": "name-binding-root",
+        "max_partitions": "512"
+       }
+      }
+     },
+     "hashes": {
+      "genesis": "sha256:52c2baa2283c909cc948aaf88192621f26aabc83a1197446f31a1338ede178dd"
+     }
+    },
+    "sig": {
+     "alg": "Ed25519",
+     "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+     "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+     "sig": "x_JOdw14DZDUGNglFJTfc3-q7okQA1RJYGt9fD1G2Z5jEU6pkKQXI6e-xEPIP7uxRpvOVkru0GYkXc91zqPuAw"
+    }
+   },
+   "cadence_log": [
+    {
+     "ust": "1.0",
+     "state": {
+      "id": {
+       "domain_shard": "cadence.example",
+       "ust_id": "ust:20260726.09",
+       "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+       "class": "observation"
+      },
+      "time": {
+       "generated_at": "2026-07-26T09:00:00Z",
+       "valid_from": "2026-07-26T09:00:00Z",
+       "valid_to": "2026-07-26T09:00:00Z"
+      },
+      "data": {
+       "x": {
+        "kind": "captured",
+        "value": {
+         "v": "1"
+        }
+       }
+      },
+      "hashes": {
+       "x": "sha256:b572f25e9b15240e090c4abe5fe90a664b679c0b84b352bb4d50606e8e595134"
+      },
+      "provenance": {
+       "prev": "sha256:5ff2df591d72b88ab650e8849d4c3420b5dd064d9faa08d42e3e49ee95e45aa7"
+      }
+     },
+     "sig": {
+      "alg": "Ed25519",
+      "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+      "sig": "UNicNTgqE33kWWi7wuSKIAOgVBFwWp-1gJjtOh_Uj1IjyF1jdoOnOdwVK-YAvQHSIcy6SBmV5hN094AwCAf9BQ"
+     }
+    }
+   ],
+   "at": "ust:20260726.11",
+   "expect": {
+    "error": "E-KEY"
+   }
+  },
+  {
+   "kind": "cadence-resolve",
+   "id": "cadr-13-keylog-entry-in-the-log",
+   "rule": "§11.3 only class:cadence moves the grid — a VALID key-log entry misplaced in the cadence log is E-MALFORMED",
+   "genesis": {
+    "ust": "1.0",
+    "state": {
+     "id": {
+      "domain_shard": "cadence.example",
+      "ust_id": "ust:20260726.08",
+      "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "class": "genesis"
+     },
+     "time": {
+      "generated_at": "2026-07-26T08:00:00Z",
+      "valid_from": "2026-07-26T08:00:00Z",
+      "valid_to": "2026-07-26T08:00:00Z"
+     },
+     "data": {
+      "genesis": {
+       "kind": "captured",
+       "value": {
+        "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+        "role": "name-binding-root",
+        "max_partitions": "512"
+       }
+      }
+     },
+     "hashes": {
+      "genesis": "sha256:52c2baa2283c909cc948aaf88192621f26aabc83a1197446f31a1338ede178dd"
+     }
+    },
+    "sig": {
+     "alg": "Ed25519",
+     "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+     "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+     "sig": "x_JOdw14DZDUGNglFJTfc3-q7okQA1RJYGt9fD1G2Z5jEU6pkKQXI6e-xEPIP7uxRpvOVkru0GYkXc91zqPuAw"
+    }
+   },
+   "cadence_log": [
+    {
+     "ust": "1.0",
+     "state": {
+      "id": {
+       "domain_shard": "cadence.example",
+       "ust_id": "ust:20260726.08",
+       "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+       "class": "key"
+      },
+      "time": {
+       "generated_at": "2026-07-26T08:05:00Z",
+       "valid_from": "2026-07-26T08:05:00Z",
+       "valid_to": "2026-07-26T08:05:00Z"
+      },
+      "data": {
+       "key_op": {
+        "kind": "captured",
+        "value": {
+         "op": "add",
+         "pub": "Lk6D_bLYj4jF8D5mPDnqP5x1NjErYqKwmpVxLczxGkA",
+         "new_key_id": "sha256:eea63f9cacad592e3cdafe1cb944faae1bad01f9f4abfcd40d3383ecde93285d"
+        }
+       }
+      },
+      "hashes": {
+       "key_op": "sha256:9f444149e90903383671e3937c25e5ea9eb5facd4d55892ae8f0458e06eb79a5"
+      },
+      "provenance": {
+       "prev": "sha256:5ff2df591d72b88ab650e8849d4c3420b5dd064d9faa08d42e3e49ee95e45aa7"
+      }
+     },
+     "sig": {
+      "alg": "Ed25519",
+      "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+      "sig": "qLGd7FiNfWGac1O0V9K9WeJB5HAq-oOX6JKMTNzJbC5A1-wmCzn5niYds4lhTZ_-g9nJiCB6b20Mm6TCH122CQ"
+     }
+    }
+   ],
+   "at": "ust:20260726.11",
+   "expect": {
+    "error": "E-MALFORMED"
+   }
   }
  ]
 }

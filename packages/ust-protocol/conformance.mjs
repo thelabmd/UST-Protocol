@@ -102,6 +102,13 @@ for (const v of V.vectors) {
     // #95 — the REFERENCE inclusion connector, pinned language-neutrally. Now that the protocol calls the tagged walk one
     // connector among several, a second implementation needs the bytes to reproduce it; the DELEGATION seam itself cannot
     // be a vector (JSON carries no function), which is why it lives in the checks + mutation corpus instead.
+    // §11.3 — cadence RESOLUTION, the semantics a completeness verdict rests on. Pure data, so a second implementation
+    // can check itself: prev-chaining from the genesis content_hash, an ACTIVE signer, monotonic effective_from, and the
+    // answer being relative to the MOMENT asked about (a change never rewrites the grid of earlier slots).
+    case 'cadence-resolve': { const r = P.resolveCadence(v.genesis, v.cadence_log, v.at, { keylog: v.keylog ?? [] });
+      const got = r.error ? { error: r.error } : { cadence: r.cadence === null ? null : String(r.cadence) };
+      check(v.id, v.expect.error ? got.error === v.expect.error : (!r.error && got.cadence === v.expect.cadence),
+        `got ${JSON.stringify(got)} expected ${JSON.stringify(v.expect)}`); break; }
     case 'anchor-inclusion': { const r = P.verifyAnchor(v.content_hash, { root: v.root, path: v.path, anchor: { substrate: 'bitcoin-ots' } });
       check(v.id, r.inclusion === v.expect.inclusion && (v.expect.error ? r.error === v.expect.error : true),
         `inclusion=${r.inclusion} error=${r.error || '-'} expected inclusion=${v.expect.inclusion}${v.expect.error ? ' error=' + v.expect.error : ''}`); break; }

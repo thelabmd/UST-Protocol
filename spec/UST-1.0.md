@@ -1711,11 +1711,24 @@ is explicitly outside the §18 threat model; THIS is where it is addressed, oper
 
 **Companion surfaces (same host, same contract):** a publisher offering out-of-the-box HIGH SHOULD also
 serve `/.well-known/ust-keylog` — the §12.2 key log as a JSON array of its entry transcripts, in chain
-order — and `/.well-known/ust-witness` — the §12.1a witness log. Both are APPEND-ONLY (existing entries
-byte-stable; new entries/anchors appended); the genesis alone is fully immutable. Neither surface is a
-verification input by itself: the key log re-verifies per §12.2 (every entry is a signed transcript) and
-the witness log is an index whose anchors are substrate-checked (§12.1a) — a poisoned surface can deny
-availability, never forge authority. The serving properties below apply to all three HTTPS surfaces.
+order — and `/.well-known/ust-witness` — the §12.1a witness log. A publisher that has CHANGED its stream
+cadence MUST also serve `/.well-known/ust-cadence` — the §11.3 cadence log, likewise a JSON array of entry
+transcripts in chain order — because a change nobody can fetch is a change no verifier applies, and the
+range would then be judged against the superseded grid. All are APPEND-ONLY (existing entries
+byte-stable; new entries/anchors appended); the genesis alone is fully immutable. None is a
+verification input by itself: the key log re-verifies per §12.2 (every entry is a signed transcript), the
+cadence log per §11.3 (each entry `prev`-chained from the genesis `content_hash`, signed by a
+currently-active key), and the witness log is an index whose anchors are substrate-checked (§12.1a) — a
+poisoned surface can deny availability, never forge authority. The serving properties below apply to all
+four HTTPS surfaces.
+
+**ABSENT and UNREADABLE are different facts, and a verifier MUST NOT confuse them.** For the key log and
+the cadence log alike, `404`/`410` means the surface is genuinely not served — the publisher declares no
+key events, or no cadence change, and the genesis value stands. Any other failure (oversize, transport
+error, a status that is neither) means the surface EXISTS and could not be read: the verifier reports
+INDETERMINATE and MUST NOT substitute an empty log. Substituting one erases a real key retirement, or a
+real cadence change — and in the cadence case that manufactures a completeness verdict out of a network
+failure: a finer new cadence reads as holes, a coarser one reads as `complete` while frames are missing.
 
 **Serving properties — a publisher claiming discovery conformance MUST hold all four. Each is a PROPERTY;
 the mechanism is the publisher's choice:**
