@@ -175,6 +175,8 @@ change: the checkpoint is the existing `class:"attestation"` with two interval b
 grid is COMPUTED not stored, and the gap record already exists (§11.1) — completeness is earned by adding the
 cadence coordinate to `ℐ`, not by any new document shape.
 
+**Realization (rev91 — the cadence coordinate must be OBTAINED, and "unreadable" is not "absent").** The statement above is binary — completeness is measurable only when `c_n(t) ∈ ℐ` — and the discovery realization is where that binarity meets a transport, which has THREE outcomes rather than two. A published cadence log that returns 404/410 is genuinely not served: the publisher declares no change and the genesis value stands, so the coordinate IS in `ℐ` (*"#95/F.4 cadence ABSENT (404) is benign — the publisher declares no change, the document still resolves"*). A log that EXISTS but cannot be read leaves the coordinate OUT of `ℐ`, and the one thing forbidden is substituting an empty log for it: that would place a WRONG value in `ℐ` and let a transport failure manufacture the very verdict this section makes conditional (*"#95/F.4 cadence UNREADABLE is INDETERMINATE, never substituted by an empty log (a wrong value in ℐ would manufacture completeness)"*). The distinction is inherited from the key-log, where collapsing unreadable into empty erases a retirement.
+
 **Realization (rev85 — domain totality).** a frame is measurable with respect to its own anchored interval: adaptedness is refused when the covering interval is not chain-consistent — *"#39 chain-consistent covering interval ⇒ no-deletion-only (omission still possible)"*
 
 ## F.5 Verification is a measurability test — and the tiers are nested σ-algebras

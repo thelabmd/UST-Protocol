@@ -420,6 +420,18 @@
       "rev": "rev91",
       "model_locus": "delegation does NOT lift the time rung",
       "conformance_check": "#95 an inclusion connector cannot mint anchored TIME — the substrate seam still gates it (C3)"
+    },
+    {
+      "id": "R91-f4-cadence-absent-benign",
+      "rev": "rev91",
+      "model_locus": "the publisher declares no change and the genesis value stands",
+      "conformance_check": "#95/F.4 cadence ABSENT (404) is benign — the publisher declares no change, the document still resolves"
+    },
+    {
+      "id": "R91-f4-cadence-unreadable-indeterminate",
+      "rev": "rev91",
+      "model_locus": "substituting an empty log for it",
+      "conformance_check": "#95/F.4 cadence UNREADABLE is INDETERMINATE, never substituted by an empty log (a wrong value in ℐ would manufacture completeness)"
     }
   ]
 }

@@ -511,6 +511,37 @@ console.log('\n═════════════════════�
 
   // offline forbids the network even for a public name
   const okId = { ...ID, domain_shard: 'noosphere.md', ust_id: 'ust:20260628.15' };
+
+  // ── F.4 completeness: the model says the honest verdict without a signed cadence is "the strictly coarser
+  // chain-consistent, never complete" — completeness is earned by adding the cadence coordinate to the information set.
+  // These bind that statement to the DISCOVERY realization, where the distinction that matters is three-way, not binary:
+  // ABSENT means the publisher declares no change (the value stands), UNREADABLE means the coordinate is NOT in the
+  // information set and nothing may be substituted for it. Collapsing the second into an empty log would put a WRONG
+  // value into ℐ and manufacture a completeness verdict out of a transport failure.
+  {
+    const ck = kp('c7'.repeat(32));
+    const D = 'cadence-conf.example';
+    const T = (h) => ({ generated_at: `2026-07-26T${h}:00:00Z`, valid_from: `2026-07-26T${h}:00:00Z`, valid_to: `2026-07-26T${h}:00:00Z` });
+    const gen = P.seal(P.buildGenesis({ domain_shard: D, ust_id: 'ust:20260726.08', key_id: ck.key_id }, T('08'), ck.pubB64, 512), ck.priv, ck.pubB64);
+    const doc = P.seal(P.buildState({ domain_shard: D, ust_id: 'ust:20260726.11', key_id: ck.key_id, class: 'observation' },
+      T('11'), { x: { kind: 'captured', value: { v: '1' } } }, { prev: P.contentHash(gen) }), ck.priv, ck.pubB64);
+    const serve = (cadStatus) => async (url) => {
+      const ok = (o) => ({ ok: true, status: 200, text: async () => JSON.stringify(o), arrayBuffer: async () => Buffer.from(JSON.stringify(o)) });
+      const no = (st) => ({ ok: false, status: st, text: async () => '', arrayBuffer: async () => Buffer.alloc(0) });
+      if (url.endsWith('/.well-known/ust-genesis')) return ok(gen);
+      if (url.endsWith('/.well-known/ust-keylog')) return ok([]);
+      if (url.endsWith('/.well-known/ust-cadence')) return cadStatus === 200 ? ok([]) : no(cadStatus);
+      return no(404);
+    };
+    const absent = await P.resolveByDiscovery(doc, { noForkConfirmed: true }, { fetchImpl: serve(404) });
+    check('#95/F.4 cadence ABSENT (404) is benign — the publisher declares no change, the document still resolves',
+      !absent.resolution?.error && absent.resolution?.status !== 'INDETERMINATE' && absent.resolution?.cadence === null,
+      JSON.stringify(absent.resolution).slice(0, 130));
+    const unread = await P.resolveByDiscovery(doc, { noForkConfirmed: true }, { fetchImpl: serve(503) });
+    check('#95/F.4 cadence UNREADABLE is INDETERMINATE, never substituted by an empty log (a wrong value in ℐ would manufacture completeness)',
+      unread.resolution?.status === 'INDETERMINATE' && /cadence-log present but unreadable/.test(unread.resolution?.error || ''),
+      JSON.stringify(unread.resolution).slice(0, 130));
+  }
   const okDoc = P.seal(P.buildState(okId, T, { p: { kind: 'captured', value: { x: '1' } } }), A.priv, A.pubB64);
   const r2 = await P.resolveByDiscovery(okDoc, { context: 'data', offline: true }, { fetchImpl: spyFetch });
   check('resolveByDiscovery: offline makes zero network calls', touched === 0 && r2.resolution === null);
