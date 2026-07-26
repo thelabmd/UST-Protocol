@@ -134,6 +134,14 @@ cert (HIGH — name authority) → an EV / CT-logged cert (TOP). Every verificat
 itself — `VALID:LIGHT` / `VALID:HIGH` / `VALID:TOP`, never a bare `VALID` — so a consumer cannot read "valid"
 without reading valid-AT-WHAT; nothing silently claims trust it did not establish.
 
+**`NONE` is the FLOOR of the same chain, and it is a tier — not the absence of one.** Formal model F.5.0 defines
+the tier as a monotone projection `Π : 𝓐 → {NONE ≺ LIGHT ≺ HIGH ≺ TOP}`, in which `LIGHT` holds iff the integrity
+floor holds and `NONE` sits below it: a document whose bytes do not carry their own integrity earns `NONE`, and
+that is a decided answer rather than a missing field. Only the three EARNED tiers correspond to σ-algebras
+(`𝒮_LIGHT ⊆ 𝒮_HIGH ⊆ 𝒮_TOP`), which is why this section's title names those three — `NONE` decides nothing, so it
+has no σ-algebra of its own. An implementation MUST treat `NONE` as a value of the tier vocabulary; a consumer
+parsing a tier MUST accept it.
+
 - **LIGHT — trust in a minute (THE FLOOR).** A signed, canonical, addressable state document. *Publish* =
   generate a keypair, sign your canonical JSON, serve it (the pubkey travels in `sig.pub`). *Verify* = recompute
   the canonical + per-partition hashes (integrity) + strict-Ed25519-verify the signature against the carried

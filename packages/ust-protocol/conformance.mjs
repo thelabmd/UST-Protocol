@@ -105,6 +105,11 @@ for (const v of V.vectors) {
     // §11.3 — cadence RESOLUTION, the semantics a completeness verdict rests on. Pure data, so a second implementation
     // can check itself: prev-chaining from the genesis content_hash, an ACTIVE signer, monotonic effective_from, and the
     // answer being relative to the MOMENT asked about (a change never rewrites the grid of earlier slots).
+    // F.5.0 — the tier projection Π itself, pinned language-neutrally. NONE had no vector at all until §3.1 named it as
+    // the FLOOR, which is the down-direction half of the same change: a statement added to the spec is not finished until
+    // a second implementation can check itself against it.
+    case 'tier-projection': { const got = P.projectTier(v.assurance);
+      check(v.id, got === v.expect, `got ${got} expected ${v.expect}`); break; }
     case 'cadence-resolve': { const r = P.resolveCadence(v.genesis, v.cadence_log, v.at, { keylog: v.keylog ?? [] });
       const got = r.error ? { error: r.error } : { cadence: r.cadence === null ? null : String(r.cadence) };
       check(v.id, v.expect.error ? got.error === v.expect.error : (!r.error && got.cadence === v.expect.cadence),

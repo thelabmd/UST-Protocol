@@ -4040,6 +4040,78 @@
    "expect": {
     "error": "E-MALFORMED"
    }
+  },
+  {
+   "kind": "tier-projection",
+   "id": "tier-01-floor-unmet-NONE",
+   "rule": "F.5.0/§3.1 integrity floor unmet ⇒ NONE — the FLOOR is a decided tier, not a missing field, and no other coordinate can lift it",
+   "assurance": {
+    "integrity": "invalid",
+    "identity": "authoritative",
+    "freshness": "attested",
+    "time": "anchored"
+   },
+   "expect": "NONE"
+  },
+  {
+   "kind": "tier-projection",
+   "id": "tier-02-integrity-only-LIGHT",
+   "rule": "F.5.0 LIGHT iff the integrity floor holds — bytes carrying their own integrity, nothing else claimed",
+   "assurance": {
+    "integrity": "valid",
+    "identity": "self-asserted",
+    "freshness": "unverified",
+    "time": "unproven"
+   },
+   "expect": "LIGHT"
+  },
+  {
+   "kind": "tier-projection",
+   "id": "tier-03-name-bound-HIGH",
+   "rule": "F.5.0 HIGH iff name-bound (IdentityStrength ≥ corroborated)",
+   "assurance": {
+    "integrity": "valid",
+    "identity": "corroborated",
+    "freshness": "unverified",
+    "time": "unproven"
+   },
+   "expect": "HIGH"
+  },
+  {
+   "kind": "tier-projection",
+   "id": "tier-04-authoritative-without-time-HIGH",
+   "rule": "F.5.0 authoritative identity alone does NOT reach TOP — TOP needs anchored time as well",
+   "assurance": {
+    "integrity": "valid",
+    "identity": "authoritative",
+    "freshness": "unverified",
+    "time": "unproven"
+   },
+   "expect": "HIGH"
+  },
+  {
+   "kind": "tier-projection",
+   "id": "tier-05-both-axes-TOP",
+   "rule": "F.5.0 TOP iff IdentityStrength = authoritative AND TimeStrength = anchored",
+   "assurance": {
+    "integrity": "valid",
+    "identity": "authoritative",
+    "freshness": "attested",
+    "time": "anchored"
+   },
+   "expect": "TOP"
+  },
+  {
+   "kind": "tier-projection",
+   "id": "tier-06-monotone-no-drop",
+   "rule": "F.5.0 Π is ORDER-PRESERVING — adding freshness never lowers the tier",
+   "assurance": {
+    "integrity": "valid",
+    "identity": "corroborated",
+    "freshness": "attested",
+    "time": "unproven"
+   },
+   "expect": "HIGH"
   }
  ]
 }
