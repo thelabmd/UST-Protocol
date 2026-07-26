@@ -157,6 +157,13 @@ now. Not one flattering "yes" — a measured answer to *"how strongly is this pr
 | `INVALID` | a definite, deterministic failure (specific `E-*` codes) |
 | `INDETERMINATE` | a dependency was unreachable, or an optional algorithm is unimplemented — *cannot decide* is never conflated with *forged* |
 
+There is a fourth tier below `LIGHT`, and it is deliberately absent from that table: **`NONE`**. The tier is a
+projection over what a document *earned* — `NONE ≺ LIGHT ≺ HIGH ≺ TOP` — and `NONE` is the answer it gives for a
+state that does not clear the integrity floor. It ranks a **state**, not a verdict, so it never appears as one:
+there is no `INVALID:NONE`, and a refusal carries no tier at all. Nor is it "unknown" — *decided: earned nothing*
+and *could not decide* are different answers, and the second is `INDETERMINATE`. Keeping the two apart is what
+stops "I could not tell" from being read as "I checked, and there is nothing."
+
 One signal the protocol never emits: **"true."** UST proves *fixation, not truth* — a publisher committed to
 these bytes at this time and cannot silently rewrite them. Whether the reading was *correct* is out of scope by
 construction; you learn whom to hold accountable and that nothing was tampered.
