@@ -180,7 +180,7 @@ panel('ust-time', 'ONE TIME AXIS — EVERY PUBLISHER, BY CONSTRUCTION (UTC)',
 
 // ── 5. MAP — the repository at a glance ──
 panel('ust-map', 'REPOSITORY MAP',
-  'Repository map. spec/ holds the normative UST-1.0.md plus a measure-theoretic formal model. vectors/ holds language-neutral conformance vectors and a byte corpus — the cross-implementation arbiter. packages/ holds ust-protocol (the zero-dep reference verifier + producer), ust-cli (the ust command: verify, canon, the HIGH genesis ceremony, witness), ust-mcp (an MCP server so agents verify natively), ust-light (a byte-identical minimal subset), ust-web-signer (WebCrypto browser signing with non-extractable keys), and ust-ots-verify / ust-rekor-verify (opt-in Bitcoin/OTS and Sigstore Rekor anchor substrates). docs/ is the client-side web verifier plus zero-dependency single-file verifiers. tools/ are the drift gates that keep spec = code = vectors = README = these panels in sync.',
+  'Repository map. spec/ holds the normative UST-1.0.md plus a measure-theoretic formal model. vectors/ holds language-neutral conformance vectors and a byte corpus — the cross-implementation arbiter. packages/ holds ust-protocol (the zero-dep reference verifier + producer), ust-cli (the ust command: verify, canon, the HIGH genesis ceremony, witness), ust-mcp (an MCP server so agents verify natively), ust-light (a byte-identical minimal subset), ust-web-signer (WebCrypto browser signing with non-extractable keys), ust-ots-verify / ust-rekor-verify (opt-in Bitcoin/OTS and Sigstore Rekor anchor substrates), and diarium (agent memory as a verifiable stream — a product built on the protocol). docs/ is the client-side web verifier plus zero-dependency single-file verifiers. tools/ are the drift gates that keep spec = code = vectors = README = these panels in sync.',
   (P) => {
   const rows = [
     ['UST-Protocol/', '', TEXT, true],
@@ -192,7 +192,8 @@ panel('ust-map', 'REPOSITORY MAP',
     ['│   ├── ust-mcp', 'MCP server — agents verify natively', GREEN],
     ['│   ├── ust-light', 'minimal subset — byte-identical verdicts', TEXT],
     ['│   ├── ust-web-signer', 'WebCrypto browser signing (non-extractable keys)', GREEN],
-    ['│   └── ust-{ots,rekor}-verify', 'opt-in anchor substrates — Bitcoin/OTS · Sigstore Rekor', GREEN],
+    ['│   ├── ust-{ots,rekor}-verify', 'opt-in anchor substrates — Bitcoin/OTS · Sigstore Rekor', GREEN],
+    ['│   └── diarium', 'agent memory as a verifiable stream — a product on the protocol', TEXT],
     ['├── docs/', 'web verifier (GitHub Pages) · zero-dependency single-file verifiers', VALUE],
     ['├── examples/ · extension/', 'sample docs (valid + tampered) · “Make it UST” Chrome demo', VALUE],
     ['└── tools/', 'drift gates: spec == code == vectors == README == these panels', VALUE],
