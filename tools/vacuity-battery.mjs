@@ -3,7 +3,7 @@
 //
 // What the other gates already prove, and what they cannot:
 //   • `model-domain-totality` — every model SECTION is bound or explicitly declared (the DOMAIN, rev85).
-//   • `model-correspondence`  — every citation names a check that RAN AND PASSED (presence → EXECUTION, rev86).
+//   • `model-correspondence`  — every citation names a check that RAN AND PASSED (presence → EXECUTION, rev91).
 //   • conformance's in-process lockstep — a registered check must run in the SAME process over the live `executed`
 //     set, so a disabled check cannot be forged by editing a committed manifest.
 // None of them can tell a MEANINGFUL assertion from a tautological one. `check()` records its id whether it passed or
@@ -43,7 +43,7 @@ const MUTANTS = MUTATIONS.filter((m) => (m.observe || []).length > 0);
 
 // The residual is pinned: registered checks not yet reached by any mutant. Lower it as the battery grows; it must
 // never rise. (A new registered check with no mutant reaching it is EXPECTED to raise this — that is the point.)
-// 53 → 54 (#95, rev86), and the one addition is NAMED rather than absorbed: `R86-f3-inclusion-consumer-owned` — "the
+// 53 → 54 (#95, rev91), and the one addition is NAMED rather than absorbed: `R91-f3-inclusion-consumer-owned` — "the
 // connector is read from `opts` only" — is defended by TWO independent layers, so no SINGLE mutant can turn it red.
 // `admitDeep` strips every field the verifier does not declare (measured: the seam's insertion point IS reachable, the
 // planted field is not), and a function makes the whole proof non-inert and refused at the door. Breaking one layer
