@@ -13,6 +13,7 @@
 //
 // The gate fails CLOSED in both directions: a package with no mention, and a mention with no package.
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
@@ -40,11 +41,21 @@ for (const d of dirs) {
   const j = JSON.parse(readFileSync(pj, 'utf8'));
   pkgs.push({ dir: d, name: j.name, private: !!j.private, version: j.version });
 }
-// a declared non-package that has since become one, or vanished, must not linger in the list
+// A declared non-package must not have quietly become a package, and a declaration must not outlive what it describes.
+// But absence is not automatically staleness: `ustate` is gitignored on purpose (the internal operator toolkit is not
+// in the public repository), so CI never sees the directory that a developer machine does. Git is the authority on
+// "deliberately absent" — asking it is the difference between a gate that works in both places and one that is green
+// locally and red on push, which is exactly how this gate first shipped.
+const ignored = (rel) => { try { execFileSync('git', ['check-ignore', '-q', rel], { cwd: ROOT, stdio: 'ignore' }); return true; } catch { return false; } };
 for (const d of Object.keys(NOT_A_PACKAGE)) {
-  ok(`declared non-package packages/${d} still exists and still has no package.json`,
-    dirs.includes(d) && !existsSync(ROOT + `packages/${d}/package.json`),
-    'the declaration is stale — remove it');
+  if (dirs.includes(d)) {
+    ok(`declared non-package packages/${d} still has no package.json`, !existsSync(ROOT + `packages/${d}/package.json`),
+      'it became a package — remove the declaration');
+  } else {
+    ok(`declared non-package packages/${d} is absent BY DESIGN (gitignored), not stale`, ignored(`packages/${d}/`),
+      'the directory is gone and git does not ignore it — the declaration is stale, remove it');
+    console.log(`  · packages/${d} not in this checkout — gitignored by design: ${NOT_A_PACKAGE[d]}`);
+  }
 }
 ok('at least one package found', pkgs.length > 0);
 
