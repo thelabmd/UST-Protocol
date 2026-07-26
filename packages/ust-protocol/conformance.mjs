@@ -2,7 +2,7 @@
 // Conformance runner (rc.2): every primitive vector + every negative class verified against ust-protocol.
 // Negatives are CONSTRUCTED from the live impl (not skipped), so this is a real pass/fail. HIGH/TOP built inline.
 import * as P from './index.mjs';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { createPrivateKey, createPublicKey, createHash, sign } from 'node:crypto';
 import { __setWitnessClockForConformance, witnessNow } from './_clock.mjs';   // rev33/36 R4 — the witness clock is verifier-owned in an INTERNAL module; the harness drives it deterministically HERE (not through public opts), then restores
 const withWitnessClock = async (clock, body) => { __setWitnessClockForConformance(clock); try { return await body(); } finally { __setWitnessClockForConformance(); } };
@@ -390,9 +390,22 @@ check('F8 impossible ust_id→E-MALFORMED', P.verify(mk({ r: { kind: 'captured',
   const specText = readFileSync(new URL('../../spec/UST-1.0.md', import.meta.url), 'utf8');
   check('version gate: spec release header == VERSION.spec', specText.includes('`' + P.VERSION.spec + '`'));
   // bundled-drift gate: the extension MUST carry the exact clean-room bytes (twice-in-one-day lesson).
-  const cleanRoom = readFileSync(new URL('../../docs/ust-verify.mjs', import.meta.url), 'utf8');
-  const bundled = readFileSync(new URL('../../extension/lib/ust-verify.mjs', import.meta.url), 'utf8');
-  check('bundle gate: extension clean-room is byte-identical to docs/ust-verify.mjs', bundled === cleanRoom);
+  //
+  // It named ONE copy while the extension bundles TWO. ust-web-signer was byte-identical only by discipline — nothing
+  // checked it, so the next edit to either copy would have drifted silently. Same shape as the two parity holes found the
+  // same day: a gate that names an instance instead of enumerating the set. So the SET of bundled files is now pinned and
+  // every one of them must have a declared source, which makes a new bundled copy a gate failure rather than a surprise.
+  const SOURCE_OF = { 'ust-verify.mjs': 'docs/ust-verify.mjs', 'ust-web-signer.mjs': 'packages/ust-web-signer/index.mjs' };
+  const bundledFiles = readdirSync(new URL('../../extension/lib/', import.meta.url)).filter((f) => f.endsWith('.mjs')).sort();
+  check('bundle gate: every file bundled into the extension has a DECLARED source (no undeclared copy)',
+    bundledFiles.every((f) => SOURCE_OF[f]), 'bundled: [' + bundledFiles.join(', ') + '] declared: [' + Object.keys(SOURCE_OF).join(', ') + ']');
+  for (const [f, src] of Object.entries(SOURCE_OF)) {
+    let a, b;
+    try { a = readFileSync(new URL('../../extension/lib/' + f, import.meta.url), 'utf8'); } catch { a = null; }
+    try { b = readFileSync(new URL('../../' + src, import.meta.url), 'utf8'); } catch { b = null; }
+    check(`bundle gate: extension/lib/${f} is byte-identical to ${src}`, a !== null && b !== null && a === b,
+      a === null ? 'bundled copy missing' : (b === null ? 'declared source missing' : 'the two copies have drifted'));
+  }
 }
 
 // ─── verifier PARITY (I4 across OUR OWN two verifiers) — the 2026-07-12 probe found the
