@@ -2061,6 +2061,7 @@ console.log('\n═════════════════════�
     evidenceReceiptId: 'primitive', genesisEpoch: 'primitive', keylogLeaf: 'primitive', nameMapLeaf: 'primitive', noForkClaim: 'primitive',
     // ── EXEMPT (pure predicate/accessor) ──
     isValid: 'predicate', isVerifiedHandle: 'predicate', isPublicDnsShard: 'predicate',
+    registryDigest: 'accessor',   // zero-arg over a deep-frozen constant — there is no untrusted input to be hostile with
     // ── EXEMPT (result class) ──
     UstInvalid: 'result-class', UstIndeterminate: 'result-class',
     // ── EXEMPT (internal, reached only POST-admit through a public door that admits) ──

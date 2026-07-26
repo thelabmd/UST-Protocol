@@ -824,10 +824,13 @@ function verifyCore(doc, opts = {}) {
     // verified via their own chain, not standalone domain claims. The rule is for STATE documents (observation/attestation/derivation).
     if (tier === 'LIGHT' && shardMode === 'name' && st.id.class !== 'genesis' && st.id.class !== 'key' && st.id.class !== 'cadence')
       return { result: 'INDETERMINATE', reason: 'unavailable', identity: { ...identity, mode: shardMode }, detail: 'name-form domain_shard is a domain claim the verifier could not confirm (tier resolved to LIGHT — the identity axis reached no name binding): supply genesis to bind the name (→ HIGH), or use key-form domain_shard = key_id for a self-asserted key-identity document (→ VALID:LIGHT). "cannot confirm" ⇒ INDETERMINATE (UST-ybn — the unified rule)' };
+    // A verdict that does not say WHO judged it cannot be re-checked later. `verifier` + `registry_digest` bind this
+    // result to the rules that produced it: pin the pair and the same verdict is reproducible after the protocol has
+    // moved on, which is what lets the rules keep changing without redefining verdicts already handed out.
     return { result: 'VALID:' + tier, tier, assurance, identity: { ...identity, mode: shardMode }, disclosed, sources, ...nameField,
       ...(identity.noFork ? { no_fork: identity.noFork } : {}),
       ust_id: st.id.ust_id, class: st.id.class, content_hash: ch, time: timeField, provenance: provenanceReport,
-      completeness: 'not_evaluated' };
+      completeness: 'not_evaluated', verifier: VERSION, registry_digest: registryDigest() };
   } catch (e) {
     return bad(e.code || 'E-MALFORMED', e.detail || String(e));         // fail-closed (§14/I10)
   }
@@ -2420,7 +2423,7 @@ export const REGISTRY = deepFreeze({   // round-25 P0-04 — DEEP-frozen: the ca
   hashDomains: ['ust:state', 'ust:shard', 'ust:seed', 'ust:keylog', 'ust:leaf', 'ust:node',
     'ust:authority-checkpoint', 'ust:checkpoint-map-key', 'ust:checkpoint-map-value', 'ust:name-map-key', 'ust:name-map-value',
     'ust:keylog-empty', 'ust:keylog-leaf', 'ust:keylog-node', 'ust:keylog-commit', 'ust:smt-empty', 'ust:smt-node', 'ust:smt-leaf',
-    'ust:genesis-epoch', 'ust:authority-scope', 'ust:evidence-receipt'],
+    'ust:genesis-epoch', 'ust:authority-scope', 'ust:evidence-receipt', 'ust:registry'],
   // signed `canon` preimage purposes (§12.1a/§12.3) — domain-separated, never interchangeable.
   purposes: ['ust:name-no-fork', 'ust:authority-checkpoint', 'ust:authority-checkpoint-signature',
     'ust:checkpoint-authority-recovery', 'ust:genesis-epoch-transition', 'ust:checkpoint-uniqueness-attestation',
@@ -2438,6 +2441,17 @@ export const REGISTRY = deepFreeze({   // round-25 P0-04 — DEEP-frozen: the ca
   // M3 — the SIGNED connector-receipt claim (§12.3.5): facts only; a capability/assurance/independence field is E-EVIDENCE.
   evidenceReceiptClaimFields: { required: ['version', 'purpose', 'domain_shard', 'active_genesis', 'genesis_epoch', 'subject', 'proof_kind', 'facts', 'issued_at'], optional: ['payload_digest'] },
 });
+
+// The digest of the frozen vocabulary this verifier decides by: the canonical string sets that define what a
+// verdict can even SAY (tiers, error codes, indeterminate reasons, assurance axes, hash domains, purposes). Emitted in
+// every VALID verdict beside `verifier`, so a held verdict names the rules it was judged under and stays re-checkable
+// after those rules move. Memoized: REGISTRY is deep-frozen, so the digest is a constant of the build.
+// NOTE the deliberate naming: this is the DOCUMENT verifier (VERSION.revision), NOT the L1 authority checker
+// (REFERENCE_CHECKER_VERSION, a separate revision line). Calling this field \`checker_version\` would conflate two
+// different frozen surfaces that move independently.
+let _regDigest = null;
+export const registryDigest = () => (_regDigest ??= H('ust:registry', canon(REGISTRY)));
+
 
 // ─── TOP §11.3 completeness: a sequenced stream is prev-chained; first frame's prev = genesis content_hash
 //     (M4); per-frame validity is verified too (X2 — completeness ≠ validity); duplicate ust_id / shared prev

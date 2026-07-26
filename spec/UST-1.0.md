@@ -414,7 +414,7 @@ publisher-bound values a layer up.)
   `ust:node`→`left_hash_ascii || right_hash_ascii` (both `sha256:`-prefixed, concatenated); `ust:seed`→
   `utf8(canon([content_hash,…]))`. Distinct tags make a bytes-equal collision across object kinds impossible. The COMPLETE, authoritative domain set is RENDERED from the reference `REGISTRY` (LAYER 1 drift gate §16 — never hand-maintained, so the enumeration above can never claim a domain the code lacks nor omit one it added):
   <!-- BEGIN spec-sync:hash-domains -->
-`ust:state` | `ust:shard` | `ust:seed` | `ust:keylog` | `ust:leaf` | `ust:node` | `ust:authority-checkpoint` | `ust:checkpoint-map-key` | `ust:checkpoint-map-value` | `ust:name-map-key` | `ust:name-map-value` | `ust:keylog-empty` | `ust:keylog-leaf` | `ust:keylog-node` | `ust:keylog-commit` | `ust:smt-empty` | `ust:smt-node` | `ust:smt-leaf` | `ust:genesis-epoch` | `ust:authority-scope` | `ust:evidence-receipt`
+`ust:state` | `ust:shard` | `ust:seed` | `ust:keylog` | `ust:leaf` | `ust:node` | `ust:authority-checkpoint` | `ust:checkpoint-map-key` | `ust:checkpoint-map-value` | `ust:name-map-key` | `ust:name-map-value` | `ust:keylog-empty` | `ust:keylog-leaf` | `ust:keylog-node` | `ust:keylog-commit` | `ust:smt-empty` | `ust:smt-node` | `ust:smt-leaf` | `ust:genesis-epoch` | `ust:authority-scope` | `ust:evidence-receipt` | `ust:registry`
 <!-- END spec-sync:hash-domains -->
   `content_hash = H_state(S)` where
   `S = canon({ust, state})` (the signed content) is the document's UNIQUE reference (chains §9, anchors §11,
