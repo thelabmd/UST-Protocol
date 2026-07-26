@@ -190,7 +190,9 @@ panel('ust-map', 'REPOSITORY MAP',
     ['│   ├── ust-protocol', 'reference verifier + producer — zero-dep, stateless', GREEN],
     ['│   ├── ust-cli', 'the ust command — verify · canon · HIGH genesis ceremony · witness', GREEN],
     ['│   ├── ust-mcp', 'MCP server — agents verify natively', GREEN],
-    ['│   ├── ust-light', 'minimal subset — byte-identical verdicts', TEXT],
+    // Colour carries meaning in this panel: GREEN = protocol surface, TEXT = a product built on top. ust-light
+    // is the LIGHT floor of the protocol itself; diarium is a product, and stays grey.
+    ['│   ├── ust-light', 'minimal subset — byte-identical verdicts', GREEN],
     ['│   ├── ust-web-signer', 'WebCrypto browser signing (non-extractable keys)', GREEN],
     ['│   ├── ust-{ots,rekor}-verify', 'opt-in anchor substrates — Bitcoin/OTS · Sigstore Rekor', GREEN],
     ['│   └── diarium', 'agent memory as a verifiable stream — a product on the protocol', TEXT],

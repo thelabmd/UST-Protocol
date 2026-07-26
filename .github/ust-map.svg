@@ -17,7 +17,7 @@
   <text x="320" y="196" fill="#8b949e" font-size="13">the ust command — verify · canon · HIGH genesis ceremony · witness</text>
   <text x="36" y="221" fill="#7ee787" >│   ├── ust-mcp</text>
   <text x="320" y="221" fill="#8b949e" font-size="13">MCP server — agents verify natively</text>
-  <text x="36" y="246" fill="#c9d1da" >│   ├── ust-light</text>
+  <text x="36" y="246" fill="#7ee787" >│   ├── ust-light</text>
   <text x="320" y="246" fill="#8b949e" font-size="13">minimal subset — byte-identical verdicts</text>
   <text x="36" y="271" fill="#7ee787" >│   ├── ust-web-signer</text>
   <text x="320" y="271" fill="#8b949e" font-size="13">WebCrypto browser signing (non-extractable keys)</text>
