@@ -424,13 +424,13 @@
     {
       "id": "R91-f4-cadence-absent-benign",
       "rev": "rev91",
-      "model_locus": "the publisher declares no change and the genesis value stands",
+      "model_locus": "the publisher declares no change, so the genesis value is what is known",
       "conformance_check": "#95/F.4 cadence ABSENT (404) is benign — the publisher declares no change, the document still resolves"
     },
     {
       "id": "R91-f4-cadence-unreadable-indeterminate",
       "rev": "rev91",
-      "model_locus": "substituting an empty log for it",
+      "model_locus": "an empty log is a VALUE, and writing one in place of an unanswered query",
       "conformance_check": "#95/F.4 cadence UNREADABLE is INDETERMINATE, never substituted by an empty log (a wrong value in ℐ would manufacture completeness)"
     }
   ]
