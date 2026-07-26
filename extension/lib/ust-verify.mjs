@@ -199,7 +199,18 @@ export async function verify(doc, opts = {}) {
 
 // §11.3 completeness — verify a RANGE as ONE authority's prev-chained stream (LIGHT per-frame + chain + authority).
 // Async (per-frame verify + contentHash are async). Mirrors ust-protocol.verifyStream so the two cross-check.
-export async function verifyStream(frames, { genesis, checkpoint } = {}) {
+//
+// It did NOT mirror it, and the comment above went unchecked for as long as it existed: this returned
+// `complete: 'proven'` — a word the reference vocabulary (none | provisional | chain-consistent | complete) does not
+// contain — on nothing more than chain consistency plus a matching head and frame_count. That evidence is exactly what
+// the reference calls `chain-consistent`: no-deletion. Meanwhile the reference, holding the SAME bytes for a stream with
+// a missing grid slot, refused completeness and NAMED the hole. The public page was telling a user "proven" while a
+// frame was absent — our own verifier crossing the assurance-never-self-declared line. Nothing compared the two: the
+// parity gate covered verify() only, so the stream path had never been measured against the reference at all.
+//
+// Now: the reference vocabulary, the interval-faithfulness check, and the cadence grid. `complete` (no-omission) is
+// reachable ONLY through grid equality; without a resolved cadence the ceiling is `chain-consistent`, stated as such.
+export async function verifyStream(frames, { genesis, checkpoint, cadence } = {}) {
   if (!Array.isArray(frames) || !frames.length) return { complete: 'none' };
   const authority = frames[0].state.id.domain_shard;
   let prevHash = genesis ? await contentHash(genesis) : null;
@@ -225,7 +236,36 @@ export async function verifyStream(frames, { genesis, checkpoint } = {}) {
     if (checkpoint.state.id.domain_shard !== authority) return { error: 'E-AUTHORITY', detail: 'checkpoint not from the stream authority' };
     const a = checkpoint.state.data.checkpoint?.value;
     if (!a || a.head !== prevHash || String(a.frame_count) !== String(frames.length)) return { error: 'E-PREV', detail: 'checkpoint contradicts observed set' };
-    return { complete: 'proven', head: prevHash };
+    if (a.from === undefined || a.to === undefined) return { complete: 'chain-consistent', head: prevHash };
+    // The interval MUST faithfully BOUND the observed set, or the checkpoint covers a different range than the one in
+    // hand: first == from, last == to, and no frame outside. Without this a valid checkpoint for a NEIGHBOURING range
+    // would license this one.
+    const ustE = (u) => { const m = /^ust:(\d{4})(\d{2})(\d{2})\.(\d{2})(\d{2})?(\d{2})?$/.exec(u || ''); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +(m[5] ?? 0), +(m[6] ?? 0)) / 1000 : null; };
+    const fromE = ustE(a.from), toE = ustE(a.to);
+    if (frames[0].state.id.ust_id !== a.from) return { error: 'E-PREV', detail: 'first frame != checkpoint `from` (' + a.from + ')' };
+    if (frames[frames.length - 1].state.id.ust_id !== a.to) return { error: 'E-PREV', detail: 'last frame != checkpoint `to` (' + a.to + ')' };
+    for (const f of frames) { const e = ustE(f.state.id.ust_id); if (e === null || fromE === null || toE === null || e < fromE || e > toE) return { error: 'E-PREV', detail: 'frame outside the checkpoint interval: ' + f.state.id.ust_id }; }
+
+    // §11.3 — no-omission needs the SIGNED grid. The caller resolves the cadence (resolveCadence in ./ust-resolve.mjs)
+    // and passes seconds; absent or unresolved, the ceiling is `chain-consistent` and it is reported as that, never more.
+    const secs = typeof cadence === 'string' && /^[1-9]\d*$/.test(cadence) ? Number(cadence) : (Number.isSafeInteger(cadence) && cadence > 0 ? cadence : null);
+    if (secs === null) return { complete: 'chain-consistent', head: prevHash, interval: { from: a.from, to: a.to } };
+    const prec = secs % 3600 === 0 ? 'h' : (secs % 60 === 0 ? 'm' : 's');
+    const pad = (n) => String(n).padStart(2, '0');
+    const toUst = (e) => { const d = new Date(e * 1000); const base = `ust:${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}.${pad(d.getUTCHours())}`; return prec === 'h' ? base : (prec === 'm' ? base + pad(d.getUTCMinutes()) : base + pad(d.getUTCMinutes()) + pad(d.getUTCSeconds())); };
+    const grid = [];
+    for (let e = fromE; e <= toE; e += secs) { grid.push(toUst(e)); if (grid.length > 200000) return { complete: 'chain-consistent', head: prevHash, interval: { from: a.from, to: a.to }, detail: 'grid exceeds the §13 bound — not evaluated' }; }
+    const gridSet = new Set(grid), covered = new Set();
+    for (const f of frames) {
+      const c = f.state.id.class;
+      const slotBearing = c === 'observation' || c === 'derivation' || (c === 'attestation' && f.state.data?.gap !== undefined);
+      if (!slotBearing) continue;
+      if (!gridSet.has(f.state.id.ust_id)) return { error: 'E-PREV', detail: 'off-grid frame ' + f.state.id.ust_id + ' is not a slot of the signed cadence grid' };
+      covered.add(f.state.id.ust_id);
+    }
+    const hole = grid.find((s) => !covered.has(s));
+    if (hole) return { complete: 'chain-consistent', head: prevHash, interval: { from: a.from, to: a.to }, hole, detail: 'grid slot ' + hole + ' has no frame and no signed gap record' };
+    return { complete: 'complete', head: prevHash, interval: { from: a.from, to: a.to }, cadence: String(secs), grid_slots: String(grid.length) };
   }
   return { complete: 'provisional', head: prevHash };
 }

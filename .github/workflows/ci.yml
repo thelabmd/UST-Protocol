@@ -64,6 +64,8 @@ jobs:
         run: npm run test:ssrf
       - name: drift-guards (meta — every from-code gate is fail-closed; injects a fake drift, asserts the gate rejects it, restores)
         run: npm run test:drift-guards
+      - name: stream parity (completeness verdict identical in both verifiers; no-omission only via the signed grid)
+        run: npm run test:stream-parity
       - name: cadence parity (clean-room browser resolver == reference on every vector)
         run: npm run test:cadence-parity
       - name: cadence discovery (a declared grid is reachable; unreadable ≠ undeclared)
