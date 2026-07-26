@@ -75,6 +75,61 @@ export async function resolveAuthority(doc, { genesis, keylog = [], noForkConfir
   };
 }
 
+// ─── §11.3 CADENCE — the grid a completeness claim is measured against. The publisher signs it, so a verifier can
+// count: with a declared cadence a missing slot is a NAMED hole, without one the publisher's silence is unfalsifiable
+// and its ceiling is no-deletion. This is the clean-room half; the reference implementation is the authority on
+// semantics and both are pinned by the `cadence-resolve` vectors.
+//
+// ONE deliberate refusal rather than a weaker answer: the reference requires a CURRENTLY-ACTIVE signer — a retired,
+// rotated-out or revoked key cannot move the grid. This verifier does not model that state machine (revocation windows
+// need anchored time, which is why `resolveAuthority` reports `revocation: 'not_evaluated'`), and its key set is
+// ever-registered, not active. Where the two coincide — a key log of pure add/rotate, which is the ordinary case — the
+// answer is exact. Where a revoke/retire exists the set would be WIDER than the reference's, so this returns
+// `unresolved` instead of a number it cannot stand behind. A verifier that accepts a signer the reference rejects is
+// the divergence class this file already paid for once.
+export async function resolveCadence(genesis, cadenceLog = [], atTime, { keylog = [] } = {}) {
+  const INT = /^([1-9]\d*)$/;                                     // canonical positive integer seconds — no sign, no fraction, no leading zero
+  const parseSecs = (s) => (typeof s === 'string' && INT.test(s) && Number(s) <= 31622400 ? Number(s) : null);
+  const epoch = (u) => {
+    const m = /^ust:(\d{4})(\d{2})(\d{2})\.(\d{2})(\d{2})?(\d{2})?$/.exec(u || '');
+    return m ? Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +(m[5] ?? 0), +(m[6] ?? 0)) / 1000 : null;
+  };
+  if (!genesis) return { error: 'no genesis supplied' };
+  if (!Array.isArray(cadenceLog)) return { error: 'E-MALFORMED', detail: 'cadenceLog must be an array' };
+  if (cadenceLog.length > 256) return { error: 'E-BOUNDS', detail: 'cadence-log > 256 (§13)' };
+  const gCad = genesis.state?.data?.genesis?.value?.cadence;
+  if (gCad !== undefined && parseSecs(gCad) === null) return { error: 'E-MALFORMED', detail: 'genesis cadence is not canonical integer seconds (§11.3)' };
+  let cadence = gCad !== undefined ? parseSecs(gCad) : null;      // the genesis value is authorized by construction (self-signed)
+  if (!cadenceLog.length) return { cadence };
+
+  const auth = await resolveAuthority(cadenceLog[0], { genesis, keylog });
+  if (auth.error && !/document key is NOT in/.test(auth.error)) return { error: 'E-AUTHORITY', detail: 'cadence authority: ' + auth.error };
+  if (keylog.some((e) => { const op = e?.state?.data?.key_op?.value?.op; return op && op !== 'add' && op !== 'rotate'; }))
+    return { unresolved: 'the key log contains a revoke/retire — deciding a CURRENTLY-ACTIVE signer needs anchored time, which this verifier does not evaluate' };
+
+  const active = new Set([genesis.state.id.key_id]);
+  for (const e of keylog) { const op = e?.state?.data?.key_op?.value ?? {}; if ((op.op === 'add' || op.op === 'rotate') && op.new_key_id) active.add(op.new_key_id); }
+
+  const atE = epoch(atTime);
+  let prev = await contentHash(genesis), lastEff = null;
+  for (const [i, e] of cadenceLog.entries()) {
+    const ev = await verify(e, { context: 'key' });
+    if (ev.result !== 'VALID:LIGHT') return { error: 'E-KEY', detail: `cadence entry ${i} invalid: ` + (ev.error || ev.result) };
+    if (e.state.id.class !== 'cadence') return { error: 'E-MALFORMED', detail: `cadence-log entry ${i} not class:cadence` };
+    if (e.state.id.domain_shard !== genesis.state.id.domain_shard) return { error: 'E-AUTHORITY', detail: `cadence entry ${i} domain mismatch` };
+    if (e.state.provenance?.prev !== prev) return { error: 'E-PREV', detail: `cadence entry ${i} not chained` };
+    if (!active.has(e.sig.key_id)) return { error: 'E-KEY', detail: `cadence entry ${i} NOT signed by an authorized key (§12.2)` };
+    const op = e.state.data.cadence_op?.value ?? {};
+    const effE = epoch(op.effective_from);
+    if (effE === null) return { error: 'E-MALFORMED', detail: `cadence entry ${i} bad effective_from` };
+    if (lastEff !== null && effE < lastEff) return { error: 'E-PREV', detail: `cadence effective_from not monotonic (entry ${i})` };
+    if (parseSecs(op.cadence) === null) return { error: 'E-MALFORMED', detail: `cadence entry ${i} cadence not canonical integer seconds` };
+    if (atE !== null && effE <= atE) cadence = parseSecs(op.cadence);      // the latest change in force at atTime wins
+    lastEff = effE; prev = await contentHash(e);
+  }
+  return { cadence };
+}
+
 // Discovery fetch (§20.1 pair) — pull the publisher's OWN genesis + key log from the standard locations.
 // TLS to the claimed name is the observation; the chain math above is what actually binds the key.
 export async function fetchIdentity(domain, fetchImpl = fetch) {
@@ -85,9 +140,25 @@ export async function fetchIdentity(domain, fetchImpl = fetch) {
     return r.json();
   };
   const genesis = await get('/.well-known/ust-genesis');
-  let keylog = [];
-  try { const k = await get('/.well-known/ust-keylog'); if (Array.isArray(k)) keylog = k; } catch { /* not served — resolution may still fail on key membership */ }
-  return { genesis, keylog };
+  // ABSENT and UNREADABLE are different facts (§20.1, round-18 P0-03), and this browser half used to collapse them with
+  // a bare `catch {}`: an oversize or 5xx key-log became `keylog = []`, which ERASES a real retirement and can accept a
+  // post-retirement document — the exact hole the core closes. Only 404/410 means "not served"; anything else is carried
+  // out as `indeterminate` so the caller reports it instead of quietly verifying against a surface it never read.
+  let keylog = [], cadenceLog = [], indeterminate = null;
+  const optional = async (path, label) => {
+    try { return await get(path); }
+    catch (e) {
+      if (!/HTTP (404|410) /.test(e.message || '')) indeterminate = { surface: label, detail: e.message || String(e) };
+      return null;
+    }
+  };
+  const k = await optional('/.well-known/ust-keylog', 'key-log');
+  if (Array.isArray(k)) keylog = k;
+  // §11.3 — the cadence log declares the completeness GRID. Absent is the common, honest case (one fixed cadence needs
+  // no log at all); unreadable must never look like undeclared, or a range gets judged against the superseded grid.
+  const c = await optional('/.well-known/ust-cadence', 'cadence-log');
+  if (Array.isArray(c)) cadenceLog = c;
+  return { genesis, keylog, cadenceLog, ...(indeterminate ? { indeterminate } : {}) };
 }
 
 // ─── WITNESS auto-query (#68) — the browser half. Same honesty ladder as the CLI/MCP: fetch the witness

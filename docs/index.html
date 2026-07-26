@@ -170,6 +170,7 @@
     <summary class="hint" style="cursor:pointer">Resolve authority manually (offline) — paste the publisher's genesis + key log</summary>
     <textarea id="gin" spellcheck="false" style="min-height:70px;margin-top:8px" placeholder='{"ust":"1.0","state":{"id":{"class":"genesis",…   (/.well-known/ust-genesis)'></textarea>
     <textarea id="kin" spellcheck="false" style="min-height:70px;margin-top:8px" placeholder='[ {…key-log entry…} ]   (/.well-known/ust-keylog — the JSON array)'></textarea>
+    <textarea id="cin" spellcheck="false" style="min-height:70px;margin-top:8px" placeholder='[ {…cadence entry…} ]   (/.well-known/ust-cadence — the JSON array; only if the publisher CHANGED its cadence)'></textarea>
   </details>
 
   <div id="out"></div>
@@ -198,7 +199,7 @@
 
 <script type="module">
 import { verify } from './ust-verify.mjs';
-import { resolveAuthority, fetchIdentity, witnessNoFork } from './ust-resolve.mjs';
+import { resolveAuthority, fetchIdentity, witnessNoFork, resolveCadence } from './ust-resolve.mjs';
 
 const $ = (id) => document.getElementById(id);
 const inEl = $('in'), outEl = $('out');
@@ -326,10 +327,10 @@ outEl.addEventListener('click', (e) => {
 const identCache = new Map();
 let noForkChecked = false;
 async function getIdentity(domain) {
-  const g = $('gin')?.value.trim(), k = $('kin')?.value.trim();
+  const g = $('gin')?.value.trim(), k = $('kin')?.value.trim(), c = $('cin')?.value.trim();
   if (g) {
-    try { return { genesis: JSON.parse(g), keylog: k ? JSON.parse(k) : [], source: 'pasted (offline)' }; }
-    catch (e) { return { error: 'manual genesis/key-log not valid JSON: ' + e.message, source: 'pasted (offline)' }; }
+    try { return { genesis: JSON.parse(g), keylog: k ? JSON.parse(k) : [], cadenceLog: c ? JSON.parse(c) : [], source: 'pasted (offline)' }; }
+    catch (e) { return { error: 'manual genesis/key-log/cadence-log not valid JSON: ' + e.message, source: 'pasted (offline)' }; }
   }
   if (identCache.has(domain)) return identCache.get(domain);
   try {
@@ -365,8 +366,21 @@ async function run() {
           resolution = { ...auth, source: ident.source, witness, fork: true };
           r = { result: 'INVALID', error: 'E-GENESIS', detail: witness.detail };
         } else {
+          // §11.3 — report the grid the publisher has SIGNED for this document's own moment. `cadence: null` is a
+          // POSITIVE fact: the publisher declares no grid, so its ceiling is `chain-consistent` (no-deletion) and a
+          // no-omission claim is not available to it at all. A surface that EXISTS but could not be read is carried as
+          // `cadence_unreadable` rather than shown as "none" — never a verdict against bytes nobody read.
+          let cadence = null, cadenceUnreadable;
+          try {
+            const cr = resolveCadence(ident.genesis, ident.cadenceLog || [], doc.state.id.ust_id, { keylog: ident.keylog });
+            if (cr.error) cadenceUnreadable = cr.error + (cr.detail ? ' — ' + cr.detail : '');
+            else if (cr.unresolved) cadenceUnreadable = cr.unresolved;
+            else cadence = cr.cadence === null ? null : String(cr.cadence);
+          } catch (e) { cadenceUnreadable = 'cadence did not resolve: ' + (e && e.message || e); }
+          if (ident.indeterminate) cadenceUnreadable = ident.indeterminate.surface + ' present but unreadable: ' + ident.indeterminate.detail;
           const grant = noForkChecked || (witness && witness.status === 'confirmed');
-          resolution = { ...auth, source: ident.source, witness, noFork: witness && witness.status === 'confirmed' ? 'witness-confirmed' : (noForkChecked ? 'asserted-by-you' : 'unconfirmed') };
+          resolution = { ...auth, source: ident.source, witness, noFork: witness && witness.status === 'confirmed' ? 'witness-confirmed' : (noForkChecked ? 'asserted-by-you' : 'unconfirmed'),
+            cadence, ...(cadenceUnreadable ? { cadence_unreadable: cadenceUnreadable } : {}) };
           r = await verify(doc, { context: 'data', capacity: auth.capacity, ...(grant ? { authority: { publisher: auth.publisher } } : {}) });
         }
       } else resolution = { error: auth.error, source: ident.source };

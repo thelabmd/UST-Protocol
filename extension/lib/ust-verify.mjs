@@ -63,7 +63,12 @@ const tsCal = (ts) => calOk(ts.slice(0, 4), ts.slice(5, 7), ts.slice(8, 10));
 const idCal = (u) => calOk(u.slice(4, 8), u.slice(8, 10), u.slice(10, 12));
 const KEYID_FORM = /^sha256:[0-9a-f]{64}$/;   // §4/§12 typed identity: key-form shard MUST equal key_id
 const USTID = /^ust:\d{4}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\.([01]\d|2[0-3])(([0-5]\d)([0-5]\d)?)?$/;  // F8 valid UTC frame
-const CLASSES = ['observation', 'attestation', 'derivation', 'genesis', 'key'];
+// `cadence` was MISSING here while line ~183 below already exempted it from the key-form shard rule — so this
+// clean-room verifier returned INVALID('bad class') on a legitimate §11.3 cadence entry that the reference verifier
+// accepts as VALID:LIGHT. A measured divergence between two conforming verifiers, which is the one thing the README
+// promises cannot happen. The parity gate exists for exactly this class (rev83's name-form rule diverged the same way)
+// but its battery carried no cadence-class document, so the hole survived the gate. Battery extended alongside this fix.
+const CLASSES = ['observation', 'attestation', 'derivation', 'genesis', 'key', 'cadence'];
 const TRANSCRIPT = ['ust', 'state', 'sig', 'proof'], SIGK = ['alg', 'key_id', 'pub', 'sig'];
 const RES_NAMES = new Set(['ust', 'state', 'sig', 'proof', 'id', 'time', 'data', 'hashes', 'provenance', 'domain_shard', 'ust_id', 'key_id', 'class', 'parent_ust', 'kind', 'value', 'privacy', 'commit', 'enc', 'sources', 'constituents', 'based_on', 'root', 'seed', 'prev', 'alg', 'pub', 'partition', 'nonce', '__proto__', 'constructor', 'prototype']);
 const KINDS = ['captured', 'computed'], PRIVACY = ['blinded', 'encrypted'];
@@ -82,7 +87,7 @@ export async function verify(doc, opts = {}) {
     if (!TS.test(st.time.generated_at || '') || !TS.test(st.time.valid_from || '') || !TS.test(st.time.valid_to || '')) return bad('E-MALFORMED', 'bad timestamp (not ISO-Z)');
     for (const t of [st.time.generated_at, st.time.valid_from, st.time.valid_to]) if (!tsCal(t)) return bad('E-MALFORMED', 'timestamp date not on the calendar');
     if (KEYID_FORM.test(id.domain_shard) && id.domain_shard !== id.key_id) return bad('E-MALFORMED', 'key-form domain_shard != key_id (self-certifying)');
-    if (opts.context === 'data' && (id.class === 'key' || id.class === 'genesis')) return bad('E-MALFORMED', 'class ' + id.class + ' not valid in data context (W3)');
+    if (opts.context === 'data' && (id.class === 'key' || id.class === 'genesis' || id.class === 'cadence')) return bad('E-MALFORMED', 'class ' + id.class + ' not valid in data context (W3)');
     // step 2 — content_hash + bijection + per-partition
     const ch = await contentHash(doc);
     // §13 structural bounds — the SAME hard ceilings as the reference verifier (I4:
@@ -133,6 +138,9 @@ export async function verify(doc, opts = {}) {
     const pr = st.provenance;
     if (id.class === 'observation' && (pr?.constituents !== undefined || pr?.root !== undefined)) return bad('E-MALFORMED', 'observation MUST NOT carry constituents/root');
     if (id.class === 'derivation' && (pr?.based_on === undefined || pr?.seed === undefined)) return bad('E-MALFORMED', 'derivation MUST carry based_on + seed');
+    // §11.3 — a cadence entry is the key-log pattern for the stream grid: it MUST be chained and MUST carry the op, or a
+    // bare doc with the same domain could pose as a cadence declaration. Mirrors the reference rule exactly.
+    if (id.class === 'cadence' && (pr?.prev === undefined || st.data?.cadence_op === undefined)) return bad('E-MALFORMED', 'cadence entry MUST carry provenance.prev + a cadence_op partition');
     // §14a obligations: every commitment-bearing provenance member is RECOMPUTED (no present-but-unchecked).
     const HASHREF = /^sha256:[0-9a-f]{64}$/;
     if (pr?.based_on !== undefined) {

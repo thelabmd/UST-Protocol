@@ -22,6 +22,11 @@ const hA = 'sha256:' + 'ab'.repeat(32);
 const obs = (over = {}, data) => seal(P.buildState({ domain_shard: A.key_id, ust_id: 'ust:20260715.12', key_id: A.key_id, class: 'observation', ...over }, t, data ?? { r: { kind: 'captured', value: { x: '1' } } }));
 const deriv = (shard, based) => seal(P.buildState({ domain_shard: shard, ust_id: 'ust:20260715.13', key_id: A.key_id, class: 'derivation' }, t, { d: { kind: 'computed', value: { x: '1' } } }, { based_on: based, seed: P.seed(based.map((b) => b.hash)) }));
 const gen = seal(P.buildGenesis({ domain_shard: 'example.com', ust_id: 'ust:20260715.10', key_id: A.key_id }, t, A.pub));
+// §11.3 cadence entries — a valid one, plus the two malformed shapes the reference refuses, so BOTH verifiers must
+// agree on the accept AND on each refusal (a class that is merely "known" but unpoliced is a different divergence).
+const cadEntry = seal(P.buildCadenceEntry({ domain_shard: 'example.com', ust_id: 'ust:20260715.11', key_id: A.key_id }, t, 30, 'ust:20260715.12', P.contentHash(gen)));
+const cadNoPrev = (() => { const d = JSON.parse(JSON.stringify(cadEntry)); delete d.state.provenance; return d; })();
+const cadNoOp = (() => { const d = JSON.parse(JSON.stringify(cadEntry)); d.state.data = { r: { kind: 'captured', value: { x: '1' } } }; return d; })();
 const tampered = (() => { const d = JSON.parse(JSON.stringify(obs())); d.state.data.r.value.x = '9'; return d; })();
 const badSig = (() => { const d = JSON.parse(JSON.stringify(obs())); d.sig.sig = 'A'.repeat(d.sig.sig.length); return d; })();
 
@@ -36,6 +41,13 @@ const battery = [
   ['genesis name-form (exempt) → VALID:LIGHT', gen, 'key'],
   ['tampered value → INVALID', tampered, 'data'],
   ['bad signature → INVALID', badSig, 'data'],
+  // §11.3 — the battery had NO cadence-class document, so the clean-room verifier omitted `cadence` from its CLASSES
+  // list and returned INVALID('bad class') where the reference returned VALID:LIGHT. The gate was green throughout: a
+  // battery that does not name a class cannot detect a divergence in it. Enumerate the DOMAIN of classes, not a sample.
+  ['cadence entry (name-form, exempt) → VALID:LIGHT', cadEntry, 'key'],
+  ['cadence entry in DATA context → INVALID (W3)', cadEntry, 'data'],
+  ['cadence entry without provenance.prev → INVALID', cadNoPrev, 'key'],
+  ['cadence entry without a cadence_op partition → INVALID', cadNoOp, 'key'],
 ];
 
 let fail = 0;

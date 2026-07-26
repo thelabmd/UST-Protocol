@@ -49,6 +49,7 @@
     "test:ustid": "node tools/ustid-tier-gate.mjs",
     "test:attribution": "node tools/verdict-attribution-gate.mjs",
     "test:inclusion": "node tools/inclusion-connector-gate.mjs",
-    "test:cadence": "node tools/cadence-discovery-gate.mjs"
+    "test:cadence": "node tools/cadence-discovery-gate.mjs",
+    "test:cadence-parity": "node tools/cadence-parity-gate.mjs"
   }
 }
