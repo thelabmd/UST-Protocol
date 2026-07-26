@@ -46,6 +46,8 @@ jobs:
         run: npm run test:docs-parity
       - name: CLI ceremony regression (9th-audit — the seven points cannot regress)
         run: npm run test:cli
+      - name: the diary view matches what was signed (diarium.md is GENERATED from the store, never hand-edited)
+        run: npm run test:diary
       - name: diarium store discipline (chain-derived order, refusal to extend damage, the cap, one closure one entry)
         run: npm run test:diarium
       - name: ust-lite is a valid UST subset (byte-identical to the reference impl, both directions)
