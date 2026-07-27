@@ -164,6 +164,12 @@ export const contextFor = (doc) => (doc?.state?.id?.class === 'genesis' || doc?.
 // Hidden passphrase input (line-review P1: readline echoed the root passphrase to the terminal). Raw-mode
 // character loop with '*' echo in a tty; falls back to the visible ask (with a loud warning) elsewhere.
 export async function askHidden(q, fallbackAsk) {
+  // askHidden must own stdin. A readline interface created BEFORE this call takes stdin over and echoes the
+  // line ITSELF — its echo wins over this raw-mode loop, so the passphrase appears in plaintext while the code
+  // looks correct. Measured 2026-07-27: the owner ran the cadence ceremony and watched the root passphrase print.
+  // Every caller now builds its readline LAZILY, and this guard makes a future eager one loud instead of silent.
+  if (process.stdin.listenerCount('data') > 0 || process.stdin.listenerCount('keypress') > 0)
+    throw new Error('askHidden: another reader owns stdin (a readline interface is open) — it would ECHO the secret. Create the interface lazily, after this call.');
   if (!process.stdin.isTTY) { console.log('  ⚠️  no tty — the passphrase WILL echo'); return fallbackAsk(q); }
   process.stdout.write(q);
   return await new Promise((resolve) => {
@@ -1095,7 +1101,7 @@ async function cmdPublish() {
     console.log('  ✓ route ' + w.route + ' (from wrangler.toml)');
     const rl = createInterface({ input: process.stdin, output: process.stdout });
     let apex; try { apex = await cfApexSteps({ domain, token: await resolveDnsToken((q) => rl.question(q)), flipProxy }); }
-    catch (e) { rl.close(); die(e.message); }
+    catch (e) { rl?.close(); die(e.message); }
     rl.close();
     r = { ...w, routeAction: 'wrangler', proxied: apex.proxied, flipped: apex.flipped, warnings: apex.warnings };
   } else {
@@ -1385,7 +1391,7 @@ async function cmdGenesis() {
   const maxBytes = arg('max-transcript-bytes', null);
   if (maxBytes === true) { rl.close(); die('--max-transcript-bytes needs a value'); }
   let built; try { built = await buildCeremony({ domain, profile, maxP, maxBytes, cadence, signerRef }); }
-  catch (e) { rl.close(); die(e.message); }
+  catch (e) { rl?.close(); die(e.message); }
   const { genesis, keylog0, genHash, op, opPkcs8, pkcs8, warnings } = built;
   for (const w of warnings) console.log('\n  ⚠️  ' + w);
   console.log('\n  ✅ 1/5 🔑 ROOT key generated — it exists only in this process right now');
@@ -1440,7 +1446,7 @@ async function cmdGenesis() {
         domain, txt, genHash, token: dnsToken,
         onAttempt: (i, n) => console.log(`     ⏳ readback ${i}/${n} — the resolver still serves the previous record (TTL up to 300 s), waiting…`),
       });
-    } catch (e) { rl.close(); die(e.message); }
+    } catch (e) { rl?.close(); die(e.message); }
     console.log('  ✅ 3/5 🌐 _ust TXT ' + res.action + ' and confirmed by an independent DoH readback');
     console.log('       DNS now vouches for your hash even if every HTTP surface lies');
   } else {
@@ -1467,7 +1473,7 @@ async function cmdGenesis() {
       } else {
         pub = await cfPublish({ domain, genesisText: JSON.stringify(genesis), keylogText: JSON.stringify([keylog0]), witnessText: buildWitnessLog(JSON.stringify(genesis)), token: process.env.CF_TOKEN || process.env.CLOUDFLARE_API_TOKEN, flipProxy: !!arg('flip-proxy', false) });
       }
-    } catch (e) { rl.close(); die(e.message); }
+    } catch (e) { rl?.close(); die(e.message); }
     console.log('  ✅ worker ' + pub.script + ' + route ' + pub.route + ' (' + pub.routeAction + (pub.flipped ? ', proxy enabled on apex' : '') + ')');
     for (const w of pub.warnings) console.log('  ⚠️  ' + w);
     if (!pub.proxied) { rl.close(); die('apex is not proxied — the route cannot fire. Re-run with --flip-proxy (NOTE: puts the whole site behind CF), or enable the proxy manually and re-run.'); }
@@ -1502,7 +1508,7 @@ async function cmdGenesis() {
       if (probed === a) console.log('  ✅ query-robustness probe: an unknown ?query returns byte-identical bytes (§20.1)');
       else console.log('  ⚠️  §20.1 SERVING: the response VARIES with an unknown query parameter — cache-key amplification is open; fix the cache config, then `npx @ust-protocol/cli discovery ' + domain + '`');
     } catch (e) { console.log('  ⚠️  §20.1 SERVING: query-robustness probe inconclusive (' + e.message + ') — run `npx @ust-protocol/cli discovery ' + domain + '` later'); }
-  } catch (e) { rl.close(); die(e.message); }
+  } catch (e) { rl?.close(); die(e.message); }
 
   // 5. witnesses + anchor — PREPARED here; the operator runs the exchange + anchor
   console.log('\n' + ceremonyMap(4));
@@ -1512,7 +1518,7 @@ async function cmdGenesis() {
   for (const line of rest) console.log('       ' + line);
 
   for (const line of ceremonySummary({ domain, genHash, opKeyId: op.key_id, maxP, cadence, outDir, encrypted: !!pass })) console.log(line);
-  rl.close();
+  rl?.close();
 }
 
 // ─── UST#66 `ust rotate` — key-log lifecycle: APPEND a rotation (never re-mint). rc.15 added the remint guard;
@@ -1562,22 +1568,23 @@ export async function cmdRotate() {
   try { keylog = (klFile && klFile !== true) ? JSON.parse(readFileSync(klFile, 'utf8')) : JSON.parse(await get('/.well-known/ust-keylog')); }
   catch (e) { die('cannot load the key-log: ' + (e.message || e)); }
   // decrypt the cold root, reconstruct the signer, self-verify it matches the genesis
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  const ask = (q) => rl.question(q);
+  // lazy: only the no-tty fallback needs a readline, and creating one EAGERLY is what made the secret echo
+  let rl = null;
+  const ask = (q) => { rl ??= createInterface({ input: process.stdin, output: process.stdout }); return rl.question(q); };
   const pass = await askHidden('  🔑 root passphrase: ', ask);
   let rootSigner;
   try { rootSigner = await rootSignerFrom(decryptKey(readFileSync(rootFile, 'utf8').trim(), pass), genesis.state.data.genesis.value.pub); }
-  catch (e) { rl.close(); die(e.message.includes('match') ? e.message : 'decrypt failed — wrong passphrase or corrupt backup'); }
+  catch (e) { rl?.close(); die(e.message.includes('match') ? e.message : 'decrypt failed — wrong passphrase or corrupt backup'); }
   const reason = arg('reason', null); const cs = arg('compromised-since', null);
   const { ust_id, time } = W.nowFrame();
   let grown;
   try { grown = await rotateKeylog({ genesis, keylog, rootSigner, reason: reason === true ? null : reason, compromisedSince: cs === true ? null : cs, time, ustId: ust_id }); }
-  catch (e) { rl.close(); die(e.message); }
+  catch (e) { rl?.close(); die(e.message); }
   // SELF-CHECK fail-closed: a doc signed by the NEW op key must resolve authoritative under the grown log
   const probe = await W.seal(await W.buildState({ domain_shard: domain, ust_id, key_id: grown.newOp.key_id, class: 'observation' }, time, { r: { kind: 'captured', value: { x: '1' } } }), grown.newOp);
   const res = P.resolveAuthority(probe, { genesis, keylog: grown.keylog, noForkConfirmed: true });
   if (res.error || res.strength !== 'authoritative') { rl.close(); die('self-check FAILED: the new key does not resolve authoritative (' + (res.error || res.strength) + ')'); }
-  rl.close();
+  rl?.close();
   const outDir = (arg('out', null) && arg('out', null) !== true) ? arg('out', null) : '.';
   writeFileSync(`${outDir}/ust-keylog`, JSON.stringify(grown.keylog, null, 2) + '\n');
   const newOpPkcs8 = Buffer.from(await crypto.subtle.exportKey('pkcs8', grown.newOp.privateKey)).toString('base64');
@@ -1631,13 +1638,14 @@ export async function cmdCadence() {
   const prev = log.length ? P.contentHash(log[log.length - 1]) : P.contentHash(genesis);
   console.error(`  chaining onto ${log.length ? 'cadence entry #' + (log.length - 1) : 'the GENESIS'} — prev ${prev.slice(0, 22)}…`);
 
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  const ask = (q) => rl.question(q);
+  // lazy: only the no-tty fallback needs a readline, and creating one EAGERLY is what made the secret echo
+  let rl = null;
+  const ask = (q) => { rl ??= createInterface({ input: process.stdin, output: process.stdout }); return rl.question(q); };
   const pass = await askHidden('  🔑 root passphrase: ', ask);
   let rootSigner;
   try { rootSigner = await rootSignerFrom(decryptKey(readFileSync(rootFile, 'utf8').trim(), pass), genesis.state.data.genesis.value.pub); }
-  catch (e) { rl.close(); die(e.message.includes('match') ? e.message : 'decrypt failed — wrong passphrase or corrupt backup'); }
-  rl.close();
+  catch (e) { rl?.close(); die(e.message.includes('match') ? e.message : 'decrypt failed — wrong passphrase or corrupt backup'); }
+  rl?.close();
 
   const { ust_id, time } = W.nowFrame();
   const entry = await W.seal(P.buildCadenceEntry({ domain_shard: domain, ust_id, key_id: rootSigner.key_id }, time, seconds, effFrom, prev), rootSigner);
