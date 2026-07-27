@@ -424,6 +424,40 @@ export function buildWranglerProject({ domain, genesisText, keylogText = null, w
 // Which discovery artifacts this deploy actually carries, in DISCOVERY_ARTIFACTS order. The worker answering a
 // path Cloudflare never routes to it is a real past defect (line-review P0-3, the key-log); one list now feeds
 // BOTH the dispatch table and the routes, so the two cannot drift apart again.
+// A deploy is constructed from the COMPLETE discovery set or not at all. Every call site used to assemble its own
+// arguments, so every call site could forget one — and three of five did: cmdWitness --deploy and both cmdGenesis
+// sites passed neither the cadence log nor the witness anchors, so a deploy from either NULLED /.well-known/ust-cadence
+// and DESTROYED the served Rekor/OTS anchors. That is not three bugs; it is one missing assembler, found three times.
+// Nothing here enumerates artifacts at a call site any more: they ask for the set and pass it whole.
+export async function collectServed({ domain, genesisText, genPath, keylogText = null, witnessFile = null, cadenceFile = null, fetchImpl = fetch, log = () => {} }) {
+  const genHash = P.contentHash(JSON.parse(genesisText));
+  const anchorsOf = (text) => { try { const w = JSON.parse(text); const a = w?.genesis_log?.find((e) => e.content_hash === genHash)?.anchors; return Array.isArray(a) && a.length ? a : null; } catch { return null; } };
+
+  // PRESERVE first: whatever is live is what a consumer holds. Synthesising over it is how anchors were destroyed.
+  let anchors = null;
+  try {
+    const r = await fetchImpl(`https://${domain}/.well-known/ust-witness`, { signal: AbortSignal.timeout(10000) });
+    if (r.ok) { anchors = anchorsOf(await r.text()); if (anchors) log(`  ℹ️  preserving ${anchors.length} witness anchor(s) from the live log`); }
+  } catch { /* unreachable ⇒ nothing live to preserve */ }
+  // RESTORE second: a local log may still hold what an earlier deploy destroyed.
+  if (!anchors) {
+    const wPath = witnessFile || (genPath ? genPath.replace(/[^/\\]+$/, 'ust-witness') : null);
+    if (wPath) { try { anchors = anchorsOf(readFileSync(wPath, 'utf8')); if (anchors) log(`  ℹ️  restoring ${anchors.length} witness anchor(s) from ${wPath}`); } catch { if (witnessFile) die('could not read --witness ' + wPath); } }
+  }
+
+  let cadenceText = null;
+  const cadPath = cadenceFile || (genPath ? genPath.replace(/[^/\\]+$/, 'ust-cadence') : null);
+  if (cadPath) {
+    try {
+      const parsed = parseLogRaw(readFileSync(cadPath, 'utf8'), '--cadence-log');
+      if (parsed.err) { if (cadenceFile) die('could not admit --cadence-log ' + cadPath + ': ' + parsed.err); }
+      else cadenceText = JSON.stringify(parsed.entries);
+    } catch { if (cadenceFile) die('could not read --cadence-log ' + cadPath); }
+  }
+
+  return { genesisText, keylogText, cadenceText, witnessText: buildWitnessLog(genesisText, anchors) };
+}
+
 export function servedArtifacts({ genesisText, keylogText = null, cadenceText = null, witnessText = null }) {
   const t = { genesis: genesisText, keylog: keylogText, cadence: cadenceText, witness: witnessText };
   return DISCOVERY_ARTIFACTS.filter((a) => t[a] !== null && t[a] !== undefined);
@@ -1128,41 +1162,15 @@ async function cmdPublish() {
   // archiver's byte-for-byte git sync then refused the shrink — correctly, and silently — leaving the last intact
   // copy frozen for two weeks with nobody told. So: PRESERVE the served witness. Fetch what is live, keep its
   // anchors, and synthesise only when there is nothing to preserve.
-  let servedAnchors = null;
-  try {
-    const r = await fetch(`https://${domain}/.well-known/ust-witness`, { signal: AbortSignal.timeout(10000) });
-    if (r.ok) {
-      const w = JSON.parse(await r.text());
-      const a = w?.genesis_log?.find((e) => e.content_hash === P.contentHash(JSON.parse(genesisText)))?.anchors;
-      if (Array.isArray(a) && a.length) { servedAnchors = a; console.log(`  ℹ️  preserving ${a.length} witness anchor(s) from the live log`); }
-    }
-  } catch { /* unreachable ⇒ nothing to preserve; the synthesised log is the honest fallback */ }
-  // nothing live to preserve — then a local witness log may still hold what a previous deploy destroyed. Same
-  // shape as the cadence log: --witness <file>, or an ust-witness found next to the genesis. This is how a loss
-  // already suffered gets RESTORED, rather than only prevented from happening again.
-  if (!servedAnchors) {
-    const wPath = arg('witness', null) || genPath.replace(/[^/\\]+$/, 'ust-witness');
-    try {
-      const w = JSON.parse(readFileSync(wPath, 'utf8'));
-      const a = w?.genesis_log?.find((e) => e.content_hash === P.contentHash(JSON.parse(genesisText)))?.anchors;
-      if (Array.isArray(a) && a.length) { servedAnchors = a; console.log(`  ℹ️  restoring ${a.length} witness anchor(s) from ${wPath}`); }
-    } catch { if (arg('witness', null)) die('could not read --witness ' + wPath); }
-  }
-
-  let cadenceText = null;
-  const cadPath = arg('cadence-log', null) || genPath.replace(/[^/\\]+$/, 'ust-cadence');
-  try {
-    const raw = readFileSync(cadPath, 'utf8');
-    const parsed = parseLogRaw(raw, '--cadence-log');
-    if (parsed.err) { if (arg('cadence-log', null)) die('could not admit --cadence-log ' + cadPath + ': ' + parsed.err); }
-    else cadenceText = JSON.stringify(parsed.entries);
-  } catch { if (arg('cadence-log', null)) die('could not read --cadence-log ' + cadPath); }
+  const served = await collectServed({ domain, genesisText, genPath, keylogText,
+    witnessFile: typeof arg('witness', null) === 'string' ? arg('witness', null) : null,
+    cadenceFile: typeof arg('cadence-log', null) === 'string' ? arg('cadence-log', null) : null, log: console.log });
 
   let r;
   if (arg('auth', null) === 'wrangler') {
     // COMBINED flow: worker+route ride wrangler's OAuth (browser login — no workers scopes on any token);
     // the API token shrinks to Zone.DNS:Edit for the apex steps.
-    let w; try { w = await wranglerDeploy({ domain, genesisText, keylogText, witnessText: buildWitnessLog(genesisText, servedAnchors), cadenceText }); } catch (e) { die(e.message); }
+    let w; try { w = await wranglerDeploy({ domain, ...served }); } catch (e) { die(e.message); }
     console.log('  ✓ worker ' + w.script + ' deployed via wrangler OAuth (genesis embedded, ' + w.genHash + ')');
     console.log('  ✓ route ' + w.route + ' (from wrangler.toml)');
     const rl = createInterface({ input: process.stdin, output: process.stdout });
@@ -1172,7 +1180,7 @@ async function cmdPublish() {
     r = { ...w, routeAction: 'wrangler', proxied: apex.proxied, flipped: apex.flipped, warnings: apex.warnings };
   } else {
     const token = process.env.CF_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
-    try { r = await cfPublish({ domain, genesisText, keylogText, witnessText: buildWitnessLog(genesisText, servedAnchors), cadenceText, token, flipProxy }); } catch (e) { die(e.message); }
+    try { r = await cfPublish({ domain, ...served, token, flipProxy }); } catch (e) { die(e.message); }
     console.log('  ✓ worker ' + r.script + ' deployed (genesis embedded, ' + r.genHash + ')');
     console.log('  ✓ route ' + r.route + ' ' + r.routeAction);
   }
@@ -1351,7 +1359,7 @@ async function cmdWitness() {
   if (arg('deploy', false)) {
     console.log('  ⏳ updating the live witness endpoint (CF worker)…');
     let keylogText = null; try { keylogText = await fetch(`https://${domain}/.well-known/ust-keylog`, { signal: AbortSignal.timeout(8000) }).then((r) => r.ok ? r.text() : null); } catch { /* ok */ }
-    try { await wranglerDeploy({ domain, genesisText, keylogText, witnessText: witness }); } catch (e) { die('deploy failed: ' + e.message + '\n  (the anchor is logged in Rekor; re-run --deploy or update the endpoint by hand)'); }
+    try { await wranglerDeploy({ domain, ...(await collectServed({ domain, genesisText, genPath, keylogText, log: console.log })), witnessText: witness }); } catch (e) { die('deploy failed: ' + e.message + '\n  (the anchor is logged in Rekor; re-run --deploy or update the endpoint by hand)'); }
     console.log('  ✅ witness endpoint updated — verifiers with @ust-protocol/rekor-verify now confirm no-fork automatically');
     console.log('     re-attest:  npx @ust-protocol/cli verify <slot>   (install ots-verify + rekor-verify)');
   } else {
@@ -1533,11 +1541,11 @@ async function cmdGenesis() {
         // combined auth: worker+route via wrangler OAuth; the token below stays DNS-only (smallest scope)
         // the key log rides ALONG (a verifier needs genesis AND key log) — served as a JSON array,
         // so a future rotation is an APPEND + redeploy, never a rewrite
-        const w = await wranglerDeploy({ domain, genesisText: JSON.stringify(genesis), keylogText: JSON.stringify([keylog0]), witnessText: buildWitnessLog(JSON.stringify(genesis)) });
+        const w = await wranglerDeploy({ domain, ...(await collectServed({ domain, genesisText: JSON.stringify(genesis), genPath: outDir + "/ust-genesis", keylogText: JSON.stringify([keylog0]), log: console.log })) });
         const apex = await cfApexSteps({ domain, token: await getDnsToken(), flipProxy: !!arg("flip-proxy", false) });
         pub = { ...w, routeAction: 'wrangler', proxied: apex.proxied, flipped: apex.flipped, warnings: apex.warnings };
       } else {
-        pub = await cfPublish({ domain, genesisText: JSON.stringify(genesis), keylogText: JSON.stringify([keylog0]), witnessText: buildWitnessLog(JSON.stringify(genesis)), token: process.env.CF_TOKEN || process.env.CLOUDFLARE_API_TOKEN, flipProxy: !!arg('flip-proxy', false) });
+        pub = await cfPublish({ domain, ...(await collectServed({ domain, genesisText: JSON.stringify(genesis), genPath: outDir + "/ust-genesis", keylogText: JSON.stringify([keylog0]), log: console.log })), token: process.env.CF_TOKEN || process.env.CLOUDFLARE_API_TOKEN, flipProxy: !!arg('flip-proxy', false) });
       }
     } catch (e) { rl?.close(); die(e.message); }
     console.log('  ✅ worker ' + pub.script + ' + route ' + pub.route + ' (' + pub.routeAction + (pub.flipped ? ', proxy enabled on apex' : '') + ')');

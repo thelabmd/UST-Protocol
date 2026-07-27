@@ -8,6 +8,25 @@ conformance vectors; this file is the readable map.
 
 ## [Unreleased] — rc.37 line
 
+### Serving completeness — a deploy carries the whole discovery set
+
+**Measured.** Five sites construct a deploy. Two passed the cadence log and the preserved witness anchors; THREE
+passed neither — `ust witness --deploy` and both `ust genesis --deploy` roads. So anchoring a witness, or re-running
+genesis, NULLED `/.well-known/ust-cadence` and DESTROYED every Rekor/OTS anchor the served witness held. Those anchors
+are the only evidence an hour was ever notarised. Nothing warned: a deploy serving a valid but emptier document looks
+exactly like a healthy one, and §20.1 kept reporting ATTESTED because each artifact it found was well-formed.
+
+**Not three bugs — one missing assembler, found three times.** Every call site enumerated the artifacts itself, so
+every call site could forget one. Patching the three would have left the sixth free to repeat it. `collectServed()` is
+now the single place that knows what a complete set IS: it PRESERVES live anchors before synthesising, RESTORES from a
+local log when the domain is unreachable, and loads the cadence log beside the genesis. Call sites no longer
+enumerate — they ask for the set and spread it whole (`{ domain, ...served }`).
+
+`deploy-completeness-gate` holds the shape: exactly one builder, every deploy call spreading an assembled set, and
+the assembler still carrying both artifacts that were being lost. Verified against the live domain — 2 anchors
+preserved. Mutation-tested: a sixth hand-rolled site fails both legs.
+
+
 ### Reference checker (L1) — the audit rev-ladder
 
 The rev numbers are ONE SHARED COUNTER across this ladder and the formal model's `**Realization (revN …)**` notes —
