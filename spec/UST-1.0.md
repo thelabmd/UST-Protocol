@@ -1510,8 +1510,12 @@ A verifier returns one of THREE OUTCOME KINDS — **availability is distinct fro
   obtained and earns nothing.** A strength label whose status is not `verified` is neutralized — it contributes
   the floor, never its own rung — so a report that carries it beside the earned coordinate offers two answers to
   one question, of which only one was adjudicated. Such a value MUST NOT be surfaced under a name that reads as a
-  result: a verifier MUST report the strength and its status as a PAIR wherever either is shown, and a surface
-  (CLI, MCP, page) MUST NOT render a strength without the status that qualifies it. The reason set is CLOSED — {`unavailable`, `unsupported_alg`, `resource_limit`,
+  result; the remedy is the NAMED FLOOR the axis already has (`self-asserted` for identity), NOT omission — the
+  slot is not empty, and a status qualifying no strength qualifies nothing. A verifier MUST report the strength
+  and its status as a PAIR wherever either is shown, and a surface (CLI, MCP, page) MUST NOT render a strength
+  without the status that qualifies it. Where a consumer's own opt-in LIFTS a seam label, the report keeps the
+  seam label beside the lifted coordinate — that difference is the provenance telling a consumer the authority
+  rests on its own assertion, and it MUST NOT be collapsed. The reason set is CLOSED — {`unavailable`, `unsupported_alg`, `resource_limit`,
   `stale_keylog`}: a fetch timeout IS `unavailable`; a verification-budget overrun is INVALID `E-BOUNDS` (§13); a
   fetched-but-WRONG dependency is its own definite error; an above-floor document without a TRUSTED capacity
   grant is `unavailable` (§13 ladder). **`resource_limit`** (rc.12) is the third member: the document may be

@@ -341,12 +341,18 @@ fields in isolation, so it will read whichever it reaches first. The label the d
 stronger claim than the coordinate the derivation earned, published beside it under the same word.
 
 So the discipline extends across the report boundary: **a value the derivation neutralizes MUST NOT be surfaced
-under a name that reads as a result.** It may be omitted — the earned coordinate already answers the question it
-appears to answer — or it may be surfaced under a name that says what it is: an unadjudicated CLAIM, never a
-strength. What it must not do is keep the name of the thing it was refused. This is not a naming preference: the
-model has no predicate that can make an inert value true or false, so nothing downstream can ever contradict it,
-which is precisely the property that made the invented word dangerous. An inert value published as a result is a
-fabricated rung that happens to have a real referent.
+under a name that reads as a result.** The remedy is the FIRST case above, not the second: report the NAMED FLOOR
+the axis already has. Absence is wrong here and the reason is exact — the slot is not empty. The measurement ran
+far enough to earn the floor, the floor has a name (`self-asserted`), and a strength must be shown WITH its status,
+so removing the strength would leave a status qualifying nothing. Omission was this note's first prescription and
+it was wrong: it read the case as an empty slot because the value in it was worthless, which confuses "earned
+nothing" with "measured nothing".
+
+One asymmetry is deliberate and must not be flattened. A seam label is not always inert: where a consumer's own
+opt-in lifts it, the report keeps the SEAM label (`consumer-override`) beside an earned coordinate that reads
+`authoritative` — and that difference IS the provenance, the one signal telling a consumer the authority rests on
+its own assertion. Collapsing the report onto the earned coordinate would erase exactly the fact a consumer most
+needs. So the rule is about the neutralized case only, and its remedy is the floor.
 
 **Gap 3 — split `A_id` from `A_fresh`.** These were the two facts `𝒮_HIGH`'s `W_n` fused; F.5a already splits
 name-binding from no-fork, and here the split is axis-level: name authority and key-log freshness are measurable

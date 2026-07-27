@@ -979,6 +979,11 @@ async function cmdVerify() {
     // one line below; identity was not, so a label the derivation NEUTRALIZED (any strength whose status is not
     // `verified` earns the floor, C3) reached a reader with nothing beside it to say so. A consuming agent reads
     // fields in isolation; a human reads a line in isolation. The pair is the smallest honest unit either can read.
+    // rev93 — the strength and its status print as a PAIR (§15). `time` was already printed that way one line
+    // below; identity was not, so a label whose status disqualified it reached a reader with nothing beside it to
+    // say so. The SEAM label is what prints, deliberately, NOT the earned coordinate: on the `--no-fork-confirmed`
+    // path verify() lifts the earned coordinate to `authoritative` while the seam stays `consumer-override`, and
+    // that difference IS the provenance an operator must see — that the authority rests on their own assertion.
     console.log('  identity : ' + r.identity.strength + '/' + r.identity.status + ' (mode ' + r.identity.mode + ')  ' + (r.publisher ? 'publisher ' + r.publisher : 'publisher_claimed ' + r.publisher_claimed));
     console.log('  time     : ' + r.time.strength + '/' + r.time.status + '   completeness: ' + r.completeness);
     console.log('  ust_id   : ' + r.ust_id + '   class ' + r.class + '   content_hash ' + r.content_hash);

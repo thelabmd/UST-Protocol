@@ -1439,7 +1439,7 @@ export function resolveAuthority(doc, opts = {}) {
   // only because `status: 'unavailable'` is the named sibling that carries the meaning — the verdict door's spread
   // drops `no_fork` when `noFork` is unset. The STRENGTH on this branch is a separate, open question (#96): the text
   // does not settle it, and a sibling branch ships `corroborated` with a non-`verified` status deliberately.
-  return { strength: 'corroborated', status: 'unavailable', capacity, freshness,
+  return { strength: 'self-asserted', status: 'unavailable', capacity, freshness,
     detail: 'no independent no-fork evidence; a served witness only corroborates (§12.1a F.5a) → authority pending, retry' };
 }
 
