@@ -922,6 +922,18 @@ console.log('\n═════════════════════�
       noCad.complete === 'chain-consistent' && wiCad.complete === 'complete'
       && [n0, n1, n2].map(tierOf).join('|') === [f0, f1, f2].map(tierOf).join('|'));
   }
+  // rev93 — the TWO honest markers for a slot a verifier could not fill, and the absence of a third. A NAMED floor
+  // means the measurement RAN and earned nothing; ABSENCE means it could not run. Both are asserted on the same
+  // object so neither can be satisfied by accident, and the third option this forbids — minting a word to fill the
+  // slot — is what shipped as `no_fork: 'unconfirmed'`, a value occurring nowhere in the spec, the model or the
+  // vectors, riding out under the spec's own field name where an agent reads it as a measurement that happened.
+  {
+    const inv = P.verify({ ust: '1.0', state: {}, sig: {} }, { context: 'data' });
+    const ind = P.verify(gen, { context: 'key', maxSupportedBytes: 1 });
+    check('rev93 empty slot: NAMED floor when measured (INVALID→tier NONE), ABSENT when unmeasurable (INDETERMINATE→no tier), and no basis either way',
+      inv.result === 'INVALID' && inv.tier === 'NONE' && 'tier' in inv && !('no_fork' in inv)
+      && ind.result === 'INDETERMINATE' && !('tier' in ind));
+  }
   check('#70 ustGrid computes the expected slots (30s over a minute = 3)', P.ustGrid('ust:20260628.142900', 'ust:20260628.143000', 30).length === 3);
 
   const cpI = (head, n, prev, from, to) => signC(P.buildCheckpoint({ domain_shard: dom, ust_id: 'ust:20260628.143501', key_id: C.key_id }, Tc, head, n, prev, { from, to }));

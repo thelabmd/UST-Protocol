@@ -174,9 +174,12 @@ export async function verify(doc, opts = {}) {
     if (doc.sig.pub === undefined) return bad('E-KEY', 'no carried pub (LIGHT)');
     if ((await keyId(doc.sig.pub)) !== id.key_id) return bad('E-SIG', 'key_id != H(ust:keylog, pub)');
     if (!(await edVerifyStrict(doc.sig.pub, S, doc.sig.sig))) return bad('E-SIG', 'Ed25519 (strict) verify failed');
-    // §3.1 pinned (TOFU): a key not in the caller's pin set is INVALID; else self-asserted (LIGHT — never authoritative here).
-    let strength = 'self-asserted';
-    if (opts.pinnedKeys) { if (!opts.pinnedKeys.includes(id.key_id)) return bad('E-KEY', 'key_id not in the pinned set (§3.1 TOFU)'); strength = 'pinned'; }
+    // round-53 retired the `pinned`/TOFU rung: a domain claim survives hijack / key-loss / compromise ONLY through
+    // genesis, so a bare key is `self-asserted` and nothing else. This file kept the rung after the reference dropped
+    // it, and the divergence was a VERDICT one, not a label one — measured: with `pinnedKeys` naming other keys the
+    // reference returned VALID:LIGHT while this file returned INVALID E-KEY on the SAME document. The parity battery
+    // never passed the option, so it compared two implementations only on inputs where they happened to agree.
+    const strength = 'self-asserted';
     // §12: a TRUSTED authority result (the OUTPUT of resolution with a confirmed no-fork witness)
     // lifts the tier — the NAME becomes the verified publisher. Without it: §Y3, claimed label only.
     const provOut = { depth: 0, referents: (pr?.based_on?.length || pr?.constituents?.length) ? 'unverified' : 'none' };

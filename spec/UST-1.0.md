@@ -965,6 +965,16 @@ DISTINCT from `authoritative` and honored only on explicit opt-in. Only `authori
 `map-inclusion`). A consumer needing independent authority sets `requireAuthoritative`, which rejects
 `corroborated` (and any `consumer-override` not explicitly honored via `acceptConsumerOverride`).
 
+**`consumer-override` basis values.** A `consumer-override` carries its OWN basis, drawn from a set disjoint from
+the three above because none of them was established: `caller-asserted` — an explicit boolean axiom the consumer
+stated (`noForkConfirmed` / `corroborated === true`), which `acceptConsumerOverride` MAY lift; and
+`served-lookalike` — a served-list-SHAPED object the verifier did not itself mint, which resembles verified
+evidence and is not, and which therefore MUST carry `override_liftable: false` and MUST NOT be liftable to
+`authoritative` by any opt-in. The two are distinguished because only the first is a claim the consumer knowingly
+made about its own out-of-band knowledge; the second is a shape that arrived. Where NO no-fork basis was
+established at all, the `no_fork` field is ABSENT rather than filled (§15) — the accompanying `status` of
+`unavailable` is what carries that fact.
+
 ### 12.2 Key log — a genesis-rooted, self-signed chain (M1)
 - A publisher's key log is a **sequenced stream (§11.3) of UST transcripts** — the SAME `{ust, state, sig,
   proof}` shape as any document (nothing changes across tier OR role, §16). Each entry is a transcript with
@@ -1487,7 +1497,16 @@ A verifier returns one of THREE OUTCOME KINDS — **availability is distinct fro
   implemented by this verifier (`unsupported_alg`): NOT a negative. The document keeps its LIGHT verdict;
   the affected strength is reported `unavailable` (retry). Fail-closed means "never CLAIM a strength you did not
   verify" — it does NOT mean "call it INVALID." A verifier/MCP MUST NOT report an unreachable authority as a
-  failed document. The reason set is CLOSED — {`unavailable`, `unsupported_alg`, `resource_limit`,
+  failed document. **A slot a verifier could not fill has exactly TWO honest markers, and a verifier MUST NOT
+  invent a third.** A NAMED floor value means the measurement RAN and earned nothing — `tier: "NONE"` on INVALID
+  is this, and it is named rather than omitted for that reason. An ABSENT field means the measurement COULD NOT
+  RUN — no `tier` accompanies INDETERMINATE, whose assurance is partial rather than nothing. Absence is permitted
+  ONLY where a named sibling in the SAME report already carries that meaning (`INDETERMINATE` carries it for a
+  tier; a `status` of `unavailable` carries it for a no-fork basis), because an absent field is otherwise
+  indistinguishable from one the reader's implementation never had. A verifier MUST NOT emit a value outside a
+  field's declared enumeration in order to fill an empty slot: such a value is unfalsifiable by construction —
+  nothing can contradict it, since it denotes nothing — and a consumer reading the field alone takes it for a
+  measurement that happened. The reason set is CLOSED — {`unavailable`, `unsupported_alg`, `resource_limit`,
   `stale_keylog`}: a fetch timeout IS `unavailable`; a verification-budget overrun is INVALID `E-BOUNDS` (§13); a
   fetched-but-WRONG dependency is its own definite error; an above-floor document without a TRUSTED capacity
   grant is `unavailable` (§13 ladder). **`resource_limit`** (rc.12) is the third member: the document may be

@@ -52,6 +52,7 @@
     "test:cadence": "node tools/cadence-discovery-gate.mjs",
     "test:serving": "node tools/discovery-serving-gate.mjs",
     "test:consumption": "node tools/stream-consumption-gate.mjs",
+    "test:report-shape": "node tools/report-shape-gate.mjs",
     "test:cadence-parity": "node tools/cadence-parity-gate.mjs",
     "test:stream-parity": "node tools/stream-parity-gate.mjs",
     "test:primitive-parity": "node tools/primitive-parity-gate.mjs",

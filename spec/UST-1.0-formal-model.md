@@ -304,6 +304,30 @@ never IS strength:** a predicate is discharged only by an admissible capability 
 `order`/`time`, so a proof-kind bearing neither (`content-addressed`, `authenticated-map`, opaque) enters `Fₜ`
 under NO circumstance (Variant A, F.5g) — and the seam (F.5g) guarantees no caller mints support (B3/B4).
 
+**Realization (rev93 — a report NAMES what it measured and OMITS what it could not, and the two are not
+interchangeable).** rev92 established that a report may be strictly wider than what it scores. This fixes the
+remaining freedom: what a report is allowed to put in a slot it could not fill. There are exactly two honest
+markers, and the choice between them is not stylistic — it is the difference between two facts a consumer must
+be able to tell apart:
+
+- a NAMED floor value means **the measurement ran and earned nothing** — `Π(⊥) = NONE` is exactly this, and it
+  is why `NONE` was given a name rather than left as an absent field;
+- ABSENCE means **the measurement could not run** — the tier field is absent under `INDETERMINATE`, whose
+  assurance is PARTIAL rather than `⊥`, so ranking it `NONE` would under-claim as badly as an over-claim.
+
+Collapsing the two loses a distinction the theory is built on: availability is not failure. And absence is the
+weaker marker for a reason that has nothing to do with meaning — it is **indistinguishable from a coordinate a
+reader's implementation never had**. A consumer reading a missing field cannot tell "could not be measured" from
+"this verifier predates the field", so absence carries information only when a NAMED sibling in the same report
+already carries it. `INDETERMINATE` is that sibling for the tier; an availability status is that sibling for a
+basis. Where no such sibling exists, a report MUST name.
+
+The failure this forbids is a THIRD option that is neither: inventing a value to fill the slot. A word minted for
+an empty slot is unfalsifiable by construction — nothing in the model can contradict it, because it denotes
+nothing in the model — and it is read by a consuming agent as a measurement that happened. That is strictly worse
+than either honest marker, since both of those are recoverable and a fabricated rung is not: it says less than
+`NONE` and claims more than absence.
+
 **Gap 3 — split `A_id` from `A_fresh`.** These were the two facts `𝒮_HIGH`'s `W_n` fused; F.5a already splits
 name-binding from no-fork, and here the split is axis-level: name authority and key-log freshness are measurable
 one WITHOUT the other.

@@ -1433,7 +1433,13 @@ export function resolveAuthority(doc, opts = {}) {
   if (ncf === true || cor === true) return { strength: 'consumer-override', noFork: 'caller-asserted', override_liftable: true, independently_verified: false, status: st2, capacity, freshness,
     ...(noForkEvidence !== undefined ? { detail: 'noForkEvidence rejected → consumer-override only (not independently verified)' } : {}) };   // round-42 P1-01 — ONLY an explicit boolean AXIOM (noForkConfirmed/corroborated===true) creates a LIFTABLE consumer-override (acceptConsumerOverride may raise it to authoritative — the consumer consciously honors ITS OWN out-of-band claim)
   if (servedNoFork != null) return { strength: 'consumer-override', noFork: 'served-lookalike', override_liftable: false, independently_verified: false, status: st2, capacity, freshness, detail: 'an unminted servedNoFork is a caller look-alike, not verified evidence and not an explicit axiom — it DIVERTS from corroborated (rc35-P0a) but is NOT liftable to authoritative by acceptConsumerOverride (round-42 P1-01)' };   // a present-but-unminted servedNoFork: neither corroborated nor a HIGH-reachable override
-  return { strength: 'corroborated', noFork: 'unconfirmed', status: 'unavailable', capacity, freshness,
+  // rev93 — an empty slot takes ABSENCE, never an invented word. `unconfirmed` denoted nothing: measured 0 occurrences
+  // in the spec, the formal model and the vectors, while riding out under the spec's OWN `no_fork` field name, where a
+  // consuming agent reading the field alone takes it for a basis that was established. Absence is licensed here, and
+  // only because `status: 'unavailable'` is the named sibling that carries the meaning — the verdict door's spread
+  // drops `no_fork` when `noFork` is unset. The STRENGTH on this branch is a separate, open question (#96): the text
+  // does not settle it, and a sibling branch ships `corroborated` with a non-`verified` status deliberately.
+  return { strength: 'corroborated', status: 'unavailable', capacity, freshness,
     detail: 'no independent no-fork evidence; a served witness only corroborates (§12.1a F.5a) → authority pending, retry' };
 }
 

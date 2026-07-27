@@ -438,6 +438,12 @@
       "rev": "rev92",
       "model_locus": "the SCORED set of an attestation must be closed under the axis that attestation names, while its REPORTED set may be strictly wider",
       "conformance_check": "rev92 completeness ⊥ tier: an undeclared grid bounds the RANGE and subtracts nothing from Π"
+    },
+    {
+      "id": "R93-report-shape-named-or-absent",
+      "rev": "rev93",
+      "model_locus": "a NAMED floor value means **the measurement ran and earned nothing**",
+      "conformance_check": "rev93 empty slot: NAMED floor when measured (INVALID→tier NONE), ABSENT when unmeasurable (INDETERMINATE→no tier), and no basis either way"
     }
   ]
 }
