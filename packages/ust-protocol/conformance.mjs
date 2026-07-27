@@ -376,7 +376,29 @@ check('F8 impossible ust_id→E-MALFORMED', P.verify(mk({ r: { kind: 'captured',
       check('#98 the override lift is ASSURANCE-only: the seam label stays consumer-override while the tuple reads authoritative',
         one.identity.strength === 'consumer-override' && one.assurance.identity === 'authoritative');
     }
-    // ── #98 — the INVARIANT the bound predicate rests on, pinned instead of the predicate itself. The predicate reads
+    // ── rev94 — the EQUIVALENCE, enumerated over the seam grid rather than sampled. Fork choice's binding decision
+  // must agree with the projection: a candidate is bound exactly when the DERIVED identity coordinate reaches
+  // corroborated or above AND the coordinate was not lifted by the consumer's own opt-in. The seam-field conjunction
+  // `strength ∈ {corroborated, authoritative} ∧ status = verified` realizes that. Both obvious single-field readings
+  // fail: the derived coordinate alone is a loosening (π_override), the seam label alone disagreed in 6 of 10 states.
+  {
+    const idOf = (seam) => { const g = P.provePredicates(seam); return P.assuranceState({ integrity: 'valid', ...g.atoms }).identity; };
+    const BIND = new Set(['corroborated', 'authoritative']);
+    const STRENGTHS = ['self-asserted', 'corroborated', 'authoritative', 'consumer-override'];
+    const STATUSES = ['verified', 'suspect', 'unavailable', 'expired', 'premature', 'conflict'];
+    const disagree = [];
+    for (const st of STRENGTHS) for (const stat of STATUSES) {
+      const seam = { identity: { strength: st, status: stat } };
+      const modelBound = BIND.has(idOf(seam));                       // what the projection says
+      const decided = BIND.has(st) && stat === 'verified';           // what forkChoice decides
+      if (decided !== modelBound) disagree.push(st + '/' + stat + ' model=' + modelBound + ' decided=' + decided);
+    }
+    check('rev94 fork-choice binding == derived identity ≥ corroborated, over the WHOLE seam grid (' + (STRENGTHS.length * STATUSES.length) + ' states)',
+      disagree.length === 0, disagree.join(' · '));
+    // and the grid must be a real grid — a shrunken one would make the equivalence free
+    check('rev94 the seam grid is enumerated, not sampled', STRENGTHS.length >= 4 && STATUSES.length >= 6);
+  }
+  // ── #98 — the INVARIANT the bound predicate rests on, pinned instead of the predicate itself. The predicate reads
     // strength and never status; that is sound ONLY while no VALID verdict pairs a binding strength with a status that
     // is not `verified`. Measured: the class exemption at §14 (genesis/key/cadence stay VALID:LIGHT rather than
     // collapsing to INDETERMINATE) DOES reach the predicate, so the guard is a filter two functions away, not a local

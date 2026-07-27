@@ -450,6 +450,12 @@
       "rev": "rev93",
       "model_locus": "a value the derivation neutralizes MUST NOT be surfaced\nunder a name that reads as a result",
       "conformance_check": "rev93 third case: a strength whose status is not verified is NEUTRALIZED to the floor, never its own rung"
+    },
+    {
+      "id": "R94-forkchoice-agrees-with-projection",
+      "rev": "rev94",
+      "model_locus": "the decision is not a projection of either field; it is the CONJUNCTION of the two facts the model separates",
+      "conformance_check": "rev94 fork-choice binding == derived identity ≥ corroborated, over the WHOLE seam grid (24 states)"
     }
   ]
 }

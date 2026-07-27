@@ -1605,7 +1605,21 @@ export async function forkChoice(candidates, opts = {}) {
     // `domain_shard` claim. A candidate whose key is NOT bound to its claimed authority (self-asserted / pinned)
     // is an IMPOSTER for that name and can NEVER be canonical under it — the math: content_hash commits the
     // CLAIMED domain, authority resolution proves the claim (ROOT 1+2). No manifest needed to close this.
-    const bound = v.identity && (v.identity.strength === 'authoritative' || v.identity.strength === 'corroborated');
+    // rev94 — the decision must AGREE with the projection, and neither report field alone does. Measured over the
+    // seam grid: the DERIVED coordinate is a loosening (π_override lifts a `consumer-override` seam to
+    // `authoritative` before derivation, so it can carry a rung a caller BOOLEAN minted — a fork adjudicated by the
+    // assertion of the party asking); the SEAM label alone disagreed with the coordinate in 6 of 10 states — every
+    // one where C3 neutralizes it (`suspect`, `unavailable`, `expired`, `premature`) still read as binding.
+    // The conjunction equals `derived identity ≥ corroborated ∧ ¬consumer-lifted`, with zero disagreements: the
+    // first conjunct excludes the lift (the verdict deliberately KEEPS the seam label beside the lifted coordinate,
+    // which is what makes the exclusion expressible), the second reproduces C3.
+    // The seam-only reading was observationally sound only because a neutralized label floors the tier to LIGHT and
+    // §14 turns a name-form LIGHT document into INDETERMINATE — but §14 EXEMPTS genesis/key/cadence, which stay
+    // VALID:LIGHT and DO reach here. The guard was standing two functions away, in a filter whose exemption list is
+    // a separate decision.
+    const bound = v.identity
+      && (v.identity.strength === 'authoritative' || v.identity.strength === 'corroborated')
+      && v.identity.status === 'verified';
     if (!bound) { unauthenticated.push({ content_hash: v.content_hash, claimed: doc?.state?.id?.domain_shard, anchored: v.time?.strength === 'anchored' }); continue; }
     const rec = { doc, content_hash: v.content_hash, authority: doc.state.id.domain_shard, tier: v.tier };   // domain_shard now VERIFIED-bound (resolveAuthority checked genesis.domain == doc.domain)
     (v.time?.strength === 'anchored' ? anchored : losers).push(rec);   // anchored = in the chain; else a valid non-anchored candidate

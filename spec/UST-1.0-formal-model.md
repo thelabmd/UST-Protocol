@@ -354,6 +354,33 @@ opt-in lifts it, the report keeps the SEAM label (`consumer-override`) beside an
 its own assertion. Collapsing the report onto the earned coordinate would erase exactly the fact a consumer most
 needs. So the rule is about the neutralized case only, and its remedy is the floor.
 
+**Realization (rev94 — a DECISION procedure must agree with the projection, and neither report field alone does).**
+Fork choice asks one question of a candidate: is its key BOUND to the name it claims. The model already answers what
+name-binding is — the derived identity coordinate reaching `corroborated` or above — so a procedure that decides
+bindingness is correct exactly when it agrees with that coordinate. That is a testable equivalence, not a matter of
+which field is convenient.
+
+Measured over the seam grid, the two obvious readings BOTH fail, for opposite reasons:
+
+- reading the DERIVED coordinate is a LOOSENING. `π_override` rewrites a `consumer-override` seam to
+  `authoritative` before derivation when the consumer opts in, so the derived coordinate is precisely the object
+  that can carry a rung a caller BOOLEAN minted. A fork is then adjudicated by the assertion of the party asking.
+- reading the SEAM label disagrees with the coordinate in 6 of 10 seam states — every state where C3 neutralizes the
+  label (`suspect`, `unavailable`, `expired`, `premature`) still reads as binding.
+
+So the decision is not a projection of either field; it is the CONJUNCTION of the two facts the model separates:
+`strength ∈ {corroborated, authoritative} ∧ status = verified`. The first conjunct excludes the consumer lift —
+the report deliberately KEEPS the seam label `consumer-override` beside the lifted coordinate, and that retention is
+what makes the exclusion expressible at all. The second reproduces C3's neutralization. Together they equal
+`derived identity ≥ corroborated ∧ ¬consumer-lifted`, with zero disagreements across the grid.
+
+Why this had to be stated rather than left to the code: the seam-only reading was OBSERVATIONALLY sound, because a
+neutralized label floors the tier to LIGHT and §14 turns a name-form LIGHT document into INDETERMINATE, which fork
+choice filters before its predicate. But §14 EXEMPTS `genesis`/`key`/`cadence` — those stay VALID:LIGHT and do
+reach the predicate. So the guard was standing two functions away, in a filter whose exemption list is a separate
+decision. A decision procedure whose correctness depends on a reachability accident elsewhere is not proved; it is
+merely not yet wrong.
+
 **Gap 3 — split `A_id` from `A_fresh`.** These were the two facts `𝒮_HIGH`'s `W_n` fused; F.5a already splits
 name-binding from no-fork, and here the split is axis-level: name authority and key-log freshness are measurable
 one WITHOUT the other.
