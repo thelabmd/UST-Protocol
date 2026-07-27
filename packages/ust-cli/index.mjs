@@ -82,20 +82,75 @@ export function verifyRaw(raw, opts = {}) {
   let doc = null; try { doc = JSON.parse(text); } catch { doc = null; }
   return { verdict, doc, text };
 }
-// Parse an untrusted ARRAY (served key log) fail-closed: duplicate scan on the RAW text, then parse,
-// then each entry verifies in the key context. Returns { entries } or { err }.
-export function parseKeylogRaw(raw) {
+// Parse an untrusted ARRAY (a served log) fail-closed: duplicate scan on the RAW text, then parse, then each
+// entry verifies in the key context. Returns { entries } or { err }.
+//
+// Both identity-side logs have this shape and both are signed by genesis/rotation keys, so both admit in the
+// SAME context — measured on the normative vectors, where a `class:cadence` entry verifies VALID:LIGHT under
+// `context:'key'`. One parser, two logs: the alternative was a second copy differing only in a noun.
+export function parseLogRaw(raw, label = 'key log') {
   const text = rawTextOf(raw);
   const dup = scanDupes(text);
   if (dup) return { err: 'E-CANON: ' + dup };
   let arr; try { arr = JSON.parse(text); } catch { return { err: 'not valid JSON' }; }
-  if (!Array.isArray(arr)) return { err: 'a key log must be the JSON ARRAY shape' };
+  if (!Array.isArray(arr)) return { err: `a ${label} must be the JSON ARRAY shape` };
   for (const [i, e] of arr.entries()) {
     const v = P.verify(e, { context: 'key' });
-    if (!P.isValid(v)) return { err: `key-log entry ${i} does not VERIFY (${v.error ?? v.result})` };
+    if (!P.isValid(v)) return { err: `${label} entry ${i} does not VERIFY (${v.error ?? v.result})` };
   }
   return { entries: arr };
 }
+export const parseKeylogRaw = (raw) => parseLogRaw(raw, 'key log');
+
+// The FLAG/POSITIONAL split, done once against a DECLARED set. `arg()` reads a value as `argv[i + 1]`, so a
+// value-taking flag occupies TWO argv slots — and filtering on the `--` prefix alone (the shape this replaces)
+// dropped the flag NAME and kept its VALUE, which then became a positional. Measured before the fix:
+// `ust stream --genesis <g> <f>` opened <g> as a FRAME, and when <g> verified it was silently admitted into the
+// range, so a completeness verdict was computed over a set the operator never described. `stream-consumption-gate`
+// enumerates the declared set against the flags the command actually reads, so a NEW flag cannot reintroduce the
+// sweep by being forgotten here.
+export function positionals(argv, valueFlags) {
+  const out = [];
+  for (let i = 0; i < argv.length; i++) {
+    const t = argv[i];
+    if (!t.startsWith('--')) { out.push(t); continue; }
+    if (valueFlags.has(t.slice(2)) && i + 1 < argv.length) i++;   // the next token belongs to the flag, never to us
+  }
+  return out;
+}
+// Declared per command, because the split is NOT a property of a flag name — `--offline` takes no value while
+// `--keylog` does, and a boolean that wrongly claims a value would eat the next positional. Two commands parse
+// positionals; both are listed, because fixing the one that was reported and leaving its twin is how a defect
+// class survives its own fix.
+
+// A log flag names FILES, and each file is EITHER the SERVED ARRAY — what `ust rotate` and `ust cadence` write, and
+// what /.well-known serves — OR a single entry transcript. Accepting only the second is why the artifacts our own
+// ceremonies PRODUCE could not be fed to our own range verifier: the consumption dual of the serving gap closed in
+// 8229ac7.
+//
+// Routed on the first non-whitespace BYTE, the same way `verifyRaw` routes, rather than by trying one shape and
+// falling back. Trying-then-falling-back would report a broken array as "not a valid entry either", burying the real
+// error under the wrong one — and it would materialize the file as a string before the single-doc path's byte-length
+// admission had a chance to refuse it.
+function readLogFiles(flag, raw) {
+  return String(raw).split(',').flatMap((f) => {
+    const name = f.trim();
+    const bytes = readFileSync(name);
+    let i = 0; while (i < bytes.length && (bytes[i] === 0x20 || bytes[i] === 0x09 || bytes[i] === 0x0a || bytes[i] === 0x0d)) i++;
+    if (bytes[i] === 0x5b) {                                        // '[' — the served log
+      const parsed = parseLogRaw(bytes.toString('utf8'), `--${flag}`);
+      if (parsed.err) die(`--${flag} ${name}: ${parsed.err}`);
+      return parsed.entries;
+    }
+    const { verdict, doc } = verifyRaw(bytes);                      // '{' — one entry, the degenerate case
+    if (!P.isValid(verdict)) die(`--${flag} entry ${name} does not VERIFY (${verdict.error ?? verdict.result})`);
+    return [doc];
+  });
+}
+
+export const STREAM_VALUE_FLAGS = new Set(['genesis', 'checkpoint', 'cadence-log', 'keylog']);
+export const FORKCHOICE_VALUE_FLAGS = new Set(['genesis', 'keylog']);
+export const FORKCHOICE_BOOL_FLAGS = new Set(['no-fork-confirmed', 'offline']);
 // Convenience parse (blob/base64 → object) for bytes this tool built ITSELF or already admitted through
 // verifyRaw/parseKeylogRaw. NEVER the entry point for untrusted verification input.
 export const decodeInput = (raw) => JSON.parse(rawTextOf(raw));
@@ -1057,8 +1112,8 @@ async function cmdPublish() {
 // ─── ust stream <frame…> — the RANGE verdict (F.4): chain, forks, checkpoint, completeness ───────────
 // Completeness is NEVER a single document's property — this command is where it legitimately lives.
 async function cmdStream() {
-  const files = process.argv.slice(3).filter((a) => !a.startsWith('--'));
-  if (!files.length) die('usage: ust stream <frame.json…> [--genesis <f>] [--checkpoint <f>]   [--cadence-log <f,f…>]   # range verdict: chain · forks · completeness\n  exit: 0=chain-consistent/complete · 2=provisional/none · 1=broken');
+  const files = positionals(process.argv.slice(3), STREAM_VALUE_FLAGS);
+  if (!files.length) die('usage: ust stream <frame.json…> [--genesis <f>] [--checkpoint <f>]   [--keylog <f,f…>] [--cadence-log <f,f…>]   # range verdict: chain · forks · completeness\n  exit: 0=chain-consistent/complete · 2=provisional/none · 1=broken');
   const frames = [];
   for (const f of files) {
     const { verdict, doc } = verifyRaw(readFileSync(f));   // every frame passes the RAW boundary
@@ -1072,10 +1127,10 @@ async function cmdStream() {
   // §11.3 continuity — an optional cadence-log (comma-separated files) so `complete` resolves the cadence in
   // force at the interval; without it the genesis cadence (if any) is used.
   const clRaw = arg('cadence-log', null);
-  const cadenceLog = (clRaw && clRaw !== true) ? clRaw.split(',').map((f) => { const { verdict, doc } = verifyRaw(readFileSync(f.trim())); if (!P.isValid(verdict)) die(`--cadence-log entry ${f} does not VERIFY (${verdict.error ?? verdict.result})`); return doc; }) : undefined;
+  const cadenceLog = (clRaw && clRaw !== true) ? readLogFiles('cadence-log', clRaw) : undefined;
   // the key-log AUTHORIZES the cadence-log (a cadence change must be signed by a genesis/key-log key). Comma-sep.
   const klsRaw = arg('keylog', null);
-  const keylog = (klsRaw && klsRaw !== true) ? klsRaw.split(',').map((f) => { const { verdict, doc } = verifyRaw(readFileSync(f.trim())); if (!P.isValid(verdict)) die(`--keylog entry ${f} does not VERIFY (${verdict.error ?? verdict.result})`); return doc; }) : undefined;
+  const keylog = (klsRaw && klsRaw !== true) ? readLogFiles('keylog', klsRaw) : undefined;
   const r = P.verifyStream(frames, { ...(genesis ? { genesis } : {}), ...(keylog ? { keylog } : {}), ...(checkpoint ? { checkpoint } : {}), ...(cadenceLog ? { cadenceLog } : {}) });
   if (r.error) { console.log(`  ❌ stream BROKEN: ${r.error}${r.detail ? ' — ' + r.detail : ''}`); process.exit(1); }
   console.log('  frames      ' + frames.length);
@@ -1092,7 +1147,7 @@ async function cmdStream() {
 // ─── ust forkchoice <doc…> — canonical = anchor-included (§3.1/F.5c). Hold ≥2 docs claiming ONE ust_id with
 //     different content (dual-writer race / adversary) → decide WHICH is canonical, deterministically from the chain.
 async function cmdForkChoice() {
-  const files = process.argv.slice(3).filter((a) => !a.startsWith('--'));
+  const files = positionals(process.argv.slice(3), FORKCHOICE_VALUE_FLAGS);
   if (files.length < 2) die('usage: ust forkchoice <doc.json> <doc.json> [more…] [--genesis <f>] [--keylog <f,f…>] [--no-fork-confirmed] [--offline]\n  decide the CANONICAL document among candidates that claim the SAME ust_id — canonical = the one in the anchored hour root (§3.1/F.5c)\n  exit: 0=CANONICAL · 2=INDETERMINATE (none anchored yet) / MULTI_AUTHORITY · 1=E-PREV (equivocation) / E-MALFORMED');
   const candidates = [];
   for (const f of files) {
@@ -1104,7 +1159,7 @@ async function cmdForkChoice() {
     const { verdict, doc } = verifyRaw(readFileSync(v)); if (!P.isValid(verdict)) die(`--${flag} file does not VERIFY (${verdict.error ?? verdict.result})`); return doc; };
   const genesis = rd('genesis');
   const klsRaw = arg('keylog', null);
-  const keylog = (klsRaw && klsRaw !== true) ? klsRaw.split(',').map((f) => { const { verdict, doc } = verifyRaw(readFileSync(f.trim())); if (!P.isValid(verdict)) die(`--keylog entry ${f} does not VERIFY (${verdict.error ?? verdict.result})`); return doc; }) : undefined;
+  const keylog = (klsRaw && klsRaw !== true) ? readLogFiles('keylog', klsRaw) : undefined;
   const noFork = !!arg('no-fork-confirmed', false);
   const offline = !!arg('offline', false);
   // anchor-inclusion is a SUBSTRATE fact — load the same opt-in plugins as `verify`. None installed ⇒ nothing is
