@@ -102,3 +102,5 @@ jobs:
         run: npm run test:changelog
       - name: Ladder completeness — every round decides all five layers (reference or reasoned exclusion)
         run: npm run test:ladder
+      - name: Ceremony self-checks assert what the ceremony preserves, never a world property
+        run: npm run test:ceremony

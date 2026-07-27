@@ -1649,7 +1649,14 @@ export async function cmdRotate() {
   // SELF-CHECK fail-closed: a doc signed by the NEW op key must resolve authoritative under the grown log
   const probe = await W.seal(await W.buildState({ domain_shard: domain, ust_id, key_id: grown.newOp.key_id, class: 'observation' }, time, { r: { kind: 'captured', value: { x: '1' } } }), grown.newOp);
   const res = P.resolveAuthority(probe, { genesis, keylog: grown.keylog, noForkConfirmed: true });
-  if (res.error || res.strength !== 'authoritative') { rl.close(); die('self-check FAILED: the new key does not resolve authoritative (' + (res.error || res.strength) + ')'); }
+    // rev95 — a ceremony self-check asserts what the ceremony PRESERVES. This asked whether the NAME is
+    // authoritative, a property of the world the ceremony neither holds nor should: it supplied only
+    // `noForkConfirmed`, which yields `consumer-override` — the value #98 hardened the protocol to withhold so a
+    // caller boolean cannot name a canonical. So it died on its own check EVERY time, and rotation is the only
+    // recovery from key compromise. F.5e fixes the real invariant: after the grown log the new key is ACTIVE.
+    const ks = P.resolveKeys(genesis, grown.keylog);
+    const bound = !ks.error && ks.active instanceof Map && ks.active.has(grown.newOp.key_id);
+    if (!bound) { rl?.close(); die('self-check FAILED: the new key is NOT in the active set after the grown log (' + (active.error || 'not present') + ')'); }
   rl?.close();
   const outDir = (arg('out', null) && arg('out', null) !== true) ? arg('out', null) : '.';
   writeFileSync(`${outDir}/ust-keylog`, JSON.stringify(grown.keylog, null, 2) + '\n');

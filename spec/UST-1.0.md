@@ -1572,6 +1572,8 @@ reached; a document does NOT change format across tiers OR roles — even genesi
   §4–§10 with a mandatory signature over a CARRIED key (`sig.pub`), string-only values, per-partition hashing,
   within bounds. NO genesis / anchor / completeness required. (This is the ~0.29-light adoption floor: publish
   in a minute.)
+**Ceremony self-checks (normative).** A tool that performs a CEREMONY — minting an identity, rotating a key, declaring a grid — MUST verify, before it emits anything, the invariant that ceremony PRESERVES, and MUST NOT condition that check on a property of the world it does not determine. Name authority, witness confirmation and network reachability are properties of the world: a ceremony self-check that asks for them either fails always or passes vacuously, and both read to an operator as the other. Concretely: a genesis ceremony checks that the documents it emitted VERIFY; a cadence declaration checks that the grown log RESOLVES to the declared grid at the declared moment; a key rotation checks that the new key is in the ACTIVE SET after the grown log (§12.2). A ceremony self-check MUST be decidable from what the ceremony holds.
+
 - **Conforming verifier — LIGHT:** recompute canonical + per-partition hashes + strict-Ed25519-verify against
   the carried key, fail-closed, report identity strength `self-asserted`. Passes the FLOOR
   vectors (canonicalization/NFC/ordering, per-partition captured-vs-computed hashing, domain separation,

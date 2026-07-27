@@ -4,6 +4,16 @@
   "_pin": "Rows in the ladder with no record here. May only ever SHRINK. 94 rows existed when the gate landed; the three most recent are accounted.",
   "records": [
     {
+      "rev": "rev95",
+      "math": "the property it tests must be one the ceremony itself",
+      "spec": "A tool that performs a CEREMONY",
+      "code": "packages/ust-cli/index.mjs :: cmdRotate self-check",
+      "vector": {
+        "excluded": "the rule governs a TOOL's ceremony self-check — what a CLI must verify before emitting. The corpus pins document bytes and the verdicts they must produce; a ceremony is not a document, and a vector could only restate the conformance check. The protocol FACT underneath it (a caller boolean never earns authoritative) IS pinned, in conformance and by rev94's seam grid."
+      },
+      "test": "rev95 a caller no-fork boolean never earns authoritative — the rung a ceremony self-check may not demand of it"
+    },
+    {
       "rev": "rev94",
       "math": "the decision is not a projection of either field; it is the CONJUNCTION of the two facts the model separates",
       "spec": "A candidate is authority-BOUND when its identity strength is `corroborated` or",

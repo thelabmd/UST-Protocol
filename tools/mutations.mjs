@@ -17,6 +17,15 @@
 // `mustDetect` marks the verdict-seam mutations the battery treats as hard requirements; the rest are harvest — a hit
 // lowers the unproven residual, a miss is covered by the gate channel and is not a failure.
 export const MUTATIONS = [
+  // rev95 — the rung a caller boolean may NOT earn. Broken, a consumer's own assertion becomes name authority,
+  // which is the forgery #98 hardened against and the property `ust rotate` was wrongly demanding of that flag.
+  {
+    id: 'override-earns-authoritative', mustDetect: true, observe: ['conformance'],
+    why: 'the override ceiling. Broken, consumer-override derives authoritative — a caller boolean names a canonical.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "    : identity.strength === 'corroborated' ? 'corroborated'",
+    to: "    : identity.strength === 'consumer-override' ? 'authoritative' /* mutant */ : identity.strength === 'corroborated' ? 'corroborated'",
+  },
   // rev93 third case — the C3 NEUTRALIZATION. A strength label whose status is not `verified` must contribute the
   // FLOOR, never its own rung. Broken, a caller-shaped or unresolved label lifts the identity coordinate straight
   // into the assurance tuple, which is the forgery this seam exists to close — and the reason an inert label is

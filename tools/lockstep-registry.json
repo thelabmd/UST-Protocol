@@ -456,6 +456,12 @@
       "rev": "rev94",
       "model_locus": "the decision is not a projection of either field; it is the CONJUNCTION of the two facts the model separates",
       "conformance_check": "rev94 fork-choice binding == derived identity ≥ corroborated, over the WHOLE seam grid (24 states)"
+    },
+    {
+      "id": "R95-ceremony-selfcheck-own-invariant",
+      "rev": "rev95",
+      "model_locus": "the property it tests must be one the ceremony itself",
+      "conformance_check": "rev95 a caller no-fork boolean never earns authoritative — the rung a ceremony self-check may not demand of it"
     }
   ]
 }

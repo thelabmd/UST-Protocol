@@ -376,7 +376,17 @@ check('F8 impossible ust_id→E-MALFORMED', P.verify(mk({ r: { kind: 'captured',
       check('#98 the override lift is ASSURANCE-only: the seam label stays consumer-override while the tuple reads authoritative',
         one.identity.strength === 'consumer-override' && one.assurance.identity === 'authoritative');
     }
-    // ── rev94 — the EQUIVALENCE, enumerated over the seam grid rather than sampled. Fork choice's binding decision
+    // rev95 — the protocol FACT the rotation ceremony misused: a caller no-fork boolean confers consumer-override
+  // and never authoritative, opt-in or not. #98 hardened this deliberately so a caller cannot name a canonical; the
+  // ceremony then DEMANDED authoritative from exactly that flag and died on its own check every time. Pinning the
+  // fact here is what makes 'a ceremony may not ask the world' checkable at the protocol layer rather than only in a
+  // linter over the CLI.
+  {
+    const seam = (o) => { const g = P.provePredicates({ identity: { strength: 'consumer-override', status: 'verified' } }); return P.assuranceState({ integrity: 'valid', ...g.atoms }).identity; };
+    check('rev95 a caller no-fork boolean never earns authoritative — the rung a ceremony self-check may not demand of it',
+      seam() !== 'authoritative');
+  }
+  // ── rev94 — the EQUIVALENCE, enumerated over the seam grid rather than sampled. Fork choice's binding decision
   // must agree with the projection: a candidate is bound exactly when the DERIVED identity coordinate reaches
   // corroborated or above AND the coordinate was not lifted by the consumer's own opt-in. The seam-field conjunction
   // `strength ∈ {corroborated, authoritative} ∧ status = verified` realizes that. Both obvious single-field readings

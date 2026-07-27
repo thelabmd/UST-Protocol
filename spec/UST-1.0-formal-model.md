@@ -354,6 +354,29 @@ opt-in lifts it, the report keeps the SEAM label (`consumer-override`) beside an
 its own assertion. Collapsing the report onto the earned coordinate would erase exactly the fact a consumer most
 needs. So the rule is about the neutralized case only, and its remedy is the floor.
 
+**Realization (rev95 — a ceremony's self-check asserts what the ceremony PRESERVES, never a property of the world).**
+A ceremony operates on the inputs it holds: a cold key, a fetched log, a declared parameter. Its self-check exists
+for one purpose — to refuse to emit something broken — so the property it tests must be one the ceremony itself
+determines. A check that asks instead about the WORLD (is this name authoritative, did a witness confirm, is the
+network reachable) depends on evidence the ceremony neither has nor should have, and there are only two outcomes:
+it fails always, or it passes vacuously. Both are worse than no check, because both read as one.
+
+The generative form is: for each ceremony, name the invariant it must preserve, and test THAT.
+  · genesis — the documents it emits VERIFY (the floor, a function of the bytes it just produced)
+  · cadence — the grown log RESOLVES to the declared grid at the declared moment (F.4)
+  · rotation — the new key is in the ACTIVE SET after the grown log: F.5e fixes exactly this, `rotate` signed by
+    `s` naming successor `k` ⇒ `active ∪ {k} ∖ {s}`, with the admissibility invariant `signer(e_{i+1}) ∈ active(after e_i)`
+
+Measured on 2026-07-27: rotation asked `resolveAuthority(...).strength === 'authoritative'` while supplying only
+`noForkConfirmed`, which yields `consumer-override` — a value #98 had that same day HARDENED the protocol to
+withhold, precisely so a caller's boolean cannot name a canonical. So the ceremony demanded of a flag a property
+the protocol had just decided that flag may not confer, and `ust rotate` died on its own check every time. It is
+the only recovery from key compromise.
+
+The other two ceremonies asked correctly, and that was LUCK rather than discipline — nothing stated the rule, and
+nothing stopped a fourth ceremony from copying the wrong one. An invariant that lives only in how three cases
+happen to be written is not an invariant; this note plus its gate is what makes it one.
+
 **Realization (rev94 — a DECISION procedure must agree with the projection, and neither report field alone does).**
 Fork choice asks one question of a candidate: is its key BOUND to the name it claims. The model already answers what
 name-binding is — the derived identity coordinate reaching `corroborated` or above — so a procedure that decides
