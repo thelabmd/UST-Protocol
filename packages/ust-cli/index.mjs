@@ -1498,10 +1498,67 @@ export async function cmdRotate() {
 
 // Run the dispatcher ONLY when executed directly — importing this module (regression suite / Go-binding
 // harness) must not trigger the CLI or its process.exit.
+// ─── ust cadence — DECLARE or CHANGE the stream grid (§11.3). Same ceremony class as `ust rotate`: the COLD root key
+// signs, nothing warm is pulled out of a running engine. Measured before building this: the genesis key is active by
+// construction, so resolveCadence accepts its signature — an operator never needs the operational key for this.
+// The cadence log is its OWN chain: the first entry chains from the GENESIS content_hash, not from the key-log.
+export async function cmdCadence() {
+  const domain = arg('domain');
+  if (!domain || domain === true) die('usage: ust cadence --domain <d> --root <encrypted-root.b64> --seconds <n> --effective-from <ust:YYYYMMDD.HH[MM[SS]]>\n         [--cadence-log <served array file>] [--out <dir>]   # declare/change the SIGNED stream grid (§11.3)');
+  const rootFile = arg('root'); if (!rootFile || rootFile === true) die('--root <encrypted root backup .b64> required (the cold crown key)');
+  const secsRaw = arg('seconds'); if (!secsRaw || secsRaw === true) die('--seconds <n> required — the grid spacing in SECONDS');
+  const seconds = String(secsRaw);
+  if (!/^[1-9][0-9]*$/.test(seconds)) die('--seconds must be a canonical positive integer of seconds (§11.3): "30", never "1.5" or "030"');
+  const effFrom = arg('effective-from'); if (!effFrom || effFrom === true) die('--effective-from <ust_id> required — the slot this cadence takes effect at');
+
+  const get = async (p) => { const r = await fetch(`https://${domain}${p}`, { signal: AbortSignal.timeout(10000), redirect: 'error' }); if (!r.ok) { const e = new Error(`HTTP ${r.status} at ${p}`); e.httpStatus = r.status; throw e; } return r.text(); };
+  let genesis; try { genesis = JSON.parse(await get('/.well-known/ust-genesis')); } catch (e) { die('cannot fetch genesis for ' + domain + ': ' + (e.message || e)); }
+  if (!P.isValid(P.verify(genesis, { context: 'key' }))) die('served genesis does not VERIFY');
+  let keylog = [];
+  try { keylog = JSON.parse(await get('/.well-known/ust-keylog')); } catch (e) { if (e.httpStatus !== 404 && e.httpStatus !== 410) die('key-log present but unreadable: ' + (e.message || e)); }
+
+  // ABSENT (404/410) is the first declaration; anything else unreadable must NOT be treated as empty — that would chain
+  // a new entry onto the wrong head and silently orphan whatever is already served.
+  const clFile = arg('cadence-log', null);
+  let log = [];
+  if (clFile && clFile !== true) { try { log = JSON.parse(readFileSync(clFile, 'utf8')); } catch (e) { die('cannot read --cadence-log: ' + (e.message || e)); } }
+  else { try { log = JSON.parse(await get('/.well-known/ust-cadence')); } catch (e) { if (e.httpStatus !== 404 && e.httpStatus !== 410) die('cadence-log present but unreadable — refusing to chain onto an unknown head: ' + (e.message || e)); } }
+  if (!Array.isArray(log)) die('the served cadence log is not a JSON array');
+
+  const prev = log.length ? P.contentHash(log[log.length - 1]) : P.contentHash(genesis);
+  console.error(`  chaining onto ${log.length ? 'cadence entry #' + (log.length - 1) : 'the GENESIS'} — prev ${prev.slice(0, 22)}…`);
+
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const ask = (q) => rl.question(q);
+  const pass = await askHidden('  🔑 root passphrase: ', ask);
+  let rootSigner;
+  try { rootSigner = await rootSignerFrom(decryptKey(readFileSync(rootFile, 'utf8').trim(), pass), genesis.state.data.genesis.value.pub); }
+  catch (e) { rl.close(); die(e.message.includes('match') ? e.message : 'decrypt failed — wrong passphrase or corrupt backup'); }
+  rl.close();
+
+  const { ust_id, time } = W.nowFrame();
+  const entry = await W.seal(P.buildCadenceEntry({ domain_shard: domain, ust_id, key_id: rootSigner.key_id }, time, seconds, effFrom, prev), rootSigner);
+  const grown = [...log, entry];
+
+  // SELF-CHECK, fail-closed: the grown log must RESOLVE to this cadence at a moment inside its effect, and must NOT
+  // have moved the grid before it. A file that does not resolve is never written — the operator would otherwise publish
+  // an entry that no verifier applies.
+  const after = P.resolveCadence(genesis, grown, effFrom, { keylog });
+  if (after.error) die('self-check FAILED — the grown log does not resolve: ' + after.error + ' ' + (after.detail || ''));
+  if (String(after.cadence) !== seconds) die(`self-check FAILED — at ${effFrom} the log resolves to ${after.cadence}, not ${seconds}`);
+
+  const outDir = (arg('out', null) && arg('out', null) !== true) ? arg('out', null) : '.';
+  writeFileSync(`${outDir}/ust-cadence`, JSON.stringify(grown, null, 2) + '\n');
+  console.error(`  ✓ ${grown.length} entr${grown.length === 1 ? 'y' : 'ies'} → ${outDir}/ust-cadence`);
+  console.error(`    cadence ${seconds}s effective from ${effFrom} · entry ${P.contentHash(entry).slice(0, 22)}…`);
+  console.error('    serve it at https://' + domain + '/.well-known/ust-cadence (and mirror it, like the genesis and key-log)');
+}
+
 const isMain = (() => { try { return process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url); } catch { return false; } })();
 if (isMain) {
   const cmd = process.argv[2];
-  const run = { verify: cmdVerify, canon: cmdCanon, genesis: cmdGenesis, rotate: cmdRotate, discovery: cmdDiscovery, publish: cmdPublish, mirror: cmdMirror, stream: cmdStream, forkchoice: cmdForkChoice, witness: cmdWitness }[cmd];
-  if (!run) { console.error('ust — verify machine-readable state\n\n  ust verify <file|->        verify a transcript (exit 0 = VALID, 1 = not; --require-anchored floors at TOP)\n  ust canon  <file|->        print canonical bytes + hash (cross-language diff)\n  ust genesis --domain <d>   run the HIGH genesis ceremony (add --publish cf for one-click serving)\n  ust rotate  --domain <d> --root <enc>   APPEND a key rotation to the served log (never re-mint; old docs stay valid)\n  ust discovery <domain>     attest the §20.1 serving contract (any infra)\n  ust publish cf --domain <d> --genesis <f>   deploy the CF serving adapter for an existing genesis\n  ust mirror <domain>        publish + attest a SECOND-vendor mirror (§20.1 vendor-independence)\n  ust stream <frames…>       RANGE verdict: chain · forks · completeness (needs --checkpoint for `complete`)\n  ust forkchoice <docs…>     pick the CANONICAL doc among candidates for ONE ust_id (canonical = anchor-included)\n  ust witness rekor --domain <d>   log the genesis in a transparency log → automatic no-fork (#68)\n'); process.exit(cmd ? 1 : 0); }
+
+  const run = { verify: cmdVerify, canon: cmdCanon, genesis: cmdGenesis, rotate: cmdRotate, cadence: cmdCadence, discovery: cmdDiscovery, publish: cmdPublish, mirror: cmdMirror, stream: cmdStream, forkchoice: cmdForkChoice, witness: cmdWitness }[cmd];
+  if (!run) { console.error('ust — verify machine-readable state\n\n  ust verify <file|->        verify a transcript (exit 0 = VALID, 1 = not; --require-anchored floors at TOP)\n  ust canon  <file|->        print canonical bytes + hash (cross-language diff)\n  ust genesis --domain <d>   run the HIGH genesis ceremony (add --publish cf for one-click serving)\n  ust rotate  --domain <d> --root <enc>   APPEND a key rotation to the served log (never re-mint; old docs stay valid)\n  ust cadence --domain <d> --root <enc> --seconds <n> --effective-from <slot>   DECLARE the signed stream grid (§11.3)\n  ust discovery <domain>     attest the §20.1 serving contract (any infra)\n  ust publish cf --domain <d> --genesis <f>   deploy the CF serving adapter for an existing genesis\n  ust mirror <domain>        publish + attest a SECOND-vendor mirror (§20.1 vendor-independence)\n  ust stream <frames…>       RANGE verdict: chain · forks · completeness (needs --checkpoint for `complete`)\n  ust forkchoice <docs…>     pick the CANONICAL doc among candidates for ONE ust_id (canonical = anchor-included)\n  ust witness rekor --domain <d>   log the genesis in a transparency log → automatic no-fork (#68)\n'); process.exit(cmd ? 1 : 0); }
   run().catch((e) => die(e.message || String(e)));
 }

@@ -30,7 +30,7 @@ const mcpTools = new Set(MCP.listTools().map((t) => t.name));
 const CAPS = {
   'canon':              { core: ['canon'], mcp: 'ust_canon', cli: 'canon' },
   'content-address':    { core: ['contentHash', 'signedContent', 'partitionHash', 'seed', 'merkleRoot', 'keyId'], mcp: 'ust_key_id', cli: 'contentHash' },
-  'build-transcript':   { core: ['buildState', 'buildAttestation', 'buildDerivation', 'buildGenesis', 'buildKeyLogEntry', 'buildCheckpoint', 'buildGap', 'buildCadenceEntry'], mcp: 'ust_build_observation', cli: 'buildState' },
+  'build-transcript':   { core: ['buildState', 'buildAttestation', 'buildDerivation', 'buildGenesis', 'buildKeyLogEntry', 'buildCheckpoint', 'buildGap'], mcp: 'ust_build_observation', cli: 'buildState' },
   'sign':               { core: ['seal'], cli: 'seal' },
   'verify':             { core: ['verify', 'verifyJson', 'verifyAsync', 'isValid', 'checkBounds', 'assertValid', 'verifyOrThrow'], mcp: 'ust_verify', cli: 'verifyRaw' },
   'resolve-authority':  { core: ['resolveAuthority', 'resolveKeys', 'resolveKeysBytes', 'resolveByDiscovery'], mcp: 'ust_resolve', cli: '--genesis' },
@@ -55,7 +55,11 @@ const CAPS = {
   'uniqueness-attest':  { core: ['checkpointUniquenessClaim', 'buildUniquenessAttestation', 'verifyCheckpointUniqueness'] },
   'verifiable-map':     { core: ['buildVerifiableMap', 'checkpointMapLeaf', 'nameMapLeaf', 'verifyCheckpointMapUniqueness', 'verifyActiveGenesisUniqueness'] },
   'keylog-commitment':  { core: ['keylogLeaf', 'buildKeylogCommitment', 'verifyKeylogTerminality'], cli: 'rotateKeylog' },
-  'cadence-grid':       { core: ['ustGrid', 'resolveCadence', 'resolveCadenceBytes'] },
+  'cadence-grid':       { core: ['ustGrid', 'resolveCadence', 'resolveCadenceBytes'], mcp: 'ust_resolve_cadence', cli: 'cadence' },
+  // Split OUT of build-transcript (2026-07-27): that capability bundles eight builders behind ONE representative probe
+  // (`ust_build_observation`), so `buildCadenceEntry` having no surface at all read as full. A capability whose probe
+  // cannot see its own members is the coarse-probe failure this file's own header warns about.
+  'cadence-declare':    { core: ['buildCadenceEntry'], mcp: 'ust_build_cadence', cli: 'cmdCadence' },
   'substrate-registry': { core: ['combineSubstrates', 'combineInclusion'] },   // #95 — finality AND membership route by substrate name, one pattern
   'discovery-shard':    { core: ['isPublicDnsShard'], cli: 'attestDiscovery' },
   'disclosure':         { core: ['blindedCommit', 'blindPartition'] },
@@ -87,8 +91,8 @@ const SURFACES = {
   // is deferred to the PLANNED operator MCP over ustate (key creation, checkpoint/recovery/epoch/uniqueness/map
   // ceremonies) so a human explicitly grants agent rights — NOT 'stays core+CLI forever'. NOTE: no-fork-evidence /
   // anchor-verify are marked full on the CONSUME side; a produce/consume axis split is the honest refinement (UST-<top>).
-  'ust-mcp':          { probe: mcpProbe, full: ['canon', 'content-address', 'build-transcript', 'verify', 'resolve-authority', 'no-fork-evidence', 'consumer-trust-root', 'anchor-verify', 'fork-choice', 'stream-verify'], subset: [], naReason: 'deferred to the planned operator MCP over ustate (privilege-separation: a human explicitly grants agent rights) — NOT core+CLI-forever; TOP-produce is the one agent touch still to be built for noosphere', naSpecific: { 'sign': 'the agent signs with its OWN key; build tools return signing_input, the MCP never holds a private key', 'negative-observation': 'agent-appropriate (a normal negative observation, NOT operator) — new per #39; an MCP absence verb is planned, not yet built' } },
-  'ust-cli':          { probe: cliProbe, full: ['canon', 'content-address', 'build-transcript', 'sign', 'verify', 'resolve-authority', 'no-fork-evidence', 'consumer-trust-root', 'anchor-verify', 'stream-verify', 'checkpoint-chain', 'keylog-commitment', 'discovery-shard'], subset: [], naReason: 'not exposed by the reference operator CLI', naSpecific: { 'negative-observation': 'new per #39; a `ust absence` command is planned, not yet built' } },
+  'ust-mcp':          { probe: mcpProbe, full: ['canon', 'content-address', 'build-transcript', 'verify', 'resolve-authority', 'no-fork-evidence', 'consumer-trust-root', 'anchor-verify', 'fork-choice', 'stream-verify', 'cadence-grid', 'cadence-declare'], subset: [], naReason: 'deferred to the planned operator MCP over ustate (privilege-separation: a human explicitly grants agent rights) — NOT core+CLI-forever; TOP-produce is the one agent touch still to be built for noosphere', naSpecific: { 'sign': 'the agent signs with its OWN key; build tools return signing_input, the MCP never holds a private key', 'negative-observation': 'agent-appropriate (a normal negative observation, NOT operator) — new per #39; an MCP absence verb is planned, not yet built' } },
+  'ust-cli':          { probe: cliProbe, full: ['canon', 'content-address', 'build-transcript', 'sign', 'verify', 'resolve-authority', 'no-fork-evidence', 'consumer-trust-root', 'anchor-verify', 'stream-verify', 'checkpoint-chain', 'keylog-commitment', 'discovery-shard', 'cadence-grid', 'cadence-declare'], subset: [], naReason: 'not exposed by the reference operator CLI', naSpecific: { 'negative-observation': 'new per #39; a `ust absence` command is planned, not yet built' } },
 };
 
 const capIds = Object.keys(CAPS);
