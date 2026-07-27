@@ -505,16 +505,16 @@ function boundsOf(doc) {
 // the hot core and break the internal identity coupling. One place admits; the core trusts. This is the single seat.
 export function verify(doc, opts = {}) {
   const O = admitOpts(opts);   // round-46 self-audit (Theorem R — trusted before untrusted) — admit the TRUSTED opts FIRST, THEN the untrusted doc: admitDeep(doc) reads the doc's [[Get]] face (the SIGNED face, round-29 P0-01), which FIRES a hostile doc getter; if opts were admitted after, that getter would mutate the still-live opts (drop requireAuthoritative, set acceptConsumerOverride) and rewrite the consumer policy the verdict uses — the r45 cross-argument mutation class, found in the MAIN verify path. (round-40 P1-01 — one opts admission → one inert snapshot, every opts read consistent; functions preserved.)
-  if (O === null) return bad('E-MALFORMED', 'opts must be an inert record (round-40 P1-01 — a two-face opts Proxy cannot show one maxSupportedBytes to the budget and another to the enforcement guard)');
+  if (O === null) return floorTier(bad('E-MALFORMED', 'opts must be an inert record (round-40 P1-01 — a two-face opts Proxy cannot show one maxSupportedBytes to the budget and another to the enforcement guard)'));
   const D = admitDeep(doc);
-  if (D === ADMIT_REJECT) return bad('E-MALFORMED', 'document is not an inert record — an accessor/getter cannot sign one payload and disclose another (round-27: the ONE input boundary)');
+  if (D === ADMIT_REJECT) return floorTier(bad('E-MALFORMED', 'document is not an inert record — an accessor/getter cannot sign one payload and disclose another (round-27: the ONE input boundary)'));
   const verdict = verifyCore(D, O);
   // rev32 R3 (non-bypass output) — EMIT id(x̂): the content hash of the ADMITTED snapshot the verdict is about. A consumer
   // addresses the transcript by THIS returned id (a projection of the admitted artifact), never by re-hashing the raw input
   // `doc` — so a live/mutable/Proxy object that shows one face to `verify` and another to a later `contentHash(doc)` cannot
   // split the verdict from the identity. The verdict and the id come from the SAME single admission.
   let id; try { if (D && typeof D === 'object' && D.state !== undefined) id = contentHash(D); } catch { /* malformed → no addressable id */ }
-  return id === undefined ? verdict : { ...verdict, id };
+  return floorTier(id === undefined ? verdict : { ...verdict, id });
 }
 function verifyCore(doc, opts = {}) {
   try {
@@ -3020,4 +3020,12 @@ function err(code, detail) { const e = new Error(code); e.code = code; e.detail 
 // §14 INVALID constructor. `fields` (optional) carries MACHINE-STRUCTURED context so a program branches WITHOUT
 // parsing `detail` (audit #44 §2 — verification fatigue): `obligation` names the exact broken spec rule, and a
 // recompute mismatch adds `expected`/`actual` (and `partition` where it applies). `error`+`detail` stay for humans.
+// §3.1/F.5.0 — a refused DOCUMENT has assurance ⊥, and the projection is total over it: Π(⊥) = NONE. So an INVALID
+// document verdict carries `tier: 'NONE'` — the tier of "there was nothing to rank", never of "measured and failed".
+// INDETERMINATE deliberately gets NOTHING: its assurance is PARTIAL, not ⊥ (integrity passed, a dependency was
+// unreachable), so NONE there would UNDER-claim as badly as an over-claim and would blur the one line the protocol
+// keeps sharp — cannot decide is not earned nothing.
+// Stamped at the document DOORS, not inside bad(): bad() also serves verifyEvidenceReceipt, whose subject is a receipt
+// and has no document assurance state to rank.
+const floorTier = (v) => (v && v.result === 'INVALID' && v.tier === undefined ? { ...v, tier: 'NONE' } : v);
 function bad(code, detail, fields) { return { result: 'INVALID', error: code, detail, ...(fields || null) }; }

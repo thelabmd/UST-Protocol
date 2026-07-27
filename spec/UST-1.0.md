@@ -145,8 +145,13 @@ has no σ-algebra of its own.
 document that yields no usable state maps to the reject sentinel `⊥`, and the tier projection is total over that too —
 `Π(⊥) = NONE`. So `NONE` is not "the floor was measured and failed"; it is "there was nothing to rank." A verdict
 STRING still never carries it — `VALID:LIGHT`/`VALID:HIGH`/`VALID:TOP` are the only tiered results and there is no
-`INVALID:NONE` — but the tier of a refused document IS `NONE`, and an implementation reporting a tier alongside a
-refusal MUST report that value rather than omitting it or inventing another.
+`INVALID:NONE` — but the tier of a refused document IS `NONE`, and a verifier MUST report it: an
+`INVALID` document verdict carries `tier: "NONE"`.
+
+**`INDETERMINATE` carries NO tier, and that is the same distinction stated once more.** Its assurance is PARTIAL, not
+`⊥` — the integrity floor may well have held and only a dependency was unreachable — so ranking it `NONE` would
+under-claim exactly as badly as an over-claim, and would blur the line §14 keeps sharp: *cannot decide* is never
+*earned nothing*.
 
 - **LIGHT — trust in a minute (THE FLOOR).** A signed, canonical, addressable state document. *Publish* =
   generate a keypair, sign your canonical JSON, serve it (the pubkey travels in `sig.pub`). *Verify* = recompute

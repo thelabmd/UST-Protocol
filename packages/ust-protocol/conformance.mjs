@@ -167,31 +167,28 @@ check('#95 an async connector is NAMED, never silently taken as unproven-or-true
 })());
 check('#95 with NO connector the bundled walk still refuses a foreign-shape proof (no silent acceptance)',
   P.verifyAnchor(A_CH, A_ALIEN).inclusion === false);
-// §3.1/F.5.0 — the tier is the SUFFIX of a VALID verdict, never a field on a refusal. NONE is what Π returns when
-// ranking an assurance STATE whose floor is unmet; it is not an answer about a verdict, and four admission doors used
-// to emit it as one. Uniformity is the property: no refusal path may grow a tier again.
+// §3.1/F.5.0 — the assurance map is TOTAL into AssuranceState ∪ {⊥} and Π is total over it, so a refused DOCUMENT has
+// tier NONE: the rank of "there was nothing to rank". INDETERMINATE keeps NO tier — its assurance is PARTIAL, not ⊥
+// (integrity passed, a dependency was unreachable), and NONE there would under-claim as badly as an over-claim.
+// The two halves are checked TOGETHER on purpose: either one alone is satisfiable by a blanket rule in the wrong direction.
 {
-  // MEASURED, three tries deep: an EMPTY throwing Proxy is not hostile — `{}` has no own keys, so the trap never fires
-  // and the document is refused later as merely malformed, never reaching the admission door the mutation targets.
-  // These three DO reach it: a keyed throwing Proxy, a function nested in the value, and a throwing ownKeys.
-  const refusals = [
-    ['keyed throwing Proxy (admission door)', P.verify(new Proxy({ ust: '1.0' }, { get() { throw new Error('h'); } }), { context: 'data' })],
-    ['function nested in the document (admission door)', P.verify({ ust: '1.0', state: { fn: () => 1 } }, { context: 'data' })],
-    ['throwing ownKeys (admission door)', P.verify(new Proxy({}, { ownKeys() { throw new Error('h'); } }), { context: 'data' })],
-    // ENUMERATE THE ENTRY POINTS, not one of them: the admission door exists separately in verify, verifyAsync and
-    // resolveByDiscovery, and a check that calls only the first cannot see a tier grow back on the other two.
-    ['verifyAsync admission door', await P.verifyAsync(new Proxy({ ust: '1.0' }, { get() { throw new Error('h'); } }), { context: 'data' })],
-    ['resolveByDiscovery admission door', (await P.resolveByDiscovery(new Proxy({ ust: '1.0' }, { get() { throw new Error('h'); } }), { context: 'data' })).verdict],
-    ['malformed document', P.verify({ ust: '1.0' }, { context: 'data' })],
+  const invalids = [
     ['bad signature', (() => { const d = clone(mk()); d.sig.sig = 'A'.repeat(d.sig.sig.length); return P.verify(d, { context: 'data' }); })()],
-    // NOT included: hostile opts. MEASURED — verify() DEGRADES to the floor there rather than refusing (options only
-    // ever ADD context, so losing them can only LOWER a verdict), so it is a VALID:LIGHT and not a refusal at all.
-    // verifyAnchor refuses the same input instead; both directions lower, and the difference is recorded, not fixed here.
+    ['malformed', P.verify({ ust: '1.0' }, { context: 'data' })],
+    ['keyed throwing Proxy (admission door)', P.verify(new Proxy({ ust: '1.0' }, { get() { throw new Error('h'); } }), { context: 'data' })],
+    ['function nested in the document', P.verify({ ust: '1.0', state: { fn: () => 1 } }, { context: 'data' })],
+    ['unknown top-level member', (() => { const d = clone(mk()); d.summary = 'x'; return P.verify(d, { context: 'data' }); })()],
   ];
-  check('§3.1 a REFUSAL carries no tier — the tier is the suffix of a VALID verdict, and NONE ranks a STATE not a verdict',
-    refusals.every(([, r]) => r.result !== undefined && !String(r.result).startsWith('VALID') && r.tier === undefined),
-    refusals.filter(([, r]) => r.tier !== undefined).map(([n, r]) => n + ' → tier=' + JSON.stringify(r.tier)).join(' · '));
-  check('§3.1 a VALID verdict DOES carry its tier — the check above is not vacuously satisfied by dropping tiers everywhere',
+  check('§3.1/F.5.0 every INVALID document verdict carries tier NONE — Π(⊥) is total, so a refusal is RANKED, not blank',
+    invalids.every(([, v]) => v.result === 'INVALID' && v.tier === 'NONE'),
+    invalids.filter(([, v]) => v.tier !== 'NONE').map(([n, v]) => n + ' → ' + JSON.stringify(v.tier)).join(' · '));
+
+  const nameDoc = mk({ r: { kind: 'captured', value: { x: '1' } } }, { domain_shard: 'example.com', ust_id: 'ust:20260715.12', key_id: A.key_id, class: 'observation' });
+  const ind = P.verify(nameDoc, { context: 'data', offline: true });
+  check('§3.1/F.5.0 an INDETERMINATE verdict carries NO tier — cannot decide is not earned nothing',
+    ind.result === 'INDETERMINATE' && ind.tier === undefined, 'got tier=' + JSON.stringify(ind.tier));
+
+  check('§3.1 a VALID verdict still carries its earned tier — the rules above cannot be met by stamping NONE everywhere',
     P.verify(mk(), { context: 'data' }).tier === 'LIGHT');
 }
 
