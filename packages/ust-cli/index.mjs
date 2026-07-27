@@ -1092,11 +1092,24 @@ async function cmdPublish() {
     keylogText = JSON.stringify(Array.isArray(kl) ? kl : [kl]);
   } catch { if (arg('keylog', null)) die('could not read --keylog ' + klPath); }
 
+  // The cadence log rides along the same way — cadenceText rides along by default: --cadence-log <file>, or an
+  // ust-cadence found NEXT to the genesis. Threading it through buildWorkerScript/cfPublish (this morning) gave the
+  // artifact a serving PATH; without this the COMMAND never picks the file up, and a deploy would leave
+  // /.well-known/ust-cadence a 404 while every gate stayed green — the same seam, one layer out.
+  let cadenceText = null;
+  const cadPath = arg('cadence-log', null) || genPath.replace(/[^/\\]+$/, 'ust-cadence');
+  try {
+    const raw = readFileSync(cadPath, 'utf8');
+    const parsed = parseLogRaw(raw, '--cadence-log');
+    if (parsed.err) { if (arg('cadence-log', null)) die('could not admit --cadence-log ' + cadPath + ': ' + parsed.err); }
+    else cadenceText = JSON.stringify(parsed.entries);
+  } catch { if (arg('cadence-log', null)) die('could not read --cadence-log ' + cadPath); }
+
   let r;
   if (arg('auth', null) === 'wrangler') {
     // COMBINED flow: worker+route ride wrangler's OAuth (browser login — no workers scopes on any token);
     // the API token shrinks to Zone.DNS:Edit for the apex steps.
-    let w; try { w = await wranglerDeploy({ domain, genesisText, keylogText, witnessText: buildWitnessLog(genesisText) }); } catch (e) { die(e.message); }
+    let w; try { w = await wranglerDeploy({ domain, genesisText, keylogText, witnessText: buildWitnessLog(genesisText), cadenceText }); } catch (e) { die(e.message); }
     console.log('  ✓ worker ' + w.script + ' deployed via wrangler OAuth (genesis embedded, ' + w.genHash + ')');
     console.log('  ✓ route ' + w.route + ' (from wrangler.toml)');
     const rl = createInterface({ input: process.stdin, output: process.stdout });
@@ -1106,7 +1119,7 @@ async function cmdPublish() {
     r = { ...w, routeAction: 'wrangler', proxied: apex.proxied, flipped: apex.flipped, warnings: apex.warnings };
   } else {
     const token = process.env.CF_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
-    try { r = await cfPublish({ domain, genesisText, keylogText, witnessText: buildWitnessLog(genesisText), token, flipProxy }); } catch (e) { die(e.message); }
+    try { r = await cfPublish({ domain, genesisText, keylogText, witnessText: buildWitnessLog(genesisText), cadenceText, token, flipProxy }); } catch (e) { die(e.message); }
     console.log('  ✓ worker ' + r.script + ' deployed (genesis embedded, ' + r.genHash + ')');
     console.log('  ✓ route ' + r.route + ' ' + r.routeAction);
   }
