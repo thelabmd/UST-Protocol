@@ -361,6 +361,42 @@ check('F8 impossible ust_id→E-MALFORMED', P.verify(mk({ r: { kind: 'captured',
   const only1 = (a, root) => root === fp1.root ? anchorSV() : null;
   const fcWin = await P.forkChoice([cand1, cand2], { ...fbase, substrateVerify: only1 });
   check('#45 forkChoice: one anchor-included → CANONICAL picks it', fcWin.result === 'CANONICAL' && fcWin.content_hash === P.contentHash(f1));
+  // ── #98 — the product NOTHING covered: forkChoice × acceptConsumerOverride. The fork-choice driver mints REAL
+    // witness evidence for every candidate, so all of them arrive `authoritative` and every variant of the bound
+    // predicate agrees — green here was uninformative BY CONSTRUCTION. A caller BOOLEAN must never name a canonical:
+    // `verify()` lifts a consumer-override seam to `authoritative` in the ASSURANCE tuple (π_override), while the
+    // seam label stays `consumer-override`. The predicate reads the SEAM, which is why the boolean does not bind —
+    // and this check is what makes that a decision instead of an accident.
+    {
+      const ovBase = { genesis: gen, keylog: [add], noForkConfirmed: true, acceptConsumerOverride: true, context: 'data' };
+      const ov = await P.forkChoice([cand1, cand2], { ...ovBase, substrateVerify: only1 });
+      check('#98 forkChoice: a caller no-fork BOOLEAN never names a canonical (consumer-override is not a name binding)',
+        ov.result === 'INDETERMINATE' && (ov.unauthenticated || []).length === 2);
+      const one = P.verify(cand1, ovBase);
+      check('#98 the override lift is ASSURANCE-only: the seam label stays consumer-override while the tuple reads authoritative',
+        one.identity.strength === 'consumer-override' && one.assurance.identity === 'authoritative');
+    }
+    // ── #98 — the INVARIANT the bound predicate rests on, pinned instead of the predicate itself. The predicate reads
+    // strength and never status; that is sound ONLY while no VALID verdict pairs a binding strength with a status that
+    // is not `verified`. Measured: the class exemption at §14 (genesis/key/cadence stay VALID:LIGHT rather than
+    // collapsing to INDETERMINATE) DOES reach the predicate, so the guard is a filter two functions away, not a local
+    // property. This check fails the moment that invariant breaks — which is the event that would make the predicate wrong.
+    {
+      const BINDING = new Set(['authoritative', 'corroborated']);
+      const probes = [];
+      const cadDoc = P.seal(P.buildCadenceEntry({ domain_shard: 'noosphere.md', ust_id: 'ust:20260628.2015', key_id: K.key_id }, T, '30', 'ust:20260628.21', P.contentHash(gen)), K.priv, K.pubB64);
+      for (const [name, d, o] of [
+        ['cadence/no-evidence', cadDoc, { genesis: gen, keylog: [add], context: 'key' }],
+        ['cadence/witnessed', cadDoc, { genesis: gen, keylog: [add], ...nfe(gen), context: 'key' }],
+        ['observation/override', cand1, { genesis: gen, keylog: [add], noForkConfirmed: true, acceptConsumerOverride: true, context: 'data' }],
+      ]) {
+        const r = P.verify(d, o);
+        if (/^VALID:/.test(r.result || '')) probes.push({ name, s: r.identity?.strength, st: r.identity?.status });
+      }
+      check('#98 invariant: no VALID verdict pairs a BINDING strength with a non-verified status (what forkChoice silently assumes)',
+        probes.length > 0 && probes.every((p) => !BINDING.has(p.s) || p.st === 'verified'),
+        JSON.stringify(probes));
+    }
   check('#45 forkChoice: the out-raced doc is a recorded loser (VALID, not anchored)', fcWin.losers.length === 1 && fcWin.losers[0].content_hash === P.contentHash(f2));
   check('#45 forkChoice: determinism — reversed input order → SAME canonical', (await P.forkChoice([cand2, cand1], { ...fbase, substrateVerify: only1 })).content_hash === fcWin.content_hash);
   check('#45 forkChoice: neither anchored → INDETERMINATE (no guessed winner)', (await P.forkChoice([cand1, cand2], { ...fbase, substrateVerify: () => null })).result === 'INDETERMINATE');
