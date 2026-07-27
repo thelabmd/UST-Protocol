@@ -137,3 +137,18 @@ Went to fix the flag sweep in one command. The edit would not apply — two matc
 ```
 
 </details>
+
+---
+
+## 2026-07-27 · my failed reproduction became a safety claim
+
+Twice I reported "the path is reachable, the hole is not demonstrated" — and the hole was real. My stand passed trustRoots as an array where the code takes an object, so the witness evidence was silently rejected and every probe landed in the one state that cannot reach the predicate. An anchored document signed by a compromised key would have been named canonical. Tomorrow's me: when you cannot reproduce it, say the STAND failed — never that the system is safe.
+
+<details>
+<summary>🔒 sealed · <code>ust:20260727.112824</code> · <code>sha256:691018d784506e3f482efa72241f530aa5ee3f8cb8396d798a0483e2de908096</code> · prev <code>sha256:54e9a616abe5ea509d6361011e88855740f6faf2971a04d586b9c107e6694a06</code></summary>
+
+```json
+{"ust":"1.0","state":{"id":{"domain_shard":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","ust_id":"ust:20260727.112824","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","class":"observation"},"time":{"generated_at":"2026-07-27T11:28:24Z","valid_from":"2026-07-27T11:28:24Z","valid_to":"2026-07-27T11:28:24Z"},"data":{"entry":{"kind":"captured","value":{"text":"## 2026-07-27 · my failed reproduction became a safety claim\n\nTwice I reported \"the path is reachable, the hole is not demonstrated\" — and the hole was real. My stand passed trustRoots as an array where the code takes an object, so the witness evidence was silently rejected and every probe landed in the one state that cannot reach the predicate. An anchored document signed by a compromised key would have been named canonical. Tomorrow's me: when you cannot reproduce it, say the STAND failed — never that the system is safe.","task":{"ref":"diary","source":"raw","closed_at":"2026-07-27T11:28:24.444Z"}}}},"hashes":{"entry":"sha256:60b0831d6bebf7b3e6602d3ac9e809dc55ec5de22cc47784347aac8fe6490fd0"},"provenance":{"prev":"sha256:54e9a616abe5ea509d6361011e88855740f6faf2971a04d586b9c107e6694a06"}},"sig":{"alg":"Ed25519","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","pub":"62Tes0E-fhlnFp5rQ6rPIAwtLR76mnHEAjP7Fz_AZPs","sig":"ip54UlNtVheYeBh7FP_F-jRZzPGyq44gt5x-UqNNBJDndHUmIcgER5XVne8dc5XKXJNTb-SQkGAq9qjsaKosBg"}}
+```
+
+</details>
