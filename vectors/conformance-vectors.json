@@ -2667,6 +2667,178 @@
    }
   },
   {
+   "kind": "fork-choice",
+   "id": "fc-02-suspect-key-reaches-predicate-and-is-refused",
+   "rule": "rev94 — authority-BOUND requires strength ∈ {corroborated, authoritative} AND status = verified. A provably pre-compromise key (U < C ≤ R) is `suspect`: the assurance derivation NEUTRALIZES it to the floor, so an ANCHOR-INCLUDED candidate signed by it remains an imposter for the name and can never be canonical (§3.1 fork-choice, F.5c).",
+   "candidates": [
+    {
+     "ust": "1.0",
+     "state": {
+      "id": {
+       "domain_shard": "noosphere.md",
+       "ust_id": "ust:20260628.1410",
+       "key_id": "sha256:6977d0b0608a66fcd0b935b05de56b7c6a678c48cf57b53cdab231a00b061e04",
+       "class": "cadence"
+      },
+      "time": {
+       "generated_at": "2026-06-28T14:10:00Z",
+       "valid_from": "2026-06-28T14:10:00Z",
+       "valid_to": "2026-06-28T15:00:00Z"
+      },
+      "data": {
+       "cadence_op": {
+        "kind": "computed",
+        "value": {
+         "cadence": "30",
+         "effective_from": "ust:20260628.15"
+        }
+       }
+      },
+      "hashes": {
+       "cadence_op": "sha256:4cc1f2b51115356e4242cd98beeac12fed7b4bf45aff31dab7b754216e95c372"
+      },
+      "provenance": {
+       "prev": "sha256:016c36bdc2ebf6b0165fab486ec4fd8213e4d6b72a3360f13905e08e293b633a"
+      }
+     },
+     "sig": {
+      "alg": "Ed25519",
+      "key_id": "sha256:6977d0b0608a66fcd0b935b05de56b7c6a678c48cf57b53cdab231a00b061e04",
+      "pub": "rNzISU1Fj0SnqqwdaoTsYk2u6IQ22yribme6ZFoQYig",
+      "sig": "tgScsx7gXGPb5LAEYu8IyO8qHhSkB4GplCIVwUAgi9X1ZyUDIbUfEm5oVM1eLjac6HWX0TFqB1BRAksUwZf3Bg"
+     },
+     "proof": {
+      "root": "sha256:ec359f49d1a1554bcd924bb6d967b0fea3a7cade2b4b6e3257895730758fabcc",
+      "path": [],
+      "anchor": {
+       "substrate": "bitcoin-ots"
+      }
+     }
+    }
+   ],
+   "genesis": {
+    "ust": "1.0",
+    "state": {
+     "id": {
+      "domain_shard": "noosphere.md",
+      "ust_id": "ust:20260628.14",
+      "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+      "class": "genesis"
+     },
+     "time": {
+      "generated_at": "2026-06-28T14:00:00Z",
+      "valid_from": "2026-06-28T14:00:00Z",
+      "valid_to": "2026-06-28T15:00:00Z"
+     },
+     "data": {
+      "genesis": {
+       "kind": "captured",
+       "value": {
+        "pub": "vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+        "role": "name-binding-root",
+        "max_partitions": "[object Object]"
+       }
+      }
+     },
+     "hashes": {
+      "genesis": "sha256:4abbb8fe07040b1f31d0d1ebf840da3d5907999f5bc7ef8edbe85d234148d2dd"
+     }
+    },
+    "sig": {
+     "alg": "Ed25519",
+     "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+     "pub": "vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+     "sig": "ryv00k0ts0xJqqoZtHRb5wGk2eCuFRS-pWd_IEBbj8ujSHdFpAjNPwGWVgNTWpqic07ypsmpmwyDpQYZmNRyAA"
+    }
+   },
+   "keylog": [
+    {
+     "ust": "1.0",
+     "state": {
+      "id": {
+       "domain_shard": "noosphere.md",
+       "ust_id": "ust:20260628.1404",
+       "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+       "class": "key"
+      },
+      "time": {
+       "generated_at": "2026-06-28T14:04:00Z",
+       "valid_from": "2026-06-28T14:04:00Z",
+       "valid_to": "2026-06-28T15:00:00Z"
+      },
+      "data": {
+       "key_op": {
+        "kind": "captured",
+        "value": {
+         "op": "add",
+         "pub": "rNzISU1Fj0SnqqwdaoTsYk2u6IQ22yribme6ZFoQYig",
+         "new_key_id": "sha256:6977d0b0608a66fcd0b935b05de56b7c6a678c48cf57b53cdab231a00b061e04"
+        }
+       }
+      },
+      "hashes": {
+       "key_op": "sha256:8adcbfe93ee14898fa59454da6d182401f93cf6bb2a85cb0a3b03d07558cb348"
+      },
+      "provenance": {
+       "prev": "sha256:016c36bdc2ebf6b0165fab486ec4fd8213e4d6b72a3360f13905e08e293b633a"
+      }
+     },
+     "sig": {
+      "alg": "Ed25519",
+      "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+      "pub": "vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+      "sig": "qPgnQLejqQM_XgPa-0cKZ34QG6zvkDBrnjKWozQF6ZPfdMbGV_3JlNw0HhLLmoaH6MEx8uPTKq8KMMHktvZhAg"
+     }
+    },
+    {
+     "ust": "1.0",
+     "state": {
+      "id": {
+       "domain_shard": "noosphere.md",
+       "ust_id": "ust:20260628.1450",
+       "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+       "class": "key"
+      },
+      "time": {
+       "generated_at": "2026-06-28T14:50:00Z",
+       "valid_from": "2026-06-28T14:50:00Z",
+       "valid_to": "2026-06-28T15:00:00Z"
+      },
+      "data": {
+       "key_op": {
+        "kind": "captured",
+        "value": {
+         "op": "revoke",
+         "pub": "rNzISU1Fj0SnqqwdaoTsYk2u6IQ22yribme6ZFoQYig",
+         "reason": "compromised",
+         "compromised_since": "2026-06-28T14:40:00Z"
+        }
+       }
+      },
+      "hashes": {
+       "key_op": "sha256:a0f7d3794189bd515ebb32738e859745a825e184f0a604e6d18fefaf1650a337"
+      },
+      "provenance": {
+       "prev": "sha256:066692263ec18007df299a7a02d622359f63ccaf8e5607e7a91d5f7c24eab9ec"
+      }
+     },
+     "sig": {
+      "alg": "Ed25519",
+      "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+      "pub": "vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+      "sig": "7x09TCgfS9fh4RN-dLXZwne8tRvSqrCsPrHT_9PQN-HzjvCvEdVV2BtN29p2eEXbX4giJBd8f2xv2EbyTruJBw"
+     }
+    }
+   ],
+   "anchored_roots": [
+    "sha256:ec359f49d1a1554bcd924bb6d967b0fea3a7cade2b4b6e3257895730758fabcc"
+   ],
+   "anchor_time": "2026-06-28T14:20:00Z",
+   "expect": {
+    "result": "INDETERMINATE"
+   }
+  },
+  {
    "kind": "ustid-tier",
    "id": "ustid-prefix-hour-in-minute",
    "rule": "§8 tiers: hour ⊃ minute ⊃ second — a coarser frame is a LITERAL STRING PREFIX of every finer frame it contains. Holds because HH/MM/SS carry no separator; this is the invariant the IANA-registered ust: scheme commits to.",

@@ -98,7 +98,7 @@ for (const v of V.vectors) {
     // #75 ROOT 3 (math-derived, no manifest) — composition authority: forkChoice/verifyStream resolve per-frame
     // authority (impersonation) + grid equality (off-grid), all language-neutral.
     case 'stream-authority': case 'stream-grid': { const r = P.verifyStream(v.frames, { genesis: v.genesis, checkpoint: v.checkpoint }); check(v.id, v.expect.error ? r.error === v.expect.error : r.complete === v.expect.complete); break; }
-    case 'fork-choice': { const sv = (a, root) => v.anchored_roots.includes(root) ? { final: true, time: '2027-01-01T00:00:00Z' } : null; const r = await P.forkChoice(v.candidates, { genesis: v.genesis, ...(v.keylog ? { keylog: v.keylog } : {}), ...nfe(v.genesis), substrateVerify: sv }); check(v.id, r.result === v.expect.result); break; }
+    case 'fork-choice': { const sv = (a, root) => v.anchored_roots.includes(root) ? { final: true, time: v.anchor_time ?? '2027-01-01T00:00:00Z' } : null; const r = await P.forkChoice(v.candidates, { genesis: v.genesis, ...(v.keylog ? { keylog: v.keylog } : {}), ...nfe(v.genesis), substrateVerify: sv }); check(v.id, r.result === v.expect.result); break; }
     // #95 — the REFERENCE inclusion connector, pinned language-neutrally. Now that the protocol calls the tagged walk one
     // connector among several, a second implementation needs the bytes to reproduce it; the DELEGATION seam itself cannot
     // be a vector (JSON carries no function), which is why it lives in the checks + mutation corpus instead.
