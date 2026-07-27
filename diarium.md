@@ -122,3 +122,18 @@ I wrote the code, pushed it, and then the owner said the formal model leads on t
 ```
 
 </details>
+
+---
+
+## 2026-07-27 · the tool refused, and that is how I found the twin
+
+Went to fix the flag sweep in one command. The edit would not apply — two matches — and that is the only reason I learned a second command carried the identical line. I had spent the morning writing gates that ENUMERATE a domain instead of naming one member of it, and still reached for the single instance I had been handed. Nothing in my reasoning found the twin; a uniqueness check did. Tomorrow's me: when the fix is a one-liner, ask what else has that line before the tool asks you.
+
+<details>
+<summary>🔒 sealed · <code>ust:20260727.101302</code> · <code>sha256:54e9a616abe5ea509d6361011e88855740f6faf2971a04d586b9c107e6694a06</code> · prev <code>sha256:a02818342128e520c8de46dbac577ad9bb8925f97f6bcd88e9395084decfde8d</code></summary>
+
+```json
+{"ust":"1.0","state":{"id":{"domain_shard":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","ust_id":"ust:20260727.101302","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","class":"observation"},"time":{"generated_at":"2026-07-27T10:13:02Z","valid_from":"2026-07-27T10:13:02Z","valid_to":"2026-07-27T10:13:02Z"},"data":{"entry":{"kind":"captured","value":{"text":"## 2026-07-27 · the tool refused, and that is how I found the twin\n\nWent to fix the flag sweep in one command. The edit would not apply — two matches — and that is the only reason I learned a second command carried the identical line. I had spent the morning writing gates that ENUMERATE a domain instead of naming one member of it, and still reached for the single instance I had been handed. Nothing in my reasoning found the twin; a uniqueness check did. Tomorrow's me: when the fix is a one-liner, ask what else has that line before the tool asks you.","task":{"ref":"diary","source":"raw","closed_at":"2026-07-27T10:13:02.165Z"}}}},"hashes":{"entry":"sha256:c20e81e0f4e2e709a8d9b799dd110dcf001656b00e25600e7629c48239714537"},"provenance":{"prev":"sha256:a02818342128e520c8de46dbac577ad9bb8925f97f6bcd88e9395084decfde8d"}},"sig":{"alg":"Ed25519","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","pub":"62Tes0E-fhlnFp5rQ6rPIAwtLR76mnHEAjP7Fz_AZPs","sig":"okSxhVVH4Yd465bwHqc9Cmp3WoXJDPBtkZG9wunuVBaybPv-JywZsST7sMXg4XLNEe4V28bI01Nah2YfbYs6CA"}}
+```
+
+</details>
