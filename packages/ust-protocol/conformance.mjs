@@ -930,6 +930,18 @@ console.log('\n═════════════════════�
   {
     const inv = P.verify({ ust: '1.0', state: {}, sig: {} }, { context: 'data' });
     const ind = P.verify(gen, { context: 'key', maxSupportedBytes: 1 });
+    // rev93 THIRD case — a slot FILLED with a value the derivation refused to count. C3 neutralizes any strength
+    // whose status is not `verified`: it contributes the FLOOR, never its own rung. So the label is inert, and the
+    // protection is real but it protects the TIER, not the reader — which is why the discipline had to extend across
+    // the report boundary. Asserted on the PAIR, so neither half can satisfy it alone.
+    check('rev93 third case: a strength whose status is not verified is NEUTRALIZED to the floor, never its own rung',
+      (() => {
+        const DAx = (v) => { const g = P.provePredicates(v); return P.assuranceState({ integrity: 'valid', ...g.atoms }); };
+        const inert = DAx({ identity: { strength: 'authoritative' } }).identity === 'self-asserted';
+        const alsoInert = DAx({ identity: { strength: 'corroborated', status: 'unavailable' } }).identity === 'self-asserted';
+        const earned = DAx({ identity: { strength: 'authoritative', status: 'verified' } }).identity === 'authoritative';
+        return inert && alsoInert && earned;
+      })());
     check('rev93 empty slot: NAMED floor when measured (INVALID→tier NONE), ABSENT when unmeasurable (INDETERMINATE→no tier), and no basis either way',
       inv.result === 'INVALID' && inv.tier === 'NONE' && 'tier' in inv && !('no_fork' in inv)
       && ind.result === 'INDETERMINATE' && !('tier' in ind));

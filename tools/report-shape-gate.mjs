@@ -84,6 +84,30 @@ const invalid = P.verify({ ust: '1.0', state: {}, sig: {} }, { context: 'data' }
 check(invalid.result === 'INVALID' && invalid.tier === 'NONE' && 'tier' in invalid, 'an INVALID verdict must carry the NAMED floor tier NONE — a named value is what distinguishes "measured, earned nothing" from "could not measure"');
 check(!('no_fork' in invalid), 'an INVALID verdict surfaces a no-fork basis it never established');
 
+// ── 4b. rev93 THIRD case — a filled slot the derivation refused to count. C3 neutralizes any strength whose status
+// is not `verified` (it contributes the floor, never its own rung), so the label is INERT. That protects the tier;
+// it does not protect the reader, who gets the earned coordinate and the discarded label side by side under the same
+// word. Two enumerations, both over sets rather than examples:
+//   (a) every strength the core returns carries a status, so the pair EXISTS to be shown;
+//   (b) no surface renders a strength without it. `time` was already printed as `strength/status`; `identity` was
+//       printed bare one line above it, so a neutralized label reached an operator with nothing beside it to say so.
+// `[^;]*?` was the first shape and it was BLIND: a `detail` string containing a semicolon ("no-fork evidence; a
+// served witness…") stopped the match before the statement end, so that return was not among the ones counted and
+// its missing status could not be seen. Caught only by mutation-testing the leg — it reported 12 returns and 0
+// defects while the defect was planted inside the 13th it could not parse.
+const strengthReturns = [...CORE.matchAll(/return \{ strength: '[a-z-]+'[\s\S]*?\};/g)].map((m) => m[0]);
+check(strengthReturns.length >= 12, `only ${strengthReturns.length} strength returns found — the probe is vacuous or has gone blind again`);
+for (const r of strengthReturns) {
+  check(/status:/.test(r), `a strength return carries no status — the pair cannot be shown, so the label is unqualifiable: ${r.slice(0, 90).replace(/\s+/g, ' ')}`);
+}
+for (const [name, src] of [['ust-cli', U('packages/ust-cli/index.mjs')], ['ust-mcp', U('packages/ust-mcp/index.mjs')]]) {
+  // a rendered `X.strength` must have `X.status` in the SAME statement — the reader's unit is the line, not the object
+  for (const m of src.matchAll(/^.*console\.log\([^\n]*\.strength[^\n]*$/gm)) {
+    const line = m[0];
+    check(/\.status/.test(line), `${name} renders a strength with no status in the same line — a neutralized label reaches the reader unqualified: ${line.trim().slice(0, 100)}`);
+  }
+}
+
 // ── 5. the pin must be able to FAIL — each leg asserted against a value the code has never had.
 check(!LEGAL.has('pinned'), 'the retired `pinned` rung is back in the DECLARED set — round-53 removed it, and the model still says the ladder is 3 rungs');
 check(!basisValues.has('unconfirmed'), 'the invented basis word `unconfirmed` is back');

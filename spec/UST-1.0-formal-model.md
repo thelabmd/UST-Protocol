@@ -328,6 +328,26 @@ nothing in the model — and it is read by a consuming agent as a measurement th
 than either honest marker, since both of those are recoverable and a fabricated rung is not: it says less than
 `NONE` and claims more than absence.
 
+**The third case: a slot that is FILLED with a value the derivation refused to count.** The pair above ranges over
+EMPTY slots. There is a case neither marker covers, and it is the one that actually shipped: a value that was
+obtained, is not invented, denotes something real — and earns nothing. C3 already fixes its arithmetic: strength
+coordinates are derived from SEAM VERDICTS by fixed rules, and *"C3 a bare strength LABEL without a verified status earns nothing (no caller labels)"*, so `{strength: authoritative}` with no `verified` status yields `self-asserted`, exactly as
+`{strength: corroborated, status: unavailable}` does. The seam label is INERT — the derivation neutralizes it.
+
+That neutralization is a statement about the transition, not about the report. It protects the TIER; on its own it
+does not protect the READER. A verdict that carries the earned coordinate AND the inert seam label side by side
+hands a consumer two answers to one question, of which only one was adjudicated — and a consuming agent reads
+fields in isolation, so it will read whichever it reaches first. The label the derivation discarded is then a
+stronger claim than the coordinate the derivation earned, published beside it under the same word.
+
+So the discipline extends across the report boundary: **a value the derivation neutralizes MUST NOT be surfaced
+under a name that reads as a result.** It may be omitted — the earned coordinate already answers the question it
+appears to answer — or it may be surfaced under a name that says what it is: an unadjudicated CLAIM, never a
+strength. What it must not do is keep the name of the thing it was refused. This is not a naming preference: the
+model has no predicate that can make an inert value true or false, so nothing downstream can ever contradict it,
+which is precisely the property that made the invented word dangerous. An inert value published as a result is a
+fabricated rung that happens to have a real referent.
+
 **Gap 3 — split `A_id` from `A_fresh`.** These were the two facts `𝒮_HIGH`'s `W_n` fused; F.5a already splits
 name-binding from no-fork, and here the split is axis-level: name authority and key-log freshness are measurable
 one WITHOUT the other.

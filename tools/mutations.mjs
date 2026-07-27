@@ -17,6 +17,17 @@
 // `mustDetect` marks the verdict-seam mutations the battery treats as hard requirements; the rest are harvest — a hit
 // lowers the unproven residual, a miss is covered by the gate channel and is not a failure.
 export const MUTATIONS = [
+  // rev93 third case — the C3 NEUTRALIZATION. A strength label whose status is not `verified` must contribute the
+  // FLOOR, never its own rung. Broken, a caller-shaped or unresolved label lifts the identity coordinate straight
+  // into the assurance tuple, which is the forgery this seam exists to close — and the reason an inert label is
+  // merely misleading in the report but catastrophic in the derivation.
+  {
+    id: 'bare-label-earns-its-rung', mustDetect: true, observe: ['conformance'],
+    why: 'the C3 neutralization. Broken, a strength label with no verified status earns its own rung — an unresolved or caller-supplied name binds.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "  const idStr = !verified ? 'self-asserted'",
+    to: "  const idStr = !verified ? (identity?.strength ?? 'self-asserted') /* mutant */",
+  },
   // rev92 — the axis seam. An UNDECLARED grid is the one case where nothing signed says how many slots there
   // should be, so no-omission is not merely unproven but undecidable. Minting `complete` there would let a publisher
   // reach the strongest range verdict by declaring LESS, which inverts the incentive the whole grid exists to create.

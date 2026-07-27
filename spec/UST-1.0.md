@@ -1506,7 +1506,12 @@ A verifier returns one of THREE OUTCOME KINDS — **availability is distinct fro
   indistinguishable from one the reader's implementation never had. A verifier MUST NOT emit a value outside a
   field's declared enumeration in order to fill an empty slot: such a value is unfalsifiable by construction —
   nothing can contradict it, since it denotes nothing — and a consumer reading the field alone takes it for a
-  measurement that happened. The reason set is CLOSED — {`unavailable`, `unsupported_alg`, `resource_limit`,
+  measurement that happened. **A THIRD case is neither empty nor invented: a slot FILLED with a value that was
+  obtained and earns nothing.** A strength label whose status is not `verified` is neutralized — it contributes
+  the floor, never its own rung — so a report that carries it beside the earned coordinate offers two answers to
+  one question, of which only one was adjudicated. Such a value MUST NOT be surfaced under a name that reads as a
+  result: a verifier MUST report the strength and its status as a PAIR wherever either is shown, and a surface
+  (CLI, MCP, page) MUST NOT render a strength without the status that qualifies it. The reason set is CLOSED — {`unavailable`, `unsupported_alg`, `resource_limit`,
   `stale_keylog`}: a fetch timeout IS `unavailable`; a verification-budget overrun is INVALID `E-BOUNDS` (§13); a
   fetched-but-WRONG dependency is its own definite error; an above-floor document without a TRUSTED capacity
   grant is `unavailable` (§13 ladder). **`resource_limit`** (rc.12) is the third member: the document may be

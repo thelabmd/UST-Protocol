@@ -975,7 +975,11 @@ async function cmdVerify() {
   }
   if (P.isValid(r)) {
     const tier = r.result.split(':')[1] ?? 'LIGHT';
-    console.log('  identity : ' + r.identity.strength + ' (mode ' + r.identity.mode + ')  ' + (r.publisher ? 'publisher ' + r.publisher : 'publisher_claimed ' + r.publisher_claimed));
+    // rev93 third case — a strength is NEVER printed alone. `time` was already printed as `strength/status`
+    // one line below; identity was not, so a label the derivation NEUTRALIZED (any strength whose status is not
+    // `verified` earns the floor, C3) reached a reader with nothing beside it to say so. A consuming agent reads
+    // fields in isolation; a human reads a line in isolation. The pair is the smallest honest unit either can read.
+    console.log('  identity : ' + r.identity.strength + '/' + r.identity.status + ' (mode ' + r.identity.mode + ')  ' + (r.publisher ? 'publisher ' + r.publisher : 'publisher_claimed ' + r.publisher_claimed));
     console.log('  time     : ' + r.time.strength + '/' + r.time.status + '   completeness: ' + r.completeness);
     console.log('  ust_id   : ' + r.ust_id + '   class ' + r.class + '   content_hash ' + r.content_hash);
     if (r.provenance) console.log('  lineage  : declared' + (r.provenance.referents ? `, referents ${r.provenance.referents}` : '') + (r.provenance.depth !== undefined ? ` (walk depth ${r.provenance.depth})` : '') + ' — a declaration is not a verified derivation');
