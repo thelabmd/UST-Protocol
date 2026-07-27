@@ -1,0 +1,39 @@
+{
+  "_": "Per-round accounting for the law math → spec → code → vector → test. Every layer is either a REFERENCE that must resolve, or an explicit exclusion WITH a reason. A skip is legitimate — rev92(d) has no formal-model content and forcing prose there would be the patch this repo rejects — but it must be a DECISION, not an absence. See thelabmd/UST-Protocol#99.",
+  "unaccounted_pin": 89,
+  "_pin": "Rows in the ladder with no record here. May only ever SHRINK. 94 rows existed when the gate landed; the three most recent are accounted.",
+  "records": [
+    {
+      "rev": "rev94",
+      "math": "the decision is not a projection of either field; it is the CONJUNCTION of the two facts the model separates",
+      "spec": "A candidate is authority-BOUND when its identity strength is `corroborated` or",
+      "code": "packages/ust-protocol/index.mjs :: forkChoice bound predicate",
+      "vector": "fc-02-suspect-key-reaches-predicate-and-is-refused",
+      "test": "rev94 fork-choice binding == derived identity ≥ corroborated, over the WHOLE seam grid (24 states)"
+    },
+    {
+      "rev": "rev93",
+      "math": "a NAMED floor value means **the measurement ran and earned nothing**",
+      "spec": "A slot a verifier could not fill has exactly TWO honest markers",
+      "code": "packages/ust-protocol/index.mjs :: resolveAuthority no-evidence branch",
+      "vector": {
+        "excluded": "the rule governs the SHAPE of a verifier's own report — which marker fills an unfilled slot — and the vector corpus pins document bytes and the verdicts they must produce, not the report's field layout. A vector could only restate the conformance check in JSON."
+      },
+      "test": "rev93 empty slot: NAMED floor when measured (INVALID→tier NONE), ABSENT when unmeasurable (INDETERMINATE→no tier), and no basis either way"
+    },
+    {
+      "rev": "rev92",
+      "math": {
+        "excluded": "the round's second half (argv parsing) has no formal-model content: 'a verdict is a function of its argument, so a substituted argument yields a true statement about the wrong object' is what a function IS, not a theorem. Writing model prose to satisfy a gate is the patch this repo rejects. The round's FIRST half (the axis closure) is modelled and cited under math."
+      },
+      "spec": {
+        "excluded": "the axis split (a report may be wider than what it scores) governs attestDiscovery — a TOOL's own §20.1 conformance verdict, not a protocol verdict. The normative spec defines what the serving contract REQUIRES; which of a checker's probes are scored is that checker's business, and legislating it would put tool policy into the wire standard."
+      },
+      "code": "packages/ust-cli/index.mjs :: positionals + readLogFiles",
+      "vector": {
+        "excluded": "the defect is in a CLI's argument handling and a log reader's shape routing — neither is expressible as protocol vectors, which pin documents and verdicts. Pinned instead by stream-consumption-gate, which enumerates the flag sets and the served shapes."
+      },
+      "test": "rev92 completeness ⊥ tier: an undeclared grid bounds the RANGE and subtracts nothing from Π"
+    }
+  ]
+}

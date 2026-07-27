@@ -100,3 +100,5 @@ jobs:
         run: node tools/npm-drift-check.mjs
       - name: CHANGELOG rev-ladder gate (a checker rev bump records itself)
         run: npm run test:changelog
+      - name: Ladder completeness — every round decides all five layers (reference or reasoned exclusion)
+        run: npm run test:ladder
