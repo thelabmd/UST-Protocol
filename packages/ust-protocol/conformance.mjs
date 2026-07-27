@@ -195,6 +195,16 @@ check('#95 with NO connector the bundled walk still refuses a foreign-shape proo
     P.verify(mk(), { context: 'data' }).tier === 'LIGHT');
 }
 
+// rev39/rev91 — «a malformed operand must map to ⊥ and the op must RETURN, not throw … projectTier → NONE». A coded throw
+// at a consumer boundary was the residual that statement closes, and projectTier(null) was still throwing a TypeError.
+check('LATTICE totality: projectTier RETURNS NONE for every ⊥-shaped operand, never throws at the consumer boundary', (() => {
+  for (const bad of [null, undefined, 'x', 42, [], {}, { integrity: 'nope' }, new Proxy({ integrity: 'valid' }, { get() { throw new Error('h'); } })]) {
+    let r; try { r = P.projectTier(bad); } catch { return false; }
+    if (r !== 'NONE') return false;
+  }
+  return P.projectTier({ integrity: 'valid', identity: 'self-asserted', freshness: 'unverified', time: 'unproven' }) === 'LIGHT';
+})());
+
 check('#6 sig-alg-none→E-SIG', (() => { const b = clone(mk()); b.sig.alg = 'none'; return P.verify(b, { context: 'data' }).error === 'E-SIG'; })());
 check('B leap-second→E-MALFORMED', P.verify(mk({ r: { kind: 'captured', value: { x: '1' } } }, ID, { generated_at: '2026-12-31T23:59:60Z', valid_from: '2026-12-31T23:00:00Z', valid_to: '2027-01-01T00:00:00Z' }), { context: 'data' }).error === 'E-MALFORMED');
 // G1 — round-53 (UST-ybn): the `pinned`/TOFU rung was REMOVED; LIGHT identity = the KEY (key-form domain_shard = key_id).

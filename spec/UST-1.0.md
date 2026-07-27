@@ -141,12 +141,12 @@ that is a decided answer rather than a missing field. Only the three EARNED tier
 (`𝒮_LIGHT ⊆ 𝒮_HIGH ⊆ 𝒮_TOP`), which is why this section's title names those three — `NONE` decides nothing, so it
 has no σ-algebra of its own.
 
-`NONE` is a value of the PROJECTION, not a field on the wire. The tier a verdict carries is the suffix of a VALID
-verdict and nothing else: a verifier emits `VALID:LIGHT`/`VALID:HIGH`/`VALID:TOP` with a matching `tier`, and a
-refusal (`INVALID`, `INDETERMINATE`) carries NO tier at all — there is no `INVALID:NONE`. An implementation MUST NOT
-attach a tier to a refusal, and a consumer MUST NOT read one from it. `NONE` is what `Π` returns when asked to rank
-an assurance state whose integrity floor is unmet; it answers a question about a STATE, not a question about a
-verdict.
+`NONE` is the tier of **no assurance state at all**. The assurance map is TOTAL into `AssuranceState ∪ {⊥}`: a
+document that yields no usable state maps to the reject sentinel `⊥`, and the tier projection is total over that too —
+`Π(⊥) = NONE`. So `NONE` is not "the floor was measured and failed"; it is "there was nothing to rank." A verdict
+STRING still never carries it — `VALID:LIGHT`/`VALID:HIGH`/`VALID:TOP` are the only tiered results and there is no
+`INVALID:NONE` — but the tier of a refused document IS `NONE`, and an implementation reporting a tier alongside a
+refusal MUST report that value rather than omitting it or inventing another.
 
 - **LIGHT — trust in a minute (THE FLOOR).** A signed, canonical, addressable state document. *Publish* =
   generate a keypair, sign your canonical JSON, serve it (the pubkey travels in `sig.pub`). *Verify* = recompute

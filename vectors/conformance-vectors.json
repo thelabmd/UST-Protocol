@@ -4112,6 +4112,23 @@
     "time": "unproven"
    },
    "expect": "HIGH"
+  },
+  {
+   "kind": "tier-projection",
+   "id": "tier-07-bottom-is-NONE",
+   "rule": "F.5.0/rev39 Π is TOTAL over AssuranceState ∪ {⊥} — a malformed operand is the reject sentinel ⊥ and Π(⊥) = NONE, so NONE ranks the ABSENCE of a state, not a measured failure",
+   "assurance": {},
+   "expect": "NONE"
+  },
+  {
+   "kind": "tier-projection",
+   "id": "tier-08-garbage-axes-NONE",
+   "rule": "F.5.0/rev39 out-of-range axis values are ⊥ too — the surface RETURNS the sentinel rather than throwing at a consumer boundary",
+   "assurance": {
+    "integrity": "nope",
+    "identity": "nope"
+   },
+   "expect": "NONE"
   }
  ]
 }

@@ -2357,6 +2357,10 @@ export const joinAssurance = (a, b) => { const A = assuranceState(a), B = assura
 // time; HIGH = name-bound (identity ≥ corroborated); LIGHT = the integrity floor; below the floor there is NO tier.
 // This is the CANONICAL projection; the inline §14 verify tier is conformance-pinned to agree with it (no 2nd truth).
 export function projectTier(state) {
+  // Model rev39/rev91: every lattice surface is TOTAL and fails closed by RETURN — «a malformed operand must map to ⊥
+  // and the op must RETURN, not throw … projectTier → NONE». `null`/`undefined` threw a TypeError, which is a coded throw
+  // at a consumer boundary: the exact residual that statement was written to close.
+  if (state === null || typeof state !== 'object') return 'NONE';
   const s = assuranceState(state);
   if (s === ASSURANCE_REJECT) return 'NONE';                                  // round-39 P1-02 — TOTAL: an un-admittable state has NO tier (fail-closed), never a throw
   if (!axisLE('integrity', 'valid', s.integrity)) return 'NONE';              // integrity floor unmet ⇒ INVALID upstream
