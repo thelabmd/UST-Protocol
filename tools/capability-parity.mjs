@@ -27,6 +27,29 @@ const mcpTools = new Set(MCP.listTools().map((t) => t.name));
 
 // ── CAPS — the capability units. `core` = the ust-protocol exports that realize the capability. `mcp`/`cli` = the
 //    probe token (a tool name / forwarded field for MCP; a flag / command for CLI) proving that surface EXPOSES it.
+
+// ── STANCE (owner 2026-07-27) — a capability exposed by NO surface must say WHY, or the gate's own green is empty.
+// The parity checks below compare DECLARED against ACTUAL and therefore pass forever on a capability honestly
+// declared as nowhere: they answer "does the tree match itself", never "is the declaration right". The owner asked
+// exactly that question — "did we update everything in the tools that we made ourselves" — and the matrix could not
+// answer it. Same shape as the ladder registry shipped this morning: an exclusion is legitimate, an ABSENCE is not.
+//
+// 'decided'  — deliberately internal or deliberately deferred, with the reason.
+// 'undecided'— nobody has ruled. Written down as such rather than passing silently; this is the queue.
+const MIN_REASON = 50;
+const STANCE = {
+  'evidence-receipt':    ['undecided', 'the receipt is the paid signing axis in the product plan, so exposing it on a free surface is a COMMERCIAL decision and not mine to make. Queued for the owner.'],
+  'assurance-lattice':   ['decided',   'internal algebra: deriveAssurance/assuranceState/projectTier are how a verdict is COMPUTED. A surface that let a caller assemble a tuple directly would be the forgery oracle round-25 closed at the type level.'],
+  'verified-handle':     ['decided',   'the branded-handle machinery is the mechanism that makes the above unforgeable. Exposing the brand IS the vulnerability; it can have no public surface by construction.'],
+  'authority-bundle':    ['undecided', 'the #76/#77 authority-checkpoint family is built in core and reachable from no tool. It belongs to the TOP work (UST-48p) and should get its surface there, not before.'],
+  'recovery':            ['undecided', 'N-of-M genesis-authorized recovery exists in core. A surface for it is a CEREMONY, and ceremonies live on the CLI — but the owner has not ruled whether recovery is operator-facing or support-only.'],
+  'epoch-transition':    ['undecided', 'same family as authority-bundle; same answer — it lands with TOP or not at all.'],
+  'uniqueness-attest':   ['undecided', 'part of the checkpoint/uniqueness cluster. No tool consumes it yet, and inventing a surface before a consumer exists is how unused surface becomes permanent.'],
+  'verifiable-map':      ['undecided', 'the anchored name-map is the independent path to authoritative. It has no operator today because no map substrate is registered; the surface should follow the substrate, not precede it.'],
+  'disclosure':          ['decided',   'private-partition disclosure is a PUBLISHER-side act on data the tool never holds — the verifier receives {nonce, value} from whoever discloses. There is nothing for a tool of ours to do.'],
+  'negative-observation':['decided',   'a negative observation is built with the ordinary transcript builders and carries no distinct operation; it is a USAGE of build-transcript, not a capability needing its own surface.'],
+};
+
 const CAPS = {
   'canon':              { core: ['canon'], mcp: 'ust_canon', cli: 'canon' },
   'content-address':    { core: ['contentHash', 'signedContent', 'partitionHash', 'seed', 'merkleRoot', 'keyId'], mcp: 'ust_key_id', cli: 'contentHash' },
@@ -134,6 +157,26 @@ console.log('\n  UST capability parity — surface × capability (✅ full · �
 console.log('  ' + pad('capability', 20) + surfaceIds.map((s) => pad(short(s), 12)).join(''));
 for (const cap of capIds) console.log('  ' + pad(cap, 20) + surfaceIds.map((s) => pad(mark[stanceOf(s, cap)], 12)).join(''));
 
+
+// ── every zero-surface capability must carry a stance, and every stance must name a real capability
+{
+  // the authoritative domain is SURFACES — each surface DECLARES the capabilities it exposes. My first version
+  // read key names off CAPS and reported two capabilities as surfaceless that the matrix shows with a full ✅; the
+  // detector was pointed at the wrong object, and the gate caught its own author on the first run.
+  const exposed = new Set(Object.values(SURFACES).flatMap((s) => [...(s.full ?? []), ...(s.subset ?? [])]));
+  const zero = Object.keys(CAPS).filter((n) => !exposed.has(n));
+  const missing = zero.filter((n) => !STANCE[n]);
+  const thin = zero.filter((n) => STANCE[n] && String(STANCE[n][1]).trim().length < MIN_REASON);
+  const phantom = Object.keys(STANCE).filter((n) => !CAPS[n]);
+  if (missing.length || thin.length || phantom.length) {
+    if (missing.length) console.error('  ✗ capability exposed by NO surface and carrying no stance: ' + missing.join(', '));
+    if (thin.length) console.error('  ✗ stance shorter than ' + MIN_REASON + ' chars (a placeholder, not a decision): ' + thin.join(', '));
+    if (phantom.length) console.error('  ✗ stance names a capability that does not exist: ' + phantom.join(', '));
+    process.exit(1);
+  }
+  const undecided = zero.filter((n) => STANCE[n][0] === 'undecided');
+  console.log('  ✓ STANCE: all ' + zero.length + ' zero-surface capabilities declare a reason (' + undecided.length + ' undecided — the queue: ' + undecided.join(', ') + ')');
+}
 console.log('\n  capability parity gate (UST-kdb):');
 report.forEach((r) => console.log(r));
 console.log(fail ? `\n  ✗ ${fail} parity failure(s) — a surface diverged from the spec's capability set` : `\n  ✓ every surface's capabilities match its declared, spec-derived stance — no silent drift`);
