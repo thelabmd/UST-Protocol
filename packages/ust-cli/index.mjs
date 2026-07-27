@@ -627,6 +627,32 @@ export async function attestDiscovery({ domain, mirrors = [], expectHash = null,
     checks.push({ id: 'cadence declared (completeness input)', informational: true, status: 'fail', detail: e.message });
   }
 
+  // (1d) witness — the no-fork evidence surface, and the ONE discovery artifact that had no probe (#91). Its
+  // absence is benign: a publisher may assert no-fork by other means, and the LIGHT floor never depended on it.
+  // What is NOT benign is a witness that SHRINKS: on 2026-07-27 every deploy rebuilt the log from the genesis and
+  // dropped its Rekor/OTS anchors, the git mirror's append-only guard refused the shrink silently, and the loss
+  // sat unreported for two weeks on every public surface. So the detail carries the ANCHOR COUNT — a number that
+  // falling from 2 to 0 is exactly what a comparison between two attestations must be able to see.
+  try {
+    const wr = await get(`https://${domain}/.well-known/ust-witness`);
+    if (wr.status === 404 || wr.status === 410) {
+      checks.push({ id: 'witness served (no-fork evidence)', informational: true, status: 'skip', detail: `HTTP ${wr.status} — no witness surface; a no-fork claim rests on other evidence` });
+    } else if (!wr.ok) throw new Error(`HTTP ${wr.status} — served but UNREADABLE (an unreadable witness is not an absent one)`);
+    else {
+      const w = JSON.parse(await wr.text());
+      if (w?.domain_shard !== domain) throw new Error(`witness is for ${w?.domain_shard ?? '?'} — not ${domain}`);
+      if (!Array.isArray(w.genesis_log)) throw new Error('witness carries no genesis_log array');
+      if (w.active !== hash) throw new Error(`witness \`active\` is ${String(w.active).slice(0, 22)}… — not the served genesis`);
+      const entry = w.genesis_log.find((e) => e.content_hash === hash);
+      if (!entry) throw new Error('the served genesis is absent from the witness genesis_log');
+      const anchors = Array.isArray(entry.anchors) ? entry.anchors.length : 0;
+      checks.push({ id: 'witness served (no-fork evidence)', informational: true, status: 'pass',
+        detail: `${w.genesis_log.length} genesis entr${w.genesis_log.length === 1 ? 'y' : 'ies'}, active matches, ${anchors} anchor${anchors === 1 ? '' : 's'}` });
+    }
+  } catch (e) {
+    checks.push({ id: 'witness served (no-fork evidence)', informational: true, status: 'fail', detail: e.message });
+  }
+
   // (2) DNS pair: _ust TXT must carry THIS hash — and NO CONFLICTING binding may exist (line-review:
   // one matching record among conflicting ones previously passed; a forked/stale DNS state must surface)
   try {
