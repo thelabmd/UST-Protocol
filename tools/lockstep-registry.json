@@ -432,6 +432,12 @@
       "rev": "rev91",
       "model_locus": "an empty log is a VALUE, and writing one in place of an unanswered query",
       "conformance_check": "#95/F.4 cadence UNREADABLE is INDETERMINATE, never substituted by an empty log (a wrong value in ℐ would manufacture completeness)"
+    },
+    {
+      "id": "R92-f4-completeness-orthogonal-to-tier",
+      "rev": "rev92",
+      "model_locus": "the SCORED set of an attestation must be closed under the axis that attestation names, while its REPORTED set may be strictly wider",
+      "conformance_check": "rev92 completeness ⊥ tier: an undeclared grid bounds the RANGE and subtracts nothing from Π"
     }
   ]
 }

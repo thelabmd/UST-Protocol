@@ -74,6 +74,8 @@ jobs:
         run: npm run test:cadence-parity
       - name: cadence discovery (a declared grid is reachable; unreadable ≠ undeclared)
         run: npm run test:cadence
+      - name: Discovery serving — produced artifacts must have a serving path on both roads
+        run: npm run test:serving
       - name: inclusion connector (anchor inclusion is delegable; the bundled tree is one connector; the seam is total)
         run: npm run test:inclusion
       - name: module-seam totality (S1 — a NOT-OURS module return/throw is a structured verdict, never a host throw; invocation roster pinned from source)

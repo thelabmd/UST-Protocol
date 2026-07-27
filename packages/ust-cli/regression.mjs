@@ -176,7 +176,15 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
 
   // absent TXT + no mirror: no violation, but PARTIAL — unchecked properties never attest
   const partial = await C.attestDiscovery({ domain: DOMAIN, fetchImpl: mkPub({ keylog: null }) });
-  check('discovery_partial_is_honest', partial.verdict === 'PARTIAL' && partial.checks.filter((c) => c.status === 'skip').length === 3);
+  check('discovery_partial_is_honest', partial.verdict === 'PARTIAL' && partial.checks.filter((c) => c.status === 'skip' && !c.informational).length === 3);
+
+  // AXIS SEPARATION (2026-07-27): the cadence probe reports on a §11.3 property — an input to a COMPLETENESS verdict
+  // over a stream — while this verdict grades the §20.1 SERVING contract. A publisher that deliberately declares no
+  // grid is fully conformant; its streams simply stay chain-consistent. So the cadence skip must SHOW (the operator
+  // map is wider than the contract) and must NEVER be what withholds ATTESTED. Caught by this suite the first time:
+  // scoring it made ATTESTED unreachable for every publisher without a grid.
+  const cadSkip = full.checks.find((c) => c.id.startsWith('cadence'));
+  check('discovery_cadence_reported_but_never_scored', full.verdict === 'ATTESTED' && cadSkip !== undefined && cadSkip.status === 'skip' && cadSkip.informational === true);
 
   // mirror carrying a DIFFERENT genesis ⇒ FAILED (mirrors are availability, the hash decides)
   const other = await C.buildCeremony({ domain: DOMAIN, profile: 'silver' });

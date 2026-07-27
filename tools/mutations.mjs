@@ -17,6 +17,16 @@
 // `mustDetect` marks the verdict-seam mutations the battery treats as hard requirements; the rest are harvest — a hit
 // lowers the unproven residual, a miss is covered by the gate channel and is not a failure.
 export const MUTATIONS = [
+  // rev92 — the axis seam. An UNDECLARED grid is the one case where nothing signed says how many slots there
+  // should be, so no-omission is not merely unproven but undecidable. Minting `complete` there would let a publisher
+  // reach the strongest range verdict by declaring LESS, which inverts the incentive the whole grid exists to create.
+  {
+    id: 'undeclared-grid-mints-complete', mustDetect: true, observe: ['conformance'],
+    why: 'the no-grid ceiling. Broken, a stream with no signed cadence reports no-omission — the completeness axis starts paying for silence.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "    return { complete: 'chain-consistent', head: prevHash, ...(a.from !== undefined && a.to !== undefined ? { interval: { from: a.from, to: a.to } } : {}) };",
+    to: "    return { complete: 'complete', head: prevHash, ...(a.from !== undefined && a.to !== undefined ? { interval: { from: a.from, to: a.to } } : {}) };",
+  },
   // ── verdict seams: the battery's hard requirements ────────────────────────────────────────────────────────────
   {
     id: 'verifier-stops-refusing', mustDetect: true, observe: ['conformance'],

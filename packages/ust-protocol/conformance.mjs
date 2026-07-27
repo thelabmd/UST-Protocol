@@ -909,6 +909,19 @@ console.log('\n═════════════════════�
   //     is signed in the genesis, not a caller/per-checkpoint choice, so a coarser grid cannot be claimed).
   const nH = P.contentHash(genNo), n0 = fr('ust:20260628.142900', nH), n1 = fr('ust:20260628.142930', P.contentHash(n0)), n2 = fr('ust:20260628.143000', P.contentHash(n1));
   check('#70 no signed cadence → chain-consistent (grid undecidable, never complete)', P.verifyStream([n0, n1, n2], { genesis: genNo, checkpoint: cp(P.contentHash(n2), 3, P.contentHash(n2)) }).complete === 'chain-consistent');
+  // rev92 — the DISJOINTNESS itself, not either side of it. A publisher that declares no grid is bounded on the
+  // RANGE (chain-consistent, never complete) and loses nothing on the TIER: the two verdicts are predicates over
+  // disjoint carriers, and this goes red the moment either starts contributing to the other. It closes a realization
+  // the tooling violated first — a §11.3 availability observation scored inside a §20.1 serving verdict, which made
+  // conformance unreachable for every publisher who deliberately declares nothing.
+  {
+    const tierOf = (d) => { const v = P.verify(d, { context: 'data' }); return v.result + '/' + (v.tier ?? '-'); };
+    const noCad = P.verifyStream([n0, n1, n2], { genesis: genNo, checkpoint: cp(P.contentHash(n2), 3, P.contentHash(n2)) });
+    const wiCad = P.verifyStream([f0, f1, f2], { genesis: gen, checkpoint: cp(P.contentHash(f2), 3, P.contentHash(f2)) });
+    check('rev92 completeness ⊥ tier: an undeclared grid bounds the RANGE and subtracts nothing from Π',
+      noCad.complete === 'chain-consistent' && wiCad.complete === 'complete'
+      && [n0, n1, n2].map(tierOf).join('|') === [f0, f1, f2].map(tierOf).join('|'));
+  }
   check('#70 ustGrid computes the expected slots (30s over a minute = 3)', P.ustGrid('ust:20260628.142900', 'ust:20260628.143000', 30).length === 3);
 
   const cpI = (head, n, prev, from, to) => signC(P.buildCheckpoint({ domain_shard: dom, ust_id: 'ust:20260628.143501', key_id: C.key_id }, Tc, head, n, prev, { from, to }));
