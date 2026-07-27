@@ -8,6 +8,32 @@ conformance vectors; this file is the readable map.
 
 ## [Unreleased] — rc.37 line
 
+### §11.1 honest gaps — the prose had overreached its own mathematics
+
+The map carried "the gap record is unwired: §11.1 is a MUST and `buildGap` has zero production callers." Measured,
+that entry was WRONG, and the measurement inverted it.
+
+The model defines *complete over [t₀,t₁]* as: every grid point `g ∈ G` carries EITHER a frame OR a signed gap record.
+The gap record is therefore a **condition of an EARNED property**, never a duty every publisher owes. §11.3 agrees —
+`prev` exists only in a stream **declared** sequenced in the operator profile, and "a one-off State outside any
+sequenced stream has no `prev` and is complete-strength `none`."
+
+But §11.1 stated it flatly: "A missing frame MUST be published as a signed gap record." It sits in §11.1, so unlike
+every other prev-MUST it inherits no scope from a section heading. Read alone it obliges EVERY publisher — including
+containment-addressed ones whose verifier walks slot → hour → day and never slot → slot. And the record it demands
+carries `provenance.prev`, which such a publisher does not have. The MUST was not merely broad; it was
+UNSATISFIABLE, demanding a document built from a field the stream lacks.
+
+So zero production callers is CORRECT, not a hole: a publisher claiming no completeness reaches a strictly coarser
+verdict over the interval, exactly as the model says. The defect was in the prose, and the fix runs model → spec,
+the direction the law requires when the mathematics is already right.
+
+**Triaged before reporting.** A broad probe returned 15 candidates, a narrowed one 6, and exactly ONE was real: the
+other five carry their scope in their own subject ("a prev-only attestation…") or sit inside §11.3, whose heading IS
+the scope. The noise was the probe's. `prev-scope-gate` now enforces the rule — a MUST requiring `prev` is scoped by its
+section or by its own wording — and fails when §11.1's scope is removed.
+
+
 ### Serving completeness — a deploy carries the whole discovery set
 
 **Measured.** Five sites construct a deploy. Two passed the cadence log and the preserved witness anchors; THREE
