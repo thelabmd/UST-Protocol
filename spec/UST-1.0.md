@@ -191,7 +191,15 @@ failover both seal the slot — or an adversary offering two states). **First, t
 frame MUST be RESOLVED (`key ∈ K_A(t)` via genesis+key-log), NOT read from its LIGHT `domain_shard` claim:** a
 document signed by a key NOT bound to the claimed authority is an IMPOSTER and can never be canonical / complete
 under that name (an impersonation is a per-frame authority failure, decidable from the key-log alone — no anchor
-or manifest needed, F.5f.1). Among candidates that ARE authority-bound, the CANONICAL one for a `ust_id` is the
+or manifest needed, F.5f.1). **A candidate is authority-BOUND when its identity strength is `corroborated` or
+`authoritative` AND its identity STATUS is `verified` — both conjuncts are REQUIRED.** The status conjunct is not a
+formality: a strength whose status is anything else (`suspect`, `unavailable`, `conflict`, or a window failure) is
+NEUTRALIZED to the floor by the assurance derivation (§12.1a), so binding on the strength alone would name a
+canonical the tier projection says is merely `self-asserted`. Conversely the STRENGTH conjunct MUST be read from the
+reported identity and NOT from the derived assurance coordinate: where a consumer's own opt-in lifts an override,
+the derived coordinate reads `authoritative` while the reported strength stays `consumer-override`, and binding on
+the derived value would let a consumer's assertion decide a fork it is itself a party to. Among candidates that ARE
+authority-bound, the CANONICAL one for a `ust_id` is the
 one whose `content_hash` is INCLUDED in the authority's anchored hour root (§11): **exactly one anchor-included ⇒
 canonical** (others are `VALID` but out-raced); **zero ⇒ `INDETERMINATE`**; **two or more under the SAME authority
 with distinct `content_hash`es ⇒ `E-PREV`** (operator equivocation — non-repudiable, the immutable anchor makes it
