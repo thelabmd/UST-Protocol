@@ -1096,6 +1096,33 @@ async function cmdPublish() {
   // ust-cadence found NEXT to the genesis. Threading it through buildWorkerScript/cfPublish (this morning) gave the
   // artifact a serving PATH; without this the COMMAND never picks the file up, and a deploy would leave
   // /.well-known/ust-cadence a 404 while every gate stayed green — the same seam, one layer out.
+  // The witness is the one artifact the publish path SYNTHESISES instead of loading, and synthesising it
+  // DESTROYS what it replaces: buildWitnessLog takes anchors as its second argument and this path never passed
+  // them, so every deploy overwrote the served log with a minimal one and dropped its Rekor/OTS anchors. The
+  // archiver's byte-for-byte git sync then refused the shrink — correctly, and silently — leaving the last intact
+  // copy frozen for two weeks with nobody told. So: PRESERVE the served witness. Fetch what is live, keep its
+  // anchors, and synthesise only when there is nothing to preserve.
+  let servedAnchors = null;
+  try {
+    const r = await fetch(`https://${domain}/.well-known/ust-witness`, { signal: AbortSignal.timeout(10000) });
+    if (r.ok) {
+      const w = JSON.parse(await r.text());
+      const a = w?.genesis_log?.find((e) => e.content_hash === P.contentHash(JSON.parse(genesisText)))?.anchors;
+      if (Array.isArray(a) && a.length) { servedAnchors = a; console.log(`  ℹ️  preserving ${a.length} witness anchor(s) from the live log`); }
+    }
+  } catch { /* unreachable ⇒ nothing to preserve; the synthesised log is the honest fallback */ }
+  // nothing live to preserve — then a local witness log may still hold what a previous deploy destroyed. Same
+  // shape as the cadence log: --witness <file>, or an ust-witness found next to the genesis. This is how a loss
+  // already suffered gets RESTORED, rather than only prevented from happening again.
+  if (!servedAnchors) {
+    const wPath = arg('witness', null) || genPath.replace(/[^/\\]+$/, 'ust-witness');
+    try {
+      const w = JSON.parse(readFileSync(wPath, 'utf8'));
+      const a = w?.genesis_log?.find((e) => e.content_hash === P.contentHash(JSON.parse(genesisText)))?.anchors;
+      if (Array.isArray(a) && a.length) { servedAnchors = a; console.log(`  ℹ️  restoring ${a.length} witness anchor(s) from ${wPath}`); }
+    } catch { if (arg('witness', null)) die('could not read --witness ' + wPath); }
+  }
+
   let cadenceText = null;
   const cadPath = arg('cadence-log', null) || genPath.replace(/[^/\\]+$/, 'ust-cadence');
   try {
@@ -1109,7 +1136,7 @@ async function cmdPublish() {
   if (arg('auth', null) === 'wrangler') {
     // COMBINED flow: worker+route ride wrangler's OAuth (browser login — no workers scopes on any token);
     // the API token shrinks to Zone.DNS:Edit for the apex steps.
-    let w; try { w = await wranglerDeploy({ domain, genesisText, keylogText, witnessText: buildWitnessLog(genesisText), cadenceText }); } catch (e) { die(e.message); }
+    let w; try { w = await wranglerDeploy({ domain, genesisText, keylogText, witnessText: buildWitnessLog(genesisText, servedAnchors), cadenceText }); } catch (e) { die(e.message); }
     console.log('  ✓ worker ' + w.script + ' deployed via wrangler OAuth (genesis embedded, ' + w.genHash + ')');
     console.log('  ✓ route ' + w.route + ' (from wrangler.toml)');
     const rl = createInterface({ input: process.stdin, output: process.stdout });
@@ -1119,7 +1146,7 @@ async function cmdPublish() {
     r = { ...w, routeAction: 'wrangler', proxied: apex.proxied, flipped: apex.flipped, warnings: apex.warnings };
   } else {
     const token = process.env.CF_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
-    try { r = await cfPublish({ domain, genesisText, keylogText, witnessText: buildWitnessLog(genesisText), cadenceText, token, flipProxy }); } catch (e) { die(e.message); }
+    try { r = await cfPublish({ domain, genesisText, keylogText, witnessText: buildWitnessLog(genesisText, servedAnchors), cadenceText, token, flipProxy }); } catch (e) { die(e.message); }
     console.log('  ✓ worker ' + r.script + ' deployed (genesis embedded, ' + r.genHash + ')');
     console.log('  ✓ route ' + r.route + ' ' + r.routeAction);
   }
