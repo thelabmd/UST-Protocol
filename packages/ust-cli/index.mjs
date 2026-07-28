@@ -1358,14 +1358,30 @@ async function cmdCanon() {
 }
 
 // ─── ust discovery <domain> — §20.1 compliance attestation (any infra; properties, not mechanisms) ────
+// WHICH BUILD SAID THIS (#103). An older checker does not DISAGREE with a newer one — it has nothing to
+// say, silently. Measured: the published build printed five checks where the working copy printed seven,
+// so `cadence declared` and `witness served` were simply absent, and a reader would have taken the silence
+// for a property of the DOMAIN rather than of the instrument. A report that cannot name its own version
+// cannot be compared with another report at all.
+//
+// One function prints the checks AND the stamp, because there are three call sites and a fourth would
+// otherwise be free to forget. The version reported is the PROTOCOL's, not the CLI's: the number that
+// decides what a check MEANS lives there, and naming a wrapper while the verifier underneath is older
+// would be precise about the wrong thing.
+const mark = { pass: '✅', fail: '❌', skip: '⬜' };
+
+function printChecks(checks) {
+  for (const c of checks) console.log(`  ${mark[c.status]}  ${c.id}${c.detail ? '  (' + c.detail + ')' : ''}`);
+  console.log(`\n  checker: ust-protocol ${P.VERSION.spec} (wire ${P.VERSION.wire}, rev ${P.VERSION.revision}) \u00b7 ${checks.length} checks run`);
+}
+
 async function cmdDiscovery() {
   const domain = process.argv[3];
   if (!domain || domain.startsWith('--')) die('usage: ust discovery <domain> [--mirror url,url] [--expect sha256:…]   # attest the §20.1 serving contract');
   const mirrors = (arg('mirror', '') || '').split(',').filter(Boolean);
   const expectHash = arg('expect', null);
   const { hash, checks, verdict } = await attestDiscovery({ domain, mirrors, expectHash });
-  const mark = { pass: '✅', fail: '❌', skip: '⬜' };
-  for (const c of checks) console.log(`  ${mark[c.status]}  ${c.id}${c.detail ? '  (' + c.detail + ')' : ''}`);
+  printChecks(checks);
   console.log(`\n  DISCOVERY CONFORMANCE (§20.1): ${verdict}${hash ? '   genesis ' + hash : ''}   (exit: 0=ATTESTED · 2=PARTIAL · 1=FAILED)`);
   if (verdict === 'PARTIAL') {
     // targeted hints (rc.8): name ONLY what was actually skipped — never advise republishing what already passed
@@ -1492,8 +1508,7 @@ async function cmdPublish() {
   // fail-closed: deployment is only DONE when the live surface attests (§20.1 probes)
   const mirrors = (arg('mirror', '') || '').split(',').filter(Boolean);
   const a = await attestDiscovery({ domain, mirrors, expectHash: r.genHash });
-  const mark = { pass: '✅', fail: '❌', skip: '⬜' };
-  for (const c of a.checks) console.log(`  ${mark[c.status]}  ${c.id}${c.detail ? '  (' + c.detail + ')' : ''}`);
+  printChecks(a.checks);
   console.log(`\n  DISCOVERY CONFORMANCE (§20.1): ${a.verdict}${a.verdict === 'PARTIAL' ? '  — no violation; only undeclared properties left unattested (e.g. a mirror)' : ''}`);
   // the flow must never just STOP at a verdict — close the story: what happened, the path to HIGH, housekeeping
   if (a.verdict !== 'FAILED') for (const l of whatsNextSummary({ domain, genHash: r.genHash, checks: a.checks ?? [] })) console.log(l);
@@ -1629,7 +1644,7 @@ async function cmdMirror() {
   // fold into the FULL §20.1 verdict — an attested mirror is what flips PARTIAL → ATTESTED
   console.log('\n  ⏳ full §20.1 attestation with the mirror declared…');
   const a = await attestDiscovery({ domain, mirrors: genesisUrls, expectHash: m.canonHash });
-  for (const c of a.checks) console.log(`  ${mark[c.status]}  ${c.id}${c.detail ? '  (' + c.detail + ')' : ''}`);
+  printChecks(a.checks);
   const complete = a.verdict === 'ATTESTED' && !m.failed;
   console.log(`\n  RESULT: ${complete ? '✅ COMPLETE — every §20.1 property attested, vendor-independence included' : m.failed || a.verdict === 'FAILED' ? '❌ FAILED — fix the ❌ lines above and re-run' : '⬜ PARTIAL — see the ⬜ lines above'}`);
   if (complete) {

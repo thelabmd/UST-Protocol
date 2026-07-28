@@ -19,17 +19,35 @@ tracks two lines: the **reference checker (L1 TCB)** rev-ladder — a recurring 
 math-first remediation — and the **protocol milestones**. The normative source is the git history plus the
 conformance vectors; this file is the readable map.
 
-## [Unreleased] — rc.38 line
+## rc.38 line — published 2026-07-28
 
 Newest line first; each version line owns its own section. A line is closed by ADDING the next one, never by
 editing the header of the last — this file briefly recorded a bump by overwriting `rc.37 line` with `rc.38`,
 which is succession by removal, the thing §12.1 forbids an identity to do.
+
+**`[Unreleased]` is a claim about the registry, so it is only true while the registry disagrees.** This header
+said `[Unreleased]` for several hours after `ust-protocol@1.0.0-rc.38` was live on npm — a ledger describing
+its own artifact as unshipped. It opens again on the next bump, not before.
+
+### Release policy — what `latest` and `next` mean here
+
+Written down because #103 measured what happens when nobody has said it: `latest` had drifted twenty-six
+candidates behind and was missing whole capabilities, and no reader could tell whether that was intended.
+
+- **`latest` tracks every capability.** If an export or a check exists in this repo and not in what
+  `npm i <pkg>` gives a stranger, that is a defect, not a lag — `version-truth-gate` fails on it.
+- **`next` is not a slower `latest`.** It exists for versions deliberately held back; it is not where
+  capabilities wait for permission.
+- **A version and its round land in the same commit.** No bump without a row, no row without a bump.
+- **Publishing is a human act** and stays one until #87 — see the note there for why that is a decision
+  rather than a gap.
 
 | version | round | what closed |
 |---------|-------|-------------|
 | **protocol rc.38** | 64 | **`witnessSuccessor` discarded the anchor it was called to add.** "Already active" was treated as "nothing to do" — but that is exactly the shape of an ANCHOR run: same genesis, new evidence. The entry reached a public transparency log and the served witness still read zero anchors. Idempotence is about the ENTRY, not about the call; the branch now merges anchors, deduplicated. |
 | **cli rc.66** | 65 | **A mirror of two artifacts out of four contradicts itself, and after a supersession it does so loudly.** `ust mirror --publish gh` pushed genesis and key log and left the rest, producing the worst of three states: a fresh genesis beside a STALE witness, so a consumer reads a genesis the mirror's own witness calls inactive. Uniformly old would have been more honest. The publisher now takes the whole served set and does the other half too — an artifact the domain STOPPED serving is DELETED, because mirroring it would attest a document belonging to a name that no longer resolves. Verified through the API rather than the CDN, which was still serving previous bytes. §20.1 now attests COMPLETE for the reference domain, vendor-independence included. |
 | **rekor-verify rc.6**<br>**cli rc.67** | 66 | **The inclusion climb narrowed tree indices to 32 bits — correct until the public log passed 2^31.** A fresh anchor verified `final: false` while the same domain's two-week-old anchor verified `final: true`. Filed WITHOUT a cause rather than a guess; the cause was ours. `fn >>= 1` and `fn & 1` coerce to signed 32-bit, so `2149645490 >> 1 = -1072660903` against a correct `1074822745`. Found by recomputing BOTH proofs by hand against RFC 6962 — both recompute, which moved the fault from the data to the verifier in one step and disproved the substrate hypothesis this had been filed under. Every gate stayed green because every vector sat in a tiny tree: a claim tested only over the part of its domain where it holds. Now BigInt throughout, `index`/`treeSize` accept `number \| string \| bigint` (a uint64 past 2^53 must travel as a string), and `unbounded-index-gate` forbids fixed-width bitwise operators on that path while REQUIRING a vector at or above 2^31 to exist — four legs, each mutation-proven. The class: arithmetic on a counter we do not own carries no ceiling we may assume; it is correct until a date somebody else sets and presents as an outage in their system rather than a defect in ours. |
+| **cli rc.68** | 67 | **A conformance report that cannot name its own build is not comparable with another report.** An older checker does not DISAGREE with a newer one — it has nothing to say, silently: the published build printed five checks where the working copy printed seven, so `cadence declared` and `witness served` were simply absent, and a reader would have taken that silence for a property of the DOMAIN rather than of the instrument. `discovery` now stamps every report with the PROTOCOL's version, not the CLI's — the number that decides what a check MEANS lives there, and naming a wrapper while the verifier underneath is older is precision about the wrong thing. One `printChecks` serves all three call sites so a fourth cannot forget the stamp; the status-glyph map was duplicated in two locals and is now one. #103. |
 | **measurement** | — | **HIGH reached end to end on a live domain — measured, not described.** `witnessNoFork → confirmed` ("a single anchored active genesis, cross-checked against its substrate — no rival root"); `resolveByDiscovery → VALID:HIGH`, identity `corroborated / served-list / verified`, a 512-partition capacity grant against 172 declared. Yesterday the same chain returned `INDETERMINATE(unavailable)`. Stated with its limit: the probe was built with the same primitive and the operator's live key, NOT lifted from a deployed writer, so it proves the CHAIN and not any deployment. `time: unproven` is honest for a one-off probe. The whole ladder rested on an arithmetic width nobody had written down. |
 
 ## rc.37 line
