@@ -755,7 +755,7 @@ export async function attestDiscovery({ domain, mirrors = [], expectHash = null,
   // (1) well-known: fetch → the normative RAW path (duplicates/admission) → it must BE a genesis and it
   // must be THIS domain's genesis (line-review P0-2: a valid observation from a foreign identity served
   // at the well-known previously attested). content_hash pinned when --expect is given.
-  let baseline = null, hash = null;
+  let baseline = null, hash = null, genesisCadence = null;   // §11.3: the grid can be declared IN the genesis
   try {
     const r = await get(url);
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -768,6 +768,7 @@ export async function attestDiscovery({ domain, mirrors = [], expectHash = null,
     if (!P.isValid(verdict)) throw new Error('published document does not VERIFY' + (verdict.error ? ` (${verdict.error})` : ''));
     if (doc.state?.id?.domain_shard !== domain) throw new Error(`genesis domain_shard is ${doc.state?.id?.domain_shard ?? '?'} — not ${domain}`);
     hash = P.contentHash(doc);
+    genesisCadence = doc.state?.data?.genesis?.value?.cadence ?? null;
     if (expectHash && hash !== expectHash) throw new Error(`content_hash differs from --expect (${hash} ≠ ${expectHash})`);
     checks.push({ id: 'well-known verifies (§14, fail-closed)', status: 'pass', detail: hash });
   } catch (e) {
@@ -801,7 +802,12 @@ export async function attestDiscovery({ domain, mirrors = [], expectHash = null,
   try {
     const cr = await get(`https://${domain}/.well-known/ust-cadence`);
     if (cr.status === 404 || cr.status === 410) {
-      checks.push({ id: 'cadence declared (completeness input)', informational: true, status: 'skip', detail: `HTTP ${cr.status} — no signed grid; streams stay chain-consistent and can never reach complete` });
+      checks.push(genesisCadence
+        // §11.3: `genesis.value.cadence` is the INITIAL value and the log is OPTIONAL. Reading only the log told a
+        // publisher whose genesis declares a grid that its streams "can never reach complete" — false, and false in
+        // the direction that matters: it describes a capability the publisher HAS as one it lacks.
+        ? { id: 'cadence declared (completeness input)', informational: true, status: 'pass', detail: `${genesisCadence}s — declared IN THE GENESIS (§11.3 initial value); no log served, which is optional` }
+        : { id: 'cadence declared (completeness input)', informational: true, status: 'skip', detail: `HTTP ${cr.status} — no signed grid anywhere: not in the genesis value, no log served. Streams stay chain-consistent and can never reach complete` });
     } else if (!cr.ok) throw new Error(`HTTP ${cr.status} — served but UNREADABLE (an unreadable log is not an empty one)`);
     else {
       const log = JSON.parse(await cr.text());
@@ -1433,8 +1439,18 @@ async function cmdPublish() {
     console.log('  ✓ worker ' + w.script + ' deployed via wrangler OAuth (genesis embedded, ' + w.genHash + ')');
     console.log('  ✓ route ' + w.route + ' (from wrangler.toml)');
     const rl = openReader(createInterface);   // lifecycle, not a bare interface: close() alone leaves a live stdin listener on a terminal
-    let apex; try { apex = await cfApexSteps({ domain, token: await resolveDnsToken((q) => rl.question(q)), flipProxy }); }
-    catch (e) { rl?.close(); die(e.message); }
+    // THE DNS PIN IS PART OF PUBLISHING, not only of the first ceremony. `publish` can change WHICH genesis a
+    // domain serves — that is what a supersession is — and it used to leave `_ust` pointing at the old one, so
+    // the name stayed bound to a hash the domain no longer served. Measured on a live supersession: the worker
+    // carried the new identity while DNS still pinned the predecessor, and §20.1 discovery failed on exactly
+    // that conflict. The token asked for here is DNS-scoped; writing the pin is what it is FOR.
+    const dnsToken = await resolveDnsToken((q) => rl.question(q));
+    let apex, pin;
+    try {
+      pin = await cfUpsert({ domain, txt: `ust-genesis=${w.genHash}`, genHash: w.genHash, token: dnsToken });
+      console.log(`  ✓ _ust.${domain} TXT ${pin.action} → ${w.genHash.slice(0, 26)}…`);
+      apex = await cfApexSteps({ domain, token: dnsToken, flipProxy });
+    } catch (e) { closeReader(rl); die(e.message); }
     closeReader(rl);
     r = { ...w, routeAction: 'wrangler', proxied: apex.proxied, flipped: apex.flipped, warnings: apex.warnings };
   } else {
