@@ -190,6 +190,11 @@ export function closeReader(rl) {
   for (const ev of ['data', 'keypress']) {
     for (const l of process.stdin.listeners(ev)) if (!before[ev].includes(l)) process.stdin.removeListener(ev, l);
   }
+  // …and PAUSE it, but only if nobody is left reading. A resumed stdin with no reader holds the event loop open, so
+  // a command that has finished never exits: everything prints, the shell returns no prompt, and the next thing the
+  // operator types goes into a dead process. Conditional, because pausing a stream a concurrent reader still needs
+  // would starve it.
+  if (process.stdin.listenerCount('data') === 0 && process.stdin.listenerCount('readable') === 0) process.stdin.pause();
   return null;
 }
 
@@ -206,6 +211,8 @@ export async function askHidden(q, fallbackAsk) {
     const chars = [];
     const stdin = process.stdin;
     const wasRaw = stdin.isRaw;
+    const wasPaused = stdin.isPaused();   // restore what we found: resuming a paused stdin and leaving it resumed
+                                          // keeps the event loop alive, so the command finishes and never exits
     stdin.setRawMode(true); stdin.resume();
     // A data event is a CHUNK, not a keystroke. Treating it as one character means a PASTED passphrase — which is
     // how anyone enters a strong one — arrives as a single string equal to neither a terminator nor a character:
@@ -214,7 +221,7 @@ export async function askHidden(q, fallbackAsk) {
     // split mid-character.
     const onData = (b) => {
       for (const c of b.toString('utf8')) {
-        if (c === '\r' || c === '\n') { stdin.setRawMode(wasRaw); stdin.removeListener('data', onData); process.stdout.write('\n'); return resolve(chars.join('')); }
+        if (c === '\r' || c === '\n') { stdin.setRawMode(wasRaw); stdin.removeListener('data', onData); if (wasPaused) stdin.pause(); process.stdout.write('\n'); return resolve(chars.join('')); }
         if (c === '\u0003') { stdin.setRawMode(wasRaw); process.stdout.write('\n'); process.exit(130); }
         if (c === '\u007f' || c === '\b') { if (chars.length) { chars.pop(); process.stdout.write('\b \b'); } continue; }
         chars.push(c); process.stdout.write('*');

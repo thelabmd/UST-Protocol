@@ -150,6 +150,32 @@ check(WORLD.length >= 4 && sites.length >= 4, 'the vocabulary or the site set sh
 }
 
 
+// ── a command that finishes must EXIT ─────────────────────────────────────────────────────────────────────────────
+//
+// The air-gapped ceremony completed correctly — eight files, every document verified, the whole handoff printed — and
+// then hung. `askHidden` resumes stdin to read in raw mode and never paused it again, and a resumed stdin with no
+// reader holds the event loop open. The shell never returned a prompt, and the operator's next command was typed
+// into a dead process. Nothing in the output said anything was wrong, because nothing WAS wrong except that it would
+// not end.
+//
+// Checked structurally here (the runtime proof is the pty rehearsal): whatever resumes stdin must restore the state
+// it found, and the reader lifecycle must pause a stream nobody is left reading.
+{
+  const ah = SRC.slice(SRC.indexOf('export async function askHidden'));
+  const body = ah.slice(0, 3000);
+  check(/stdin\.resume\(\)/.test(body), 'askHidden no longer resumes stdin — the raw read would never receive anything');
+  check(/const wasPaused = stdin\.isPaused\(\)/.test(body),
+    'askHidden resumes stdin without recording whether it was paused — it cannot restore what it found, so the process never exits');
+  check(/if \(wasPaused\) stdin\.pause\(\)/.test(body),
+    'askHidden does not restore the paused state on the way out — a resumed stdin with no reader holds the event loop open and the command hangs after finishing');
+  const cr = SRC.slice(SRC.indexOf('export function closeReader'), SRC.indexOf('export async function askHidden'));
+  check(/process\.stdin\.pause\(\)/.test(cr),
+    'closeReader does not pause a stream nobody is reading — the process stays alive after the last question');
+  check(/listenerCount\('data'\) === 0/.test(cr),
+    'closeReader pauses unconditionally — it must only do so when no reader is left, or it would starve a concurrent one');
+}
+
+
 console.log(`\n  ceremony self-check   PASS ${pass}   FAIL ${fail.length}   (${sites.length} self-check sites × ${WORLD.length} world properties)`);
 if (fail.length) { fail.forEach((f) => console.log('    ✗ ' + f)); process.exit(1); }
 console.log('  ✓ every ceremony self-check asserts what the ceremony preserves, and every failure branch can report');
