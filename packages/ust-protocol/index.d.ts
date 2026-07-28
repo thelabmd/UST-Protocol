@@ -86,7 +86,7 @@ export function resolveKeysBytes(genesisBytes: unknown, keylogBytes?: unknown): 
 export function seal(state: unknown, privKeyObj: unknown, pubB64url: unknown): { ust: unknown; state: unknown; sig: unknown };
 export function sealAuthorityCheckpoint(body: unknown, privKeyObj: unknown, pubB64url: unknown): { body: unknown; sig: unknown };
 export function seed(contentHashes: unknown): string;
-export function signedContent(doc: unknown): unknown;
+export function signedContent(doc: unknown): string;
 export function snapshotBytes(input: unknown, maxBytes?: unknown, sizeErr?: unknown): { error: unknown };
 export const STABILITY: unknown;
 export function strictB64url(s: unknown, bytes: unknown): string;

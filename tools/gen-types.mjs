@@ -178,6 +178,11 @@ function returnTypeOf(rawBody, isAsync) {
     // whose whole job is to return a digest; the previous rule wanted a quote at the return site and missed it.
     if (/\breturn\s+['\`]/.test(body) || /\.toString\(['\`)]/.test(body)) return 'string';
     if (/^H\s*\(/.test(expr) || /^[a-zA-Z]*[Hh]ash\s*\(/.test(expr) || /\.digest\(/.test(expr)) return 'string';
+    // A body that IS a call to a canonicaliser returns its string. `signedContent` is `canon({ust, state})`,
+    // and inference does not follow calls — so the one primitive whose contract is "value -> canonical string"
+    // is named here. Narrow on purpose: this is not general interprocedural inference and must not grow into it,
+    // because each such rule is a claim about a function that could change without this file noticing.
+    if (/^canon\s*\(/.test(expr)) return 'string';
     if (/\breturn\s*\[/.test(body)) return 'unknown[]';
     return 'unknown';
   })();

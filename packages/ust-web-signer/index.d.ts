@@ -16,6 +16,6 @@ export function keyId(pubB64url: unknown): unknown;
 export function nowFrame(date?: unknown): { ust_id: unknown; time: unknown };
 export function partitionHash(arg0: unknown): Promise<Record<string, unknown>>;
 export function seal(state: unknown, signer: unknown): Promise<{ ust: unknown; state: unknown; sig: unknown }>;
-export function signedContent(doc: unknown): unknown;
+export function signedContent(doc: unknown): string;
 export function signerFromKeys(privateKey: unknown, publicKey: unknown): Promise<{ privateKey: unknown; publicKey: unknown; pub: unknown; key_id: unknown }>;
 export function signObservation(signer: unknown, arg1: unknown): Promise<Record<string, unknown>>;

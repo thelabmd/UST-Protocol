@@ -14,5 +14,5 @@ export function keyId(pubB64url: unknown): unknown;
 export function keypair(): { privateKey: unknown; pub: unknown; key_id: unknown };
 export function seal(state: unknown, privateKey: unknown, pubB64url: unknown): { ust: unknown; state: unknown; sig: unknown };
 export function seed(contentHashes: unknown): string;
-export function signedContent(doc: unknown): unknown;
+export function signedContent(doc: unknown): string;
 export function verify(doc?: unknown): { result: unknown; reason: unknown; ust_id: unknown; key_id: unknown; content_hash: unknown; detail: unknown };
