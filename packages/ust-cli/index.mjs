@@ -870,6 +870,46 @@ function ceremonyLimits({ cadence, recovery, checkpointAuthority }) {
     '      Changing any of them means minting a NEW genesis (a supersession) and moving your consumers to it.', ''];
 }
 
+// The handoff out of an air-gapped ceremony. Two lists, and the split between them is the whole point: the PUBLIC
+// documents travel and are published; the KEYS stay, and one of them never leaves that machine at all. Printed by the
+// tool rather than kept in a runbook, because a runbook drifts from the code and this cannot.
+export function offlineHandoff({ domain, outDir, genHash }) {
+  return [
+    '',
+    '  ══════════════════════════════════════════════',
+    '  ✈️  OFFLINE HALF COMPLETE — nothing was sent anywhere',
+    '  ══════════════════════════════════════════════',
+    `  identity      ${genHash}`,
+    '',
+    '  📤 CARRY OUT — public, safe to copy anywhere:',
+    `     ${outDir}/ust-genesis`,
+    `     ${outDir}/ust-keylog-0`,
+    '',
+    '  🔥 CARRY OUT — a SECRET, but it must reach your producer:',
+    `     ${outDir}/operational-key.b64      → the daily signer. Into your producer's secret store,`,
+    '                                          then DELETE the file. Never into git.',
+    '',
+    '  🧊 DO NOT CARRY OUT — these stay on this machine or go to cold storage BY HAND:',
+    `     ${outDir}/genesis-key*.b64          → the crown. If it reaches a networked machine, the`,
+    '                                          air gap you just kept is spent.',
+    '     recovery-key-*.b64                 → split them across places; a threshold whose keys',
+    '                                          share one directory is a threshold of one.',
+    '     checkpoint-authority-key.b64       → cold, like the crown.',
+    '',
+    '  ▶️  THE ONLINE HALF — on a networked machine, with ONLY the two public documents:',
+    `     ust publish --domain ${domain} --genesis ./ust-genesis --keylog ./ust-keylog-0`,
+    '',
+    '     It fetches whatever witness log is live and builds the SUCCESSOR from it: your predecessor',
+    '     keeps its anchors and is marked superseded, this identity becomes active. If nothing is live,',
+    '     it is a first log. Either way the crown key is not involved and is not needed.',
+    '',
+    '  ✅ then verify from anywhere, trusting nobody:',
+    `     ust verify ./ust-genesis --genesis ./ust-genesis --keylog ./ust-keylog-0`,
+    `     ust discovery ${domain}`,
+    '  ══════════════════════════════════════════════',
+  ];
+}
+
 export function ceremonySummary({ domain, genHash, opKeyId, maxP, cadence, outDir, encrypted, recovery = null, checkpointAuthority = null }) {
   return [
     '',
@@ -1468,6 +1508,9 @@ async function cmdWitness() {
 // ─── ust genesis --domain <d> [--profile] [--dns] — the ceremony (#37), orchestrating the core above ──
 async function cmdGenesis() {
   const domain = arg('domain'); if (!domain || domain === true) die('usage: ust genesis --domain <name> [--profile bronze|silver|gold] [--dns manual|cf-api] [--publish cf [--auth wrangler] [--flip-proxy]] [--signer <ref>] [--witness url,url] [--max-partitions N] [--cadence SECONDS] [--out .]\n  every option is also asked INTERACTIVELY — the flags only preselect');
+  // declared HERE, beside `domain`: the offline branch is read at the remint probe, long before the flags block —
+  // declaring it there put it in a temporal dead zone and the whole ceremony died on its first line of work.
+  const offline = !!arg('offline', false);   // no network at all — the air-gapped half of a split ceremony
   const signerRef = arg('signer', null);
   // LAZY, like every other askHidden caller. An interface created here takes stdin over, and askHidden's guard then
   // refuses — correctly, because an open readline echoes the passphrase it is trying to hide. When that guard landed
@@ -1484,7 +1527,20 @@ async function cmdGenesis() {
   // ── REMINT GUARD (fail-closed, rc.17): 'absent' is the ONLY state that proceeds silently. A live
   // identity requires typed REMINT; an INDETERMINATE state (network error / garbage / foreign document)
   // also STOPS — those were previously indistinguishable from absence, on an identity-orphaning op.
-  {
+  // --offline: the crown key is generated on a machine with no network, so it can never leave over one. That
+  // claim is only true if this half touches nothing — and the remint probe is the single network call that stands
+  // before the files. It cannot run here, so the check it performs becomes the OPERATOR'S, stated rather than
+  // skipped: minting over a live identity orphans it, and offline this tool cannot tell whether one exists.
+  if (offline) {
+    console.log('\n  ✈️  OFFLINE — no network will be touched. This half produces keys and documents only.');
+    console.log('     I CANNOT check whether an identity is already live at ' + domain + '. If one is, this mints a');
+    console.log('     SUCCESSOR: the publish half will chain it (the predecessor keeps its anchors and is marked');
+    console.log('     superseded). If you meant to add a key instead, stop — that is `ust rotate`, not a ceremony.');
+    if (tty) {
+      const a = (await ask('     type OFFLINE to confirm you know which of the two you are doing: ')).trim();
+      if (a !== 'OFFLINE') { rl?.close(); die('aborted — nothing was minted'); }
+    }
+  } else {
     const probe = await remintProbe({ domain });
     if (probe.status === 'live') {
       console.log(`\n  ⚠️  an identity for ${domain} is ALREADY LIVE: ${probe.hash.slice(0, 28)}…`);
@@ -1685,6 +1741,15 @@ async function cmdGenesis() {
   }
   if (caSigner) console.log('     checkpoint-authority-key.b64        → 🧊 signs §12.3 authority checkpoints (skip-the-key-log)');
   console.log('     self-check: genesis + key-log verify ✓ (this tool never emits what it has not verified)');
+
+  // THE CUT. Everything below this line needs the network: DNS, serving, the live gate, the witness. Offline stops
+  // here with the files on disk and the exact handoff — the second half is an ordinary `ust publish`, which needs
+  // only the PUBLIC documents. The crown key never travels.
+  if (offline) {
+    rl?.close();
+    for (const l of offlineHandoff({ domain, outDir, genHash })) console.log(l);
+    return;
+  }
 
   // 3. DNS (profile A) — manual paste or CF one-click (upsert + DoH readback)
   console.log('\n' + ceremonyMap(2));

@@ -40,6 +40,7 @@
     "test:changelog": "node tools/changelog-rev-gate.mjs",
     "test:ladder": "node tools/ladder-completeness-gate.mjs",
     "test:ceremony": "node tools/ceremony-selfcheck-gate.mjs",
+    "test:offline": "node tools/offline-ceremony-gate.mjs",
     "test:genesis-surface": "node tools/genesis-surface-gate.mjs",
     "test:deploy": "node tools/deploy-completeness-gate.mjs",
     "test:artifact-origin": "node tools/artifact-origin-gate.mjs",
