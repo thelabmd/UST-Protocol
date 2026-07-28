@@ -1095,7 +1095,15 @@ export async function attestMirror({ domain, genesisUrls = [], keylogUrls = [], 
 // GitHub one-click: publish the mirror bytes into a PUBLIC repo via the user's own authenticated `gh`
 // CLI (same delegation pattern as wrangler — we never hold the credential). Idempotent: create-or-update
 // by sha. Returns the raw URLs a verifier fetches.
-export async function ghMirrorPublish({ repo, dir = 'mirror', genesisText, keylogText = null, execImpl = null }) {
+export // A mirror carries the WHOLE identity or it lies about the part it carries. Publishing genesis+keylog while leaving
+// a stale witness behind produced the worst state of the three: a consumer reads a genesis that the mirror's OWN
+// witness says is not active. Measured after a supersession — the same one-of-four defect retired from the operator's
+// archiver this morning, still living here.
+//
+// And an artifact the domain STOPPED serving must be REMOVED, not left: after a supersession the old cadence log is
+// rooted in the superseded genesis, so mirroring it would attest a document that belongs to a name that no longer
+// resolves. Absent upstream ⇒ absent here.
+async function ghMirrorPublish({ repo, dir = 'mirror', artifacts = {}, execImpl = null }) {
   const exec = execImpl ?? (async (args) => {
     const { spawnSync } = await import('node:child_process');
     const r = spawnSync('gh', args, { encoding: 'utf8' });
@@ -1112,9 +1120,23 @@ export async function ghMirrorPublish({ repo, dir = 'mirror', genesisText, keylo
     await exec(args);
     return `https://raw.githubusercontent.com/${repo}/${branch}/${dir}/${name}`;
   };
-  const genesisUrl = await putFile('ust-genesis', genesisText);
-  const keylogUrl = keylogText !== null ? await putFile('ust-keylog', keylogText) : null;
-  return { genesisUrl, keylogUrl, branch };
+  // an artifact the domain stopped serving is DELETED from the mirror — leaving it would attest a document
+  // belonging to a superseded identity, which is worse than not mirroring it at all
+  const delFile = async (name) => {
+    let sha = null;
+    try { sha = (await exec(['api', `repos/${repo}/contents/${dir}/${name}?ref=${branch}`, '--jq', '.sha'])).trim() || null; } catch { return false; }
+    if (!sha) return false;
+    await exec(['api', '-X', 'DELETE', `repos/${repo}/contents/${dir}/${name}`,
+      '-f', `message=ust mirror: ${name} no longer served upstream`, '-f', `sha=${sha}`, '-f', `branch=${branch}`]);
+    return true;
+  };
+  const urls = {}, removed = [];
+  for (const name of DISCOVERY_ARTIFACTS) {
+    const text = artifacts[name];
+    if (text == null) { if (await delFile(`ust-${name}`)) removed.push(name); continue; }
+    urls[name] = await putFile(`ust-${name}`, text);
+  }
+  return { urls, removed, branch, genesisUrl: urls.genesis ?? null, keylogUrl: urls.keylog ?? null };
 }
 
 // The closing story every publishing flow must end with (owner: "я вообще не понимаю что мне дальше
@@ -1570,7 +1592,14 @@ async function cmdMirror() {
     let k = null;
     try { const kr = await fetch(`https://${domain}/.well-known/ust-keylog`, { signal: AbortSignal.timeout(10000) }); k = kr.ok ? await kr.text() : null; } catch { k = null; }
     console.log('  ⏳ publishing via YOUR gh CLI (create-or-update, idempotent — this tool holds no credential)…');
-    let pub; try { pub = await ghMirrorPublish({ repo: repoFlag, dir: dirFlag, genesisText: g, keylogText: k }); } catch (e) { die(e.message); }
+        // the WHOLE served set, fetched the same way discovery reads it — a mirror of two of four is a mirror that
+    // contradicts itself, and after a supersession it contradicts itself loudly.
+    const fetchServed = async (name) => { try { const r = await fetch(`https://${domain}/.well-known/ust-${name}`, { signal: AbortSignal.timeout(10000) }); return r.ok ? await r.text() : null; } catch { return null; } };
+    const artifacts = { genesis: g, keylog: k };
+    for (const name of DISCOVERY_ARTIFACTS) if (!(name in artifacts)) artifacts[name] = await fetchServed(name);
+    for (const [n, v] of Object.entries(artifacts)) console.log(`  ${v == null ? '·' : '✓'} ust-${n}${v == null ? ': not served upstream — will be removed from the mirror' : ''}`);
+    let pub; try { pub = await ghMirrorPublish({ repo: repoFlag, dir: dirFlag, artifacts }); } catch (e) { die(e.message); }
+    if (pub.removed?.length) console.log('  🗑  removed from the mirror (no longer served): ' + pub.removed.join(', '));
     console.log('  ✅ pushed: ' + pub.genesisUrl);
     if (pub.keylogUrl) console.log('  ✅ pushed: ' + pub.keylogUrl);
     else console.log('  ⬜ the canonical key log is not served yet — redeploy serving first, then re-run mirror');

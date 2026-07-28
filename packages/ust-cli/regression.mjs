@@ -459,11 +459,18 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
     if (String(args[1]).includes('/contents/') && args[0] === 'api' && !args.includes('-X')) return args[1].includes('ust-genesis') ? 'abc123\n' : ''; // genesis exists → sha, keylog is new
     return '{}';
   };
-  const pub = await C.ghMirrorPublish({ repo: 'o/r', genesisText: bytes, keylogText: klArr, execImpl: ghExec });
+  // the publisher takes the WHOLE served set now: a mirror of two artifacts out of four contradicts itself, and
+  // after a supersession a stale witness beside a fresh genesis says that genesis is not active. `witness: null`
+  // stands for "the domain stopped serving it" and must be REMOVED rather than quietly kept.
+  const pub = await C.ghMirrorPublish({ repo: 'o/r', artifacts: { genesis: bytes, keylog: klArr, witness: null }, execImpl: ghExec });
   check('gh_mirror_urls_are_raw', pub.genesisUrl === 'https://raw.githubusercontent.com/o/r/main/mirror/ust-genesis' && pub.keylogUrl.endsWith('/mirror/ust-keylog'));
   const putG = calls.find((c) => c.includes('-X PUT') && c.includes('ust-genesis'));
   const putK = calls.find((c) => c.includes('-X PUT') && c.includes('ust-keylog'));
   check('gh_mirror_update_carries_sha_create_does_not', putG.includes('sha=abc123') && !putK.includes('sha='));
+  // an artifact absent upstream is DELETED, not silently kept — keeping it attests a document that belongs to a
+  // superseded identity, which is worse than not mirroring it
+  check('gh_mirror_reports_what_it_removed', Array.isArray(pub.removed));
+  check('gh_mirror_returns_a_url_per_published_artifact', !!pub.urls?.genesis && !!pub.urls?.keylog && !pub.urls?.witness);
 }
 
 // ── 17. external line-review of rc.15 — every reproduced finding frozen as a pin.
