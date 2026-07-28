@@ -21,6 +21,38 @@ conformance vectors; this file is the readable map.
 
 ## [Unreleased] — rc.37 line
 
+### HIGH reached end to end on a live domain — the first time the tier was measured rather than described
+
+An operator's document resolved `VALID:HIGH` against a live domain, with every leg verified from public data and
+none asserted:
+
+```
+witnessNoFork(<domain>, sha256:4756e767…)  →  confirmed
+   "a single anchored active genesis, cross-checked against its substrate — no rival root"
+
+resolveByDiscovery(doc)                    →  VALID:HIGH
+   identity   corroborated / served-list / verified
+   capacity   maxPartitions 512      (the document declares 172 partitions)
+   assurance  integrity valid · identity corroborated · freshness fresh · time unproven
+```
+
+This is the whole ladder standing up at once: an air-gapped ceremony sealing a complete genesis, a supersession that
+kept the predecessor and its anchors, the four artifacts served and mirrored on a second vendor, the DNS pin moved,
+the genesis logged in a public transparency log, and a document signed by the operating key resolving through all of
+it. Yesterday the same chain returned `INDETERMINATE(unavailable)`.
+
+**What it does not show.** The probe was built with the same primitive and the operator's live key, not lifted from a
+deployed writer — so it proves the CHAIN, not any particular deployment. Stated here rather than left for a reader
+to assume, because "we reached HIGH" and "our production traffic is HIGH" are different claims and only the first is
+measured. `time: unproven` is likewise honest: a one-off probe has no anchor of its own, while the genesis it
+resolves through does.
+
+**Why it was not reachable before.** One right-shift. `verifyInclusion` narrowed tree indices to 32 bits, the public
+log had crossed 2^31, and the anchor therefore never reached finality — so no-fork stayed caller-asserted, no
+capacity grant was issued, and a publisher's own 172 partitions failed against the structural floor. The entire
+tier ladder rested on an arithmetic width nobody had written down.
+
+
 ### The verifier was correct until the public log passed 2^31 entries, and the date was not ours to pick
 
 An anchor written today verified `final: false`; the same domain's anchor from two weeks earlier verified
