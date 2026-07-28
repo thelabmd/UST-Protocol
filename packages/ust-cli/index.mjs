@@ -793,7 +793,36 @@ export async function confirmLive({ domain, genHash, fetchImpl = fetch, sleep = 
 
 // The closing picture: WHAT exists now, WHO holds which key, WHERE you are on the tier ladder, and the
 // exact next moves. Exported so the regression suite pins custody classes and the no-overclaim wording.
-export function ceremonySummary({ domain, genHash, opKeyId, maxP, cadence, outDir, encrypted }) {
+// RFC 2606 / RFC 6761 names that cannot exist on the internet. The only place a scripted ceremony is allowed:
+// there is nothing behind such a name to compromise, so a harness can drive a full ceremony without creating a door
+// on a real one. Kept next to the summary so the list and its reason travel together.
+export const RESERVED_TEST_NAME = /(\.(test|example|invalid|localhost)|^(www\.)?example\.(com|net|org))$/i;
+
+// THE ARTIFACT MUST STATE WHAT IT IS NOT. A genesis that omits `recovery` or `checkpoint_authority` verifies
+// perfectly and is quietly missing a capability that can NEVER be added without minting a new one. That is the
+// dangerous shape for an operator who does not know the mechanics: nothing is broken, nothing warns, and the loss
+// only surfaces on the day it is needed. Measured 2026-07-28: the reference operator completed a ceremony in exactly
+// that state and had no way to know. So the summary now says, in plain words, what this identity cannot do.
+function ceremonyLimits({ cadence, recovery, checkpointAuthority }) {
+  const out = [];
+  if (!recovery) out.push(
+    '  ⚠️  NO RECOVERY SET — if the cold backup or its passphrase is lost, or the root key is compromised,',
+    '      there is no way back to THIS name: you would start a new identity and consumers would follow a new',
+    '      hash. With a recovery set, a threshold of spare keys can re-root the name instead.');
+  if (!checkpointAuthority) out.push(
+    '  ⚠️  NO CHECKPOINT AUTHORITY — every verifier reads your ENTIRE key history on every check. Fine today,',
+    '      slower and heavier as rotations accumulate. A checkpoint authority lets a verifier trust a signed',
+    '      summary instead of walking the log.');
+  if (!cadence) out.push(
+    '  ⚠️  NO CADENCE — a range of your frames can never verify as `complete`, only as `chain-consistent`',
+    '      (nothing was deleted). Honest, and the right choice for a deliberately lossy tier — but it cannot',
+    '      be upgraded later.');
+  if (!out.length) return [];
+  return ['', '  🚧 what this identity CANNOT do — and these three are settable at CEREMONY TIME ONLY:', ...out,
+    '      Changing any of them means minting a NEW genesis (a supersession) and moving your consumers to it.', ''];
+}
+
+export function ceremonySummary({ domain, genHash, opKeyId, maxP, cadence, outDir, encrypted, recovery = null, checkpointAuthority = null }) {
   return [
     '',
     '  ══════════════════════════════════════════════',
@@ -809,6 +838,7 @@ export function ceremonySummary({ domain, genHash, opKeyId, maxP, cadence, outDi
     `  ${outDir}/genesis-key${encrypted ? '.enc' : ''}.b64${encrypted ? '' : '        '}          → 🧊 COLD — the crown backup; keep the file and its passphrase APART`,
     `  ${outDir}/operational-key.b64           → 🔥 WARM — your producer's signing-key secret, then DELETE this file`,
     '',
+    ...ceremonyLimits({ cadence, recovery, checkpointAuthority }),
     '  🎚  tier ladder — where you are',
     '  LIGHT  ✅ now   — each document verifies self-asserted: signed + intact under its carried key',
     '  HIGH   ⏳ next  — a verifier RESOLVES genesis→key-log (+ no-fork witness) and your NAME becomes',
@@ -1425,7 +1455,11 @@ async function cmdGenesis() {
     if (v === true) { if (!tty) die(`--${flag} needs a value`); v = null; }
     if (v === null && tty) { const a = (await ask(question)).trim(); v = a === '' ? def : a; }
     if (v === null) v = def;
-    if (validate && !validate(String(v))) die(`--${flag}: "${v}" is not a valid value`);
+    // An UNSET optional reaches the validator as itself, not as the string "null". Every optional validator here is
+    // written `v === null || <check>`, and stringifying first turned "left blank" into the literal "null", which no
+    // check accepts — so declining an optional field ABORTED the ceremony. It survived because nothing ran a
+    // ceremony to the end; the only exercisable profile skipped the prompts that have defaults.
+    if (validate && !validate(v === null || v === undefined ? null : String(v))) die(`--${flag}: "${v}" is not a valid value`);
     return v;
   };
 
@@ -1498,6 +1532,23 @@ async function cmdGenesis() {
   let dnsTokenMemo = null;
   const getDnsToken = async () => (dnsTokenMemo ??= await resolveDnsToken(ask));
 
+  // THE LAST REVERSIBLE MOMENT. Three fields can be set here and NOWHERE ELSE: declining one is permanent for this
+  // identity, and the resulting genesis verifies perfectly while quietly lacking the capability. That is the exact
+  // shape an operator cannot notice on their own — nothing is broken, nothing warns, and the loss surfaces on the
+  // day it is needed. The end-of-run summary repeats this, but a warning printed AFTER an irreversible act is not a
+  // control. So the consequences are stated here, before anything is sealed, and an interactive operator must say
+  // yes to them. A reserved test name skips the confirmation (there is nothing behind it to lose).
+  const limits = ceremonyLimits({ cadence, recovery, checkpointAuthority });
+  if (limits.length && !RESERVED_TEST_NAME.test(domain)) {
+    for (const l of limits) console.log(l);
+    if (tty) {
+      const a = (await ask('  type YES to mint an identity with those limits, anything else goes back: ')).trim();
+      if (a !== 'YES') { rl?.close(); die('aborted — nothing was minted. Re-run and set the fields you want; they cannot be added later.'); }
+    } else {
+      console.log('  (non-interactive — proceeding; the limits above are PERMANENT for this identity)');
+    }
+  }
+
   // 1–2. root key + genesis + key-log[0], all self-checked (fail-closed) inside buildCeremony
   const maxBytes = arg('max-transcript-bytes', null);
   if (maxBytes === true) { rl?.close(); die('--max-transcript-bytes needs a value'); }
@@ -1514,10 +1565,26 @@ async function cmdGenesis() {
   // backup the root key (gold forces a passphrase → AES-256-GCM; the file is an encrypted blob, NOT a UST)
   let pass = '';
   if (profile !== 'bronze') {   // silver+: the software-operator ceremony encrypts the root backup
-    console.log('\n  🧊 The root key is about to be written to disk ENCRYPTED. The passphrase you set now');
-    console.log('     is the ONLY way to open that backup — store the file and the phrase in DIFFERENT');
-    console.log('     places (split custody). You will need it roughly once a year (rotate/revoke).');
-    while (pass.length < 8) pass = await askHidden('     set the passphrase (≥8 chars): ', ask);
+    // A DOOR FOR THE HARNESS IS A DOOR. The passphrase is asked interactively, which is right for a person — but
+    // then no gate can perform a silver ceremony end to end, and that gap is exactly what let a broken ceremony
+    // ship for six release candidates. So the non-interactive path exists, and it opens ONLY in a room where there
+    // is nothing to steal: a name reserved by RFC 2606/6761, which cannot exist on the internet. Scripting the
+    // passphrase of a REAL crown key is refused loudly rather than quietly allowed.
+    if (RESERVED_TEST_NAME.test(domain) && process.env.UST_CEREMONY_PASSPHRASE) {
+      pass = process.env.UST_CEREMONY_PASSPHRASE;
+      if (pass.length < 8) die('UST_CEREMONY_PASSPHRASE is shorter than 8 characters');
+      console.log(`\n  🧪 ${domain} is a RESERVED test name — passphrase taken from UST_CEREMONY_PASSPHRASE.`);
+      console.log('     This path is refused for any real name: a scripted crown passphrase is not a ceremony.');
+    } else {
+      if (process.env.UST_CEREMONY_PASSPHRASE)
+        die(`UST_CEREMONY_PASSPHRASE is set but "${domain}" is not a reserved test name (.test/.example/.invalid/.localhost or example.com|net|org).\n`
+          + '  A real crown passphrase is never taken from the environment — it would land in shell history, process\n'
+          + '  listings and CI logs. Remove the variable and run the ceremony interactively.');
+      console.log('\n  🧊 The root key is about to be written to disk ENCRYPTED. The passphrase you set now');
+      console.log('     is the ONLY way to open that backup — store the file and the phrase in DIFFERENT');
+      console.log('     places (split custody). You will need it roughly once a year (rotate/revoke).');
+      while (pass.length < 8) pass = await askHidden('     set the passphrase (≥8 chars): ', ask);
+    }
   }
   const backup = pass ? encryptKey(pkcs8, pass) : pkcs8.toString('base64');
   // custody hardening (line-review P1): key material is 0600 and NEVER silently overwritten ('wx') —
@@ -1645,7 +1712,7 @@ async function cmdGenesis() {
   console.log('\n  ▶️  5/5 ⚓ ' + head);
   for (const line of rest) console.log('       ' + line);
 
-  for (const line of ceremonySummary({ domain, genHash, opKeyId: op.key_id, maxP, cadence, outDir, encrypted: !!pass })) console.log(line);
+  for (const line of ceremonySummary({ domain, genHash, opKeyId: op.key_id, maxP, cadence, outDir, encrypted: !!pass, recovery, checkpointAuthority })) console.log(line);
   rl?.close();
 }
 
