@@ -44,11 +44,13 @@ export function unmappedColours(svg) {
 
 export const lightName = (name) => name + '-light';
 
-// DARK ON BOTH THEMES, DELIBERATELY. `status.svg` is a TUI panel — a terminal is dark on a light page too, so it is
-// ONE artifact with no prefers-color-scheme fork. That decision is stated in gen-status-svg.mjs's own header and was
-// nearly overridden here by deriving a light variant for it without reading why it was dark. Membership is checked,
-// not assumed: a dark-only panel must have NO light file and must NOT sit in a <picture>.
-export const DARK_ONLY = new Set(['status']);
+// DARK ON BOTH THEMES — a panel that stays ONE artifact with no prefers-color-scheme fork.
+//
+// `status.svg` was the only member, on the reasoning that a TUI panel is dark on a light page too. The owner reviewed
+// the six light panels and asked for the status one as well, so the set is now EMPTY and every panel has a light
+// variant. The mechanism stays: it is how a future panel opts out, and it is checked rather than assumed — a dark-only
+// panel must have NO light file and must NOT sit in a <picture>, so the exclusion cannot half-apply.
+export const DARK_ONLY = new Set();
 export const isDarkOnly = (name) => DARK_ONLY.has(name);
 
 // MUST escape: the alt is a long prose description (agents read the alt, not the SVG) and now lives in an HTML

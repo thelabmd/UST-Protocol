@@ -2,8 +2,11 @@
 // README status panel — a TUI-style (btop/lazygit) SVG generated from the CANONICAL `VERSION.spec`, the same one
 // version source the README alt-text and root package.json track (gen-readme-version.mjs). Deterministic (a pure
 // function of VERSION.spec — no dates, no randomness), so `git diff --exit-code .github/status.svg` gates drift the
-// same way the spec registry is gated. Dark terminal palette by design: a terminal panel is dark on BOTH GitHub
-// themes — no prefers-color-scheme forks, one artifact. Borders are VECTOR lines (crisp at any scale), not box-drawing
+// same way the spec registry is gated. The panel is authored in GitHub's DARK palette and its light rendering is
+// DERIVED from these bytes (tools/gen-light-svgs.mjs), so there is still one authored artifact — the fork is a
+// generated file, not a second thing to maintain. This replaces an earlier decision that the panel should stay dark on
+// both themes because a terminal is dark on a light page too: the owner reviewed the light panels and asked for this
+// one as well. Borders are VECTOR lines (crisp at any scale), not box-drawing
 // glyphs, so the panel survives mobile widths where an ASCII box in a code block wraps and tears.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { VERSION } from '../packages/ust-protocol/index.mjs';

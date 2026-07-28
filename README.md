@@ -8,7 +8,11 @@
 [![@ust-protocol/mcp](https://img.shields.io/npm/v/@ust-protocol/mcp?label=@ust-protocol/mcp)](https://www.npmjs.com/package/@ust-protocol/mcp) [![pulls](https://img.shields.io/npm/dt/@ust-protocol/mcp?label=pulls&color=informational)](https://www.npmjs.com/package/@ust-protocol/mcp)
 [![@ust-protocol/cli](https://img.shields.io/npm/v/@ust-protocol/cli?label=@ust-protocol/cli)](https://www.npmjs.com/package/@ust-protocol/cli) [![pulls](https://img.shields.io/npm/dt/@ust-protocol/cli?label=pulls&color=informational)](https://www.npmjs.com/package/@ust-protocol/cli)
 
-![UST status: `1.0.0-rc.36` — a release candidate, not a final 1.0. Verify machine-readable state without trusting whoever handed it to you. Multiple external AI reviews incorporated structurally; an independent human cryptographic audit is pending; suitable for evaluation and integration testing. The wire format ust:"1.0" is stable across all release candidates; pin exact versions.](.github/status.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/status.svg">
+  <source media="(prefers-color-scheme: light)" srcset=".github/status-light.svg">
+  <img alt="UST status: `1.0.0-rc.36` — a release candidate, not a final 1.0. Verify machine-readable state without trusting whoever handed it to you. Multiple external AI reviews incorporated structurally; an independent human cryptographic audit is pending; suitable for evaluation and integration testing. The wire format ust:&quot;1.0&quot; is stable across all release candidates; pin exact versions." src=".github/status-light.svg">
+</picture>
 
 > **Status: `1.0.0-rc.36`** — a release candidate, not a final 1.0. External AI reviews are folded in structurally; an independent human cryptographic audit is pending. Suitable for evaluation and integration testing. The wire format `ust:"1.0"` is stable across all rc's — pin exact versions. *(This line mirrors the panel above as plain text, for readers and agents that don't render the image.)*
 
