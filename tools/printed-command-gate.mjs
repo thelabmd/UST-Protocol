@@ -26,7 +26,7 @@ check(COMMANDS.size >= 8, `only ${COMMANDS.size} subcommands found — the dispa
 
 // subcommands whose FIRST positional is a required road, not a flag. Declared, because the requirement lives in the
 // command's own usage line and a printed instruction that omits it produces the help screen and no work.
-const REQUIRES_ROAD = { publish: ['cf'], witness: ['rekor'] };
+const REQUIRES_ROAD = { publish: ['cf', 'self'], witness: ['rekor'] };
 
 // Only STRING LITERALS the tool prints — comments and usage prose are not instructions an operator copies.
 const lines = SRC.split('\n');

@@ -7,7 +7,7 @@
 // encryptKey) so a notary tool is TESTABLE end-to-end without a live network — the 9th-audit regression suite
 // (regression.mjs) drives them directly. cmdGenesis is only the readline/network orchestrator around them.
 import { createInterface } from 'node:readline/promises';
-import { readFileSync, writeFileSync, realpathSync } from 'node:fs';
+import { readFileSync, writeFileSync, realpathSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createCipheriv, createDecipheriv, scryptSync, randomBytes, createHash, generateKeyPairSync, sign as edsign } from 'node:crypto';
 import * as P from 'ust-protocol';
@@ -358,6 +358,48 @@ export function manualDnsGuide(domain, txt) {
     `  self-check anytime:  dig +short TXT _ust.${domain}`,
   ];
 }
+// The SELF-HOSTED road, written out. The §20.1 contract is deliberately vendor-neutral — "properties, not vendors"
+// — and until now the only publish adapter was Cloudflare, so an operator on their own stack got a refusal about a
+// missing token and no map at all. Worse for a supersession: the WITNESS is a successor computed from what is live,
+// and nobody can build that by hand. So this road assembles the same four artifacts the CF adapter would serve,
+// writes them to disk, and hands over the exact contract plus the command that ATTESTS it.
+export function selfHostedPlan({ domain, outDir, genHash, artifacts }) {
+  const served = Object.entries(artifacts).filter(([, v]) => v != null).map(([k]) => k);
+  return [
+    '',
+    '  ══════════════════════════════════════════════',
+    '  🏗  SELF-HOSTED — the files are written; the serving is yours',
+    '  ══════════════════════════════════════════════',
+    `  identity      ${genHash}`,
+    `  written       ${served.length} artifact(s) to ${outDir}/`,
+    '',
+    '  1️⃣  SERVE each file at its well-known path, byte for byte:',
+    ...served.map((a) => `       ${outDir}/ust-${a}  →  https://${domain}/.well-known/ust-${a}`),
+    '',
+    '  2️⃣  THE CONTRACT (§20.1) — properties, not vendors; any stack conforms:',
+    '       · methods: GET and HEAD · content-type: application/json',
+    '       · Cache-Control: public, max-age=300 — the URL points at the CURRENT document, so a rotation',
+    '         must converge; cache longer ONLY if you purge on rotation',
+    '       · an unknown query parameter must NOT change the response or its cache key (cache key = path)',
+    '       · the SAME bytes from every vendor you serve from — a mirror that differs is not a mirror',
+    '',
+    '  3️⃣  DNS — one TXT record, the pointer that binds the name to this identity:',
+    `       _ust.${domain}   TXT   "ust-genesis=${genHash}"`,
+    '',
+    '  4️⃣  ATTEST it — from anywhere, trusting nobody, including yourself:',
+    `       ust discovery ${domain}`,
+    '       It fetches every surface, checks the bytes against these files, probes the query-robustness',
+    '       rule and reads the DNS pin. A pass is evidence; your own assertion is not.',
+    '',
+    '  examples for common stacks:',
+    `       static host:  copy the files into  <webroot>/.well-known/`,
+    '       nginx:        location = /.well-known/ust-genesis { alias /srv/ust/ust-genesis;',
+    '                       default_type application/json; add_header Cache-Control "public, max-age=300"; }',
+    '       caddy:        handle /.well-known/ust-* { root * /srv/ust; file_server }',
+    '  ══════════════════════════════════════════════',
+  ];
+}
+
 export function manualServingGuide(domain, outDir) {
   return [
     `  make  https://${domain}/.well-known/ust-genesis  return the EXACT bytes of ${outDir}/ust-genesis`,
@@ -1306,8 +1348,23 @@ async function resolveDnsToken(ask) {
 
 // ─── ust publish cf --domain <d> --genesis <file> — the CF one-click serving adapter (§20.1) ──────────
 async function cmdPublish() {
-  const provider = process.argv[3];
-  if (provider !== 'cf') die('usage: ust publish cf --domain <d> --genesis <ust-genesis file> [--auth wrangler] [--flip-proxy] [--mirror url,url]\n  (cf is the first convenience adapter — the §20.1 contract itself is infrastructure-agnostic; `ust discovery` attests ANY stack)');
+  // THE ROAD IS A CHOICE, and it is the same choice the ceremony offers — so it is asked the same way here. It
+  // used to be a fatal 'needs CF_TOKEN' with a wall of scope text, which reads as a broken command rather than a
+  // fork, and it silently assumed Cloudflare: an operator on their own stack was told about a missing token for a
+  // vendor they do not use. The §20.1 contract is vendor-NEUTRAL; the tool now says so where it matters.
+  const ROADS = { cf: 'Cloudflare — worker + route + DNS, one command', self: 'your own infrastructure — files written, you serve them' };
+  let provider = process.argv[3];
+  if (provider && !(provider in ROADS)) die(`unknown road \`${provider}\`. Roads: ` + Object.keys(ROADS).join(' | '));
+  if (!provider) {
+    if (!process.stdin.isTTY) die('usage: ust publish <cf|self> --domain <d> --genesis <ust-genesis file>\n  cf   — Cloudflare worker + route + DNS\n  self — write the four artifacts and serve them on your own stack');
+    console.log('\n  Where does this identity get SERVED? (both roads end at the same §20.1 checks)');
+    for (const [k, v] of Object.entries(ROADS)) console.log(`    [${k === 'cf' ? 1 : 2}] ${k.padEnd(5)} ${v}`);
+    const rl0 = openReader(createInterface);
+    const pick = (await rl0.question('  choose 1 or 2 [2]: ')).trim();
+    closeReader(rl0);
+    provider = pick === '1' ? 'cf' : 'self';
+    console.log(`  → ${provider}\n`);
+  }
   const domain = arg('domain'); if (!domain || domain === true) die('--domain is required');
   const genPath = arg('genesis'); if (!genPath || genPath === true) die('--genesis <path to the ust-genesis file> is required');
   const genesisText = readFileSync(genPath, 'utf8');
@@ -1335,6 +1392,23 @@ async function cmdPublish() {
   const served = await collectServed({ domain, genesisText, genPath, keylogText,
     witnessFile: typeof arg('witness', null) === 'string' ? arg('witness', null) : null,
     cadenceFile: typeof arg('cadence-log', null) === 'string' ? arg('cadence-log', null) : null, log: console.log });
+
+  // THE SELF-HOSTED ROAD ends here: the artifacts are assembled exactly as the vendor adapter would assemble them
+  // — including the WITNESS, which for a supersession is a successor derived from what is live and cannot be
+  // written by hand — and then handed over. Nothing is deployed, no credential is asked for, and the verification
+  // is the same `ust discovery` a stranger would run.
+  if (provider === 'self') {
+    const outDir = typeof arg('out', null) === 'string' ? arg('out', null) : './ust-serve';
+    mkdirSync(outDir, { recursive: true });
+    const files = { genesis: served.genesisText, keylog: served.keylogText, cadence: served.cadenceText, witness: served.witnessText };
+    for (const [name, text] of Object.entries(files)) {
+      if (text == null) { console.log(`  ·  ust-${name}: not available — not written, and it will not be served`); continue; }
+      writeFileSync(`${outDir}/ust-${name}`, text);
+      console.log(`  ✓ wrote ${outDir}/ust-${name}  (${Buffer.byteLength(text)} B)`);
+    }
+    for (const line of selfHostedPlan({ domain, outDir, genHash: P.contentHash(JSON.parse(served.genesisText)), artifacts: files })) console.log(line);
+    return;
+  }
 
   let r;
   if (arg('auth', null) === 'wrangler') {
@@ -2067,6 +2141,6 @@ if (isMain) {
   const cmd = process.argv[2];
 
   const run = { verify: cmdVerify, canon: cmdCanon, genesis: cmdGenesis, rotate: cmdRotate, cadence: cmdCadence, discovery: cmdDiscovery, publish: cmdPublish, mirror: cmdMirror, stream: cmdStream, forkchoice: cmdForkChoice, witness: cmdWitness }[cmd];
-  if (!run) { console.error('ust — verify machine-readable state\n\n  ust verify <file|->        verify a transcript (exit 0 = VALID, 1 = not; --require-anchored floors at TOP)\n  ust canon  <file|->        print canonical bytes + hash (cross-language diff)\n  ust genesis --domain <d>   run the HIGH genesis ceremony (add --publish cf for one-click serving)\n  ust rotate  --domain <d> --root <enc>   APPEND a key rotation to the served log (never re-mint; old docs stay valid)\n  ust cadence --domain <d> --root <enc> --seconds <n> --effective-from <slot>   DECLARE the signed stream grid (§11.3)\n  ust discovery <domain>     attest the §20.1 serving contract (any infra)\n  ust publish cf --domain <d> --genesis <f>   deploy the CF serving adapter for an existing genesis\n  ust mirror <domain>        publish + attest a SECOND-vendor mirror (§20.1 vendor-independence)\n  ust stream <frames…>       RANGE verdict: chain · forks · completeness (needs --checkpoint for `complete`)\n  ust forkchoice <docs…>     pick the CANONICAL doc among candidates for ONE ust_id (canonical = anchor-included)\n  ust witness rekor --domain <d>   log the genesis in a transparency log → automatic no-fork (#68)\n'); process.exit(cmd ? 1 : 0); }
+  if (!run) { console.error('ust — verify machine-readable state\n\n  ust verify <file|->        verify a transcript (exit 0 = VALID, 1 = not; --require-anchored floors at TOP)\n  ust canon  <file|->        print canonical bytes + hash (cross-language diff)\n  ust genesis --domain <d>   run the HIGH genesis ceremony (add --publish cf for one-click serving)\n  ust rotate  --domain <d> --root <enc>   APPEND a key rotation to the served log (never re-mint; old docs stay valid)\n  ust cadence --domain <d> --root <enc> --seconds <n> --effective-from <slot>   DECLARE the signed stream grid (§11.3)\n  ust discovery <domain>     attest the §20.1 serving contract (any infra)\n  ust publish <cf|self> --domain <d> --genesis <f>   serve an existing genesis: cf deploys the adapter,\n                             self writes the four artifacts for YOUR stack (asked if omitted)\n  ust mirror <domain>        publish + attest a SECOND-vendor mirror (§20.1 vendor-independence)\n  ust stream <frames…>       RANGE verdict: chain · forks · completeness (needs --checkpoint for `complete`)\n  ust forkchoice <docs…>     pick the CANONICAL doc among candidates for ONE ust_id (canonical = anchor-included)\n  ust witness rekor --domain <d>   log the genesis in a transparency log → automatic no-fork (#68)\n'); process.exit(cmd ? 1 : 0); }
   run().catch((e) => die(e.message || String(e)));
 }
