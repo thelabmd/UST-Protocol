@@ -547,7 +547,15 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
   const grant = P.resolveAuthority(capObs, { genesis: cap.genesis, keylog: [cap.keylog0], noForkConfirmed: true });
   check('capacity_is_two_dimensional', cap.genesis.state.data.genesis.value.max_transcript_bytes === '5000000' && grant.capacity?.maxTranscriptBytes === 5000000);
   const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
-  check('package_exports_the_core', pkg.exports === './index.mjs');
+  // The assertion is that the core is EXPORTED, not that `exports` is a bare string. It became an object when
+  // `types` moved inside it: TypeScript under node16 resolution reads the declaration from the exports map, not
+  // from a top-level `types` field, so a package with `exports` and only a top-level `types` resolves the module
+  // and refuses the types — measured on the reference operator's engine, which found the file and could not use
+  // it. Checking the literal shape would have made a correct change look like a regression (#105).
+  const exp = pkg.exports;
+  const core = typeof exp === 'string' ? exp : (typeof exp?.['.'] === 'string' ? exp['.'] : exp?.['.']?.import ?? exp?.['.']?.default);
+  check('package_exports_the_core', core === './index.mjs');
+  check('package_exports_types_first', typeof exp === 'object' && Object.keys(exp['.'] ?? {})[0] === 'types');
 }
 
 // ── 18. second external review (formal-model alignment) + the V8-reality pin.

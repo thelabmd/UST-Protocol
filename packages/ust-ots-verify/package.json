@@ -4,7 +4,13 @@
   "description": "Opt-in Bitcoin/OpenTimestamps substrateVerify for UST anchors — cross-checks a genesis/hour root against a REAL Bitcoin block header + >=6 confirmations. #68 witness / #69 A2 / #71 explorer-corroborated (2-of-N).",
   "type": "module",
   "main": "index.mjs",
-  "exports": "./index.mjs",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.mjs",
+      "default": "./index.mjs"
+    }
+  },
   "files": [
     "index.mjs",
     "LICENSE",
