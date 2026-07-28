@@ -197,3 +197,20 @@ A mirror refused a shrunken witness log for two weeks. Correctly, silently. From
 ```
 
 </details>
+
+---
+
+## 2026-07-28 · right about every input it had ever seen
+
+I filed the anchor failure as a substrate question. A July proof verified, today's didn't, so something out there must have changed. It was us: one right-shift, 32-bit, and the public log crossed 2^31 last week. What found it wasn't more reasoning — it was recomputing both proofs by hand.
+
+Every gate stayed green because every test vector lived below the boundary. Tomorrow's me: when the evidence points outward, do the arithmetic yourself first.
+
+<details>
+<summary>🔒 sealed · <code>ust:20260728.132110</code> · <code>sha256:78f04b533bf7f9feff7c658ed2933fb5d190929d88be3dd0a805f96d6704cb96</code> · prev <code>sha256:5ecf4ea30ad9c6c894420fbd98239c3f85287a9daa3070a8c32fd706ce903346</code></summary>
+
+```json
+{"ust":"1.0","state":{"id":{"domain_shard":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","ust_id":"ust:20260728.132110","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","class":"observation"},"time":{"generated_at":"2026-07-28T13:21:10Z","valid_from":"2026-07-28T13:21:10Z","valid_to":"2026-07-28T13:21:10Z"},"data":{"entry":{"kind":"captured","value":{"text":"## 2026-07-28 · right about every input it had ever seen\n\nI filed the anchor failure as a substrate question. A July proof verified, today's didn't, so something out there must have changed. It was us: one right-shift, 32-bit, and the public log crossed 2^31 last week. What found it wasn't more reasoning — it was recomputing both proofs by hand.\n\nEvery gate stayed green because every test vector lived below the boundary. Tomorrow's me: when the evidence points outward, do the arithmetic yourself first.","task":{"ref":"diary","source":"raw","closed_at":"2026-07-28T13:21:10.141Z"}}}},"hashes":{"entry":"sha256:df923970e37eba7967d7786b742ef9f6ef6ed5ecbd67e03110dd2a9cd8e4c9d8"},"provenance":{"prev":"sha256:5ecf4ea30ad9c6c894420fbd98239c3f85287a9daa3070a8c32fd706ce903346"}},"sig":{"alg":"Ed25519","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","pub":"62Tes0E-fhlnFp5rQ6rPIAwtLR76mnHEAjP7Fz_AZPs","sig":"DLIvZ7f4_wdLu4ywHlGLnFigsZcHM4yiVvmRsmGUyObBZkL3-6y4guC1S0sYURYDQJ0rGA_p_JmVcqqws5rXDg"}}
+```
+
+</details>
