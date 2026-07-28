@@ -327,8 +327,13 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
   let exhausted = '';
   try { await C.confirmLive({ domain: DOMAIN, genHash: g.genHash, fetchImpl: async () => ({ text: async () => 'nope' }), sleep: async () => {}, attempts: 2, delayMs: 1 }); }
   catch (e) { exhausted = e.message; }
-  // the re-attest hint must be RUNNABLE for everyone (npx form — a global `ust` is not assumed)
-  check('confirm_live_exhaustion_names_reattest', exhausted.includes('npx @ust-protocol/cli discovery') && exhausted.includes('NOT granted'));
+  // The re-attest hint must be RUNNABLE — that was always the intent, and the npx form was the mechanism chosen
+  // for it. Measured 2026-07-28: `npx @ust-protocol/cli` fetches the PUBLISHED package, which is a DIFFERENT checker
+  // from the one printing the hint. An operator on a working copy would be sent to a build that disagrees with the
+  // one that just ran — today's reads a cadence declared in the genesis and the published one does not, so the hint
+  // would have contradicted the screen above it. `invocation()` keeps the intent (runnable without assuming a global
+  // install) and drops the cost. The assertion follows the intent, not the mechanism.
+  check('confirm_live_exhaustion_names_reattest', /discovery/.test(exhausted) && exhausted.includes('NOT granted'));
 
   // the closing summary: custody classes + tier ladder + NO operator-specific env name (the protocol
   // tool must not present one operator's convention as the standard)
