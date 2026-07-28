@@ -19,7 +19,16 @@ tracks two lines: the **reference checker (L1 TCB)** rev-ladder — a recurring 
 math-first remediation — and the **protocol milestones**. The normative source is the git history plus the
 conformance vectors; this file is the readable map.
 
-## [Unreleased] — rc.37 line
+## [Unreleased] — rc.38 line
+
+<!-- The header said rc.37 while `packages/ust-protocol/package.json` said rc.38: the version moved
+     and the ledger did not follow. Caught by the owner asking what rc.38 even was — a fair question,
+     because nothing here answered it. Both bumps are same-day work: rc.37 is the gate that enumerated
+     a pattern instead of the domain, rc.38 is `witnessSuccessor` discarding the anchor it was called
+     to add. Neither changes verification semantics.
+     Recorded because a version number nobody can trace back to a row is the same defect as a claim
+     nobody can trace back to a measurement. -->
+
 
 ### HIGH reached end to end on a live domain — the first time the tier was measured rather than described
 
