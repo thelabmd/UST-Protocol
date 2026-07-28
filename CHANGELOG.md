@@ -147,12 +147,27 @@ fixes **structurally, not point-wise**. The conformance vectors + byte corpus + 
 
 ## Milestones
 
-- **LIGHT** — the byte-verdict floor · **done**
-- **HIGH** — name-binding authority · **done**
-- **TOP** — anchored time · protocol done, operator wiring pending
-- **Formal model** — assurance product-lattice · human + machine audit pending
-- **Chains** — state linked by provenance · in progress
-- **Tools & surfaces** — MCP / CLI / web-signer / connectors · shipped
+Counts are open/closed as of 2026-07-28, and they are here so the status word can be checked against
+something rather than believed. Five milestones were missing from this list entirely, and every issue in
+the tracker now carries one — 26 did not until today, which is why "in progress" could mean anything.
+
+| milestone | issues | status |
+|---|---|---|
+| **LIGHT** — the byte-verdict floor | 0 / 6 | **done** — closed as a milestone; the floor holds |
+| **HIGH** — name-binding authority | 0 / 7 | **done** — and proven end to end on a live domain today, not only in code |
+| **TOP** — anchored time | 1 / 6 | operator anchored its genesis (`final: true`); **per-document** anchoring is undecided — the open item |
+| **Reference checker (L1)** — independent TCB | 2 / 7 | the ladder stands at rev95, two audits still open |
+| **Formal model** — assurance product-lattice | 4 / 3 | human + machine review pending; calibration of the §13 constants is open |
+| **L2** — machine-checked soundness (Lean 4) | 0 / 0 | **empty** — not one issue has ever been filed here |
+| **Chains** — state linked by provenance | 2 / 0 | barely started: two open, nothing closed |
+| **Tools & surfaces** — MCP · CLI · web-signer · connectors | 4 / 4 | shipped and *drifting* — the published checker is behind what CI verifies |
+| **1.0.0 final** | 8 / 1 | the release gate; what must close before the version stops being a candidate |
+| **Post-1.0** — vNext design space | 3 / 0 | kept out of the release scope deliberately, so 1.0 stays readable |
+| **Pre-1.0** — v0.24 → v0.26 checker references | 0 / 3 | history: what the protocol *was* |
+
+Two things this table says that a prose list hid. **L2 is empty** — the Lean layer has a milestone and no
+work behind it, so "machine-checked soundness" is a name, not a track. And **Tools & surfaces is not simply
+"shipped"**: it ships, and what a stranger installs is not what CI tests.
 
 See [milestones](https://github.com/thelabmd/UST-Protocol/milestones) for the live status.
 
