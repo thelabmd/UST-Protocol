@@ -34,7 +34,7 @@ let checked = 0;
 for (const [n, line] of lines.entries()) {
   if (/^\s*(\/\/|\*)/.test(line)) continue;                      // a comment is not an instruction
   if (!/console\.log|^\s*['"`]|^\s*\$\{?T\}?/.test(line) && !/^\s{4}['"`]/.test(line)) continue;
-  for (const m of line.matchAll(/(?:^|[\s'"`])(?:npx @ust-protocol\/cli|ust) ([a-z]+)(?: ([a-z-]+))?/g)) {
+  for (const m of line.matchAll(/(?:^|[\s'"`])(?:npx @ust-protocol\/cli|\$\{invocation\(\)\}|ust) ([a-z]+)(?: ([a-z-]+))?/g)) {
     const [, sub, next] = m;
     if (!COMMANDS.has(sub)) continue;                            // English prose that happens to contain "ust"
     checked++;

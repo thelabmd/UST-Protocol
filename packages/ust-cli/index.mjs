@@ -942,7 +942,7 @@ export async function confirmLive({ domain, genHash, fetchImpl = fetch, sleep = 
       if (i < attempts) await sleep(delayMs);
     }
   }
-  throw new Error(`could not confirm the published well-known after ${attempts} attempts (~${Math.round(attempts * delayMs / 60000)} min): ${last.message}\n  authoritative NOT granted. DNS/proxy propagation can take a few minutes — your artifacts are ALREADY written and the deployment may be fine; verify later with:  npx @ust-protocol/cli discovery ${domain} --expect ${genHash}`);
+  throw new Error(`could not confirm the published well-known after ${attempts} attempts (~${Math.round(attempts * delayMs / 60000)} min): ${last.message}\n  authoritative NOT granted. DNS/proxy propagation can take a few minutes — your artifacts are ALREADY written and the deployment may be fine; verify later with:  ${invocation()} discovery ${domain} --expect ${genHash}`);
 }
 
 // The closing picture: WHAT exists now, WHO holds which key, WHERE you are on the tier ladder, and the
@@ -1037,14 +1037,14 @@ export function ceremonySummary({ domain, genHash, opKeyId, maxP, cadence, outDi
     '  🎚  tier ladder — where you are',
     '  LIGHT  ✅ now   — each document verifies self-asserted: signed + intact under its carried key',
     '  HIGH   ⏳ next  — a verifier RESOLVES genesis→key-log (+ no-fork witness) and your NAME becomes',
-    '                   authoritative:  npx @ust-protocol/cli verify <doc> --genesis ust-genesis --keylog ust-keylog-0 --no-fork-confirmed',
+    `                   authoritative:  ${invocation()} verify <doc> --genesis ust-genesis --keylog ust-keylog-0 --no-fork-confirmed`,
     '  TOP    ⏳ later — anchored TIME for each document (e.g. bitcoin-ots). Stream COMPLETENESS is a',
-    '                   SEPARATE range verdict:  npx @ust-protocol/cli stream <frames…> --checkpoint <cp>',
+    `                   SEPARATE range verdict:  ${invocation()} stream <frames…> --checkpoint <cp>`,
     '',
     '  ➡️  next moves',
     "  1. operational-key.b64 → your producer's signing-key secret (an env var of YOUR naming), then DELETE the file",
     '  2. revoke the ceremony credentials (wrangler logout + the DNS token)',
-    `  3. re-attest the serving contract anytime:  npx @ust-protocol/cli discovery ${domain}`,
+    `  3. re-attest the serving contract anytime:  ${invocation()} discovery ${domain}`,
     '  4. HIGH: run the witness exchange + serve the key log    5. TOP: queue the anchor',
     '  ══════════════════════════════════════════════',
   ];
@@ -1120,7 +1120,12 @@ export async function ghMirrorPublish({ repo, dir = 'mirror', genesisText, keylo
 // The closing story every publishing flow must end with (owner: "я вообще не понимаю что мне дальше
 // делать и где мой HIGH") — what just happened, the explicit PATH TO HIGH for the publisher's own
 // documents, and the housekeeping. One source, printed by publish AND folded into the ceremony summary.
-export function whatsNextSummary({ domain, genHash }) {
+// The ladder reports what was MEASURED where it can. Step 3 was a hardcoded ⬜ printed directly beneath a §20.1
+// run that had just confirmed the key log IS served — the operator was shown a step to do and the evidence it was
+// already done, in the same screen. A checklist that does not read its own measurements is decoration.
+export function whatsNextSummary({ domain, genHash, checks = [] }) {
+  const passed = (idPrefix) => checks.some((c) => c.id?.startsWith(idPrefix) && c.status === 'pass');
+  const keylogServed = passed('key log served');
   return [
     '',
     '  ─── what just happened ───',
@@ -1132,16 +1137,16 @@ export function whatsNextSummary({ domain, genHash }) {
     '  ✅ 1. identity live — genesis + key-log minted, serving attested',
     '  ⬜ 2. your producer signs with the operational key',
     '        load operational-key.b64 as its signing-key secret, then DELETE the file',
-    '  ⬜ 3. make the key log resolvable — the cf adapter serves it at /.well-known/ust-keylog;',
-    '        by hand: publish ust-keylog-0 yourself (a verifier needs BOTH to resolve your name)',
+    `  ${keylogServed ? '✅' : '⬜'} 3. key log resolvable — ${keylogServed ? 'served and chained to this genesis (attested above)' : 'the cf adapter serves it at /.well-known/ust-keylog;'}`,
+    ...(keylogServed ? [] : ['        by hand: publish ust-keylog-0 yourself (a verifier needs BOTH to resolve your name)']),
     '  ⬜ 4. verifiers resolve — YOUR documents then verify HIGH:',
-    `        npx @ust-protocol/cli verify <doc> --genesis ust-genesis --keylog ust-keylog-0 --no-fork-confirmed`,
+    `        ${invocation()} verify <doc> --genesis ust-genesis --keylog ust-keylog-0 --no-fork-confirmed`,
     '  ⏳ later: witness exchange (backs the no-fork assertion) · anchor the stream → TOP',
     '',
     '  ─── housekeeping (do these NOW) ───',
     '  · revoke the ceremony credentials:  npx wrangler logout  + delete the DNS token in the dashboard',
     '  · genesis-key(.enc).b64 → cold storage; the passphrase lives APART from the file',
-    `  · re-attest the serving contract anytime:  npx @ust-protocol/cli discovery ${domain}`,
+    `  · re-attest the serving contract anytime:  ${invocation()} discovery ${domain}`,
   ];
 }
 
@@ -1295,7 +1300,7 @@ async function cmdVerify() {
     } else if (tier === 'LIGHT' && !genesisPath && !resolution) {
       console.log('\n  ✅ this is the EXPECTED result for a lone document — it proves the file is signed and');
       console.log('     intact under the key it carries. HIGH is a property of RESOLUTION, not of the file:');
-      console.log('     npx @ust-protocol/cli verify <doc> --genesis <ust-genesis> --keylog <ust-keylog-0> --no-fork-confirmed');
+      console.log('     ${invocation()} verify <doc> --genesis <ust-genesis> --keylog <ust-keylog-0> --no-fork-confirmed');
     } else if (tier === 'LIGHT' && genesisPath && !noFork) {
       console.log('\n  ℹ️  resolution ran but the name is not authoritative WITHOUT the no-fork witness check.');
       console.log('     Once your witness exchange confirms no rival genesis exists, add: --no-fork-confirmed');
@@ -1345,8 +1350,8 @@ async function cmdDiscovery() {
     console.log('  PARTIAL = no violation found, but unchecked properties remain:');
     for (const c of checks.filter((x) => x.status === 'skip')) {
       if (c.id.startsWith('DNS record')) console.log('    → publish the _ust TXT (ust-genesis=<content_hash>) and re-run');
-      else if (c.id.startsWith('vendor-independence')) console.log(`    → declare an independent mirror:  npx @ust-protocol/cli discovery ${domain} --mirror <url>`);
-      else if (c.id.startsWith('cadence')) console.log(`    → declare the stream grid (a COLD root-key ceremony; needed before a range can read \`complete\`):\n        npx @ust-protocol/cli cadence --domain ${domain} --root <encrypted-root.b64> --seconds <n> --effective-from <a FUTURE ust_id>`);
+      else if (c.id.startsWith('vendor-independence')) console.log(`    → declare an independent mirror:  ${invocation()} discovery ${domain} --mirror <url>`);
+      else if (c.id.startsWith('cadence')) console.log(`    → declare the stream grid (a COLD root-key ceremony; needed before a range can read \`complete\`):\n        ${invocation()} cadence --domain ${domain} --root <encrypted-root.b64> --seconds <n> --effective-from <a FUTURE ust_id>`);
       else console.log('    → ' + c.id + ' — ' + c.detail);
     }
   }
@@ -1469,7 +1474,7 @@ async function cmdPublish() {
   for (const c of a.checks) console.log(`  ${mark[c.status]}  ${c.id}${c.detail ? '  (' + c.detail + ')' : ''}`);
   console.log(`\n  DISCOVERY CONFORMANCE (§20.1): ${a.verdict}${a.verdict === 'PARTIAL' ? '  — no violation; only undeclared properties left unattested (e.g. a mirror)' : ''}`);
   // the flow must never just STOP at a verdict — close the story: what happened, the path to HIGH, housekeeping
-  if (a.verdict !== 'FAILED') for (const l of whatsNextSummary({ domain, genHash: r.genHash })) console.log(l);
+  if (a.verdict !== 'FAILED') for (const l of whatsNextSummary({ domain, genHash: r.genHash, checks: a.checks ?? [] })) console.log(l);
   process.exit(a.verdict === 'FAILED' ? 1 : a.verdict === 'PARTIAL' ? 2 : 0);
 }
 
@@ -1600,7 +1605,7 @@ async function cmdMirror() {
   console.log(`\n  RESULT: ${complete ? '✅ COMPLETE — every §20.1 property attested, vendor-independence included' : m.failed || a.verdict === 'FAILED' ? '❌ FAILED — fix the ❌ lines above and re-run' : '⬜ PARTIAL — see the ⬜ lines above'}`);
   if (complete) {
     console.log('  keep the mirror URL(s) declared to your consumers (operator profile) and re-attest anytime:');
-    console.log(`    npx @ust-protocol/cli discovery ${domain} --mirror ${genesisUrls[0]}`);
+    console.log(`    ${invocation()} discovery ${domain} --mirror ${genesisUrls[0]}`);
   }
   process.exit(m.failed || a.verdict === 'FAILED' ? 1 : a.verdict === 'PARTIAL' ? 2 : 0);
 }
@@ -1646,7 +1651,7 @@ async function cmdWitness() {
     let keylogText = null; try { keylogText = await fetch(`https://${domain}/.well-known/ust-keylog`, { signal: AbortSignal.timeout(8000) }).then((r) => r.ok ? r.text() : null); } catch { /* ok */ }
     try { await wranglerDeploy({ domain, ...(await collectServed({ domain, genesisText, genPath, keylogText, log: console.log })), witnessText: witness }); } catch (e) { die('deploy failed: ' + e.message + '\n  (the anchor is logged in Rekor; re-run --deploy or update the endpoint by hand)'); }
     console.log('  ✅ witness endpoint updated — verifiers with @ust-protocol/rekor-verify now confirm no-fork automatically');
-    console.log('     re-attest:  npx @ust-protocol/cli verify <slot>   (install ots-verify + rekor-verify)');
+    console.log('     re-attest:  ${invocation()} verify <slot>   (install ots-verify + rekor-verify)');
   } else {
     console.log('\n  witness-log built (NOT deployed — pass --deploy to update the CF endpoint, or publish it yourself):');
     console.log('  ' + witness);
@@ -1981,7 +1986,7 @@ async function cmdGenesis() {
     if (dnsMode !== 'cf-api') {
       const seen = await dohConfirmTxt({ domain, genHash, attempts: 2 });
       if (seen) console.log('  ✅ 🌐 the _ust TXT is visible via DoH and carries your hash');
-      else console.log('  ⚠️  🌐 the _ust TXT is not visible via DoH yet (registrar propagation) — re-attest later:  npx @ust-protocol/cli discovery ' + domain);
+      else console.log('  ⚠️  🌐 the _ust TXT is not visible via DoH yet (registrar propagation) — re-attest later:  ${invocation()} discovery ' + domain);
     }
     // §20.1 probe (3), WARNING-level here: BINDING is fail-closed above; a serving-contract violation is
     // fixable post-hoc without redoing the ceremony. `ust discovery <domain>` re-attests all four anytime.
@@ -1991,8 +1996,8 @@ async function cmdGenesis() {
       const a = await fetch(`https://${domain}/.well-known/ust-genesis`, { signal: AbortSignal.timeout(10000) }).then((r) => r.text());
       const probed = await fetch(`https://${domain}/.well-known/ust-genesis?${rand}`, { signal: AbortSignal.timeout(10000) }).then((r) => (r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`))));
       if (probed === a) console.log('  ✅ query-robustness probe: an unknown ?query returns byte-identical bytes (§20.1)');
-      else console.log('  ⚠️  §20.1 SERVING: the response VARIES with an unknown query parameter — cache-key amplification is open; fix the cache config, then `npx @ust-protocol/cli discovery ' + domain + '`');
-    } catch (e) { console.log('  ⚠️  §20.1 SERVING: query-robustness probe inconclusive (' + e.message + ') — run `npx @ust-protocol/cli discovery ' + domain + '` later'); }
+      else console.log('  ⚠️  §20.1 SERVING: the response VARIES with an unknown query parameter — cache-key amplification is open; fix the cache config, then `${invocation()} discovery ' + domain + '`');
+    } catch (e) { console.log('  ⚠️  §20.1 SERVING: query-robustness probe inconclusive (' + e.message + ') — run `${invocation()} discovery ' + domain + '` later'); }
   } catch (e) { rl?.close(); die(e.message); }
 
   // 5. witnesses + anchor — PREPARED here; the operator runs the exchange + anchor
@@ -2100,7 +2105,7 @@ export async function cmdRotate() {
   else if (reason === 'retired') console.log('     retired: an old-key doc is VALID iff its anchor time is at/before this rotation (hygienic — history intact).');
   else console.log('     no revocation: old-key docs remain VALID (the key is superseded, not revoked). Add --reason to revoke.');
   console.log('\n  ▶️  next: serve the grown key-log, then point the engine at the new operational key.');
-  console.log(`     one-click reserve: npx @ust-protocol/cli publish cf --domain ${domain} --genesis <ust-genesis> --keylog ${outDir}/ust-keylog --auth wrangler`);
+  console.log(`     one-click reserve: ${invocation()} publish cf --domain ${domain} --genesis <ust-genesis> --keylog ${outDir}/ust-keylog --auth wrangler`);
 }
 
 // Run the dispatcher ONLY when executed directly — importing this module (regression suite / Go-binding
