@@ -6,7 +6,7 @@
 // is the defect this file exists to prevent (#105).
 // Package: @ust-protocol/mcp
 
-export function dispatch(name: unknown, args?: unknown): Promise<unknown>;
-export function listTools(): unknown;
+export function dispatch(name: unknown, args?: unknown): Promise<{ isError: unknown; error: unknown }>;
+export function listTools(): Record<string, unknown>;
 export const productTools: unknown;
 export const tools: unknown;

@@ -6,16 +6,16 @@
 // is the defect this file exists to prevent (#105).
 // Package: @ust-protocol/web-signer
 
-export function buildState(id: unknown, time: unknown, data: unknown): Promise<unknown>;
-export function canon(v: unknown): unknown;
-export function contentHash(doc: unknown): unknown;
-export function generateSigner(arg0?: unknown): Promise<unknown>;
+export function buildState(id: unknown, time: unknown, data: unknown): Promise<{ id: unknown; time: unknown; data: unknown; hashes: unknown }>;
+export function canon(v: unknown): Record<string, unknown>;
+export function contentHash(doc: unknown): string;
+export function generateSigner(arg0?: unknown): Promise<Record<string, unknown>>;
 export function H(tag: unknown, str: unknown): unknown;
 export function Hbytes(tag: unknown, bytes: unknown): unknown;
 export function keyId(pubB64url: unknown): unknown;
-export function nowFrame(date?: unknown): unknown;
-export function partitionHash(arg0: unknown): Promise<unknown>;
-export function seal(state: unknown, signer: unknown): Promise<unknown>;
+export function nowFrame(date?: unknown): { ust_id: unknown; time: unknown };
+export function partitionHash(arg0: unknown): Promise<Record<string, unknown>>;
+export function seal(state: unknown, signer: unknown): Promise<{ ust: unknown; state: unknown; sig: unknown }>;
 export function signedContent(doc: unknown): unknown;
-export function signerFromKeys(privateKey: unknown, publicKey: unknown): Promise<unknown>;
-export function signObservation(signer: unknown, arg1: unknown): Promise<unknown>;
+export function signerFromKeys(privateKey: unknown, publicKey: unknown): Promise<{ privateKey: unknown; publicKey: unknown; pub: unknown; key_id: unknown }>;
+export function signObservation(signer: unknown, arg1: unknown): Promise<Record<string, unknown>>;

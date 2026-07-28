@@ -6,9 +6,9 @@
 // is the defect this file exists to prevent (#105).
 // Package: @ust-protocol/rekor-verify
 
-export function inclusionVerify(contentHash: unknown, proof: unknown): unknown;
-export function makeSubstrateVerify(arg0?: unknown): unknown;
+export function inclusionVerify(contentHash: unknown, proof: unknown): Record<string, unknown>;
+export function makeSubstrateVerify(arg0?: unknown): { final: unknown; time: unknown };
 export const substrateVerify: unknown;
-export function toVerifiedEvidence(subject: unknown, result?: unknown, source_id?: unknown): unknown;
-export function verifyCheckpoint(checkpoint: unknown, expectedRootHex: unknown, expectedTreeSize: unknown, pubKey: unknown): unknown;
-export function verifyInclusion(proof?: unknown): unknown;
+export function toVerifiedEvidence(subject: unknown, result?: unknown, source_id?: unknown): { proof_kind: unknown; subject: unknown; source_id: unknown; facts: unknown };
+export function verifyCheckpoint(checkpoint: unknown, expectedRootHex: unknown, expectedTreeSize: unknown, pubKey: unknown): string;
+export function verifyInclusion(proof?: unknown): Record<string, unknown>;

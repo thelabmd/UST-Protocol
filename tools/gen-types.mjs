@@ -83,7 +83,8 @@ export function declarationsFor(src) {
   const decls = [];
   for (const m of src.matchAll(/^export (?:async )?function (\w+)\s*\(([\s\S]*?)\)\s*\{/gm)) {
     const body = bodyOf(src, m.index + m[0].length - 1);
-    decls.push({ kind: 'function', name: m[1], params: relaxTrailing(parseParams(m[2]), body), async: /^export async/.test(m[0]) });
+    const isA = /^export async/.test(m[0]);
+    decls.push({ kind: 'function', name: m[1], params: relaxTrailing(parseParams(m[2]), body), async: isA, ret: returnTypeOf(body, isA) });
   }
   for (const m of src.matchAll(/^export const (\w+)\s*=\s*(?:async\s*)?\(([\s\S]*?)\)\s*=>/gm)) {
     // An arrow has either a BLOCK body (`=> {`) or an EXPRESSION body. Brace-matching is right for the first
@@ -92,14 +93,95 @@ export function declarationsFor(src) {
     // AFTER that literal closes, so the parameter looked required. Decide by what follows the arrow.
     const after = src.slice(m.index + m[0].length);
     const isBlock = /^\s*\{/.test(after);
-    const end = (() => { const nx = src.indexOf('\nexport ', m.index + 1); return nx < 0 ? src.length : nx; })();
+    // An EXPRESSION arrow ends at its own semicolon, not at the next `export`. Slicing to the next export
+    // swallowed the statements between — `isValid`'s one-line predicate arrived with `const CLASSES = […]`
+    // attached, so the predicate test never matched and a human-written `boolean` beat the generator. Walk to
+    // the first `;` at depth zero.
+    const end = (() => {
+      let d = 0;
+      for (let k = m.index + m[0].length; k < src.length; k++) {
+        const c = src[k];
+        if ('([{'.includes(c)) d++;
+        else if (')]}'.includes(c)) d--;
+        else if (c === ';' && d === 0) return k;
+      }
+      const nx = src.indexOf('\nexport ', m.index + 1);
+      return nx < 0 ? src.length : nx;
+    })();
     const body2 = isBlock ? bodyOf(src, m.index + m[0].length + after.indexOf('{')) : src.slice(m.index + m[0].length, end);
-    decls.push({ kind: 'function', name: m[1], params: relaxTrailing(parseParams(m[2]), body2), async: /=\s*async/.test(m[0]) });
+    const isA2 = /=\s*async/.test(m[0]);
+    decls.push({ kind: 'function', name: m[1], params: relaxTrailing(parseParams(m[2]), body2), async: isA2, ret: returnTypeOf(body2, isA2) });
   }
   for (const m of src.matchAll(/^export const (\w+)\s*=\s*(?!\(|async)/gm)) {
     if (!decls.some((d) => d.name === m[1])) decls.push({ kind: 'const', name: m[1] });
   }
   return decls.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+// RETURN TYPES, inferred from the body rather than left at `unknown`. Not decoration: the acceptance test for
+// #105 is the reference operator DELETING its hand-written declaration, and it could not, because its file
+// returned `Record<string, unknown>` where this one returned `unknown` — four call sites stopped compiling.
+// A declaration too loose to replace the thing it supersedes has not finished the job.
+// Only shapes the source states outright are read; anything else stays `unknown`, which is the honest answer.
+function returnTypeOf(rawBody, isAsync) {
+  // Strip leading comments before matching the body's FIRST expression. `buildCheckpoint` carries a §11.3
+  // annotation between its arrow and its call, so a pattern anchored on the body's start matched the comment
+  // instead and the return stayed `unknown`. Third variant today of the same lesson: match the structure, not a
+  // position that happens to work on the cases in front of me.
+  const body = rawBody.replace(/^(?:\s*(?:\/\/[^\n]*|\/\*[\s\S]*?\*\/)\s*)+/, '');
+  // `expr` must be declared BEFORE the first rule reads it. It was not, and the temporal dead zone made every
+  // literal-shape inference throw silently — the same defect that killed the genesis ceremony on its first run
+  // this morning, committed again the same day by the person who fixed it. A gate exists for that one and
+  // watches only `cmdGenesis`: named an instance, not the class.
+  const expr = body.replace(/^\s*return\s+/, '').trim();
+  const inner = (() => {
+    // An object literal states its OWN KEYS, so emit them instead of collapsing to `Record<string, unknown>`.
+    // Property access then resolves — `doc.state` exists rather than being an index into an opaque record —
+    // which is the difference between a consumer narrowing its own data and a consumer unable to reach a field
+    // at all. The hand-written declaration this replaces named the shape by hand (`SealedDoc`); the keys are
+    // derivable, the NAME is not, and a structural type serves the same purpose without inventing one.
+    // Find the RETURNED object literal by balancing braces, not by a regex anchored at the end of a string:
+    // a block body is `{ … return { … }; }`, so the literal sits in the middle and every positional pattern I
+    // tried matched the wrong brace. Balance from `return {` and read the top-level keys.
+    const retAt = expr.search(/\breturn\s*\{/);
+    if (retAt >= 0) {
+      const open = expr.indexOf('{', retAt);
+      let d = 0, close = -1;
+      for (let k = open; k < expr.length; k++) {
+        if (expr[k] === '{') d++;
+        else if (expr[k] === '}') { d--; if (d === 0) { close = k; break; } }
+      }
+      if (close > open) {
+        const innerLit = expr.slice(open + 1, close);
+        const keys = []; let depth = 0, buf = '';
+        for (const ch of innerLit + ',') {
+          if ('([{'.includes(ch)) depth++;
+          else if (')]}'.includes(ch)) depth--;
+          if (ch === ',' && depth === 0) { const k = buf.trim().split(':')[0].trim(); if (/^[A-Za-z_$][\w$]*$/.test(k)) keys.push(k); buf = ''; continue; }
+          buf += ch;
+        }
+        const uniq = [...new Set(keys)];
+        if (uniq.length && uniq.length <= 12) return `{ ${uniq.map((k) => `${k}: unknown`).join('; ')} }`;
+      }
+    }
+    if (/return\s*\{|^\s*\{[^}]*:/.test(body) || /=>\s*\(\s*\{/.test(body)) return 'Record<string, unknown>';
+    // For an EXPRESSION arrow the body already begins past the `=>`, so a pattern anchored on the arrow never
+    // matches — `buildCheckpoint` is `=> buildState({…})` and stayed `unknown` until this was anchored on the
+    // body's own start instead. Same correction as the brace-matching one, in the other direction.
+    if (/\breturn\s+(buildState|buildTranscript)\s*\(/.test(body) || /^\s*(buildState|buildTranscript)\s*\(/.test(body)) return 'Record<string, unknown>';
+    // BOOLEAN when the body IS a predicate: a comparison, a negation, or a chain of them. `isValid` is
+    // `typeof r?.result === 'string' && r.result.slice(0,6) === 'VALID:'` — no literal `true` anywhere, so a
+    // rule looking for one left it `unknown` while the hand-written declaration a human wrote said `boolean`.
+    if (/^[^;]*(===|!==|>=|<=|&&|\|\|)[^;]*$/.test(expr) && !/\breturn\b/.test(expr) && /(===|!==|typeof |instanceof )/.test(expr)) return 'boolean';
+    if (/^!/.test(expr) || /^Boolean\(/.test(expr)) return 'boolean';
+    // STRING when the body delegates to a named hasher or builds one. `contentHash` is `H('ust:state', …)`,
+    // whose whole job is to return a digest; the previous rule wanted a quote at the return site and missed it.
+    if (/\breturn\s+['\`]/.test(body) || /\.toString\(['\`)]/.test(body)) return 'string';
+    if (/^H\s*\(/.test(expr) || /^[a-zA-Z]*[Hh]ash\s*\(/.test(expr) || /\.digest\(/.test(expr)) return 'string';
+    if (/\breturn\s*\[/.test(body)) return 'unknown[]';
+    return 'unknown';
+  })();
+  return isAsync ? `Promise<${inner}>` : inner;
 }
 
 const render = (pkg, decls) => {
@@ -116,7 +198,7 @@ const render = (pkg, decls) => {
   const body = decls.map((d) => {
     if (d.kind === 'const') return `export const ${d.name}: unknown;`;
     const ps = d.params.map((p) => `${p.rest ? '...' : ''}${p.name}${p.optional && !p.rest ? '?' : ''}: ${p.rest ? 'unknown[]' : 'unknown'}`).join(', ');
-    return `export function ${d.name}(${ps}): ${d.async ? 'Promise<unknown>' : 'unknown'};`;
+    return `export function ${d.name}(${ps}): ${d.ret ?? (d.async ? 'Promise<unknown>' : 'unknown')};`;
   });
   return head.concat(body, ['']).join('\n');
 };
