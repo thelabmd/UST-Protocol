@@ -404,6 +404,24 @@ check('F8 impossible ust_id→E-MALFORMED', P.verify(mk({ r: { kind: 'captured',
     check('§12.1 re-introducing a hash already in the log is a rewind and is refused', !!P.witnessSuccessor(r.log, { domain_shard: 'd', content_hash: H('a') }).error);
     check('§12.1 a dropped predecessor is caught by the rule itself', !!P.witnessNoShrink(prior, { domain_shard: 'd', active: H('b'), genesis_log: [{ content_hash: H('b') }] }));
   }
+  // §12.1 — anchoring re-runs the successor with the SAME genesis and a NEW anchor. The idempotence guard used to
+  // return the prior log untouched, discarding exactly what the caller came to add: a witness exchange logged its
+  // entry in a public transparency log and the served witness still read zero anchors. Idempotence is about the
+  // ENTRY, not about the call.
+  {
+    const H = (c) => 'sha256:' + c.repeat(64);
+    const A1 = { root: H('r'), path: [], anchor: { substrate: 'rekor' } };
+    const A2 = { root: H('s'), path: [], anchor: { substrate: 'bitcoin-ots' } };
+    const base = { domain_shard: 'd', active: H('b'), genesis_log: [{ content_hash: H('a'), anchors: [A1], superseded_by: H('b') }, { content_hash: H('b'), superseded_by: null }] };
+    const one = P.witnessSuccessor(base, { domain_shard: 'd', content_hash: H('b'), anchors: [A1] });
+    check('§12.1 anchoring an ALREADY-ACTIVE genesis adds the anchor instead of discarding it', one.log?.genesis_log[1].anchors?.length === 1);
+    const again = P.witnessSuccessor(one.log, { domain_shard: 'd', content_hash: H('b'), anchors: [A1] });
+    check('§12.1 re-anchoring with the SAME anchor does not duplicate it', again.log?.genesis_log[1].anchors?.length === 1);
+    const two = P.witnessSuccessor(again.log, { domain_shard: 'd', content_hash: H('b'), anchors: [A2] });
+    check('§12.1 a second substrate ACCUMULATES — substrates add evidence, never replace it', two.log?.genesis_log[1].anchors?.length === 2);
+    check('§12.1 merging anchors leaves the superseded predecessor and its anchors untouched', two.log?.genesis_log[0].anchors?.length === 1 && two.log?.genesis_log[0].superseded_by === H('b'));
+    check('§12.1 a re-run with NO anchors is still a no-op', P.witnessSuccessor(two.log, { domain_shard: 'd', content_hash: H('b') }).unchanged === true);
+  }
   // ── rev94 — the EQUIVALENCE, enumerated over the seam grid rather than sampled. Fork choice's binding decision
   // must agree with the projection: a candidate is bound exactly when the DERIVED identity coordinate reaches
   // corroborated or above AND the coordinate was not lifted by the consumer's own opt-in. The seam-field conjunction

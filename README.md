@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 # Universal State Transcript ➝ UST Protocol ➝ ust:
 
-[![CI](https://img.shields.io/github/actions/workflow/status/thelabmd/UST-Protocol/ci.yml?branch=main&label=CI)](https://github.com/thelabmd/UST-Protocol/actions) [![conformance](https://img.shields.io/badge/conformance-700%20checks%20%C2%B7%20141%20vectors%20%C2%B7%204007%20fuzz-brightgreen)](https://github.com/thelabmd/UST-Protocol/actions/workflows/ci.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/thelabmd/UST-Protocol/ci.yml?branch=main&label=CI)](https://github.com/thelabmd/UST-Protocol/actions) [![conformance](https://img.shields.io/badge/conformance-705%20checks%20%C2%B7%20141%20vectors%20%C2%B7%204007%20fuzz-brightgreen)](https://github.com/thelabmd/UST-Protocol/actions/workflows/ci.yml)
 [![code license](https://img.shields.io/badge/code-Apache--2.0-blue)](./LICENSE)
 [![docs license](https://img.shields.io/badge/docs-CC--BY--4.0-blue)](./LICENSE-SPEC)
 [![ust-protocol](https://img.shields.io/npm/v/ust-protocol?label=ust-protocol)](https://www.npmjs.com/package/ust-protocol) [![pulls](https://img.shields.io/npm/dt/ust-protocol?label=pulls&color=informational)](https://www.npmjs.com/package/ust-protocol)
@@ -11,10 +11,10 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/status.svg">
   <source media="(prefers-color-scheme: light)" srcset=".github/status-light.svg">
-  <img alt="UST status: `1.0.0-rc.37` — a release candidate, not a final 1.0. Verify machine-readable state without trusting whoever handed it to you. Multiple external AI reviews incorporated structurally; an independent human cryptographic audit is pending; suitable for evaluation and integration testing. The wire format ust:&quot;1.0&quot; is stable across all release candidates; pin exact versions." src=".github/status-light.svg">
+  <img alt="UST status: `1.0.0-rc.38` — a release candidate, not a final 1.0. Verify machine-readable state without trusting whoever handed it to you. Multiple external AI reviews incorporated structurally; an independent human cryptographic audit is pending; suitable for evaluation and integration testing. The wire format ust:&quot;1.0&quot; is stable across all release candidates; pin exact versions." src=".github/status-light.svg">
 </picture>
 
-> **Status: `1.0.0-rc.37`** — a release candidate, not a final 1.0. External AI reviews are folded in structurally; an independent human cryptographic audit is pending. Suitable for evaluation and integration testing. The wire format `ust:"1.0"` is stable across all rc's — pin exact versions. *(This line mirrors the panel above as plain text, for readers and agents that don't render the image.)*
+> **Status: `1.0.0-rc.38`** — a release candidate, not a final 1.0. External AI reviews are folded in structurally; an independent human cryptographic audit is pending. Suitable for evaluation and integration testing. The wire format `ust:"1.0"` is stable across all rc's — pin exact versions. *(This line mirrors the panel above as plain text, for readers and agents that don't render the image.)*
 
 ## ●  Thirty seconds
 

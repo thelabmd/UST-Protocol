@@ -1649,7 +1649,7 @@ async function cmdWitness() {
   if (arg('deploy', false)) {
     console.log('  ⏳ updating the live witness endpoint (CF worker)…');
     let keylogText = null; try { keylogText = await fetch(`https://${domain}/.well-known/ust-keylog`, { signal: AbortSignal.timeout(8000) }).then((r) => r.ok ? r.text() : null); } catch { /* ok */ }
-    try { await wranglerDeploy({ domain, ...(await collectServed({ domain, genesisText, genPath, keylogText, log: console.log })), witnessText: witness }); } catch (e) { die('deploy failed: ' + e.message + '\n  (the anchor is logged in Rekor; re-run --deploy or update the endpoint by hand)'); }
+    try { await wranglerDeploy({ domain, ...(await collectServed({ domain, genesisText, genPath: null, keylogText, log: console.log })), witnessText: witness }); } catch (e) { die('deploy failed: ' + e.message + '\n  (the anchor is logged in Rekor; re-run --deploy or update the endpoint by hand)'); }
     console.log('  ✅ witness endpoint updated — verifiers with @ust-protocol/rekor-verify now confirm no-fork automatically');
     console.log('     re-attest:  ${invocation()} verify <slot>   (install ots-verify + rekor-verify)');
   } else {

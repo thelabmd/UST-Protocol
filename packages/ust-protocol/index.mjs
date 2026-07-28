@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.37', revision: 64 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.38', revision: 64 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -2848,7 +2848,26 @@ function successorInner(prior, next) {
   if (prior == null) return { log: { domain_shard, active: content_hash, genesis_log: [entry] } };
   if (typeof prior !== 'object' || !Array.isArray(prior.genesis_log)) return { error: 'prior witness log is unreadable — refusing to replace a history that cannot be read' };
   if (prior.domain_shard !== domain_shard) return { error: `prior log is for ${prior.domain_shard}, not ${domain_shard}` };
-  if (prior.active === content_hash) return { log: prior, unchanged: true };
+  // ALREADY ACTIVE — but that is not the same as nothing to do. Anchoring re-runs this with the SAME genesis and a
+  // NEW anchor: returning the prior unchanged silently discarded exactly what the caller came to add, so a witness
+  // exchange logged its entry in Rekor and the served log still read zero anchors. Idempotence must be about the
+  // ENTRY, not about the call. Anchors accumulate — substrates add evidence, they never replace each other — and the
+  // no-shrink rule below still holds because a union can only grow.
+  if (prior.active === content_hash) {
+    if (!list.length) return { log: prior, unchanged: true };
+    const key = (a) => JSON.stringify(a);
+    const log = {
+      ...prior,
+      genesis_log: prior.genesis_log.map((e) => {
+        if (e.content_hash !== content_hash) return { ...e };
+        const have = new Map((e.anchors ?? []).map((a) => [key(a), a]));
+        for (const a of list) if (!have.has(key(a))) have.set(key(a), a);
+        return { ...e, anchors: [...have.values()] };
+      }),
+    };
+    const shrank = witnessNoShrink(prior, log);
+    return shrank ? { error: `anchor merge would not survive the no-shrink rule: ${shrank}` } : { log, merged: true };
+  }
 
   const actives = prior.genesis_log.filter((e) => (e.superseded_by ?? undefined) === undefined);
   if (actives.length === 0) return { error: 'prior log has NO active entry — it is already fully superseded, so there is nothing to supersede' };
