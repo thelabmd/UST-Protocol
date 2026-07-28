@@ -17,6 +17,7 @@
   "scripts": {
     "test": "node packages/ust-protocol/conformance.mjs && node packages/ust-protocol/run-arc-vectors.mjs",
     "test:cli": "node packages/ust-cli/regression.mjs",
+    "test:printed": "node tools/printed-command-gate.mjs",
     "test:model": "node packages/ust-protocol/model-correspondence.mjs",
     "test:model-lockstep": "node packages/ust-protocol/conformance.mjs > /dev/null && git diff --exit-code vectors/conformance-checks.json && node tools/model-lockstep-gate.mjs",
     "test:model-domain": "node tools/model-domain-totality.mjs",
