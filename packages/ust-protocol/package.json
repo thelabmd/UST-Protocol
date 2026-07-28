@@ -1,6 +1,6 @@
 {
   "name": "ust-protocol",
-  "version": "1.0.0-rc.38",
+  "version": "1.0.0-rc.39",
   "description": "Universal State Transcript (UST) — the stateless reference base: canonical hashing (JCS), Ed25519 signing, three-tier verification (LIGHT/HIGH/TOP), privacy commitments, chains, and anchoring. Trust infrastructure for machine-readable state.",
   "author": "THE LAB (https://thelab.md)",
   "type": "module",
@@ -13,7 +13,8 @@
     "index.mjs",
     "ssrf.mjs",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "./index.d.ts"
   ],
   "keywords": [
     "ust",
@@ -41,5 +42,6 @@
     "directory": "packages/ust-protocol"
   },
   "homepage": "https://github.com/thelabmd/UST-Protocol/tree/main/packages/ust-protocol#readme",
-  "bugs": "https://github.com/thelabmd/UST-Protocol/issues"
+  "bugs": "https://github.com/thelabmd/UST-Protocol/issues",
+  "types": "./index.d.ts"
 }

@@ -1,16 +1,18 @@
 {
   "name": "ust-light",
-  "version": "1.0.0-rc.34",
+  "version": "1.0.0-rc.35",
   "description": "UST 1.0 LIGHT floor — standalone, zero-dependency sign/verify for canonical, addressable, string-only signed state. A ust-light document is a valid UST document.",
   "type": "module",
   "main": "index.mjs",
   "exports": "./index.mjs",
   "files": [
     "index.mjs",
-    "README.md"
+    "README.md",
+    "index.d.ts"
   ],
   "license": "Apache-2.0",
   "scripts": {
     "test": "node test.mjs"
-  }
+  },
+  "types": "index.d.ts"
 }

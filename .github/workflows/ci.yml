@@ -116,6 +116,8 @@ jobs:
         run: npm run test:unbounded-index
       - name: version truth (a version traces to a round; a capability gap may not widen)
         run: npm run test:version-truth
+      - name: types parity (a declaration may not describe a source that no longer exists)
+        run: npm run test:types-parity
       - name: Every field the genesis builder can place is reachable from the ceremony
         run: npm run test:genesis-surface
       - name: A deploy is constructed from the complete discovery set or not at all

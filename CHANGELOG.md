@@ -25,6 +25,16 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
+## rc.39 line
+
+Opened because the previous line was PUBLISHED and a published version is immutable: adding a `types` field to a
+manifest changes the tarball, so every package that had already shipped at its current number needed a new one.
+Five did. The `npm-drift` gate named each in turn and would not let one through.
+
+| version | round | what closed |
+|---------|-------|-------------|
+| **protocol rc.39**<br>**mcp rc.30** · **web-signer rc.4**<br>**ots-verify rc.11** · **rekor-verify rc.7**<br>**ust-light rc.35** | 68 | **No package shipped types, so every typed consumer maintained a second source of truth about our API.** Measured: 0 of 8. The reference operator's hand-written declaration said `buildCheckpoint(id, time, head, frameCount, prev)` — five parameters, faithful to the rc.12 it had installed — and could not say rc.12 was twenty candidates old, so the sixth parameter was unreachable from the product and every hour sealed without interval bounds. The type-checker was right the whole time; it was right about the past. Declarations are now GENERATED from the source with no dependency and no build step: this repo has zero deps including dev and no JSDoc, so `tsc --declaration` would have meant a toolchain plus 2300 annotated lines to buy convenience with a deliberate property. Names and ARITY are exact, which is what failed; value types are `unknown` until refined, because a complete loose declaration beats a precise stale one. Three parser corrections, each caught by measurement rather than assumption: a trailing parameter guarded in the body is optional (`interval?`); the body must end where the FUNCTION ends, not at a fixed window that spilled into the next declaration and relaxed a required `prev`; and an arrow with an EXPRESSION body has no brace to match — `=> buildState({…})` returns an argument literal. `types-parity-gate` regenerates into memory and diffs, so an edited generated file or a forgotten regeneration fails; binary-only packages are exempt BY MEASUREMENT (no `main` and no `exports`), which is one — `diarium`. #105. |
+
 ## rc.38 line — published 2026-07-28
 
 A line is closed by ADDING the next one, never by editing the header of the last. `[Unreleased]` is a claim

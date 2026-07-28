@@ -10,7 +10,8 @@
   "files": [
     "index.mjs",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "index.d.ts"
   ],
   "keywords": [
     "ust",
@@ -44,5 +45,6 @@
   },
   "homepage": "https://github.com/thelabmd/UST-Protocol/tree/main/packages/ust-cli#readme",
   "bugs": "https://github.com/thelabmd/UST-Protocol/issues",
-  "exports": "./index.mjs"
+  "exports": "./index.mjs",
+  "types": "index.d.ts"
 }
