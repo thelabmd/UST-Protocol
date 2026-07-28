@@ -163,6 +163,36 @@ export const contextFor = (doc) => (doc?.state?.id?.class === 'genesis' || doc?.
 
 // Hidden passphrase input (line-review P1: readline echoed the root passphrase to the terminal). Raw-mode
 // character loop with '*' echo in a tty; falls back to the visible ask (with a loud warning) elsewhere.
+// ONE reader lifecycle, because `close()` is not enough on a real terminal.
+//
+// MEASURED, and this is what broke an air-gapped ceremony twice: with `terminal: true` — which is what stdin gets
+// in an actual terminal — readline attaches BOTH a 'data' and a 'keypress' listener, and `close()` removes only the
+// keypress one. The 'data' listener SURVIVES. So askHidden's guard, which refuses to read a secret while another
+// reader owns stdin, kept firing after a correct close. My own measurement missed it because I ran it under a pipe,
+// where `terminal` is false and close() does drop the listener — the tested path was not the operator's path.
+//
+// closeReader undoes exactly what openReader added: the listener sets are snapshotted at creation and only the NEW
+// ones are removed. A foreign listener — a signal handler, a parent harness — is never touched.
+const READER_ADDED = new WeakMap();
+
+export function openReader(createInterface) {
+  const before = { data: [...process.stdin.listeners('data')], keypress: [...process.stdin.listeners('keypress')] };
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  READER_ADDED.set(rl, before);
+  return rl;
+}
+
+/** Close a reader AND hand stdin back — return null so the caller's handle is cleared in one expression. */
+export function closeReader(rl) {
+  if (!rl) return null;
+  const before = READER_ADDED.get(rl) ?? { data: [], keypress: [] };
+  try { rl.close(); } catch { /* already closed */ }
+  for (const ev of ['data', 'keypress']) {
+    for (const l of process.stdin.listeners(ev)) if (!before[ev].includes(l)) process.stdin.removeListener(ev, l);
+  }
+  return null;
+}
+
 export async function askHidden(q, fallbackAsk) {
   // askHidden must own stdin. A readline interface created BEFORE this call takes stdin over and echoes the
   // line ITSELF — its echo wins over this raw-mode loop, so the passphrase appears in plaintext while the code
@@ -177,12 +207,18 @@ export async function askHidden(q, fallbackAsk) {
     const stdin = process.stdin;
     const wasRaw = stdin.isRaw;
     stdin.setRawMode(true); stdin.resume();
+    // A data event is a CHUNK, not a keystroke. Treating it as one character means a PASTED passphrase — which is
+    // how anyone enters a strong one — arrives as a single string equal to neither a terminator nor a character:
+    // it is pushed whole, one asterisk is printed, and the prompt NEVER returns. Measured under a real pty: the
+    // ceremony hung exactly there. Iterate by CODE POINT, never by UTF-16 unit, or a non-ASCII passphrase would
+    // split mid-character.
     const onData = (b) => {
-      const c = b.toString('utf8');
-      if (c === '\r' || c === '\n') { stdin.setRawMode(wasRaw); stdin.removeListener('data', onData); process.stdout.write('\n'); resolve(chars.join('')); }
-      else if (c === '\u0003') { stdin.setRawMode(wasRaw); process.stdout.write('\n'); process.exit(130); }
-      else if (c === '\u007f' || c === '\b') { if (chars.length) { chars.pop(); process.stdout.write('\b \b'); } }
-      else { chars.push(c); process.stdout.write('*'); }
+      for (const c of b.toString('utf8')) {
+        if (c === '\r' || c === '\n') { stdin.setRawMode(wasRaw); stdin.removeListener('data', onData); process.stdout.write('\n'); return resolve(chars.join('')); }
+        if (c === '\u0003') { stdin.setRawMode(wasRaw); process.stdout.write('\n'); process.exit(130); }
+        if (c === '\u007f' || c === '\b') { if (chars.length) { chars.pop(); process.stdout.write('\b \b'); } continue; }
+        chars.push(c); process.stdout.write('*');
+      }
     };
     stdin.on('data', onData);
   });
@@ -1299,10 +1335,10 @@ async function cmdPublish() {
     let w; try { w = await wranglerDeploy({ domain, ...served }); } catch (e) { die(e.message); }
     console.log('  ✓ worker ' + w.script + ' deployed via wrangler OAuth (genesis embedded, ' + w.genHash + ')');
     console.log('  ✓ route ' + w.route + ' (from wrangler.toml)');
-    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    const rl = openReader(createInterface);   // lifecycle, not a bare interface: close() alone leaves a live stdin listener on a terminal
     let apex; try { apex = await cfApexSteps({ domain, token: await resolveDnsToken((q) => rl.question(q)), flipProxy }); }
     catch (e) { rl?.close(); die(e.message); }
-    rl.close();
+    closeReader(rl);
     r = { ...w, routeAction: 'wrangler', proxied: apex.proxied, flipped: apex.flipped, warnings: apex.warnings };
   } else {
     const token = process.env.CF_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
@@ -1429,10 +1465,10 @@ async function cmdMirror() {
     console.log(`       curl -o ust-keylog   https://${domain}/.well-known/ust-keylog    (if served)`);
     console.log('    2. upload them anywhere PUBLIC on that second vendor');
     console.log('    3. paste the URL(s) — I will FETCH and hash-match them (a claim is not a proof)');
-    const rl2 = createInterface({ input: process.stdin, output: process.stdout });
+    const rl2 = openReader(createInterface);   // this command asks for a secret afterwards — a bare interface would have it refused
     const gu = (await rl2.question('  genesis mirror URL: ')).trim();
     const ku = (await rl2.question('  key-log mirror URL (Enter to skip): ')).trim();
-    rl2.close();
+    closeReader(rl2);
     if (gu) genesisUrls.push(gu);
     if (ku) keylogUrls.push(ku);
   }
@@ -1517,7 +1553,7 @@ async function cmdGenesis() {
   // its comment claimed "every caller now builds its readline lazily"; this one was not converted, so the guard
   // broke `ust genesis` at silver and gold and nothing noticed, because no gate runs a passphrase ceremony.
   let rl = null;
-  const ask = (q) => { rl ??= createInterface({ input: process.stdin, output: process.stdout }); return rl.question(q); };
+  const ask = (q) => { rl ??= openReader(createInterface); return rl.question(q); };
   const tty = !!process.stdin.isTTY;
   console.log(`\n  🏛  ust genesis — the HIGH ceremony for ${domain}`);
   console.log('      One run creates your name\'s cryptographic identity and makes it publicly');
@@ -1712,10 +1748,10 @@ async function cmdGenesis() {
       // same prompt until someone notices, which on a machine deliberately cut off from the network may be a while.
       for (let tries = 1; pass.length < 8; tries++) {
         if (tries > 5) { rl?.close(); die('no usable passphrase after 5 attempts — stdin cannot answer (an exhausted pipe or a detached terminal). Run the ceremony from a real terminal.'); }
-        rl?.close(); rl = null;
+        rl = closeReader(rl);
         pass = await askHidden('     set the passphrase (≥8 chars): ', ask);
       }
-      rl?.close(); rl = null;   // hand stdin back; the next question opens a fresh interface
+      rl = closeReader(rl);   // hand stdin back; the next question opens a fresh interface
     }
   }
   const backup = pass ? encryptKey(pkcs8, pass) : pkcs8.toString('base64');
@@ -1906,12 +1942,12 @@ export async function cmdRotate() {
   // decrypt the cold root, reconstruct the signer, self-verify it matches the genesis
   // lazy: only the no-tty fallback needs a readline, and creating one EAGERLY is what made the secret echo
   let rl = null;
-  const ask = (q) => { rl ??= createInterface({ input: process.stdin, output: process.stdout }); return rl.question(q); };
+  const ask = (q) => { rl ??= openReader(createInterface); return rl.question(q); };
   // hand stdin back before asking for a secret. Here askHidden happens to be the FIRST question, so nothing is
   // open yet and this is a no-op — which is the point: the property holds by CONSTRUCTION rather than by the
   // accident of call order, so adding a question above it later cannot silently reintroduce the echo guard's
   // refusal. That is exactly how the genesis ceremony broke.
-  rl?.close(); rl = null;
+  rl = closeReader(rl);
   const pass = await askHidden('  🔑 root passphrase: ', ask);
   let rootSigner;
   try { rootSigner = await rootSignerFrom(decryptKey(readFileSync(rootFile, 'utf8').trim(), pass), genesis.state.data.genesis.value.pub); }
@@ -1988,12 +2024,12 @@ export async function cmdCadence() {
 
   // lazy: only the no-tty fallback needs a readline, and creating one EAGERLY is what made the secret echo
   let rl = null;
-  const ask = (q) => { rl ??= createInterface({ input: process.stdin, output: process.stdout }); return rl.question(q); };
+  const ask = (q) => { rl ??= openReader(createInterface); return rl.question(q); };
   // hand stdin back before asking for a secret. Here askHidden happens to be the FIRST question, so nothing is
   // open yet and this is a no-op — which is the point: the property holds by CONSTRUCTION rather than by the
   // accident of call order, so adding a question above it later cannot silently reintroduce the echo guard's
   // refusal. That is exactly how the genesis ceremony broke.
-  rl?.close(); rl = null;
+  rl = closeReader(rl);
   const pass = await askHidden('  🔑 root passphrase: ', ask);
   let rootSigner;
   try { rootSigner = await rootSignerFrom(decryptKey(readFileSync(rootFile, 'utf8').trim(), pass), genesis.state.data.genesis.value.pub); }

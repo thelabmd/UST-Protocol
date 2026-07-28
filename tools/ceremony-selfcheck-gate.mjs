@@ -87,7 +87,7 @@ check(WORLD.length >= 4 && sites.length >= 4, 'the vocabulary or the site set sh
     // the enclosing function's readline must be created LAZILY, on first use, not at entry
     const body = lines.slice(c.fn, c.line).join('\n');
     const eager = /^\s*const rl = createInterface\(/m.test(body);
-    const lazy = /rl \?\?= createInterface\(/.test(body);
+    const lazy = /rl \?\?= openReader\(/.test(body);
     check(!eager, `${c.name} opens its readline EAGERLY (ust-cli/index.mjs) and then calls askHidden at :${c.line} — the open interface owns stdin and echoes the passphrase, so askHidden's guard refuses and the whole ceremony dies. Build it lazily: \`let rl = null; const ask = (q) => { rl ??= createInterface(...); return rl.question(q); };\``);
     check(lazy, `${c.name} calls askHidden at :${c.line} but no lazy \`rl ??= createInterface(\` is visible above it — the roster is enumerated, so a new caller must adopt the pattern rather than inherit a claim about it`);
     // a lazy rl means every close must be null-safe, or the failure path throws instead of reporting
@@ -115,7 +115,7 @@ check(WORLD.length >= 4 && sites.length >= 4, 'the vocabulary or the site set sh
     const line = SRC.slice(0, m.index).split('\n').length;
     if (/export async function askHidden/.test(lines[line - 1] || '')) continue;
     const before = lines.slice(Math.max(0, line - 6), line).join('\n');
-    check(/rl\?\.close\(\);\s*rl = null;/.test(before),
+    check(/rl = closeReader\(rl\);/.test(before),
       `the askHidden call at ust-cli/index.mjs:${line} does not hand stdin back first (\`rl?.close(); rl = null;\` within the five lines above it). Building the interface lazily is not enough — by this point earlier questions have opened it, and the guard will refuse one step before the ceremony writes anything.`);
     const loop = lines.slice(Math.max(0, line - 8), line + 2).join('\n');
     if (/\b(while|for)\s*\(/.test(loop)) {
@@ -123,6 +123,30 @@ check(WORLD.length >= 4 && sites.length >= 4, 'the vocabulary or the site set sh
         `the askHidden call at :${line} retries in an UNBOUNDED loop — an exhausted pipe or a detached terminal makes it spin forever, printing the same prompt on a machine that may have nobody watching`);
     }
   }
+}
+
+
+// ── the reader lifecycle, and the two things a pipe cannot show you ───────────────────────────────────────────────
+//
+// Both were measured on a real pty AFTER a piped rehearsal had reported success, and neither is visible under a pipe:
+//
+// 1. `rl.close()` is not enough. With `terminal: true` — what stdin gets in an actual terminal — readline attaches a
+//    'data' AND a 'keypress' listener, and close() removes only the keypress one. The 'data' listener SURVIVES, so
+//    askHidden's guard keeps refusing after a correct close. Under a pipe `terminal` is false and close() does drop
+//    it, which is why the rehearsal passed and the operator's run did not.
+// 2. A data event is a CHUNK, not a keystroke. A pasted passphrase — how anyone enters a strong one — arrives whole,
+//    matches no terminator, is pushed as a single "character", and the prompt never returns. The ceremony hung.
+{
+  check(/export function openReader/.test(SRC) && /export function closeReader/.test(SRC),
+    'the reader lifecycle is gone — close() alone leaves a live stdin listener on a terminal, and every askHidden after it will be refused');
+  check(!/createInterface\(\{ input: process\.stdin/.test(SRC.replace(/export function openReader[\s\S]*?\n}/, '')),
+    'a readline interface is created outside openReader — its listeners will not be undone, so the next secret prompt is refused');
+  const cr = SRC.slice(SRC.indexOf('export function closeReader'));
+  check(/removeListener/.test(cr.slice(0, 600)), 'closeReader no longer removes the listeners readline added — close() does not on a terminal');
+  check(/before\[ev\]\.includes/.test(cr.slice(0, 600)), 'closeReader no longer preserves foreign listeners — it must undo only what it added');
+  const ah = SRC.slice(SRC.indexOf('export async function askHidden'));
+  check(/for \(const c of b\.toString/.test(ah.slice(0, 3000)),
+    'askHidden reads a data event as ONE character again — a pasted passphrase arrives as a chunk, matches no terminator, and the prompt never returns');
 }
 
 
