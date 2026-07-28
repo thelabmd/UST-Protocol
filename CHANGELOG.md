@@ -21,6 +21,72 @@ conformance vectors; this file is the readable map.
 
 ## [Unreleased] — rc.37 line
 
+### A real supersession, walked end to end — twelve defects, and four of them a pipe cannot show
+
+Every round below was found the same way: **the operator walked it**, on a live domain with an existing identity,
+starting from an air-gapped machine. None was found by review. They are one arc rather than twelve rows because the
+causal chain is the point — each was hidden behind the one before it.
+
+**The ceremony could not produce a complete genesis.** `buildGenesis` places seven fields in a value; the CLI never
+called it, hand-built five, sealed that. `checkpoint_authority` and `recovery` existed in the protocol and were
+unreachable from the only tool that performs a ceremony — and both are settable at ceremony time ONLY, so a
+publisher who misses them is locked out until a supersession. Declining an optional field also *aborted* the run:
+`askOr` handed the validator `String(null)`. Nothing had ever completed a ceremony end to end, so nobody had declined
+anything.
+
+**`--offline`, because a runbook cannot describe a tool that does not exist.** The ceremony writes its files BEFORE it
+touches the network — ten reaches, all after — so the split was cheap: skip the one probe that stands earlier, do
+everything local, write eight files, return with a handoff. `offline-ceremony-gate` holds the claim POSITIONALLY: the
+early return is a cut and every reach must live after it, in the command *and in its callees*, where a mutation had
+left the first version green.
+
+**Four failures a pipe cannot show.** Each passed a piped rehearsal and failed on a terminal:
+(1) `rl.close()` is not enough — with `terminal: true` readline attaches a `data` *and* a `keypress` listener and close()
+removes only the second, so the guard kept refusing after a correct close; (2) a data event is a CHUNK, not a
+keystroke — a pasted passphrase matched no terminator and the prompt never returned; (3) the process never EXITED —
+a resumed stdin with no reader holds the event loop open, so everything printed correctly and the shell never came
+back, and the operator typed his next command into a dead process; (4) lazy readline was necessary and not
+sufficient — by the passphrase, earlier questions have already opened the interface, so the caller must hand stdin
+*back*, inside the retry loop, and the retry must be bounded.
+
+I found none of these by reading. I found them by driving a real pty — which is what I should have done before
+handing over a runbook.
+
+**Instructions that could not be run.** The handoff said `ust publish --domain …`; the real surface is `ust publish cf`,
+so the CLI answered with its help screen. And every printed command began with `ust `, which resolves only when the
+package is installed globally — run from a checkout, which is what an air-gapped ceremony IS, every next step was
+`command not found`. Later, fifteen instructions still said `npx @ust-protocol/cli`, which fetches a DIFFERENT checker:
+following one would have reported a cadence absent minutes after this build confirmed it. `printed-command-gate`
+checks every printed command against the dispatch table it will be dispatched through.
+
+**`publish self` — the protocol claimed vendor-neutrality and offered one vendor.** §20.1 is deliberately about
+properties, not vendors, and the only adapter was Cloudflare. Worse, the WITNESS is a successor derived from what is
+live and cannot be written by hand, so a self-hosted operator could not produce a correct one at all.
+
+**Publishing did not move the DNS pin.** `publish cf` deployed a worker carrying the new genesis and never touched
+`_ust`, leaving the name bound to a hash the domain no longer served. `cfUpsert` already did the right thing and
+publish simply never called it. §20.1 discovery caught the conflict — the check working, after a correct ceremony.
+
+**Discovery called a declared cadence absent.** §11.3 says `genesis.value.cadence` is the initial value and the log is
+OPTIONAL. Reading only the log told a publisher its streams "can never reach complete" — false, and false in the
+direction that matters: describing a capability it HAS as one it lacks. For this operator that is the difference
+between 447 hours that can never be complete and a new epoch declaring its grid from its first second.
+
+**The ladder ignored its own measurements**, printing a hardcoded ⬜ for a step the screen above had just confirmed —
+a task and the evidence it was done, at once. And the resolution report **crashed** reading a capacity that a
+self-asserted resolution legitimately does not have: the ordinary state of a newly minted name.
+
+**Anchoring discarded the anchor.** `witnessSuccessor` treated "already active" as "nothing to do" — but that is
+exactly the shape of an anchor run: same genesis, new evidence. The entry reached a public transparency log and the
+served witness still read zero. Idempotence is about the ENTRY, not about the call.
+
+**Where it stopped, honestly.** The identity is live, superseded cleanly, anchored, and its documents still verify
+`INDETERMINATE`: finality does not hold, so no authority, so no capacity grant, so 172 partitions exceed the floor.
+The predecessor's anchor through the same connector verifies `final: true`; today's does not, and a freshly fetched
+proof behaves the same. Recorded as its own issue at the point where the measurement is solid and the explanation is
+not — guessing further would have been worse than stopping.
+
+
 ### The genesis ceremony could not produce a complete genesis — and had been refusing to run at all
 
 **Two defects, found because the reference operator is about to re-run its ceremony.**
