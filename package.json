@@ -67,6 +67,7 @@
     "test:primitive-parity": "node tools/primitive-parity-gate.mjs",
     "test:vocabulary": "node tools/verdict-vocabulary-gate.mjs",
     "ci:local": "node tools/run-ci-locally.mjs",
-    "test:unbounded-index": "node tools/unbounded-index-gate.mjs"
+    "test:unbounded-index": "node tools/unbounded-index-gate.mjs",
+    "test:version-truth": "node tools/version-truth-gate.mjs"
   }
 }
