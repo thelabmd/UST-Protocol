@@ -106,5 +106,3 @@ jobs:
         run: npm run test:ceremony
       - name: A deploy is constructed from the complete discovery set or not at all
         run: npm run test:deploy
-      - name: A MUST requiring prev is scoped to a declared sequenced stream
-        run: npm run test:prev-scope

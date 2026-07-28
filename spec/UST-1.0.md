@@ -683,16 +683,11 @@ example; another operator MAY register a different public append-only log). Time
 - **Un-backdatable time** for a State is obtained by resolving its `content_hash` to an anchored `root`
   whose append-only-log commitment fixes "not later than". The verifier's trust root is the LOG commitment,
   reached via the anchored key log (§12) — never a mutable repository mapping (I7).
-- **On-time or honest gap:** retro-anchoring a hash under a past time is forgery and is fatal. **Within a declared
-  sequenced stream (§11.3)**, a missing frame MUST be published as a **signed gap record** — `class:"attestation"` with
-  `provenance.prev` set (it is a normal frame in the stream) but EMPTY `constituents` and a data partition asserting the
-  gap; this is the one attestation whose `constituents` may be empty (§14 step 5) — so that sustained gaps are provably
-  honest, not indistinguishable from compromise. Outside a declared sequenced stream there is no `prev` to carry and
-  no completeness guarantee to keep honest, so the duty does not arise — and could not be discharged if it did. This
-  matches the model: *complete over [t₀,t₁]* holds when every grid point carries EITHER a frame OR a gap record, which
-  makes the gap record a condition of an EARNED property, never an obligation every publisher owes. A publisher
-  claiming no completeness simply reaches a strictly coarser verdict over that interval. Stated unconditionally the
-  MUST was unsatisfiable for such a publisher, demanding a record built from the very field its stream does not have.
+- **On-time or honest gap:** retro-anchoring a hash under a past time is forgery and is fatal. A missing
+  frame MUST be published as a **signed gap record** — `class:"attestation"` with `provenance.prev` set (it is
+  a normal frame in the stream) but EMPTY `constituents` and a data partition asserting the gap; this is the
+  one attestation whose `constituents` may be empty (§14 step 5) — so that sustained gaps are provably honest, not
+  indistinguishable from compromise.
 - **Signed timing is an ASSERTION, upper-bounded only (N9).** The anchor guarantees "not later than" its log
   commitment; NOTHING bounds "not earlier than". `generated_at`/`valid_*` are signed but publisher-asserted;
   a verifier MUST derive freshness/ordering from the ANCHOR, treat `generated_at` as advisory-though-signed,
