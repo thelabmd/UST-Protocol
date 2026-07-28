@@ -36,10 +36,11 @@ const root = new URL('..', import.meta.url).pathname;
 // he publishes would be a gate issuing an instruction. So today's gaps are recorded as a ceiling that may
 // only SHRINK: a new capability gap fails, closing one is free, and the number stays visible either way.
 // Same shape as the reference-checker residual — the point is that nobody can widen a gap in silence.
+// Lowered to ZERO the day it was raised: the owner published, every capability gap closed, and the
+// ratchet's job is now to keep it there. What a stranger installs and what CI tests are the same
+// artifact for the first time since the drift began. Any future entry here is a REGRESSION, not a
+// baseline — if a gap reappears, publish or state the policy, do not raise the number.
 const PIN = {
-  'ust-protocol': 65,
-  '@ust-protocol/cli': 17,
-  '@ust-protocol/rekor-verify': 2,
   untraced: 3,          // versions with no CHANGELOG row: mcp rc.29, web-signer rc.3, ots-verify rc.10
 };
 
@@ -121,4 +122,6 @@ if (fail.length) { fail.forEach((f) => console.log('    ✗ ' + f)); process.exi
 // what passed is that the number did not grow. Saying "no package is missing a capability" would be a
 // green light asserting something false — the exact shape this repo keeps catching elsewhere.
 const held = Object.entries(PIN).filter(([k]) => k !== 'untraced').reduce((a, [, v]) => a + v, 0);
-console.log(`  ✓ no gap widened and every version traces to a written line — but ${held} exports remain absent from what \`npm i\` gives a stranger, held at the pin, not closed`);
+console.log(held
+  ? `  ✓ no gap widened and every version traces to a written line — but ${held} exports remain absent from what \`npm i\` gives a stranger, held at the pin, not closed`
+  : '  ✓ what a stranger installs IS what CI tests — no capability gap on any published package, and every version traces to a written line');
