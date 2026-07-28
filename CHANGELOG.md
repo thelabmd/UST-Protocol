@@ -1,6 +1,19 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 # Changelog
 
+Most changelogs are ledgers of outcomes: Problem X → Bug Y → Solution Z — what changed, with the reasoning thrown
+away. This one keeps the reasoning. Each row records what was believed, what was measured, which belief did not
+survive the measurement, who caught it, and why the fix is structural rather than a patch. Wrong claims are
+corrected in place and kept — a ledger that quietly edits itself is worth nothing, and several rows below exist
+only because an earlier row was wrong.
+
+The direction of this project is also reversed, and the log reads accordingly. Most protocols travel idea →
+specification → hoped-for adoption. UST traveled the other way: a working operator — noosphere.md — ran first, and
+the protocol was extracted from what production kept proving necessary; then formalized against a mathematical
+model; then widened so that no operator, including ours, is special — a core any implementation can conform to,
+connectors for everything else (anchor substrates, trackers, transports). The rows below are that extraction, one
+adversarial round at a time.
+
 The wire format `ust:"1.0"` is **stable across every release candidate** — pin exact package versions. This log
 tracks two lines: the **reference checker (L1 TCB)** rev-ladder — a recurring diverse-model adversarial audit →
 math-first remediation — and the **protocol milestones**. The normative source is the git history plus the
