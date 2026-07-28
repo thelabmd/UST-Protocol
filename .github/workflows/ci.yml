@@ -58,6 +58,8 @@ jobs:
         run: npm run test:diarium
       - name: ust-light is a valid UST subset (byte-identical to the reference impl, both directions)
         run: npm run test:light
+      - name: light README panels are DERIVED from the dark originals, never hand-edited
+        run: npm run test:artwork
       - name: security regression (external-audit P0/P1 reproductions must stay closed — epic UST-1o6)
         run: npm run test:security
       - name: SSRF guards (core + MCP)

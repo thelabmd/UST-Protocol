@@ -104,7 +104,11 @@ key, and were not changed since?"* Seal at creation → store anywhere → verif
 offline, with one library call. No blockchain required, no consensus, no per-record fees: the LIGHT tier is a
 key, a canonical form and a signature.
 
-![Anatomy of a UST transcript — a self-contained signed JSON document. Its id says WHO (domain_shard: a name or a self-certifying key-id) and WHEN (ust_id: an address on one shared UTC axis), plus key_id and class. A time frame carries generated_at, valid_from and valid_to. The data holds partitions (captured, computed, blinded or encrypted); one domain-separated hash per partition binds the data to the id and frame. Provenance (based_on, prev, seed) links chains, streams and derivations. An Ed25519 signature travels WITH the data, not the channel. Seal at creation, store anywhere, verify offline in one call — no blockchain; TLS secures the pipe, UST secures the payload, so it verifies the same from a cache, mirror, file or chat paste.](.github/ust-anatomy.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/ust-anatomy.svg">
+  <source media="(prefers-color-scheme: light)" srcset=".github/ust-anatomy-light.svg">
+  <img alt="Anatomy of a UST transcript — a self-contained signed JSON document. Its id says WHO (domain_shard: a name or a self-certifying key-id) and WHEN (ust_id: an address on one shared UTC axis), plus key_id and class. A time frame carries generated_at, valid_from and valid_to. The data holds partitions (captured, computed, blinded or encrypted); one domain-separated hash per partition binds the data to the id and frame. Provenance (based_on, prev, seed) links chains, streams and derivations. An Ed25519 signature travels WITH the data, not the channel. Seal at creation, store anywhere, verify offline in one call — no blockchain; TLS secures the pipe, UST secures the payload, so it verifies the same from a cache, mirror, file or chat paste." src=".github/ust-anatomy-light.svg">
+</picture>
 
 ## ●  The time coordinate — `ust_id`
 
@@ -118,7 +122,11 @@ another frame.
 > is recorded in the IANA URI-scheme registry ([provisional](https://www.iana.org/assignments/uri-schemes/prov/ust)),
 > so `ust:20260710.142900` is a first-class address wherever URIs are read.
 
-![One shared time axis — every transcript carries a frame id ust:YYYYMMDD.HH(MM(SS)) in UTC. The hour ust:20260710.14 contains the minute ust:20260710.1429 contains the second ust:20260710.142900: containment is literal string prefixing, so roll-ups are prefix scans and sortable equals streamable. Because every publisher shares the grid by construction, “what was the world doing at 14:29Z?” is a query, not a metaphor — the same coordinate from unrelated publishers means the same moment, joinable after the fact.](.github/ust-time.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/ust-time.svg">
+  <source media="(prefers-color-scheme: light)" srcset=".github/ust-time-light.svg">
+  <img alt="One shared time axis — every transcript carries a frame id ust:YYYYMMDD.HH(MM(SS)) in UTC. The hour ust:20260710.14 contains the minute ust:20260710.1429 contains the second ust:20260710.142900: containment is literal string prefixing, so roll-ups are prefix scans and sortable equals streamable. Because every publisher shares the grid by construction, “what was the world doing at 14:29Z?” is a query, not a metaphor — the same coordinate from unrelated publishers means the same moment, joinable after the fact." src=".github/ust-time-light.svg">
+</picture>
 
 One coordinate system, shared by every publisher on Earth by construction (UTC), buys things no per-vendor
 timestamp field can:
@@ -147,7 +155,11 @@ In an agent world nobody can hand you truth as a boolean. The closest thing to t
 provably bound to the key; an anchor in real time), and how much of it the verifier could actually **confirm**, here and
 now. Not one flattering "yes" — a measured answer to *"how strongly is this proven, to me, at this moment?"*
 
-![The verdict ladder — trust is graduated and the verdict carries its tier; a conforming verifier never says a bare VALID. VALID:LIGHT is the floor: exact bytes, the signing key and the claimed time frame (a key, canonical form and a signature — no infrastructure, no fees). VALID:HIGH adds that the NAME is provably bound to the key (a genesis + key-log ceremony, rotation and revocation; strength corroborated or authoritative). VALID:TOP adds that the document existed BY a real point in time (an anchor inclusion proof — Bitcoin/OTS or Rekor, opt-in; stream completeness is a separate range verdict). INVALID is a definite failure (an E-* code); INDETERMINATE means cannot decide — never conflated with forged. A tier is EARNED per verification: there is no field a producer can set to claim it.](.github/ust-tiers.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/ust-tiers.svg">
+  <source media="(prefers-color-scheme: light)" srcset=".github/ust-tiers-light.svg">
+  <img alt="The verdict ladder — trust is graduated and the verdict carries its tier; a conforming verifier never says a bare VALID. VALID:LIGHT is the floor: exact bytes, the signing key and the claimed time frame (a key, canonical form and a signature — no infrastructure, no fees). VALID:HIGH adds that the NAME is provably bound to the key (a genesis + key-log ceremony, rotation and revocation; strength corroborated or authoritative). VALID:TOP adds that the document existed BY a real point in time (an anchor inclusion proof — Bitcoin/OTS or Rekor, opt-in; stream completeness is a separate range verdict). INVALID is a definite failure (an E-* code); INDETERMINATE means cannot decide — never conflated with forged. A tier is EARNED per verification: there is no field a producer can set to claim it." src=".github/ust-tiers-light.svg">
+</picture>
 
 | verdict | what is proven |
 |---|---|
@@ -175,7 +187,11 @@ It can be a **chain of independently signed layers**, each a full transcript wit
 provenance — linked by content hashes (`based_on` + a recomputed `seed`), so the **existence, order and lineage
 of every layer are publicly provable while each layer's content is disclosed only to whom it is meant for**:
 
-![One state, graduated visibility — a single connected state can be a hash-linked chain of independently signed layers. L1 is a public observation anyone verifies. L2 is a blinded commitment: the value is fixed but hidden until reveal, while its existence is public. L3 is an encrypted shard: AEAD ciphertext plus a commitment, so only key holders read and verify it. L4 is a partner’s derived shard under another publisher’s own key — cross-party, provable lineage. Each layer links to the prior by based_on = sha256(content) plus a recomputed seed, so order and lineage are publicly provable. Every layer verifies on its own; trust composes but is never inherited; payloads stay deletable while “existed, in this order” remains provable.](.github/ust-chain.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/ust-chain.svg">
+  <source media="(prefers-color-scheme: light)" srcset=".github/ust-chain-light.svg">
+  <img alt="One state, graduated visibility — a single connected state can be a hash-linked chain of independently signed layers. L1 is a public observation anyone verifies. L2 is a blinded commitment: the value is fixed but hidden until reveal, while its existence is public. L3 is an encrypted shard: AEAD ciphertext plus a commitment, so only key holders read and verify it. L4 is a partner’s derived shard under another publisher’s own key — cross-party, provable lineage. Each layer links to the prior by based_on = sha256(content) plus a recomputed seed, so order and lineage are publicly provable. Every layer verifies on its own; trust composes but is never inherited; payloads stay deletable while “existed, in this order” remains provable." src=".github/ust-chain-light.svg">
+</picture>
 
 - **Blinded** (`privacy: "blinded"`): the value is replaced by a frame-bound commitment
   (`H(domain_shard, ust_id, nonce, name, value)`). Publish now, reveal later — and the revealed `{nonce, value}`
@@ -262,7 +278,11 @@ Want an agent to keep a memory it cannot rewrite afterwards? `npm i -D diarium` 
 
 ## ●  The `ust` CLI
 
-![The ust CLI — one entrypoint, the whole command surface (parsed from the real binary’s help). Install with npm i -g @ust-protocol/cli. The 11 subcommands: verify <file|-> (verify a transcript (exit 0 = VALID, 1 = not; --require-anchored floors at TOP)); canon <file|-> (print canonical bytes + hash (cross-language diff)); genesis --domain <d> (run the HIGH genesis ceremony (add --publish cf for one-click serving)); rotate --domain <d> --root <enc> (APPEND a key rotation to the served log (never re-mint; old docs stay valid)); cadence --domain <d> --root <enc> --seconds <n> --effective-from <slot> (DECLARE the signed stream grid (§11.3)); discovery <domain> (attest the §20.1 serving contract (any infra)); publish cf --domain <d> --genesis <f> (deploy the CF serving adapter for an existing genesis); mirror <domain> (publish + attest a SECOND-vendor mirror (§20.1 vendor-independence)); stream <frames…> (RANGE verdict: chain · forks · completeness (needs --checkpoint for `complete`)); forkchoice <docs…> (pick the CANONICAL doc among candidates for ONE ust_id (canonical = anchor-included)); witness rekor --domain <d> (log the genesis in a transparency log → automatic no-fork (#68)). Exit 0 = VALID with the tier in the verdict, 1 = not; the ceremony self-verifies its outputs, fail-closed.](.github/ust-cli.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/ust-cli.svg">
+  <source media="(prefers-color-scheme: light)" srcset=".github/ust-cli-light.svg">
+  <img alt="The ust CLI — one entrypoint, the whole command surface (parsed from the real binary’s help). Install with npm i -g @ust-protocol/cli. The 11 subcommands: verify &lt;file|-&gt; (verify a transcript (exit 0 = VALID, 1 = not; --require-anchored floors at TOP)); canon &lt;file|-&gt; (print canonical bytes + hash (cross-language diff)); genesis --domain &lt;d&gt; (run the HIGH genesis ceremony (add --publish cf for one-click serving)); rotate --domain &lt;d&gt; --root &lt;enc&gt; (APPEND a key rotation to the served log (never re-mint; old docs stay valid)); cadence --domain &lt;d&gt; --root &lt;enc&gt; --seconds &lt;n&gt; --effective-from &lt;slot&gt; (DECLARE the signed stream grid (§11.3)); discovery &lt;domain&gt; (attest the §20.1 serving contract (any infra)); publish cf --domain &lt;d&gt; --genesis &lt;f&gt; (deploy the CF serving adapter for an existing genesis); mirror &lt;domain&gt; (publish + attest a SECOND-vendor mirror (§20.1 vendor-independence)); stream &lt;frames…&gt; (RANGE verdict: chain · forks · completeness (needs --checkpoint for `complete`)); forkchoice &lt;docs…&gt; (pick the CANONICAL doc among candidates for ONE ust_id (canonical = anchor-included)); witness rekor --domain &lt;d&gt; (log the genesis in a transparency log → automatic no-fork (#68)). Exit 0 = VALID with the tier in the verdict, 1 = not; the ceremony self-verifies its outputs, fail-closed." src=".github/ust-cli-light.svg">
+</picture>
 
 ```bash
 npm i -g @ust-protocol/cli    # installs the `ust` command
@@ -305,7 +325,11 @@ rung (`attested_withheld: "experimental-gate"`); the top rung is reachable only 
 
 ## ●  Layout
 
-![Repository map. spec/ holds the normative UST-1.0.md plus a measure-theoretic formal model. vectors/ holds language-neutral conformance vectors and a byte corpus — the cross-implementation arbiter. packages/ holds ust-protocol (the zero-dep reference verifier + producer), ust-cli (the ust command: verify, canon, the HIGH genesis ceremony, witness), ust-mcp (an MCP server so agents verify natively), ust-light (a byte-identical minimal subset), ust-web-signer (WebCrypto browser signing with non-extractable keys), ust-ots-verify / ust-rekor-verify (opt-in Bitcoin/OTS and Sigstore Rekor anchor substrates), and diarium (agent memory as a verifiable stream — a product built on the protocol). docs/ is the client-side web verifier plus zero-dependency single-file verifiers. tools/ are the drift gates that keep spec = code = vectors = README = these panels in sync.](.github/ust-map.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/ust-map.svg">
+  <source media="(prefers-color-scheme: light)" srcset=".github/ust-map-light.svg">
+  <img alt="Repository map. spec/ holds the normative UST-1.0.md plus a measure-theoretic formal model. vectors/ holds language-neutral conformance vectors and a byte corpus — the cross-implementation arbiter. packages/ holds ust-protocol (the zero-dep reference verifier + producer), ust-cli (the ust command: verify, canon, the HIGH genesis ceremony, witness), ust-mcp (an MCP server so agents verify natively), ust-light (a byte-identical minimal subset), ust-web-signer (WebCrypto browser signing with non-extractable keys), ust-ots-verify / ust-rekor-verify (opt-in Bitcoin/OTS and Sigstore Rekor anchor substrates), and diarium (agent memory as a verifiable stream — a product built on the protocol). docs/ is the client-side web verifier plus zero-dependency single-file verifiers. tools/ are the drift gates that keep spec = code = vectors = README = these panels in sync." src=".github/ust-map-light.svg">
+</picture>
 
 | Path | What |
 |------|------|

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 432" role="img" aria-labelledby="ust-map-t ust-map-d">
+<title id="ust-map-t">REPOSITORY MAP</title>
+<desc id="ust-map-d">Repository map. spec/ holds the normative UST-1.0.md plus a measure-theoretic formal model. vectors/ holds language-neutral conformance vectors and a byte corpus — the cross-implementation arbiter. packages/ holds ust-protocol (the zero-dep reference verifier + producer), ust-cli (the ust command: verify, canon, the HIGH genesis ceremony, witness), ust-mcp (an MCP server so agents verify natively), ust-light (a byte-identical minimal subset), ust-web-signer (WebCrypto browser signing with non-extractable keys), ust-ots-verify / ust-rekor-verify (opt-in Bitcoin/OTS and Sigstore Rekor anchor substrates), and diarium (agent memory as a verifiable stream — a product built on the protocol). docs/ is the client-side web verifier plus zero-dependency single-file verifiers. tools/ are the drift gates that keep spec = code = vectors = README = these panels in sync.</desc>
+<g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="15" xml:space="preserve">
+  <rect x="1.5" y="1.5" width="877" height="429" rx="10" fill="#ffffff" stroke="#afb8c1" stroke-width="1.5"/>
+  <line x1="16" y1="46" x2="864" y2="46" stroke="#d1d9e0" stroke-width="1"/>
+  <text x="28" y="34" fill="#0969da" font-size="13" font-weight="600" letter-spacing="2">REPOSITORY MAP</text>
+  <text x="36" y="71" fill="#1f2328" font-weight="600">UST-Protocol/</text>
+  <text x="36" y="96" fill="#0550ae" >├── spec/</text>
+  <text x="320" y="96" fill="#59636e" font-size="13">UST-1.0.md (normative) · formal model (measure-theoretic semantics)</text>
+  <text x="36" y="121" fill="#0550ae" >├── vectors/</text>
+  <text x="320" y="121" fill="#59636e" font-size="13">language-neutral conformance + byte corpus — the cross-impl arbiter</text>
+  <text x="36" y="146" fill="#0550ae" >├── packages/</text>
+  <text x="36" y="171" fill="#116329" >│   ├── ust-protocol</text>
+  <text x="320" y="171" fill="#59636e" font-size="13">reference verifier + producer — zero-dep, stateless</text>
+  <text x="36" y="196" fill="#116329" >│   ├── ust-cli</text>
+  <text x="320" y="196" fill="#59636e" font-size="13">the ust command — verify · canon · HIGH genesis ceremony · witness</text>
+  <text x="36" y="221" fill="#116329" >│   ├── ust-mcp</text>
+  <text x="320" y="221" fill="#59636e" font-size="13">MCP server — agents verify natively</text>
+  <text x="36" y="246" fill="#116329" >│   ├── ust-light</text>
+  <text x="320" y="246" fill="#59636e" font-size="13">minimal subset — byte-identical verdicts</text>
+  <text x="36" y="271" fill="#116329" >│   ├── ust-web-signer</text>
+  <text x="320" y="271" fill="#59636e" font-size="13">WebCrypto browser signing (non-extractable keys)</text>
+  <text x="36" y="296" fill="#116329" >│   ├── ust-{ots,rekor}-verify</text>
+  <text x="320" y="296" fill="#59636e" font-size="13">opt-in anchor substrates — Bitcoin/OTS · Sigstore Rekor</text>
+  <text x="36" y="321" fill="#1f2328" >│   └── diarium</text>
+  <text x="320" y="321" fill="#59636e" font-size="13">agent memory as a verifiable stream — a product on the protocol</text>
+  <text x="36" y="346" fill="#0550ae" >├── docs/</text>
+  <text x="320" y="346" fill="#59636e" font-size="13">web verifier (GitHub Pages) · zero-dependency single-file verifiers</text>
+  <text x="36" y="371" fill="#0550ae" >├── examples/ · extension/</text>
+  <text x="320" y="371" fill="#59636e" font-size="13">sample docs (valid + tampered) · “Make it UST” Chrome demo</text>
+  <text x="36" y="396" fill="#0550ae" >└── tools/</text>
+  <text x="320" y="396" fill="#59636e" font-size="13">drift gates: spec == code == vectors == README == these panels</text>
+</g>
+</svg>

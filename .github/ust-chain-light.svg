@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 440" role="img" aria-labelledby="ust-chain-t ust-chain-d">
+<title id="ust-chain-t">ONE STATE — GRADUATED VISIBILITY</title>
+<desc id="ust-chain-d">One state, graduated visibility — a single connected state can be a hash-linked chain of independently signed layers. L1 is a public observation anyone verifies. L2 is a blinded commitment: the value is fixed but hidden until reveal, while its existence is public. L3 is an encrypted shard: AEAD ciphertext plus a commitment, so only key holders read and verify it. L4 is a partner’s derived shard under another publisher’s own key — cross-party, provable lineage. Each layer links to the prior by based_on = sha256(content) plus a recomputed seed, so order and lineage are publicly provable. Every layer verifies on its own; trust composes but is never inherited; payloads stay deletable while “existed, in this order” remains provable.</desc>
+<g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="15" xml:space="preserve">
+  <rect x="1.5" y="1.5" width="877" height="437" rx="10" fill="#ffffff" stroke="#afb8c1" stroke-width="1.5"/>
+  <line x1="16" y1="46" x2="864" y2="46" stroke="#d1d9e0" stroke-width="1"/>
+  <text x="28" y="34" fill="#0969da" font-size="13" font-weight="600" letter-spacing="2">ONE STATE — GRADUATED VISIBILITY</text>
+  <rect x="24" y="64" width="566" height="54" rx="8" fill="none" stroke="#1a7f37" stroke-opacity="0.55" stroke-width="1.2"/>
+  <text x="40" y="88" fill="#1a7f37" font-weight="600">L1</text>
+  <text x="76" y="88" fill="#1f2328" font-weight="600">public observation</text>
+  <text x="76" y="107" fill="#59636e" font-size="13">&quot;geomagnetic activity: elevated&quot;</text>
+  <rect x="614" y="81" width="128" height="19" rx="9.5" fill="none" stroke="#1a7f37" stroke-width="1"/>
+  <text x="678" y="95" fill="#1a7f37" font-size="12" text-anchor="middle">anyone verifies</text>
+  <line x1="56" y1="118" x2="56" y2="142" stroke="#d1d9e0" stroke-width="1.2"/>
+  <text x="66" y="136" fill="#59636e" font-size="12.5">▲ based_on: sha256(content) + seed — order &amp; lineage publicly provable</text>
+  <rect x="24" y="142" width="566" height="54" rx="8" fill="none" stroke="#9a6700" stroke-opacity="0.55" stroke-width="1.2"/>
+  <text x="40" y="166" fill="#9a6700" font-weight="600">L2</text>
+  <text x="76" y="166" fill="#1f2328" font-weight="600">blinded commitment</text>
+  <text x="76" y="185" fill="#59636e" font-size="13">value fixed — hidden until reveal</text>
+  <rect x="614" y="159" width="157" height="19" rx="9.5" fill="none" stroke="#9a6700" stroke-width="1"/>
+  <text x="692.5" y="173" fill="#9a6700" font-size="12" text-anchor="middle">existence is public</text>
+  <line x1="56" y1="196" x2="56" y2="220" stroke="#d1d9e0" stroke-width="1.2"/>
+  <text x="66" y="214" fill="#59636e" font-size="12.5">▲ based_on: sha256(content) + seed — order &amp; lineage publicly provable</text>
+  <rect x="24" y="220" width="566" height="54" rx="8" fill="none" stroke="#0550ae" stroke-opacity="0.55" stroke-width="1.2"/>
+  <text x="40" y="244" fill="#0550ae" font-weight="600">L3</text>
+  <text x="76" y="244" fill="#1f2328" font-weight="600">encrypted shard</text>
+  <text x="76" y="263" fill="#59636e" font-size="13">AEAD ciphertext + commitment</text>
+  <rect x="614" y="237" width="201" height="19" rx="9.5" fill="none" stroke="#0550ae" stroke-width="1"/>
+  <text x="714.5" y="251" fill="#0550ae" font-size="12" text-anchor="middle">key holders read &amp; verify</text>
+  <line x1="56" y1="274" x2="56" y2="298" stroke="#d1d9e0" stroke-width="1.2"/>
+  <text x="66" y="292" fill="#59636e" font-size="12.5">▲ based_on: sha256(content) + seed — order &amp; lineage publicly provable</text>
+  <rect x="24" y="298" width="566" height="54" rx="8" fill="none" stroke="#8250df" stroke-opacity="0.55" stroke-width="1.2"/>
+  <text x="40" y="322" fill="#8250df" font-weight="600">L4</text>
+  <text x="76" y="322" fill="#1f2328" font-weight="600">partner’s derived shard</text>
+  <text x="76" y="341" fill="#59636e" font-size="13">another publisher, own key</text>
+  <rect x="614" y="315" width="157" height="19" rx="9.5" fill="none" stroke="#8250df" stroke-width="1"/>
+  <text x="692.5" y="329" fill="#8250df" font-size="12" text-anchor="middle">cross-party lineage</text>
+  <text x="28" y="394" fill="#1f2328" font-size="13">public sees L1 · client L1–L2 · partner L1–L3 · auditor walks ALL — each layer verifies on its own,</text>
+  <text x="28" y="414" fill="#1f2328" font-size="13">trust composes but is never inherited. Payloads deletable; “existed, in this order” stays provable.</text>
+</g>
+</svg>

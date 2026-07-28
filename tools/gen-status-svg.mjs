@@ -7,6 +7,7 @@
 // glyphs, so the panel survives mobile widths where an ASCII box in a code block wraps and tears.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { VERSION } from '../packages/ust-protocol/index.mjs';
+import { imageBlock, imageRe } from './lib/readme-image.mjs';   // ONE place knows how a README illustration is written
 
 const W = 880;
 const PAD = 28;                       // left text margin
@@ -79,7 +80,7 @@ writeFileSync(new URL('../.github/status.svg', import.meta.url), svg);
 // sync the README status image ALT to this content (agents read the alt); the version token is preserved for the machine grep.
 const readmePath = new URL('../README.md', import.meta.url);
 let readme = readFileSync(readmePath, 'utf8');
-const re = /!\[UST status:[^\]]*\]\(\.github\/status\.svg\)/;
-if (!re.test(readme)) { console.error('  ✗ README has no "![UST status: …](.github/status.svg)" image tag'); process.exit(1); }
-writeFileSync(readmePath, readme.replace(re, '![' + alt.replace(/\]/g, ')') + '](.github/status.svg)'));
+const re = imageRe('status');
+if (!re.test(readme)) { console.error('  ✗ README has no <picture> block for .github/status.svg'); process.exit(1); }
+writeFileSync(readmePath, readme.replace(re, imageBlock('status', alt.replace(/\]/g, ')'))));
 console.log(`  ✓ .github/status.svg + README alt → ${VERSION.spec} (TUI status panel, deterministic from VERSION.spec)`);

@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 515" role="img" aria-labelledby="ust-anatomy-t ust-anatomy-d">
+<title id="ust-anatomy-t">A TRANSCRIPT — SELF-CONTAINED, VERIFIES ANYWHERE</title>
+<desc id="ust-anatomy-d">Anatomy of a UST transcript — a self-contained signed JSON document. Its id says WHO (domain_shard: a name or a self-certifying key-id) and WHEN (ust_id: an address on one shared UTC axis), plus key_id and class. A time frame carries generated_at, valid_from and valid_to. The data holds partitions (captured, computed, blinded or encrypted); one domain-separated hash per partition binds the data to the id and frame. Provenance (based_on, prev, seed) links chains, streams and derivations. An Ed25519 signature travels WITH the data, not the channel. Seal at creation, store anywhere, verify offline in one call — no blockchain; TLS secures the pipe, UST secures the payload, so it verifies the same from a cache, mirror, file or chat paste.</desc>
+<g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="15" xml:space="preserve">
+  <rect x="1.5" y="1.5" width="877" height="512" rx="10" fill="#ffffff" stroke="#afb8c1" stroke-width="1.5"/>
+  <line x1="16" y1="46" x2="864" y2="46" stroke="#d1d9e0" stroke-width="1"/>
+  <text x="28" y="34" fill="#0969da" font-size="13" font-weight="600" letter-spacing="2">A TRANSCRIPT — SELF-CONTAINED, VERIFIES ANYWHERE</text>
+  <text x="36" y="71" fill="#1f2328" font-size="14">{</text>
+  <text x="52.86" y="96" fill="#0550ae" font-size="14">&quot;ust&quot;</text>
+  <text x="95.00999999999999" y="96" fill="#59636e" font-size="14">: </text>
+  <text x="111.86999999999999" y="96" fill="#116329" font-size="14">&quot;1.0&quot;,</text>
+  <text x="502" y="96" fill="#0969da" >←</text>
+  <text x="520" y="96" fill="#59636e" font-size="13">wire format — stable across all rc’s</text>
+  <text x="52.86" y="121" fill="#0550ae" font-size="14">&quot;state&quot;</text>
+  <text x="111.87" y="121" fill="#59636e" font-size="14">: </text>
+  <text x="128.73000000000002" y="121" fill="#1f2328" font-size="14">{</text>
+  <text x="69.72" y="146" fill="#0550ae" font-size="14">&quot;id&quot;</text>
+  <text x="103.44" y="146" fill="#59636e" font-size="14">: </text>
+  <text x="120.3" y="146" fill="#1f2328" font-size="14">{</text>
+  <text x="86.58" y="171" fill="#0550ae" font-size="14">&quot;domain_shard&quot;</text>
+  <text x="204.6" y="171" fill="#59636e" font-size="14">: </text>
+  <text x="221.45999999999998" y="171" fill="#116329" font-size="14">&quot;example.org&quot;,</text>
+  <text x="502" y="171" fill="#0969da" >←</text>
+  <text x="520" y="171" fill="#59636e" font-size="13">WHO — a name, or a self-certifying key-id</text>
+  <text x="86.58" y="196" fill="#0550ae" font-size="14">&quot;ust_id&quot;</text>
+  <text x="154.01999999999998" y="196" fill="#59636e" font-size="14">: </text>
+  <text x="170.88" y="196" fill="#116329" font-size="14">&quot;ust:20260710.1429&quot;,</text>
+  <text x="502" y="196" fill="#0969da" >←</text>
+  <text x="520" y="196" fill="#59636e" font-size="13">WHEN — an address on one shared UTC axis</text>
+  <text x="86.58" y="221" fill="#0550ae" font-size="14">&quot;key_id&quot;</text>
+  <text x="154.01999999999998" y="221" fill="#59636e" font-size="14">: </text>
+  <text x="170.88" y="221" fill="#116329" font-size="14">&quot;sha256:…&quot;, &quot;class&quot;: &quot;observation&quot;</text>
+  <text x="69.72" y="246" fill="#1f2328" font-size="14">},</text>
+  <text x="69.72" y="271" fill="#0550ae" font-size="14">&quot;time&quot;</text>
+  <text x="120.3" y="271" fill="#59636e" font-size="14">: </text>
+  <text x="137.16" y="271" fill="#1f2328" font-size="14">{ generated_at · valid_from · valid_to },</text>
+  <text x="502" y="271" fill="#0969da" >←</text>
+  <text x="520" y="271" fill="#59636e" font-size="13">the claimed frame</text>
+  <text x="69.72" y="296" fill="#0550ae" font-size="14">&quot;data&quot;</text>
+  <text x="120.3" y="296" fill="#59636e" font-size="14">: </text>
+  <text x="137.16" y="296" fill="#1f2328" font-size="14">{ … partitions … },</text>
+  <text x="502" y="296" fill="#0969da" >←</text>
+  <text x="520" y="296" fill="#59636e" font-size="13">captured / computed / blinded / encrypted</text>
+  <text x="69.72" y="321" fill="#0550ae" font-size="14">&quot;hashes&quot;</text>
+  <text x="137.16" y="321" fill="#59636e" font-size="14">: </text>
+  <text x="154.01999999999998" y="321" fill="#1f2328" font-size="14">{ one per partition },</text>
+  <text x="502" y="321" fill="#0969da" >←</text>
+  <text x="520" y="321" fill="#59636e" font-size="13">domain-separated — bind data to id + frame</text>
+  <text x="69.72" y="346" fill="#0550ae" font-size="14">&quot;provenance&quot;</text>
+  <text x="170.88" y="346" fill="#59636e" font-size="14">: </text>
+  <text x="187.74" y="346" fill="#1f2328" font-size="14">{ based_on[] · prev · seed }</text>
+  <text x="502" y="346" fill="#0969da" >←</text>
+  <text x="520" y="346" fill="#59636e" font-size="13">lineage — chains, streams, derivations</text>
+  <text x="52.86" y="371" fill="#1f2328" font-size="14">},</text>
+  <text x="52.86" y="396" fill="#0550ae" font-size="14">&quot;sig&quot;</text>
+  <text x="95.00999999999999" y="396" fill="#59636e" font-size="14">: </text>
+  <text x="111.86999999999999" y="396" fill="#1f2328" font-size="14">{ &quot;alg&quot;: &quot;Ed25519&quot;, key_id · pub · sig }</text>
+  <text x="502" y="396" fill="#0969da" >←</text>
+  <text x="520" y="396" fill="#59636e" font-size="13">travels WITH the data — not with the channel</text>
+  <text x="36" y="421" fill="#1f2328" font-size="14">}</text>
+  <line x1="16" y1="435" x2="864" y2="435" stroke="#d1d9e0" stroke-width="1"/>
+  <text x="36" y="465" fill="#1a7f37" font-weight="600">SEAL at creation</text>
+  <text x="196" y="465" fill="#59636e" >──▶</text>
+  <text x="244" y="465" fill="#0550ae" font-weight="600">STORE anywhere</text>
+  <text x="388" y="465" fill="#59636e" >──▶</text>
+  <text x="436" y="465" fill="#1f2328" font-weight="600">VERIFY offline — one call · no blockchain</text>
+  <text x="36" y="489" fill="#59636e" font-size="13">TLS secures the pipe — UST secures the payload: cache, mirror, file or chat paste — the same verdict</text>
+</g>
+</svg>

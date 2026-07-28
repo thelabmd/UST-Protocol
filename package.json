@@ -27,6 +27,7 @@
     "test:parity": "node tools/capability-parity.mjs",
     "test:docs-parity": "node tools/docs-verifier-parity.mjs",
     "test:light": "node packages/ust-light/test.mjs",
+    "test:artwork": "node tools/gen-light-svgs.mjs && node tools/light-variant-gate.mjs",
     "test:security": "node packages/ust-protocol/security-regression.mjs",
     "test:ssrf": "node packages/ust-protocol/ssrf.test.mjs && node packages/ust-mcp/ssrf-guard.test.mjs",
     "test:drift-guards": "node packages/ust-protocol/drift-guards.test.mjs",

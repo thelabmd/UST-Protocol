@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 404" role="img" aria-labelledby="ust-tiers-t ust-tiers-d">
+<title id="ust-tiers-t">TRUST IS GRADUATED, AND THE VERDICT CARRIES ITS TIER — A CONFORMING VERIFIER NEVER SAYS A BARE VALID:</title>
+<desc id="ust-tiers-d">The verdict ladder — trust is graduated and the verdict carries its tier; a conforming verifier never says a bare VALID. VALID:LIGHT is the floor: exact bytes, the signing key and the claimed time frame (a key, canonical form and a signature — no infrastructure, no fees). VALID:HIGH adds that the NAME is provably bound to the key (a genesis + key-log ceremony, rotation and revocation; strength corroborated or authoritative). VALID:TOP adds that the document existed BY a real point in time (an anchor inclusion proof — Bitcoin/OTS or Rekor, opt-in; stream completeness is a separate range verdict). INVALID is a definite failure (an E-* code); INDETERMINATE means cannot decide — never conflated with forged. A tier is EARNED per verification: there is no field a producer can set to claim it.</desc>
+<g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="15" xml:space="preserve">
+  <rect x="1.5" y="1.5" width="877" height="401" rx="10" fill="#ffffff" stroke="#afb8c1" stroke-width="1.5"/>
+  <line x1="16" y1="46" x2="864" y2="46" stroke="#d1d9e0" stroke-width="1"/>
+  <text x="28" y="34" fill="#0969da" font-size="11.5" font-weight="600" letter-spacing="0.8">TRUST IS GRADUATED, AND THE VERDICT CARRIES ITS TIER — A CONFORMING VERIFIER NEVER SAYS A BARE VALID:</text>
+  <rect x="24" y="150" width="256" height="170" rx="8" fill="none" stroke="#d1d9e0" stroke-width="1.2"/>
+  <rect x="38" y="163" width="98" height="19" rx="9.5" fill="none" stroke="#1f2328" stroke-width="1"/>
+  <text x="87" y="177" fill="#1f2328" font-size="12" text-anchor="middle">VALID:LIGHT</text>
+  <text x="38" y="206" fill="#1f2328" font-size="13">the floor — a key,</text>
+  <text x="38" y="224" fill="#1f2328" font-size="13">canonical form, a signature</text>
+  <text x="38" y="250" fill="#59636e" font-size="13">·</text>
+  <text x="52" y="250" fill="#59636e" font-size="13">exact bytes · signing key</text>
+  <text x="38" y="272" fill="#59636e" font-size="13">·</text>
+  <text x="52" y="272" fill="#59636e" font-size="13">claimed time frame</text>
+  <text x="38" y="294" fill="#59636e" font-size="13">·</text>
+  <text x="52" y="294" fill="#59636e" font-size="13">no infra · no fees</text>
+  <rect x="312" y="110" width="256" height="210" rx="8" fill="none" stroke="#d1d9e0" stroke-width="1.2"/>
+  <rect x="326" y="123" width="91" height="19" rx="9.5" fill="none" stroke="#0550ae" stroke-width="1"/>
+  <text x="371.5" y="137" fill="#0550ae" font-size="12" text-anchor="middle">VALID:HIGH</text>
+  <text x="326" y="166" fill="#1f2328" font-size="13">+ the NAME is provably</text>
+  <text x="326" y="184" fill="#1f2328" font-size="13">bound to the key</text>
+  <text x="326" y="210" fill="#59636e" font-size="13">·</text>
+  <text x="340" y="210" fill="#59636e" font-size="13">genesis + key log ceremony</text>
+  <text x="326" y="232" fill="#59636e" font-size="13">·</text>
+  <text x="340" y="232" fill="#59636e" font-size="13">rotation / revocation</text>
+  <text x="326" y="254" fill="#59636e" font-size="13">·</text>
+  <text x="340" y="254" fill="#59636e" font-size="13">corroborated|authoritative</text>
+  <rect x="600" y="70" width="256" height="250" rx="8" fill="none" stroke="#d1d9e0" stroke-width="1.2"/>
+  <rect x="614" y="83" width="84" height="19" rx="9.5" fill="none" stroke="#1a7f37" stroke-width="1"/>
+  <text x="656" y="97" fill="#1a7f37" font-size="12" text-anchor="middle">VALID:TOP</text>
+  <text x="614" y="126" fill="#1f2328" font-size="13">+ existed BY a real point</text>
+  <text x="614" y="144" fill="#1f2328" font-size="13">in time</text>
+  <text x="614" y="170" fill="#59636e" font-size="13">·</text>
+  <text x="628" y="170" fill="#59636e" font-size="13">anchor inclusion proof</text>
+  <text x="614" y="192" fill="#59636e" font-size="13">·</text>
+  <text x="628" y="192" fill="#59636e" font-size="13">Bitcoin/OTS · Rekor opt-in</text>
+  <text x="614" y="214" fill="#59636e" font-size="13">·</text>
+  <text x="628" y="214" fill="#59636e" font-size="13">completeness: range verdict</text>
+  <text x="288" y="200" fill="#0969da" font-size="17">▶</text>
+  <text x="576" y="160" fill="#0969da" font-size="17">▶</text>
+  <text x="28" y="356" fill="#cf222e" font-size="13" font-weight="600">INVALID</text>
+  <text x="96" y="356" fill="#59636e" font-size="13">= a definite failure (E-*)</text>
+  <text x="330" y="356" fill="#9a6700" font-size="13" font-weight="600">INDETERMINATE</text>
+  <text x="456" y="356" fill="#59636e" font-size="13">= cannot decide — never conflated with forged</text>
+  <text x="28" y="378" fill="#1f2328" font-size="13">a tier is EARNED per verification — there is NO field a producer can set to claim it</text>
+</g>
+</svg>

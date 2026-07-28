@@ -13,6 +13,7 @@
 //
 // The gate fails CLOSED in both directions: a package with no mention, and a mention with no package.
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { altOf } from './lib/readme-image.mjs';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
@@ -77,9 +78,10 @@ for (const d of rowDirs) ok(`table row packages/${d} corresponds to a real packa
 
 // ── 3. the panel — one source, two renderings (the SVG and the README alt), so check the rendered artefacts
 const svg = readFileSync(ROOT + '.github/ust-map.svg', 'utf8');
-const altMatch = /!\[Repository map\.([\s\S]*?)\]\(\.github\/ust-map\.svg\)/.exec(readme);
-ok('README carries the repository-map alt text', altMatch !== null);
-const alt = altMatch ? altMatch[1] : '';
+// the alt now lives in the <picture> block's <img>, HTML-escaped — read it through the one module that knows the form
+const mapAlt = altOf(readme, 'ust-map');
+ok('README carries the repository-map alt text', mapAlt !== null && mapAlt.startsWith('Repository map.'));
+const alt = mapAlt ?? '';
 
 // The panel collapses siblings with a brace — `ust-{ots,rekor}-verify`. Expand those before comparing, or the gate
 // reports a divergence that is only a notation. The expansion is exact: every brace form must expand to real packages.

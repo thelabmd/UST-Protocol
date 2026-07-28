@@ -5,6 +5,7 @@
 // (no dates, no randomness) gated by `git diff --exit-code` in test:spec-sync, exactly like the status panel — the
 // prose stays in the README; these panels replace only the ASCII diagrams that wrap and tear on mobile.
 import { readFileSync, writeFileSync } from 'node:fs';
+import { imageBlock, imageRe } from './lib/readme-image.mjs';   // ONE place knows how a README illustration is written
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
@@ -253,9 +254,9 @@ panel('ust-map', 'REPOSITORY MAP',
 const readmePath = new URL('../README.md', import.meta.url);
 let readme = readFileSync(readmePath, 'utf8');
 for (const { name, alt } of PANELS) {
-  const re = new RegExp('!\\[[^\\]]*\\]\\(\\.github/' + name.replace(/[-.]/g, '\\$&') + '\\.svg\\)');
+  const re = imageRe(name);
   if (!re.test(readme)) { console.error('  ✗ README has no image tag for .github/' + name + '.svg — add one or fix the panel name'); process.exit(1); }
-  readme = readme.replace(re, '![' + alt + '](.github/' + name + '.svg)');
+  readme = readme.replace(re, imageBlock(name, alt));
 }
 writeFileSync(readmePath, readme);
 console.log('  (6 README panels regenerated + README alt text synced from panel content — deterministic; the CLI panel is parsed from the real `$ ust` help)');

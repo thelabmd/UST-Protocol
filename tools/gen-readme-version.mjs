@@ -15,7 +15,10 @@ let readme = readFileSync(readmePath, 'utf8');
 // TWO version tokens track VERSION.spec: the status image ALT (searchable text agents read) AND the plain-text Status
 // blockquote below it (the fallback for readers/agents that don't render the image). Both are stamped + git-diff-gated.
 const anchors = [
-  { re: /(!\[UST status:\s*`)[^`]+(`)/, what: 'status image alt' },
+  // Form-agnostic on purpose: an illustration's alt lives in markdown `![…]` when the panel is one artifact, and in
+  // `<img alt="…">` when it has a light variant behind <picture>. This stamps the version token either way, so a
+  // panel moving between the two forms cannot silently strand the version. See tools/lib/readme-image.mjs.
+  { re: /((?:!\[|alt=")UST status:\s*`)[^`]+(`)/, what: 'status image alt' },
   { re: /(\*\*Status:\s*`)[^`]+(`\*\*)/, what: 'status text blockquote' },
 ];
 for (const { re, what } of anchors) {
