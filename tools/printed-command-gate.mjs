@@ -50,6 +50,33 @@ check(checked >= 5, `only ${checked} printed commands found — the extraction h
 check(!COMMANDS.has('nonexistent-subcommand'), 'the dispatch probe accepts a command the table lacks');
 check(REQUIRES_ROAD.publish?.length > 0, 'the road table is empty — every printed publish would pass');
 
+// ── a printed instruction must be runnable IN THE CONTEXT THAT PRINTED IT ─────────────────────────────────────────
+//
+// Every instruction began with `ust `, which is only correct when the package is installed globally. Someone running
+// it straight from a checkout — which is what an air-gapped ceremony looks like, and what the operator did — copied
+// a printed command and got `zsh: command not found: ust`. Twice, after a ceremony that had otherwise gone perfectly.
+//
+// So the instructions an operator COPIES must interpolate how the tool was actually invoked. Prose that merely names
+// a command ("run `ust rotate` instead") is not affected: it is a reference, not something to paste.
+{
+  const copyable = [];
+  for (const [n, line] of SRC.split('\n').entries()) {
+    if (/^\s*(\/\/|\*)/.test(line)) continue;
+    // a copyable instruction is an indented literal that carries flags — that is what distinguishes it from prose
+    if (!/^\s*[`'"]\s+\s*/.test(line) && !/^\s*`\s{2,}/.test(line)) continue;
+    if (!/--\w/.test(line)) continue;
+    if (!/\bust \w/.test(line) && !/invocation\(\)/.test(line)) continue;
+    copyable.push({ n: n + 1, line: line.trim() });
+  }
+  check(copyable.length >= 2, `only ${copyable.length} copyable instructions found — the probe has gone blind`);
+  for (const c of copyable) {
+    check(/invocation\(\)/.test(c.line) || /usage:/.test(c.line),
+      `ust-cli/index.mjs:${c.n} prints a copyable command starting with a bare \`ust\`, which only resolves when the package is installed globally. Interpolate invocation() so it matches how the tool was actually run: ${c.line.slice(0, 90)}`);
+  }
+  check(/export function invocation/.test(SRC), 'invocation() is gone — printed commands would assume a global install again');
+}
+
+
 console.log(`\n  printed commands   PASS ${pass}   FAIL ${fail.length}   (${COMMANDS.size} subcommands · ${checked} printed instructions checked)`);
 if (fail.length) { fail.forEach((f) => console.log('    ✗ ' + f)); process.exit(1); }
 console.log('  ✓ every command the tool prints is one the tool can run');

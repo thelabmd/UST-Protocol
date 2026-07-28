@@ -74,7 +74,7 @@ for (const fn of OFFLINE_CALLEES) {
 const handoff = SRC.slice(SRC.indexOf('export function offlineHandoff'), SRC.indexOf('export function ceremonySummary'));
 check(/DO NOT CARRY OUT/.test(handoff), 'the handoff no longer separates what travels from what stays — the crown key is the whole point');
 check(/genesis-key/.test(handoff) && /recovery-key/.test(handoff), 'the handoff no longer names the keys that must not travel');
-check(/ust publish/.test(handoff), 'the handoff no longer names the online half, so an operator is left holding files with no next step');
+check(/(ust|invocation\(\)\}) publish/.test(handoff), 'the handoff no longer names the online half, so an operator is left holding files with no next step');
 
 // each leg must be able to fail
 check(!/\bnonexistentNetworkCall\(/.test(body), 'the network probe matches a call the source lacks');

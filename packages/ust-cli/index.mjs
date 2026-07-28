@@ -363,6 +363,16 @@ export function manualDnsGuide(domain, txt) {
 // missing token and no map at all. Worse for a supersession: the WITNESS is a successor computed from what is live,
 // and nobody can build that by hand. So this road assembles the same four artifacts the CF adapter would serve,
 // writes them to disk, and hands over the exact contract plus the command that ATTESTS it.
+// HOW THE OPERATOR ACTUALLY INVOKED THIS. Every instruction the tool prints used to begin with `ust `, which is
+// only correct when the package is installed globally. Someone running it straight from a checkout — which is what
+// an air-gapped ceremony looks like, and what the owner did — copied a printed command and got
+// `zsh: command not found: ust`. A printed instruction has to be runnable in the context that printed it.
+export function invocation() {
+  const argv1 = process.argv[1] ?? '';
+  const base = argv1.split(/[/\\]/).pop() ?? '';
+  return base === 'ust' ? 'ust' : `node ${argv1}`;
+}
+
 export function selfHostedPlan({ domain, outDir, genHash, artifacts }) {
   const served = Object.entries(artifacts).filter(([, v]) => v != null).map(([k]) => k);
   return [
@@ -387,7 +397,7 @@ export function selfHostedPlan({ domain, outDir, genHash, artifacts }) {
     `       _ust.${domain}   TXT   "ust-genesis=${genHash}"`,
     '',
     '  4️⃣  ATTEST it — from anywhere, trusting nobody, including yourself:',
-    `       ust discovery ${domain}`,
+    `       ${invocation()} discovery ${domain}`,
     '       It fetches every surface, checks the bytes against these files, probes the query-robustness',
     '       rule and reads the DNS pin. A pass is evidence; your own assertion is not.',
     '',
@@ -982,7 +992,7 @@ export function offlineHandoff({ domain, outDir, genHash }) {
     '     checkpoint-authority-key.b64       → cold, like the crown.',
     '',
     '  ▶️  THE ONLINE HALF — on a networked machine, with ONLY the two public documents:',
-    `     ust publish cf --domain ${domain} --genesis ./ust-genesis`,
+    `     ${invocation()} publish cf --domain ${domain} --genesis ./ust-genesis`,
     '     (the key log rides along: ust-keylog-0 is found next to the genesis)',
     '',
     '     It fetches whatever witness log is live and builds the SUCCESSOR from it: your predecessor',
@@ -990,8 +1000,8 @@ export function offlineHandoff({ domain, outDir, genHash }) {
     '     it is a first log. Either way the crown key is not involved and is not needed.',
     '',
     '  ✅ then verify from anywhere, trusting nobody:',
-    `     ust verify ./ust-genesis --genesis ./ust-genesis --keylog ./ust-keylog-0`,
-    `     ust discovery ${domain}`,
+    `     ${invocation()} verify ./ust-genesis --genesis ./ust-genesis --keylog ./ust-keylog-0`,
+    `     ${invocation()} discovery ${domain}`,
     '  ══════════════════════════════════════════════',
   ];
 }
