@@ -52,6 +52,7 @@
     "test:diary": "node tools/diarium-render.mjs --check",
     "test:display": "node tools/display-safety-gate.mjs",
     "test:packages": "node tools/package-enumeration-gate.mjs",
+    "test:root": "node tools/root-inventory-gate.mjs",
     "test:ustid": "node tools/ustid-tier-gate.mjs",
     "test:attribution": "node tools/verdict-attribution-gate.mjs",
     "test:inclusion": "node tools/inclusion-connector-gate.mjs",
