@@ -21,6 +21,42 @@ conformance vectors; this file is the readable map.
 
 ## [Unreleased] — rc.37 line
 
+### The verifier was correct until the public log passed 2^31 entries, and the date was not ours to pick
+
+An anchor written today verified `final: false`; the same domain's anchor from two weeks earlier verified
+`final: true`. Same connector, same log, same code path. I filed it as a substrate question because that is what it
+looked like, and said plainly that the cause was not established.
+
+It was ours. `verifyInclusion` climbed the RFC 6962 path with `fn >>= 1` and `fn & 1` — JavaScript coerces both to
+**signed 32-bit**, so an index at or above 2^31 goes NEGATIVE halfway up. Measured on the two live anchors:
+`2149645490 >> 1 = -1072660903` where the answer is `1074822745`. The public log crossed 2,147,483,648 entries
+between 13 July and today. Before that boundary the code was right about every input it had ever seen.
+
+Found by recomputing both proofs BY HAND against RFC 6962: both recomputed correctly, which moved the fault from
+the data to the verifier in one step. The hypothesis I had actually started with — that the log's tree had changed —
+was wrong, and the hand-recomputation is what disproved it rather than more reasoning about it.
+
+**Why every gate stayed green.** Every test vector sat in a tiny synthetic tree. Not one exercised an index near the
+boundary, so a verifier that fails above 2^31 passed the entire suite, and would have kept passing forever. This is
+the vacuity pattern one level deeper than usual: not a claim asserted over an empty domain, but a claim tested only
+over the part of its domain where it happens to hold.
+
+**Structural, not local.** Tree indices are unbounded naturals — RFC 6962 §2.1.1 defines the climb over naturals and
+the wire form is uint64. The climb is BigInt throughout now, and `index`/`treeSize` accept number | string | bigint,
+because a log serving a uint64 past 2^53 must send it as a string and a number-only guard would reinstate the same
+ceiling one power higher. `unbounded-index-gate` forbids fixed-width bitwise operators on that path outright and
+requires a vector at or above 2^31 to exist — four legs, each mutation-proven, including one that catches the vector
+being quietly moved back below the boundary.
+
+**The class.** Arithmetic on a counter we do not own carries no ceiling we may assume. It is correct until a date
+somebody else sets, it announces nothing when it stops being correct, and its failure presents as an outage in the
+system we depend on rather than a defect in our own. Our own key-log tree already used BigInt; the vendored verifier
+never learned it.
+
+The reference operator's fresh anchor now verifies `final: true` with its logged time, and the predecessor's July
+anchor still does.
+
+
 ### A real supersession, walked end to end — twelve defects, and four of them a pipe cannot show
 
 Every round below was found the same way: **the operator walked it**, on a live domain with an existing identity,

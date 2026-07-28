@@ -66,6 +66,7 @@
     "test:stream-parity": "node tools/stream-parity-gate.mjs",
     "test:primitive-parity": "node tools/primitive-parity-gate.mjs",
     "test:vocabulary": "node tools/verdict-vocabulary-gate.mjs",
-    "ci:local": "node tools/run-ci-locally.mjs"
+    "ci:local": "node tools/run-ci-locally.mjs",
+    "test:unbounded-index": "node tools/unbounded-index-gate.mjs"
   }
 }

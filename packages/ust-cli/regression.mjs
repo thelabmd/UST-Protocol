@@ -638,6 +638,36 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
   const okLeft = verifyInclusion({ leafHash: l[0], index: 0, treeSize: 3, hashes: [l[1].toString('hex'), l[2].toString('hex')], rootHash: root.toString('hex') });
   check('rfc6962_left_leaf_inclusion_correct', okLeft === true);
   check('rfc6962_wrong_root_fails', verifyInclusion({ leafHash: l[2], index: 2, treeSize: 3, hashes: [n01.toString('hex')], rootHash: 'aa'.repeat(32) }) === false);
+
+  // THE 2^31 BOUNDARY. Every vector above sits in a tiny tree, which is why a verifier that broke at 2,147,483,648
+  // entries passed all of them for the whole history of the public log. JavaScript's >> and & coerce to signed
+  // 32-bit, so the climb goes NEGATIVE at that index and the recomputation silently produces a wrong root.
+  // Measured live: an anchor written today verified false while the same domain's two-week-old anchor verified true.
+  //
+  // A real tree of that size cannot be built here, so the vector is constructed the other way round: pick a large
+  // index and a set of siblings, run RFC 6962 forward to whatever root it commits to, then require the verifier to
+  // agree. That is a genuine test of the ARITHMETIC, which is where the defect lived.
+  {
+    const climb = (leaf, index, size, sibs) => {
+      let fn = BigInt(index), sn = BigInt(size) - 1n, h = leaf;
+      for (const s of sibs) {
+        if (fn === sn || (fn & 1n) === 1n) { h = H(0x01, s, h); while (fn !== 0n && (fn & 1n) === 0n) { fn >>= 1n; sn >>= 1n; } }
+        else h = H(0x01, h, s);
+        fn >>= 1n; sn >>= 1n;
+      }
+      return h;
+    };
+    for (const [label, index, size] of [['past_2_31', 2149645490, 2149645504], ['past_2_53', '9007199254740993', '9007199254740999']]) {
+      const depth = 24;
+      const leaf = H(0x00, Buffer.from('leaf:' + label));
+      const sibs = Array.from({ length: depth }, (_, i) => H(0x01, Buffer.from('sib:' + label + ':' + i)));
+      const root = climb(leaf, index, size, sibs);
+      const ok = verifyInclusion({ leafHash: leaf, index, treeSize: size, hashes: sibs.map((b) => b.toString('hex')), rootHash: root.toString('hex') });
+      check('rfc6962_index_' + label + '_verifies', ok === true);
+      const bad = verifyInclusion({ leafHash: H(0x00, Buffer.from('other')), index, treeSize: size, hashes: sibs.map((b) => b.toString('hex')), rootHash: root.toString('hex') });
+      check('rfc6962_index_' + label + '_wrong_leaf_fails', bad === false);
+    }
+  }
 }
 
 // ── 11. UST#66 `ust rotate` — APPENDS a rotation (never re-mint): the new key resolves authoritative, the OLD

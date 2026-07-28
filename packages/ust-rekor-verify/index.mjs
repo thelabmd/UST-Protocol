@@ -37,19 +37,32 @@ export function verifyInclusion(proof) {
   try {
     if (!proof || typeof proof !== 'object') return false;
     const { leafHash, index, treeSize, hashes, rootHash } = proof;
-    if (!Array.isArray(hashes) || typeof index !== 'number' || typeof treeSize !== 'number') return false;
-    if (index >= treeSize || index < 0) return false;
-    let hash = leafHash, fn = index, sn = treeSize - 1;
+    // TREE INDICES ARE UNBOUNDED NATURALS AND MUST NOT BE NARROWED (rc.67).
+    // RFC 6962 §2.1.1 defines the path over naturals and the wire form is uint64. JavaScript's >> and & coerce to
+    // SIGNED 32-BIT, so any index at or above 2^31 goes NEGATIVE mid-climb. This verifier was correct for the whole
+    // history of the public log and broke the moment that log passed 2,147,483,648 entries. Measured on two live
+    // anchors of the same domain: 2149645490 >> 1 = -1072660903 where the answer is 1074822745, while a proof from
+    // two weeks earlier still verified — so the failure presented as a substrate change rather than an arithmetic one.
+    //
+    // The lesson is not 'use BigInt here'. It is that an index supplied by an EXTERNAL counter we do not control has
+    // no ceiling we may assume, and arithmetic correct only below one is a dated charge with no alarm attached.
+    // number | string | bigint are all accepted: a log serving a uint64 past 2^53 must send it as a string, and
+    // refusing that would reinstate the same ceiling one power higher.
+    if (!Array.isArray(hashes)) return false;
+    let fn, sn;
+    try { fn = BigInt(index); sn = BigInt(treeSize) - 1n; } catch { return false; }
+    if (fn < 0n || sn < 0n || fn > sn) return false;
+    let hash = leafHash;
     for (const sib of hashes.map(hexToBytes)) {
-    if (fn === sn || (fn & 1) === 1) {                 // right child, OR at the right edge → sibling on LEFT
+    if (fn === sn || (fn & 1n) === 1n) {               // right child, OR at the right edge → sibling on LEFT
       hash = sha256(Buffer.concat([Buffer.from([0x01]), sib, hash]));
-      while (fn !== 0 && (fn & 1) === 0) { fn >>= 1; sn >>= 1; }   // climb past the right-edge run
+      while (fn !== 0n && (fn & 1n) === 0n) { fn >>= 1n; sn >>= 1n; }   // climb past the right-edge run
     } else {                                            // left child → sibling on RIGHT
       hash = sha256(Buffer.concat([Buffer.from([0x01]), hash, sib]));
     }
-    fn >>= 1; sn >>= 1;
+    fn >>= 1n; sn >>= 1n;
     }
-    return fn === 0 && hash.equals(hexToBytes(rootHash));
+    return fn === 0n && hash.equals(hexToBytes(rootHash));
   } catch { return false; }
 }
 
