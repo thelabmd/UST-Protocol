@@ -52,6 +52,40 @@ optional fields, verifying VALID:LIGHT [measured]. The summary's file count is n
 it was the literal word "four".
 
 
+### §12.1 supersession was unbuildable — the only tool that mints an identity would have deleted its predecessor
+
+**Found by refusing to run.** The reference operator was ready to re-run its ceremony; the last check before doing so
+was what the resulting witness log would contain. Answer: **one entry**. The new genesis, `superseded_by: null`, and
+nothing else — the predecessor and its two anchors simply gone from the served log.
+
+§12.1 forbids that in one sentence: *"supersession is expressed by ADDING `superseded_by` and a successor entry, never
+by removal."* Two roots with no relation between them is not a supersession, it is an **orphaning**: a consumer
+holding the old hash has no path forward, and the operator's own mirror would have refused the push — correctly, and
+only after the live domain was already serving the orphan.
+
+**The protocol owned the READ side and nothing owned the WRITE side.** `witnessNoFork` already treats an entry without
+`superseded_by` as active and fails closed when one hash is listed both ways. But `buildWitnessLog` — in the CLI, not the
+protocol — rebuilt the log from the new genesis alone. The rule existed on one side of a seam and not the other.
+
+**`witnessSuccessor` + `witnessNoShrink`, in the protocol, owned once.** The successor keeps every prior entry verbatim
+with its anchors, marks the single active one superseded, appends the new active, and **checks itself against the
+same no-shrink rule a mirror will apply on the way in** — a ceremony that emits what the mirror refuses has not
+finished. Refusals are explicit: an unreadable prior, a domain mismatch, zero or two active entries (a fork, not a
+chain), a hash already in the log (a rewind). Re-running against an already-active hash is idempotent.
+
+**Both witness-building sites in the CLI now carry the prior forward**, so a deploy can no longer regenerate the log
+from scratch — which is the other half of the anchor-dropping this closes. Verified against the live operator: the
+same genesis yields one entry with its two anchors intact; a different genesis yields two entries, the predecessor
+keeping its anchors and gaining `superseded_by`, and the result passes no-shrink against what is actually served
+[measured].
+
+**Three totality failures caught by the roster, none by reading.** Destructuring threw on primitives; `Array.isArray`
+throws on a REVOKED proxy before any trap runs; a plain object with a throwing getter escapes both. The roster's
+escape battery found each in turn — the reason it enumerates shapes rather than trusting a hand-list.
+
+Ten conformance checks, 700 total.
+
+
 ### Serving completeness — a deploy carries the whole discovery set
 
 **Measured.** Five sites construct a deploy. Two passed the cadence log and the preserved witness anchors; THREE

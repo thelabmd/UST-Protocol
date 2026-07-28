@@ -338,12 +338,22 @@ export function manualServingGuide(domain, outDir) {
 // The genesis-log for the witness endpoint (#68): the publisher's OWN append-only record of every genesis
 // for this name. Phase 1 carries the single active genesis; an anchor (Bitcoin OTS) is attached once its
 // stamp is final — until then a verifier honestly reports "HIGH pending" (it cannot cross-check yet).
-export function buildWitnessLog(genesisText, anchors = null) {
+// A witness log is DERIVED FROM THE PRIOR ONE, never regenerated. Rebuilding it from the new genesis alone would
+// delete the previous identity, anchors and all — §12.1: "supersession is expressed by ADDING `superseded_by` and a
+// successor entry, never by removal." The rule and the successor construction live in the protocol (witnessSuccessor
+// / witnessNoShrink), so the ceremony, the deploy path and any consumer's mirror all apply one rule rather than three
+// copies of it. `priorLogText` absent ⇒ a first ceremony; present ⇒ a supersession that must survive the same
+// no-shrink test the mirror will apply on the way in.
+export function buildWitnessLog(genesisText, anchors = null, priorLogText = null) {
   const g = JSON.parse(genesisText);
-  const genHash = P.contentHash(g);
-  const list = anchors == null ? [] : (Array.isArray(anchors) ? anchors : [anchors]);
-  return JSON.stringify({ domain_shard: g.state.id.domain_shard, active: genHash,
-    genesis_log: [{ content_hash: genHash, superseded_by: null, ...(list.length ? { anchors: list } : {}) }] });
+  let prior = null;
+  if (priorLogText != null) {
+    try { prior = typeof priorLogText === 'string' ? JSON.parse(priorLogText) : priorLogText; }
+    catch { throw new Error('the prior witness log is unparseable — refusing to replace a history that cannot be read'); }
+  }
+  const r = P.witnessSuccessor(prior, { domain_shard: g.state.id.domain_shard, content_hash: P.contentHash(g), anchors });
+  if (r.error) throw new Error('witness successor refused: ' + r.error);
+  return JSON.stringify(r.log);
 }
 
 // Log a genesis leaf-root into Sigstore Rekor (a public transparency log) and return the rekor anchor.
@@ -441,16 +451,32 @@ export async function collectServed({ domain, genesisText, genPath, keylogText =
   const genHash = P.contentHash(JSON.parse(genesisText));
   const anchorsOf = (text) => { try { const w = JSON.parse(text); const a = w?.genesis_log?.find((e) => e.content_hash === genHash)?.anchors; return Array.isArray(a) && a.length ? a : null; } catch { return null; } };
 
-  // PRESERVE first: whatever is live is what a consumer holds. Synthesising over it is how anchors were destroyed.
-  let anchors = null;
+  // PRESERVE first, and preserve the WHOLE log, not just its anchors. Keeping only the anchors sufficed while a
+  // domain had one identity forever; the moment a genesis is superseded, a log rebuilt from the new one alone
+  // DELETES the predecessor — which §12.1 forbids and a mirror refuses. So the live log is carried forward as the
+  // prior and buildWitnessLog derives a successor from it.
+  let anchors = null, priorLog = null;
   try {
     const r = await fetchImpl(`https://${domain}/.well-known/ust-witness`, { signal: AbortSignal.timeout(10000) });
-    if (r.ok) { anchors = anchorsOf(await r.text()); if (anchors) log(`  ℹ️  preserving ${anchors.length} witness anchor(s) from the live log`); }
+    if (r.ok) {
+      priorLog = await r.text();
+      anchors = anchorsOf(priorLog);
+      if (anchors) log(`  ℹ️  preserving ${anchors.length} witness anchor(s) from the live log`);
+      let n = 0; try { n = JSON.parse(priorLog).genesis_log?.length ?? 0; } catch { /* shape reported downstream */ }
+      if (n > 1) log(`  ℹ️  carrying forward ${n} genesis entries — this domain has superseded before`);
+    }
   } catch { /* unreachable ⇒ nothing live to preserve */ }
   // RESTORE second: a local log may still hold what an earlier deploy destroyed.
-  if (!anchors) {
+  if (!anchors || !priorLog) {
     const wPath = witnessFile || (genPath ? genPath.replace(/[^/\\]+$/, 'ust-witness') : null);
-    if (wPath) { try { anchors = anchorsOf(readFileSync(wPath, 'utf8')); if (anchors) log(`  ℹ️  restoring ${anchors.length} witness anchor(s) from ${wPath}`); } catch { if (witnessFile) die('could not read --witness ' + wPath); } }
+    if (wPath) {
+      try {
+        const text = readFileSync(wPath, 'utf8');
+        priorLog ??= text;
+        anchors ??= anchorsOf(text);
+        if (anchors) log(`  ℹ️  restoring ${anchors.length} witness anchor(s) from ${wPath}`);
+      } catch { if (witnessFile) die('could not read --witness ' + wPath); }
+    }
   }
 
   let cadenceText = null;
@@ -463,7 +489,7 @@ export async function collectServed({ domain, genesisText, genPath, keylogText =
     } catch { if (cadenceFile) die('could not read --cadence-log ' + cadPath); }
   }
 
-  return { genesisText, keylogText, cadenceText, witnessText: buildWitnessLog(genesisText, anchors) };
+  return { genesisText, keylogText, cadenceText, witnessText: buildWitnessLog(genesisText, anchors, priorLog) };
 }
 
 export function servedArtifacts({ genesisText, keylogText = null, cadenceText = null, witnessText = null }) {
@@ -1389,10 +1415,20 @@ async function cmdWitness() {
   const anchor = { root: leafRoot, path: [], anchor: rekor };
 
   // merge with any anchors already served (e.g. a Bitcoin one) so substrates ACCUMULATE, never replace
-  let existing = [];
-  try { const wl = await fetch(`https://${domain}/.well-known/ust-witness`, { signal: AbortSignal.timeout(8000) }).then((r) => r.ok ? r.json() : null); const g0 = wl?.genesis_log?.find((x) => x.content_hash === genHash); existing = g0?.anchors ?? (g0?.anchor ? [g0.anchor] : []); } catch { /* none yet */ }
+  // the live log is fetched for its anchors AND kept whole: it is the prior this witness must extend, not replace.
+  // Fetching it twice for two purposes is how the anchors survived while the genesis_log did not.
+  let existing = [], priorWitness = null;
+  try {
+    const r = await fetch(`https://${domain}/.well-known/ust-witness`, { signal: AbortSignal.timeout(8000) });
+    if (r.ok) {
+      priorWitness = await r.text();
+      const wl = JSON.parse(priorWitness);
+      const g0 = wl?.genesis_log?.find((x) => x.content_hash === genHash);
+      existing = Array.isArray(g0?.anchors) ? g0.anchors : [];
+    }
+  } catch { /* unreachable ⇒ nothing to merge and nothing to extend */ }
   const merged = [...existing.filter((a) => (a.anchor?.substrate ?? a.substrate) !== 'rekor'), anchor];
-  const witness = buildWitnessLog(genesisText, merged);
+  const witness = buildWitnessLog(genesisText, merged, priorWitness);
 
   if (arg('deploy', false)) {
     console.log('  ⏳ updating the live witness endpoint (CF worker)…');

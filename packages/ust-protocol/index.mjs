@@ -2787,6 +2787,84 @@ const readBounded = async (r, cap = DISCOVERY_MAX_BYTES) => {
   if (Buffer.byteLength(body, 'utf8') > cap) throw new Error(`discovery body exceeds the ${cap} B ceiling (§13)`);
   return body;
 };
+// ── §12.1 supersession, the WRITE side ───────────────────────────────────────────────────────────────────────────
+//
+// The protocol already owns the READ side: witnessNoFork treats an entry without `superseded_by` as ACTIVE and fails
+// closed when one hash is listed both active and superseded. Nothing owned the WRITE side, so the only tool that
+// mints an identity rebuilt the log from the new genesis alone — a single entry, superseded_by null. Re-running a
+// ceremony would therefore have DELETED the previous identity from the served log, anchors and all, which §12.1
+// forbids in one sentence: "supersession is expressed by ADDING `superseded_by` and a successor entry, never by
+// removal." Two roots with no relation between them is not a supersession; it is an orphaning, and a consumer
+// holding the old hash has no path forward.
+//
+// These two functions are the rule, owned once. A publisher's mirror applies the same no-shrink test on the way in;
+// a ceremony must apply it to itself on the way out, or it emits what the mirror will refuse.
+
+/** The §12.1 monotonicity rule. Returns null when `next` legitimately extends `prior`, else the reason it does not. */
+export function witnessNoShrink(prior, next) {
+  // TOTAL at the door: the roster requires every export to survive an input whose every property access throws, and
+  // reading `.genesis_log` off such an object is exactly the host throw that check exists to forbid. Unreadable is a
+  // VERDICT here, and the safest one — a log you cannot read is a log you must never overwrite.
+  try { return noShrinkInner(prior, next); } catch { return 'witness log unreadable (hostile or malformed input) — refusing'; }
+}
+
+function noShrinkInner(prior, next) {
+  if (!prior || !Array.isArray(prior.genesis_log)) return 'prior log is not readable — never overwrite history you cannot read';
+  if (!next || !Array.isArray(next.genesis_log)) return 'successor log is not readable';
+  if (prior.domain_shard !== next.domain_shard) return `domain_shard changed ${prior.domain_shard} → ${next.domain_shard}`;
+  for (const o of prior.genesis_log) {
+    const n = next.genesis_log.find((e) => e.content_hash === o.content_hash);
+    if (!n) return `entry ${String(o.content_hash).slice(0, 15)}… DROPPED — supersession adds, never removes`;
+    const oa = o.anchors?.length ?? 0, na = n.anchors?.length ?? 0;
+    if (na < oa) return `entry ${String(o.content_hash).slice(0, 15)}… lost anchors (${oa}→${na})`;
+    const os = o.superseded_by ?? undefined, ns = n.superseded_by ?? undefined;   // null ≡ absent
+    if (os !== undefined && ns !== os) return `entry ${String(o.content_hash).slice(0, 15)}… supersession REWRITTEN — it is set once`;
+  }
+  return null;
+}
+
+/**
+ * Build the successor witness log: every prior entry survives verbatim, the single ACTIVE prior entry gains
+ * `superseded_by = content_hash`, and the new genesis is appended as the new active. `prior` may be null (a first
+ * ceremony). Idempotent: re-running against a log whose active is already `content_hash` returns it unchanged.
+ * Returns { log } or { error } — never throws, and never silently drops an entry it could not understand.
+ */
+export function witnessSuccessor(prior, next) {
+  // TOTAL across the whole escape battery, not just the obvious shapes. Three separate failures were caught here by
+  // the roster rather than by me: destructuring threw on primitives, `Array.isArray` throws on a REVOKED proxy
+  // before any trap runs, and a plain object with a throwing getter escapes both. A builder that throws instead of
+  // returning a verdict hands the decision to a caller who may not be looking — so the door is a try, and every
+  // read of untrusted input happens behind it.
+  try { return successorInner(prior, next); } catch { return { error: 'witnessSuccessor: the successor descriptor is unreadable (hostile or malformed)' }; }
+}
+
+function successorInner(prior, next) {
+  if (next === null || typeof next !== 'object' || Array.isArray(next)) return { error: 'witnessSuccessor: the successor descriptor must be an object' };
+  const { domain_shard, content_hash, anchors = null } = next;
+  if (typeof domain_shard !== 'string' || !domain_shard) return { error: 'witnessSuccessor: domain_shard must be a non-empty string' };
+  if (typeof content_hash !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(content_hash)) return { error: 'witnessSuccessor: content_hash must be a sha256: digest' };
+  const list = anchors == null ? [] : (Array.isArray(anchors) ? anchors : [anchors]);
+  const entry = { content_hash, superseded_by: null, ...(list.length ? { anchors: list } : {}) };
+  if (prior == null) return { log: { domain_shard, active: content_hash, genesis_log: [entry] } };
+  if (typeof prior !== 'object' || !Array.isArray(prior.genesis_log)) return { error: 'prior witness log is unreadable — refusing to replace a history that cannot be read' };
+  if (prior.domain_shard !== domain_shard) return { error: `prior log is for ${prior.domain_shard}, not ${domain_shard}` };
+  if (prior.active === content_hash) return { log: prior, unchanged: true };
+
+  const actives = prior.genesis_log.filter((e) => (e.superseded_by ?? undefined) === undefined);
+  if (actives.length === 0) return { error: 'prior log has NO active entry — it is already fully superseded, so there is nothing to supersede' };
+  if (actives.length > 1) return { error: `prior log has ${actives.length} active entries — a fork, not a chain; resolve it before superseding` };
+  if (prior.genesis_log.some((e) => e.content_hash === content_hash)) return { error: 'the new genesis hash is ALREADY in the log — that is a rewind, not a supersession' };
+
+  const log = {
+    domain_shard,
+    active: content_hash,
+    genesis_log: [...prior.genesis_log.map((e) => (e === actives[0] ? { ...e, superseded_by: content_hash } : { ...e })), entry],
+  };
+  const shrank = witnessNoShrink(prior, log);            // the ceremony checks ITSELF with the rule the mirror will apply
+  return shrank ? { error: `successor would not survive the no-shrink rule: ${shrank}` } : { log };
+}
+
+
 export async function witnessNoFork(shard, genesisHash, opts) {
   // rev34 R1 (round-29 P1-01 / div1) — witnessNoFork is CONSUMER SURFACE: it is exported, takes an untrusted endpoint body,
   // and its verdict gates whether resolveByDiscovery mints a served-list basis. So it must be TOTAL on EVERY argument — a

@@ -386,6 +386,24 @@ check('F8 impossible ust_id→E-MALFORMED', P.verify(mk({ r: { kind: 'captured',
     check('rev95 a caller no-fork boolean never earns authoritative — the rung a ceremony self-check may not demand of it',
       seam() !== 'authoritative');
   }
+  // §12.1 write side — supersession ADDS, never removes. The only tool that mints an identity rebuilt the witness
+  // log from the new genesis alone, so re-running a ceremony would have deleted the predecessor and its anchors from
+  // the served log. The spec forbids it in one sentence; nothing enforced it, because nothing owned the write side.
+  {
+    const H = (c) => 'sha256:' + c.repeat(64);
+    const prior = { domain_shard: 'd', active: H('a'), genesis_log: [{ content_hash: H('a'), anchors: [{ x: 1 }, { y: 2 }] }] };
+    const r = P.witnessSuccessor(prior, { domain_shard: 'd', content_hash: H('b') });
+    check('§12.1 supersession ADDS a successor entry and keeps the predecessor', !r.error && r.log.genesis_log.length === 2);
+    check('§12.1 the superseded entry KEEPS its anchors', r.log?.genesis_log[0].anchors?.length === 2);
+    check('§12.1 the superseded entry gains superseded_by = the successor', r.log?.genesis_log[0].superseded_by === H('b'));
+    check('§12.1 the successor is the new active and is not itself superseded', r.log?.active === H('b') && r.log?.genesis_log[1].superseded_by === null);
+    check('§12.1 the successor survives the no-shrink rule it will be judged by', P.witnessNoShrink(prior, r.log) === null);
+    check('§12.1 a re-run against an already-active hash is idempotent, never a duplicate entry', P.witnessSuccessor(r.log, { domain_shard: 'd', content_hash: H('b') }).unchanged === true);
+    check('§12.1 an unreadable prior is REFUSED — never a silent replacement of history', !!P.witnessSuccessor({ junk: 1 }, { domain_shard: 'd', content_hash: H('b') }).error);
+    check('§12.1 two active entries are a fork and are refused', !!P.witnessSuccessor({ domain_shard: 'd', active: H('a'), genesis_log: [{ content_hash: H('a') }, { content_hash: H('c') }] }, { domain_shard: 'd', content_hash: H('b') }).error);
+    check('§12.1 re-introducing a hash already in the log is a rewind and is refused', !!P.witnessSuccessor(r.log, { domain_shard: 'd', content_hash: H('a') }).error);
+    check('§12.1 a dropped predecessor is caught by the rule itself', !!P.witnessNoShrink(prior, { domain_shard: 'd', active: H('b'), genesis_log: [{ content_hash: H('b') }] }));
+  }
   // ── rev94 — the EQUIVALENCE, enumerated over the seam grid rather than sampled. Fork choice's binding decision
   // must agree with the projection: a candidate is bound exactly when the DERIVED identity coordinate reaches
   // corroborated or above AND the coordinate was not lifted by the consumer's own opt-in. The seam-field conjunction
@@ -2278,6 +2296,10 @@ console.log('\n═════════════════════�
     // ── EXEMPT (throw-by-contract): designed to throw on invalid — totality is not the contract ──
     assertValid: 'throws-by-contract', verifyOrThrow: 'throws-by-contract',
     // ── EXEMPT (producer builders): operate on the SIGNER's OWN data; a producer can only hurt themselves ──
+    // §12.1 supersession write side: witnessSuccessor BUILDS the successor log; witnessNoShrink is the RULE it
+    // must satisfy — the same rule a publisher's mirror applies on the way in, so it is owned once and consumed
+    // by both sides rather than copied into each.
+    witnessSuccessor: 'producer-builder', witnessNoShrink: 'producer-builder (the rule, shared with consumers)',
     seal: 'producer-builder', sealAuthorityCheckpoint: 'producer-builder', verifiedEvidence: 'producer-builder (raw-facts shape)',
     buildAbsence: 'producer-builder', buildAttestation: 'producer-builder', buildAuthorityCheckpoint: 'producer-builder',
     buildAuthorityProof: 'producer-builder', buildCadenceEntry: 'producer-builder', buildCheckpoint: 'producer-builder',
