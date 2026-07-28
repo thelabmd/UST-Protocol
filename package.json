@@ -1,6 +1,6 @@
 {
   "name": "ust",
-  "version": "1.0.0-rc.36",
+  "version": "1.0.0-rc.37",
   "private": true,
   "description": "UST (Universal State Transcript) — specification, conformance vectors, and reference implementations. Trust infrastructure for machine-readable state.",
   "license": "Apache-2.0",
@@ -61,6 +61,7 @@
     "test:cadence-parity": "node tools/cadence-parity-gate.mjs",
     "test:stream-parity": "node tools/stream-parity-gate.mjs",
     "test:primitive-parity": "node tools/primitive-parity-gate.mjs",
-    "test:vocabulary": "node tools/verdict-vocabulary-gate.mjs"
+    "test:vocabulary": "node tools/verdict-vocabulary-gate.mjs",
+    "ci:local": "node tools/run-ci-locally.mjs"
   }
 }

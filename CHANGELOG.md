@@ -52,6 +52,24 @@ optional fields, verifying VALID:LIGHT [measured]. The summary's file count is n
 it was the literal word "four".
 
 
+### "All gates green" was a sample, not the domain — and it hid a red CI
+
+**Measured.** The local pre-push sweep grepped `npm run …` out of the workflow and reported **47 green**. CI then failed.
+The workflow has **46** `run:` steps and one of them is `node tools/npm-drift-check.mjs` — no `npm run` prefix, so the
+grep never saw it. The claim was not wrong about the 47 scripts; it was wrong about the DOMAIN, which is *what CI
+executes*, not *what matches my pattern*. That is the failure this repository spends most of its gates preventing,
+committed in the tool used to check the gates.
+
+**What it hid.** `ust-protocol` had been edited without a version bump, and a published version is immutable. Fixing
+that surfaced a cascade the same sweep would also have missed: `VERSION.spec`, the conformance vectors' header and the
+specification's release line all carry the version, and the conformance suite's own version gates enumerate them —
+so the domain WAS covered, by checks that never ran locally.
+
+**`npm run ci:local`** parses the workflow and executes every `run:` step in order, reporting by step name. It refuses
+to report a pass if it parses fewer than twenty steps, because a parser that has gone blind must not look green. A
+step CI runs and this does not is now impossible without editing the runner.
+
+
 ### §12.1 supersession was unbuildable — the only tool that mints an identity would have deleted its predecessor
 
 **Found by refusing to run.** The reference operator was ready to re-run its ceremony; the last check before doing so

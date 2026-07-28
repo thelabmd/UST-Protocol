@@ -1,5 +1,5 @@
 {
-  "version": "UST 1.0 assurance-arc vectors (1.0.0-rc.36)",
+  "version": "UST 1.0 assurance-arc vectors (1.0.0-rc.37)",
   "note": "language-neutral contract: pre-signed inputs + expected verdict, executable by any implementation (see run-arc-vectors.mjs)",
   "count": 65,
   "vectors": [
