@@ -110,3 +110,5 @@ jobs:
         run: npm run test:genesis-surface
       - name: A deploy is constructed from the complete discovery set or not at all
         run: npm run test:deploy
+      - name: A constructed artifact is declared as such and extends its prior, never replaces it
+        run: npm run test:artifact-origin

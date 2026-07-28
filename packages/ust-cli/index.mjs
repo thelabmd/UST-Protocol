@@ -381,6 +381,28 @@ export async function logToRekor(rootHex, { fetchImpl = fetch, api = 'https://re
 // `discovery-serving-gate` enumerates this list, so a fifth member fails until it is wired end to end.
 export const DISCOVERY_ARTIFACTS = ['genesis', 'keylog', 'cadence', 'witness'];
 
+// HOW each served artifact comes to exist — declared, because the difference is where evidence gets destroyed.
+//
+// A LOADED artifact is READ from somewhere the operator controls: if the read fails, nothing is served and the
+// failure is visible. A DERIVED artifact is CONSTRUCTED by this tool, and construction has a second failure mode
+// that loading does not — it can succeed while producing LESS than what was already published. That is exactly what
+// happened: the witness log was rebuilt from the genesis alone, so every deploy silently overwrote the anchors, and
+// a re-ceremony would have deleted the predecessor entirely.
+//
+// So a DERIVED artifact carries an obligation a loaded one does not: it must EXTEND what is live, never replace it,
+// and it must be checkable against the same monotonicity rule a mirror applies on the way in. artifact-origin-gate
+// enumerates this table against DISCOVERY_ARTIFACTS in both directions and holds the obligation to the derivation.
+export const ARTIFACT_ORIGIN = {
+  genesis: 'loaded',    // handed in by the caller — the ceremony wrote it; this tool never mints one here
+  keylog:  'loaded',    // handed in by the caller, append-only, produced by `ust rotate`
+  cadence: 'loaded',    // read from the log beside the genesis; absent ⇒ not served, never invented
+  witness: 'derived',   // CONSTRUCTED from the live log — the only one, and the one that lost evidence
+};
+
+// A derived artifact must be built from the prior it extends. Named here so the gate checks a CONTRACT rather than
+// a call signature it happened to read once.
+export const DERIVED_REQUIRES_PRIOR = { witness: 'buildWitnessLog(genesisText, anchors, priorLog)' };
+
 export function buildWorkerScript(genesisText, keylogText = null, witnessText = null, cadenceText = null) {
   // STATELESS by design (live lesson, 3rd ceremony): the first template cached its response at the edge
   // for 24 h — a redeploy then kept serving the PREVIOUS genesis (Cache API survives worker versions).

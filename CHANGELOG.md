@@ -70,6 +70,29 @@ to report a pass if it parses fewer than twenty steps, because a parser that has
 step CI runs and this does not is now impossible without editing the runner.
 
 
+### A constructed artifact must say so, and must extend rather than replace
+
+The last open item on the witness-regeneration chain, and the one that closes the class rather than the case.
+
+**Loading and constructing fail differently.** A LOADED artifact is read from somewhere the operator controls: a
+failed read serves nothing, visibly. A DERIVED artifact is built by the tool, and construction has a second failure
+mode loading does not — it can **succeed while producing less than what was already published**. That is precisely
+what happened: the witness log was the one derived artifact, rebuilt from the genesis alone, so every deploy
+overwrote the served anchors and the mirror sat guard-frozen for two weeks refusing the shrunken form. One turn
+further, a re-ceremony would have deleted the predecessor identity outright.
+
+It is the same seam as a cadence file the command never read, one turn worse: that one failed to LOAD; this one
+failed to load **and overwrote**.
+
+`ARTIFACT_ORIGIN` now declares, per served artifact, whether it is loaded or derived, and `DERIVED_REQUIRES_PRIOR`
+names what each derivation extends. `artifact-origin-gate` reads both FROM SOURCE and holds three things: the table
+is total over the artifact set in both directions, every derivation's declared call actually appears in the
+assembler, and no witness log is built with two arguments — the exact shape that replaced instead of extended.
+
+Mutation-proven on both legs, and the first mutation reproduces the state that shipped: dropping the prior argument
+turns the gate red with the sentence describing the incident.
+
+
 ### §12.1 supersession was unbuildable — the only tool that mints an identity would have deleted its predecessor
 
 **Found by refusing to run.** The reference operator was ready to re-run its ceremony; the last check before doing so
