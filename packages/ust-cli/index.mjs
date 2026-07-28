@@ -1275,7 +1275,7 @@ async function cmdVerify() {
   console.log(r.result + (r.error ? '  (' + r.error + (r.detail ? ' — ' + r.detail : '') + ')' : ''));
   if (resolution) {
     if (resolution.error) console.log('  resolve  : ✗ ' + resolution.error);
-    else console.log("  resolve  : key ∈ " + resolution.publisher + "'s chain · capacity " + (resolution.capacity.maxPartitions ?? 'floor') + ' admitted · no-fork ' + resolution.noFork);
+    else console.log("  resolve  : key ∈ " + resolution.publisher + "'s chain · capacity " + (resolution.capacity?.maxPartitions ?? 'floor') + ' admitted · no-fork ' + resolution.noFork);
   }
   if (P.isValid(r)) {
     const tier = r.result.split(':')[1] ?? 'LIGHT';
