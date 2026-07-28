@@ -98,6 +98,34 @@ check(WORLD.length >= 4 && sites.length >= 4, 'the vocabulary or the site set sh
 }
 
 
+// ── askHidden must OWN stdin AT THE MOMENT IT RUNS, not merely have been built lazily ─────────────────────────────
+//
+// Lazy construction was necessary and NOT sufficient, and the gap cost the owner a failed ceremony on a machine
+// deliberately cut off from the network. By the time the passphrase is asked, the ceremony has already asked several
+// questions, so the interface EXISTS — lazily built, but open — and askHidden's guard refuses one step before the
+// files are written. The tool was correct and the ceremony still died.
+//
+// So the caller must hand stdin BACK: close the interface and null the handle immediately before each attempt, and
+// let the lazy getter re-create it for whatever is asked next. Inside the loop, not once before it — askHidden's own
+// no-tty fallback delegates to `ask`, which re-opens the interface, so a second attempt met an open reader again.
+//
+// And the retry must be BOUNDED: unbounded, it spins forever the moment stdin cannot answer.
+{
+  for (const m of SRC.matchAll(/askHidden\(/g)) {
+    const line = SRC.slice(0, m.index).split('\n').length;
+    if (/export async function askHidden/.test(lines[line - 1] || '')) continue;
+    const before = lines.slice(Math.max(0, line - 6), line).join('\n');
+    check(/rl\?\.close\(\);\s*rl = null;/.test(before),
+      `the askHidden call at ust-cli/index.mjs:${line} does not hand stdin back first (\`rl?.close(); rl = null;\` within the five lines above it). Building the interface lazily is not enough — by this point earlier questions have opened it, and the guard will refuse one step before the ceremony writes anything.`);
+    const loop = lines.slice(Math.max(0, line - 8), line + 2).join('\n');
+    if (/\b(while|for)\s*\(/.test(loop)) {
+      check(/tries|attempts|max|>\s*\d/.test(loop),
+        `the askHidden call at :${line} retries in an UNBOUNDED loop — an exhausted pipe or a detached terminal makes it spin forever, printing the same prompt on a machine that may have nobody watching`);
+    }
+  }
+}
+
+
 console.log(`\n  ceremony self-check   PASS ${pass}   FAIL ${fail.length}   (${sites.length} self-check sites × ${WORLD.length} world properties)`);
 if (fail.length) { fail.forEach((f) => console.log('    ✗ ' + f)); process.exit(1); }
 console.log('  ✓ every ceremony self-check asserts what the ceremony preserves, and every failure branch can report');

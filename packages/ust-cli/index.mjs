@@ -1697,7 +1697,25 @@ async function cmdGenesis() {
       console.log('\n  🧊 The root key is about to be written to disk ENCRYPTED. The passphrase you set now');
       console.log('     is the ONLY way to open that backup — store the file and the phrase in DIFFERENT');
       console.log('     places (split custody). You will need it roughly once a year (rotate/revoke).');
-      while (pass.length < 8) pass = await askHidden('     set the passphrase (≥8 chars): ', ask);
+      // askHidden must OWN stdin. Building the interface lazily is necessary and NOT sufficient: by this point the
+      // ceremony has already asked several questions, so the interface exists and would echo the passphrase — the
+      // guard then refuses and the whole ceremony dies one step from writing its files. So hand stdin back: close
+      // it here and null the handle, and the lazy getter re-creates it for any question that follows.
+      // (This path is the one an operator actually walks. It went untested because the offline rehearsal supplied
+      //  the passphrase through the reserved-name environment variable, which skips askHidden entirely.)
+      // …and inside the LOOP, not once before it. askHidden's own no-tty fallback delegates to `ask`, which
+      // re-creates the interface — so a second attempt (a short passphrase, or any non-tty run) met an open reader
+      // again and died on the retry rather than the first try. Measured: close() drops the stdin listener
+      // synchronously, so re-closing each iteration is exact rather than hopeful.
+      // BOUNDED. An unbounded retry loop spins forever the moment stdin cannot answer — an exhausted pipe, a
+      // detached terminal, a script that fed fewer lines than the ceremony asks. It burns a core and prints the
+      // same prompt until someone notices, which on a machine deliberately cut off from the network may be a while.
+      for (let tries = 1; pass.length < 8; tries++) {
+        if (tries > 5) { rl?.close(); die('no usable passphrase after 5 attempts — stdin cannot answer (an exhausted pipe or a detached terminal). Run the ceremony from a real terminal.'); }
+        rl?.close(); rl = null;
+        pass = await askHidden('     set the passphrase (≥8 chars): ', ask);
+      }
+      rl?.close(); rl = null;   // hand stdin back; the next question opens a fresh interface
     }
   }
   const backup = pass ? encryptKey(pkcs8, pass) : pkcs8.toString('base64');
@@ -1889,6 +1907,11 @@ export async function cmdRotate() {
   // lazy: only the no-tty fallback needs a readline, and creating one EAGERLY is what made the secret echo
   let rl = null;
   const ask = (q) => { rl ??= createInterface({ input: process.stdin, output: process.stdout }); return rl.question(q); };
+  // hand stdin back before asking for a secret. Here askHidden happens to be the FIRST question, so nothing is
+  // open yet and this is a no-op — which is the point: the property holds by CONSTRUCTION rather than by the
+  // accident of call order, so adding a question above it later cannot silently reintroduce the echo guard's
+  // refusal. That is exactly how the genesis ceremony broke.
+  rl?.close(); rl = null;
   const pass = await askHidden('  🔑 root passphrase: ', ask);
   let rootSigner;
   try { rootSigner = await rootSignerFrom(decryptKey(readFileSync(rootFile, 'utf8').trim(), pass), genesis.state.data.genesis.value.pub); }
@@ -1966,6 +1989,11 @@ export async function cmdCadence() {
   // lazy: only the no-tty fallback needs a readline, and creating one EAGERLY is what made the secret echo
   let rl = null;
   const ask = (q) => { rl ??= createInterface({ input: process.stdin, output: process.stdout }); return rl.question(q); };
+  // hand stdin back before asking for a secret. Here askHidden happens to be the FIRST question, so nothing is
+  // open yet and this is a no-op — which is the point: the property holds by CONSTRUCTION rather than by the
+  // accident of call order, so adding a question above it later cannot silently reintroduce the echo guard's
+  // refusal. That is exactly how the genesis ceremony broke.
+  rl?.close(); rl = null;
   const pass = await askHidden('  🔑 root passphrase: ', ask);
   let rootSigner;
   try { rootSigner = await rootSignerFrom(decryptKey(readFileSync(rootFile, 'utf8').trim(), pass), genesis.state.data.genesis.value.pub); }
