@@ -655,7 +655,12 @@ export async function wranglerDeploy({ domain, genesisText, keylogText = null, w
     // No `npx` — that would DOWNLOAD-and-run wrangler ad-hoc (a silent external fetch + arbitrary-code risk). Call the
     // LOCAL wrangler the operator installed (declared as an OPTIONAL PEER). ENOENT → tell them to install it, never fetch.
     const r = spawnSync('wrangler', ['deploy'], { cwd, stdio: 'inherit' });
-    if (r.error && r.error.code === 'ENOENT') { console.error('`wrangler` not found. Install it first (npm i -g wrangler, or add it to your project) — UST never fetches it for you. Then re-run `ust publish cf`.'); return 127; }
+    if (r.error && r.error.code === 'ENOENT') { console.error('`wrangler` not found on PATH. UST never fetches a tool for you — that is deliberate.'
+        + '\n  · already installed in another project? point PATH at it for this one command:'
+        + '\n      PATH="<that repo>/node_modules/.bin:$PATH" ' + invocation() + ' publish cf …'
+        + '\n  · install it:  npm i -g wrangler   (needs sudo when the npm prefix is /usr/local)'
+        + '\n  · or skip the vendor entirely:  ' + invocation() + ' publish self   — writes the four'
+        + '\n    artifacts, including the witness successor, for you to serve on your own stack'); return 127; }
     return r.status ?? 1;
   });
   const code = await exec(dir);
