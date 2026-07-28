@@ -60,6 +60,44 @@ for (const s of sites) {
 // the pin must be able to fail
 check(WORLD.length >= 4 && sites.length >= 4, 'the vocabulary or the site set shrank — the gate would pass vacuously');
 
+// ── askHidden must OWN stdin, and the roster is ENUMERATED rather than claimed ────────────────────────────────────
+//
+// `askHidden` reads a passphrase in raw mode so it never echoes. A readline interface opened BEFORE it takes stdin
+// over and echoes the line itself — the secret prints while the code looks correct. A guard was added on 2026-07-27
+// after the owner watched a root passphrase print, and its comment stated: "Every caller now builds its readline
+// LAZILY, and this guard makes a future eager one loud instead of silent."
+//
+// THE CLAIM WAS FALSE WHEN WRITTEN. `cmdGenesis` still opened its interface eagerly, so from rc.43 the guard REFUSED
+// every silver and gold genesis ceremony — the tool that mints a name's identity, broken at the two profiles an
+// operator actually uses, and unnoticed because no gate performs a passphrase ceremony. That is the difference
+// between asserting a property over a domain and enumerating the domain: the sentence "every caller" was the bug.
+{
+  const callers = [];
+  for (const m of SRC.matchAll(/askHidden\(/g)) {
+    const line = SRC.slice(0, m.index).split('\n').length;
+    if (/export async function askHidden/.test(lines[line - 1] || '')) continue;   // the definition itself
+    // walk back to the enclosing function
+    let fn = -1;
+    for (let i = line - 1; i >= 0; i--) if (/^(export )?(async )?function \w+|^async function \w+/.test(lines[i])) { fn = i; break; }
+    if (fn >= 0) callers.push({ line, fn, name: (lines[fn].match(/function (\w+)/) || [, '?'])[1] });
+  }
+  check(callers.length >= 3, `only ${callers.length} askHidden call sites found — the roster probe has gone blind and this whole section would pass vacuously`);
+
+  for (const c of callers) {
+    // the enclosing function's readline must be created LAZILY, on first use, not at entry
+    const body = lines.slice(c.fn, c.line).join('\n');
+    const eager = /^\s*const rl = createInterface\(/m.test(body);
+    const lazy = /rl \?\?= createInterface\(/.test(body);
+    check(!eager, `${c.name} opens its readline EAGERLY (ust-cli/index.mjs) and then calls askHidden at :${c.line} — the open interface owns stdin and echoes the passphrase, so askHidden's guard refuses and the whole ceremony dies. Build it lazily: \`let rl = null; const ask = (q) => { rl ??= createInterface(...); return rl.question(q); };\``);
+    check(lazy, `${c.name} calls askHidden at :${c.line} but no lazy \`rl ??= createInterface(\` is visible above it — the roster is enumerated, so a new caller must adopt the pattern rather than inherit a claim about it`);
+    // a lazy rl means every close must be null-safe, or the failure path throws instead of reporting
+    const after = lines.slice(c.fn, c.fn + 400).join('\n');
+    const bare = (after.match(/(?<!\?)\brl\.close\(\)/g) || []).length;
+    check(bare === 0, `${c.name} contains ${bare} bare rl.close() call(s) while its rl is lazy — a failure before the first prompt throws a TypeError instead of printing why`);
+  }
+}
+
+
 console.log(`\n  ceremony self-check   PASS ${pass}   FAIL ${fail.length}   (${sites.length} self-check sites × ${WORLD.length} world properties)`);
 if (fail.length) { fail.forEach((f) => console.log('    ✗ ' + f)); process.exit(1); }
 console.log('  ✓ every ceremony self-check asserts what the ceremony preserves, and every failure branch can report');

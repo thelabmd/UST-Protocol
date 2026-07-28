@@ -21,6 +21,37 @@ conformance vectors; this file is the readable map.
 
 ## [Unreleased] — rc.37 line
 
+### The genesis ceremony could not produce a complete genesis — and had been refusing to run at all
+
+**Two defects, found because the reference operator is about to re-run its ceremony.**
+
+**(a) The ceremony narrowed the protocol at the one moment the choice exists.** `buildGenesis` places seven fields in a
+genesis value. The CLI never called it — it hand-built the value from five and sealed that. So `checkpoint_authority`
+(§12.3) and `recovery{keys,threshold}` (§12.1 P2, authority re-rooted in domain control) existed in the protocol and
+were unreachable from the only tool that performs a ceremony. Both are settable at ceremony time ONLY: changing
+either means a NEW genesis, i.e. superseding the name-binding root. A publisher who completes a ceremony without
+them is locked out of skip-the-key-log verification and of recovery-from-compromise until it supersedes — and the
+live reference genesis carries three fields, so it is in exactly that state [measured].
+
+**(b) `ust genesis` had been dying at silver and gold since rc.43 — mine.** That release hardened `askHidden` so a
+readline opened before it cannot echo the passphrase, after the owner watched a root passphrase print. The guard's
+own comment read *"every caller now builds its readline LAZILY"*. `cmdGenesis` was not converted, so the guard
+refused every passphrase ceremony: the genesis was built in memory, then the run died writing nothing. Unnoticed
+because no gate performs a passphrase ceremony — the sentence "every caller" was the bug, and it is the same shape
+as asserting a property over a domain instead of enumerating it.
+
+**Structural, both halves.** The ceremony now seals through `buildGenesis`; the readline is lazy and its eight closes
+are null-safe. `genesis-surface-gate` reads the builder's parameter list FROM SOURCE and requires every field to be
+reachable from the ceremony or excluded here with a reason, and requires every generated secret to be persisted
+under the same 0600 refuse-overwrite discipline as the root — a recovery set signed into a genesis and not written
+to disk advertises a capability the operator cannot perform. `ceremony-selfcheck-gate` gained an enumerated roster
+of `askHidden` callers, so the next one must adopt the pattern rather than inherit a claim about it.
+
+**Run end to end, not just compiled:** a full silver ceremony produced 8 files and a genesis carrying all six
+optional fields, verifying VALID:LIGHT [measured]. The summary's file count is now derived from what was written —
+it was the literal word "four".
+
+
 ### Serving completeness — a deploy carries the whole discovery set
 
 **Measured.** Five sites construct a deploy. Two passed the cadence log and the preserved witness anchors; THREE

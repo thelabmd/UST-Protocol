@@ -208,7 +208,7 @@ export const decryptKey = (b64, pass) => {
 // Build genesis + key-log[0] (adds an operational key) and SELF-CHECK both (fail-closed, 9th audit #6):
 // a ceremony tool must never emit an output it hasn't verified. Throws before returning if either fails.
 // `warnings` carries the gold ASSURANCE LIMIT so the orchestrator (and the test) can assert it (9th audit #5).
-export async function buildCeremony({ domain, profile = 'silver', maxP, maxBytes = null, cadence = null, signerRef }) {
+export async function buildCeremony({ domain, profile = 'silver', maxP, maxBytes = null, cadence = null, checkpointAuthority = null, recovery = null, signerRef }) {
   const warnings = [];
   // Each tier is about ITS OWN thing (owner 2026-07-12). gold IS the hardware ceremony — and this
   // reference CLI cannot drive a hardware signer yet, so it REFUSES instead of pretending: the old
@@ -221,8 +221,16 @@ export async function buildCeremony({ domain, profile = 'silver', maxP, maxBytes
   const root = await W.generateSigner({ extractable: true });
   const pkcs8 = Buffer.from(await crypto.subtle.exportKey('pkcs8', root.privateKey));
   const { ust_id, time } = nowFrame();
-  const genValue = { pub: root.pub, role: 'name-binding-root', ...(maxP ? { max_partitions: String(maxP) } : {}), ...(maxBytes ? { max_transcript_bytes: String(maxBytes) } : {}), ...(cadence ? { cadence: String(cadence) } : {}) };
-  const genesis = await W.seal(P.buildState({ domain_shard: domain, ust_id, key_id: root.key_id, class: 'genesis' }, time, { genesis: { kind: 'captured', value: genValue } }), root);
+  // §12.1 — the ceremony builds its genesis THROUGH the protocol builder, never beside it. Two hand-maintained
+  // shapes of one document is how `checkpoint_authority` and `recovery` came to exist in `buildGenesis` and stay
+  // unreachable from the only tool that performs the ceremony — and BOTH can be set at ceremony time only, so a
+  // publisher that misses them is locked out until a supersession. genesis-surface-gate enumerates the builder's
+  // fields against this call, so a field added there cannot silently skip the ceremony again.
+  const genesis = await W.seal(P.buildGenesis(
+    { domain_shard: domain, ust_id, key_id: root.key_id }, time, root.pub,
+    maxP ?? undefined, maxBytes ?? undefined, cadence ?? undefined,
+    checkpointAuthority ?? undefined, recovery ?? undefined,
+  ), root);
   const genHash = P.contentHash(genesis);
   // operational key: extractable so its PKCS#8 can be exported for the daily signer
   // (the WARM key the producer signs with daily — under whatever secret name the
@@ -1373,8 +1381,12 @@ async function cmdWitness() {
 async function cmdGenesis() {
   const domain = arg('domain'); if (!domain || domain === true) die('usage: ust genesis --domain <name> [--profile bronze|silver|gold] [--dns manual|cf-api] [--publish cf [--auth wrangler] [--flip-proxy]] [--signer <ref>] [--witness url,url] [--max-partitions N] [--cadence SECONDS] [--out .]\n  every option is also asked INTERACTIVELY — the flags only preselect');
   const signerRef = arg('signer', null);
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  const ask = (q) => rl.question(q);
+  // LAZY, like every other askHidden caller. An interface created here takes stdin over, and askHidden's guard then
+  // refuses — correctly, because an open readline echoes the passphrase it is trying to hide. When that guard landed
+  // its comment claimed "every caller now builds its readline lazily"; this one was not converted, so the guard
+  // broke `ust genesis` at silver and gold and nothing noticed, because no gate runs a passphrase ceremony.
+  let rl = null;
+  const ask = (q) => { rl ??= createInterface({ input: process.stdin, output: process.stdout }); return rl.question(q); };
   const tty = !!process.stdin.isTTY;
   console.log(`\n  🏛  ust genesis — the HIGH ceremony for ${domain}`);
   console.log('      One run creates your name\'s cryptographic identity and makes it publicly');
@@ -1392,16 +1404,16 @@ async function cmdGenesis() {
       console.log('     KEY ROTATION is different: a key-log APPEND under the SAME identity (root stays,');
       console.log('     old documents stay valid) — never a new ceremony.');
       if (!arg('remint', false)) {
-        if (!tty) { rl.close(); die('an identity is already live — pass --remint to consciously replace it'); }
+        if (!tty) { rl?.close(); die('an identity is already live — pass --remint to consciously replace it'); }
         const a = (await ask('     type REMINT to replace it, anything else aborts: ')).trim();
-        if (a !== 'REMINT') { rl.close(); die('aborted — the live identity stays untouched'); }
+        if (a !== 'REMINT') { rl?.close(); die('aborted — the live identity stays untouched'); }
       }
     } else if (probe.status === 'indeterminate' && !arg('remint-unchecked', false)) {
       console.log(`\n  ⚠️  REMINT STATUS INDETERMINATE: ${probe.detail}`);
       console.log('     I cannot PROVE no identity is live at ' + domain + ' — and minting over a live one orphans it.');
-      if (!tty) { rl.close(); die('remint status indeterminate — pass --remint-unchecked to proceed anyway'); }
+      if (!tty) { rl?.close(); die('remint status indeterminate — pass --remint-unchecked to proceed anyway'); }
       const a = (await ask('     type UNCHECKED to proceed anyway, anything else aborts: ')).trim();
-      if (a !== 'UNCHECKED') { rl.close(); die('aborted — resolve the well-known state first (or --remint-unchecked)'); }
+      if (a !== 'UNCHECKED') { rl?.close(); die('aborted — resolve the well-known state first (or --remint-unchecked)'); }
     }
   }
 
@@ -1422,7 +1434,7 @@ async function cmdGenesis() {
   console.log('    bronze  quick floor (plain backup)     silver  software root + ENCRYPTED backup');
   console.log('    gold    HARDWARE root (pkcs11/air-gap) — refused honestly until this CLI can drive one');
   const profile = await askOr('profile', '  profile [silver]: ', 'silver', (v) => ['bronze', 'silver', 'gold'].includes(v));
-  if (profile === 'gold') { rl.close(); die(GOLD_REFUSAL); }   // refuse NOW — not after three more questions
+  if (profile === 'gold') { rl?.close(); die(GOLD_REFUSAL); }   // refuse NOW — not after three more questions
 
   console.log('\n  capacity = max partitions your documents may DECLARE (signed into the genesis,');
   console.log('  ceremony-earned; ABS ceiling 4096). More sources/fields later ⇒ pick headroom now.');
@@ -1436,6 +1448,31 @@ async function cmdGenesis() {
   console.log('  verdict is grid-checked (`complete`), not just no-deletion (`chain-consistent`). Leave blank if');
   console.log('  you make no completeness claim (e.g. a lossy free tier). noosphere: 30.');
   const cadence = await askOr('cadence', '  cadence [none]: ', null, (v) => v === null || (Number.isInteger(Number(v)) && Number(v) > 0));
+
+  // §12.3 + §12.1 P2 — the last two genesis fields, and the ONLY two that can never be added later: changing
+  // either means a new genesis, i.e. a supersession. Both default to none, because an operator who does not want
+  // them should not be talked into them — but the consequence is stated rather than hidden.
+  console.log('\n  🔑  RECOVERY (optional) — re-root authority in DOMAIN CONTROL. If the root key is lost or');
+  console.log('  compromised, a threshold of these keys can supersede the genesis; without it, the only recovery is');
+  console.log('  a fresh name. Keys are generated here and written beside the root. SET IT NOW OR NEVER: adding it');
+  console.log('  later requires a new genesis.');
+  const recN = await askOr('recovery-keys', '  recovery keys [0]: ', 0, (v) => Number.isInteger(Number(v)) && Number(v) >= 0 && Number(v) <= 16);
+  let recovery = null, recoverySigners = [];
+  if (Number(recN) > 0) {
+    const dflt = Math.min(2, Number(recN));
+    const th = await askOr('recovery-threshold', `  threshold of ${recN} [${dflt}]: `, dflt, (v) => Number(v) >= 1 && Number(v) <= Number(recN));
+    recoverySigners = await Promise.all(Array.from({ length: Number(recN) }, () => W.generateSigner({ extractable: true })));
+    recovery = { keys: Object.fromEntries(recoverySigners.map((k) => [k.key_id, k.pub])), threshold: Number(th) };
+  }
+
+  console.log('\n  🧾  CHECKPOINT AUTHORITY (optional) — the key allowed to sign §12.3 authority checkpoints, which let');
+  console.log('  a verifier skip a long key log instead of walking every event. Generated here. SET IT NOW OR NEVER.');
+  const wantCA = await askOr('checkpoint-authority', '  checkpoint authority [no]: ', 'no', (v) => ['yes', 'no', 'y', 'n'].includes(String(v).toLowerCase()));
+  let checkpointAuthority = null, caSigner = null;
+  if (/^y/i.test(String(wantCA))) {
+    caSigner = await W.generateSigner({ extractable: true });
+    checkpointAuthority = { key_id: caSigner.key_id, pub: caSigner.pub };
+  }
 
   // NOT a question (owner: you already chose your directory by standing in it) — the files go to the
   // current dir; --out exists for scripted/special cases and is simply SHOWN, never asked.
@@ -1463,8 +1500,8 @@ async function cmdGenesis() {
 
   // 1–2. root key + genesis + key-log[0], all self-checked (fail-closed) inside buildCeremony
   const maxBytes = arg('max-transcript-bytes', null);
-  if (maxBytes === true) { rl.close(); die('--max-transcript-bytes needs a value'); }
-  let built; try { built = await buildCeremony({ domain, profile, maxP, maxBytes, cadence, signerRef }); }
+  if (maxBytes === true) { rl?.close(); die('--max-transcript-bytes needs a value'); }
+  let built; try { built = await buildCeremony({ domain, profile, maxP, maxBytes, cadence, checkpointAuthority, recovery, signerRef }); }
   catch (e) { rl?.close(); die(e.message); }
   const { genesis, keylog0, genHash, op, opPkcs8, pkcs8, warnings } = built;
   for (const w of warnings) console.log('\n  ⚠️  ' + w);
@@ -1493,18 +1530,35 @@ async function cmdGenesis() {
   // producer loads it non-interactively from its signing-key env. It is NOT cold-store:
   // move it into the producer's secret store, then delete this file — never commit it.
     writeSecret(`${outDir}/operational-key.b64`, opPkcs8.toString('base64'));
+    // A recovery set that is signed into the genesis and NOT persisted is worse than none: the document would
+    // advertise a recovery the operator cannot perform. Same for the checkpoint authority. They are written under
+    // the same 0600 + refuse-overwrite discipline as the root, and the summary tells the operator to split them —
+    // a threshold whose keys all live in one directory is a threshold of one.
+    for (const [i, k] of recoverySigners.entries())
+      writeSecret(`${outDir}/recovery-key-${i}.b64`, Buffer.from(await crypto.subtle.exportKey('pkcs8', k.privateKey)).toString('base64'));
+    if (caSigner)
+      writeSecret(`${outDir}/checkpoint-authority-key.b64`, Buffer.from(await crypto.subtle.exportKey('pkcs8', caSigner.privateKey)).toString('base64'));
     writePublic(`${outDir}/ust-genesis`, JSON.stringify(genesis));
     writePublic(`${outDir}/ust-keylog-0`, JSON.stringify(keylog0));
   } catch (e) {
-    rl.close();
+    rl?.close();
     die(e.code === 'EEXIST'
       ? `refusing to overwrite an existing ceremony file (${e.path}). Move the previous ceremony's files away (or run with --out <fresh dir>) and re-run — key material is never silently clobbered.`
       : e.message);
   }
-  console.log('\n  📦 four files written to ' + outDir + ':');
+  // COUNTED, not asserted: the number was the literal "four" until the ceremony could also emit recovery and
+  // checkpoint-authority keys. A count that does not enumerate what it counts is how an operator walks away
+  // believing they hold every file the ceremony produced.
+  const written = 4 + recoverySigners.length + (caSigner ? 1 : 0);
+  console.log(`\n  📦 ${written} files written to ` + outDir + ':');
   console.log('     ust-genesis + ust-keylog-0          → PUBLIC identity documents (verifiable by anyone)');
   console.log(`     genesis-key${pass ? '.enc' : ''}.b64${pass ? '' : '    '}                 → 🧊 COLD crown backup (file + passphrase apart)`);
   console.log("     operational-key.b64                 → 🔥 WARM daily signer → your producer's signing-key secret, then DELETE");
+  if (recoverySigners.length) {
+    console.log(`     recovery-key-0…${recoverySigners.length - 1}.b64${' '.repeat(Math.max(1, 18 - String(recoverySigners.length - 1).length))}→ 🧊 ${recovery.threshold} of ${recoverySigners.length} can supersede this genesis`);
+    console.log('       SPLIT THEM — a threshold whose keys share one directory is a threshold of one.');
+  }
+  if (caSigner) console.log('     checkpoint-authority-key.b64        → 🧊 signs §12.3 authority checkpoints (skip-the-key-log)');
   console.log('     self-check: genesis + key-log verify ✓ (this tool never emits what it has not verified)');
 
   // 3. DNS (profile A) — manual paste or CF one-click (upsert + DoH readback)
@@ -1550,7 +1604,7 @@ async function cmdGenesis() {
     } catch (e) { rl?.close(); die(e.message); }
     console.log('  ✅ worker ' + pub.script + ' + route ' + pub.route + ' (' + pub.routeAction + (pub.flipped ? ', proxy enabled on apex' : '') + ')');
     for (const w of pub.warnings) console.log('  ⚠️  ' + w);
-    if (!pub.proxied) { rl.close(); die('apex is not proxied — the route cannot fire. Re-run with --flip-proxy (NOTE: puts the whole site behind CF), or enable the proxy manually and re-run.'); }
+    if (!pub.proxied) { rl?.close(); die('apex is not proxied — the route cannot fire. Re-run with --flip-proxy (NOTE: puts the whole site behind CF), or enable the proxy manually and re-run.'); }
   } else {
     console.log('\n  ▶️  4/5 📡 the serving half — do this on YOUR infra:');
     for (const l of manualServingGuide(domain, outDir)) console.log('   ' + l);

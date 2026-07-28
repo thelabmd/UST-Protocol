@@ -106,5 +106,7 @@ jobs:
         run: npm run test:ladder
       - name: Ceremony self-checks assert what the ceremony preserves, never a world property
         run: npm run test:ceremony
+      - name: Every field the genesis builder can place is reachable from the ceremony
+        run: npm run test:genesis-surface
       - name: A deploy is constructed from the complete discovery set or not at all
         run: npm run test:deploy
