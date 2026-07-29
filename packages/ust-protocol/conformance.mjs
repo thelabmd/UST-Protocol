@@ -1304,7 +1304,7 @@ console.log('\n═════════════════════�
   // signer NOT authorized by the prior checkpoint
   check('AC Cₙ signed by a key not authorized by Cₙ₋₁ → INVALID(E-AUTHORITY)', (r => r.result === 'INVALID' && r.error === 'E-AUTHORITY')(P.verifyAuthorityCheckpointChain([C0, P.sealAuthorityCheckpoint(bc('1', id0, K1, { k: K2, at: '2' }), KX.priv, KX.pubB64)], { genesisAuthority: gAuth })));
   // retroactive self-authorization: C1 signed by ITS OWN declared next key (K2), not the prior-authorized K1
-  check('AC checkpoint signed by its own declared next key → INVALID (no retroactive self-auth)', (r => r.result === 'INVALID' && r.error === 'E-AUTHORITY')(P.verifyAuthorityCheckpointChain([C0, P.sealAuthorityCheckpoint(bc('1', id0, K1, { k: K2, at: '2' }), K2.priv, K2.pubB64)], { genesisAuthority: gAuth })));
+  check('AC authority checkpoint signed by its own declared next key → INVALID (no retroactive self-auth)', (r => r.result === 'INVALID' && r.error === 'E-AUTHORITY')(P.verifyAuthorityCheckpointChain([C0, P.sealAuthorityCheckpoint(bc('1', id0, K1, { k: K2, at: '2' }), K2.priv, K2.pubB64)], { genesisAuthority: gAuth })));
   // carried current_key_id ≠ the prior-authorized signer (diagnostic field must not resolve authority)
   check('AC carried current_key_id ≠ prior-authorized signer → INVALID(E-AUTHORITY)', (r => r.result === 'INVALID' && r.error === 'E-AUTHORITY')(P.verifyAuthorityCheckpointChain([C0, P.sealAuthorityCheckpoint(bc('1', id0, KX, { k: K2, at: '2' }), K1.priv, K1.pubB64)], { genesisAuthority: gAuth })));
   // linkage + sequence
@@ -1350,12 +1350,12 @@ console.log('\n═════════════════════�
   //   context fixes) — never accepted while still reporting verified-context. This is what the positive C1 never tested.
   check('C1/L1 a raw pinnedPrior alongside a branded context → INVALID(E-AUTHORITY) — the context is the SOLE root (never raw fields, M2; round-26 P0-01)',
     (r => r.result === 'INVALID' && r.error === 'E-AUTHORITY')(P.verifyAuthorityCheckpointChain([C0], { context: ctx, pinnedPrior: { scope_id: 'sha256:' + '44'.repeat(32), checkpoint_id: 'sha256:' + '44'.repeat(32), sequence: '9', authority_for_next: { key_id: K0.key_id, pub: K0.pubB64 }, keylog_size: '1', keylog_root: 'sha256:' + '44'.repeat(32), keylog_head: 'sha256:' + '44'.repeat(32) } })));
-  check('C1/L2 raw recoveryKeys/recoveryThreshold alongside a branded context → INVALID(E-AUTHORITY) — recovery is genesis-fixed, never injected from a call argument (F.5l; round-26 P0-02)',
+  check('C1/L2 raw recoveryKeys/recoveryThreshold alongside a branded context → INVALID(E-AUTHORITY) — checkpoint-recovery is genesis-fixed, never injected from a call argument (F.5l; round-26 P0-02)',
     (r => r.result === 'INVALID' && r.error === 'E-AUTHORITY')(P.verifyAuthorityCheckpointChain([C0], { context: ctx, recoveryKeys: { [K0.key_id]: K0.pubB64 }, recoveryThreshold: '1' })));
   // round-27 P0-02 — the WHOLE (chain, config) authority graph crosses the admitDeep boundary: a getter on a checkpoint
   //   body (sign a no-rotation body, then mint an attacker rotation on the re-read) is not an inert record → E-MALFORMED,
   //   never a VALID takeover. rev24 put the snapshot on the evidence/genesis entries but NOT the chain verifier (P0-02).
-  check('round-27 P0-02 a getter on a checkpoint body cannot sign one body and mint another → INVALID(E-MALFORMED) (the chain crosses the snapshot boundary)',
+  check('round-27 P0-02 a getter on an authority checkpoint body cannot sign one body and mint another → INVALID(E-MALFORMED) (the chain crosses the snapshot boundary)',
     (() => { const evil = { ...C0, body: { ...C0.body } }; let n = 0; const realCA = C0.body.checkpoint_authority;
       Object.defineProperty(evil.body, 'checkpoint_authority', { enumerable: true, get() { n++; return realCA; } });   // an accessor at ANY depth of the chain → not inert
       const r = P.verifyAuthorityCheckpointChain([evil], { context: ctx });
@@ -1441,9 +1441,9 @@ console.log('\n═════════════════════�
     const px = new Proxy(base, { get(t, k, r) { if (k === 'issuer_id') { reads++; return reads === 1 ? 'sha256:' + '00'.repeat(32) : KC.key_id; } return Reflect.get(t, k, r); } });
     return vrR33(px).result === 'INVALID' && reads <= 1;   // the fixed check reads R.issuer_id (frozen face-1), so the raw second face is never consulted
   })());
-  check('PhB commitment not bound to checkpoint id → INDETERMINATE(evidence_unverified)', (r => r.result === 'INDETERMINATE' && r.reason === 'evidence_unverified')(F({ target, commitment: btc(900, 'sha256:' + '00'.repeat(32)), terminality: term })));
+  check('PhB commitment not bound to authority checkpoint id → INDETERMINATE(evidence_unverified)', (r => r.result === 'INDETERMINATE' && r.reason === 'evidence_unverified')(F({ target, commitment: btc(900, 'sha256:' + '00'.repeat(32)), terminality: term })));
   check('PhB unauthorized chain (wrong signer) → INVALID, freshness unverified', (r => r.result === 'INVALID' && r.keylog_freshness === 'unverified')(P.deriveCheckpointFreshness([P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: D, genesis_epoch: EP, sequence: '0', active_genesis: AG, current_key_id: K0.key_id, keylog }), KX.priv, KX.pubB64)], { genesisAuthority: gAuth, target, commitment: commit, terminality: term })));
-  check('PhB checkpoint active_genesis ≠ target → INVALID(E-GENESIS)', (r => r.result === 'INVALID' && r.error === 'E-GENESIS')(F({ target: { active_genesis: 'sha256:' + '99'.repeat(32), domain_shard: D, anchor: btc(800, 'ust:target') }, commitment: commit, terminality: term })));
+  check('PhB authority checkpoint active_genesis ≠ target → INVALID(E-GENESIS)', (r => r.result === 'INVALID' && r.error === 'E-GENESIS')(F({ target: { active_genesis: 'sha256:' + '99'.repeat(32), domain_shard: D, anchor: btc(800, 'ust:target') }, commitment: commit, terminality: term })));
   check('PhB cold verifier (no root) → INDETERMINATE(authority_unresolved)', (r => r.reason === 'authority_unresolved')(P.deriveCheckpointFreshness([C0], { target, commitment: commit, terminality: term })));
 
   // ── M3 (UST-6vj C2) — THE EVIDENCE SEAM: provenance is verified, not assumed. VerifyEvidence_C = 7 ordered checks;
@@ -1511,7 +1511,7 @@ console.log('\n═════════════════════�
   check('K1 stable path (no opt-in): a would-be attested checkpoint is capped at corroborated, attested_withheld named', (r => r.result === 'VALID' && r.keylog_freshness === 'corroborated' && r.attested_withheld === 'experimental-gate' && r.anti_equivocation === 'attested')(P.deriveCheckpointFreshness([C0], { genesisAuthority: gAuth, target, commitment: commit, terminality: term, trust, uniqueness: uOpts([ua(Wa), ua(Wb)]) })));
   check('PhC 2 witnesses, DISTINCT domains → attested (accepted-witness-quorum), anti_equivocation attested', (r => r.result === 'VALID' && r.keylog_freshness === 'attested' && r.basis === 'accepted-witness-quorum' && r.anti_equivocation === 'attested' && r.trust_domains.length === 2)(F(uOpts([ua(Wa), ua(Wb)]))));
   check('PhC 2 witnesses, SAME domain → quorum not met → stays corroborated', (r => r.keylog_freshness === 'corroborated')(F(uOpts([ua(Wa), ua(Wc)]))));
-  check('PhC uniqueness on an UNAUTHORIZED checkpoint → INVALID, never attested', (r => r.result === 'INVALID' && r.keylog_freshness !== 'attested')(P.deriveCheckpointFreshness([P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: D, genesis_epoch: EP, sequence: '0', active_genesis: AG, current_key_id: K0.key_id, keylog }), KX.priv, KX.pubB64)], { genesisAuthority: gAuth, target, commitment: commit, terminality: term, uniqueness: uOpts([ua(Wa), ua(Wb)]) })));
+  check('PhC uniqueness on an UNAUTHORIZED authority checkpoint → INVALID, never attested', (r => r.result === 'INVALID' && r.keylog_freshness !== 'attested')(P.deriveCheckpointFreshness([P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: D, genesis_epoch: EP, sequence: '0', active_genesis: AG, current_key_id: K0.key_id, keylog }), KX.priv, KX.pubB64)], { genesisAuthority: gAuth, target, commitment: commit, terminality: term, uniqueness: uOpts([ua(Wa), ua(Wb)]) })));
   check('PhC bare observation (wrong purpose) is NOT uniqueness → not admitted', VU([{ claim: { purpose: 'ust:observed', domain_shard: D, genesis_epoch: EP, sequence: '0', checkpoint: headId }, issuer_id: Wa.key_id, sig: { alg: 'Ed25519', key_id: Wa.key_id, pub: Wa.pubB64, sig: 'x' } }, ua(Wb)]).attested === false);
   check('R34 P0-03 a uniqueness claim with an EXTRA signed field (observed_map_root ∉ the closed VOTE_CLAIM) is DROPPED → quorum not met', VU([{ claim: { ...P.checkpointUniquenessClaim({ domain_shard: D, genesis_epoch: EP, sequence: '0', checkpoint: headId }), observed_map_root: 'sha256:' + 'a1'.repeat(32) }, issuer_id: Wa.key_id, sig: ua(Wa).sig }, ua(Wb)]).attested === false);
   check('PhC witness NOT in consumer trustRoots → not admitted', P.verifyCheckpointUniqueness([ua(Wa), ua(Wb)], { domain_shard: D, genesis_epoch: EP, sequence: '0', checkpoint: headId, trustRoots: { [Wa.key_id]: Wa.pubB64 }, domains, threshold: 2 }).attested === false);
@@ -1597,7 +1597,7 @@ console.log('\n═════════════════════�
   }
   // P1-03 — evidenceCaps returns a FROZEN copy: a caller cannot mutate the checker's capability vocabulary.
   check('round-24 P1-03 evidenceCaps is a frozen copy (mutation cannot make check_C history-dependent)', (() => { const a = P.evidenceCaps('pow-header-chain'); try { a.push('forged'); } catch {} return Object.isFrozen(a) && !P.evidenceCaps('pow-header-chain').includes('forged'); })());
-  check('PhC uniqueness for a DIFFERENT checkpoint → not admitted (binding)', VU([P.buildUniquenessAttestation({ domain_shard: D, genesis_epoch: EP, sequence: '0', checkpoint: 'sha256:' + '00'.repeat(32) }, Wa.priv, Wa.pubB64), ua(Wb)]).attested === false);
+  check('PhC uniqueness for a DIFFERENT authority checkpoint → not admitted (binding)', VU([P.buildUniquenessAttestation({ domain_shard: D, genesis_epoch: EP, sequence: '0', checkpoint: 'sha256:' + '00'.repeat(32) }, Wa.priv, Wa.pubB64), ua(Wb)]).attested === false);
 
   // ── M5 (UST-6vj) — ONE QUORUM ALGEBRA: admit → group → count → adjudicate; uniqueness and recovery are instances.
   const Wd = kp('44'.repeat(32));
@@ -1610,7 +1610,7 @@ console.log('\n═════════════════════�
   // two rival groups. Conflict is real only where the payload can differ (recovery: rival replacement authorities).
   check('M5 ValidThreshold uniform: quorumTrustDomains threshold 0 → met:false (never satisfied)',
     (r => r.met === false)(P.quorumTrustDomains([{ source_id: 'a' }], { domains: { a: 'op-a' }, threshold: 0 })));
-  check('M5 total: a malformed recovery leaf (canon-throwing) admits nothing and never throws',
+  check('M5 total: a malformed checkpoint-recovery leaf (canon-throwing) admits nothing and never throws',
     (() => { try { return P.verifyCheckpointRecovery([{ claim: { purpose: 'ust:checkpoint-authority-recovery', domain_shard: D, genesis_epoch: EP, last_accepted_checkpoint: headId, effective_sequence: '1', replacement_authority: { key_id: Wa.key_id, pub: Wa.pubB64 }, junk: undefined }, issuer_id: Wa.key_id, sig: { sig: 'AA', pub: Wa.pubB64 } }], { domain_shard: D, genesis_epoch: EP, last_accepted_checkpoint: headId, effective_sequence: '1', recoveryKeys: roots4, threshold: 2 }).recovered === false; } catch { return false; } })());
 }
 
@@ -1689,7 +1689,7 @@ console.log('\n═════════════════════�
     check('R34 P0-01 a genesis authority carrying a non-canonical Pub32 alias roots NO authority (strict Pub32 before keyId)', !P.resolveCheckpointRoots(genBad)?.genesisAuthority);
     const kl2 = P.buildKeylogCommitment(['sha256:' + 'ab'.repeat(32)]), ctx2 = P.verifiedGenesisContext(gen2);
     const cp2 = P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({ domain_shard: D2, genesis_epoch: P.genesisEpoch(P.contentHash(gen2)), sequence: '0', active_genesis: P.contentHash(gen2), current_key_id: gk.key_id, keylog: { root: kl2.root, length: kl2.length, head: kl2.head } }), gk.priv, gk.pubB64);
-    check('R34 P0-02 a checkpoint witness with an unsigned EXTRA sig field → INVALID (closed { body, sig } — no checkpoint-id malleability)', (r => r.result === 'INVALID' && r.error === 'E-MALFORMED')(P.verifyAuthorityCheckpointChain([{ ...cp2, sig: { ...cp2.sig, extra: 'unsigned-malleability' } }], { context: ctx2 })));
+    check('R34 P0-02 an authority checkpoint witness with an unsigned EXTRA sig field → INVALID (closed { body, sig } — no checkpoint-id malleability)', (r => r.result === 'INVALID' && r.error === 'E-MALFORMED')(P.verifyAuthorityCheckpointChain([{ ...cp2, sig: { ...cp2.sig, extra: 'unsigned-malleability' } }], { context: ctx2 })));
     check('R34 P0-02 the genuine checkpoint is STILL VALID (kernel-aligned, no over-reject)', P.verifyAuthorityCheckpointChain([cp2], { context: ctx2 }).result === 'VALID'); }
   // round-35 P0-01/03 — the ONE admitSigner choke-point: EVERY signed authority witness binds issuer_id === sig.key_id
   // === keyId(pub) over an EXACT Ed25519 wrapper. A foreign sig.key_id / alg:RSA / extra wrapper or envelope field admits nothing.
@@ -2058,18 +2058,18 @@ console.log('\n═════════════════════�
     const mauled = Buffer.concat([sig.subarray(0, 32), Sm]).toString('base64url');
     return okBase && P.edVerifyStrict(pubB64, msg, mauled) === false;
   })());
-  check('RECOVERY signer NOT in the genesis recovery set → not counted', VR([stmt(rf(KR), R1), stmt(rf(KR), RX)]).recovered === false);
+  check('RECOVERY signer NOT in the genesis checkpoint-recovery set → not counted', VR([stmt(rf(KR), R1), stmt(rf(KR), RX)]).recovered === false);
   check('RECOVERY threshold-complete malformed replacement (BOTH signers agree on key_id ≠ keyId(pub)) → NOT recovered (admitAuthorityKey binds the pair; round-36 P1-01/P2-01 — the vacuous single-malformed vector could not see it)', (() => { const bad = { ...P.checkpointRecoveryClaim(rf(KR)), replacement_authority: { key_id: K1.key_id, pub: KR.pubB64 } }; const st = (W) => { const sg = sign(null, Buffer.from(P.canon(bad), 'utf8'), W.priv).toString('base64url'); return { claim: bad, issuer_id: W.key_id, sig: { alg: 'Ed25519', key_id: W.key_id, pub: W.pubB64, sig: sg } }; }; return VR([st(R1), st(R2)]).recovered === false; })());
-  check('RECOVERY effective_sequence ≠ last+1 → not recovered (only the next checkpoint)', VR([stmt(rf(KR, '2'), R1), stmt(rf(KR, '2'), R2)]).recovered === false);
+  check('RECOVERY effective_sequence ≠ last+1 → not recovered (only the next authority checkpoint)', VR([stmt(rf(KR, '2'), R1), stmt(rf(KR, '2'), R2)]).recovered === false);
   // round-25 P1-01 — CanonicalSeq on the recovery coordinate: a coercible array `["1"]` (String(["1"])==="1") is not a
   //    canonical sequence; isSeq drops it before the signature, so it cannot authorize a recovery.
-  check('round-25 P1-01 a coercible array effective_sequence `["1"]` is dropped (cannot authorize a recovery)', VR([{ claim: { ...P.checkpointRecoveryClaim(rf(KR)), effective_sequence: ['1'] }, issuer_id: R1.key_id, sig: stmt(rf(KR), R1).sig }, stmt(rf(KR), R2)]).recovered === false);
+  check('round-25 P1-01 a coercible array effective_sequence `["1"]` is dropped (cannot authorize a checkpoint-recovery)', VR([{ claim: { ...P.checkpointRecoveryClaim(rf(KR)), effective_sequence: ['1'] }, issuer_id: R1.key_id, sig: stmt(rf(KR), R1).sig }, stmt(rf(KR), R2)]).recovered === false);
   check('RECOVERY stale last_accepted_checkpoint → not recovered (bound to the prior)', VR([stmt(rf(KR, '1', 'sha256:' + 'ee'.repeat(32)), R1), stmt(rf(KR, '1', 'sha256:' + 'ee'.repeat(32)), R2)]).recovered === false);
   check('RECOVERY valid 2-of-3 → replacement_authority + threshold + 2 signers', (r => r.recovered === true && r.replacement_authority.key_id === KR.key_id && r.threshold === '2' && r.signers.length === 2)(VR([stmt(rf(KR), R1), stmt(rf(KR), R2)])));
-  check('R35 P0-02 recovery sig.key_id ≠ issuer (admitSigner binds issuer===key_id===keyId(pub)) → NOT recovered', VR([{ ...stmt(rf(KR), R1), sig: { ...stmt(rf(KR), R1).sig, key_id: 'sha256:' + 'cc'.repeat(32) } }, { ...stmt(rf(KR), R2), sig: { ...stmt(rf(KR), R2).sig, key_id: 'sha256:' + 'cc'.repeat(32) } }]).recovered === false);
+  check('R35 P0-02 checkpoint-recovery sig.key_id ≠ issuer (admitSigner binds issuer===key_id===keyId(pub)) → NOT recovered', VR([{ ...stmt(rf(KR), R1), sig: { ...stmt(rf(KR), R1).sig, key_id: 'sha256:' + 'cc'.repeat(32) } }, { ...stmt(rf(KR), R2), sig: { ...stmt(rf(KR), R2).sig, key_id: 'sha256:' + 'cc'.repeat(32) } }]).recovered === false);
   // recovery re-authorizes the SIGNER only — it does NOT bypass the rest of checkpoint validation
   const C1bad = P.sealAuthorityCheckpoint({ ...bc('1', id0, KR, null), checkpoint_authority: { current_key_id: KR.key_id, next_key_id: K1.key_id } }, KR.priv, KR.pubB64);
-  check('RECOVERY does NOT bypass checkpoint validation (recovered signer, but malformed rotation → E-MALFORMED)', (r => r.result === 'INVALID' && r.error === 'E-MALFORMED')(chain([stmt(rf(KR), R1), stmt(rf(KR), R2)], 2, C1bad)));
+  check('RECOVERY does NOT bypass authority checkpoint validation (recovered signer, but malformed rotation → E-MALFORMED)', (r => r.result === 'INVALID' && r.error === 'E-MALFORMED')(chain([stmt(rf(KR), R1), stmt(rf(KR), R2)], 2, C1bad)));
 }
 
 // ─── #76 (audit-8) GENESIS-EPOCH TRANSITION — a new epoch must NOT silently reset; it needs an A→B transition signed
@@ -2093,7 +2093,7 @@ console.log('\n═════════════════════�
   check('round-24 P1-02 transition with a NON-canonical from_sequence ("0x1") → verifyEpochTransition not ok', VE(P.buildEpochTransition(etf({ from_sequence: '0x1' }), KA0.priv, KA0.pubB64)).ok === false);
   check('EPOCH silent reset (no transition supplied) → INVALID(E-MALFORMED)', (r => r.result === 'INVALID' && r.error === 'E-MALFORMED')(chain(C0b, undefined)));
   check('EPOCH transition NOT signed by epoch A authority → INVALID(E-MALFORMED)', (r => r.error === 'E-MALFORMED')(chain(C0b, { [EPB]: P.buildEpochTransition(etf(), KX.priv, KX.pubB64) })));
-  check('EPOCH B C₀ does not bind the prior-epoch final checkpoint → INVALID(E-PREV)', (r => r.error === 'E-PREV')(chain(c0b({ previous_epoch_final_checkpoint: 'sha256:' + 'ee'.repeat(32) }), { [EPB]: et })));
+  check('EPOCH B C₀ does not bind the prior-epoch final authority checkpoint → INVALID(E-PREV)', (r => r.error === 'E-PREV')(chain(c0b({ previous_epoch_final_checkpoint: 'sha256:' + 'ee'.repeat(32) }), { [EPB]: et })));
   check('EPOCH B C₀ sequence ≠ transition to_initial_sequence → INVALID(E-SEQ)', (r => r.error === 'E-SEQ')(P.verifyAuthorityCheckpointChain([C0a, P.sealAuthorityCheckpoint({ ...P.buildAuthorityCheckpoint({ domain_shard: D, genesis_epoch: EPB, sequence: '5', previous_epoch_final_checkpoint: idA, active_genesis: AGB, current_key_id: KB0.key_id, keylog: KL }) }, KB0.priv, KB0.pubB64)], { genesisAuthority: gA, epochTransitions: { [EPB]: P.buildEpochTransition(etf({ to_initial_sequence: '0' }), KA0.priv, KA0.pubB64) } })));
   check('EPOCH verifyEpochTransition valid → to_checkpoint_authority + to_initial_sequence', (r => r.ok === true && r.to_checkpoint_authority.key_id === KB0.key_id && r.to_initial_sequence === '0')(VE(et)));
   check('EPOCH transition bound to wrong from_final_checkpoint → not ok', VE(et, { from_final_checkpoint: 'sha256:' + '00'.repeat(32) }).ok === false);
@@ -2101,7 +2101,7 @@ console.log('\n═════════════════════�
   // M4.4 — the destination is a VERIFIED genesis, never a free label.
   check('M4.4 transition without to_active_genesis → not ok (no free epoch label)', VE(P.buildEpochTransition({ domain_shard: D, from_genesis_epoch: EPA, from_final_checkpoint: idA, to_genesis_epoch: EPB, to_key_id: KB0.key_id, to_pub: KB0.pubB64, to_initial_sequence: '0' }, KA0.priv, KA0.pubB64)).ok === false);
   check('M4.4 transition with a NON-canonical to_genesis_epoch → not ok (M2 hygiene uniform)', VE(P.buildEpochTransition(etf({ to_genesis_epoch: 'sha256:' + 'ee'.repeat(32) }), KA0.priv, KA0.pubB64)).ok === false);
-  check('M4.4 transition bound to a DIFFERENT destination genesis than the checkpoint lives in → INVALID (no cross-genesis seeding)', (r => r.result === 'INVALID')((() => {
+  check('M4.4 transition bound to a DIFFERENT destination genesis than the authority checkpoint lives in → INVALID (no cross-genesis seeding)', (r => r.result === 'INVALID')((() => {
     const AGC = 'sha256:' + 'c2'.repeat(32);                                            // the transition hands authority to genesis C; the epoch-B checkpoint cannot ride it
     const etC = P.buildEpochTransition(etf({ to_active_genesis: AGC, to_genesis_epoch: P.genesisEpoch(AGC) }), KA0.priv, KA0.pubB64);
     return P.verifyAuthorityCheckpointChain([C0a, C0b], { genesisAuthority: gA, epochTransitions: { [EPB]: etC, [P.genesisEpoch(AGC)]: etC } });
@@ -2130,12 +2130,12 @@ console.log('\n═════════════════════�
   check('K5 growth WITHOUT the prefix witness → INDETERMINATE(chain_consistency_unproven) (round-3 P0-3)', (r => r.result === 'INDETERMINATE' && r.reason === 'chain_consistency_unproven')(P.verifyAuthorityCheckpointChain([C0, cp('1', id0, kc(3))], { genesisAuthority: gA })));
   check('M4.2 keylog REWIND (length 2→1) → INVALID(E-COMMIT) — a signed rewind is caught without any proof', (r => r.result === 'INVALID' && r.error === 'E-COMMIT')(P.verifyAuthorityCheckpointChain([C0, cp('1', id0, kc(1))], { genesisAuthority: gA })));
   check('M4.2 equal-length keylog with a DIFFERENT root/head → INVALID(E-COMMIT) — same-length history rewrite', (r => r.result === 'INVALID' && r.error === 'E-COMMIT')(P.verifyAuthorityCheckpointChain([C0, cp('1', id0, P.buildKeylogCommitment([e(0x01), e(0x0f)]))], { genesisAuthority: gA })));
-  check('M4.2 prefix-extension witness: every checkpoint is a prefix of the supplied entry vector → VALID', (r => r.result === 'VALID')(P.verifyAuthorityCheckpointChain([C0, cp('1', id0, kc(3))], { genesisAuthority: gA, keylogEntries: E })));
-  check('M4.2 prefix-extension witness: a checkpoint whose keylog is NOT a prefix of the vector → INVALID(E-COMMIT)', (r => r.result === 'INVALID' && r.error === 'E-COMMIT')((() => {
+  check('M4.2 prefix-extension witness: every authority checkpoint is a prefix of the supplied entry vector → VALID', (r => r.result === 'VALID')(P.verifyAuthorityCheckpointChain([C0, cp('1', id0, kc(3))], { genesisAuthority: gA, keylogEntries: E })));
+  check('M4.2 prefix-extension witness: an authority checkpoint whose keylog is NOT a prefix of the vector → INVALID(E-COMMIT)', (r => r.result === 'INVALID' && r.error === 'E-COMMIT')((() => {
     const rogue = P.buildKeylogCommitment([e(0x01), e(0x0f), e(0x03)]);                // same length 3, middle entry rewritten
     return P.verifyAuthorityCheckpointChain([C0, cp('1', id0, rogue)], { genesisAuthority: gA, keylogEntries: [e(0x01), e(0x0f), e(0x03)] });
   })()));                                                                              // the WITNESS is the rewritten vector: C0 (honest prefix of E) no longer matches it
-  check('M4.2 witness longer than the checkpoint keylog is fine; checkpoint longer than the witness → INVALID(E-COMMIT)', (r => r.result === 'INVALID' && r.error === 'E-COMMIT')(P.verifyAuthorityCheckpointChain([C0, cp('1', id0, kc(3))], { genesisAuthority: gA, keylogEntries: E.slice(0, 2) })));
+  check('M4.2 witness longer than the authority checkpoint keylog is fine; authority checkpoint longer than the witness → INVALID(E-COMMIT)', (r => r.result === 'INVALID' && r.error === 'E-COMMIT')(P.verifyAuthorityCheckpointChain([C0, cp('1', id0, kc(3))], { genesisAuthority: gA, keylogEntries: E.slice(0, 2) })));
   check('M4.2 keylogEntries over the §13 ceiling (257) → INVALID(E-BOUNDS) before any Merkle work', (r => r.result === 'INVALID' && r.error === 'E-BOUNDS')(P.verifyAuthorityCheckpointChain([C0], { genesisAuthority: gA, keylogEntries: Array.from({ length: 257 }, () => e(0x01)) })));
 }
 

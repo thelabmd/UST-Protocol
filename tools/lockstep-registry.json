@@ -11,7 +11,7 @@
       "id": "L2-recovery-genesis-fixed",
       "rev": "rev25",
       "model_locus": "immutable within the epoch",
-      "conformance_check": "C1/L2 raw recoveryKeys/recoveryThreshold alongside a branded context → INVALID(E-AUTHORITY) — recovery is genesis-fixed, never injected from a call argument (F.5l; round-26 P0-02)"
+      "conformance_check": "C1/L2 raw recoveryKeys/recoveryThreshold alongside a branded context → INVALID(E-AUTHORITY) — checkpoint-recovery is genesis-fixed, never injected from a call argument (F.5l; round-26 P0-02)"
     },
     {
       "id": "L3-evidence-exact-facts",
@@ -41,7 +41,7 @@
       "id": "R27-authority-graph-snapshot",
       "rev": "rev28",
       "model_locus": "authority graph crosses the ONE inert snapshot boundary",
-      "conformance_check": "round-27 P0-02 a getter on a checkpoint body cannot sign one body and mint another → INVALID(E-MALFORMED) (the chain crosses the snapshot boundary)"
+      "conformance_check": "round-27 P0-02 a getter on an authority checkpoint body cannot sign one body and mint another → INVALID(E-MALFORMED) (the chain crosses the snapshot boundary)"
     },
     {
       "id": "R27-witness-budget-final-leaf",
@@ -179,7 +179,7 @@
       "id": "R42-authority-witness-closed-adt",
       "rev": "rev42",
       "model_locus": "SWEPT across every signed authority witness",
-      "conformance_check": "R34 P0-02 a checkpoint witness with an unsigned EXTRA sig field → INVALID (closed { body, sig } — no checkpoint-id malleability)"
+      "conformance_check": "R34 P0-02 an authority checkpoint witness with an unsigned EXTRA sig field → INVALID (closed { body, sig } — no checkpoint-id malleability)"
     },
     {
       "id": "R42-strict-pub32",

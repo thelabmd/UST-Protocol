@@ -71,6 +71,6 @@
     "test:version-truth": "node tools/version-truth-gate.mjs",
     "types": "node tools/gen-types.mjs",
     "test:types-parity": "node tools/types-parity-gate.mjs",
-    "test:checkpoint-qualified": "node tools/checkpoint-qualified-gate.mjs"
+    "test:ambiguous-terms": "node tools/ambiguous-term-gate.mjs"
   }
 }

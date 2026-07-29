@@ -436,7 +436,7 @@ publisher-bound values a layer up.)
 - **Content hash (domain-separated, M6/P8):** every hash in UST is typed —
   `H_t(x) = "sha256:" || lowerhex( SHA-256( ascii(t) || 0x00 || x ) )`. **Exact byte layout (P8):** `ascii(t)`
   is the tag's literal ASCII bytes, then ONE `0x00` byte, then `x`, where `x` per tag is:
-  `ust:state`→`utf8(canon({ust,state}))` (the signed content; a authority checkpoint is ITSELF a transcript and hashes under `ust:state` — it has NO separate domain, whereas the authority checkpoint CHAIN link uses `ust:authority-checkpoint` and the authority checkpoint MAP uses `ust:checkpoint-map-key`/`-value`); `ust:keylog` has TWO byte-disjoint inputs — for a `key_id` it is the RAW public-key bytes (`key_id = H("ust:keylog", pub_raw)`, where `pub_raw` = the octets of the key, i.e. base64url-decode(`sig.pub`) — NOT plain `SHA256(pub)`, NOT the base64url string), and for a key-log ENTRY hash it is `utf8(canon(entry-without-sig))` (32 raw key bytes can never equal a JSON-object canon, so no collision);
+  `ust:state`→`utf8(canon({ust,state}))` (the signed content; an authority checkpoint is ITSELF a transcript and hashes under `ust:state` — it has NO separate domain, whereas the authority checkpoint CHAIN link uses `ust:authority-checkpoint` and the authority checkpoint MAP uses `ust:checkpoint-map-key`/`-value`); `ust:keylog` has TWO byte-disjoint inputs — for a `key_id` it is the RAW public-key bytes (`key_id = H("ust:keylog", pub_raw)`, where `pub_raw` = the octets of the key, i.e. base64url-decode(`sig.pub`) — NOT plain `SHA256(pub)`, NOT the base64url string), and for a key-log ENTRY hash it is `utf8(canon(entry-without-sig))` (32 raw key bytes can never equal a JSON-object canon, so no collision);
   `ust:leaf`→the leaf's `content_hash` ASCII bytes;
   `ust:node`→`left_hash_ascii || right_hash_ascii` (both `sha256:`-prefixed, concatenated); `ust:seed`→
   `utf8(canon([content_hash,…]))`. Distinct tags make a bytes-equal collision across object kinds impossible. The COMPLETE, authoritative domain set is RENDERED from the reference `REGISTRY` (LAYER 1 drift gate §16 — never hand-maintained, so the enumeration above can never claim a domain the code lacks nor omit one it added):
@@ -893,7 +893,7 @@ AND POSITIVELY confirm via the witness that NO conflicting genesis exists before
 FORKED genesis (a rival name-binding root exists) ⇒ `conflict` ⇒ E-GENESIS; an UNREACHABLE genesis/witness ⇒
 `unavailable` (INDETERMINATE, §15), NOT E-GENESIS — and `authoritative` is DENIED, never silently granted (W1:
 suppress-the-witness cannot mask a hijack — the attacker denies the strength but cannot forge it; an out-of-band
-PINNED key is unaffected). **Genesis recovery — re-rooted in domain control (P2).** The ultimate authority is the NAME-BINDING root
+PINNED key is unaffected). **Genesis-recovery — re-rooted in domain control (P2).** The ultimate authority is the NAME-BINDING root
 (DNSSEC record / TLS-ceremony at the domain), NOT possession of the genesis KEY — the key log lives UNDER it.
 A supersession is authoritative iff it is BOTH (a) signed by the old genesis key AND (b) reflected in the
 CURRENT name-binding root (which only the true domain controller can change). This solves recovery-from-
@@ -902,7 +902,7 @@ true owner recovers by publishing a new genesis in the name-binding root. A supe
 is ignored; conflicting name-binding roots ⇒ E-GENESIS. Historical records stay valid under the genesis that
 was authoritative at their anchored time (bounding domain-lapse / re-registration, P3). **(X3 — placing a
 record in the correct genesis EPOCH requires its ANCHORED time; an UNANCHORED record signed by an old-genesis
-key near/after a recovery cannot be epoch-placed and is rejected at HIGH, fail-closed. So across a recovery
+key near/after a genesis-recovery cannot be epoch-placed and is rejected at HIGH, fail-closed. So across a genesis-recovery
 boundary anchoring is EFFECTIVELY REQUIRED for HIGH validation.)** Anchor time/order is
 necessary but NOT sufficient for name authority; domain control is the arbiter.
 
@@ -918,7 +918,7 @@ verifier runs, so no-fork stops being a manual assertion and becomes COLLECTED E
 WitnessLog := { "domain_shard": string,            // MUST equal the serving name
                 "active":       content_hash,      // the publisher's view of the current genesis
                 "genesis_log":  [ { "content_hash": content_hash,      // of a genesis transcript (§12.1)
-                                    ["superseded_by": content_hash,]   // §12.1 recovery/supersession
+                                    ["superseded_by": content_hash,]   // §12.1 genesis-recovery/supersession
                                     "anchors": [ AnchorProof, … ] } ] }
 ```
 `AnchorProof` is EXACTLY the §11.2 shape (`{root, path, anchor}`, substrate per the §17 registry; for a
@@ -995,21 +995,28 @@ established at all, the `no_fork` field is ABSENT rather than filled (§15) — 
   The added key's identifier `key_id` = `H("ust:keylog", pub_raw)` where `pub_raw` = the RAW public-key octets
   (base64url-decode of `pub`), domain-separated (§7) — NOT plain `SHA256(pub)`, NOT the base64url string;
   content-derived, unique by construction (P9), reproduced byte-for-byte by the verifier (§14 step 4). **Each
-  entry transcript MUST be signed by an ACTIVE key**; the genesis key signs the first; a replacement is an
-  `add` naming the replaced key in `supersedes`; `revoke` requires an active key (profile MAY require a
+entry transcript MUST be signed by the GENESIS ROOT**; a replacement is an `add` naming the replaced key in
+`supersedes`, followed by `revoke` of that key.
 
-quorum, and SHOULD restrict this — see below).
+**Authority to MUTATE the log is not authority to SIGN (rev97, §F.5e.3).** Being `active` is NECESSARY but not
+SUFFICIENT: left at that, a key issued to sign observations may add keys and revoke others — including revoking
+the genesis key as `compromised`, which is TERMINAL. Measured against the reference implementation rather than
+inferred: a data key added a key that then verified `authoritative`, and the same data key revoked the GENESIS key
+as compromised and was accepted (2026-07-29). The operational key is the one living in a running service's
+environment, so this handed the operator's most exposed key the power to permanently destroy the name binding it
+serves — nullifying the separation an offline root is kept for. An operational key signing a key-log entry ⇒
+`E-KEY`, whatever its `active` status.
 
-**A known gap, stated rather than implied (rev97).** "Active" does not distinguish an OPERATIONAL key from an
-AUTHORITY key, so a key issued to sign observations may also add keys and revoke others — including revoking the
-genesis key as `compromised`, which is TERMINAL. The operational key is the one that lives in a running service's
-environment, so it is the most exposed key an operator holds, and this grants it the power to permanently destroy
-the name binding it serves. Measured against the reference implementation, not inferred: a data key added another
-key that then verified `authoritative`, and the same data key revoked the GENESIS key as compromised and was
-accepted (2026-07-29). §F.5e.1's role partition exists to close this; until roles land normatively a profile MUST
-NOT treat "active" as sufficient authority for key-log mutation.
+Neither recovery mechanism is admitted here, and both remain available where they belong: **checkpoint-recovery**
+(§12.3.2) threshold-signs a `RecoveryClaim` against the AUTHORITY CHECKPOINT chain, and **genesis-recovery**
+(§12.1 P2) re-roots through DOMAIN CONTROL — the arbiter above the key log, which therefore needs no key-log
+privilege. Before rev97 both were called "recovery" in prose, and a draft of §F.5e.3 admitted the first as a
+key-log mutator on the strength of the shared name.
 
-  quorum). This forecloses M1. Because an entry is a normal transcript, it is verified by the SAME algorithm
+The cost is deliberate and falls on the operator: no key may be added or revoked without bringing the root out of
+cold storage, which for a typical operator is the once-a-year rotation its tooling already warns about. A protocol
+cannot carry this risk on the operator's behalf, and pretending otherwise would only move the failure somewhere
+less visible. This forecloses M1. Because an entry is a normal transcript, it is verified by the SAME algorithm
   (§14) as any UST — the trust layer is built from the protocol's own documents.
   **Revocation semantics (P1) — decided against the anchor UPPER BOUND (X1).** The anchor gives ONLY an upper
   bound `U` ("not later than", N9); there is no lower bound, so validity is decided against `U`, fail-closed —
@@ -1142,10 +1149,10 @@ legacy wire field; the earlier 3-field `canon` preimage was redundant and weaker
 
 #### 12.3.1 Verification (`verifyAuthorityCheckpointChain` — ordered, resolve-signer-BEFORE-trust, fail-closed)
 
-Authority is carried IN-BAND and NON-CIRCULARLY: **a authority checkpoint NEVER authorizes its own signer.** The genesis
+Authority is carried IN-BAND and NON-CIRCULARLY: **an authority checkpoint NEVER authorizes its own signer.** The genesis
 authorizes C₀'s signer; each Cₙ₋₁ authorizes the signer of Cₙ. The expected signer is resolved from PRIOR state
 BEFORE Cₙ's signature is trusted. The verifier MUST supply a root — preferred: a `context`
-(the `verifiedGenesisContext` output, §12.3.0a — ONE verified derivation carrying scope + authority + recovery keys;
+(the `verifiedGenesisContext` output, §12.3.0a — ONE verified derivation carrying scope + authority + checkpoint-recovery keys;
 C₀ is bound to ITS `active_genesis`, `authority_root:"verified-context"`); or `genesis` (roots resolved from the
 signed genesis); or `genesisAuthority = {key_id, pub}` (a consumer PIN); or a
 `pinnedPrior` — a FULL scoped `PinnedCheckpointState {scope_id, checkpoint_id, sequence, authority_for_next,
@@ -1175,12 +1182,12 @@ silent accept. For each Cₙ, in order:
      length alone does not prove an append (round-3 P0-3).
    - An unresolvable expected signer ⇒ **INDETERMINATE (`authority_unresolved`)**.
 3. **Authenticate against the RESOLVED signer.** The candidate signers are the resolved authority AND — after key
-   loss — a bound recovery replacement for exactly this sequence (§12.3.2). Cₙ's `sig` MUST strict-verify (§7)
+   loss — a bound checkpoint-recovery replacement for exactly this sequence (§12.3.2). Cₙ's `sig` MUST strict-verify (§7)
    over the §12.3 preimage, with `sig.pub`/`sig.key_id` equal to a candidate and `keyId(sig.pub) == sig.key_id`.
-   No match ⇒ `E-AUTHORITY`. Recovery re-authorizes the signer; it does NOT bypass any later check.
+   No match ⇒ `E-AUTHORITY`. Checkpoint-recovery re-authorizes the signer; it does NOT bypass any later check.
 4. **Diagnostic binding.** The carried `checkpoint_authority.current_key_id` MUST EQUAL the matched signer — it is
    a cross-check, it never RESOLVES the signer. Mismatch ⇒ `E-AUTHORITY`.
-5. **Rotation exactness (all-or-none).** `{next_key_id, next_pub, effective_sequence}` are all-present or
+5. **Authority-checkpoint rotation exactness (all-or-none).** `{next_key_id, next_pub, effective_sequence}` are all-present or
    all-absent (else `E-MALFORMED`); if present, `keyId(next_pub) == next_key_id` (`E-KEY`) and
    `effective_sequence == sequence + 1` (`E-SEQ`) — no arbitrary future activation.
 6. **Advance.** `prior ← { id: checkpoint_id(Cₙ), authority: matched, sequence, body }`.
@@ -1188,16 +1195,16 @@ silent accept. For each Cₙ, in order:
 `VALID` returns `{ head, length, sequence, active_genesis, keylog, activeAuthority }`, where `activeAuthority` is
 the last committed `next_*` (if any) else the last matched signer — the key a consumer expects to sign Cₙ₊₁.
 
-#### 12.3.2 Rotation, recovery (genesis-rooted threshold), epoch transition
+#### 12.3.2 Authority-checkpoint rotation, checkpoint-recovery (genesis-rooted threshold), epoch transition
 
-- **Rotation** is in-band (step 5): a authority checkpoint names its successor key, effective at exactly `sequence + 1`.
-- **Recovery** (`purpose:"ust:checkpoint-authority-recovery"`) is a DORMANT emergency multisig for key LOSS, NOT a
+- **Rotation** is in-band (step 5): an authority checkpoint names its successor key, effective at exactly `sequence + 1`.
+- **Checkpoint-recovery** (`purpose:"ust:checkpoint-authority-recovery"`) is a DORMANT emergency multisig for key LOSS, NOT a
   normal rotation. `RecoveryClaim = { purpose, domain_shard, genesis_epoch, last_accepted_checkpoint,
   replacement_authority:{key_id, pub}, reason, effective_sequence }`; each signer emits `{ claim, issuer_id, sig }`.
   `verifyCheckpointRecovery` admits it only when **≥ threshold (reference profile: 2-of-3) DISTINCT
-  genesis-authorized recovery signers** sign the BYTE-IDENTICAL claim, bound to `(domain, epoch,
+  genesis-authorized checkpoint-recovery signers** sign the BYTE-IDENTICAL claim, bound to `(domain, epoch,
   last_accepted_checkpoint, effective_sequence)`. It authorizes ONLY the next authority checkpoint's replacement key; the
-  recovery set is genesis-fixed and role-separated from the data and authority checkpoint keys. Recovery does not skip
+  checkpoint-recovery set is genesis-fixed and role-separated from the data and authority checkpoint keys. Checkpoint-recovery does not skip
   validation — the recovered authority checkpoint still passes every step above.
 - **Genesis-epoch transition** (`purpose:"ust:genesis-epoch-transition"`) crosses a re-rooting without a silent
   reset: `{ purpose, domain_shard, from_genesis_epoch, from_final_checkpoint, to_active_genesis, to_genesis_epoch,
@@ -1228,7 +1235,7 @@ the existing §13 key-log ceiling (≤ 256 default / genesis-declared), so the k
 Merkle of ≤ 256 leaves; the §12.3.4 UNIQUENESS sparse Merkle tree is a FIXED depth 256
 (the key-hash width), so every membership/non-membership co-path there is exactly 256 siblings; the `sequence` counter is
 monotone and UNBOUNDED (a chain grows over time and is walked incrementally — the verifier's §13 `resource_limit`
-governs how far it walks, never a protocol cap); the recovery set is a small genesis-fixed finite set and the
+governs how far it walks, never a protocol cap); the checkpoint-recovery set is a small genesis-fixed finite set and the
 witness quorum a finite consumer-configured one.
 
 #### 12.3.4 Independent uniqueness — authenticated map AND witness quorum (#42, #76 Phase C)
@@ -1255,13 +1262,13 @@ Two INDEPENDENT (non-publisher) bases prove `¬∃ rival at the coordinate`, bot
   self-declared: a claim that carries its own `trust_domain`/`issuer_id` is REJECTED (P0-2), and a bare-observation
   co-sign is corroboration with the WRONG purpose ⇒ not admitted as uniqueness.
 
-**One quorum algebra (M5).** Every quorum surface (witness uniqueness here, recovery §12.3.2, the
+**One quorum algebra (M5).** Every quorum surface (witness uniqueness here, checkpoint-recovery §12.3.2, the
 `quorumTrustDomains` aggregate) runs the SAME four steps: **admit** (authenticate + bind FIRST; a malformed element
 admits nothing and never throws) → **group** by `canon(claim)` AFTER admission (an unauthenticated element can never
 poison the group reference) → **count** distinct consumer-resolved voters per group → **adjudicate**: no group at
 threshold ⇒ not met; exactly one ⇒ accepted; MORE than one ⇒ **conflict/equivocation, rejected** — independent of
 iteration order, never first-wins. `threshold` MUST be an integer ≥ 1 (and ≤ the voter-set size where that set is
-closed, e.g. recovery keys) on EVERY surface — a non-positive threshold never satisfies any quorum.
+closed, e.g. checkpoint-recovery keys) on EVERY surface — a non-positive threshold never satisfies any quorum.
 
 #### 12.3.5 Freshness ladder — `unverified ⊊ fresh ⊊ corroborated ⊊ attested`
 
@@ -1602,7 +1609,7 @@ reached; a document does NOT change format across tiers OR roles — even genesi
   vectors (canonicalization/NFC/ordering, per-partition captured-vs-computed hashing, domain separation,
   strict-Ed25519 malleability, bounds/cycle, error codes).
 - **HIGH producer/verifier:** + genesis-rooted key log → `authoritative` identity, rotation/revocation
-  (vectors: key-log chain, revocation window, genesis fork/recovery).
+  (vectors: key-log chain, revocation window, genesis fork/genesis-recovery).
 - **TOP producer/verifier (notary):** + anchor-proof per registered substrate (time) + sequenced-stream
   completeness. This is the reference-operator profile.
 
@@ -1610,7 +1617,7 @@ Every verifier passes the normative test-vector suite BYTE-FOR-BYTE (§App. A) f
 FLOOR vectors — canonicalization/NFC/ordering, per-partition captured-vs-computed hashing, domain separation,
 strict-Ed25519 malleability, bounds/cycle, private-commit + AEAD↔commit binding, each error code. HIGH vectors —
 key-log chain (root-authorized supersession, break/unauthorized reject, ≤256 bound, revocation window, genesis
-fork/recovery), name-authority resolution. TOP vectors — anchor-proof per substrate (non-final ⇒ UNPROVEN),
+fork/genesis-recovery), name-authority resolution. TOP vectors — anchor-proof per substrate (non-final ⇒ UNPROVEN),
 stream-genesis + stream checkpoint/omission, pinned Merkle/seed ordering. A verifier that diverges on any vector for
 a tier it claims is non-conforming — making verifier disagreement a test failure, not a settlement weapon.
 Independent re-implementation is expected; the vectors make "verify without trusting the publisher's library" real.
@@ -1771,8 +1778,8 @@ substrate(s); partition schema (names + captured/computed designation); source r
 hour-close timeout (§8.1); stream checkpoint cadence for sequenced streams (§11.3 — SHOULD for any stream that wants
 provable completeness); a private-nonce uniqueness log (§10 I6/Z2 — SHOULD: the verifier cannot detect
 cross-document nonce reuse, so the operator must); size bounds
-(within §13 ceilings); metadata-minimization policy. A profile SHOULD publish §12.1 recovery events in a
-changelog: unanchored records near a recovery boundary fail HIGH by design (X3) — consumers must be able to
+(within §13 ceilings); metadata-minimization policy. A profile SHOULD publish §12.1 genesis-recovery events in a
+changelog: unanchored records near a genesis-recovery boundary fail HIGH by design (X3) — consumers must be able to
 see why, not guess. The protocol fixes the mechanism; the profile carries the
 operator. Each operator publishes its own profile (substrates, cadence, custody, disclosure) alongside its genesis.
 
@@ -1946,7 +1953,7 @@ provenance and will be lifted into this ledger when the spec is published.
 - **REV 3 / FINAL-mechanism** — lifecycle red-team (M1–M10): genesis-rooted self-signed key-log, name-binding
   genesis, anchor trust profile, stream-genesis, checkpoints, domain-separated hashing, pinned ordering/encodings.
 - **REV 4 / DEPLOYMENT-READY** — operational red-team (P1–P10): revocation retired-vs-compromised semantics,
-  genesis recovery re-rooted in domain control, aggregate verification budget, pinned domain-sep byte layout,
+  genesis-recovery re-rooted in domain control, aggregate verification budget, pinned domain-sep byte layout,
   completeness tail/cross-tier/AEAD-misuse/key_id. Added I13/I14.
 - **REV 5** — honest cover-to-cover pass (H1–H11): fixed the VALID-condition bug and hash-tag discipline, and
   stated the honest limitations (Bitcoin-SPV for time, ~1h resolution, DNS/TLS naming root).
@@ -2217,7 +2224,7 @@ provenance and will be lifted into this ledger when the spec is published.
     non-membership`), `compareEvidenceOrder` (order is a PROOF relation, not a timestamp compare), `quorumTrustDomains`
     (independence = DISTINCT consumer-resolved trust domains, never connector count).
   - **Authority-checkpoint chain** (F.5h): three-layer object (`body` / signature preimage / `checkpoint_id` over
-    `{body,sig}`; external evidence excluded), NON-CIRCULAR in-band authority (`Cₙ₋₁` authorizes `Cₙ`; a authority checkpoint
+    `{body,sig}`; external evidence excluded), NON-CIRCULAR in-band authority (`Cₙ₋₁` authorizes `Cₙ`; an authority checkpoint
     never authorizes itself), resolve-signer-before-trust, exact rotation. `verifyAuthorityCheckpointChain`.
   - **Phase B `corroborated` freshness** (F.5i): `deriveCheckpointFreshness` — the conjunction (authorized ∧ head∈root
     ∧ external-commitment ∧ proven-after target), capped at `corroborated` by construction (no `attested` branch) —
@@ -2232,7 +2239,7 @@ provenance and will be lifted into this ledger when the spec is published.
   130/0, mcp live 11/0, ssrf 7/0, model↔code 63/63.
 - **REV 45 (2026-07-14)** — **Phase B checkpoint custody lifecycle** (#76 §1.7 / audit-8 / #77), the same
   build → conformance → formal → `model↔code` guard loop:
-  - **Recovery multisig** (F.5l): a genesis-authorized N-of-M (reference 2-of-3) re-authorizes the checkpoint
+  - **Checkpoint-recovery multisig** (F.5l): a genesis-authorized N-of-M (reference 2-of-3) re-authorizes the checkpoint
     authority after key loss WITHOUT bypassing authority checkpoint validation — role-separated, genesis-fixed keys, a dormant
     emergency mechanism bound to `(domain, epoch, last_accepted_checkpoint, next-sequence)`; conflicting replacements
     fail the byte-identical-claim rule (`verifyCheckpointRecovery`).
@@ -2249,7 +2256,7 @@ provenance and will be lifted into this ledger when the spec is published.
   after, under the `model↔code` guard, never ahead). New **§12.3** normatively fixes, for clean-room
   re-implementation: the three-layer authority checkpoint object (`CheckpointBody` → `ust:authority-checkpoint-signature`
   preimage → `checkpoint_id = H("ust:authority-checkpoint", canon({body,sig}))`, external evidence EXCLUDED from
-  the id); the ordered resolve-signer-before-trust verify (§12.3.1); rotation / 2-of-3 recovery / genesis-epoch
+  the id); the ordered resolve-signer-before-trust verify (§12.3.1); rotation / 2-of-3 checkpoint-recovery / genesis-epoch
   transition (§12.3.2); strict last-index key-log terminality via a positioned SMT (§12.3.3 — that construction was LATER found unsound by external audit and replaced by a size-bound ordered vector commitment; the history entry stands as shipped, the section is authoritative); the two typed
   authenticated-map predicates + accepted-witness quorum (§12.3.4); the `unverified ⊊ fresh ⊊ corroborated ⊊
   attested` freshness ladder + facts-only `VerifiedEvidence` (§12.3.5); and the distinct verdict vocabulary
@@ -2281,7 +2288,7 @@ provenance and will be lifted into this ledger when the spec is published.
   proving the whole suffix empty (§12.3.3, F.5n). **P0-03** — the legacy `keylogHeadAnchor → attested` path is
   DELETED (an anchored head is membership-at-anchor, not latest-head); strong freshness only via the checkpoint
   derivation (§12.2a, F.5d). **P0-04** — evidence is capability-typed; `content-addressed`/`authenticated-map` can
-  never satisfy temporal order (§12.3.5, F.5g). **P0-05** — recovery groups signers by canonical claim and REJECTS
+  never satisfy temporal order (§12.3.5, F.5g). **P0-05** — checkpoint-recovery groups signers by canonical claim and REJECTS
   `> 1` threshold-reaching replacement (equivocation conflict), and validates `1 ≤ threshold ≤ |recoveryKeys|`
   (F.5l). Plus P1-01 checkpoint fixed-schema enforcement, P1-02 fail-closed `compareEvidenceOrder`, P1-05 duplicate
   typed-key rejection. Gates: conformance 317/0, arc 44/0, model↔code 97/97, security 10/10, cli 130/0. Remaining
@@ -2361,13 +2368,13 @@ provenance and will be lifted into this ledger when the spec is published.
   numbers contradict its own definitions is now machine-caught (negative-tested: an injected wrong count fails the
   gate). Gates: conformance 360/0, model 123/123 + 4 numeric claims, arc regenerated (lat-* now 4-axis).
 - **REV 54 (2026-07-15, `rc.36`)** — **authority-layer refactor, phase M5 (one quorum algebra).** Uniqueness
-  attestations and recovery statements are now INSTANCES of a single core (`quorumAdjudicate`: admit → group → count
+  attestations and checkpoint-recovery statements are now INSTANCES of a single core (`quorumAdjudicate`: admit → group → count
   → adjudicate). Closes **quorum-poison** (`rc35-P0i`): the canonical group reference was locked to the FIRST binding
   claim BEFORE its signature was checked, so an attacker prepending a garbage-signed claim VARIANT suppressed the
   honest quorum (denial-of-attested) — grouping now happens strictly AFTER admission. Uniqueness gains CONFLICT
   determinism (two rival claims each reaching quorum ⇒ equivocation, rejected, order-independent — previously
-  first-claim-wins-by-position); recovery keeps its conflict rule but through the shared core and is now TOTAL (a
-  canon-throwing malformed leaf admits nothing instead of throwing through verification — the round-2 recovery-DoS).
+  first-claim-wins-by-position); checkpoint-recovery keeps its conflict rule but through the shared core and is now TOTAL (a
+  canon-throwing malformed leaf admits nothing instead of throwing through verification — the round-2 checkpoint-recovery-DoS).
   `ValidThreshold` (integer ≥ 1, ≤ closed-voter-set size) is UNIFORM — including `quorumTrustDomains`, whose
   `threshold ≤ 0` previously reported `met` from an empty list (`rc35-P1b`, the P0-4 sibling). §12.3.4 quorum-algebra
   paragraph; F.5j M5 section in the formal model (in lockstep). Gates: conformance 365/0, model 128/128,
@@ -2375,7 +2382,7 @@ provenance and will be lifted into this ledger when the spec is published.
 - **REV 55 (2026-07-15, `rc.36`)** — **authority-layer refactor, phase C1-tail (downstream takes the context) + M2
   formalized.** `verifyAuthorityCheckpointChain`/`deriveCheckpointFreshness` accept a `context` — the
   `verifiedGenesisContext` output — as the PREFERRED root (`authority_root:"verified-context"`): scope, authority checkpoint
-  authority and recovery keys flow from ONE verified derivation, never re-read from raw genesis fields; the C₀
+  authority and checkpoint-recovery keys flow from ONE verified derivation, never re-read from raw genesis fields; the C₀
   `active_genesis` is bound to the context scope (`E-GENESIS` on mismatch). Formal model gains **F.5g.0** (M2 — the
   verified authority context: scope DERIVED never chosen; namespace non-malleability theorem tying epoch-split /
   receipt-epoch / transition-epoch hygiene to the one seam). Gates: conformance 367/0, model guard green.
@@ -2396,8 +2403,8 @@ provenance and will be lifted into this ledger when the spec is published.
   restated predicate, the carried tier always equals the projection of the carried strength, and each coordinate is
   a function of its verdict ALONE (no cross-coordinate lift). V2: the security-regression census now covers EVERY
   round-1 + round-2 finding as a SECURE-expectation vector — 29 vectors, adding `rc35-P0j` (cross-scope evidence:
-  a receipt for a FOREIGN active_genesis never corroborates this chain), `rc35-P1c` (recovery-DoS: a canon-throwing
-  recovery statement never throws through chain verification), `rc35-P1d` (the keylogEntries witness ceiling is
+  a receipt for a FOREIGN active_genesis never corroborates this chain), `rc35-P1c` (checkpoint-recovery-DoS: a canon-throwing
+  checkpoint-recovery statement never throws through chain verification), `rc35-P1d` (the keylogEntries witness ceiling is
   E-BOUNDS before Merkle work). With this, phases M1–M5, C1–C4, V1–V2 of the rc.35 round-2 structural refactor are
   COMPLETE: the remaining epic item is A1 — a diverse-model adversarial round-3 over the refactored layer.
   Gates: conformance 376/0, security 29/0, model guard green, arc 59/0, parity green, npm-drift green.

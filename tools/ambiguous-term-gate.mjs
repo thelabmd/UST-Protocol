@@ -13,33 +13,48 @@
 //     rotation (§12.3.2, alive), which names a successor in-band. Removing the first nearly took prose
 //     belonging to the second with it; six stale references survived the first sweep.
 //
-// A THIRD case was examined and deliberately NOT registered, because registering it would have been the
-// wrong fix. `recovery` names exactly ONE mechanism: the genesis-rooted threshold that re-authorizes the
-// AUTHORITY CHECKPOINT chain (§12.3.2). A draft of §F.5e.3 admitted recovery keys as key-log mutators — not
-// because the word was ambiguous, but because I extended its SCOPE to a chain it never touched. Enumerating
-// all 36 uses showed them consistent; a bare-use pin would have forced 26 edits and prevented nothing.
+//   · `recovery`    — GENESIS-RECOVERY (§12.1 P2) re-roots the name through DOMAIN CONTROL, the arbiter that
+//     sits above the key log; CHECKPOINT-RECOVERY (§12.3.2, §F.5l) is a dormant genesis-fixed threshold that
+//     re-authorizes the AUTHORITY CHECKPOINT chain. Different roots of trust, different documents, different
+//     failure they answer. A draft of §F.5e.3 admitted checkpoint-recovery keys as key-log mutators on the
+//     strength of the shared word — widening an authority set in text that reads as a clarification. Worse,
+//     the first attempt to fix it swept the word blindly and CONFLATED the two, turning "Genesis recovery —
+//     re-rooted in domain control" into a checkpoint mechanism. The word had to be split, not counted.
 //
-// So the two defects are kept apart. AMBIGUITY is a property of the word and a prose gate can hold it.
-// OVER-EXTENDED SCOPE is a property of a claim, and what caught it was a VECTOR that failed — §12.3.2 now
-// states the scope negatively ("does not authorize key-log mutation") so the next reader inherits the answer.
+//     Note the pattern in all three: the WIRE was already right. `ust:checkpoint-authority-recovery`,
+//     `verifyCheckpointRecovery`, and the two distinct checkpoint shapes all carried the qualifier. Only the
+//     prose dropped it, and reasoning happens in prose.
 //
 // The rule the owner set after the second collision: introduce the qualified pair BEFORE the ambiguity does
 // damage, because the damage lands on the foundation and is found late. This gate makes that mechanical — each
 // term carries the qualifiers that disambiguate it, and its bare count is PINNED so it may only shrink.
 //
-// A pin is not a target. It is the residual a qualifying pass could not decide from the line alone (mostly
-// Appendix B revision history, where the subject lives in the paragraph). Closing one is free; adding one fails.
+// A pin is not a target. It is the residual a qualifying pass could not decide FROM THE LINE ALONE, and after the
+// rev97 pass it is three things, all legitimate: Appendix B revision history (the subject lives in the paragraph,
+// not the sentence); the generic English activity ("the once-a-year rotation its tooling warns about"), which
+// names no mechanism; and text that discusses the ambiguity ITSELF and must therefore reference both mechanisms
+// collectively. Closing one is free; adding one fails.
+//
+// The pins below are the MEASURED residual over BOTH documents after that pass, not a target chosen in advance.
+// They moved once, when the gate's domain grew from one document to two — a domain change, stated here rather
+// than quietly absorbed, because raising a pin to silence a gate is the failure this file exists to prevent.
 import { readFileSync } from 'node:fs';
 
 const TERMS = [
-  { word: 'checkpoint', pin: 16, qualifiers: /authority[- ]|stream |hour /i,
+  { word: 'checkpoint', pin: 24, qualifiers: /authority[- ]|stream |hour /i,
     thirdParty: /rekor|sigstore|logIndex|treeSize/i },
-  { word: 'rotation',   pin: 12, qualifiers: /authority[- ]|checkpoint |key[- ]|operational[- ]|hygienic |normal /i,
+  { word: 'rotation',   pin: 22, qualifiers: /authority[- ]|checkpoint |key[- ]|operational[- ]|hygienic |normal /i,
     thirdParty: /null/ },
+  { word: 'recovery',   pin: 17,  qualifiers: /genesis-|checkpoint-|Keys|Threshold|Claim|brute-force |key-|nonce-reuse |private |disaster /i,
+    thirdParty: /brute-force|nonce-reuse|low-entropy/i },
 ];
 
-const src = readFileSync(new URL('../spec/UST-1.0.md', import.meta.url), 'utf8');
-const lines = src.split('\n');
+// BOTH documents: the formal model is where the reasoning happens, so an ambiguous term does the most damage
+// there. Checking only the spec would have missed every use that produced the §F.5e.3 error.
+const lines = [
+  ...readFileSync(new URL('../spec/UST-1.0.md', import.meta.url), 'utf8').split('\n'),
+  ...readFileSync(new URL('../spec/UST-1.0-formal-model.md', import.meta.url), 'utf8').split('\n'),
+];
 let failed = false;
 
 for (const t of TERMS) {
