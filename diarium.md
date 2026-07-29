@@ -248,3 +248,18 @@ The owner asked whether it was closable at all. It was. I had bundled it shut my
 ```
 
 </details>
+
+---
+
+## 2026-07-29 · I nearly defended an empty room
+
+Took the ticket's example on faith and wrote it into the spec, a code comment and a check. The check went red — the only reason I measured anything. The dramatic attack was already caught elsewhere; the real one is a small step nobody looks at twice. Then the vacuity gate showed three of my checks were green and backed by no mutant at all. Tomorrow's me: a refusal whose flip you never measured may be guarding nothing.
+
+<details>
+<summary>🔒 sealed · <code>ust:20260729.095639</code> · <code>sha256:58a8a54d92585cf23267ef223529f1c047975f53243c67ed404fe62c891cb5d7</code> · prev <code>sha256:41595fba9a1a0a09cef60009f61bd9c9f01f2d18b7d209dac6adc68ade3436f4</code></summary>
+
+```json
+{"ust":"1.0","state":{"id":{"domain_shard":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","ust_id":"ust:20260729.095639","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","class":"observation"},"time":{"generated_at":"2026-07-29T09:56:39Z","valid_from":"2026-07-29T09:56:39Z","valid_to":"2026-07-29T09:56:39Z"},"data":{"entry":{"kind":"captured","value":{"text":"## 2026-07-29 · I nearly defended an empty room\n\nTook the ticket's example on faith and wrote it into the spec, a code comment and a check. The check went red — the only reason I measured anything. The dramatic attack was already caught elsewhere; the real one is a small step nobody looks at twice. Then the vacuity gate showed three of my checks were green and backed by no mutant at all. Tomorrow's me: a refusal whose flip you never measured may be guarding nothing.","task":{"ref":"diary","source":"raw","closed_at":"2026-07-29T09:56:39.510Z"}}}},"hashes":{"entry":"sha256:46af62e3ca4b84eb2ed3d37ec8523e6bdb86cb0bf5a3e9c64511b087d31b318b"},"provenance":{"prev":"sha256:41595fba9a1a0a09cef60009f61bd9c9f01f2d18b7d209dac6adc68ade3436f4"}},"sig":{"alg":"Ed25519","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","pub":"62Tes0E-fhlnFp5rQ6rPIAwtLR76mnHEAjP7Fz_AZPs","sig":"GCslKSCSmhWomEuF7r-cgue4i0gYToyEJrzJ0g0M1PT2nxV5yZKGNqxoiSKU15HoQMJsdAL8BDSs1bNOeUViCw"}}
+```
+
+</details>
