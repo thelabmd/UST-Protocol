@@ -34,10 +34,14 @@ const genesis = seal(P.buildGenesis({ domain_shard: DOMAIN, ust_id: 'ust:2026072
 const step = (s, ev) => {
   if (!s.active.has(ev.signer)) return null;                                  // signer must be active
   const active = new Set(s.active), all = new Set(s.all), comp = new Set(s.compromised);
-  if (ev.op === 'add' || ev.op === 'rotate') {
+  if (ev.op === 'add') {
     if (comp.has(ev.target)) return null;                                     // compromised is terminal — never re-authorized
     all.add(ev.target); active.add(ev.target);
-    if (ev.op === 'rotate' && ev.signer !== ev.target) { active.delete(ev.signer); }   // the superseded signer leaves active
+    // rev97 (§F.5e.0): `rotate` is gone — a self-authorized succession let a compromised-but-undeclared key name its
+    // own successor, turning a detected compromise into an undetected one. `supersedes` does the same bookkeeping
+    // while the entry stays ROOT-authorized: the superseded key leaves `active`, and the authority to say so never
+    // belonged to it.
+    if (ev.supersedes !== undefined && ev.supersedes !== ev.target) { active.delete(ev.supersedes); }
   } else if (ev.op === 'retire' || ev.op === 'compromise') {
     // F.5e (normative, derived from the SPEC — not copied from the impl, round-47 P1-02): `revoke(k, r)` requires `k ∈ bind`
     // and `k ∉ compromised` (terminality). It does NOT require `k ∈ active` — a redundant revoke of a rotated-out / retired
@@ -55,8 +59,7 @@ const step = (s, ev) => {
 const buildEntry = (ev, prevHash, n) => {
   const signer = byKid.get(ev.signer), tgt = byKid.get(ev.target);
   let keyOp;
-  if (ev.op === 'add') keyOp = { op: 'add', pub: tgt.pubB64, new_key_id: tgt.key_id };
-  else if (ev.op === 'rotate') keyOp = { op: 'rotate', pub: tgt.pubB64, new_key_id: tgt.key_id };
+  if (ev.op === 'add') keyOp = { op: 'add', pub: tgt.pubB64, new_key_id: tgt.key_id, ...(ev.supersedes !== undefined ? { supersedes: ev.supersedes } : {}) };
   else if (ev.op === 'retire') keyOp = { op: 'revoke', pub: tgt.pubB64, reason: 'retired' };
   else keyOp = { op: 'revoke', pub: tgt.pubB64, reason: 'compromised', compromised_since: '2026-07-20T00:05:00Z' };
   const id = { domain_shard: DOMAIN, ust_id: `ust:20260720.${String((n % 23) + 1).padStart(2, '0')}`, key_id: signer.key_id };   // HH must be 00-23
@@ -73,9 +76,9 @@ const legalEvents = (s) => {
   const evs = [];
   for (const signer of s.active) {
     for (const t of byKid.keys()) {
-      if (t === G.key_id) continue;                                           // never re-add/rotate-into genesis (its kid is fixed)
+      if (t === G.key_id) continue;                                           // never re-add into genesis (its kid is fixed)
       evs.push({ op: 'add', signer, target: t });
-      evs.push({ op: 'rotate', signer, target: t });
+      for (const sup of [...s.active].filter((k) => k !== t && k !== G.key_id)) evs.push({ op: 'add', signer, target: t, supersedes: sup });
     }
     // F.5e revoke targets EVERY bound key (`k ∈ bind`), not only active ones — so the enumerator NOW reaches retired→compromised
     // (re-revoking a rotated-out / retired key as compromised), the ordering the round-47 audit named but the old `s.active`

@@ -216,6 +216,38 @@ check('G1 name-form domain_shard, no binding → INDETERMINATE (cannot confirm t
   const alias = signG(P.buildKeyLogEntry({ domain_shard: 'v.com', ust_id: 'ust:20260628.1001', key_id: G.key_id }, T, { op: 'add', pub: K.pubB64, new_key_id: E.key_id }, P.contentHash(gen)));
   const docE = P.seal(P.buildState({ domain_shard: 'v.com', ust_id: 'ust:20260628.11', key_id: E.key_id, class: 'observation' }, T, { r: { kind: 'captured', value: { x: '1' } } }), E.priv, E.pubB64);
   check('F1 keylog new_key_id alias→E-KEY', P.verify(docE, { genesis: gen, keylog: [alias], noForkConfirmed: true, context: 'data' }).error === 'E-KEY');
+
+  // ── rev97: `rotate` REMOVED, `supersedes` replaces what it was for (§F.5e.0) ──────────────────────
+  // The removal is prose until the verifier REFUSES the op. A model that no longer defines a transition
+  // while the checker still accepts it is the worst of both: readers trust the model, machines trust the code.
+  const rotEntry = signG(P.buildKeyLogEntry({ domain_shard: 'v.com', ust_id: 'ust:20260628.1002', key_id: G.key_id }, T, { op: 'rotate', pub: K.pubB64 }, P.contentHash(gen)));
+  const docK = P.seal(P.buildState({ domain_shard: 'v.com', ust_id: 'ust:20260628.12', key_id: K.key_id, class: 'observation' }, T, { r: { kind: 'captured', value: { x: '1' } } }), K.priv, K.pubB64);
+  // Assert the REASON, not just the refusal. With `rotate` restored to the allowlist the entry still fails E-KEY
+  // — it falls through to the revoke branch and dies as "revoke of a never-authorized key" — so a check on the
+  // error CODE alone passes either way and proves nothing. Found by mutation, which is what mutation is for.
+  {
+    const vRot = P.verify(docK, { genesis: gen, keylog: [rotEntry], noForkConfirmed: true, context: 'data' });
+    check('rev97 op:rotate is REFUSED AS UNKNOWN — self-authorized succession is gone from the protocol',
+      vRot.error === 'E-KEY' && /unknown or missing key_op\.op/.test(String(vRot.detail)));
+  }
+
+  // supersedes: root-authorized, records succession, and CLOSES the superseded key for later entries
+  const addK = signG(P.buildKeyLogEntry({ domain_shard: 'v.com', ust_id: 'ust:20260628.1003', key_id: G.key_id }, T, { op: 'add', pub: K.pubB64 }, P.contentHash(gen)));
+  const supE = signG(P.buildKeyLogEntry({ domain_shard: 'v.com', ust_id: 'ust:20260628.1004', key_id: G.key_id }, T, { op: 'add', pub: E.pubB64, supersedes: K.key_id }, P.contentHash(addK)));
+  // Assert the property UNDER TEST, not a stronger unrelated one: the key log ACCEPTS the supersedes entry and
+  // the successor resolves as an authorized signer. The overall verdict here is INDETERMINATE for a reason that
+  // has nothing to do with succession (no capacity grant on this throwaway genesis), and asserting VALID would
+  // have tied this vector to a condition it does not test.
+  {
+    const vSucc = P.verify(P.seal(P.buildState({ domain_shard: 'v.com', ust_id: 'ust:20260628.13', key_id: E.key_id, class: 'observation' }, T, { r: { kind: 'captured', value: { x: '1' } } }), E.priv, E.pubB64), { genesis: gen, keylog: [addK, supE], noForkConfirmed: true, context: 'data' });
+    check('rev97 supersedes: the successor RESOLVES as an authorized signer', vSucc.error !== 'E-KEY' && vSucc.identity?.status === 'verified');
+  }
+  const supSelf = signG(P.buildKeyLogEntry({ domain_shard: 'v.com', ust_id: 'ust:20260628.1005', key_id: G.key_id }, T, { op: 'add', pub: E.pubB64, supersedes: P.keyId(E.pubB64) }, P.contentHash(gen)));
+  check('rev97 supersedes ITSELF → E-KEY',
+    P.verify(docK, { genesis: gen, keylog: [supSelf], noForkConfirmed: true, context: 'data' }).error === 'E-KEY');
+  const supGhost = signG(P.buildKeyLogEntry({ domain_shard: 'v.com', ust_id: 'ust:20260628.1006', key_id: G.key_id }, T, { op: 'add', pub: K.pubB64, supersedes: P.keyId(E.pubB64) }, P.contentHash(gen)));
+  check('rev97 supersedes a NEVER-AUTHORIZED key → E-KEY',
+    P.verify(docK, { genesis: gen, keylog: [supGhost], noForkConfirmed: true, context: 'data' }).error === 'E-KEY');
 }
 // F2 — stream checkpoint WITHOUT genesis → not proven
 {

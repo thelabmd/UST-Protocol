@@ -739,24 +739,54 @@ assuming a cached prefix is the whole log.
 
 **Realization (rev85 — domain totality).** a stale key-log cache cannot pass as fresh: a stale cache is INDETERMINATE, never quietly fresh — *"#40 requireFreshKeylog on a stale cache → INDETERMINATE stale_keylog"*
 
+## F.5e.0 Why there is no `rotate` transition (rev97)
+
+An earlier form of §F.5e carried a third transition — `rotate`, **signed by the key `s` it replaces**, naming a
+successor `k`. It was defined here, present in the verifier's field allowlist, emitted by nothing, and covered by
+no conformance check. Removing it is therefore not a compatibility question; no key log in existence contains one
+(measured on the reference operator's served and mirrored logs, 2026-07-29). It is removed on its merits.
+
+**The property that disqualifies it.** Compromise is TERMINAL only once DECLARED (§F.5e). A key compromised and
+not yet declared is, by the admissibility invariant, still `active` — so it may sign `rotate(→k)` for a successor
+the ATTACKER chose. The operator then revokes the key it knows about and the attacker retains authority through a
+key the operator never saw. Self-authorized succession converts a detected compromise into an undetected one.
+
+Contrast the root-authorized replacement, `add(k, supersedes=s)` + `revoke(s, retired)`: both events are signed by
+a key the operator controls deliberately, and revoking `s` ends the incident because no successor exists that the
+operator did not name.
+
+**What is lost, stated honestly.** `rotate` let an honest operator roll a key forward WITHOUT bringing the root
+out of cold storage. That is a real operational cost and it is paid deliberately: an offline root is protection
+against exactly the scenario `rotate` reopens, so spending it to avoid touching the root is circular.
+
+**What replaces it for §F.5e.1.** Role inheritance needs a successor relation, not self-authorization. `supersedes`
+on a root-authorized `add` supplies it, and it satisfies §F.5e.2 — the verifier ACTS on the field: it derives the
+successor's role from the superseded key's lineage, so the field is not decoration a verifier ignores.
+
+**Binding: pending — thelabmd/UST-Protocol#106, removal lands with the `supersedes` realization.** The transition
+must also be REJECTED once removed, which is a check that does not exist yet: an entry carrying `op:"rotate"` has
+to fail `E-KEY`, and a vector must exercise it — otherwise the removal is prose and the verifier still accepts
+what the model no longer defines.
+
 ## F.5e The key-authority process `K_n(t)` — a state machine, not a set (MATH-04, #75)
 
 `W_n` (§F.5, §F.5a) bundled several facts; one of them — WHICH key is authorized for name `n` at time `t` — is
 not a static set but a **process**. Model the key-log as a sequence of events `(e_1, …, e_m)`, each an
-`add | rotate | revoke` transition, and define the reducer
+`add | revoke` transition (see the `rotate` removal below), and define the reducer
 
   `K_n : (event prefix) ↦ ⟨active ⊆ Keys, bind ⊆ Keys, revoked : Keys ⇀ {retired, compromised}×Time⟩`,
 
 with `active` the keys that may sign the NEXT event, `bind` every key ever authorized (for document binding), and
-the transitions: `add(k)` ⇒ `active ∪ {k}`, `bind ∪ {k}`; `rotate` (signed by `s`, naming successor `k`) ⇒
-`active ∪ {k} ∖ {s}`, `bind ∪ {k}`, `revoked[s] = (retired, t)`; `revoke(k, r)` ⇒ `active ∖ {k}`, `revoked[k] =
-(r, t)`. The **admissibility invariant** is `signer(e_{i+1}) ∈ active(after e_i)` — an event is well-formed only
+the transitions: `add(k, supersedes?)` ⇒ `active ∪ {k}`, `bind ∪ {k}`, and when `supersedes = s` is present the
+successor relation `succ(s) = k` is recorded; `revoke(k, r)` ⇒ `active ∖ {k}`, `revoked[k] = (r, t)`. Replacing a
+key is therefore `add(k, supersedes=s)` followed by `revoke(s, retired)` — two events, both authorized by the
+signer the admissibility invariant demands, with the succession stated rather than inferred. The **admissibility invariant** is `signer(e_{i+1}) ∈ active(after e_i)` — an event is well-formed only
 if its signer was active in the state the PREVIOUS events produced. This is exactly the missing coordinate: "key
 `k` appears somewhere in the log" (`k ∈ bind`) is strictly weaker than "`k` was active when it signed" (`k ∈
 active` at that prefix), and conflating them is the P0-02 class (a revoked / rotated-out key still signing).
 
 **Event preconditions — COMPROMISE is TERMINAL (made normative rev67, round-47 P1-02).** Beyond the signer being active, one
-TARGET precondition is load-bearing: once `revoked[k] = (compromised, ·)`, `k` is TERMINAL — no later `add(k)`, `rotate(→k)`,
+TARGET precondition is load-bearing: once `revoked[k] = (compromised, ·)`, `k` is TERMINAL — no later `add(k)`, `add(·, supersedes=k)`,
 or `revoke(k, ·)` is admissible (compromise is monotonic; it can never be re-authorized, re-revoked, or downgraded to
 `retired`). An event violating it is INADMISSIBLE (the reducer errors `E-KEY`), exactly as a non-active-signer event is.
 `revoke(k, r)` also requires `k ∈ bind` (a never-authorized key cannot be revoked). It does NOT require `k ∈ active`: a
@@ -833,12 +863,14 @@ direction for an authority question is closed (§F.5e, and the general rule that
 "is it relevant?" fails open). Backward compatibility is not purchased here: a domain that predates roles
 supersedes its genesis, which is an operation this model already defines and which an operator has performed.
 
-**Rotation carries the role; the lineage does.** Binding a role to a `key_id` alone would make rotating a roled
-key impossible without a supersession — rigidity with no security gain, since the successor is authorized by the
-predecessor it replaces. So the role attaches to the LINEAGE: `rotate` (signed by `s`, naming successor `k`)
-transfers `s`'s role to `k`, and the lineage terminates at a key the genesis names. Adding a role that no genesis
-names remains a supersession. This requires NO new key-log field: `OP_FIELDS` stays the strict allowlist it is,
-and the general principle governing it is stated in §F.5e.2.
+**Succession carries the role; the lineage does.** Binding a role to a `key_id` alone would make replacing a roled
+key impossible without a supersession — rigidity with no security gain, since the replacement is authorized by the
+root either way. So the role attaches to the LINEAGE: `add(k, supersedes=s)` transfers `s`'s role to `k`, and the
+lineage terminates at a key the genesis names. Adding a role that no genesis names remains a supersession.
+
+An earlier draft of this section put the inheritance on `rotate` — the self-authorized transition — and that was
+wrong for a reason that has nothing to do with roles: see §F.5e.0. The correction does require a key-log field,
+and `supersedes` earns entry under §F.5e.2 precisely because the verifier ACTS on it to derive the role.
 
 **Binding: pending — thelabmd/UST-Protocol#106, no code obligation until `rotate` is emitted and the role vocabulary lands normatively.** This section states a design the implementation does not yet carry, which is the point of stating it first; the deferral is attributable and the realization gap is measured below rather than left implicit.
 

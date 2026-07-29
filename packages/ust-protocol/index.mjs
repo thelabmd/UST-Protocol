@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.39', revision: 64 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.40', revision: 64 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -947,7 +947,15 @@ export function resolveKeysBytes(genesisBytes, keylogBytes) {
   const revoked = new Map();                                                      // key_id → {reason, compromised_since?, at}
   const compromised = new Set();                                                  // MONOTONIC (round-14 P0-01): compromise is TERMINAL — a compromised key is never re-authorized, and its status can never be downgraded (compromised → retired) by a later revoke
   const history = new Map([[gKid, { pub: gPub, intervals: [{ from: genesis.state.time.generated_at, to: null, end: null }] }]]);  // round-15 P0-02: ORDERED authorization intervals (two-sided K_n(t), F.5e). A key's lifetime is a SET of active windows; re-add opens a NEW interval, so add→retire→re-add→retire keeps the retired GAP unauthorized. Scalar first/last collapsed disjoint windows into one → a doc in the gap escaped both bounds.
-  const OP_FIELDS = Object.assign(Object.create(null), { add: ['op', 'pub', 'new_key_id'], rotate: ['op', 'pub', 'new_key_id'], revoke: ['op', 'pub', 'reason', 'compromised_since'] });   // null-proto (UST-Protocol round-13 P2-01): OP_FIELDS["toString"] must be undefined, not an inherited function
+    // `rotate` REMOVED (rev97, §F.5e.0). It was signed by the key it replaced, so a key compromised but NOT YET
+  // DECLARED could name a successor the attacker chose — the operator then revokes what it knows about while the
+  // attacker keeps authority through a key nobody saw. Self-authorized succession turns a detected compromise into
+  // an undetected one, and compromise is terminal only once declared, so the window is exactly the blind one.
+  // Nothing ever emitted it and no key log in existence carries one (measured 2026-07-29 on the reference
+  // operator's served and mirrored logs), so removal costs no compatibility. `supersedes` on a ROOT-authorized
+  // `add` replaces what it was for: it records succession without granting anything, and it earns its place in
+  // this strict allowlist under §F.5e.2 because the verifier ACTS on it — role inheritance is derived from it.
+  const OP_FIELDS = Object.assign(Object.create(null), { add: ['op', 'pub', 'new_key_id', 'supersedes'], revoke: ['op', 'pub', 'reason', 'compromised_since'] });   // null-proto (UST-Protocol round-13 P2-01): OP_FIELDS["toString"] must be undefined, not an inherited function
   const derive = (i, pub, label) => {                                            // strict pub + derived key_id
     if (strictB64url(pub, 32) === null) return { error: { error: 'E-KEY', detail: 'entry ' + i + ' ' + label + ' pub not a 32-byte base64url key' } };
     return { kid: keyId(pub) };
@@ -968,9 +976,9 @@ export function resolveKeysBytes(genesisBytes, keylogBytes) {
     if (active.get(sKid) !== e.sig.pub) return { error: 'E-KEY', detail: 'entry ' + i + ' not signed by a currently-active key (revoked / rotated-out / never-authorized)' };
     const op = e.state?.data?.key_op?.value;
     // #75 P0-02d/e + P1-07 — CLOSED exact schema per op: an unknown op or a stray field is an ERROR, never a no-op.
-    if (typeof op !== 'object' || op === null || typeof op.op !== 'string' || !Object.hasOwn(OP_FIELDS, op.op)) return { error: 'E-KEY', detail: 'entry ' + i + ' unknown or missing key_op.op (add|rotate|revoke)' };
+    if (typeof op !== 'object' || op === null || typeof op.op !== 'string' || !Object.hasOwn(OP_FIELDS, op.op)) return { error: 'E-KEY', detail: 'entry ' + i + ' unknown or missing key_op.op (add|revoke)' };
     for (const k of Object.keys(op)) if (!OP_FIELDS[op.op].includes(k)) return { error: 'E-MALFORMED', detail: 'entry ' + i + ' stray field in ' + op.op + ': ' + k };
-    if (op.op === 'add' || op.op === 'rotate') {
+    if (op.op === 'add') {
       const d = derive(i, op.pub, op.op); if (d.error) return d.error;
       if (op.new_key_id !== undefined && op.new_key_id !== d.kid) return { error: 'E-KEY', detail: 'entry ' + i + ' new_key_id != H(ust:keylog, pub)' };
       if (compromised.has(d.kid)) return { error: 'E-KEY', detail: 'entry ' + i + ' cannot re-authorize a COMPROMISED key (terminal, round-14 P0-01)' };
@@ -978,12 +986,19 @@ export function resolveKeysBytes(genesisBytes, keylogBytes) {
       { const h = history.get(d.kid), t = e.state.time.generated_at;                // round-15 P0-02: re-add after retirement OPENS A NEW interval (never reuses the old authorized_at)
         if (!h) history.set(d.kid, { pub: op.pub, intervals: [{ from: t, to: null, end: null }] });
         else if (h.intervals[h.intervals.length - 1].to !== null) h.intervals.push({ from: t, to: null, end: null }); }
-      // #75 spec §12.2 "each rotation is authorized by the key it supersedes": on rotate the SIGNER is superseded —
-      // it leaves active (cannot sign later entries) and is recorded retired (its EARLIER docs stay valid, X1).
-      if (op.op === 'rotate' && sKid !== d.kid) {
-        active.delete(sKid);
-        revoked.set(sKid, { reason: 'retired', at: e.state.time.generated_at });
-        const h = history.get(sKid); if (h) { const iv = h.intervals[h.intervals.length - 1]; if (iv.to === null) { iv.to = e.state.time.generated_at; iv.end = 'retired'; } }   // round-15 P0-02: close the current active interval
+      // `supersedes` records the SUCCESSION and grants nothing: the superseded key leaves `active` here, but the
+      // entry is authorized by whoever signed it — the root — not by the key being replaced. That distinction is the
+      // whole of §F.5e.0: a self-authorized succession let a compromised-but-undeclared key name its own successor.
+      // Retirement of the superseded key still requires an explicit `revoke`; this only closes its ability to sign
+      // FURTHER entries, which is what `rotate` used to do as a side effect of being signed by it.
+      if (op.supersedes !== undefined) {
+        if (typeof op.supersedes !== 'string' || !all.has(op.supersedes))
+          return { error: 'E-KEY', detail: 'entry ' + i + ' supersedes a key that was never authorized' };
+        if (op.supersedes === d.kid)
+          return { error: 'E-KEY', detail: 'entry ' + i + ' supersedes itself' };
+        active.delete(op.supersedes);
+        const h = history.get(op.supersedes);
+        if (h) { const iv = h.intervals[h.intervals.length - 1]; if (iv.to === null) iv.to = e.state.time.generated_at; }
       }
     } else {  // revoke
       const d = derive(i, op.pub, 'revoke'); if (d.error) return d.error;

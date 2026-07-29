@@ -25,6 +25,15 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
+## rc.40 line
+
+Opened because rc.39 is published and a published version is immutable — and because this line removes a
+transition rather than adding one, which is a change a reader must be able to find by version.
+
+| version | round | what closed |
+|---------|-------|-------------|
+| **protocol rc.40**<br>**cli rc.71** | 74 | **`rotate` REMOVED — a self-authorized succession let a compromised key name its own successor.** The transition was signed by the key it replaced, so a key compromised but NOT YET DECLARED could name a successor the attacker chose; the operator then revokes what it knows about while the attacker keeps authority through a key nobody saw. Compromise is terminal only once declared, so the window is exactly the undetected one. The owner's call on hearing it: *"it is unacceptable to know about a super-dangerous hole and agree with it."* Replaced by `supersedes` on a ROOT-authorized `add`, which records the succession without granting anything and earns its place in the strict allowlist under §F.5e.2 — the verifier ACTS on it, deriving role lineage. Removal cost no compatibility: nothing ever emitted it, and neither the served nor the mirrored key log carries one [measured]. All five layers moved — §F.5e.0 states WHY the transition is absent, §12.2 is rewritten, `OP_FIELDS` drops it and gains `supersedes`, four vectors cover refusal and succession, the CLI emits it. **Two gates caught me mid-change.** The first vector asserted only the error CODE, and with `rotate` restored the entry still failed `E-KEY` — by falling through to the revoke branch — so the check passed either way and proved nothing; found by mutation, now asserting the REASON. And the temporal BMC flagged `impl {G,K1,K2} vs model {G,K2}`: an honest disagreement whose fault was mine on the model side, where the event builder matched `op === 'add'` first and silently dropped the `supersedes` field. 798 reachable sequences and 690 non-active-signer attacks now agree. |
+
 ## rc.39 line
 
 Opened because the previous line was PUBLISHED and a published version is immutable: adding a `types` field to a

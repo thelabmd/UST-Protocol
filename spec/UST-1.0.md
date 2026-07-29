@@ -3,7 +3,7 @@
 
 *This specification text is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](../LICENSE-SPEC). Reference code in this repository is licensed Apache-2.0. Use of the name **UST** / **Universal State Transcript** and the **UST-compatible** claim: see [TRADEMARK.md](../TRADEMARK.md).*
 
-> **Release candidate — `1.0.0-rc.39`.** This specification has been extensively red-teamed; an independent
+> **Release candidate — `1.0.0-rc.40`.** This specification has been extensively red-teamed; an independent
 > external cryptographic audit is pending. It is subject to change until `1.0.0` final. The wire format `ust:"1.0"`
 > is stable across all rc's — pin exact versions. Per-version history is in [`CHANGELOG.md`](../CHANGELOG.md).
 
@@ -1020,8 +1020,19 @@ established at all, the `no_fork` field is ABSENT rather than filled (§15) — 
   explicit state, and TWO sets that a naïve "accumulate valid keys" conflates MUST be kept distinct: **`active`**
   — the keys that may sign the NEXT log (or cadence, §11.3) entry — and the **binding set** (every key ever
   authorized) used only to bind a document's key before the X1 time-judgment. Transitions: `add` inserts a
-  parallel active key; `rotate` is "authorized by the key it supersedes" — the SIGNER is superseded, so it leaves
-  `active` (cannot sign later entries) and is recorded retired (its EARLIER documents stay valid, X1); `revoke`
+parallel active key and MAY carry `supersedes` — the `key_id` of the key it replaces, recording the succession
+without granting anything by itself; `revoke` removes its target from `active` and records the reason. Replacing
+a key is `add(supersedes=s)` then `revoke(s, retired)`: two events, both signed by an `active` key, with the
+succession STATED rather than inferred from adjacency.
+
+There is deliberately **no `rotate` transition.** A self-authorized succession — an entry signed by the key it
+replaces — lets a key that is compromised but NOT YET DECLARED name a successor the attacker chose; the operator
+then revokes what it knows about while the attacker keeps authority through a key nobody saw. Compromise is
+terminal only once declared (below), so the window is exactly the undetected one. The convenience lost is real —
+an honest operator could roll a key forward without bringing the root out of cold storage — and it is paid
+deliberately, since an offline root is the protection `rotate` reopens. Removed in rev97 with no key log in
+existence carrying one; an entry with `op:"rotate"` MUST be rejected `E-KEY`.
+
   removes its target from `active` and records the reason. **Each entry MUST be signed by a key that is `active`
   at that point** — a revoked, rotated-out, or never-authorized signer ⇒ E-KEY (this is what stops a
   revoked/superseded key from authorizing a later entry or a cadence change). `key_op` has a CLOSED exact schema
@@ -1599,7 +1610,7 @@ Independent re-implementation is expected; the vectors make "verify without trus
 - **class:** `observation`, `attestation`, `derivation`, `genesis` (name-binding root, §12.1), `key` (key-log entry, §12.2), `cadence` (cadence-log entry, §11.3 — `state.data.cadence_op.value` keys `cadence, effective_from`; prev-chained, resolved at a slot's time; not valid in a `data` context, W3). (Extensible by future 1.x; unknown ⇒ E-MALFORMED.)
 - **attestation subtype (§11.3 C2):** `set` (constituents + Merkle `root`) · `checkpoint` (prev + a `checkpoint` data partition `{head, frame_count, from?, to?}`, no constituents/root) · `gap` (prev + a `gap` data partition, no constituents/root). A prev-only attestation MUST carry EXACTLY ONE of `checkpoint`/`gap` (never both/neither ⇒ E-MALFORMED) — the subtype is the named data partition, not a shape.
 - **genesis value (§12.1):** `pub`, `role:"name-binding-root"`, optional `max_partitions`, `max_transcript_bytes`, `cadence` (string integer seconds — the SIGNED stream cadence that fixes the completeness grid, §11.3; resolved, never a per-checkpoint choice), and — for the §12.3 authority-checkpoint profile — optional `checkpoint_authority:{key_id,pub}` and `recovery:{keys:{key_id:pub},threshold}` (each `key_id = H("ust:keylog", pub)`). A verifier RESOLVES the checkpoint-authority + recovery roots FROM this signed genesis (`authority_root:"genesis"`, P1-04); a root passed as a raw caller option is a consumer PIN (`authority_root:"consumer-pin"`), never silently "genesis-authorized".
-- **key-log entry** (a `class:"key"` transcript, §12.2): `state.data.key_op.value` keys `op,pub,reason,compromised_since`; `op` ∈ `add|rotate|revoke`;
+- **key-log entry** (a `class:"key"` transcript, §12.2): `state.data.key_op.value` keys `op,pub,supersedes,reason,compromised_since`; `op` ∈ `add|revoke`;
   `reason` ∈ `retired|compromised`. `key_id` = `H("ust:keylog", pub_raw)` (raw public-key octets, domain-separated §7 — not plain SHA256(pub)).
 - **anchor substrate (operator choice, extensible):** an entry defines the substrate's `Locator` evidence
   fields, its public-append-only-log check, its finality parameter, and — since #95 — its **inclusion

@@ -2070,13 +2070,18 @@ export async function rootSignerFrom(pkcs8, rootPubB64url) {
 export async function rotateKeylog({ genesis, keylog, rootSigner, reason = null, compromisedSince = null, time, ustId }) {
   const domain = genesis.state.id.domain_shard;
   if (!Array.isArray(keylog)) throw new Error('key-log is not a JSON array');
-  const currentOp = [...keylog].reverse().find((e) => { const op = e.state?.data?.key_op?.value; return op && (op.op === 'add' || op.op === 'rotate'); });
+  const currentOp = [...keylog].reverse().find((e) => { const op = e.state?.data?.key_op?.value; return op && op.op === 'add'; });   // rev97: `rotate` больше не существует (§F.5e.0)
   const newOp = await W.generateSigner({ extractable: true });
   const prev = keylog.length ? P.contentHash(keylog[keylog.length - 1]) : P.contentHash(genesis);
   // #75 §12.2 — the ROOT signs, ADDING the new operational key: the root is NOT superseding ITSELF (that is what
   // `rotate` means — "authorized by the key it supersedes"), so this is `add`; retiring the old operational key is
   // the SEPARATE `revoke` below. (A key that rolls ITSELF forward would sign an `op:'rotate'`.)
-  const rotate = await W.seal(P.buildKeyLogEntry({ domain_shard: domain, ust_id: ustId, key_id: rootSigner.key_id }, time, { op: 'add', pub: newOp.pub, new_key_id: newOp.key_id }, prev), rootSigner);
+  // `supersedes` STATES the succession the two-event replacement used to leave implicit (rev97, §F.5e.0). Without it
+  // an `add` followed by a `revoke` is two unrelated facts that a reader infers a relation between by adjacency —
+  // and adjacency is not a relation. With it, the successor's lineage is readable, which is what role inheritance
+  // (§F.5e.1) derives from. It grants nothing by itself: the entry is authorized by the ROOT either way.
+  const supersedes = currentOp?.state?.data?.key_op?.value?.pub ? P.keyId(currentOp.state.data.key_op.value.pub) : undefined;
+  const rotate = await W.seal(P.buildKeyLogEntry({ domain_shard: domain, ust_id: ustId, key_id: rootSigner.key_id }, time, { op: 'add', pub: newOp.pub, new_key_id: newOp.key_id, ...(supersedes ? { supersedes } : {}) }, prev), rootSigner);
   const out = [...keylog, rotate];
   if (reason) {
     if (reason !== 'retired' && reason !== 'compromised') throw new Error('--reason must be retired|compromised');
