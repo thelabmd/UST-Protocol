@@ -918,8 +918,9 @@ in a running service's environment, while the root is kept offline PRECISELY so 
 stays survivable. The invariant made the second key as powerful as the first, nullifying the separation the
 operator paid for.
 
-**The correction.** Let `mutating(c)` hold for the classes that change WHO MAY SIGN — the key log, and the cadence
-log insofar as a profile treats cadence as authority. Then admissibility gains a second conjunct:
+**The correction.** Let `mutating(c)` hold for the classes that change WHO MAY SIGN — the key log — and, by the
+same argument, the cadence log, which changes what the operator's own COMPLETENESS claim means. Then admissibility
+gains a second conjunct:
 
     signer(e_{i+1}) ∈ active(after e_i)  ∧  (mutating(class(e_{i+1})) ⟹ signer = root)
 
@@ -953,8 +954,18 @@ already warns about. The operator's decision, in their own framing: the key is t
 compromise, full stop. A protocol cannot carry this risk on the operator's behalf, and pretending otherwise moves
 the failure somewhere less visible.
 
-**Binding: pending — thelabmd/UST-Protocol#106** for the general role vocabulary; the root-only restriction itself
-is REALIZED (`resolveKeys`, three conformance vectors, and the temporal BMC's illegal-transition sweep).
+**Realization is PARTIAL, and the unrealized half is measured, not assumed.** For `class:"key"` the conjunct is
+REALIZED (`resolveKeys`, three conformance vectors, the temporal BMC's illegal-transition sweep). For
+`class:"cadence"` it is NOT: `resolveCadence` asks only `active.has(sig.pub)`, and an operational key was measured
+changing the cadence from 30s to 3600s and ACCEPTED (2026-07-29). A stream missing 119 of 120 slots becomes
+"complete" under the wider grid, with every signature valid and every gate green — a quieter power than revoking
+the root and harder to see, because nothing fails.
+
+An earlier draft of this section hedged that clause as "insofar as a profile treats cadence as authority". The
+hedge is the wrong shape and is withdrawn: a verifier cannot ask a profile at verification time, so a rule
+conditioned on one is not a rule.
+
+**Binding: pending — thelabmd/UST-Protocol#107** for the cadence half, and **#106** for the general role vocabulary.
 
 ## F.5f Composite authority is TRANSITIVE — the impersonation fix needs no new signed object (#75 ROOT 3)
 
