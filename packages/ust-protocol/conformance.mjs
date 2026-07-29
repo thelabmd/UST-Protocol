@@ -1132,6 +1132,42 @@ console.log('\n═════════════════════�
     check('audit P0: cadence entry by an UNAUTHORIZED key → E-KEY (not a silent grid change)', P.resolveCadence(gen, [evilCad], 'ust:20260628.143000', { keylog: [] }).error === 'E-KEY');
     check('audit P0: verifyStream with an unauthorized cadence-log → error, never complete', P.verifyStream([o0, o1], { genesis: gen, checkpoint: cpI(P.contentHash(o1), 2, P.contentHash(o1), 'ust:20260628.142900', 'ust:20260628.142930'), cadenceLog: [evilCad] }).error === 'E-KEY'); }
   check('cadence by the GENESIS key is authorized without a key-log (self-signed authority)', P.resolveCadence(gen, [ce], 'ust:20260628.143000').cadence === 60);
+  // ── §F.5e.3 / #107 — cadence mutation is ROOT-ONLY. `mutating(c)` names TWO classes and only `key` was realized;
+  // measured 2026-07-29, an operational key moved the grid and was ACCEPTED. Every check above signs cadence with
+  // the root, so NOTHING here exercised a non-root mutator and the hole shipped green. The CONTROL leg is not
+  // decoration: the original probe only became trustworthy once the root was run in the same fixture — before that
+  // a broken input looked exactly like a restriction.
+  {
+    const OP = kp('0b'.repeat(32));                                     // an operational key the ROOT legitimately added — genuinely `active`
+    const addOp = signC(P.buildKeyLogEntry({ domain_shard: dom, ust_id: 'ust:20260628.1430', key_id: C.key_id }, Tc, { op: 'add', pub: OP.pubB64, new_key_id: OP.key_id }, gH));
+    const KL = [addOp];
+    const widen = (signer, sec, eff) => P.seal(P.buildCadenceEntry({ domain_shard: dom, ust_id: 'ust:20260628.1431', key_id: signer.key_id }, Tc, sec, eff, gH), signer.priv, signer.pubB64);
+    check('#107 CONTROL: the GENESIS ROOT moves the grid 30s→3600s → accepted (the restriction is not a blanket refusal)',
+      P.resolveCadence(gen, [widen(C, 3600, 'ust:20260628.143000')], 'ust:20260628.143000', { keylog: KL }).cadence === 3600);
+    const rOp = P.resolveCadence(gen, [widen(OP, 3600, 'ust:20260628.143000')], 'ust:20260628.143000', { keylog: KL });
+    check('#107 an OPERATIONAL key may NOT move the cadence grid — `active` is NECESSARY, not SUFFICIENT',
+      rOp.error === 'E-KEY' && /cadence mutation requires the GENESIS ROOT/.test(String(rOp.detail)));
+    // MUTATION-PROVEN — the flip is REAL, so the refusal is load-bearing rather than vacuous. MEASURED, and the
+    // measurement corrected the shape the issue assumed: widening ACROSS a precision class (30s→3600s, the example
+    // in #107) does NOT hide holes — the surviving frames fall off the coarser grid and #75 P0-04 grid EQUALITY
+    // already returns E-PREV. The reachable attack is widening WITHIN one class: 30s→90s keeps every frame ON the
+    // grid, so a stream missing 2 of 4 slots reads `complete` with no frame added. It is also the quieter of the
+    // two — a 3× step draws less attention than a 120× one.
+    const h0 = fr('ust:20260628.142900', gH), h1 = fr('ust:20260628.143030', P.contentHash(h0));
+    const cpH = cpI(P.contentHash(h1), 2, P.contentHash(h1), 'ust:20260628.142900', 'ust:20260628.143030');
+    check('#107 mutation-proven (a): at the SIGNED 30s grid the holes are VISIBLE → chain-consistent',
+      P.verifyStream([h0, h1], { genesis: gen, checkpoint: cpH }).complete === 'chain-consistent');
+    check('#107 mutation-proven (b): widening WITHIN a precision class really does flip the verdict — root-signed 90s → complete, not one frame added',
+      P.verifyStream([h0, h1], { genesis: gen, checkpoint: cpH, cadenceLog: [widen(C, 90, 'ust:20260628.142900')] }).complete === 'complete');
+    check('#107 mutation-proven (c): the SAME widening signed by the operational key → E-KEY, so the flip is UNREACHABLE',
+      P.verifyStream([h0, h1], { genesis: gen, checkpoint: cpH, cadenceLog: [widen(OP, 90, 'ust:20260628.142900')] }).error === 'E-KEY');
+    check('#107 boundary (measured, not assumed): widening ACROSS a precision class is caught by grid EQUALITY, not by this rule → E-PREV',
+      P.verifyStream([h0, h1], { genesis: gen, checkpoint: cpH, cadenceLog: [widen(C, 3600, 'ust:20260628.142900')] }).error === 'E-PREV');
+    // A REVOKED root cannot move the grid either — which is why the key-log stays load-bearing under a one-key rule.
+    const killRoot = signC(P.buildKeyLogEntry({ domain_shard: dom, ust_id: 'ust:20260628.1432', key_id: C.key_id }, Tc, { op: 'revoke', pub: C.pubB64, reason: 'retired' }, P.contentHash(addOp)));
+    check('#107 a REVOKED root may NOT move the grid (the key-log is still load-bearing under a one-key rule)',
+      P.resolveCadence(gen, [widen(C, 3600, 'ust:20260628.143000')], 'ust:20260628.143000', { keylog: [addOp, killRoot] }).error === 'E-KEY');
+  }
   // rc.20-audit P1 — no `mapInclusion:true` boolean shortcut to authoritative (would be an unverified proof).
   check('audit P1: mapInclusion:true does NOT grant authoritative (no map verifier yet)', P.resolveAuthority(gen, { genesis: gen, keylog: [], mapInclusion: true }).strength !== 'authoritative');
 }

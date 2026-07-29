@@ -990,9 +990,11 @@ export function resolveKeysBytes(genesisBytes, keylogBytes) {
     // can no longer authorize a later entry.
     const sKid = keyId(e.sig.pub);
     if (active.get(sKid) !== e.sig.pub) return { error: 'E-KEY', detail: 'entry ' + i + ' not signed by a currently-active key (revoked / rotated-out / never-authorized)' };
-    // §F.5e.3 second conjunct: active is NECESSARY, not SUFFICIENT. Only the genesis root or a genesis-named
-    // recovery key may mutate the log. This is a RESTRICTION — every sequence admissible after it was admissible
-    // before — so no non-mutating document that verified yesterday changes verdict.
+    // §F.5e.3 second conjunct: active is NECESSARY, not SUFFICIENT. ONLY the genesis root may mutate the log —
+    // NOT a genesis-named recovery key, which belongs to the authority-checkpoint chain and is deliberately not
+    // admitted here (see the block above; the shared word "recovery" is exactly what F.5e.3 warns about, and an
+    // earlier form of THIS comment carried the error the code never had). This is a RESTRICTION — every sequence
+    // admissible after it was admissible before — so no non-mutating document that verified yesterday changes verdict.
     if (sKid !== gKid) return { error: 'E-KEY', detail: 'entry ' + i + ' key-log mutation requires the GENESIS ROOT (§F.5e.3) — an operational key may sign documents, not grant or destroy authority' };
     const op = e.state?.data?.key_op?.value;
     // #75 P0-02d/e + P1-07 — CLOSED exact schema per op: an unknown op or a stray field is an ERROR, never a no-op.
@@ -1782,7 +1784,18 @@ export function resolveCadenceBytes(genesisBytes, cadenceLogBytes, atTime, keylo
   if (rk.error) return { error: rk.error, detail: 'cadence authority: ' + rk.detail };
   // #75 P0-02c — a cadence entry MUST be signed by a currently-ACTIVE key (not merely ever-seen): a retired or
   // rotated-out or revoked key can no longer move the grid. `active` already excludes all of them (state machine).
-  const active = new Set(rk.active.values());
+  //
+  // §F.5e.3 / #107 — and ACTIVE is NECESSARY, not SUFFICIENT. `mutating(c)` names TWO classes, and only `key` was
+  // realized: measured 2026-07-29, an operational key moved the grid and was ACCEPTED. Cadence is what makes
+  // `complete` mean anything — widen it INSIDE one precision class (30s→90s) and a stream with empty slots reads
+  // `complete` with no frame added, every signature still valid, nothing failing anywhere. Widening ACROSS a class
+  // (30s→3600s, the example the issue was filed with) does NOT work: the frames fall off the coarser grid and
+  // #75 P0-04 grid EQUALITY already returns E-PREV — measured, so the reachable attack is the SMALL step, which is
+  // also the one an operator is less likely to notice. That is a quieter power than revoking the root and
+  // harder to see, so it is restricted the SAME way, by the SAME conjunct, in the SAME shape as resolveKeys: the
+  // signer must be active AND be the genesis root. A RESTRICTION — every log admissible after it was admissible
+  // before. The key-log stays load-bearing even though one key may sign: it is what reveals a REVOKED root.
+  const gKid = genesis.state.id.key_id;   // resolveKeys already proved the genesis self-signed, so this IS the root
   const atE = ustToEpoch(atTime);
   let prev = contentHash(genesis), lastEff = null;
   for (const [i, e] of cadenceLog.entries()) {
@@ -1791,7 +1804,9 @@ export function resolveCadenceBytes(genesisBytes, cadenceLogBytes, atTime, keylo
     if (e.state.id.class !== 'cadence') return { error: 'E-MALFORMED', detail: 'cadence-log entry ' + i + ' not class:cadence' };
     if (e.state.id.domain_shard !== genesis.state.id.domain_shard) return { error: 'E-AUTHORITY', detail: 'cadence entry ' + i + ' domain mismatch' };
     if (e.state.provenance?.prev !== prev) return { error: 'E-PREV', detail: 'cadence entry ' + i + ' not chained' };
-    if (!active.has(e.sig.pub)) return { error: 'E-KEY', detail: 'cadence entry ' + i + ' NOT signed by a currently-active key (retired/revoked/unauthorized, §12.2)' };
+    const sKid = keyId(e.sig.pub);
+    if (rk.active.get(sKid) !== e.sig.pub) return { error: 'E-KEY', detail: 'cadence entry ' + i + ' NOT signed by a currently-active key (retired/revoked/unauthorized, §12.2)' };
+    if (sKid !== gKid) return { error: 'E-KEY', detail: 'cadence entry ' + i + ' cadence mutation requires the GENESIS ROOT (§F.5e.3, §11.3) — an operational key may sign documents, not redefine what "complete" means' };
     const op = e.state.data.cadence_op.value;
     const effE = ustToEpoch(op.effective_from);
     if (effE === null) return { error: 'E-MALFORMED', detail: 'cadence entry ' + i + ' bad effective_from' };

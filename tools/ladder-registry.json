@@ -4,6 +4,14 @@
   "_pin": "Rows in the ladder with no record here. May only ever SHRINK. 94 rows existed when the gate landed; the three most recent are accounted.",
   "records": [
     {
+      "rev": "rev98",
+      "math": "Realization (rev98 — the cadence half) is COMPLETE over `mutating(c)`",
+      "spec": "Cadence mutation is ROOT-ONLY",
+      "code": "packages/ust-protocol/index.mjs :: resolveCadenceBytes root conjunct",
+      "vector": "cadr-09-nonroot-signer-rejected",
+      "test": "#107 an OPERATIONAL key may NOT move the cadence grid — `active` is NECESSARY, not SUFFICIENT"
+    },
+    {
       "rev": "rev95",
       "math": "the property it tests must be one the ceremony itself",
       "spec": "A tool that performs a CEREMONY",

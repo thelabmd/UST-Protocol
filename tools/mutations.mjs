@@ -17,6 +17,17 @@
 // `mustDetect` marks the verdict-seam mutations the battery treats as hard requirements; the rest are harvest — a hit
 // lowers the unproven residual, a miss is covered by the gate channel and is not a failure.
 export const MUTATIONS = [
+  // rev98 (#107) — the cadence ROOT conjunct. Broken, an operational key that is legitimately `active` may re-declare
+  // the stream cadence, and with it what the operator's own COMPLETENESS claim means: a widening inside one precision
+  // class (30s->90s) turns a stream with empty slots into `complete` without adding a frame. This mutant is what proves
+  // the #107 checks are not asserting against an impossible literal — remove the conjunct and they must go red.
+  {
+    id: 'cadence-mutation-not-root-only', mustDetect: true, observe: ['conformance'],
+    why: 'the cadence root conjunct. Broken, the most exposed key rewrites the grid that defines `complete`.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "    if (sKid !== gKid) return { error: 'E-KEY', detail: 'cadence entry ' + i + ' cadence mutation requires the GENESIS ROOT",
+    to: "    if (false /* mutant */) return { error: 'E-KEY', detail: 'cadence entry ' + i + ' cadence mutation requires the GENESIS ROOT",
+  },
   // rev95 — the rung a caller boolean may NOT earn. Broken, a consumer's own assertion becomes name authority,
   // which is the forgery #98 hardened against and the property `ust rotate` was wrongly demanding of that flag.
   {

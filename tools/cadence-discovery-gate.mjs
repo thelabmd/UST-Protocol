@@ -35,7 +35,7 @@ const genH = P.contentHash(genesis);
 const keylog = [P.seal(P.buildKeyLogEntry({ domain_shard: DOMAIN, ust_id: 'ust:20260726.09', key_id: ROOT.key_id }, T('09', '05'), { op: 'add', pub: OP.pub, new_key_id: OP.key_id }, genH), ROOT.priv, ROOT.pub)];
 const cadEntry = (secs, effFrom, signer, prev = genH) =>
   P.seal(P.buildCadenceEntry({ domain_shard: DOMAIN, ust_id: 'ust:20260726.09', key_id: signer.key_id }, T('09', '10'), secs, effFrom, prev), signer.priv, signer.pub);
-const CAD = cadEntry(30, 'ust:20260726.10', OP);
+const CAD = cadEntry(30, 'ust:20260726.10', ROOT);   // §F.5e.3/#107 — cadence mutation is ROOT-ONLY; this fixture used OP and so encoded the very hole the rule closes
 
 // a document of this publisher, at a moment after the cadence takes effect
 const doc = P.seal(P.buildState({ domain_shard: DOMAIN, ust_id: 'ust:20260726.11', key_id: OP.key_id, class: 'observation' },
@@ -111,7 +111,14 @@ for (const s of [500, 503, 403, 429]) {
   ok('a cadence entry signed OUTSIDE the authorized key set is refused through discovery', !!r.resolution?.error && !/^E-CANON/.test(r.resolution.error), JSON.stringify(r.resolution).slice(0, 140));
 }
 {
-  const r = await discover({ cadenceBody: JSON.stringify([cadEntry(30, 'ust:20260726.10', OP, 'sha256:' + 'ee'.repeat(32))]) });
+  // §F.5e.3 / #107 — the ROOT-ONLY conjunct must hold THROUGH discovery too. OP is genuinely in the key log and
+  // genuinely `active`, so this is the case an "authorized key set" check passes and the rule must still refuse.
+  const r = await discover({ cadenceBody: JSON.stringify([cadEntry(30, 'ust:20260726.10', OP)]) });
+  ok('an OPERATIONAL key (active, in the key log) cannot move the grid through discovery — ROOT-ONLY (§F.5e.3)',
+    /E-KEY/.test(r.resolution?.error || '') && /GENESIS ROOT/.test(r.resolution?.error || ''), JSON.stringify(r.resolution).slice(0, 160));
+}
+{
+  const r = await discover({ cadenceBody: JSON.stringify([cadEntry(30, 'ust:20260726.10', ROOT, 'sha256:' + 'ee'.repeat(32))]) });
   ok('a cadence entry not chained to the genesis content hash is refused through discovery', /E-PREV/.test(r.resolution?.error || ''), JSON.stringify(r.resolution).slice(0, 140));
 }
 {
@@ -123,8 +130,8 @@ for (const s of [500, 503, 403, 429]) {
 
 // ── 7. the resolution is time-relative: a change not yet in force must not apply ───────────────────────────────────
 {
-  const future = cadEntry(5, 'ust:20260727.00', OP);
-  const r = await discover({ cadenceBody: JSON.stringify([CAD, cadEntry(5, 'ust:20260727.00', OP, P.contentHash(CAD))]) });
+  const future = cadEntry(5, 'ust:20260727.00', ROOT);
+  const r = await discover({ cadenceBody: JSON.stringify([CAD, cadEntry(5, 'ust:20260727.00', ROOT, P.contentHash(CAD))]) });
   ok('a cadence change effective LATER does not apply to this document', r.resolution?.cadence === '30', 'got ' + JSON.stringify(r.resolution?.cadence));
   void future;
 }

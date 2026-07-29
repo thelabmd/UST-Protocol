@@ -107,8 +107,12 @@ export async function resolveCadence(genesis, cadenceLog = [], atTime, { keylog 
   if (keylog.some((e) => { const op = e?.state?.data?.key_op?.value?.op; return op && op !== 'add' && op !== 'rotate'; }))
     return { unresolved: 'the key log contains a revoke/retire — deciding a CURRENTLY-ACTIVE signer needs anchored time, which this verifier does not evaluate' };
 
-  const active = new Set([genesis.state.id.key_id]);
-  for (const e of keylog) { const op = e?.state?.data?.key_op?.value ?? {}; if ((op.op === 'add' || op.op === 'rotate') && op.new_key_id) active.add(op.new_key_id); }
+  // §F.5e.3 / #107 — cadence mutation is ROOT-ONLY. This resolver used to accumulate every key the log ADDED and
+  // accept any of them, which is precisely the hole the reference carried: an operational key could re-declare the
+  // grid and rewrite what `complete` means. The root is a single key known from the genesis, so the second
+  // implementation needs no key accumulation here at all — and the revoked-root case is already the `unresolved`
+  // above, since this verifier does not evaluate anchored time.
+  const rootKid = genesis.state.id.key_id;
 
   const atE = epoch(atTime);
   let prev = await contentHash(genesis), lastEff = null;
@@ -118,7 +122,7 @@ export async function resolveCadence(genesis, cadenceLog = [], atTime, { keylog 
     if (e.state.id.class !== 'cadence') return { error: 'E-MALFORMED', detail: `cadence-log entry ${i} not class:cadence` };
     if (e.state.id.domain_shard !== genesis.state.id.domain_shard) return { error: 'E-AUTHORITY', detail: `cadence entry ${i} domain mismatch` };
     if (e.state.provenance?.prev !== prev) return { error: 'E-PREV', detail: `cadence entry ${i} not chained` };
-    if (!active.has(e.sig.key_id)) return { error: 'E-KEY', detail: `cadence entry ${i} NOT signed by an authorized key (§12.2)` };
+    if (e.sig.key_id !== rootKid) return { error: 'E-KEY', detail: `cadence entry ${i} cadence mutation requires the GENESIS ROOT (§F.5e.3, §11.3) — an operational key may sign documents, not redefine what "complete" means` };
     const op = e.state.data.cadence_op?.value ?? {};
     const effE = epoch(op.effective_from);
     if (effE === null) return { error: 'E-MALFORMED', detail: `cadence entry ${i} bad effective_from` };

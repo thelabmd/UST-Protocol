@@ -813,13 +813,24 @@ cannot see and `complete` + observational coverage close.
 `genesis.value.cadence` (the initial value) plus an optional **cadence-log** — a genesis-rooted, `prev`-chained
 sequence of `class:"cadence"` transcripts, each carrying `cadence_op {cadence, effective_from}`, exactly the
 key-log pattern (§12.2) applied to the stream cadence. `resolveCadence(genesis, cadence_log, t, {keylog})`
-returns the cadence in force at `t` (the latest `effective_from ≤ t`). **A cadence entry is an OPERATOR
-AUTHORITY parameter, not "any signed document with the same `domain_shard`": each MUST be signed by an
-AUTHORIZED key — the genesis key or a key resolved from the key-log (the SAME `AuthorizedKeySet` as §12.2), with
-`effective_from` monotonic and `cadence` a positive integer.** An entry signed OUTSIDE the key set ⇒ E-KEY (else
-a transport/caller could inject a self-signed cadence change and hide omitted slots — the whole point of a
-signed cadence is that ONLY the operator can move the grid). Without the key-log only the genesis key authorizes
-a change (fail-CLOSED). The stream checkpoint carries `from` and `to` (the
+returns the cadence in force at `t` (the latest `effective_from ≤ t`). **Cadence mutation is ROOT-ONLY — the
+cadence log is a MUTATING class in the sense of §12.2 (§F.5e.3).** A cadence entry is not "any signed document
+with the same `domain_shard`", and it is not any ACTIVE key either: each MUST be signed by the GENESIS ROOT and
+that root MUST still be active in the key log at that point, with `effective_from` monotonic and `cadence` a
+canonical positive integer. Any other signer — INCLUDING an operational key the root itself authorized, and
+including a genesis-named recovery key (a different chain, §12.3.2) — ⇒ **E-KEY**. The key log therefore remains
+load-bearing here even though only one key may sign: it is what reveals a root that has since been revoked.
+Rationale: the key log changes WHO may sign, and the cadence log changes what the operator's own COMPLETENESS
+claim MEANS. A widening that stays INSIDE one precision class turns a stream with holes into a `complete` one
+with no frame added — measured: at the signed 30 s grid a stream holding only `…142900` and `…143030` is
+`chain-consistent` (two slots empty), and re-declaring the cadence as 90 s makes the same two frames a `complete`
+grid. Every signature stays valid and nothing fails anywhere; it is a quieter power than revoking the root and
+harder to notice, because nothing breaks. Widening ACROSS a precision class (30 s → 3600 s) does NOT achieve this
+— the surviving frames fall off the coarser grid and the grid-EQUALITY rule below already returns `E-PREV`, which
+is why the reachable attack is the small step rather than the dramatic one. Measured against the reference
+implementation on 2026-07-29: an operational key moved the grid and was accepted. The cost lands exactly where §12.2 already puts it — a cadence
+change requires bringing the root out of cold storage, which is rare by construction, since a grid that moved
+often would not be a grid. The stream checkpoint carries `from` and `to` (the
 interval's first and last `ust_id`) in its `checkpoint` value. The verifier computes `G` deterministically from
 `(from, to, cadence)` at the precision the cadence implies (a multiple of 3600 s ⇒ hour, of 60 s ⇒ minute, else
 second) and requires **grid EQUALITY, not mere coverage (#75 P0-04):** every `g ∈ G` is covered by a frame or a
@@ -1038,7 +1049,10 @@ less visible. This forecloses M1. Because an entry is a normal transcript, it is
 - **The key-log is a TEMPORAL STATE MACHINE, not a growing set (#75 ROOT 2).** The walk is a reducer over an
   explicit state, and TWO sets that a naïve "accumulate valid keys" conflates MUST be kept distinct: **`active`**
   — the keys that may sign the NEXT log (or cadence, §11.3) entry — and the **binding set** (every key ever
-  authorized) used only to bind a document's key before the X1 time-judgment. Transitions: `add` inserts a
+  authorized) used only to bind a document's key before the X1 time-judgment. For a MUTATING class (`key`,
+  `cadence`) membership in `active` is NECESSARY and not SUFFICIENT: the signer must additionally BE the genesis
+  root (§F.5e.3, and §11.3 for cadence), so `active` bounds who may sign at all while the root conjunct bounds who
+  may change the terms. Transitions: `add` inserts a
 parallel active key and MAY carry `supersedes` — the `key_id` of the key it replaces, recording the succession
 without granting anything by itself; `revoke` removes its target from `active` and records the reason. Replacing
 a key is `add(supersedes=s)` then `revoke(s, retired)`: two events, both signed by an `active` key, with the
@@ -1053,8 +1067,9 @@ deliberately, since an offline root is the protection `rotate` reopens. Removed 
 existence carrying one; an entry with `op:"rotate"` MUST be rejected `E-KEY`.
 
   removes its target from `active` and records the reason. **Each entry MUST be signed by a key that is `active`
-  at that point** — a revoked, rotated-out, or never-authorized signer ⇒ E-KEY (this is what stops a
-  revoked/superseded key from authorizing a later entry or a cadence change). `key_op` has a CLOSED exact schema
+  at that point AND MUST BE the genesis root** — a revoked, rotated-out, or never-authorized signer ⇒ E-KEY (this
+  is what stops a revoked/superseded key from authorizing a later entry or a cadence change), and a merely-active
+  non-root signer ⇒ E-KEY (§F.5e.3 — the same conjunct governs a cadence entry, §11.3). `key_op` has a CLOSED exact schema
   per op (`add: {op, pub, new_key_id?, supersedes?}`; `revoke: {op, pub, reason, compromised_since iff compromised}`);
   an unknown `op`, a stray field, a `retired` carrying `compromised_since`, a revoke of a never-authorized key, or
   a re-authorization of a compromised key ⇒ E-KEY / E-MALFORMED, never a silent no-op. A compromised key can
@@ -1809,8 +1824,8 @@ transcripts in chain order — because a change nobody can fetch is a change no 
 range would then be judged against the superseded grid. All are APPEND-ONLY (existing entries
 byte-stable; new entries/anchors appended); the genesis alone is fully immutable. None is a
 verification input by itself: the key log re-verifies per §12.2 (every entry is a signed transcript), the
-cadence log per §11.3 (each entry `prev`-chained from the genesis `content_hash`, signed by a
-currently-active key), and the witness log is an index whose anchors are substrate-checked (§12.1a) — a
+cadence log per §11.3 (each entry `prev`-chained from the genesis `content_hash`, signed by the
+still-active genesis ROOT), and the witness log is an index whose anchors are substrate-checked (§12.1a) — a
 poisoned surface can deny availability, never forge authority. The serving properties below apply to all
 four HTTPS surfaces.
 

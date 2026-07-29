@@ -954,18 +954,29 @@ already warns about. The operator's decision, in their own framing: the key is t
 compromise, full stop. A protocol cannot carry this risk on the operator's behalf, and pretending otherwise moves
 the failure somewhere less visible.
 
-**Realization is PARTIAL, and the unrealized half is measured, not assumed.** For `class:"key"` the conjunct is
-REALIZED (`resolveKeys`, three conformance vectors, the temporal BMC's illegal-transition sweep). For
-`class:"cadence"` it is NOT: `resolveCadence` asks only `active.has(sig.pub)`, and an operational key was measured
-changing the cadence from 30s to 3600s and ACCEPTED (2026-07-29). A stream missing 119 of 120 slots becomes
-"complete" under the wider grid, with every signature valid and every gate green — a quieter power than revoking
-the root and harder to see, because nothing fails.
+**Realization (rev98 — the cadence half) is COMPLETE over `mutating(c)`: both classes, same conjunct, same shape.** For `class:"key"` it is
+`resolveKeys` (three conformance vectors, the temporal BMC's illegal-transition sweep). For `class:"cadence"` it is
+`resolveCadenceBytes`, added in the same shape rather than a second one: `keyId(sig.pub)` must be `active` AND must
+equal the genesis key id. The key log stays load-bearing under a one-key rule because it is what reveals a REVOKED
+root — *"#107 a REVOKED root may NOT move the grid (the key-log is still load-bearing under a one-key rule)"*.
+Vectors: the CONTROL — *"#107 CONTROL: the GENESIS ROOT moves the grid 30s→3600s → accepted (the restriction is not a blanket refusal)"* — and the refusal, *"#107 an OPERATIONAL key may NOT move the cadence grid — `active` is NECESSARY, not SUFFICIENT"*; the byte-level oracle is `cadr-09-nonroot-signer-rejected` against the positive
+`cadr-04/05/06`, so a second implementation cannot pass by refusing every change.
 
-An earlier draft of this section hedged that clause as "insofar as a profile treats cadence as authority". The
-hedge is the wrong shape and is withdrawn: a verifier cannot ask a profile at verification time, so a rule
+**The measurement corrected the ATTACK's shape, and the correction is recorded rather than quietly absorbed.** The
+issue was filed on 30s→3600s. That widening does NOT hide holes: it crosses a precision class, the surviving frames
+fall off the coarser grid, and #75 P0-04 grid EQUALITY already returns `E-PREV` — *"#107 boundary (measured, not assumed): widening ACROSS a precision class is caught by grid EQUALITY, not by this rule → E-PREV"*. The reachable
+attack is a widening INSIDE one class: 30s→90s leaves every frame ON the grid, so a stream with two empty slots
+reads `complete` with nothing added — *"#107 mutation-proven (b)"* against *"(a)"* and *"(c)"*. This matters beyond
+bookkeeping: the working attack is the SMALL step, so the intuition that a dramatic jump is the thing to watch for
+would have looked for the wrong signature entirely. A refusal whose flip was never measured is a refusal that might
+have been defending against nothing.
+
+An earlier draft of this section hedged the cadence clause as "insofar as a profile treats cadence as authority".
+The hedge is the wrong shape and is withdrawn: a verifier cannot ask a profile at verification time, so a rule
 conditioned on one is not a rule.
 
-**Binding: pending — thelabmd/UST-Protocol#107** for the cadence half, and **#106** for the general role vocabulary.
+**Binding: realized — thelabmd/UST-Protocol#107 closed.** #106 (the general role vocabulary) remains open; it
+GENERALIZES this conjunct and does not replace it.
 
 ## F.5f Composite authority is TRANSITIVE — the impersonation fix needs no new signed object (#75 ROOT 3)
 

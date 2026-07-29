@@ -3723,8 +3723,8 @@
     },
     {
       "kind": "cadence-resolve",
-      "id": "cadr-09-keylog-authorized-signer",
-      "rule": "§11.3/§12.2 a key ADDED by the key-log is active and may move the grid",
+      "id": "cadr-09-nonroot-signer-rejected",
+      "rule": "§11.3/§F.5e.3 cadence mutation is ROOT-ONLY — a key-log-added key is ACTIVE yet may NOT move the grid (active is necessary, not sufficient)",
       "genesis": {
         "ust": "1.0",
         "state": {
@@ -3841,7 +3841,7 @@
       ],
       "at": "ust:20260726.11",
       "expect": {
-        "cadence": "30"
+        "error": "E-KEY"
       }
     },
     {
