@@ -436,7 +436,7 @@ publisher-bound values a layer up.)
 - **Content hash (domain-separated, M6/P8):** every hash in UST is typed —
   `H_t(x) = "sha256:" || lowerhex( SHA-256( ascii(t) || 0x00 || x ) )`. **Exact byte layout (P8):** `ascii(t)`
   is the tag's literal ASCII bytes, then ONE `0x00` byte, then `x`, where `x` per tag is:
-  `ust:state`→`utf8(canon({ust,state}))` (the signed content; a checkpoint is ITSELF a transcript and hashes under `ust:state` — it has NO separate domain, whereas the checkpoint CHAIN link uses `ust:authority-checkpoint` and the checkpoint MAP uses `ust:checkpoint-map-key`/`-value`); `ust:keylog` has TWO byte-disjoint inputs — for a `key_id` it is the RAW public-key bytes (`key_id = H("ust:keylog", pub_raw)`, where `pub_raw` = the octets of the key, i.e. base64url-decode(`sig.pub`) — NOT plain `SHA256(pub)`, NOT the base64url string), and for a key-log ENTRY hash it is `utf8(canon(entry-without-sig))` (32 raw key bytes can never equal a JSON-object canon, so no collision);
+  `ust:state`→`utf8(canon({ust,state}))` (the signed content; a authority checkpoint is ITSELF a transcript and hashes under `ust:state` — it has NO separate domain, whereas the authority checkpoint CHAIN link uses `ust:authority-checkpoint` and the authority checkpoint MAP uses `ust:checkpoint-map-key`/`-value`); `ust:keylog` has TWO byte-disjoint inputs — for a `key_id` it is the RAW public-key bytes (`key_id = H("ust:keylog", pub_raw)`, where `pub_raw` = the octets of the key, i.e. base64url-decode(`sig.pub`) — NOT plain `SHA256(pub)`, NOT the base64url string), and for a key-log ENTRY hash it is `utf8(canon(entry-without-sig))` (32 raw key bytes can never equal a JSON-object canon, so no collision);
   `ust:leaf`→the leaf's `content_hash` ASCII bytes;
   `ust:node`→`left_hash_ascii || right_hash_ascii` (both `sha256:`-prefixed, concatenated); `ust:seed`→
   `utf8(canon([content_hash,…]))`. Distinct tags make a bytes-equal collision across object kinds impossible. The COMPLETE, authoritative domain set is RENDERED from the reference `REGISTRY` (LAYER 1 drift gate §16 — never hand-maintained, so the enumeration above can never claim a domain the code lacks nor omit one it added):
@@ -764,30 +764,30 @@ ONLY when the stream is verified complete (the range verdict, §11.3); one-off d
 
 **Checkpoints (M5).** Checkpoints are themselves `prev`-chained frames (`class:"attestation"`) that assert the
 stream head + frame count over an interval. The asserted `frame_count` is CUMULATIVE from the stream origin, so
-a later covering checkpoint proves every earlier interval transitively — a missing intermediate checkpoint
+a later covering stream checkpoint proves every earlier interval transitively — a missing intermediate stream checkpoint
 delays proof but cannot hide a frame that WAS in the chain (deleting it orphans the next `prev`). Hiding a
-NEVER-EMITTED slot is a separate question — decided against the cadence grid below, not by `prev` alone. The operator profile declares a REQUIRED checkpoint cadence; a
-consumer requiring completeness MUST have a covering checkpoint whose asserted head hash-links to the frames it
-sees — a missing or contradicting checkpoint ⇒ E-PREV (fail closed).
+NEVER-EMITTED slot is a separate question — decided against the cadence grid below, not by `prev` alone. The operator profile declares a REQUIRED stream checkpoint cadence; a
+consumer requiring completeness MUST have a covering stream checkpoint whose asserted head hash-links to the frames it
+sees — a missing or contradicting stream checkpoint ⇒ E-PREV (fail closed).
 
 **Completeness scope (P5).** The range verdict is defined only for CLOSED intervals (those with a covering
-checkpoint). The open tail after the last checkpoint is provable only up to `head`; the profile declares a
-MAXIMUM checkpoint LAG, so the unprovable tail is bounded in time and a consumer treats post-last-checkpoint
-frames as PROVISIONAL. Withholding a checkpoint past the max lag is itself a detectable violation. The range VERDICT consumes ONLY
-signed inputs (the frames + the covering checkpoint); declared cadence/max-lag are accountability expectations
+stream checkpoint). The open tail after the last stream checkpoint is provable only up to `head`; the profile declares a
+MAXIMUM stream checkpoint LAG, so the unprovable tail is bounded in time and a consumer treats post-last-stream checkpoint
+frames as PROVISIONAL. Withholding a stream checkpoint past the max lag is itself a detectable violation. The range VERDICT consumes ONLY
+signed inputs (the frames + the covering stream checkpoint); declared cadence/max-lag are accountability expectations
 for consumers — a profile change can never change any verdict (I4).
 
 **No-deletion vs no-omission — `chain-consistent` ⊊ `complete` (#69 C, formal model F.4).** The `prev`-chain plus
-a covering checkpoint prove **`chain-consistent`**: no frame was DELETED from the shown chain (removing frame
+a covering stream checkpoint prove **`chain-consistent`**: no frame was DELETED from the shown chain (removing frame
 `t` orphans `t+1`'s `prev`). They do NOT prove **`complete`** (no OMISSION): a publisher that never emits `t`
-and links `t+1.prev = t-1` yields a self-consistent chain WITH A HOLE — the checkpoint's cumulative
+and links `t+1.prev = t-1` yields a self-consistent chain WITH A HOLE — the stream checkpoint's cumulative
 `frame_count` counts what WAS emitted, which the verifier cannot compare to what was EXPECTED without knowing
 the grid. `complete` is therefore decidable ONLY against the EXPECTED GRID `G` = the `ust_id` grid points at the
 operator's cadence over the interval, and the cadence MUST be a SIGNED, time-resolved parameter (resolved like
 the active key at `t`, §12.2, so it cannot be shrunk post-hoc to hide slots). Then `complete` requires every
 `g ∈ G` be either a frame with `ust_id = g` OR a signed gap record; `expected_slot_count = |G|` is DERIVED
-(never stored) and the checkpoint additionally commits the interval bounds `(from, to)` — no new document shape,
-the checkpoint is the existing `class:"attestation"` value plus two bounds, and the gap record already exists.
+(never stored) and the stream checkpoint additionally commits the interval bounds `(from, to)` — no new document shape,
+the stream checkpoint is the existing `class:"attestation"` value plus two bounds, and the gap record already exists.
 Absent a signed cadence in the verifier's information set the range verdict is `chain-consistent`, NEVER
 `complete`.
 
@@ -797,7 +797,7 @@ negative is only as strong as the STREAM COMPLETENESS over that window: the abse
 (identity+integrity), but *"nothing ELSE happened"* is a NO-OMISSION claim, not a single-document property. A consumer
 therefore trusts a no-event claim over `[from,to]` **only** when the interval that `verifyStream` VALIDATED and returns
 (`streamResult.interval`) CONTAINS `[from,to]` — read FROM the verified stream result, never a caller-supplied
-checkpoint, so a spoofed checkpoint cannot forge a backing. `noEventBacking(window, streamResult, frames)` then GRADES it:
+stream checkpoint, so a spoofed stream checkpoint cannot forge a backing. `noEventBacking(window, streamResult, frames)` then GRADES it:
 `completeness-backed` needs `complete` (NO-OMISSION: every grid slot is a frame or a signed gap) **AND** OBSERVATIONAL
 coverage — every covered slot was POSITIVELY observed. A slot where the publisher was UNREACHABLE (a blind
 `kind:"absence"`/`reason:"unreachable"`) observed NOTHING, so a hidden event is not impossible there ⇒ `observation-gap`;
@@ -819,7 +819,7 @@ AUTHORIZED key — the genesis key or a key resolved from the key-log (the SAME 
 `effective_from` monotonic and `cadence` a positive integer.** An entry signed OUTSIDE the key set ⇒ E-KEY (else
 a transport/caller could inject a self-signed cadence change and hide omitted slots — the whole point of a
 signed cadence is that ONLY the operator can move the grid). Without the key-log only the genesis key authorizes
-a change (fail-CLOSED). The checkpoint carries `from` and `to` (the
+a change (fail-CLOSED). The stream checkpoint carries `from` and `to` (the
 interval's first and last `ust_id`) in its `checkpoint` value. The verifier computes `G` deterministically from
 `(from, to, cadence)` at the precision the cadence implies (a multiple of 3600 s ⇒ hour, of 60 s ⇒ minute, else
 second) and requires **grid EQUALITY, not mere coverage (#75 P0-04):** every `g ∈ G` is covered by a frame or a
@@ -832,25 +832,25 @@ stream under the victim's name (`E-AUTHORITY`). Authority is the resolved key se
 
 **Order & interval integrity (normative).** The `prev`-chain alone does not pin TIME order — a publisher could
 permute slots in time while keeping the chain valid and the grid-set covered. So the verifier ALSO requires the
-`ust_id` to be STRICTLY INCREASING in chain order (a reorder ⇒ E-PREV), and the covering checkpoint to FAITHFULLY
-BOUND the observed set: the first frame's `ust_id` = `from`, the last = `to` (so the checkpoint `head` is the
-hash of the frame AT `to`), and no frame lies outside `[from, to]` (else E-PREV — the checkpoint does not cover
+`ust_id` to be STRICTLY INCREASING in chain order (a reorder ⇒ E-PREV), and the covering stream checkpoint to FAITHFULLY
+BOUND the observed set: the first frame's `ust_id` = `from`, the last = `to` (so the stream checkpoint `head` is the
+hash of the frame AT `to`), and no frame lies outside `[from, to]` (else E-PREV — the stream checkpoint does not cover
 THIS interval).
 
 **Continuity — an operator change never invalidates old data (normative law).** A cadence CHANGE creates a new
 cadence epoch; old data is verified `complete` against the cadence that was in force AT ITS time (the cadence-log
-resolves it), so no publisher update retroactively voids history. A checkpoint interval that CROSSES a change
+resolves it), so no publisher update retroactively voids history. A stream checkpoint interval that CROSSES a change
 (`resolveCadence(from) ≠ resolveCadence(to)`) yields `chain-consistent`, not an error — it must be SPLIT at the
 boundary, and each side verifies `complete` under its own cadence. This is the same time-resolution that makes a
 key ROTATION leave old-key signatures valid at their anchored time (§12.2): every operator parameter is resolved
-at the data's time, never applied retroactively. **Subtype discipline (C2) — a checkpoint and a gap are
+at the data's time, never applied retroactively. **Subtype discipline (C2) — a stream checkpoint and a gap are
 DISTINCT, not a shape coincidence:** a `class:"attestation"` with empty/absent `constituents` MUST carry
 `provenance.prev`, MUST NOT carry `root`, and MUST carry EXACTLY ONE of a `checkpoint` data partition (⇒ a
-checkpoint) or a `gap` data partition (⇒ a gap record) — never both, never neither (⇒ E-MALFORMED). A
+stream checkpoint) or a `gap` data partition (⇒ a gap record) — never both, never neither (⇒ E-MALFORMED). A
 constituents-bearing attestation is the `set` subtype (Merkle `root` REQUIRED). This closes the prior ambiguity
-where a checkpoint rode the gap exception. Because the cadence is SIGNED in the genesis and not a
-per-checkpoint choice, a publisher cannot claim a coarser grid to hide an omitted slot: a coarser cadence is a
-different (forked or supersession-visible) genesis, not a free checkpoint field.
+where a stream checkpoint rode the gap exception. Because the cadence is SIGNED in the genesis and not a
+per-stream checkpoint choice, a publisher cannot claim a coarser grid to hide an omitted slot: a coarser cadence is a
+different (forked or supersession-visible) genesis, not a free stream checkpoint field.
 
 **Cross-tier & resumption (P6).** Each declared tier `(domain_shard, tier)` has its own `prev` stream; the
 SET of tiers a publisher runs is declared in the profile, so a silently-absent tier is detectable against the
@@ -1057,7 +1057,7 @@ Freshness is therefore EARNED and REPORTED, never assumed. `resolveAuthority` re
   membership AT its anchor time, NOT that it is the LATEST head at the document's time: a revoke that FOLLOWS the
   anchored prefix is invisible to it, so an anchored stale prefix wrongly earned `attested`. `resolveAuthority` no
   longer grants `attested`; strong key-log freshness (`corroborated`/`attested`) is reachable ONLY through the ONE
-  checkpoint derivation (§12.3.5), which binds authorization + strict terminality + proven-after ordering +
+  authority checkpoint derivation (§12.3.5), which binds authorization + strict terminality + proven-after ordering +
   independent uniqueness. This key-log surface reports at most `fresh`.
 - **`fresh`** — the caller supplies `keylogFreshAsOf` (a strict RFC3339-Z instant it fetched the log from the
   AUTHORITATIVE §20.1 discovery surface) that is `≥` the document's anchor time — the log was current at least as
@@ -1079,10 +1079,10 @@ A key log (§12.2) proves the CURRENT authority; it does not, by itself, prove t
 not silently rewritten. The **authority-checkpoint chain** is that history: a `prev`-linked, self-authorizing
 sequence of signed checkpoints, each committing the domain's key-log head at a point in the sequence, so a
 consumer can verify "this key ruled this name at this position" and detect a rewound or forked authority. It is a
-DISTINCT object from the §11.3 completeness-checkpoint (which covers a stream of DATA frames, `class:"attestation"`);
+DISTINCT object from the §11.3 completeness-authority checkpoint (which covers a stream of DATA frames, `class:"attestation"`);
 this one covers the KEY AUTHORITY and is verified by the §12.3.1 algorithm, not §14. The two never share a shape.
 
-**Checkpoint object (three layers — the external evidence is NEVER inside the id).**
+**authority Checkpoint object (three layers — the external evidence is NEVER inside the id).**
 
 1. **`CheckpointBody`** (unsigned) — a fixed object:
    ```
@@ -1091,7 +1091,7 @@ this one covers the KEY AUTHORITY and is verified by the §12.3.1 algorithm, not
      previous_checkpoint?,                                   // OMITTED for C₀ (genesis-rooted); else = the prior checkpoint_id
      previous_epoch_final_checkpoint?,                       // epoch-B initial ONLY: binds epoch-A's final checkpoint_id (§12.3.2)
      active_genesis,                                         // the genesis this authority epoch is rooted in
-     checkpoint_authority:{ current_key_id,                  // the signer of THIS checkpoint (diagnostic; resolved, never trusted-from-here)
+     checkpoint_authority:{ current_key_id,                  // the signer of THIS authority checkpoint (diagnostic; resolved, never trusted-from-here)
                             next_key_id?, next_pub?, effective_sequence? },   // rotation: all-three-present or all-absent
      keylog:{ root, length, head } }                         // the committed key-log terminality commitment (§12.3.3)
    ```
@@ -1104,9 +1104,9 @@ this one covers the KEY AUTHORITY and is verified by the §12.3.1 algorithm, not
 
 #### 12.3.0a Canonical authority scope — the publisher cannot choose its namespace (M2)
 
-Every scope-bound authority object (checkpoint, transition, evidence receipt) lives in the scope
+Every scope-bound authority object (authority checkpoint, transition, evidence receipt) lives in the scope
 `(domain_shard, active_genesis, genesis_epoch)`, and the epoch is DERIVED, never chosen:
-**`genesis_epoch = H("ust:genesis-epoch", active_genesis)`**. A checkpoint (or receipt, or transition destination)
+**`genesis_epoch = H("ust:genesis-epoch", active_genesis)`**. A authority checkpoint (or receipt, or transition destination)
 carrying any other `genesis_epoch` is `E-MALFORMED`/rejected. This closes **epoch-split**: uniqueness predicates
 (§12.3.4) key by `(domain, genesis_epoch, sequence)` — with a publisher-chosen epoch, two rival C₀ over the SAME
 genesis could occupy two different map slots and BOTH earn `attested`; with the canonical epoch they collide in one
@@ -1119,7 +1119,7 @@ legacy wire field; the earlier 3-field `canon` preimage was redundant and weaker
 
 #### 12.3.1 Verification (`verifyAuthorityCheckpointChain` — ordered, resolve-signer-BEFORE-trust, fail-closed)
 
-Authority is carried IN-BAND and NON-CIRCULARLY: **a checkpoint NEVER authorizes its own signer.** The genesis
+Authority is carried IN-BAND and NON-CIRCULARLY: **a authority checkpoint NEVER authorizes its own signer.** The genesis
 authorizes C₀'s signer; each Cₙ₋₁ authorizes the signer of Cₙ. The expected signer is resolved from PRIOR state
 BEFORE Cₙ's signature is trusted. The verifier MUST supply a root — preferred: a `context`
 (the `verifiedGenesisContext` output, §12.3.0a — ONE verified derivation carrying scope + authority + recovery keys;
@@ -1136,17 +1136,17 @@ silent accept. For each Cₙ, in order:
 2. **Resolve the expected signer from PRIOR state** (before trusting Cₙ):
    - **C₀** (no prior): expected = `genesisAuthority`.
    - **Epoch change** (`genesis_epoch ≠ prior.genesis_epoch`): a new epoch MUST NOT silently reset — require an
-     authenticated epoch transition (§12.3.2) signed by the prior authority and binding the prior checkpoint id;
+     authenticated epoch transition (§12.3.2) signed by the prior authority and binding the prior authority checkpoint id;
      expected = its `to_checkpoint_authority`. Also require `previous_epoch_final_checkpoint == prior.id`
      (`E-PREV`) and `sequence == to_initial_sequence` (`E-SEQ`). `domain_shard` MUST NOT change (`E-MALFORMED`).
    - **Normal step**: expected = the authority Cₙ₋₁ committed for THIS sequence — `{next_key_id, next_pub}` iff
      Cₙ₋₁'s `effective_sequence == sequence`, else the unchanged prior authority. Require
      `previous_checkpoint == prior.id` (`E-PREV`) and `sequence == prior.sequence + 1` (`E-SEQ`); domain unchanged.
      **Chain-consistent key log (M4.2 / K5):** the key log is APPEND-ONLY across same-epoch checkpoints —
-     `keylog.length` MUST be ≥ the prior checkpoint's, and an EQUAL length MUST commit the identical
+     `keylog.length` MUST be ≥ the prior authority checkpoint's, and an EQUAL length MUST commit the identical
      `root`+`head` (violation ⇒ `E-COMMIT`, a signed rewind/rewrite is a proven contradiction). A GROWTH edge
      REQUIRES the prefix-extension witness: the verifier supplies the key-log entry vector (`keylogEntries`, ≤ 256
-     per §13 — it already holds it for key resolution) and EVERY checkpoint's `keylog` must recompute as the
+     per §13 — it already holds it for key resolution) and EVERY authority checkpoint's `keylog` must recompute as the
      commitment over a PREFIX of that one vector (all prefixes of one vector are mutually consistent; mismatch ⇒
      `E-COMMIT`). WITHOUT the witness a growth edge is `INDETERMINATE(chain_consistency_unproven)`, never VALID —
      length alone does not prove an append (round-3 P0-3).
@@ -1167,22 +1167,22 @@ the last committed `next_*` (if any) else the last matched signer — the key a 
 
 #### 12.3.2 Rotation, recovery (genesis-rooted threshold), epoch transition
 
-- **Rotation** is in-band (step 5): a checkpoint names its successor key, effective at exactly `sequence + 1`.
+- **Rotation** is in-band (step 5): a authority checkpoint names its successor key, effective at exactly `sequence + 1`.
 - **Recovery** (`purpose:"ust:checkpoint-authority-recovery"`) is a DORMANT emergency multisig for key LOSS, NOT a
   normal rotation. `RecoveryClaim = { purpose, domain_shard, genesis_epoch, last_accepted_checkpoint,
   replacement_authority:{key_id, pub}, reason, effective_sequence }`; each signer emits `{ claim, issuer_id, sig }`.
   `verifyCheckpointRecovery` admits it only when **≥ threshold (reference profile: 2-of-3) DISTINCT
   genesis-authorized recovery signers** sign the BYTE-IDENTICAL claim, bound to `(domain, epoch,
-  last_accepted_checkpoint, effective_sequence)`. It authorizes ONLY the next checkpoint's replacement key; the
-  recovery set is genesis-fixed and role-separated from the data and checkpoint keys. Recovery does not skip
-  validation — the recovered checkpoint still passes every step above.
+  last_accepted_checkpoint, effective_sequence)`. It authorizes ONLY the next authority checkpoint's replacement key; the
+  recovery set is genesis-fixed and role-separated from the data and authority checkpoint keys. Recovery does not skip
+  validation — the recovered authority checkpoint still passes every step above.
 - **Genesis-epoch transition** (`purpose:"ust:genesis-epoch-transition"`) crosses a re-rooting without a silent
   reset: `{ purpose, domain_shard, from_genesis_epoch, from_final_checkpoint, to_active_genesis, to_genesis_epoch,
   to_checkpoint_authority:{key_id, pub}, to_initial_sequence }`, **signed by epoch A's checkpoint authority** and
-  binding A's final checkpoint id. The destination is a VERIFIED genesis, never a free epoch label (M4.4):
+  binding A's final authority checkpoint id. The destination is a VERIFIED genesis, never a free epoch label (M4.4):
   `to_active_genesis` is REQUIRED and `to_genesis_epoch` MUST be canonical to it
   (`H("ust:genesis-epoch", to_active_genesis)`, §12.3.0a) — a transition that binds no genesis, or a non-canonical
-  destination epoch, is rejected; the epoch-initial checkpoint must live in the bound genesis. Epoch B's C₀ then
+  destination epoch, is rejected; the epoch-initial authority checkpoint must live in the bound genesis. Epoch B's C₀ then
   binds it back via `previous_epoch_final_checkpoint` (step 2).
 
 #### 12.3.3 Strict key-log terminality — head is the LAST entry, not merely a member (#77)
@@ -1200,7 +1200,7 @@ AND the recomputed root equals `keylog.root`. Binding `length` into the root for
 another size; there is no coordinate at which a later entry can hide (adjacent or not). The proof
 `{ headProof: {index, siblings} }` is EXTERNAL evidence (supplied to the verifier), never inside `checkpoint_id`.
 
-**Bounds (§13).** No NEW ceiling is minted for the checkpoint chain: the committed `keylog.length` is subject to
+**Bounds (§13).** No NEW ceiling is minted for the authority checkpoint chain: the committed `keylog.length` is subject to
 the existing §13 key-log ceiling (≤ 256 default / genesis-declared), so the key-log vector commitment is an ordered
 Merkle of ≤ 256 leaves; the §12.3.4 UNIQUENESS sparse Merkle tree is a FIXED depth 256
 (the key-hash width), so every membership/non-membership co-path there is exactly 256 siblings; the `sequence` counter is
@@ -1218,8 +1218,8 @@ Two INDEPENDENT (non-publisher) bases prove `¬∃ rival at the coordinate`, bot
   returning a value IS the non-membership proof for every rival value at that key** — position-uniqueness is
   non-membership. Non-membership = the default-empty leaf verifies at the key's path (`value = null`). TWO TYPED,
   domain-separated spaces (never a generic flag): **checkpoint-map** — `key = H("ust:checkpoint-map-key",
-  canon({domain_shard, genesis_epoch, sequence}))`, `value = H("ust:checkpoint-map-value", canon({checkpoint}))`
-  (predicate: the checkpoint is the unique value at that coordinate); **name-map** —
+  canon({domain_shard, genesis_epoch, sequence}))`, `value = H("ust:checkpoint-map-value", canon({authority checkpoint}))`
+  (predicate: the authority checkpoint is the unique value at that coordinate); **name-map** —
   `key = H("ust:name-map-key", canon({domain_shard}))`, `value = H("ust:name-map-value", canon({active_genesis}))`
   (predicate: `active_genesis` is the unique binding for the domain). **The admissible map root MUST come from the
   consumer's own trust configuration (`ℐ_C`) — a root it independently anchored or pinned — and MUST NEVER be taken
@@ -1228,7 +1228,7 @@ Two INDEPENDENT (non-publisher) bases prove `¬∃ rival at the coordinate`, bot
   consumer-held root, capped by trust — §F.5.0); the map proof is verified against the consumer-admitted root only.
 - **Accepted-witness quorum** (`purpose:"ust:checkpoint-uniqueness-attestation"`) — `≥ threshold` **DISTINCT
   CONSUMER-RESOLVED trust domains** signing the byte-identical uniqueness claim over `(domain, genesis_epoch,
-  sequence, checkpoint)`. **Independence is CONSUMER-owned** (the consumer maps issuer→domain), NEVER
+  sequence, authority checkpoint)`. **Independence is CONSUMER-owned** (the consumer maps issuer→domain), NEVER
   self-declared: a claim that carries its own `trust_domain`/`issuer_id` is REJECTED (P0-2), and a bare-observation
   co-sign is corroboration with the WRONG purpose ⇒ not admitted as uniqueness.
 
@@ -1249,25 +1249,25 @@ closed, e.g. recovery keys) on EVERY surface — a non-positive threshold never 
 > and names the withheld rung (`attested_withheld:"experimental-gate"`). The `STABILITY` export is the
 > machine-readable map. This keeps the protocol from inheriting the youngest layer's risk while the kernel is built.
 
-Checkpoint freshness (`deriveCheckpointFreshness`) is EARNED, never self-declared, and reported as a rung:
+authority Checkpoint freshness (`deriveCheckpointFreshness`) is EARNED, never self-declared, and reported as a rung:
 
 - **`unverified`** — no evidence (the default; an honest strength, not `INVALID`).
 - **`fresh`** — the key log was current as-of the target's anchor time (§12.2a `keylogFreshAsOf`) — a SINGLE-view
   freshness.
-- **`corroborated`** — a CONJUNCTION: an AUTHORIZED checkpoint chain (§12.3.1) ∧ strict key-log terminality
-  (§12.3.3) ∧ a VERIFIED external commitment BOUND to the checkpoint id AND ordered **proven-after** the target's
+- **`corroborated`** — a CONJUNCTION: an AUTHORIZED authority checkpoint chain (§12.3.1) ∧ strict key-log terminality
+  (§12.3.3) ∧ a VERIFIED external commitment BOUND to the authority checkpoint id AND ordered **proven-after** the target's
   anchor. The commitment and the target anchor enter ONLY through the EVIDENCE SEAM (below): a SIGNED receipt of a
   consumer-admitted connector — or a token the seam itself produced — scope-bound to the chain's authority scope
-  (`domain_shard`, `active_genesis`, canonical `genesis_epoch`) and subject-bound to the checkpoint id /
+  (`domain_shard`, `active_genesis`, canonical `genesis_epoch`) and subject-bound to the authority checkpoint id /
   `target.subject`; anything else ⇒ `INDETERMINATE(evidence_unverified)` — a caller-minted facts object earns
   nothing (M3; closes the rc.35 round-2 verifiedEvidence-forge). Both MUST be of a proof-kind whose CAPABILITY
   establishes temporal order (`order`/`time`); a class that cannot (e.g. `content-addressed`, `authenticated-map`,
   unknown) NEVER satisfies the ordering conjunct ⇒ INDETERMINATE (P0-04, external audit — a connector may not
   exceed its declared power). The order is a PROOF relation (`compareEvidenceOrder`, F.5g), NEVER a wall-clock
   comparison. This is the CEILING for a single publisher — one publisher cannot prove split-view absence.
-- **`attested`** — `corroborated` ∧ an INDEPENDENT anti-equivocation proof over THIS checkpoint (§12.3.4 map
+- **`attested`** — `corroborated` ∧ an INDEPENDENT anti-equivocation proof over THIS authority checkpoint (§12.3.4 map
   uniqueness OR witness quorum; a §12.2a substrate-anchored key-log head is the same top rung by a different
-  basis). Uniqueness on an unauthorized/unbound checkpoint never reaches here, so `attested ⇒ corroborated ∧
+  basis). Uniqueness on an unauthorized/unbound authority checkpoint never reaches here, so `attested ⇒ corroborated ∧
   independent-uniqueness`; uniqueness ALONE never earns `attested`.
 
 **The evidence seam (M3).** External facts reach a strong rung ONLY as an **evidence receipt**: a claim signed by
@@ -1308,7 +1308,7 @@ cross-substrate positions) prove nothing — a structural PROOF relation, never 
 algorithm from §14. Its INVALID codes: `E-MALFORMED`, `E-AUTHORITY` (signer ≠ resolved authority, or
 `current_key_id` ≠ signer), `E-KEY` (`keyId(next_pub) ≠ next_key_id`), `E-PREV` (`previous_checkpoint` /
 `previous_epoch_final_checkpoint` mismatch), `E-SEQ` (sequence ≠ prev+1, `effective_sequence` ≠ seq+1, or
-epoch-initial sequence mismatch), `E-GENESIS` (checkpoint `active_genesis`/`domain_shard` ≠ the bound target),
+epoch-initial sequence mismatch), `E-GENESIS` (authority checkpoint `active_genesis`/`domain_shard` ≠ the bound target),
 `E-EVIDENCE` (self-declared evidence class, or a malformed/tampered evidence receipt). Its INDETERMINATE reasons —
 **`authority_unresolved`, `terminality_unproven`, `order_unproven`, `evidence_unverified`, `unavailable`** — are
 checkpoint-scoped and do NOT widen the §14 document-verifier's closed four-member reason set (§15).
@@ -1426,7 +1426,7 @@ unresolved dependency ⇒ the corresponding error (never `VALID`).
    REQUIRES anchored time this is a retry/degraded outcome, reserving E-ANCHOR for a proof that is present-but-wrong. `generated_at` MUST NOT exceed the anchor time (N9); real time is the anchor.
 7. **Sequence (N5) — completeness STRENGTH.** If the operator declares a sequenced stream and the consumer
    requires completeness: `provenance.prev` MUST link the prior frame's `content_hash`; a dangling/rewound
-   `prev` or a checkpoint (§11.3) contradicting the observed set ⇒ E-PREV. Otherwise this step yields a
+   `prev` or a stream checkpoint (§11.3) contradicting the observed set ⇒ E-PREV. Otherwise this step yields a
    completeness STRENGTH (proven / provisional / none), not a gate. A one-off or completeness-not-required
    verification passes with completeness `none`/`provisional`.
 8. **Privacy.** For each PRIVATE partition (blinded/encrypted, §4.4/§10), if authorized: reproduce its `commit`
@@ -1492,8 +1492,8 @@ A verifier returns one of THREE OUTCOME KINDS — **availability is distinct fro
   (key-log chain BROKEN or entry unauthorized), `E-GENESIS` (FORKED / conflicting name-binding root — a rival
   genesis exists), `E-ANCHOR` (inclusion proof PRESENT-but-WRONG), `E-COMMIT` (commit ↔ decryption mismatch),
   `E-ROOT` (attestation root mismatch), `E-SEED` (derivation seed ≠ recomputed seed over `based_on` hashes),
-  `E-PREV` (broken sequence link / checkpoint contradiction), `E-AUTHORITY` (signer is not the resolved authority —
-  a mixed-authority stream, §11.3, or an authority-checkpoint not signed by the in-band-resolved checkpoint
+  `E-PREV` (broken sequence link / authority checkpoint contradiction), `E-AUTHORITY` (signer is not the resolved authority —
+  a mixed-authority stream, §11.3, or an authority-checkpoint not signed by the in-band-resolved authority checkpoint
   authority, §12.3.1), `E-SEQ` (authority-checkpoint sequence counter wrong — ≠ prev+1, `effective_sequence` ≠
   seq+1, or epoch-initial mismatch, §12.3), `E-EVIDENCE` (a connector self-declares an evidence class instead of
   supplying facts-only, §12.3.5), `E-ASSURANCE` (a malformed assurance-axis tuple passed to the §F.5.0 lattice
@@ -1588,7 +1588,7 @@ FLOOR vectors — canonicalization/NFC/ordering, per-partition captured-vs-compu
 strict-Ed25519 malleability, bounds/cycle, private-commit + AEAD↔commit binding, each error code. HIGH vectors —
 key-log chain (self-signed rotation, break/unauthorized reject, ≤256 bound, revocation window, genesis
 fork/recovery), name-authority resolution. TOP vectors — anchor-proof per substrate (non-final ⇒ UNPROVEN),
-stream-genesis + checkpoint/omission, pinned Merkle/seed ordering. A verifier that diverges on any vector for
+stream-genesis + stream checkpoint/omission, pinned Merkle/seed ordering. A verifier that diverges on any vector for
 a tier it claims is non-conforming — making verifier disagreement a test failure, not a settlement weapon.
 Independent re-implementation is expected; the vectors make "verify without trusting the publisher's library" real.
 
@@ -1618,10 +1618,10 @@ Independent re-implementation is expected; the vectors make "verify without trus
 - **alg (signatures):** `Ed25519` (strict, §7). **hash:** `sha256:` domain-separated (§7). **enc.alg (AEAD):**
   `AES-256-GCM` (**MTI — mandatory to implement**: every conforming verifier implements it),
   `XChaCha20-Poly1305` (OPTIONAL: a verifier that does not implement it MUST return
-  `INDETERMINATE(unsupported_alg)` for a disclosure it cannot decrypt — never a silent skip, never INVALID). **hash domain tags:** `ust:state` (whole-State `content_hash`) | `ust:shard` (a per-partition hash, §4.4) | `ust:keylog|ust:checkpoint|ust:node|ust:leaf|ust:seed|ust:source`; and the authority-checkpoint family (§12.3): `ust:authority-checkpoint` (checkpoint id) | `ust:checkpoint-map-key|ust:checkpoint-map-value` | `ust:name-map-key|ust:name-map-value` | `ust:keylog-empty|ust:keylog-leaf|ust:keylog-node|ust:keylog-commit` (size-bound key-log vector commitment, §12.3.3) | `ust:smt-empty|ust:smt-node|ust:smt-leaf` (sparse-Merkle construction).
+  `INDETERMINATE(unsupported_alg)` for a disclosure it cannot decrypt — never a silent skip, never INVALID). **hash domain tags:** `ust:state` (whole-State `content_hash`) | `ust:shard` (a per-partition hash, §4.4) | `ust:keylog|ust:checkpoint|ust:node|ust:leaf|ust:seed|ust:source`; and the authority-checkpoint family (§12.3): `ust:authority-checkpoint` (authority checkpoint id) | `ust:checkpoint-map-key|ust:checkpoint-map-value` | `ust:name-map-key|ust:name-map-value` | `ust:keylog-empty|ust:keylog-leaf|ust:keylog-node|ust:keylog-commit` (size-bound key-log vector commitment, §12.3.3) | `ust:smt-empty|ust:smt-node|ust:smt-leaf` (sparse-Merkle construction).
   All algorithm-tagged for agility (§19).
-- **signed purposes (§12.3) — domain-separated `canon` preimages, NEVER interchangeable:** `ust:authority-checkpoint` (a `CheckpointBody`), `ust:authority-checkpoint-signature` (the checkpoint SIGNATURE preimage — distinct from the body purpose), `ust:checkpoint-authority-recovery` (a recovery claim), `ust:genesis-epoch-transition` (an epoch hand-off), `ust:checkpoint-uniqueness-attestation` (a witness-quorum claim). A statement of one purpose MUST NOT verify as another.
-- **authority-checkpoint reserved keys (§12.3):** body: `version,purpose,domain_shard,genesis_epoch,sequence,previous_checkpoint,previous_epoch_final_checkpoint,active_genesis,checkpoint_authority,keylog`; `checkpoint_authority`: `current_key_id,next_key_id,next_pub,effective_sequence`; `keylog`: `root,length,head`. The checkpoint is its OWN object (not a transcript) — it is verified by §12.3.1, never the §14 data algorithm.
+- **signed purposes (§12.3) — domain-separated `canon` preimages, NEVER interchangeable:** `ust:authority-checkpoint` (a `CheckpointBody`), `ust:authority-checkpoint-signature` (the authority checkpoint SIGNATURE preimage — distinct from the body purpose), `ust:checkpoint-authority-recovery` (a recovery claim), `ust:genesis-epoch-transition` (an epoch hand-off), `ust:checkpoint-uniqueness-attestation` (a witness-quorum claim). A statement of one purpose MUST NOT verify as another.
+- **authority-checkpoint reserved keys (§12.3):** body: `version,purpose,domain_shard,genesis_epoch,sequence,previous_checkpoint,previous_epoch_final_checkpoint,active_genesis,checkpoint_authority,keylog`; `checkpoint_authority`: `current_key_id,next_key_id,next_pub,effective_sequence`; `keylog`: `root,length,head`. The authority checkpoint is its OWN object (not a transcript) — it is verified by §12.3.1, never the §14 data algorithm.
 - **reserved keys:** transcript: `ust,state,sig,proof`; State: `id,time,data,hashes,provenance`; id: `domain_shard,ust_id,key_id,class,parent_ust`;
   partition-envelope: `kind,value,privacy,commit,enc` (enc: `alg,key_id,ct`); provenance: `sources,constituents,based_on,root,seed,prev`;
   sig: `alg,key_id,pub,sig`. Reserved names MUST NOT be used as partition or source names.
@@ -1745,7 +1745,7 @@ layering fix, REV6.)
 Discoverable from `domain_shard` (`/.well-known/ust`, corroborated against the anchored key log, §12) and
 declaring the operator's choices, none of which relax §3: signature scheme + key-log location; anchoring
 substrate(s); partition schema (names + captured/computed designation); source registry; cadence; the
-hour-close timeout (§8.1); checkpoint cadence for sequenced streams (§11.3 — SHOULD for any stream that wants
+hour-close timeout (§8.1); stream checkpoint cadence for sequenced streams (§11.3 — SHOULD for any stream that wants
 provable completeness); a private-nonce uniqueness log (§10 I6/Z2 — SHOULD: the verifier cannot detect
 cross-document nonce reuse, so the operator must); size bounds
 (within §13 ceilings); metadata-minimization policy. A profile SHOULD publish §12.1 recovery events in a
@@ -2000,7 +2000,7 @@ provenance and will be lifted into this ledger when the spec is published.
   self-consistent object: `@ust-protocol/rekor-verify` verifies rekor.sigstore.dev's SIGNED checkpoint with a
   pinned log key (a fabricated `treeSize=1` tree is rejected — reproduced), `@ust-protocol/ots-verify`
   verifies the committed root against a REAL Bitcoin block header + the §17 ≥6 confirmations (not just
-  `isTimestampComplete()`); the web verifier gained the same checkpoint check. (D) The discovered key-log
+  `isTimestampComplete()`); the web verifier gained the same authority checkpoint check. (D) The discovered key-log
   crosses the SAME raw-byte boundary as any authority input (I4) — a duplicate member is E-CANON, never a
   silent LIGHT. (E) A single async anchor contract (`verifyAsync`, so TOP works with the async plugins while
   `verify()` stays sync); the exact signed-content size metric in the producer guard (no estimate pad) and in
@@ -2014,16 +2014,16 @@ provenance and will be lifted into this ledger when the spec is published.
   `authoritative`; `authoritative` requires INDEPENDENT non-membership — a caller air-gap assertion, or an
   anchored name-keyed verifiable-map inclusion (prefix-uniqueness ⇒ the name's inclusion IS the rivals'
   exclusion; format a future revision). Only `authoritative` surfaces `publisher` and composes to TOP;
-  `corroborated` surfaces `publisher_claimed` + a `no_fork` basis. **C (§11.3):** a covering checkpoint proves
+  `corroborated` surfaces `publisher_claimed` + a `no_fork` basis. **C (§11.3):** a covering stream checkpoint proves
   **`chain-consistent`** (no-deletion), NOT **`complete`** (no-omission) — the latter needs the EXPECTED GRID,
-  decidable only against a SIGNED, time-resolved cadence (the key-log pattern applied to cadence); the checkpoint
+  decidable only against a SIGNED, time-resolved cadence (the key-log pattern applied to cadence); the authority checkpoint
   gains two interval bounds in its existing attestation value, the grid is computed, gaps already exist. The
   strong words are EARNED by bringing the missing non-membership coordinate into the information set, not
   weakened. Reference verifier updated (served-list → corroborated; verifyStream → chain-consistent); the map +
   signed-cadence mechanisms that RE-EARN `authoritative`/`complete` are the coordinated next step.
 - **REV 31 (2026-07-13)** — #70 RE-EARNS `complete` (the C half of #69) STRUCTURALLY, reusing structure UST
   already commits — no new document shape. The **cadence** becomes a SIGNED parameter in the genesis value
-  (`genesis.value.cadence`, seconds); the **checkpoint** commits interval bounds `(from, to)` in its existing
+  (`genesis.value.cadence`, seconds); the **stream checkpoint** commits interval bounds `(from, to)` in its existing
   value; the verifier computes the expected grid `G` from `(from, to, cadence)` deterministically (the `ust_id`
   IS the time coordinate) and requires every slot `g ∈ G` be a frame OR a signed gap record → `complete`; any
   hole → `chain-consistent`, naming the hole. Because the cadence is SIGNED (not a per-checkpoint choice) a
@@ -2194,7 +2194,7 @@ provenance and will be lifted into this ledger when the spec is published.
     non-membership`), `compareEvidenceOrder` (order is a PROOF relation, not a timestamp compare), `quorumTrustDomains`
     (independence = DISTINCT consumer-resolved trust domains, never connector count).
   - **Authority-checkpoint chain** (F.5h): three-layer object (`body` / signature preimage / `checkpoint_id` over
-    `{body,sig}`; external evidence excluded), NON-CIRCULAR in-band authority (`Cₙ₋₁` authorizes `Cₙ`; a checkpoint
+    `{body,sig}`; external evidence excluded), NON-CIRCULAR in-band authority (`Cₙ₋₁` authorizes `Cₙ`; a authority checkpoint
     never authorizes itself), resolve-signer-before-trust, exact rotation. `verifyAuthorityCheckpointChain`.
   - **Phase B `corroborated` freshness** (F.5i): `deriveCheckpointFreshness` — the conjunction (authorized ∧ head∈root
     ∧ external-commitment ∧ proven-after target), capped at `corroborated` by construction (no `attested` branch) —
@@ -2210,7 +2210,7 @@ provenance and will be lifted into this ledger when the spec is published.
 - **REV 45 (2026-07-14)** — **Phase B checkpoint custody lifecycle** (#76 §1.7 / audit-8 / #77), the same
   build → conformance → formal → `model↔code` guard loop:
   - **Recovery multisig** (F.5l): a genesis-authorized N-of-M (reference 2-of-3) re-authorizes the checkpoint
-    authority after key loss WITHOUT bypassing checkpoint validation — role-separated, genesis-fixed keys, a dormant
+    authority after key loss WITHOUT bypassing authority checkpoint validation — role-separated, genesis-fixed keys, a dormant
     emergency mechanism bound to `(domain, epoch, last_accepted_checkpoint, next-sequence)`; conflicting replacements
     fail the byte-identical-claim rule (`verifyCheckpointRecovery`).
   - **Genesis-epoch transition** (F.5m): a typed A→B hand-off SIGNED BY epoch A's authority re-roots the chain across
@@ -2224,14 +2224,14 @@ provenance and will be lifted into this ledger when the spec is published.
   artifact). A SPEC-ONLY pass: the mechanism was already realized + conformance-tested + vectored in REV 44/45, so
   the spec CATCHES UP to the code (code-first lockstep — the formal-model math, `F.5` product-lattice, catches up
   after, under the `model↔code` guard, never ahead). New **§12.3** normatively fixes, for clean-room
-  re-implementation: the three-layer checkpoint object (`CheckpointBody` → `ust:authority-checkpoint-signature`
+  re-implementation: the three-layer authority checkpoint object (`CheckpointBody` → `ust:authority-checkpoint-signature`
   preimage → `checkpoint_id = H("ust:authority-checkpoint", canon({body,sig}))`, external evidence EXCLUDED from
   the id); the ordered resolve-signer-before-trust verify (§12.3.1); rotation / 2-of-3 recovery / genesis-epoch
   transition (§12.3.2); strict last-index key-log terminality via a positioned SMT (§12.3.3 — that construction was LATER found unsound by external audit and replaced by a size-bound ordered vector commitment; the history entry stands as shipped, the section is authoritative); the two typed
   authenticated-map predicates + accepted-witness quorum (§12.3.4); the `unverified ⊊ fresh ⊊ corroborated ⊊
   attested` freshness ladder + facts-only `VerifiedEvidence` (§12.3.5); and the distinct verdict vocabulary
   (§12.3.6). §15 now lists `E-AUTHORITY`/`E-SEQ`/`E-EVIDENCE` (already emitted by the impl) and scopes the
-  checkpoint INDETERMINATE reasons; §17 registers the `ust:authority-checkpoint`/map/SMT hash-domain tags, the five
+  authority checkpoint INDETERMINATE reasons; §17 registers the `ust:authority-checkpoint`/map/SMT hash-domain tags, the five
   signed `canon` purposes, and the checkpoint reserved keys. No runtime code changed ⇒ conformance/guard unchanged
   (305/0, 85/85) and the npm-drift gate is untouched (`rc.33`, no package bytes moved).
 - **REV 47 (2026-07-14)** — **the assurance PRODUCT-LATTICE** (gh#78 → UST-24b): the mathematics catching up to the
@@ -2268,7 +2268,7 @@ provenance and will be lifted into this ledger when the spec is published.
   / `no-event` / `unchanged` — MACHINE-DISTINGUISHABLE from a captured-empty reading and from a not-published
   transcript (a PUBLIC absence MUST carry a non-empty `value.reason`). The `no-event` guarantee is TIED to stream
   completeness (§11.3): a windowed non-occurrence is `completeness-backed` only when `verifyStream` is
-  `chain-consistent`/`complete` over a covering checkpoint interval that CONTAINS the window, else it is the
+  `chain-consistent`/`complete` over a covering stream checkpoint interval that CONTAINS the window, else it is the
   publisher's unwitnessed assertion — `noEventBacking()` returns the verdict. `buildAbsence()` helper added; both new
   exports triaged in the capability-parity gate (core-only — no surface exposes them yet). **Independent adversarial
   pass (two agents) then hardened rc.35 STRUCTURALLY (5 confirmed findings, `security-regression` rc35-A..D):** a P0 —
@@ -2281,7 +2281,7 @@ provenance and will be lifted into this ledger when the spec is published.
   now grades OBSERVATIONAL coverage (`observation-gap`/`observation-unchecked`) and names subject-binding as a caller
   precondition (§11.3); and the §4.5 worked example was corrected from name-as-key to the normative name-as-VALUE.
 - **REV 50 (2026-07-15, `rc.36`)** — **authority-layer math-first refactor, phase C1 (foundation).** A SECOND diverse-model
-  adversarial round (dogfooded UST chain, depth-2) found 4 more P0 in the checkpoint/authority/freshness core, all of one
+  adversarial round (dogfooded UST chain, depth-2) found 4 more P0 in the authority checkpoint/authority/freshness core, all of one
   shape — the publisher chose the terms of its own audit. The fix is structural and MATH-FIRST (the theorems lead, in
   `rnd/MATH-authority-layer.md`; the formal-model file + conformance land in lockstep with the code, never before). This
   revision lands the scope seam: `verifiedGenesisContext(genesis)` derives the canonical, publisher-inaccessible scope —
@@ -2306,14 +2306,14 @@ provenance and will be lifted into this ledger when the spec is published.
   `VerifyEvidence_C` (formal model, in lockstep). Gates: conformance 348/0, arc 50/0 (incl. forge/admission/role
   vectors), model 111/111, security 23/0, parity (new `evidence-receipt` capability). Legacy `verifiedEvidence()`
   remains a raw facts BUILDER with no capability; connector receipt-emission is the C4 follow-up (bd `UST-6vj`).
-- **REV 52 (2026-07-15, `rc.36`)** — **authority-layer refactor, phase M4 (the checkpoint chain's own discipline).**
+- **REV 52 (2026-07-15, `rc.36`)** — **authority-layer refactor, phase M4 (the authority checkpoint chain's own discipline).**
   Closes **keylog-rewind** (`rc35-P0h`): per-checkpoint terminality relates a snapshot to ITSELF, so C₀ could commit
   length 10 and C₁ commit length 4 — a SIGNED rewind, both individually terminal. `verifyAuthorityCheckpointChain`
   now enforces **ChainConsistent** (M4.2): across same-epoch checkpoints `keylog.length` is monotone and an equal
   length commits the identical `root`+`head` (violation ⇒ `E-COMMIT`, unconditional); an optional `keylogEntries`
   witness (≤ 256, `E-BOUNDS` first) proves the FULL prefix-extension — every checkpoint recomputes over a prefix of
   ONE vector. **Epoch transitions bind a VERIFIED genesis** (M4.4): `to_active_genesis` is REQUIRED in the claim and
-  `to_genesis_epoch` must be canonical to it — a free destination label is rejected; the epoch-initial checkpoint
+  `to_genesis_epoch` must be canonical to it — a free destination label is rejected; the epoch-initial authority checkpoint
   provably lives in the bound genesis (explicit `E-GENESIS` check kept as the hash-collision belt). New normative
   **§12.3.0a canonical authority scope** (the M2 rule was previously changelog-only — now in the body: epoch DERIVED,
   `scope_id`, `verifiedGenesisContext` as sole context producer). Formal model in lockstep: F.5h re-based on the
@@ -2351,7 +2351,7 @@ provenance and will be lifted into this ledger when the spec is published.
   security 26/0.
 - **REV 55 (2026-07-15, `rc.36`)** — **authority-layer refactor, phase C1-tail (downstream takes the context) + M2
   formalized.** `verifyAuthorityCheckpointChain`/`deriveCheckpointFreshness` accept a `context` — the
-  `verifiedGenesisContext` output — as the PREFERRED root (`authority_root:"verified-context"`): scope, checkpoint
+  `verifiedGenesisContext` output — as the PREFERRED root (`authority_root:"verified-context"`): scope, authority checkpoint
   authority and recovery keys flow from ONE verified derivation, never re-read from raw genesis fields; the C₀
   `active_genesis` is bound to the context scope (`E-GENESIS` on mismatch). Formal model gains **F.5g.0** (M2 — the
   verified authority context: scope DERIVED never chosen; namespace non-malleability theorem tying epoch-split /

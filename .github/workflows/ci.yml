@@ -118,6 +118,8 @@ jobs:
         run: npm run test:version-truth
       - name: types parity (a declaration may not describe a source that no longer exists)
         run: npm run test:types-parity
+      - name: checkpoint qualified (the word names two chains and may not stand alone)
+        run: npm run test:checkpoint-qualified
       - name: Every field the genesis builder can place is reachable from the ceremony
         run: npm run test:genesis-surface
       - name: A deploy is constructed from the complete discovery set or not at all
