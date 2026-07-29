@@ -107,6 +107,8 @@ jobs:
         run: npm run test:mcp-live
       - name: dependency audit — no critical advisories in the SHIPPED (production) tree (P1-08)
         run: npm run test:audit
+      - name: package contents (what ships must be able to LOAD, not merely to match)
+        run: npm run test:package-contents
       - name: npm-drift gate (a published version is immutable)
         run: node tools/npm-drift-check.mjs
       - name: CHANGELOG rev-ladder gate (a checker rev bump records itself)
