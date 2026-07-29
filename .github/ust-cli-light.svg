@@ -1,8 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 643" role="img" aria-labelledby="ust-cli-t ust-cli-d">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 686" role="img" aria-labelledby="ust-cli-t ust-cli-d">
 <title id="ust-cli-t">THE ust CLI — ONE ENTRYPOINT, THE WHOLE SURFACE</title>
-<desc id="ust-cli-d">The ust CLI — one entrypoint, the whole command surface (parsed from the real binary’s help). Install with npm i -g @ust-protocol/cli. The 11 subcommands: verify &lt;file|-&gt; (verify a transcript (exit 0 = VALID, 1 = not; --require-anchored floors at TOP)); canon &lt;file|-&gt; (print canonical bytes + hash (cross-language diff)); genesis --domain &lt;d&gt; (run the HIGH genesis ceremony (add --publish cf for one-click serving)); rotate --domain &lt;d&gt; --root &lt;enc&gt; (APPEND a key rotation to the served log (never re-mint; old docs stay valid)); cadence --domain &lt;d&gt; --root &lt;enc&gt; --seconds &lt;n&gt; --effective-from &lt;slot&gt; (DECLARE the signed stream grid (§11.3)); discovery &lt;domain&gt; (attest the §20.1 serving contract (any infra)); publish &lt;cf|self&gt; --domain &lt;d&gt; --genesis &lt;f&gt; (serve an existing genesis: cf deploys the adapter,); mirror &lt;domain&gt; (publish + attest a SECOND-vendor mirror (§20.1 vendor-independence)); stream &lt;frames…&gt; (RANGE verdict: chain · forks · completeness (needs --checkpoint for `complete`)); forkchoice &lt;docs…&gt; (pick the CANONICAL doc among candidates for ONE ust_id (canonical = anchor-included)); witness rekor --domain &lt;d&gt; (log the genesis in a transparency log → automatic no-fork (#68)). Exit 0 = VALID with the tier in the verdict, 1 = not; the ceremony self-verifies its outputs, fail-closed.</desc>
+<desc id="ust-cli-d">The ust CLI — one entrypoint, the whole command surface (parsed from the real binary’s help). Install with npm i -g @ust-protocol/cli. The 12 subcommands: verify &lt;file|-&gt; (verify a transcript (exit 0 = VALID, 1 = not; --require-anchored floors at TOP)); canon &lt;file|-&gt; (print canonical bytes + hash (cross-language diff)); genesis --domain &lt;d&gt; (run the HIGH genesis ceremony (add --publish cf for one-click serving)); key add --domain &lt;d&gt; --root &lt;enc&gt; --role &lt;data|issuance&gt; (ADD a key BESIDE the current one (never replaces it)); rotate --domain &lt;d&gt; --root &lt;enc&gt; (APPEND a key rotation to the served log (never re-mint; old docs stay valid)); cadence --domain &lt;d&gt; --root &lt;enc&gt; --seconds &lt;n&gt; --effective-from &lt;slot&gt; (DECLARE the signed stream grid (§11.3)); discovery &lt;domain&gt; (attest the §20.1 serving contract (any infra)); publish &lt;cf|self&gt; --domain &lt;d&gt; --genesis &lt;f&gt; (serve an existing genesis: cf deploys the adapter,); mirror &lt;domain&gt; (publish + attest a SECOND-vendor mirror (§20.1 vendor-independence)); stream &lt;frames…&gt; (RANGE verdict: chain · forks · completeness (needs --checkpoint for `complete`)); forkchoice &lt;docs…&gt; (pick the CANONICAL doc among candidates for ONE ust_id (canonical = anchor-included)); witness rekor --domain &lt;d&gt; (log the genesis in a transparency log → automatic no-fork (#68)). Exit 0 = VALID with the tier in the verdict, 1 = not; the ceremony self-verifies its outputs, fail-closed.</desc>
 <g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="15" xml:space="preserve">
-  <rect x="1.5" y="1.5" width="877" height="640" rx="10" fill="#ffffff" stroke="#afb8c1" stroke-width="1.5"/>
+  <rect x="1.5" y="1.5" width="877" height="683" rx="10" fill="#ffffff" stroke="#afb8c1" stroke-width="1.5"/>
   <line x1="16" y1="46" x2="864" y2="46" stroke="#d1d9e0" stroke-width="1"/>
   <text x="28" y="34" fill="#0969da" font-size="13" font-weight="600" letter-spacing="2">THE ust CLI — ONE ENTRYPOINT, THE WHOLE SURFACE</text>
   <text x="36" y="74" fill="#1a7f37" font-weight="600">$</text>
@@ -10,7 +10,7 @@
   <text x="300" y="74" fill="#59636e" font-size="13"># installs the ust command</text>
   <text x="36" y="98" fill="#1a7f37" font-weight="600">$</text>
   <text x="54" y="98" fill="#1f2328" font-weight="600">ust</text>
-  <text x="300" y="98" fill="#59636e" font-size="13"># 11 subcommands — this table is parsed from the real help</text>
+  <text x="300" y="98" fill="#59636e" font-size="13"># 12 subcommands — this table is parsed from the real help</text>
   <text x="48" y="130" fill="#59636e" font-size="13">ust</text>
   <text x="79.32" y="130" fill="#116329" font-size="13" font-weight="600">verify</text>
   <text x="134.13" y="130" fill="#0550ae" font-size="13">&lt;file|-&gt;</text>
@@ -24,38 +24,42 @@
   <text x="141.96" y="216" fill="#0550ae" font-size="13">--domain &lt;d&gt;</text>
   <text x="76" y="235" fill="#59636e" font-size="12.5">run the HIGH genesis ceremony (add --publish cf for one-click serving)</text>
   <text x="48" y="259" fill="#59636e" font-size="13">ust</text>
-  <text x="79.32" y="259" fill="#116329" font-size="13" font-weight="600">rotate</text>
-  <text x="134.13" y="259" fill="#0550ae" font-size="13">--domain &lt;d&gt; --root &lt;enc&gt;</text>
-  <text x="76" y="278" fill="#59636e" font-size="12.5">APPEND a key rotation to the served log (never re-mint; old docs stay valid)</text>
+  <text x="79.32" y="259" fill="#116329" font-size="13" font-weight="600">key</text>
+  <text x="110.64" y="259" fill="#0550ae" font-size="13">add --domain &lt;d&gt; --root &lt;enc&gt; --role &lt;data|issuance&gt;</text>
+  <text x="76" y="278" fill="#59636e" font-size="12.5">ADD a key BESIDE the current one (never replaces it)</text>
   <text x="48" y="302" fill="#59636e" font-size="13">ust</text>
-  <text x="79.32" y="302" fill="#116329" font-size="13" font-weight="600">cadence</text>
-  <text x="141.96" y="302" fill="#0550ae" font-size="13">--domain &lt;d&gt; --root &lt;enc&gt; --seconds &lt;n&gt; --effective-from &lt;slot&gt;</text>
-  <text x="76" y="321" fill="#59636e" font-size="12.5">DECLARE the signed stream grid (§11.3)</text>
+  <text x="79.32" y="302" fill="#116329" font-size="13" font-weight="600">rotate</text>
+  <text x="134.13" y="302" fill="#0550ae" font-size="13">--domain &lt;d&gt; --root &lt;enc&gt;</text>
+  <text x="76" y="321" fill="#59636e" font-size="12.5">APPEND a key rotation to the served log (never re-mint; old docs stay valid)</text>
   <text x="48" y="345" fill="#59636e" font-size="13">ust</text>
-  <text x="79.32" y="345" fill="#116329" font-size="13" font-weight="600">discovery</text>
-  <text x="157.62" y="345" fill="#0550ae" font-size="13">&lt;domain&gt;</text>
-  <text x="76" y="364" fill="#59636e" font-size="12.5">attest the §20.1 serving contract (any infra)</text>
+  <text x="79.32" y="345" fill="#116329" font-size="13" font-weight="600">cadence</text>
+  <text x="141.96" y="345" fill="#0550ae" font-size="13">--domain &lt;d&gt; --root &lt;enc&gt; --seconds &lt;n&gt; --effective-from &lt;slot&gt;</text>
+  <text x="76" y="364" fill="#59636e" font-size="12.5">DECLARE the signed stream grid (§11.3)</text>
   <text x="48" y="388" fill="#59636e" font-size="13">ust</text>
-  <text x="79.32" y="388" fill="#116329" font-size="13" font-weight="600">publish</text>
-  <text x="141.96" y="388" fill="#0550ae" font-size="13">&lt;cf|self&gt; --domain &lt;d&gt; --genesis &lt;f&gt;</text>
-  <text x="76" y="407" fill="#59636e" font-size="12.5">serve an existing genesis: cf deploys the adapter,</text>
+  <text x="79.32" y="388" fill="#116329" font-size="13" font-weight="600">discovery</text>
+  <text x="157.62" y="388" fill="#0550ae" font-size="13">&lt;domain&gt;</text>
+  <text x="76" y="407" fill="#59636e" font-size="12.5">attest the §20.1 serving contract (any infra)</text>
   <text x="48" y="431" fill="#59636e" font-size="13">ust</text>
-  <text x="79.32" y="431" fill="#116329" font-size="13" font-weight="600">mirror</text>
-  <text x="134.13" y="431" fill="#0550ae" font-size="13">&lt;domain&gt;</text>
-  <text x="76" y="450" fill="#59636e" font-size="12.5">publish + attest a SECOND-vendor mirror (§20.1 vendor-independence)</text>
+  <text x="79.32" y="431" fill="#116329" font-size="13" font-weight="600">publish</text>
+  <text x="141.96" y="431" fill="#0550ae" font-size="13">&lt;cf|self&gt; --domain &lt;d&gt; --genesis &lt;f&gt;</text>
+  <text x="76" y="450" fill="#59636e" font-size="12.5">serve an existing genesis: cf deploys the adapter,</text>
   <text x="48" y="474" fill="#59636e" font-size="13">ust</text>
-  <text x="79.32" y="474" fill="#116329" font-size="13" font-weight="600">stream</text>
-  <text x="134.13" y="474" fill="#0550ae" font-size="13">&lt;frames…&gt;</text>
-  <text x="76" y="493" fill="#59636e" font-size="12.5">RANGE verdict: chain · forks · completeness (needs --checkpoint for `complete`)</text>
+  <text x="79.32" y="474" fill="#116329" font-size="13" font-weight="600">mirror</text>
+  <text x="134.13" y="474" fill="#0550ae" font-size="13">&lt;domain&gt;</text>
+  <text x="76" y="493" fill="#59636e" font-size="12.5">publish + attest a SECOND-vendor mirror (§20.1 vendor-independence)</text>
   <text x="48" y="517" fill="#59636e" font-size="13">ust</text>
-  <text x="79.32" y="517" fill="#116329" font-size="13" font-weight="600">forkchoice</text>
-  <text x="165.45" y="517" fill="#0550ae" font-size="13">&lt;docs…&gt;</text>
-  <text x="76" y="536" fill="#59636e" font-size="12.5">pick the CANONICAL doc among candidates for ONE ust_id (canonical = anchor-included)</text>
+  <text x="79.32" y="517" fill="#116329" font-size="13" font-weight="600">stream</text>
+  <text x="134.13" y="517" fill="#0550ae" font-size="13">&lt;frames…&gt;</text>
+  <text x="76" y="536" fill="#59636e" font-size="12.5">RANGE verdict: chain · forks · completeness (needs --checkpoint for `complete`)</text>
   <text x="48" y="560" fill="#59636e" font-size="13">ust</text>
-  <text x="79.32" y="560" fill="#116329" font-size="13" font-weight="600">witness</text>
-  <text x="141.96" y="560" fill="#0550ae" font-size="13">rekor --domain &lt;d&gt;</text>
-  <text x="76" y="579" fill="#59636e" font-size="12.5">log the genesis in a transparency log → automatic no-fork (#68)</text>
-  <line x1="16" y1="591" x2="864" y2="591" stroke="#d1d9e0" stroke-width="1"/>
-  <text x="36" y="617" fill="#1f2328" font-size="13">exit 0 = VALID (tier in the verdict) · 1 = not · the ceremony self-verifies its outputs — fail-closed</text>
+  <text x="79.32" y="560" fill="#116329" font-size="13" font-weight="600">forkchoice</text>
+  <text x="165.45" y="560" fill="#0550ae" font-size="13">&lt;docs…&gt;</text>
+  <text x="76" y="579" fill="#59636e" font-size="12.5">pick the CANONICAL doc among candidates for ONE ust_id (canonical = anchor-included)</text>
+  <text x="48" y="603" fill="#59636e" font-size="13">ust</text>
+  <text x="79.32" y="603" fill="#116329" font-size="13" font-weight="600">witness</text>
+  <text x="141.96" y="603" fill="#0550ae" font-size="13">rekor --domain &lt;d&gt;</text>
+  <text x="76" y="622" fill="#59636e" font-size="12.5">log the genesis in a transparency log → automatic no-fork (#68)</text>
+  <line x1="16" y1="634" x2="864" y2="634" stroke="#d1d9e0" stroke-width="1"/>
+  <text x="36" y="660" fill="#1f2328" font-size="13">exit 0 = VALID (tier in the verdict) · 1 = not · the ceremony self-verifies its outputs — fail-closed</text>
 </g>
 </svg>

@@ -6,6 +6,7 @@
 // is the defect this file exists to prevent (#105).
 // Package: @ust-protocol/cli
 
+export function addKeylogKey(arg0: unknown): Promise<{ keylog: unknown; newKey: unknown }>;
 export const ARTIFACT_ORIGIN: unknown;
 export function askHidden(q: unknown, fallbackAsk: unknown): Promise<Record<string, unknown>>;
 export function attestDiscovery(arg0?: unknown): Promise<{ hash: unknown; checks: unknown; verdict: unknown }>;

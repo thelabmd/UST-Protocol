@@ -795,6 +795,21 @@ export async function attestDiscovery({ domain, mirrors = [], expectHash = null,
       if (chainErr) throw new Error(chainErr);
       keylogEntries = parsed.entries;
       checks.push({ id: 'key log served (HIGH resolution input)', status: 'pass', detail: `${parsed.entries.length} entr${parsed.entries.length === 1 ? 'y' : 'ies'}, chained to this genesis` });
+      // §12.2/#106 — an operator must see what a CONSUMER sees. A role is read from the served log by anyone
+      // resolving a key, so an operator that cannot see it here is the only party in the dark about its own
+      // separation. Reported from `resolveKeys`, never re-derived from the entries by a second reader.
+      // INFORMATIONAL by construction (F.4 rev92): §20.1 attests the SERVING contract — is the identity fetchable,
+      // byte-stable, independently mirrored. Role separation is a property of the key log's CONTENT, a different
+      // axis, so scoring it here would make a publisher that deliberately declares no roles permanently
+      // non-conformant on a contract it fully meets. The scored set stays closed under the axis it names; the
+      // reported set is allowed to be wider, and this is the wider part.
+      const ks = P.resolveKeys(decodeInput(baseline), parsed.entries);
+      if (ks.error) checks.push({ id: 'key roles (§12.2)', informational: true, status: 'fail', detail: `${ks.error}: ${ks.detail || ''}` });
+      else if (!ks.declaredRoles) checks.push({ id: 'key roles (§12.2)', informational: true, status: 'skip', detail: 'this genesis declares no role separation — every key signs everything, and a leak of one signs everything the publisher signs' });
+      else {
+        const shown = [...ks.active.keys()].map((kid) => `${(ks.roles.get(kid) ?? '(none)')}:${kid.slice(7, 15)}`).join(' · ');
+        checks.push({ id: 'key roles (§12.2)', informational: true, status: 'pass', detail: `declared ${[...ks.declaredRoles].join('/')} — active: ${shown}` });
+      }
     }
   } catch (e) {
     checks.push({ id: 'key log served (HIGH resolution input)', status: 'fail', detail: e.message });
@@ -2083,7 +2098,19 @@ export async function rootSignerFrom(pkcs8, rootPubB64url) {
 }
 // Build the grown key-log. Signs the new op key with the ROOT (a current valid key, §12.2), prev-chained;
 // optionally revokes the superseded op key with a reason. Refuses to REWRITE (input MUST be a prefix). Pure.
-export async function rotateKeylog({ genesis, keylog, rootSigner, reason = null, compromisedSince = null, time, ustId }) {
+// §12.2/§F.5e.1 — add a key BESIDE the current one, not in place of it. This is the operation `rotate` cannot
+// express and inheritance cannot either: `supersedes` PROPAGATES a role down a lineage and never INTRODUCES one,
+// so a key for a DIFFERENT purpose has no lineage to inherit from and must state its own role. Root-signed like
+// every key-log mutation (§F.5e.3).
+export async function addKeylogKey({ genesis, keylog, rootSigner, role, time, ustId }) {
+  const domain = genesis.state.id.domain_shard;
+  const prev = keylog.length ? P.contentHash(keylog[keylog.length - 1]) : P.contentHash(genesis);
+  const newKey = await W.generateSigner({ extractable: true });
+  const entry = await W.seal(P.buildKeyLogEntry({ domain_shard: domain, ust_id: ustId, key_id: rootSigner.key_id }, time,
+    { op: 'add', pub: newKey.pub, new_key_id: newKey.key_id, ...(role ? { role } : {}) }, prev), rootSigner);
+  return { keylog: [...keylog, entry], newKey };
+}
+export async function rotateKeylog({ genesis, keylog, rootSigner, reason = null, compromisedSince = null, role = null, time, ustId }) {
   const domain = genesis.state.id.domain_shard;
   if (!Array.isArray(keylog)) throw new Error('key-log is not a JSON array');
   const currentOp = [...keylog].reverse().find((e) => { const op = e.state?.data?.key_op?.value; return op && op.op === 'add'; });   // rev97: `rotate` больше не существует (§F.5e.0)
@@ -2097,7 +2124,7 @@ export async function rotateKeylog({ genesis, keylog, rootSigner, reason = null,
   // and adjacency is not a relation. With it, the successor's lineage is readable, which is what role inheritance
   // (§F.5e.1) derives from. It grants nothing by itself: the entry is authorized by the ROOT either way.
   const supersedes = currentOp?.state?.data?.key_op?.value?.pub ? P.keyId(currentOp.state.data.key_op.value.pub) : undefined;
-  const rotate = await W.seal(P.buildKeyLogEntry({ domain_shard: domain, ust_id: ustId, key_id: rootSigner.key_id }, time, { op: 'add', pub: newOp.pub, new_key_id: newOp.key_id, ...(supersedes ? { supersedes } : {}) }, prev), rootSigner);
+  const rotate = await W.seal(P.buildKeyLogEntry({ domain_shard: domain, ust_id: ustId, key_id: rootSigner.key_id }, time, { op: 'add', pub: newOp.pub, new_key_id: newOp.key_id, ...(supersedes ? { supersedes } : {}), ...(role ? { role } : {}) }, prev), rootSigner);
   const out = [...keylog, rotate];
   if (reason) {
     if (reason !== 'retired' && reason !== 'compromised') throw new Error('--reason must be retired|compromised');
@@ -2109,6 +2136,68 @@ export async function rotateKeylog({ genesis, keylog, rootSigner, reason = null,
   }
   for (let i = 0; i < keylog.length; i++) if (P.contentHash(keylog[i]) !== P.contentHash(out[i])) throw new Error('refuse: rotation must APPEND, not rewrite (entry ' + i + ' changed)');
   return { keylog: out, newOp, revokedPub: reason && currentOp ? currentOp.state.data.key_op.value.pub : null };
+}
+// §12.2/§F.5e.1 — `ust key add --role`: a key BESIDE the current one. Distinct from `ust rotate`, which REPLACES
+// and whose successor inherits its predecessor's role; a parallel key has no lineage, so it must state its own.
+// The first screen, and ONLY the first screen: the mascot is shown once, above the map, never per command.
+// TTY-gated — a redirected or piped run must see exactly what it sees today, because a script parses this.
+// The art is a committed source artifact (seal_mini_square.txt) rendered from the SVG beside it; it is read
+// rather than inlined so the picture and the file cannot drift into two versions of one drawing.
+function banner() {
+  if (!process.stderr.isTTY) return '';
+  let art;
+  try { art = readFileSync(new URL('./seal_mini_square.txt', import.meta.url), 'utf8').replace(/\n+$/, ''); }
+  catch { return ''; }   // a missing asset must never be the reason a tool refuses to print its help
+  return art.split('\n').map((l) => '  ' + l).join('\n') + '\n\n';
+}
+// NOT exported: a command is not part of the package's API — the dispatcher is in this module, and the gates that
+// look for it read the SOURCE by name. The API is the binary plus the testable cores (`addKeylogKey` below).
+async function cmdKey() {
+  const sub = process.argv[3];
+  if (sub !== 'add') die('usage: ust key add --domain <d> --root <encrypted-root.b64> --role <data|issuance> [--keylog <served array file>] [--out .]\n  APPENDS a key BESIDE the current one (never replaces it — that is `ust rotate`).\n  A parallel key states its OWN role: inheritance propagates a role down a lineage and can never introduce one (§F.5e.1).');
+  const domain = arg('domain');
+  if (!domain || domain === true) die('--domain <d> required');
+  const rootFile = arg('root'); if (!rootFile || rootFile === true) die('--root <encrypted root backup .b64> required (the cold crown key — every key-log mutation is root-signed, §F.5e.3)');
+  const role = arg('role'); if (!role || role === true) die('--role <data|issuance> required — a parallel key has no lineage to inherit a role from (§F.5e.1)');
+  const get = discoveryFetcher(domain);
+  let genesis; try { genesis = JSON.parse(await get('/.well-known/ust-genesis')); } catch (e) { die('cannot fetch genesis for ' + domain + ': ' + (e.message || e)); }
+  if (!P.isValid(P.verify(genesis, { context: 'key' }))) die('served genesis does not VERIFY');
+  const declared = genesis.state?.data?.genesis?.value?.roles;
+  if (!Array.isArray(declared) || !declared.length) die('this genesis DECLARES no role separation, so a role cannot be assigned in the key log (§12.2). Declaring it is a ceremony act: `ust genesis --roles ...`, which supersedes the genesis.');
+  if (!declared.includes(role)) die(`--role ${role} is not one this genesis declared (${declared.join(', ')})`);
+  const klFile = arg('keylog', null);
+  let keylog = [];
+  try { if (klFile && klFile !== true) { const parsed = parseKeylogRaw(readFileSync(String(klFile), 'utf8')); if (parsed.err) throw new Error(parsed.err); keylog = parsed.entries; }
+        else { const parsed = parseKeylogRaw(await get('/.well-known/ust-keylog')); if (parsed.err) throw new Error(parsed.err); keylog = parsed.entries; } }
+  catch (e) { die('cannot load the key-log: ' + (e.message || e)); }
+  // LAZY, like every other askHidden caller: an interface built EAGERLY takes stdin over and askHidden's guard
+  // then refuses rather than echo the secret. And hand stdin back BEFORE asking — here nothing is open yet, so
+  // it is a no-op, which is the point: the property holds by CONSTRUCTION, so a question added above it later
+  // cannot silently reintroduce the refusal. That is exactly how the genesis ceremony broke.
+  let rl = null;
+  const ask = (q) => { rl ??= openReader(createInterface); return rl.question(q); };
+  rl = closeReader(rl);
+  const pass = await askHidden('  🔑 root passphrase: ', ask);
+  rl = closeReader(rl);
+  let rootSigner;
+  try { rootSigner = await rootSignerFrom(decryptKey(readFileSync(rootFile, 'utf8').trim(), pass), genesis.state.data.genesis.value.pub); }
+  catch (e) { die(e.message.includes('match') ? e.message : 'decrypt failed — wrong passphrase or corrupt backup'); }
+  const { ust_id, time } = W.nowFrame();
+  let grown; try { grown = await addKeylogKey({ genesis, keylog, rootSigner, role, time, ustId: ust_id }); }
+  catch (e) { die(e.message); }
+  // rev95 self-check: assert what the ceremony PRESERVES, from what it holds — the new key is ACTIVE after the
+  // grown log and carries the role asked for. Not a property of the world; no network, no name authority.
+  const ks = P.resolveKeys(genesis, grown.keylog);
+  if (ks.error) die('self-check FAILED: the grown key-log does not resolve (' + ks.error + ': ' + (ks.detail || '') + ')');
+  if (!ks.active.has(grown.newKey.key_id)) die('self-check FAILED: the new key is NOT in the active set after the grown log');
+  if (ks.roles.get(grown.newKey.key_id) !== role) die(`self-check FAILED: the new key resolves with role ${ks.roles.get(grown.newKey.key_id) ?? '(none)'}, not ${role}`);
+  const outDir = (arg('out', null) && arg('out', null) !== true) ? arg('out', null) : '.';
+  writeFileSync(`${outDir}/ust-keylog`, JSON.stringify(grown.keylog, null, 2) + '\n');
+  const pkcs8 = Buffer.from(await crypto.subtle.exportKey('pkcs8', grown.newKey.privateKey)).toString('base64');
+  writeFileSync(`${outDir}/${role}-key.b64`, pkcs8 + '\n');
+  console.error(`  ✓ ${grown.keylog.length} entries → ${outDir}/ust-keylog`);
+  console.error(`  ✓ new ${role} key → ${outDir}/${role}-key.b64  (key_id ${grown.newKey.key_id})`);
+  console.error('  ↳ serve the grown log at /.well-known/ust-keylog for a consumer to see it');
 }
 export async function cmdRotate() {
   const domain = arg('domain');
@@ -2241,7 +2330,7 @@ const isMain = (() => { try { return process.argv[1] && realpathSync(process.arg
 if (isMain) {
   const cmd = process.argv[2];
 
-  const run = { verify: cmdVerify, canon: cmdCanon, genesis: cmdGenesis, rotate: cmdRotate, cadence: cmdCadence, discovery: cmdDiscovery, publish: cmdPublish, mirror: cmdMirror, stream: cmdStream, forkchoice: cmdForkChoice, witness: cmdWitness }[cmd];
-  if (!run) { console.error('ust — verify machine-readable state\n\n  ust verify <file|->        verify a transcript (exit 0 = VALID, 1 = not; --require-anchored floors at TOP)\n  ust canon  <file|->        print canonical bytes + hash (cross-language diff)\n  ust genesis --domain <d>   run the HIGH genesis ceremony (add --publish cf for one-click serving)\n  ust rotate  --domain <d> --root <enc>   APPEND a key rotation to the served log (never re-mint; old docs stay valid)\n  ust cadence --domain <d> --root <enc> --seconds <n> --effective-from <slot>   DECLARE the signed stream grid (§11.3)\n  ust discovery <domain>     attest the §20.1 serving contract (any infra)\n  ust publish <cf|self> --domain <d> --genesis <f>   serve an existing genesis: cf deploys the adapter,\n                             self writes the four artifacts for YOUR stack (asked if omitted)\n  ust mirror <domain>        publish + attest a SECOND-vendor mirror (§20.1 vendor-independence)\n  ust stream <frames…>       RANGE verdict: chain · forks · completeness (needs --checkpoint for `complete`)\n  ust forkchoice <docs…>     pick the CANONICAL doc among candidates for ONE ust_id (canonical = anchor-included)\n  ust witness rekor --domain <d>   log the genesis in a transparency log → automatic no-fork (#68)\n'); process.exit(cmd ? 1 : 0); }
+  const run = { verify: cmdVerify, canon: cmdCanon, genesis: cmdGenesis, key: cmdKey, rotate: cmdRotate, cadence: cmdCadence, discovery: cmdDiscovery, publish: cmdPublish, mirror: cmdMirror, stream: cmdStream, forkchoice: cmdForkChoice, witness: cmdWitness }[cmd];
+  if (!run) { console.error(banner() + 'ust — verify machine-readable state\n\n  ust verify <file|->        verify a transcript (exit 0 = VALID, 1 = not; --require-anchored floors at TOP)\n  ust canon  <file|->        print canonical bytes + hash (cross-language diff)\n  ust genesis --domain <d>   run the HIGH genesis ceremony (add --publish cf for one-click serving)\n  ust key add --domain <d> --root <enc> --role <data|issuance>   ADD a key BESIDE the current one (never replaces it)\n  ust rotate  --domain <d> --root <enc>   APPEND a key rotation to the served log (never re-mint; old docs stay valid)\n  ust cadence --domain <d> --root <enc> --seconds <n> --effective-from <slot>   DECLARE the signed stream grid (§11.3)\n  ust discovery <domain>     attest the §20.1 serving contract (any infra)\n  ust publish <cf|self> --domain <d> --genesis <f>   serve an existing genesis: cf deploys the adapter,\n                             self writes the four artifacts for YOUR stack (asked if omitted)\n  ust mirror <domain>        publish + attest a SECOND-vendor mirror (§20.1 vendor-independence)\n  ust stream <frames…>       RANGE verdict: chain · forks · completeness (needs --checkpoint for `complete`)\n  ust forkchoice <docs…>     pick the CANONICAL doc among candidates for ONE ust_id (canonical = anchor-included)\n  ust witness rekor --domain <d>   log the genesis in a transparency log → automatic no-fork (#68)\n'); process.exit(cmd ? 1 : 0); }
   run().catch((e) => die(e.message || String(e)));
 }

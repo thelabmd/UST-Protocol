@@ -696,6 +696,17 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
   const rv = await C.rotateKeylog({ genesis, keylog: [kl0], rootSigner: root, reason: 'retired', time: Tr, ustId: 'ust:20260628.1002' });
   check('rotate_reason_retired_revokes', !!rv.revokedPub && rv.keylog.length === 3);
   check('rotate_compromised_needs_since', await threw(() => C.rotateKeylog({ genesis, keylog: [kl0], rootSigner: root, reason: 'compromised', time: Tr, ustId: 'x' })));
+  // #106 — `addKeylogKey` is the testable core of `ust key add`: a key BESIDE the current one. The distinction
+  // that matters is that it does NOT supersede, which is exactly what inheritance cannot express (§F.5e.1).
+  {
+    const gR = await W.seal(P.buildGenesis({ domain_shard: dom, ust_id: 'ust:20260628.10', key_id: root.key_id }, Tr, root.pub, undefined, undefined, undefined, undefined, undefined, ['data', 'issuance']), root);
+    const k0 = await W.seal(P.buildKeyLogEntry({ domain_shard: dom, ust_id: 'ust:20260628.1001', key_id: root.key_id }, Tr, { op: 'add', pub: K1.pub, new_key_id: K1.key_id, role: 'data' }, P.contentHash(gR)), root);
+    const a1 = await C.addKeylogKey({ genesis: gR, keylog: [k0], rootSigner: root, role: 'issuance', time: Tr, ustId: 'ust:20260628.1003' });
+    const ks = P.resolveKeys(gR, a1.keylog);
+    check('keyadd_parallel_key_is_active_with_its_own_role', !ks.error && ks.active.has(a1.newKey.key_id) && ks.roles.get(a1.newKey.key_id) === 'issuance');
+    check('keyadd_does_not_supersede_the_existing_key', ks.active.has(K1.key_id) && ks.roles.get(K1.key_id) === 'data');
+    check('keyadd_appends_never_rewrites', P.contentHash(a1.keylog[0]) === P.contentHash(k0) && a1.keylog.length === 2);
+  }
   const enc = C.encryptKey(Buffer.from(await crypto.subtle.exportKey('pkcs8', root.privateKey)), 'pw');
   check('rotate_root_backup_roundtrip', (await C.rootSignerFrom(C.decryptKey(enc, 'pw'), root.pub)).pub === root.pub);
   check('rotate_wrong_passphrase_throws', await threw(async () => C.decryptKey(enc, 'wrong')));

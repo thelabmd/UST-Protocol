@@ -19,6 +19,20 @@ authoritative suite.)*
 
 If you conform, you need no permission — say so freely: "UST-compatible."
 
+## Project artwork sits with the NAME, not with the code
+
+The repository deliberately licenses three things separately: code Apache-2.0, the specification CC-BY-4.0
+(`LICENSE-SPEC`), and the names by this policy. **Project artwork — the mascot and any mark that identifies the
+project rather than explains it — belongs to this document, not to the code licence.** The reason is the same one
+that puts the names here: a mark whose use is unrestricted stops identifying anything, and an implementation that
+did not conform could carry it while claiming nothing in words.
+
+Diagrams are different and stay under the code licence: they EXPLAIN the protocol rather than identify the
+project, and reproducing them is exactly what a reader or an independent implementer should be free to do.
+
+Rendered forms count as the artwork itself — the CLI's terminal mascot is the same mark as the drawing it was
+rendered from, and shipping it inside a package does not move it to a different licence.
+
 ## Forks and derivatives are welcome — under a different name
 
 Forks and non-conforming derivatives are **welcome** under the content licenses (code: Apache-2.0; specification

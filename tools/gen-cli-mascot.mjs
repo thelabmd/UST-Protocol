@@ -13,7 +13,10 @@ import { join } from 'node:path';
 import { decodePNG } from './lib/png-decode.mjs';
 
 const ROOT = new URL('../', import.meta.url).pathname;
-const SVG = ROOT + 'packages/ust-cli/seal_mini_square.svg';
+// The SOURCE lives in art/, not in the package: the package ships only what it READS at runtime (the .txt),
+// and .github/ is the README-panel pipeline, where every svg is enumerated for a palette-mapped light twin —
+// which a mascot that appears in no README does not want.
+const SVG = ROOT + 'art/seal_mini_square.svg';
 const OUT = ROOT + 'packages/ust-cli/seal_mini_square.txt';
 const H = Number(process.argv[2] ?? 21);
 

@@ -11,7 +11,8 @@
     "index.mjs",
     "LICENSE",
     "README.md",
-    "index.d.ts"
+    "index.d.ts",
+    "seal_mini_square.txt"
   ],
   "keywords": [
     "ust",
