@@ -100,6 +100,22 @@
       "test": {
         "excluded": "The test layer here is tools/package-contents-gate.mjs and its own vacuity guards — it fails if no package was packed or if no packed file was resolved, and its recursive listing exists because a top-level-only probe found nothing in diarium/bin and would have passed silently. It runs as its own gate, not as a conformance check, because conformance covers the verifier and this covers what we ship."
       }
+    },
+    {
+      "round": 81,
+      "math": {
+        "excluded": "This round renders a sealed entry into a second place and gates that the two agree. The formal model states what a verifier may conclude from a document; how this repository DISPLAYS one of its own signed documents is not a property of any transcript, and model prose written to satisfy a gate is the patch this repo rejects."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. An implementer conforming to UST owes nothing about our changelog, and a spec sentence here would describe our bookkeeping to a reader who will never need it."
+      },
+      "code": "tools/recap-render.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce so a second implementation can check itself. The artifact under test here is a MARKDOWN FILE compared against a store the vectors do not describe; a vector could only restate a gate that already runs from the files it guards."
+      },
+      "test": {
+        "excluded": "The test layer is the gate's own negative controls, run rather than described: a hand-edited word inside a quote, a registry naming a content_hash no sealed entry carries, and the floor lowered to 74 so six undecided rounds are named. They run as npm run test:recap, not as conformance checks, which cover the verifier only."
+      }
     }
   ],
   "first_accounted_round": 76,

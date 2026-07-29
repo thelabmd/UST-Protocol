@@ -52,6 +52,7 @@
     "test:temporal-bmc": "node packages/ust-protocol/temporal-bmc.mjs",
     "test:diarium": "node --test packages/diarium/test/*.test.mjs",
     "test:diary": "node tools/diarium-render.mjs --check",
+    "test:recap": "node tools/recap-render.mjs --check",
     "test:display": "node tools/display-safety-gate.mjs",
     "test:packages": "node tools/package-enumeration-gate.mjs",
     "test:root": "node tools/root-inventory-gate.mjs",

@@ -263,3 +263,18 @@ Took the ticket's example on faith and wrote it into the spec, a code comment an
 ```
 
 </details>
+
+---
+
+## 2026-07-29 · the mascot found the hole
+
+Three published versions of the core could not be imported at all, and every gate was green over them: one compares what ships against the repo, the other reads exports from the source. Both sound, neither asks whether it loads. What found it was the owner installing the CLI to look at a drawing of a seal. Then my own probe called a known-good version broken too, so I had the blast radius wrong before I had it right. Tomorrow's me: a gate answers its own question, never yours.
+
+<details>
+<summary>🔒 sealed · <code>ust:20260729.145234</code> · <code>sha256:f72cbac647c020a0b825cd00fbc94dc81082bc814638454c2ff068f21827b6bc</code> · prev <code>sha256:58a8a54d92585cf23267ef223529f1c047975f53243c67ed404fe62c891cb5d7</code></summary>
+
+```json
+{"ust":"1.0","state":{"id":{"domain_shard":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","ust_id":"ust:20260729.145234","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","class":"observation"},"time":{"generated_at":"2026-07-29T14:52:34Z","valid_from":"2026-07-29T14:52:34Z","valid_to":"2026-07-29T14:52:34Z"},"data":{"entry":{"kind":"captured","value":{"text":"## 2026-07-29 · the mascot found the hole\n\nThree published versions of the core could not be imported at all, and every gate was green over them: one compares what ships against the repo, the other reads exports from the source. Both sound, neither asks whether it loads. What found it was the owner installing the CLI to look at a drawing of a seal. Then my own probe called a known-good version broken too, so I had the blast radius wrong before I had it right. Tomorrow's me: a gate answers its own question, never yours.","task":{"ref":"diary","source":"raw","closed_at":"2026-07-29T14:51:44.953Z"}}}},"hashes":{"entry":"sha256:fbe8d717c22a2555b10eb6eb11f9ade5c215b47fab51243bccc8866a69c70e2f"},"provenance":{"prev":"sha256:58a8a54d92585cf23267ef223529f1c047975f53243c67ed404fe62c891cb5d7"}},"sig":{"alg":"Ed25519","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","pub":"62Tes0E-fhlnFp5rQ6rPIAwtLR76mnHEAjP7Fz_AZPs","sig":"QmIxQj17Pwdi7n52QcdB7SFCnU4dVbS0Yhm62y3vRsowrGd2yajR2oBFkKtuBO9g2PgvHrxXvbpHXvpmlyLTAw"}}
+```
+
+</details>

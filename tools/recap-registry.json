@@ -1,0 +1,17 @@
+{
+  "_": "Which sealed diary entry recaps which round. The changelog row says what BECAME; the issue comment says where the ticket and reality diverged; the diary says what the moment was. This file is the only place those are joined, because the store carries no task linkage — an entry is just signed text, and inventing one inside the store would make the diary answer to the changelog.",
+  "_first_accounted": "The rule starts where it was written. Rounds below the floor predate it and are reported, never gated: back-filling them would mean writing a diary entry today about a day I cannot remember, which is the one thing this diary is not for.",
+  "first_recapped_round": 80,
+  "records": [
+    {
+      "round": 80,
+      "content_hash": "sha256:f72cbac647c020a0b825cd00fbc94dc81082bc814638454c2ff068f21827b6bc",
+      "issue": null,
+      "_issue": "No issue receives this recap: round 80 CLOSED none. The defect was found by the owner at a terminal rather than filed, and the round OPENED #108 instead of closing something. The open question from 2026-07-27 — which issue gets the comment when a round touches several — is answered here in its easy direction only; the hard one is still the owner's."
+    },
+    {
+      "round": 81,
+      "no_recap": "The diary is written when the owner invokes the recap, not when a round ends. Round 80's entry was sealed before this round existed, and sealed means sealed — a second entry for the same invocation would break 'one entry, one moment'. This is the ordinary case for any round that is not the last of an invocation, not an exemption."
+    }
+  ]
+}
