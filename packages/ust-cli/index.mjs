@@ -2102,8 +2102,20 @@ export async function rootSignerFrom(pkcs8, rootPubB64url) {
 // express and inheritance cannot either: `supersedes` PROPAGATES a role down a lineage and never INTRODUCES one,
 // so a key for a DIFFERENT purpose has no lineage to inherit from and must state its own role. Root-signed like
 // every key-log mutation (§F.5e.3).
-export async function addKeylogKey({ genesis, keylog, rootSigner, role, time, ustId }) {
+export async function addKeylogKey({ genesis, keylog, rootSigner, role = null, time, ustId }) {
   const domain = genesis.state.id.domain_shard;
+  // §12.2 — whether a `role` is REQUIRED, FORBIDDEN, or wrong is a property of the SERVED GENESIS, never of the
+  // command. Until round 84 the dispatcher asserted it as a property of the command: `--role` was demanded first
+  // and the declaration checked second, so a publisher that declares no roles had no path to a parallel key at all
+  // — only `ust rotate`, which replaces. The protocol admits exactly what the tool refused (`role-01`, active_count 2),
+  // and the refusal even named a GENESIS SUPERSESSION as the remedy: re-rooting a live identity to add a key that
+  // needs no ceremony. The rule lives here, in the testable core, rather than in the dispatcher, which is not
+  // exported and therefore cannot be asserted against.
+  const declared = genesis.state?.data?.genesis?.value?.roles;
+  const declares = Array.isArray(declared) && declared.length > 0;
+  if (declares && !role) throw new Error(`this genesis DECLARES role separation (${declared.join(', ')}), so a parallel key must state its own role: --role <${declared.join('|')}>. Inheritance propagates a role down a lineage and can never introduce one (§F.5e.1), and a missing field must not be the strongest possible claim.`);
+  if (declares && !declared.includes(role)) throw new Error(`--role ${role} is not one this genesis declared (${declared.join(', ')})`);
+  if (!declares && role) throw new Error(`this genesis declares NO role separation, so a \`role\` on a key-log entry is a field the verifier cannot act on and the entry would be E-MALFORMED (§12.2, §F.5e.2). Add the key WITHOUT --role; declaring roles is a separate ceremony act that supersedes the genesis.`);
   const prev = keylog.length ? P.contentHash(keylog[keylog.length - 1]) : P.contentHash(genesis);
   const newKey = await W.generateSigner({ extractable: true });
   const entry = await W.seal(P.buildKeyLogEntry({ domain_shard: domain, ust_id: ustId, key_id: rootSigner.key_id }, time,
@@ -2183,17 +2195,14 @@ function banner() {
 // look for it read the SOURCE by name. The API is the binary plus the testable cores (`addKeylogKey` below).
 async function cmdKey() {
   const sub = process.argv[3];
-  if (sub !== 'add') die('usage: ust key add --domain <d> --root <encrypted-root.b64> --role <data|issuance> [--keylog <served array file>] [--out .]\n  APPENDS a key BESIDE the current one (never replaces it — that is `ust rotate`).\n  A parallel key states its OWN role: inheritance propagates a role down a lineage and can never introduce one (§F.5e.1).');
+  if (sub !== 'add') die('usage: ust key add --domain <d> --root <encrypted-root.b64> [--role <data|issuance>] [--keylog <served array file>] [--out .]\n  APPENDS a key BESIDE the current one (never replaces it — that is `ust rotate`).\n  --role is REQUIRED if the served genesis DECLARES role separation and REFUSED if it does not: which one is a\n  property of that genesis, not of this command, so it is read from the genesis rather than demanded up front.');
   const domain = arg('domain');
   if (!domain || domain === true) die('--domain <d> required');
   const rootFile = arg('root'); if (!rootFile || rootFile === true) die('--root <encrypted root backup .b64> required (the cold crown key — every key-log mutation is root-signed, §F.5e.3)');
-  const role = arg('role'); if (!role || role === true) die('--role <data|issuance> required — a parallel key has no lineage to inherit a role from (§F.5e.1)');
+  const roleArg = arg('role', null); const role = (roleArg && roleArg !== true) ? roleArg : null;
   const get = discoveryFetcher(domain);
   let genesis; try { genesis = JSON.parse(await get('/.well-known/ust-genesis')); } catch (e) { die('cannot fetch genesis for ' + domain + ': ' + (e.message || e)); }
   if (!P.isValid(P.verify(genesis, { context: 'key' }))) die('served genesis does not VERIFY');
-  const declared = genesis.state?.data?.genesis?.value?.roles;
-  if (!Array.isArray(declared) || !declared.length) die('this genesis DECLARES no role separation, so a role cannot be assigned in the key log (§12.2). Declaring it is a ceremony act: `ust genesis --roles ...`, which supersedes the genesis.');
-  if (!declared.includes(role)) die(`--role ${role} is not one this genesis declared (${declared.join(', ')})`);
   const klFile = arg('keylog', null);
   let keylog = [];
   try { if (klFile && klFile !== true) { const parsed = parseKeylogRaw(readFileSync(String(klFile), 'utf8')); if (parsed.err) throw new Error(parsed.err); keylog = parsed.entries; }
@@ -2219,7 +2228,11 @@ async function cmdKey() {
   const ks = P.resolveKeys(genesis, grown.keylog);
   if (ks.error) die('self-check FAILED: the grown key-log does not resolve (' + ks.error + ': ' + (ks.detail || '') + ')');
   if (!ks.active.has(grown.newKey.key_id)) die('self-check FAILED: the new key is NOT in the active set after the grown log');
-  if (ks.roles.get(grown.newKey.key_id) !== role) die(`self-check FAILED: the new key resolves with role ${ks.roles.get(grown.newKey.key_id) ?? '(none)'}, not ${role}`);
+  // `roles` carries no entry for an unroled key, so ABSENT must compare equal to "no role asked for" — otherwise
+  // the undeclared path this round opened would die on the ceremony's own self-check, which is how the genesis
+  // ceremony broke once already.
+  const gotRole = ks.roles.get(grown.newKey.key_id) ?? null;
+  if (gotRole !== role) die(`self-check FAILED: the new key resolves with role ${gotRole ?? '(none)'}, not ${role ?? '(none)'}`);
   const outDir = (arg('out', null) && arg('out', null) !== true) ? arg('out', null) : '.';
   writeFileSync(`${outDir}/ust-keylog`, JSON.stringify(grown.keylog, null, 2) + '\n');
   const pkcs8 = Buffer.from(await crypto.subtle.exportKey('pkcs8', grown.newKey.privateKey)).toString('base64');

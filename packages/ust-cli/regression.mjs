@@ -706,6 +706,21 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
     check('keyadd_parallel_key_is_active_with_its_own_role', !ks.error && ks.active.has(a1.newKey.key_id) && ks.roles.get(a1.newKey.key_id) === 'issuance');
     check('keyadd_does_not_supersede_the_existing_key', ks.active.has(K1.key_id) && ks.roles.get(K1.key_id) === 'data');
     check('keyadd_appends_never_rewrites', P.contentHash(a1.keylog[0]) === P.contentHash(k0) && a1.keylog.length === 2);
+    // #109 / round 84 — whether a role is REQUIRED, FORBIDDEN or wrong is a property of the SERVED GENESIS. The
+    // dispatcher used to assert it as a property of the command, leaving a publisher that declares no roles with
+    // NO path to a parallel key — while `role-01` pins that exact entry as valid.
+    check('keyadd_declaring_genesis_REQUIRES_a_role',
+      await threw(() => C.addKeylogKey({ genesis: gR, keylog: [k0], rootSigner: root, time: Tr, ustId: 'ust:20260628.1005' })));
+    check('keyadd_declaring_genesis_refuses_an_undeclared_role',
+      await threw(() => C.addKeylogKey({ genesis: gR, keylog: [k0], rootSigner: root, role: 'receipts', time: Tr, ustId: 'ust:20260628.1005' })));
+    check('keyadd_UNDECLARED_genesis_refuses_a_role',
+      await threw(() => C.addKeylogKey({ genesis, keylog: [kl0], rootSigner: root, role: 'data', time: Tr, ustId: 'ust:20260628.1005' })));
+    {   // the case that had no path at all: a plain parallel add under a genesis that declares nothing
+      const p1 = await C.addKeylogKey({ genesis, keylog: [kl0], rootSigner: root, time: Tr, ustId: 'ust:20260628.1005' });
+      const ksp = P.resolveKeys(genesis, p1.keylog);
+      check('keyadd_UNDECLARED_genesis_admits_a_plain_parallel_add', !ksp.error && ksp.active.has(p1.newKey.key_id) && ksp.active.has(K1.key_id));
+      check('keyadd_plain_add_carries_no_role', ksp.roles.get(p1.newKey.key_id) === undefined);
+    }
     // #108 / round 82 — the log above is the shape `ust key add --role` made ordinary: TWO active operational keys,
     // `data` added first, `issuance` second. Until round 82 the rotation subject was the LAST `add`, so a rotation
     // superseded the issuance key, inherited ITS role, and `--reason` revoked it — while the operator meant `data`.

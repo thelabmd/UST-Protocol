@@ -62,6 +62,8 @@ jobs:
         run: npm run test:diarium
       - name: round recaps are a VERBATIM view of a sealed entry, land in the ISSUE and not the changelog, and every live round is decided
         run: npm run test:recap
+      - name: key_op contract (what a surface tells a producer to build == what the verifier admits)
+        run: npm run test:keyop
       - name: ust-light is a valid UST subset (byte-identical to the reference impl, both directions)
         run: npm run test:light
       - name: light README panels are DERIVED from the dark originals, never hand-edited

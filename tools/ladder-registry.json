@@ -144,6 +144,22 @@
       "test": {
         "excluded": "The test layer is the gate's own legs, run rather than described: a re-added `#### round N — recap` block in CHANGELOG.md fails, a record with neither issue nor reason fails, a registry hash absent from the store fails by name, and the floor lowered names undecided rounds. They run as npm run test:recap, not as conformance checks, which cover the verifier only."
       }
+    },
+    {
+      "round": 84,
+      "math": {
+        "excluded": "Every protocol layer was already correct here, and that is the finding. §F.5e.1 states the DECLARED regime and §F.5e.2 the admission criterion; the verifier refuses both errors a producer could make (an undeclared role is E-MALFORMED, a missing one under declaration is E-KEY), so a producer wanting valid output has no freedom left for the model to constrain. Unlike round 82, where the verifier accepts ANY active key and only the producer can go wrong, nothing here is under-determined."
+      },
+      "spec": {
+        "excluded": "Same reason, and it is worth the contrast: round 82 needed a producer clause in §12.2 because the verifier could not tell a well-chosen `supersedes` from a badly chosen one. Here it can — both mistakes are already refused by rules the spec states — so a clause would restate what §12.2 already determines. What the spec's field list DOES gain is enforcement: keyop-contract-gate now binds it to the reducer in both directions."
+      },
+      "code": "packages/ust-cli/index.mjs :: addKeylogKey",
+      "vector": {
+        "excluded": "role-01 (undeclared genesis, plain add → active_count 2), role-02 (undeclared genesis + role → E-MALFORMED) and role-03 (declared genesis, add with no role → E-KEY) already pin all three cases of the rule this round moves into the core. The verifier was right and covered; the defect was a tool refusing what those vectors admit, which no transcript can express."
+      },
+      "test": {
+        "excluded": "The test layer is packages/ust-cli/regression.mjs — five checks pinning a required role under declaration, refusal of an undeclared role name, refusal of a role under an undeclared genesis, the plain parallel add that had no path at all, and that it carries no role — plus keyop-contract-gate's two negative controls. They run under npm run test:cli and npm run test:keyop, not as conformance checks, which cover the verifier only."
+      }
     }
   ],
   "first_accounted_round": 76,

@@ -41,6 +41,12 @@ const RETIRED = [
   { id: 'domain-less computed mode',      rx: /domain-less/g,                   retiredIn: 'owner 2026-07-05 (forgeable cross-engine agreement)', spec: 4, model: 0 },
   { id: 'secret-url privacy mode',        rx: /secret[- ]url/g,                 retiredIn: 'rc.4 (a disclosure channel, out of scope)',        spec: 1, model: 0 },
   { id: 'first-wins / hash dedupe in forkChoice', rx: /first-wins|content_hash[- ]dedupe/g, retiredIn: 'rev18/19/20 (hid equivocation)',       spec: 1, model: 2 },
+  // rev97 removed the key-log `rotate` OP, and round 74's sweep never added it here — measured 2026-07-29, three
+  // rounds later, while it was still being advertised to agents by the MCP tool description. The fingerprint is the
+  // OP FORM, not the bare word: `ust rotate` is a live CLI command and `rotateKeylog` a live export, so /rotate/
+  // would churn on every unrelated edit and teach a reader to ignore this gate. Code surfaces are covered by
+  // tools/keyop-contract-gate.mjs, which enumerates the domain from the reducer instead of matching text.
+  { id: 'key-log `rotate` op',            rx: /op:\s*.?rotate/g,               retiredIn: 'rev97 (self-authorized succession named its own successor)', spec: 1, model: 2 },
   { id: 'depth-64 cap in admitDeep',      rx: /depth[- ]64/g,                   retiredIn: 'rev30 (falsely rejected a valid deep document)',   spec: 0, model: 1 },
 ];
 
