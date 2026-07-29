@@ -978,6 +978,38 @@ conditioned on one is not a rule.
 **Binding: realized — thelabmd/UST-Protocol#107 closed.** #106 (the general role vocabulary) remains open; it
 GENERALIZES this conjunct and does not replace it.
 
+## F.5e.4 The verification ROLE is a partition of classes, and a one-sided partition is not one
+
+§14 runs one of two ROLES over a transcript: `key`, where a document is read as part of the trust layer — a
+genesis, a key-log entry, a cadence entry — and `data`, where it is read as a publisher's claim about the world.
+Which role applies is not a caller's preference; it is fixed by the document's `class`, because the two roles run
+different downstream algorithms and a document that could be read as either would have two meanings.
+
+**The map `role : Class → {key, data}` must be a PARTITION** — total (every registered class has a role) and
+disjoint (no class has both). Only then is "which algorithm applies" a function of the document rather than of
+the door it arrived at.
+
+**A partition enforced on ONE side is not a partition.** If the `data` role refuses authority classes but the
+`key` role admits everything, then the classes are not partitioned at all: a data document simply has two homes,
+and the role it ends up in is decided by which caller reached it first. The asymmetry is invisible to a reader
+of either check alone, because each looks like a correct refusal of the wrong thing.
+
+**Measured 2026-07-29.** That is exactly what the reference implementation carried. `context:'data'` refused
+`genesis`/`key`/`cadence`; `context:'key'` checked nothing, so a key-form `class:"observation"` verified
+`VALID:LIGHT` in the key role, and the shared served-log reader — one parser for both the key log and the cadence
+log — accepted it as a log entry. No verdict was wrong: the reducers still refused it by class one layer down. But
+the door that reported having VERIFIED the entry was not the door that refused it, and a fail-closed reader whose
+refusal lives elsewhere is only accidentally closed.
+
+The correction is one enumeration read in BOTH directions rather than two lists that happen to agree today:
+`key` admits exactly `{genesis, key, cadence}` and `data` admits exactly the complement. A class added to the
+registry then belongs to a role by construction, instead of silently belonging to both.
+
+**Realization — round 78.** `verify` derives both refusals from the single `AUTHORITY_CLASSES` set, so the two
+directions cannot drift apart; the shared reader's own justification no longer rests on the key role admitting
+everything. Cf. *"#97/tlx a data class in the KEY role → E-MALFORMED (the partition is two-sided)"* and
+*"#97/tlx the key role admits EXACTLY the authority classes — genesis, key and cadence, measured from the set"*.
+
 ## F.5f Composite authority is TRANSITIVE — the impersonation fix needs no new signed object (#75 ROOT 3)
 
 An external audit proposed closing the composition holes (an impostor becoming `canonical` / `complete` under a

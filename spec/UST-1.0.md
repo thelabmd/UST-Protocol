@@ -1459,7 +1459,15 @@ unresolved dependency ⇒ the corresponding error (never `VALID`).
    The signature is ALWAYS verified (floor); only the KEY RESOLUTION is tiered. After this step every field of
    the State is authenticated (I1).
 5. **Well-formed identity/time/shape.** Validate `ust_id` shape (§8), RFC 3339 times, `valid_from ≤ valid_to`,
-   `class` in registry (§17) AND appropriate for the verification CONTEXT (W3: a key-log walk accepts ONLY `class:"key"`/`"genesis"`; a data/observation verify MUST NOT accept a `class:"key"`/`"genesis"` transcript as data, and vice-versa — a class-mismatch for the role ⇒ E-MALFORMED); ≥1 partition; each private partition (§4.4) carries a valid `commit` (+ `enc` if encrypted), and
+   `class` in registry (§17) AND appropriate for the verification ROLE. **The role is a PARTITION of the class
+   registry, enforced in BOTH directions (W3, §F.5e.4).** The **AUTHORITY classes** are `genesis`, `key` and
+   `cadence` — the trust layer's own documents; every other registered class is a **DATA** class. The `key` role
+   admits EXACTLY the authority classes and refuses a data class; the `data` role admits EXACTLY the data classes
+   and refuses an authority class. Either mismatch ⇒ `E-MALFORMED`. Both refusals MUST be derived from the one
+   set: a partition enforced on a single side is not a partition, since the losing class then simply has two
+   homes and its role is decided by whichever caller reached it first — and a reader of either check alone cannot
+   see the gap, because each looks like a correct refusal of the wrong thing. (`cadence` sits with the authority
+   classes because the cadence log is read exactly as the key log is, §11.3/§20.1.); ≥1 partition; each private partition (§4.4) carries a valid `commit` (+ `enc` if encrypted), and
    class↔provenance consistency (`derivation`/`attestation` REQUIRE `provenance`; `observation` MUST NOT
    carry `constituents`/`root`) (N10). SEMANTIC consistency is part of shape: every date MUST exist on the REAL
    calendar (range-valid strings like `Feb 31` are NOT dates — regex ranges alone are insufficient); a key-form

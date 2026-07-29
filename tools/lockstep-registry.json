@@ -468,6 +468,18 @@
       "rev": "round76",
       "model_locus": "round 76 completes `mutating(c)`: both classes, same conjunct, same shape",
       "conformance_check": "#107 an OPERATIONAL key may NOT move the cadence grid — `active` is NECESSARY, not SUFFICIENT"
+    },
+    {
+      "id": "R78-class-role-partition",
+      "rev": "round78",
+      "model_locus": "The correction is one enumeration read in BOTH directions rather than two lists that happen to agree today",
+      "conformance_check": "#97/tlx a data class in the KEY role → E-MALFORMED (the partition is two-sided)"
+    },
+    {
+      "id": "R78-key-role-exact-set",
+      "rev": "round78",
+      "model_locus": "`key` admits exactly `{genesis, key, cadence}` and `data` admits exactly the complement",
+      "conformance_check": "#97/tlx the key role admits EXACTLY the authority classes — genesis, key and cadence, measured from the set"
     }
   ]
 }

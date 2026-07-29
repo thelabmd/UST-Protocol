@@ -450,6 +450,14 @@ const AEAD_ALGS = ['AES-256-GCM', 'XChaCha20-Poly1305'], B64URL = /^[A-Za-z0-9_-
 // a bare `r.result === 'VALID'` is intentionally no longer valid (it forces callers to face the tier).
 export const isValid = (r) => typeof r?.result === 'string' && r.result.slice(0, 6) === 'VALID:';
 const CLASSES = ['observation','attestation','derivation','genesis','key','cadence'];
+// §14.5 / §F.5e.4 — the verification ROLE is a PARTITION of CLASSES: the trust layer's OWN documents on one side,
+// a publisher's claims about the world on the other. Both refusals read this ONE set, so they cannot drift apart.
+// They did: `data` refused these three while `key` checked nothing, so a key-form `class:"observation"` verified
+// VALID:LIGHT in the key role and the shared served-log reader took it as a log entry (round 78). A partition
+// enforced on one side is not a partition — the class simply has two homes and its role is decided by whichever
+// caller reached it first. `cadence` sits here because the cadence log is read exactly as the key log is (§11.3).
+const AUTHORITY_CLASSES = new Set(['genesis', 'key', 'cadence']);
+const DATA_CLASSES = CLASSES.filter((c) => !AUTHORITY_CLASSES.has(c));   // the complement, never a second hand-list
 // §6 pinned RFC3339 UTC-Z with VALID RANGES — month 01-12, day 01-31, hour 00-23, min/sec 00-59.
 // Rejects leap seconds (:60) and out-of-range (:99, hour 99) so two conforming verifiers ALWAYS agree (I4).
 // Publishers MUST smear leap seconds to :59 (there is no representable :60).
@@ -662,8 +670,9 @@ function verifyCore(doc, opts = {}) {
         if (hasCp === hasGap) return bad('E-MALFORMED', 'a prev-only attestation MUST be a checkpoint (data.checkpoint) XOR a gap (data.gap) — the §11.3 subtype, never both/neither');
       } else if (pr?.root === undefined) return bad('E-MALFORMED', 'a set attestation MUST carry constituents + root');
     }
-    // W3 class-context: a data verify must not accept a key-log/genesis transcript as data
-    if (opts.context === 'data' && (st.id.class === 'key' || st.id.class === 'genesis' || st.id.class === 'cadence')) return bad('E-MALFORMED', 'class ' + st.id.class + ' not valid in data context (W3)');
+    // W3 class-role: the partition, enforced in BOTH directions from the ONE set (§F.5e.4).
+    if (opts.context === 'data' && AUTHORITY_CLASSES.has(st.id.class)) return bad('E-MALFORMED', 'class ' + st.id.class + ' not valid in data context (W3)');
+    if (opts.context === 'key' && !AUTHORITY_CLASSES.has(st.id.class)) return bad('E-MALFORMED', 'class ' + st.id.class + ' not valid in key context (W3) — the key role admits exactly ' + [...AUTHORITY_CLASSES].join('/'));
     // step 4 — authenticity (§14.4): closed sig schema + declared alg + key_id consistency + strict Ed25519 over S
     if (typeof doc.sig !== 'object' || doc.sig === null) return bad('E-SIG', 'sig missing');
     for (const k of Object.keys(doc.sig)) if (!RESERVED.sig.includes(k)) return bad('E-SIG', 'unknown sig member: ' + k);
@@ -822,7 +831,7 @@ function verifyCore(doc, opts = {}) {
     // EXEMPT the authority-establishing classes: a `genesis` DECLARES the name it roots (self-asserted by design — the
     // consumer pins it), and `key`/`cadence` log entries continue the key-log chain; they are name-form by nature and
     // verified via their own chain, not standalone domain claims. The rule is for STATE documents (observation/attestation/derivation).
-    if (tier === 'LIGHT' && shardMode === 'name' && st.id.class !== 'genesis' && st.id.class !== 'key' && st.id.class !== 'cadence')
+    if (tier === 'LIGHT' && shardMode === 'name' && !AUTHORITY_CLASSES.has(st.id.class))
       return { result: 'INDETERMINATE', reason: 'unavailable', identity: { ...identity, mode: shardMode }, detail: 'name-form domain_shard is a domain claim the verifier could not confirm (tier resolved to LIGHT — the identity axis reached no name binding): supply genesis to bind the name (→ HIGH), or use key-form domain_shard = key_id for a self-asserted key-identity document (→ VALID:LIGHT). "cannot confirm" ⇒ INDETERMINATE (UST-ybn — the unified rule)' };
     // A verdict that does not say WHO judged it cannot be re-checked later. `verifier` + `registry_digest` bind this
     // result to the rules that produced it: pin the pair and the same verdict is reproducible after the protocol has

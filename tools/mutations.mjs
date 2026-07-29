@@ -17,6 +17,17 @@
 // `mustDetect` marks the verdict-seam mutations the battery treats as hard requirements; the rest are harvest — a hit
 // lowers the unproven residual, a miss is covered by the gate channel and is not a failure.
 export const MUTATIONS = [
+  // round 78 (#97/tlx) — the class↔role PARTITION, one-sided. Broken, the `key` role admits every class again:
+  // a data document verifies as a trust-layer document, and the shared served-log reader takes it as a log entry
+  // while reporting that it VERIFIED it. This mutant is what proves the role matrix is not asserting against an
+  // impossible literal — remove the key-side conjunct and the 12 class-role vectors must go red.
+  {
+    id: 'class-role-one-sided', mustDetect: true, observe: ['conformance'],
+    why: 'the role partition. Broken, a data class passes as an authority document in the key role.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "    if (opts.context === 'key' && !AUTHORITY_CLASSES.has(st.id.class)) return bad('E-MALFORMED',",
+    to: "    if (false /* mutant */ && !AUTHORITY_CLASSES.has(st.id.class)) return bad('E-MALFORMED',",
+  },
   // round 76 (#107) — the cadence ROOT conjunct. Broken, an operational key that is legitimately `active` may re-declare
   // the stream cadence, and with it what the operator's own COMPLETENESS claim means: a widening inside one precision
   // class (30s->90s) turns a stream with empty slots into `complete` without adding a frame. This mutant is what proves

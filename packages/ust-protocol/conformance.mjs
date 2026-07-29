@@ -86,6 +86,13 @@ for (const v of V.vectors) {
     case 'malleability-reject': check(v.id, P.edVerifyStrict(v.pub_b64url, v.signed_content, v.sig_malleable) === false, 'strict verifier MUST reject non-canonical S'); break;
     case 'version-reject': { const b = clone(mk()); b.ust = v.id.includes('major') ? '2.0' : '1.9'; check(v.id, P.verify(b).error === 'E-MALFORMED'); break; }
     case 'bijection-reject': { const b = clone(mk()); if (v.id.includes('missing')) b.state.data.extra = { kind: 'captured', value: { x: '1' } }; else b.state.hashes.ghost = 'sha256:' + '00'.repeat(32); check(v.id, P.verify(b, { context: 'data' }).error === 'E-MALFORMED'); break; }
+    // §14.5/§F.5e.4 — the class↔role PARTITION, pinned as a full 6×2 matrix so a second implementation cannot
+    // pass by enforcing one direction. The vector asserts only the ROLE refusal, not the whole verdict: a class
+    // that BELONGS in the role must not be refused for its class (anything but E-MALFORMED counts as admitted),
+    // and one that does not belong must be exactly E-MALFORMED.
+    case 'class-role': { const r = P.verify(v.doc, { context: v.role });
+      const got = r.error === 'E-MALFORMED' ? 'E-MALFORMED' : 'admitted';
+      check(v.id, got === v.expect, `role ${v.role}: got ${got} (${r.error ?? r.result}) expected ${v.expect}`); break; }
     case 'document-negative': check(v.id, P.verify(v.doc, { context: 'data' }).result === 'INVALID'); break;
     // #75 language-neutral encoder vectors (a second implementation runs the SAME cases)
     case 'utf8-reject': check(v.id, P.verifyJson(Buffer.from(v.input_hex, 'hex')).error === v.expect_error); break;
@@ -1126,6 +1133,32 @@ console.log('\n═════════════════════�
   const x0 = fr('ust:20260628.142900', gH), x1 = fr('ust:20260628.142930', P.contentHash(x0)), x2 = fr('ust:20260628.143000', P.contentHash(x1));
   check('continuity: interval crossing a cadence change → chain-consistent (split), never invalid', P.verifyStream([x0, x1, x2], { genesis: gen, checkpoint: cpI(P.contentHash(x2), 3, P.contentHash(x2), 'ust:20260628.142900', 'ust:20260628.143000'), cadenceLog: [ce] }).complete === 'chain-consistent');
   check('cadence entry is a valid class:cadence transcript (key context) but E-MALFORMED in data context (W3)', (() => { const v = P.verify(ce, { context: 'key' }); const d = P.verify(ce, { context: 'data' }); return v.result === 'VALID:LIGHT' && d.error === 'E-MALFORMED'; })());
+  // ── §F.5e.4 / #97-tlx: the ROLE is a PARTITION, enforced BOTH ways. Until round 78 only the `data` side was
+  // checked, so the key role admitted every class — the shared served-log reader took a data document as a log
+  // entry and the refusal happened one layer down. The check below asserts the WHOLE map, not one cell of it,
+  // so a class added to the registry cannot quietly land in both roles.
+  {
+    const A = kp('7a'.repeat(32));
+    const kf = A.key_id;                                            // key-form: removes the name-form INDETERMINATE confound
+    const Tk = { generated_at: '2026-06-28T14:00:00Z', valid_from: '2026-06-28T14:00:00Z', valid_to: '2026-06-28T15:00:00Z' };
+    const genA = P.seal(P.buildGenesis({ domain_shard: kf, ust_id: 'ust:20260628.1440', key_id: A.key_id }, Tk, A.pubB64), A.priv, A.pubB64);
+    const gAH = P.contentHash(genA);
+    const docs = {
+      genesis: genA,
+      key: P.seal(P.buildKeyLogEntry({ domain_shard: kf, ust_id: 'ust:20260628.1441', key_id: A.key_id }, Tk, { op: 'add', pub: A.pubB64, new_key_id: A.key_id }, gAH), A.priv, A.pubB64),
+      cadence: P.seal(P.buildCadenceEntry({ domain_shard: kf, ust_id: 'ust:20260628.1442', key_id: A.key_id }, Tk, 30, 'ust:20260628.1443', gAH), A.priv, A.pubB64),
+      observation: P.seal(P.buildState({ domain_shard: kf, ust_id: 'ust:20260628.1444', key_id: A.key_id, class: 'observation' }, Tk, { r: { kind: 'captured', value: { x: '1' } } }), A.priv, A.pubB64),
+    };
+    const AUTH = new Set(['genesis', 'key', 'cadence']);
+    let keyOk = true, dataOk = true;
+    for (const [cls, d] of Object.entries(docs)) {
+      const inKey = P.verify(d, { context: 'key' }), inData = P.verify(d, { context: 'data' });
+      if (AUTH.has(cls)) { if (!P.isValid(inKey) || inData.error !== 'E-MALFORMED') keyOk = false; }
+      else { if (inKey.error !== 'E-MALFORMED') dataOk = false; }
+    }
+    check('#97/tlx the key role admits EXACTLY the authority classes — genesis, key and cadence, measured from the set', keyOk);
+    check('#97/tlx a data class in the KEY role → E-MALFORMED (the partition is two-sided)', dataOk);
+  }
   // audit P0 (cadence authority) — a cadence entry signed by an UNAUTHORIZED key (LIGHT-valid, same domain, real
   // prev) must be REJECTED, not accepted; else a transport/caller could change the grid and hide holes.
   { const EV = kp('e7'.repeat(32)); const evilCad = P.seal(P.buildCadenceEntry({ domain_shard: dom, ust_id: 'ust:20260628.1429', key_id: EV.key_id }, Tc, 60, 'ust:20260628.143000', gH), EV.priv, EV.pubB64);

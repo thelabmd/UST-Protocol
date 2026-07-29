@@ -85,9 +85,15 @@ export function verifyRaw(raw, opts = {}) {
 // Parse an untrusted ARRAY (a served log) fail-closed: duplicate scan on the RAW text, then parse, then each
 // entry verifies in the key context. Returns { entries } or { err }.
 //
-// Both identity-side logs have this shape and both are signed by genesis/rotation keys, so both admit in the
-// SAME context — measured on the normative vectors, where a `class:cadence` entry verifies VALID:LIGHT under
-// `context:'key'`. One parser, two logs: the alternative was a second copy differing only in a noun.
+// Both are AUTHORITY-class logs (§F.5e.4): the key role admits EXACTLY `genesis`/`key`/`cadence`, so one parser
+// serves both and a data document is refused HERE, at the door that reports having verified the entry.
+//
+// The earlier justification — "both are signed by genesis/rotation keys, so both admit in the same context" —
+// outlived its premise twice: `rotate` was removed (rev97) and key-log mutation became root-only (round 76). And
+// it named as a fact what was really the absence of a check: the key role admitted EVERY class, so a key-form
+// `class:"observation"` verified here and was only refused one layer down, in the reducer (round 78).
+//
+// One parser, two logs: the alternative was a second copy differing only in a noun.
 export function parseLogRaw(raw, label = 'key log') {
   const text = rawTextOf(raw);
   const dup = scanDupes(text);

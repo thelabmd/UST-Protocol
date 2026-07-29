@@ -4,6 +4,14 @@
   "_pin": "Rows in the ladder with no record here. May only ever SHRINK. 94 rows existed when the gate landed; the three most recent are accounted.",
   "records": [
     {
+      "round": 78,
+      "math": "The correction is one enumeration read in BOTH directions rather than two lists that happen to agree today",
+      "spec": "The role is a PARTITION of the class\n   registry, enforced in BOTH directions",
+      "code": "packages/ust-protocol/index.mjs :: AUTHORITY_CLASSES role partition",
+      "vector": "role-observation-in-key",
+      "test": "#97/tlx a data class in the KEY role → E-MALFORMED (the partition is two-sided)"
+    },
+    {
       "round": 77,
       "math": {
         "excluded": "This round changes where a round is RECORDED and how that record is enforced — repo bookkeeping, not the verifier. The formal model describes what a verifier may conclude from bytes; a table's closure is not a property of any document, and writing model prose to satisfy a gate is the patch this repo rejects."

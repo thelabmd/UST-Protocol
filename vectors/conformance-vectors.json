@@ -4301,6 +4301,534 @@
         "identity": "nope"
       },
       "expect": "NONE"
+    },
+    {
+      "kind": "class-role",
+      "id": "role-genesis-in-key",
+      "rule": "§14.5/§F.5e.4 the verification role is a PARTITION: the key role admits exactly genesis/key/cadence, the data role exactly the rest — enforced BOTH ways from one set",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260729.1200",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "genesis"
+          },
+          "time": {
+            "generated_at": "2026-07-29T12:00:00Z",
+            "valid_from": "2026-07-29T12:00:00Z",
+            "valid_to": "2026-07-29T13:00:00Z"
+          },
+          "data": {
+            "genesis": {
+              "kind": "captured",
+              "value": {
+                "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+                "role": "name-binding-root"
+              }
+            }
+          },
+          "hashes": {
+            "genesis": "sha256:4f1f36943f2247194863db9fafc225d0bc723772aa1e664b44fcaeb6a4f40a3c"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "Iv8CorU9QPq6f7rrQ5PPReHmgY5xXtGnHJsFezHiVLN2X3P9BnmwMk0_RjyPqeGidiFtFz3lfOSZD1q-agXkDw"
+        }
+      },
+      "role": "key",
+      "expect": "admitted"
+    },
+    {
+      "kind": "class-role",
+      "id": "role-genesis-in-data",
+      "rule": "§14.5/§F.5e.4 the verification role is a PARTITION: the key role admits exactly genesis/key/cadence, the data role exactly the rest — enforced BOTH ways from one set",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260729.1200",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "genesis"
+          },
+          "time": {
+            "generated_at": "2026-07-29T12:00:00Z",
+            "valid_from": "2026-07-29T12:00:00Z",
+            "valid_to": "2026-07-29T13:00:00Z"
+          },
+          "data": {
+            "genesis": {
+              "kind": "captured",
+              "value": {
+                "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+                "role": "name-binding-root"
+              }
+            }
+          },
+          "hashes": {
+            "genesis": "sha256:4f1f36943f2247194863db9fafc225d0bc723772aa1e664b44fcaeb6a4f40a3c"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "Iv8CorU9QPq6f7rrQ5PPReHmgY5xXtGnHJsFezHiVLN2X3P9BnmwMk0_RjyPqeGidiFtFz3lfOSZD1q-agXkDw"
+        }
+      },
+      "role": "data",
+      "expect": "E-MALFORMED"
+    },
+    {
+      "kind": "class-role",
+      "id": "role-key-in-key",
+      "rule": "§14.5/§F.5e.4 the verification role is a PARTITION: the key role admits exactly genesis/key/cadence, the data role exactly the rest — enforced BOTH ways from one set",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260729.1201",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "key"
+          },
+          "time": {
+            "generated_at": "2026-07-29T12:00:00Z",
+            "valid_from": "2026-07-29T12:00:00Z",
+            "valid_to": "2026-07-29T13:00:00Z"
+          },
+          "data": {
+            "key_op": {
+              "kind": "captured",
+              "value": {
+                "op": "add",
+                "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+                "new_key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb"
+              }
+            }
+          },
+          "hashes": {
+            "key_op": "sha256:eeb9c7d38436fe26d9aa4687103f7c4630b2267a7df948edfe33d9dc0bcc0a53"
+          },
+          "provenance": {
+            "prev": "sha256:3eca026fe127f0838731b5ad1a301ee815944a2bcd53d730a63506af49ee20fb"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "iPQWImcCVfCVvwrdDJBFQwKfGo9EmCCMjJ2Qodtr5HmpHWCeDWXBCqFJ4PCyVCmkYa75m0sOaX3-sGKzesjYCA"
+        }
+      },
+      "role": "key",
+      "expect": "admitted"
+    },
+    {
+      "kind": "class-role",
+      "id": "role-key-in-data",
+      "rule": "§14.5/§F.5e.4 the verification role is a PARTITION: the key role admits exactly genesis/key/cadence, the data role exactly the rest — enforced BOTH ways from one set",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260729.1201",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "key"
+          },
+          "time": {
+            "generated_at": "2026-07-29T12:00:00Z",
+            "valid_from": "2026-07-29T12:00:00Z",
+            "valid_to": "2026-07-29T13:00:00Z"
+          },
+          "data": {
+            "key_op": {
+              "kind": "captured",
+              "value": {
+                "op": "add",
+                "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+                "new_key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb"
+              }
+            }
+          },
+          "hashes": {
+            "key_op": "sha256:eeb9c7d38436fe26d9aa4687103f7c4630b2267a7df948edfe33d9dc0bcc0a53"
+          },
+          "provenance": {
+            "prev": "sha256:3eca026fe127f0838731b5ad1a301ee815944a2bcd53d730a63506af49ee20fb"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "iPQWImcCVfCVvwrdDJBFQwKfGo9EmCCMjJ2Qodtr5HmpHWCeDWXBCqFJ4PCyVCmkYa75m0sOaX3-sGKzesjYCA"
+        }
+      },
+      "role": "data",
+      "expect": "E-MALFORMED"
+    },
+    {
+      "kind": "class-role",
+      "id": "role-cadence-in-key",
+      "rule": "§14.5/§F.5e.4 the verification role is a PARTITION: the key role admits exactly genesis/key/cadence, the data role exactly the rest — enforced BOTH ways from one set",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260729.1202",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "cadence"
+          },
+          "time": {
+            "generated_at": "2026-07-29T12:00:00Z",
+            "valid_from": "2026-07-29T12:00:00Z",
+            "valid_to": "2026-07-29T13:00:00Z"
+          },
+          "data": {
+            "cadence_op": {
+              "kind": "computed",
+              "value": {
+                "cadence": "30",
+                "effective_from": "ust:20260729.1203"
+              }
+            }
+          },
+          "hashes": {
+            "cadence_op": "sha256:fa4decfff420a1e6d48974f7b99ac7f35dd02e27be2cea4fc860433254825639"
+          },
+          "provenance": {
+            "prev": "sha256:3eca026fe127f0838731b5ad1a301ee815944a2bcd53d730a63506af49ee20fb"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "CF1ItXdqVYJ3SOXm8hOgkdKB1RQoBCu2c24pRo2__3EPupkp8LCyFnJFxN7W3Thv_C1ZkiXrmJ4VsEKOlwXlBQ"
+        }
+      },
+      "role": "key",
+      "expect": "admitted"
+    },
+    {
+      "kind": "class-role",
+      "id": "role-cadence-in-data",
+      "rule": "§14.5/§F.5e.4 the verification role is a PARTITION: the key role admits exactly genesis/key/cadence, the data role exactly the rest — enforced BOTH ways from one set",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260729.1202",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "cadence"
+          },
+          "time": {
+            "generated_at": "2026-07-29T12:00:00Z",
+            "valid_from": "2026-07-29T12:00:00Z",
+            "valid_to": "2026-07-29T13:00:00Z"
+          },
+          "data": {
+            "cadence_op": {
+              "kind": "computed",
+              "value": {
+                "cadence": "30",
+                "effective_from": "ust:20260729.1203"
+              }
+            }
+          },
+          "hashes": {
+            "cadence_op": "sha256:fa4decfff420a1e6d48974f7b99ac7f35dd02e27be2cea4fc860433254825639"
+          },
+          "provenance": {
+            "prev": "sha256:3eca026fe127f0838731b5ad1a301ee815944a2bcd53d730a63506af49ee20fb"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "CF1ItXdqVYJ3SOXm8hOgkdKB1RQoBCu2c24pRo2__3EPupkp8LCyFnJFxN7W3Thv_C1ZkiXrmJ4VsEKOlwXlBQ"
+        }
+      },
+      "role": "data",
+      "expect": "E-MALFORMED"
+    },
+    {
+      "kind": "class-role",
+      "id": "role-observation-in-key",
+      "rule": "§14.5/§F.5e.4 the verification role is a PARTITION: the key role admits exactly genesis/key/cadence, the data role exactly the rest — enforced BOTH ways from one set",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260729.1204",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "observation"
+          },
+          "time": {
+            "generated_at": "2026-07-29T12:00:00Z",
+            "valid_from": "2026-07-29T12:00:00Z",
+            "valid_to": "2026-07-29T13:00:00Z"
+          },
+          "data": {
+            "r": {
+              "kind": "captured",
+              "value": {
+                "x": "1"
+              }
+            }
+          },
+          "hashes": {
+            "r": "sha256:f2c8ba41ce4371f98680ba58a1e81b349e6bc112d13af661ead38d0b4aac1293"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "yZKkpTO4rFtQAM_g81AxgPweAdeJYokBJB1JC5Z5_ZtgbvbgqPAn3bGvx-RJqHMwPOMhp5Gvt2IHJe8qcmauBw"
+        }
+      },
+      "role": "key",
+      "expect": "E-MALFORMED"
+    },
+    {
+      "kind": "class-role",
+      "id": "role-observation-in-data",
+      "rule": "§14.5/§F.5e.4 the verification role is a PARTITION: the key role admits exactly genesis/key/cadence, the data role exactly the rest — enforced BOTH ways from one set",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260729.1204",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "observation"
+          },
+          "time": {
+            "generated_at": "2026-07-29T12:00:00Z",
+            "valid_from": "2026-07-29T12:00:00Z",
+            "valid_to": "2026-07-29T13:00:00Z"
+          },
+          "data": {
+            "r": {
+              "kind": "captured",
+              "value": {
+                "x": "1"
+              }
+            }
+          },
+          "hashes": {
+            "r": "sha256:f2c8ba41ce4371f98680ba58a1e81b349e6bc112d13af661ead38d0b4aac1293"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "yZKkpTO4rFtQAM_g81AxgPweAdeJYokBJB1JC5Z5_ZtgbvbgqPAn3bGvx-RJqHMwPOMhp5Gvt2IHJe8qcmauBw"
+        }
+      },
+      "role": "data",
+      "expect": "admitted"
+    },
+    {
+      "kind": "class-role",
+      "id": "role-attestation-in-key",
+      "rule": "§14.5/§F.5e.4 the verification role is a PARTITION: the key role admits exactly genesis/key/cadence, the data role exactly the rest — enforced BOTH ways from one set",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260729.1205",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "attestation"
+          },
+          "time": {
+            "generated_at": "2026-07-29T12:00:00Z",
+            "valid_from": "2026-07-29T12:00:00Z",
+            "valid_to": "2026-07-29T13:00:00Z"
+          },
+          "data": {
+            "seal": {
+              "kind": "computed",
+              "value": {
+                "n": "1"
+              }
+            }
+          },
+          "hashes": {
+            "seal": "sha256:779494a798924d7839a118b13184bce9cf9ab1c414583c84250b94981b3aa871"
+          },
+          "provenance": {
+            "constituents": [
+              "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+            ],
+            "root": "sha256:2f589ba24bedaceb618962e7bd79f5f393af12b62f0b40398d65affb491abefe"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "W_auBaXAjU3yDc-LuH1E8F6Lvz141Z6sHnJAD95ymKEVYqBv_x40onRRPgd2vzffmDBJa4eKxwH5lJ4vC_TPDw"
+        }
+      },
+      "role": "key",
+      "expect": "E-MALFORMED"
+    },
+    {
+      "kind": "class-role",
+      "id": "role-attestation-in-data",
+      "rule": "§14.5/§F.5e.4 the verification role is a PARTITION: the key role admits exactly genesis/key/cadence, the data role exactly the rest — enforced BOTH ways from one set",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260729.1205",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "attestation"
+          },
+          "time": {
+            "generated_at": "2026-07-29T12:00:00Z",
+            "valid_from": "2026-07-29T12:00:00Z",
+            "valid_to": "2026-07-29T13:00:00Z"
+          },
+          "data": {
+            "seal": {
+              "kind": "computed",
+              "value": {
+                "n": "1"
+              }
+            }
+          },
+          "hashes": {
+            "seal": "sha256:779494a798924d7839a118b13184bce9cf9ab1c414583c84250b94981b3aa871"
+          },
+          "provenance": {
+            "constituents": [
+              "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+            ],
+            "root": "sha256:2f589ba24bedaceb618962e7bd79f5f393af12b62f0b40398d65affb491abefe"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "W_auBaXAjU3yDc-LuH1E8F6Lvz141Z6sHnJAD95ymKEVYqBv_x40onRRPgd2vzffmDBJa4eKxwH5lJ4vC_TPDw"
+        }
+      },
+      "role": "data",
+      "expect": "admitted"
+    },
+    {
+      "kind": "class-role",
+      "id": "role-derivation-in-key",
+      "rule": "§14.5/§F.5e.4 the verification role is a PARTITION: the key role admits exactly genesis/key/cadence, the data role exactly the rest — enforced BOTH ways from one set",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260729.1206",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "derivation"
+          },
+          "time": {
+            "generated_at": "2026-07-29T12:00:00Z",
+            "valid_from": "2026-07-29T12:00:00Z",
+            "valid_to": "2026-07-29T13:00:00Z"
+          },
+          "data": {
+            "r": {
+              "kind": "computed",
+              "value": {
+                "x": "1"
+              }
+            }
+          },
+          "hashes": {
+            "r": "sha256:857ef0df9a4879408cf5c4980625ff5be7447bd89a0e8046974f80679eb70ab4"
+          },
+          "provenance": {
+            "based_on": [
+              {
+                "hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+              }
+            ],
+            "seed": "sha256:02f09a195d876c01f159fef750b699967019e4bcbfe051a19c34419aac1b39f7"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "xgaPbY-81HVkG-3LdVZqhjLRwDNo3YE_Qj_bqtX9q6xNBBq07Tgd4nIqMV3A6PX6HszbvIURwMsZ3qGX2Q67Bw"
+        }
+      },
+      "role": "key",
+      "expect": "E-MALFORMED"
+    },
+    {
+      "kind": "class-role",
+      "id": "role-derivation-in-data",
+      "rule": "§14.5/§F.5e.4 the verification role is a PARTITION: the key role admits exactly genesis/key/cadence, the data role exactly the rest — enforced BOTH ways from one set",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260729.1206",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "derivation"
+          },
+          "time": {
+            "generated_at": "2026-07-29T12:00:00Z",
+            "valid_from": "2026-07-29T12:00:00Z",
+            "valid_to": "2026-07-29T13:00:00Z"
+          },
+          "data": {
+            "r": {
+              "kind": "computed",
+              "value": {
+                "x": "1"
+              }
+            }
+          },
+          "hashes": {
+            "r": "sha256:857ef0df9a4879408cf5c4980625ff5be7447bd89a0e8046974f80679eb70ab4"
+          },
+          "provenance": {
+            "based_on": [
+              {
+                "hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+              }
+            ],
+            "seed": "sha256:02f09a195d876c01f159fef750b699967019e4bcbfe051a19c34419aac1b39f7"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "xgaPbY-81HVkG-3LdVZqhjLRwDNo3YE_Qj_bqtX9q6xNBBq07Tgd4nIqMV3A6PX6HszbvIURwMsZ3qGX2Q67Bw"
+        }
+      },
+      "role": "data",
+      "expect": "admitted"
     }
   ]
 }
