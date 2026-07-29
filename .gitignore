@@ -43,3 +43,4 @@ INTERNAL-*
 *.db
 .beads-credential-key
 .beads/proxieddb/
+.claude-asserted-state/
