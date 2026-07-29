@@ -784,6 +784,91 @@ authorization time; making it an ANCHORED lower bound is the operator manifest, 
 
 **Realization (rev85 — domain totality).** the process needs a PROVEN U, not an assumed one: a retired key with an unanchored document is refused authority — *"P0-01 retired key + UNANCHORED doc → NOT authoritative (fail-closed, K_n needs a proven U)"*
 
+## F.5e.1 Key ROLE is a genesis-fixed partition of `active`, not a key-log attribute (rev96)
+
+`K_n` (§F.5e) reduces the key-log to `⟨active, bind, revoked⟩`, and `active` is one undifferentiated set: every
+key that may sign the next event may sign ANY document the name publishes. An operator that signs two kinds of
+thing — a data stream and something handed to a named recipient — therefore has no way to say so, and a consumer
+reading the log cannot tell that two signatures were meant differently. The consequence is not expressive: a
+single leaked key signs everything the publisher has ever been able to sign, and revocation is all-or-nothing
+because there is exactly one thing to revoke.
+
+**The extension.** Let `Role` be a finite set fixed by the specification. `active` becomes a family indexed by
+role:
+
+  `K_n : (event prefix) ↦ ⟨ active : Role ⇀ 𝒫(Keys), bind ⊆ Keys, revoked : Keys ⇀ {retired, compromised}×Time ⟩`
+
+and the document-admission predicate gains the role coordinate: `admits(k, c)` holds iff `k ∈ active(r)` for some
+`r` whose normative class-set contains `c`. `bind` and `revoked` are unchanged — a key's history is not
+role-relative, only its present authority is.
+
+**Where roles are assigned, and why NOT in the key log.** The genesis fixes the assignment, exactly as it already
+fixes the recovery set — §F.5l states that "Genesis fixes a recovery key set `RK` (role-separated from data and
+checkpoint keys)", so role separation at the genesis level is an existing shape of this model and this is its
+generalization, not a new mechanism.
+
+The alternative — a `role` field on a key-log `add` — is REJECTED, and by a security argument rather than a
+preference. §F.5e's admissibility invariant is `signer(e_{i+1}) ∈ active(after e_i)`: **any** active key may sign
+the next event, not the root alone. A key-log-assigned role therefore lets a COMPROMISED data key append
+`add(k, role=issuance)` and sign as that role. Role separation would be defeated by precisely the compromise it
+exists to contain. Genesis assignment raises the requirement to the root key plus a supersession — a witnessed,
+externally visible act — and makes the current role structure readable at ONE point instead of by replaying the
+log.
+
+**Theorem (role assignment is a RESTRICTION).** For every key `k` and document class `c`:
+
+  `admits_role(k, c) ⟹ admits_flat(k, c)`
+
+where `admits_flat` is the pre-role predicate of §F.5e. *Proof.* `active(r) ⊆ active` for every `r` by
+construction, and the role-aware predicate additionally requires `c` to lie in `r`'s class-set; both conjuncts
+only remove pairs. ∎
+
+The theorem is what makes the extension safe to introduce: no verdict that was INVALID can become VALID, so the
+change cannot widen authority under any key log, adversarial or honest. A design in which an unroled key defaults
+to membership in every `active(r)` would satisfy the theorem trivially and is nevertheless rejected below.
+
+**No default: an unroled key is INADMISSIBLE.** A missing role must not grant maximal authority, which is what a
+permissive default does — the absence of a field would become the strongest possible claim, and the fail
+direction for an authority question is closed (§F.5e, and the general rule that "is it safe?" fails closed while
+"is it relevant?" fails open). Backward compatibility is not purchased here: a domain that predates roles
+supersedes its genesis, which is an operation this model already defines and which an operator has performed.
+
+**Rotation carries the role; the lineage does.** Binding a role to a `key_id` alone would make rotating a roled
+key impossible without a supersession — rigidity with no security gain, since the successor is authorized by the
+predecessor it replaces. So the role attaches to the LINEAGE: `rotate` (signed by `s`, naming successor `k`)
+transfers `s`'s role to `k`, and the lineage terminates at a key the genesis names. Adding a role that no genesis
+names remains a supersession. This requires NO new key-log field: `OP_FIELDS` stays the strict allowlist it is,
+and the general principle governing it is stated in §F.5e.2.
+
+**Binding: pending — thelabmd/UST-Protocol#106, no code obligation until `rotate` is emitted and the role vocabulary lands normatively.** This section states a design the implementation does not yet carry, which is the point of stating it first; the deferral is attributable and the realization gap is measured below rather than left implicit.
+
+**Realization gap, measured 2026-07-29 and stated because the model must not imply what does not run.** The
+`rotate` transition this section depends on is defined here and in the verifier's `OP_FIELDS`, and is emitted by
+NOTHING: the reference CLI's rotation is `add` + `revoke`, two independent events with no successor relation, and
+the conformance battery contains zero checks for a key-log `rotate` (its three "rotation" checks are all about the
+authority-checkpoint `next_key_id`/`next_pub`). A transition defined at three layers and exercised at none is
+vacuous in the sense of §F.9: role inheritance has nothing to inherit through until `rotate` is actually issued.
+Reviving it is a prerequisite of this section and a defect independently of roles — a reader of this model would
+otherwise reasonably assume a lineage exists.
+
+## F.5e.2 What may enter a strict field allowlist (rev96)
+
+`OP_FIELDS` rejects any key-log field it does not name (`E-MALFORMED`, "stray field"). That strictness is
+load-bearing: it prevents a publisher from placing meaning into a signed entry that the verifier will not read,
+which would let two parties disagree about what a signature said while both verify it.
+
+Widening the allowlist is therefore a specification act, and admits exactly one criterion:
+
+  **A field may enter the allowlist only if the VERIFIER ACTS ON IT.** A field the verifier ignores stays
+  forbidden, regardless of how useful it is to a publisher or a reader.
+
+`role` does not enter under §F.5e.1 — it is genesis-assigned and inherited, so no key-log field is required at
+all. The criterion is stated here because the first attempt at that section proposed adding one, and the reason
+that was wrong is general rather than particular to roles.
+
+**Binding: none — definitional.** The section defines the admission criterion for a set the checker already
+enforces (`OP_FIELDS` rejects any unnamed field); it imposes no obligation of its own beyond that enforcement.
+
 ## F.5f Composite authority is TRANSITIVE — the impersonation fix needs no new signed object (#75 ROOT 3)
 
 An external audit proposed closing the composition holes (an impostor becoming `canonical` / `complete` under a
