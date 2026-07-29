@@ -41,22 +41,45 @@ const RESOLVES = {
   test: (v) => EXECUTED.has(v),
 };
 
+// ── WHERE a round is recorded moved, and the gate had to move with it (round 77). The reference-checker rev-ladder
+// is CLOSED at rev95, which carried rounds 1-61. The ROUND counter did not restart: round 62 onward are rows in the
+// version-line tables (`## rc.NN line`), one continuous sequence — `revN` was the audited artifact's label, never the
+// round number. Keying the law's accounting to a finished table meant a new round could only be accounted by
+// being filed INTO that table — which is precisely the misfiling of round 76, where the gate's own demand for a
+// ladder row pushed the record deeper into the wrong place instead of objecting to the place.
+const VERSION_ROUNDS = (() => {                       // enumerate the DOMAIN from the file, never a sample
+  const rounds = new Set();
+  for (const sec of CHANGELOG.split(/^## /m)) {
+    if (!/^rc\.\d+ line/.test(sec)) continue;         // version lines only — the ladder's 2nd column is also numeric
+    for (const m of sec.matchAll(/^\| .+? \| (\d+) \|/gm)) rounds.add(Number(m[1]));
+  }
+  return rounds;
+})();
+check(VERSION_ROUNDS.size > 0, 'no version-line round rows found — the live probe has gone blind');
+
 check(Array.isArray(REG.records) && REG.records.length > 0, 'the ladder registry is empty — the gate would be vacuous');
 
 for (const rec of REG.records) {
-  check(/^rev\d+$/.test(rec.rev || ''), `a record has no well-formed rev: ${JSON.stringify(rec.rev)}`);
-  // the round it accounts for must EXIST in the ladder
-  check(new RegExp(`^\\| \\*\\*${rec.rev}\\*\\*`, 'm').test(CHANGELOG), `${rec.rev} is accounted for here but has no row in the CHANGELOG ladder`);
+  const isLadder = rec.rev !== undefined;
+  const key = isLadder ? rec.rev : `round ${rec.round}`;
+  if (isLadder) {
+    check(/^rev\d+$/.test(rec.rev || ''), `a record has no well-formed rev: ${JSON.stringify(rec.rev)}`);
+    // the round it accounts for must EXIST in the ladder
+    check(new RegExp(`^\\| \\*\\*${rec.rev}\\*\\*`, 'm').test(CHANGELOG), `${rec.rev} is accounted for here but has no row in the CHANGELOG ladder`);
+  } else {
+    check(Number.isInteger(rec.round), `a record is keyed by neither a well-formed rev nor an integer round: ${JSON.stringify(rec)}`);
+    check(VERSION_ROUNDS.has(rec.round), `${key} is accounted for here but has no row in any version-line table — a round is accounted where the work is RECORDED`);
+  }
   for (const layer of LAYERS) {
     const v = rec[layer];
-    if (v === undefined || v === null) { fail.push(`${rec.rev}: layer '${layer}' is neither referenced nor excluded — an ABSENCE, which is exactly what this gate exists to stop`); continue; }
+    if (v === undefined || v === null) { fail.push(`${key}: layer '${layer}' is neither referenced nor excluded — an ABSENCE, which is exactly what this gate exists to stop`); continue; }
     if (typeof v === 'object') {
       const why = (v.excluded ?? '').trim();
-      check(why.length >= MIN_REASON, `${rec.rev}: layer '${layer}' is excluded with a reason of ${why.length} chars — under ${MIN_REASON} is a placeholder, not a decision`);
+      check(why.length >= MIN_REASON, `${key}: layer '${layer}' is excluded with a reason of ${why.length} chars — under ${MIN_REASON} is a placeholder, not a decision`);
       continue;
     }
-    check(typeof v === 'string' && v.trim().length > 0, `${rec.rev}: layer '${layer}' is an empty reference`);
-    check(RESOLVES[layer](v), `${rec.rev}: layer '${layer}' names "${String(v).slice(0, 70)}…" and it does NOT resolve in the artifact it points at — a registry nobody checks is a second place to be wrong`);
+    check(typeof v === 'string' && v.trim().length > 0, `${key}: layer '${layer}' is an empty reference`);
+    check(RESOLVES[layer](v), `${key}: layer '${layer}' names "${String(v).slice(0, 70)}…" and it does NOT resolve in the artifact it points at — a registry nobody checks is a second place to be wrong`);
   }
 }
 
@@ -70,8 +93,31 @@ check(unaccounted.length <= REG.unaccounted_pin,
   `the UNACCOUNTED residual grew: ${unaccounted.length} ladder rows have no record, pinned at ${REG.unaccounted_pin}. A NEW round must be accounted for; lower the pin as old ones are back-filled, never raise it.`);
 if (unaccounted.length < REG.unaccounted_pin) console.log(`  ℹ  unaccounted ${unaccounted.length} < pin ${REG.unaccounted_pin} — lower the pin in tools/ladder-registry.json`);
 
+// ── the LIVE leg (round 77). The retro pin above is a bound on a CLOSED table and can only shrink; it says nothing
+// about work happening now. From `first_accounted_round` on, a version-line round MUST be accounted — no pin, no
+// residual, no grace. Rounds below it predate the rule and are REPORTED rather than gated: pretending history
+// complied would be the same dishonesty as a pin that silently rises.
+const FIRST = REG.first_accounted_round;
+const liveRounds = [...VERSION_ROUNDS].filter((r) => r >= FIRST).sort((a, b) => a - b);
+const accountedRounds = new Set(REG.records.filter((r) => r.round !== undefined).map((r) => r.round));
+check(Number.isInteger(FIRST), 'first_accounted_round is not an integer — the live leg would have no floor and pass for anything');
+for (const r of liveRounds)
+  check(accountedRounds.has(r), `round ${r} is RECORDED in a version line but has no five-layer record — the law applies to the round that shipped, not only to a closed audit arc`);
+const legacyRounds = [...VERSION_ROUNDS].filter((r) => r < FIRST).length;
+if (legacyRounds) console.log(`  ℹ  ${legacyRounds} version-line round(s) below the floor of ${FIRST} are reported, not gated — the rule starts where it was written, and says so`);
+
 // ── the pin must be able to FAIL, and so must each leg.
 check(REG.unaccounted_pin < ladderRevs.length, 'the pin is not below the row count — it would accept a fully unaccounted ladder');
+check(liveRounds.length > 0, 'the live leg found no round at or above the floor — it would pass vacuously');
+// The control below must be a DISCRIMINATION on real data, not an assertion against an impossible literal:
+// `!VERSION_ROUNDS.has(-1)` was the first version of it and proved nothing, since no table can carry -1. A leg is
+// shown to work by exhibiting a real row its predicate REFUSES — here a recorded round below the floor, which is
+// genuinely unaccounted. If back-filling ever accounts for every legacy round this control goes silent, and the
+// message says so rather than letting it rot into another free pass.
+const belowFloor = [...VERSION_ROUNDS].filter((r) => r < FIRST);
+const refused = belowFloor.filter((r) => !accountedRounds.has(r));
+check(belowFloor.length === 0 || refused.length > 0,
+  'the coverage predicate accepted every recorded round, including unaccounted ones below the floor — it does not discriminate, so the live leg would pass for anything');
 check(!RESOLVES.vector('this-vector-does-not-exist'), 'the vector resolver accepts a name no vector carries — leg would pass for anything');
 check(!RESOLVES.test('this check never ran'), 'the test resolver accepts an id the executed manifest lacks');
 check(!RESOLVES.math('a sentence the formal model does not contain at all, anywhere'), 'the math resolver accepts prose the model lacks');

@@ -14,6 +14,7 @@ import { join } from 'node:path';
 const root = new URL('..', import.meta.url).pathname;
 const workspaces = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).workspaces;
 let drift = 0, checked = 0, ahead = 0;
+const pubState = new Map();   // name -> published?  (round 77: the version LINE's marker is checked against this, not hand-maintained)
 
 const walk = (dir, base = '') => readdirSync(dir).flatMap((f) => {
   const p = join(dir, f), rel = base ? base + '/' + f : f;
@@ -25,6 +26,7 @@ for (const ws of workspaces) {
   const spec = `${pkg.name}@${pkg.version}`;
   let published = false;
   try { published = execSync(`npm view ${spec} version`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() === pkg.version; } catch { /* 404 ⇒ not published */ }
+  pubState.set(pkg.name, { published, version: pkg.version });
   if (!published) { ahead++; console.log(`  → ${spec}: not on npm — repo is ahead (publish pending), nothing to drift against`); continue; }
   checked++;
   const tmp = mkdtempSync(join(tmpdir(), 'ust-drift-'));
@@ -49,6 +51,29 @@ for (const ws of workspaces) {
     if (bad.length) { drift++; console.error(`  ✗ ${spec}: repo differs from the PUBLISHED artifact of the same version — ${bad.join(', ')}\n    rule: a code change to a published package must bump its version in the same commit`); }
     else console.log(`  ✓ ${spec}: repo == published artifact`);
   } finally { rmSync(tmp, { recursive: true, force: true }); }
+}
+
+// ── the version LINE's status marker must match the registry (round 77). A hand-written marker DRIFTS: the heading
+// `## rc.38 line — published 2026-07-28` stood while rc.39 was published too and carried nothing, so the mark read
+// as a distinction that did not exist. Published is the SILENT default — every line reaches it. The OPEN line is the
+// one a reader must not have to guess, so it is the one that carries a mark, and the mark is answered by the
+// registry this gate already queried rather than by memory.
+const CL = readFileSync(join(root, 'CHANGELOG.md'), 'utf8');
+const proto = pubState.get('ust-protocol');
+if (!proto) { console.error('  ✗ line-marker: ust-protocol was not reached — the marker check has gone blind'); drift++; }
+else {
+  const line = 'rc.' + proto.version.split('-rc.')[1];
+  const m = new RegExp('^## ' + line.replace('.', '\\.') + ' line(.*)$', 'm').exec(CL);
+  if (!m) { console.error(`  ✗ line-marker: CHANGELOG has no '## ${line} line' heading for the working version ${proto.version}`); drift++; }
+  else {
+    const suffix = m[1].trim();
+    const want = proto.published ? '' : '— unpublished';
+    if (suffix !== want) {
+      drift++;
+      console.error(`  ✗ line-marker: '## ${line} line${m[1]}' but the registry says ${proto.published ? 'PUBLISHED' : 'NOT published'} — expected '## ${line} line${want ? ' ' + want : ''}'`);
+      console.error('    rule: the OPEN line is marked, the published one is silent; the marker is not hand-maintained.');
+    } else console.log(`  ✓ line-marker: '## ${line} line${want ? ' ' + want : ''}' matches the registry`);
+  }
 }
 
 console.log(`\n${drift ? '✗ npm-drift gate FAILED' : '✓ npm-drift gate holds'} — ${checked} published checked, ${ahead} ahead-of-npm`);

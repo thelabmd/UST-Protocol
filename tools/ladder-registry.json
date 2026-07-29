@@ -1,8 +1,32 @@
 {
-  "_": "Per-round accounting for the law math → spec → code → vector → test. Every layer is either a REFERENCE that must resolve, or an explicit exclusion WITH a reason. A skip is legitimate — rev92(d) has no formal-model content and forcing prose there would be the patch this repo rejects — but it must be a DECISION, not an absence. See thelabmd/UST-Protocol#99.",
+  "_": "Per-round accounting for the law math → spec → code → vector → test. Every layer is either a REFERENCE that must resolve, or an explicit exclusion WITH a reason. A skip is legitimate — rev92(d) has no formal-model content and forcing prose there would be the patch this repo rejects — but it must be a DECISION, not an absence. See thelabmd/UST-Protocol#99. Records are keyed by `rev` for the CLOSED reference-checker ladder (historical) or by `round` for the LIVE version-line counter. A round is accounted where the work is recorded, not where a finished audit arc used to be.",
   "unaccounted_pin": 89,
   "_pin": "Rows in the ladder with no record here. May only ever SHRINK. 94 rows existed when the gate landed; the three most recent are accounted.",
   "records": [
+    {
+      "round": 77,
+      "math": {
+        "excluded": "This round changes where a round is RECORDED and how that record is enforced — repo bookkeeping, not the verifier. The formal model describes what a verifier may conclude from bytes; a table's closure is not a property of any document, and writing model prose to satisfy a gate is the patch this repo rejects."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, and no conformance obligation changed. A spec sentence here would describe our changelog to an implementer who will never read it."
+      },
+      "code": "tools/changelog-rev-gate.mjs :: LADDER_CLOSED_AT ceiling",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce, so a second implementation can check itself. This round touches no document and no verdict; a vector could only restate a gate that already runs from the file it guards."
+      },
+      "test": {
+        "excluded": "The test layer here is the gates' own negative controls — the closed-ladder ceiling reproduced against round 76's exact mistake, the live-coverage leg proven able to fail, and the line-marker checked against a deliberately wrong heading. They run under npm run test:changelog / test:ladder / the npm-drift gate, and are not conformance checks, which cover the verifier only."
+      }
+    },
+    {
+      "round": 76,
+      "math": "round 76 completes `mutating(c)`: both classes, same conjunct, same shape",
+      "spec": "Cadence mutation is ROOT-ONLY",
+      "code": "packages/ust-protocol/index.mjs :: resolveCadenceBytes root conjunct",
+      "vector": "cadr-09-nonroot-signer-rejected",
+      "test": "#107 an OPERATIONAL key may NOT move the cadence grid — `active` is NECESSARY, not SUFFICIENT"
+    },
     {
       "rev": "rev95",
       "math": "the property it tests must be one the ceremony itself",
@@ -45,5 +69,7 @@
       },
       "test": "rev92 completeness ⊥ tier: an undeclared grid bounds the RANGE and subtracts nothing from Π"
     }
-  ]
+  ],
+  "first_accounted_round": 76,
+  "_first_accounted": "The first version-line round the live coverage leg enforces. Rounds below it predate the rule and are reported, never gated — the same honesty as the ladder pin, without pretending history complied."
 }
