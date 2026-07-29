@@ -1056,7 +1056,11 @@ less visible. This forecloses M1. Because an entry is a normal transcript, it is
 parallel active key and MAY carry `supersedes` — the `key_id` of the key it replaces, recording the succession
 without granting anything by itself; `revoke` removes its target from `active` and records the reason. Replacing
 a key is `add(supersedes=s)` then `revoke(s, retired)`: two events, both signed by an `active` key, with the
-succession STATED rather than inferred from adjacency.
+succession STATED rather than inferred from adjacency. That obligation binds the PRODUCER as well as the reader:
+`s` MUST be a key the operator names, and MUST NOT be derived from position in the log. Where more than one
+operational key is `active` — which role separation makes ordinary — the nearest preceding `add` is a different
+key from the one the operator means, and a tool that guesses supersedes the wrong lineage, inherits the wrong
+role, and revokes the wrong key.
 
 There is deliberately **no `rotate` transition.** A self-authorized succession — an entry signed by the key it
 replaces — lets a key that is compromised but NOT YET DECLARED name a successor the attacker chose; the operator

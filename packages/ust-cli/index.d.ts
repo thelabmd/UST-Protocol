@@ -51,7 +51,7 @@ export function rawTextOf(raw?: unknown): { verdict: unknown; doc: unknown; text
 export function remintProbe(arg0?: unknown): Promise<{ status: unknown; detail: unknown }>;
 export const RESERVED_TEST_NAME: unknown;
 export function rootSignerFrom(pkcs8: unknown, rootPubB64url: unknown): Promise<Record<string, unknown>>;
-export function rotateKeylog(arg0?: unknown): Promise<{ keylog: unknown; newOp: unknown; revokedPub: unknown }>;
+export function rotateKeylog(arg0?: unknown): Promise<{ keylog: unknown; newOp: unknown; supersededKeyId: unknown; revokedPub: unknown }>;
 export function scanDupes(text: unknown): string;
 export function selfHostedPlan(arg0: unknown): unknown[];
 export function servedArtifacts(arg0?: unknown): Record<string, unknown>;

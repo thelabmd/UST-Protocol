@@ -706,6 +706,24 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
     check('keyadd_parallel_key_is_active_with_its_own_role', !ks.error && ks.active.has(a1.newKey.key_id) && ks.roles.get(a1.newKey.key_id) === 'issuance');
     check('keyadd_does_not_supersede_the_existing_key', ks.active.has(K1.key_id) && ks.roles.get(K1.key_id) === 'data');
     check('keyadd_appends_never_rewrites', P.contentHash(a1.keylog[0]) === P.contentHash(k0) && a1.keylog.length === 2);
+    // #108 / round 82 — the log above is the shape `ust key add --role` made ordinary: TWO active operational keys,
+    // `data` added first, `issuance` second. Until round 82 the rotation subject was the LAST `add`, so a rotation
+    // superseded the issuance key, inherited ITS role, and `--reason` revoked it — while the operator meant `data`.
+    // The subject is now taken from the resolved active set and NAMED; ambiguity refuses, because a ceremony that
+    // can terminally retire a key must not pick which one.
+    const two = a1.keylog;
+    check('rotate_refuses_when_the_subject_is_ambiguous',
+      await threw(() => C.rotateKeylog({ genesis: gR, keylog: two, rootSigner: root, time: Tr, ustId: 'ust:20260628.1004' })));
+    check('rotate_refuses_a_key_id_that_is_not_active',
+      await threw(() => C.rotateKeylog({ genesis: gR, keylog: two, rootSigner: root, supersedesKeyId: 'sha256:' + '0'.repeat(64), time: Tr, ustId: 'ust:20260628.1004' })));
+    const rn = await C.rotateKeylog({ genesis: gR, keylog: two, rootSigner: root, supersedesKeyId: K1.key_id, reason: 'retired', time: Tr, ustId: 'ust:20260628.1004' });
+    const ksn = P.resolveKeys(gR, rn.keylog);
+    check('rotate_supersedes_the_NAMED_key_not_the_last_added', rn.supersededKeyId === K1.key_id && P.keyId(rn.revokedPub) === K1.key_id);
+    check('rotate_successor_inherits_the_named_key_role', !ksn.error && ksn.roles.get(rn.newOp.key_id) === 'data');
+    check('rotate_leaves_the_unnamed_key_untouched', ksn.active.has(a1.newKey.key_id) && ksn.roles.get(a1.newKey.key_id) === 'issuance');
+    // the fixture must be able to expose the defect, or these checks assert against a shape the bug never had
+    check('rotate_fixture_would_have_picked_the_WRONG_key',
+      P.keyId([...two].reverse().find((e) => e.state?.data?.key_op?.value?.op === 'add').state.data.key_op.value.pub) !== K1.key_id);
   }
   const enc = C.encryptKey(Buffer.from(await crypto.subtle.exportKey('pkcs8', root.privateKey)), 'pw');
   check('rotate_root_backup_roundtrip', (await C.rootSignerFrom(C.decryptKey(enc, 'pw'), root.pub)).pub === root.pub);

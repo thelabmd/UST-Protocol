@@ -763,6 +763,19 @@ against exactly the scenario `rotate` reopens, so spending it to avoid touching 
 on a root-authorized `add` supplies it, and it satisfies §F.5e.2 — the verifier ACTS on the field: it derives the
 successor's role from the superseded key's lineage, so the field is not decoration a verifier ignores.
 
+**The relation must be ASSERTED AT BOTH ENDS, and round 82 found it was not.** `supersedes = s` names two keys:
+the successor `k`, which the operator names by generating it, and the SUBJECT `s`. Nothing above constrains where
+`s` comes from, and the reference producer took it from POSITION — the nearest preceding `add` in the log. That is
+adjacency, reintroduced by the writer of the very field introduced to remove adjacency from the reader. With one
+operational key it is correct by accident, since position and intent name the same key. §F.5e.1 then made two
+active keys ordinary, and the accident ended: the tool superseded whichever key was added last, §F.5e.1's
+inheritance derived `R(k)` from a lineage the operator never chose, and a `revoke(s, compromised)` — TERMINAL by
+§F.5e — targeted a key the operator never named. The model layer is not incidental here: role inheritance is
+*defined* as a function of the lineage, so a lineage chosen by position makes `R` a function of file order. The
+obligation is therefore stated where the field is: **`s` is an operator assertion, never a positional inference**,
+and a producer that cannot obtain the assertion must REFUSE rather than choose — the fail-closed direction, since
+the act it would be guessing at is irreversible.
+
 **Binding: realized** — *"rev97 op:rotate is REFUSED AS UNKNOWN — self-authorized succession is gone from the protocol"*.
 The removal is not prose: `OP_FIELDS` names only `add` and `revoke`, so `op:"rotate"` is an unknown op and fails
 `E-KEY`, and that check asserts the REASON rather than merely the refusal. This note

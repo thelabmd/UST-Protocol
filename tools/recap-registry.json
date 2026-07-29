@@ -12,6 +12,10 @@
     {
       "round": 81,
       "no_recap": "The diary is written when the owner invokes the recap, not when a round ends. Round 80's entry was sealed before this round existed, and sealed means sealed — a second entry for the same invocation would break 'one entry, one moment'. This is the ordinary case for any round that is not the last of an invocation, not an exemption."
+    },
+    {
+      "round": 82,
+      "no_recap": "Same invocation as rounds 80 and 81: the day's diary entry was sealed before this round existed, and sealed means sealed. The diary is written when the owner invokes the recap, not once per round."
     }
   ]
 }

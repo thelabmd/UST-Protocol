@@ -2110,10 +2110,34 @@ export async function addKeylogKey({ genesis, keylog, rootSigner, role, time, us
     { op: 'add', pub: newKey.pub, new_key_id: newKey.key_id, ...(role ? { role } : {}) }, prev), rootSigner);
   return { keylog: [...keylog, entry], newKey };
 }
-export async function rotateKeylog({ genesis, keylog, rootSigner, reason = null, compromisedSince = null, role = null, time, ustId }) {
+export async function rotateKeylog({ genesis, keylog, rootSigner, reason = null, compromisedSince = null, supersedesKeyId = null, time, ustId }) {
   const domain = genesis.state.id.domain_shard;
   if (!Array.isArray(keylog)) throw new Error('key-log is not a JSON array');
-  const currentOp = [...keylog].reverse().find((e) => { const op = e.state?.data?.key_op?.value; return op && op.op === 'add'; });   // rev97: `rotate` больше не существует (§F.5e.0)
+  // §12.2 — "the succession STATED rather than inferred from adjacency". Until round 82 this line read
+  // `[...keylog].reverse().find(op === 'add')`: the nearest preceding add, which is adjacency, in the producer of
+  // the very field added to remove adjacency from the reader. With one operational key that was right by accident.
+  // `ust key add --role` (round 79) made two active keys ordinary, and then the subject was whichever key happened
+  // to be added last — so a rotation superseded the wrong key, `role` was inherited from the wrong lineage, and
+  // `--reason compromised` TERMINALLY revoked a key the operator never named.
+  // The subject now comes from the RESOLVED active set and is named by the operator. Ambiguity REFUSES: a ceremony
+  // that can permanently retire a key must not choose which one on the operator's behalf.
+  const ks = P.resolveKeys(genesis, keylog);
+  if (ks.error) throw new Error(`the served key log does not resolve (${ks.error}): ${ks.detail || ''} — refusing to rotate against a log I cannot read`);
+  const rootKid = P.keyId(genesis.state.data.genesis.value.pub);
+  const subjects = [...ks.active.keys()].filter((k) => k !== rootKid);   // the root is not a rotation subject: §12.1 P2 re-roots it
+  const describe = (k) => `${k}${ks.roles?.get(k) ? ` (role ${ks.roles.get(k)})` : ''}`;
+  let subject;
+  if (supersedesKeyId) {
+    if (!subjects.includes(supersedesKeyId)) throw new Error(`--key-id ${supersedesKeyId} is not an ACTIVE operational key of this log. Active: ${subjects.map(describe).join(', ') || '(none)'}`);
+    subject = supersedesKeyId;
+  } else if (subjects.length === 1) {
+    subject = subjects[0];                                             // unique: naming it adds nothing a reader could not derive
+  } else if (subjects.length === 0) {
+    throw new Error('this key log has no ACTIVE operational key to rotate — `ust key add --role <data|issuance>` introduces one');
+  } else {
+    throw new Error(`this log has ${subjects.length} ACTIVE operational keys, so a rotation must NAME its subject: --key-id <key_id>. Candidates: ${subjects.map(describe).join(', ')}`);
+  }
+  const currentOp = { pub: ks.active.get(subject), kid: subject };
   const newOp = await W.generateSigner({ extractable: true });
   const prev = keylog.length ? P.contentHash(keylog[keylog.length - 1]) : P.contentHash(genesis);
   // #75 §12.2 — the ROOT signs, ADDING the new operational key: the root is NOT superseding ITSELF (that is what
@@ -2123,19 +2147,22 @@ export async function rotateKeylog({ genesis, keylog, rootSigner, reason = null,
   // an `add` followed by a `revoke` is two unrelated facts that a reader infers a relation between by adjacency —
   // and adjacency is not a relation. With it, the successor's lineage is readable, which is what role inheritance
   // (§F.5e.1) derives from. It grants nothing by itself: the entry is authorized by the ROOT either way.
-  const supersedes = currentOp?.state?.data?.key_op?.value?.pub ? P.keyId(currentOp.state.data.key_op.value.pub) : undefined;
-  const rotate = await W.seal(P.buildKeyLogEntry({ domain_shard: domain, ust_id: ustId, key_id: rootSigner.key_id }, time, { op: 'add', pub: newOp.pub, new_key_id: newOp.key_id, ...(supersedes ? { supersedes } : {}), ...(role ? { role } : {}) }, prev), rootSigner);
+  // NO `role` here, and that closes thelabmd/UST-Protocol#108 in the two-acts direction: a rotation names a SUBJECT
+  // and the successor INHERITS that subject's role (§F.5e.1 — inheritance propagates, never introduces). Changing
+  // what a key is FOR is an additive act, `ust key add --role`, because a rotation removes its subject from `active`
+  // — so a rotation that also changed the role would silently retire the old role along with the old key.
+  const supersedes = currentOp.kid;
+  const rotate = await W.seal(P.buildKeyLogEntry({ domain_shard: domain, ust_id: ustId, key_id: rootSigner.key_id }, time, { op: 'add', pub: newOp.pub, new_key_id: newOp.key_id, supersedes }, prev), rootSigner);
   const out = [...keylog, rotate];
   if (reason) {
     if (reason !== 'retired' && reason !== 'compromised') throw new Error('--reason must be retired|compromised');
-    if (!currentOp) throw new Error('--reason given but there is no current op key to revoke');
     if (reason === 'compromised' && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(compromisedSince || '')) throw new Error('--reason compromised requires --compromised-since <RFC3339-Z>');
-    const oldPub = currentOp.state.data.key_op.value.pub;
+    const oldPub = currentOp.pub;
     const revoke = await W.seal(P.buildKeyLogEntry({ domain_shard: domain, ust_id: ustId, key_id: rootSigner.key_id }, time, { op: 'revoke', pub: oldPub, reason, ...(reason === 'compromised' ? { compromised_since: compromisedSince } : {}) }, P.contentHash(rotate)), rootSigner);
     out.push(revoke);
   }
   for (let i = 0; i < keylog.length; i++) if (P.contentHash(keylog[i]) !== P.contentHash(out[i])) throw new Error('refuse: rotation must APPEND, not rewrite (entry ' + i + ' changed)');
-  return { keylog: out, newOp, revokedPub: reason && currentOp ? currentOp.state.data.key_op.value.pub : null };
+  return { keylog: out, newOp, supersededKeyId: subject, revokedPub: reason ? currentOp.pub : null };
 }
 // §12.2/§F.5e.1 — `ust key add --role`: a key BESIDE the current one. Distinct from `ust rotate`, which REPLACES
 // and whose successor inherits its predecessor's role; a parallel key has no lineage, so it must state its own.
@@ -2203,7 +2230,7 @@ async function cmdKey() {
 }
 export async function cmdRotate() {
   const domain = arg('domain');
-  if (!domain || domain === true) die('usage: ust rotate --domain <d> --root <encrypted-root.b64> [--keylog <served array file>]\n         [--reason retired|compromised [--compromised-since <RFC3339-Z>]] [--out .]\n  APPENDS a key rotation to the served log (never re-mints). Old docs stay valid under the key active at their anchored time (§12.2).');
+  if (!domain || domain === true) die('usage: ust rotate --domain <d> --root <encrypted-root.b64> [--key-id <key_id>] [--keylog <served array file>]\n         [--reason retired|compromised [--compromised-since <RFC3339-Z>]] [--out .]\n  APPENDS a key rotation to the served log (never re-mints). Old docs stay valid under the key active at their anchored time (§12.2).\n  --key-id NAMES the key being replaced; it is REQUIRED once more than one operational key is active, and the\n  successor INHERITS that key\'s role. To change what a key is FOR, add one beside it: `ust key add --role`.');
   const rootFile = arg('root'); if (!rootFile || rootFile === true) die('--root <encrypted root backup .b64> required (the cold crown key)');
   // fetch the current identity (genesis + served key-log), or take the log from --keylog
   const get = async (p) => { const r = await fetch(`https://${domain}${p}`, { signal: AbortSignal.timeout(10000), redirect: 'error' }); if (!r.ok) throw new Error(`HTTP ${r.status} at ${p}`); return r.text(); };
@@ -2227,9 +2254,10 @@ export async function cmdRotate() {
   try { rootSigner = await rootSignerFrom(decryptKey(readFileSync(rootFile, 'utf8').trim(), pass), genesis.state.data.genesis.value.pub); }
   catch (e) { rl?.close(); die(e.message.includes('match') ? e.message : 'decrypt failed — wrong passphrase or corrupt backup'); }
   const reason = arg('reason', null); const cs = arg('compromised-since', null);
+  const kid = arg('key-id', null);
   const { ust_id, time } = W.nowFrame();
   let grown;
-  try { grown = await rotateKeylog({ genesis, keylog, rootSigner, reason: reason === true ? null : reason, compromisedSince: cs === true ? null : cs, time, ustId: ust_id }); }
+  try { grown = await rotateKeylog({ genesis, keylog, rootSigner, reason: reason === true ? null : reason, compromisedSince: cs === true ? null : cs, supersedesKeyId: kid === true ? null : kid, time, ustId: ust_id }); }
   catch (e) { rl?.close(); die(e.message); }
   // SELF-CHECK fail-closed: a doc signed by the NEW op key must resolve authoritative under the grown log
   const probe = await W.seal(await W.buildState({ domain_shard: domain, ust_id, key_id: grown.newOp.key_id, class: 'observation' }, time, { r: { kind: 'captured', value: { x: '1' } } }), grown.newOp);

@@ -116,6 +116,18 @@
       "test": {
         "excluded": "The test layer is the gate's own negative controls, run rather than described: a hand-edited word inside a quote, a registry naming a content_hash no sealed entry carries, and the floor lowered to 74 so six undecided rounds are named. They run as npm run test:recap, not as conformance checks, which cover the verifier only."
       }
+    },
+    {
+      "round": 82,
+      "math": "`s` is an operator assertion, never a positional inference",
+      "spec": "`s` MUST be a key the operator names, and MUST NOT be derived from position in the log",
+      "code": "packages/ust-cli/index.mjs :: rotateKeylog supersedesKeyId",
+      "vector": {
+        "excluded": "role-07-supersedes-propagates-role ALREADY pins the document-level property this round is about: data added first, issuance second, supersedes naming the FIRST, successor expected to inherit data. The verifier was correct and covered; the defect was entirely producer-side, and no transcript can reveal whether its supersedes was chosen well or badly. A new vector would restate a covered rule."
+      },
+      "test": {
+        "excluded": "The test layer is packages/ust-cli/regression.mjs — four checks pinning refusal on ambiguity, refusal of an inactive key_id, supersession of the NAMED key, and inheritance of its role, plus a non-vacuity leg asserting the fixture is one the OLD selection would have got wrong. They run under npm run test:cli, not as conformance checks, because conformance covers the verifier and this covers a ceremony tool."
+      }
     }
   ],
   "first_accounted_round": 76,
