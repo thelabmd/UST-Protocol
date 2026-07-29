@@ -954,7 +954,7 @@ already warns about. The operator's decision, in their own framing: the key is t
 compromise, full stop. A protocol cannot carry this risk on the operator's behalf, and pretending otherwise moves
 the failure somewhere less visible.
 
-**Realization (rev98 — the cadence half) is COMPLETE over `mutating(c)`: both classes, same conjunct, same shape.** For `class:"key"` it is
+**Realization — round 76 completes `mutating(c)`: both classes, same conjunct, same shape.** For `class:"key"` it is
 `resolveKeys` (three conformance vectors, the temporal BMC's illegal-transition sweep). For `class:"cadence"` it is
 `resolveCadenceBytes`, added in the same shape rather than a second one: `keyId(sig.pub)` must be `active` AND must
 equal the genesis key id. The key log stays load-bearing under a one-key rule because it is what reveals a REVOKED

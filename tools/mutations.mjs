@@ -17,7 +17,7 @@
 // `mustDetect` marks the verdict-seam mutations the battery treats as hard requirements; the rest are harvest — a hit
 // lowers the unproven residual, a miss is covered by the gate channel and is not a failure.
 export const MUTATIONS = [
-  // rev98 (#107) — the cadence ROOT conjunct. Broken, an operational key that is legitimately `active` may re-declare
+  // round 76 (#107) — the cadence ROOT conjunct. Broken, an operational key that is legitimately `active` may re-declare
   // the stream cadence, and with it what the operator's own COMPLETENESS claim means: a widening inside one precision
   // class (30s->90s) turns a stream with empty slots into `complete` without adding a frame. This mutant is what proves
   // the #107 checks are not asserting against an impossible literal — remove the conjunct and they must go red.
