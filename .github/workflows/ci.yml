@@ -95,7 +95,12 @@ jobs:
       - name: rule-lockstep (the §14 decision-relation is FROZEN — case labels == RULE_CONTRACTS keys == 15, both directions)
         run: npm run test:rule-lockstep
       - name: connector receipts (OTS + Rekor)
-        run: npm run test:connectors
+        # `opentimestamps` is an OPTIONAL peer, deliberately absent from devDependencies: its chain pulls the
+        # deprecated `request` and two critical advisories into every contributor's tree, and a would-be auditor's
+        # first impression should not be a red audit they cannot act on. It is installed HERE so the real substrate
+        # path is still exercised; the test exits non-zero if CI reaches it without the library, so a green run can
+        # never mean those nine checks were skipped.
+        run: npm i --no-save opentimestamps && npm run test:connectors
       - name: web-signer cross-verification
         run: npm run test:web-signer
       - name: MCP live stdio transport (CWD-independent)

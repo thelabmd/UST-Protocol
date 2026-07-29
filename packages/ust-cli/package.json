@@ -5,7 +5,7 @@
   "author": "THE LAB (https://thelab.md)",
   "type": "module",
   "bin": {
-    "ust": "./index.mjs"
+    "ust": "index.mjs"
   },
   "files": [
     "index.mjs",
