@@ -2148,7 +2148,9 @@ function banner() {
   let art;
   try { art = readFileSync(new URL('./seal_mini_square.txt', import.meta.url), 'utf8').replace(/\n+$/, ''); }
   catch { return ''; }   // a missing asset must never be the reason a tool refuses to print its help
-  return art.split('\n').map((l) => '  ' + l).join('\n') + '\n\n';
+  // one blank line ABOVE as well as below: printed with no leading break the art sits flush against the shell
+  // prompt, which reads as overflow rather than as the start of the screen.
+  return '\n' + art.split('\n').map((l) => '  ' + l).join('\n') + '\n\n';
 }
 // NOT exported: a command is not part of the package's API — the dispatcher is in this module, and the gates that
 // look for it read the SOURCE by name. The API is the binary plus the testable cores (`addKeylogKey` below).

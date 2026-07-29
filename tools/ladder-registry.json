@@ -84,6 +84,22 @@
         "excluded": "the defect is in a CLI's argument handling and a log reader's shape routing — neither is expressible as protocol vectors, which pin documents and verdicts. Pinned instead by stream-consumption-gate, which enumerates the flag sets and the served shapes."
       },
       "test": "rev92 completeness ⊥ tier: an undeclared grid bounds the RANGE and subtracts nothing from Π"
+    },
+    {
+      "round": 80,
+      "math": {
+        "excluded": "This round is about DISTRIBUTION: whether the bytes a registry serves can be loaded. The formal model states what a verifier may conclude from a document, and no document, verdict or admissibility rule moved. A packaging defect is invisible to a model that reasons about transcripts, and writing model prose to satisfy a gate is the patch this repo rejects."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. PORTING.md tells an independent implementation what it must REPRODUCE, and it must reproduce the checker, not our npm manifest — the defect was in how OUR artifact was assembled, not in what any implementation owes."
+      },
+      "code": "packages/ust-protocol/package.json :: files",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce so a second implementation can check itself against them. This round touches no document and no verdict; the artifact under test is a TARBALL, and the check that it loads has to run on a packed package rather than on a transcript."
+      },
+      "test": {
+        "excluded": "The test layer here is tools/package-contents-gate.mjs and its own vacuity guards — it fails if no package was packed or if no packed file was resolved, and its recursive listing exists because a top-level-only probe found nothing in diarium/bin and would have passed silently. It runs as its own gate, not as a conformance check, because conformance covers the verifier and this covers what we ship."
+      }
     }
   ],
   "first_accounted_round": 76,
