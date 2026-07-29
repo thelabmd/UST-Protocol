@@ -73,6 +73,12 @@ for (const rec of REG.records) {
       `round ${rec.round}: no_recap is ${String(rec.no_recap).trim().length} chars — under ${MIN_REASON} is a placeholder, not a decision`);
     continue;
   }
+  // WHICH ISSUE receives the block must be DECIDED, never left to the moment. Measured 2026-07-29: reading the rule
+  // as round-bound rather than issue-bound, I recorded `issue: null` with a reason and posted nothing, and the owner
+  // had to ask. The gate cannot see whether a comment was posted — it is offline on purpose — so it demands the
+  // decision and leaves the posting to be verified by hand, which is the honest boundary rather than a claim.
+  const issued = Number.isInteger(rec.issue) || String(rec._issue ?? '').trim().length >= MIN_REASON;
+  check(issued, `round ${rec.round}: neither an issue number nor a reason of ${MIN_REASON}+ chars for receiving none — a recap nobody receives is a block written into a file and stopped there`);
   const d = byHash.get(rec.content_hash);
   check(!!d, `round ${rec.round} names content_hash ${String(rec.content_hash).slice(0, 22)}… and NO sealed entry in the store has it — a recap must be a view of something signed`);
   if (!d) continue;

@@ -6,8 +6,8 @@
     {
       "round": 80,
       "content_hash": "sha256:f72cbac647c020a0b825cd00fbc94dc81082bc814638454c2ff068f21827b6bc",
-      "issue": null,
-      "_issue": "No issue receives this recap: round 80 CLOSED none. The defect was found by the owner at a terminal rather than filed, and the round OPENED #108 instead of closing something. The open question from 2026-07-27 — which issue gets the comment when a round touches several — is answered here in its easy direction only; the hard one is still the owner's."
+      "issue": 106,
+      "_issue": "The recap follows the CLOSED ISSUE, not the round. Round 80 closed nothing, and reading that literally I posted no block at all — the owner caught it. #106 was closed in the same session and the sealed entry is that session's moment, so it belongs at the end of #106's recap. The open question from 2026-07-27 is therefore answered: the issue closed in the session receives it."
     },
     {
       "round": 81,
