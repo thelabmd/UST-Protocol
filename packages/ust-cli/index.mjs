@@ -2187,9 +2187,21 @@ function banner() {
   let art;
   try { art = readFileSync(new URL('./seal_mini_square.txt', import.meta.url), 'utf8').replace(/\n+$/, ''); }
   catch { return ''; }   // a missing asset must never be the reason a tool refuses to print its help
+  // The version is DERIVED from the core, never written here. `v1.0` is the WIRE version — what a document must
+  // conform to — and `rc40` is the protocol package's candidate, which is the number that decides what a check
+  // MEANS; naming the CLI's own version instead would be precision about the wrong thing (the same call round 67
+  // made for `ust discovery`). A hand-typed version on a first screen is a claim that goes stale silently.
+  const rc = /-rc\.(\d+)$/.exec(P.VERSION.spec)?.[1];
+  const SIDE = { 1: 'UST Protocol', 2: 'RSS for State', 4: `v${P.VERSION.wire}${rc ? ' rc' + rc : ''}` };
+  const COL = 37;
+  const lines = art.split('\n').map((l) => '  ' + l);
+  // A NARROW TERMINAL EATS IT, so the side text is dropped rather than wrapped: wrapped, it would break the art's
+  // alignment for every row below it, and a broken first screen is worse than a plain one.
+  const needs = COL + Math.max(...Object.values(SIDE).map((s) => s.length));
+  const room = !process.stderr.columns || process.stderr.columns >= needs;
   // one blank line ABOVE as well as below: printed with no leading break the art sits flush against the shell
   // prompt, which reads as overflow rather than as the start of the screen.
-  return '\n' + art.split('\n').map((l) => '  ' + l).join('\n') + '\n\n';
+  return '\n' + lines.map((l, i) => (room && SIDE[i] ? l.padEnd(COL) + SIDE[i] : l)).join('\n') + '\n\n';
 }
 // NOT exported: a command is not part of the package's API — the dispatcher is in this module, and the gates that
 // look for it read the SOURCE by name. The API is the binary plus the testable cores (`addKeylogKey` below).
@@ -2374,6 +2386,6 @@ if (isMain) {
   const cmd = process.argv[2];
 
   const run = { verify: cmdVerify, canon: cmdCanon, genesis: cmdGenesis, key: cmdKey, rotate: cmdRotate, cadence: cmdCadence, discovery: cmdDiscovery, publish: cmdPublish, mirror: cmdMirror, stream: cmdStream, forkchoice: cmdForkChoice, witness: cmdWitness }[cmd];
-  if (!run) { console.error(banner() + 'ust — verify machine-readable state\n\n  ust verify <file|->        verify a transcript (exit 0 = VALID, 1 = not; --require-anchored floors at TOP)\n  ust canon  <file|->        print canonical bytes + hash (cross-language diff)\n  ust genesis --domain <d>   run the HIGH genesis ceremony (add --publish cf for one-click serving)\n  ust key add --domain <d> --root <enc> --role <data|issuance>   ADD a key BESIDE the current one (never replaces it)\n  ust rotate  --domain <d> --root <enc>   APPEND a key rotation to the served log (never re-mint; old docs stay valid)\n  ust cadence --domain <d> --root <enc> --seconds <n> --effective-from <slot>   DECLARE the signed stream grid (§11.3)\n  ust discovery <domain>     attest the §20.1 serving contract (any infra)\n  ust publish <cf|self> --domain <d> --genesis <f>   serve an existing genesis: cf deploys the adapter,\n                             self writes the four artifacts for YOUR stack (asked if omitted)\n  ust mirror <domain>        publish + attest a SECOND-vendor mirror (§20.1 vendor-independence)\n  ust stream <frames…>       RANGE verdict: chain · forks · completeness (needs --checkpoint for `complete`)\n  ust forkchoice <docs…>     pick the CANONICAL doc among candidates for ONE ust_id (canonical = anchor-included)\n  ust witness rekor --domain <d>   log the genesis in a transparency log → automatic no-fork (#68)\n'); process.exit(cmd ? 1 : 0); }
+  if (!run) { const b = banner(); console.error(b + (b ? '' : 'ust — verify machine-readable state\n\n') + '  ust verify <file|->        verify a transcript (exit 0 = VALID, 1 = not; --require-anchored floors at TOP)\n  ust canon  <file|->        print canonical bytes + hash (cross-language diff)\n  ust genesis --domain <d>   run the HIGH genesis ceremony (add --publish cf for one-click serving)\n  ust key add --domain <d> --root <enc> --role <data|issuance>   ADD a key BESIDE the current one (never replaces it)\n  ust rotate  --domain <d> --root <enc>   APPEND a key rotation to the served log (never re-mint; old docs stay valid)\n  ust cadence --domain <d> --root <enc> --seconds <n> --effective-from <slot>   DECLARE the signed stream grid (§11.3)\n  ust discovery <domain>     attest the §20.1 serving contract (any infra)\n  ust publish <cf|self> --domain <d> --genesis <f>   serve an existing genesis: cf deploys the adapter,\n                             self writes the four artifacts for YOUR stack (asked if omitted)\n  ust mirror <domain>        publish + attest a SECOND-vendor mirror (§20.1 vendor-independence)\n  ust stream <frames…>       RANGE verdict: chain · forks · completeness (needs --checkpoint for `complete`)\n  ust forkchoice <docs…>     pick the CANONICAL doc among candidates for ONE ust_id (canonical = anchor-included)\n  ust witness rekor --domain <d>   log the genesis in a transparency log → automatic no-fork (#68)\n'); process.exit(cmd ? 1 : 0); }
   run().catch((e) => die(e.message || String(e)));
 }
