@@ -763,10 +763,13 @@ against exactly the scenario `rotate` reopens, so spending it to avoid touching 
 on a root-authorized `add` supplies it, and it satisfies §F.5e.2 — the verifier ACTS on the field: it derives the
 successor's role from the superseded key's lineage, so the field is not decoration a verifier ignores.
 
-**Binding: pending — thelabmd/UST-Protocol#106, removal lands with the `supersedes` realization.** The transition
-must also be REJECTED once removed, which is a check that does not exist yet: an entry carrying `op:"rotate"` has
-to fail `E-KEY`, and a vector must exercise it — otherwise the removal is prose and the verifier still accepts
-what the model no longer defines.
+**Binding: realized** — *"rev97 op:rotate is REFUSED AS UNKNOWN — self-authorized succession is gone from the protocol"*.
+The removal is not prose: `OP_FIELDS` names only `add` and `revoke`, so `op:"rotate"` is an unknown op and fails
+`E-KEY`, and that check asserts the REASON rather than merely the refusal. This note
+said the check "does not exist yet" and was stale for two rounds — measured 2026-07-29, the check and its vector
+were already there. A pending-binding that outlives its own closure is the same defect as a realization note that
+outruns the code, pointing the other way: the model under-claimed what runs, which reads to a reviewer as an open
+hole and sends them to fix something already fixed.
 
 ## F.5e The key-authority process `K_n(t)` — a state machine, not a set (MATH-04, #75)
 
@@ -814,7 +817,7 @@ authorization time; making it an ANCHORED lower bound is the operator manifest, 
 
 **Realization (rev85 — domain totality).** the process needs a PROVEN U, not an assumed one: a retired key with an unanchored document is refused authority — *"P0-01 retired key + UNANCHORED doc → NOT authoritative (fail-closed, K_n needs a proven U)"*
 
-## F.5e.1 Key ROLE is a genesis-fixed partition of `active`, not a key-log attribute (rev96)
+## F.5e.1 Key ROLE partitions `active`; the carrier is decided by well-foundedness, not by preference (rev96, re-derived round 79)
 
 `K_n` (§F.5e) reduces the key-log to `⟨active, bind, revoked⟩`, and `active` is one undifferentiated set: every
 key that may sign the next event may sign ANY document the name publishes. An operator that signs two kinds of
@@ -832,18 +835,46 @@ and the document-admission predicate gains the role coordinate: `admits(k, c)` h
 `r` whose normative class-set contains `c`. `bind` and `revoked` are unchanged — a key's history is not
 role-relative, only its present authority is.
 
-**Where roles are assigned, and why NOT in the key log.** The genesis fixes the assignment, exactly as it already
-fixes the checkpoint-recovery set — §F.5l states that "Genesis fixes a checkpoint-recovery key set `RK` (role-separated from data and
-checkpoint keys)", so role separation at the genesis level is an existing shape of this model and this is its
-generalization, not a new mechanism.
+**Where roles are assigned.** The genesis fixes part of the assignment, exactly as it already fixes the
+checkpoint-recovery set — §F.5l states that "Genesis fixes a checkpoint-recovery key set `RK` (role-separated from data and
+checkpoint keys)", so role separation at the genesis level is an existing shape of this model. What that section
+could not settle, and asserted instead, is whether the genesis fixes ALL of it.
 
-The alternative — a `role` field on a key-log `add` — is REJECTED, and by a security argument rather than a
-preference. §F.5e's admissibility invariant is `signer(e_{i+1}) ∈ active(after e_i)`: **any** active key may sign
-the next event, not the root alone. A key-log-assigned role therefore lets a COMPROMISED data key append
-`add(k, role=issuance)` and sign as that role. Role separation would be defeated by precisely the compromise it
-exists to contain. Genesis assignment raises the requirement to the root key plus a supersession — a witnessed,
-externally visible act — and makes the current role structure readable at ONE point instead of by replaying the
-log.
+**The rev96 argument for genesis-ONLY assignment no longer holds, and is withdrawn.** It ran: §F.5e's
+admissibility invariant is `signer(e_{i+1}) ∈ active(after e_i)`, so **any** active key may sign the next event;
+a key-log role therefore lets a COMPROMISED data key append `add(k, role=issuance)` and sign as that role, and
+role separation is defeated by the compromise it exists to contain. That was sound when written. §F.5e.3 (rev97)
+and round 76 then made key-log mutation ROOT-ONLY, so a non-root key can append nothing at all: the attack is
+unreachable by construction. A conclusion whose only stated premise has been removed is not a conclusion, and
+re-deriving it is cheaper than defending it.
+
+**Genesis-ONLY assignment is inconsistent with two rules this same section states.** Let `R(k)` be the role of
+`k`. Under genesis-only, `R(k)` is defined iff the genesis names `k`, or `k` supersedes some `s` with `R(s)`
+defined (transitively, terminating at a genesis-named key). Now take `add(k)` with NO `supersedes` — permitted by
+§F.5e (`add(k, supersedes?)` inserts a PARALLEL active key), and the ordinary way to introduce a key for a
+DIFFERENT purpose rather than to replace one. Then `k` is not genesis-named — it did not exist at ceremony time —
+and inherits from nothing, so `R(k)` is undefined; and by the no-default rule below, an unroled key is
+INADMISSIBLE. **A transition the model admits therefore produces a key the model forbids from ever signing.** That
+is not a cost to weigh; it is three rules of one model that cannot all hold.
+
+The corollary is sharper than the inconsistency. Under genesis-only, "adding a role that no genesis names remains
+a supersession" makes the ONLY way to introduce a new role a re-rooting of the name-binding genesis (§12.1 P2,
+F.5m). An ordinary operational act would then be expressed as an IDENTITY event — a category error, since the
+genesis answers *who the publisher is*, never *what its keys are for*. Routine role changes would make the root's
+own signal noisy, which is the opposite of what pinning it is for.
+
+**The carrier is decided by WELL-FOUNDEDNESS.** A role whose keys AUTHORIZE the key log cannot be assigned by the
+key log: the log's own authority derives from those keys, so assigning them there is circular. A role whose keys
+merely OPERATE under the log has no such obstruction. The split is therefore not a preference:
+
+  · `name-binding-root`, `checkpoint-recovery`, `authority-checkpoint` — authorize the log ⇒ GENESIS-fixed, by well-foundedness
+  · `data`, `issuance` — operate under it ⇒ assignable at `add`, root-signed
+
+**And admitting `role` widens the FIELD set without widening the AUTHORITY set.** After §F.5e.3 an `add` is
+signed by the root, so `add(k, role=r)` demands exactly the cold key a genesis supersession demands. What changes
+is where a consumer READS the answer — and a consumer already reduces the whole log to resolve which key signed a
+document, so reading a role from it costs nothing it was not already paying. §F.5e.2's admission criterion is
+met: the verifier ACTS on `role`, since it partitions `active` and gates `admits(k, c)`.
 
 **Theorem (role assignment is a RESTRICTION).** For every key `k` and document class `c`:
 
@@ -857,31 +888,46 @@ The theorem is what makes the extension safe to introduce: no verdict that was I
 change cannot widen authority under any key log, adversarial or honest. A design in which an unroled key defaults
 to membership in every `active(r)` would satisfy the theorem trivially and is nevertheless rejected below.
 
-**No default: an unroled key is INADMISSIBLE.** A missing role must not grant maximal authority, which is what a
-permissive default does — the absence of a field would become the strongest possible claim, and the fail
-direction for an authority question is closed (§F.5e, and the general rule that "is it safe?" fails closed while
-"is it relevant?" fails open). Backward compatibility is not purchased here: a domain that predates roles
-supersedes its genesis, which is an operation this model already defines and which an operator has performed.
+**No default: within a role-declaring publisher, an unroled key is INADMISSIBLE.** A missing role must not grant
+maximal authority, which is what a permissive default does — the absence of a field would become the strongest
+possible claim, and the fail direction for an authority question is closed (§F.5e, and the general rule that
+"is it safe?" fails closed while "is it relevant?" fails open).
+
+**But the regime is DECLARED per publisher, and that too is derived rather than chosen.** rev96 said backward
+compatibility "is not purchased here — a domain that predates roles supersedes its genesis". That cannot stand
+against a normative law this protocol already carries: §11.3's continuity rule, *an operator change never
+invalidates old data*. A publisher that does NOTHING must not stop verifying because the protocol gained a
+concept; otherwise a verifier update rewrites verdicts on documents already issued, which is exactly what I4 and
+the continuity law forbid — and the operator who broke is the one who made no change at all.
+
+So role separation is a DECLARED refinement, the same shape as every other strength here: the genesis declares
+it, and only then does `admits` consult roles and an unroled key become inadmissible. A publisher that declares
+nothing keeps `admits_flat` (§F.5e) and loses only the strength, never validity. This is the LIGHT-floor
+discipline applied one level in: a refinement no publisher declared cannot be demanded of documents signed before
+it existed.
 
 **Succession carries the role; the lineage does.** Binding a role to a `key_id` alone would make replacing a roled
 key impossible without a supersession — rigidity with no security gain, since the replacement is authorized by the
-root either way. So the role attaches to the LINEAGE: `add(k, supersedes=s)` transfers `s`'s role to `k`, and the
-lineage terminates at a key the genesis names. Adding a role that no genesis names remains a supersession.
+root either way. So the role also attaches to the LINEAGE: `add(k, supersedes=s)` transfers `s`'s role to `k`
+when `k` declares none. Inheritance PROPAGATES a role; it can never INTRODUCE one, which is precisely why an
+explicit `role` on `add` is required rather than optional sugar — a parallel key has no lineage to inherit from.
 
 An earlier draft of this section put the inheritance on `rotate` — the self-authorized transition — and that was
 wrong for a reason that has nothing to do with roles: see §F.5e.0. The correction does require a key-log field,
 and `supersedes` earns entry under §F.5e.2 precisely because the verifier ACTS on it to derive the role.
 
-**Binding: pending — thelabmd/UST-Protocol#106, no code obligation until `rotate` is emitted and the role vocabulary lands normatively.** This section states a design the implementation does not yet carry, which is the point of stating it first; the deferral is attributable and the realization gap is measured below rather than left implicit.
+**Binding: pending — thelabmd/UST-Protocol#106.** This section states a design the implementation does not yet
+carry, which is the point of stating it first.
 
-**Realization gap, measured 2026-07-29 and stated because the model must not imply what does not run.** The
-`rotate` transition this section depends on is defined here and in the verifier's `OP_FIELDS`, and is emitted by
-NOTHING: the reference CLI's rotation is `add` + `revoke`, two independent events with no successor relation, and
-the conformance battery contains zero checks for a key-log `rotate` (its three "rotation" checks are all about the
-authority-checkpoint `next_key_id`/`next_pub`). A transition defined at three layers and exercised at none is
-vacuous in the sense of §F.9: role inheritance has nothing to inherit through until `rotate` is actually issued.
-Reviving it is a prerequisite of this section and a defect independently of roles — a reader of this model would
-otherwise reasonably assume a lineage exists.
+**Two paragraphs stood here until round 79 and are removed rather than edited, because both described `rotate`.**
+One deferred the code obligation "until `rotate` is emitted"; the other called reviving `rotate` a prerequisite of
+this section. `rotate` was REMOVED in rev97 (§F.5e.0) — self-authorized succession let a compromised, undeclared
+key name its own successor — and the correction three paragraphs above already re-based inheritance on
+`supersedes`. The two notes were written for the pre-rev97 draft and survived the sweep that replaced the
+mechanism they name, so this section simultaneously said that it depends on `supersedes` and that reviving
+`rotate` is its prerequisite. Recorded rather than silently deleted: a sweep that fixes a mechanism and leaves
+the prose that justifies it is the recurring failure this model keeps naming, and it happened here to the section
+that names it.
 
 ## F.5e.2 What may enter a strict field allowlist (rev96)
 
@@ -894,9 +940,12 @@ Widening the allowlist is therefore a specification act, and admits exactly one 
   **A field may enter the allowlist only if the VERIFIER ACTS ON IT.** A field the verifier ignores stays
   forbidden, regardless of how useful it is to a publisher or a reader.
 
-`role` does not enter under §F.5e.1 — it is genesis-assigned and inherited, so no key-log field is required at
-all. The criterion is stated here because the first attempt at that section proposed adding one, and the reason
-that was wrong is general rather than particular to roles.
+`role` DOES enter, under the re-derivation in §F.5e.1 (round 79): the three authorizing roles stay genesis-fixed
+by well-foundedness, while `data` and `issuance` are assigned on a root-signed `add`, and the verifier ACTS on the
+field — it partitions `active` and gates `admits(k, c)`. Until round 79 this section said the opposite ("no
+key-log field is required at all"), correctly reporting §F.5e.1 as it then stood; when that section's own security
+premise was withdrawn, the consequence recorded here became stale with it. The criterion itself is unchanged and
+is what admits the field: a verifier that ignored `role` would have to keep refusing it.
 
 **Binding: none — definitional.** The section defines the admission criterion for a set the checker already
 enforces (`OP_FIELDS` rejects any unnamed field); it imposes no obligation of its own beyond that enforcement.

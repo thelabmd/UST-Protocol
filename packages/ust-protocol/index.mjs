@@ -342,12 +342,16 @@ export const buildAttestation = (id, time, data, constituents, prev) =>         
   buildState({ ...id, class: 'attestation' }, time, data, { constituents, root: merkleRoot(constituents), ...(prev !== undefined ? { prev } : {}) });
 export const buildDerivation = (id, time, data, basedOn, prev) =>                  // §9.3/§9.4 based_on + seed
   buildState({ ...id, class: 'derivation' }, time, data, { based_on: basedOn.map((b) => ({ hash: b.hash })), seed: seed(basedOn.map(b => b.hash)), ...(prev !== undefined ? { prev } : {}) });   // round-54 (UST-0q7) — PRODUCER-FORWARD: emit HASH-ONLY based_on; a `url` in the signed provenance is a swappable location hint that lends false authority, so producers stop emitting it (location → unsigned discovery §20.1). Verifiers still IGNORE any url present, so existing docs stay valid — NOT invalidated.
-export const buildGenesis = (id, time, pub, maxPartitions, maxTranscriptBytes, cadence, checkpointAuthority, recovery) =>  // §12.1 self-signed name-binding root
+export const buildGenesis = (id, time, pub, maxPartitions, maxTranscriptBytes, cadence, checkpointAuthority, recovery, roles) =>  // §12.1 self-signed name-binding root
   buildState({ ...id, class: 'genesis' }, time, { genesis: { kind: 'captured', value: {
     pub, role: 'name-binding-root',
     ...(maxPartitions !== undefined ? { max_partitions: String(maxPartitions) } : {}),           // §13 ladder (≠ ceiling; ABS 4096)
     ...(maxTranscriptBytes !== undefined ? { max_transcript_bytes: String(maxTranscriptBytes) } : {}), // §13 ladder (≠ ceiling; ABS 64 MiB)
     ...(cadence !== undefined ? { cadence: String(cadence) } : {}),                               // §11.3 C — SIGNED cadence (sec) → the expected grid; resolved not free-chosen (#69 C)
+    // §12.2 — role separation is a DECLARED refinement: presence of a non-empty `roles` turns it on for THIS
+    // publisher. Absent, the key set stays undifferentiated and nothing about an existing publisher changes —
+    // §11.3's continuity law forbids an operator change, including this one, from invalidating issued data.
+    ...(roles !== undefined ? { roles: [...roles].map(String) } : {}),
     // P1-04 — the genesis CARRIES its own checkpoint-authority + recovery set, so `authority_root` is RESOLVED from
     // the signed genesis, not a raw caller pin. `recovery.keys` is a {key_id: pub} map (each key_id = H(ust:keylog, pub)).
     ...(checkpointAuthority ? { checkpoint_authority: { key_id: checkpointAuthority.key_id, pub: checkpointAuthority.pub } } : {}),
@@ -457,6 +461,13 @@ const CLASSES = ['observation','attestation','derivation','genesis','key','caden
 // enforced on one side is not a partition — the class simply has two homes and its role is decided by whichever
 // caller reached it first. `cadence` sits here because the cadence log is read exactly as the key log is (§11.3).
 const AUTHORITY_CLASSES = new Set(['genesis', 'key', 'cadence']);
+// §12.2/§17/§F.5e.1 — the key-ROLE vocabulary is FIXED at five, and split by WELL-FOUNDEDNESS, not preference:
+// a role whose keys AUTHORIZE the key log cannot be assigned BY the log (the log's authority derives from them,
+// so it would be circular), while a role whose keys merely OPERATE under it can. Hence three ceremony-set and
+// two log-assigned. Free-form names are refused because a CONSUMER reads the role: an open field would make
+// "what does this signature mean" a question for the publisher rather than for the protocol.
+const AUTHORIZING_ROLES = new Set(['name-binding-root', 'checkpoint-recovery', 'authority-checkpoint']);   // ceremony only — QUALIFIED: each names the chain its key serves (the bare words name two mechanisms each, §F.5e.3)
+const OPERATING_ROLES = new Set(['data', 'issuance']);                                 // key log only
 const DATA_CLASSES = CLASSES.filter((c) => !AUTHORITY_CLASSES.has(c));   // the complement, never a second hand-list
 // §6 pinned RFC3339 UTC-Z with VALID RANGES — month 01-12, day 01-31, hour 00-23, min/sec 00-59.
 // Rejects leap seconds (:60) and out-of-range (:99, hour 99) so two conforming verifiers ALWAYS agree (I4).
@@ -956,6 +967,18 @@ export function resolveKeysBytes(genesisBytes, keylogBytes) {
   const revoked = new Map();                                                      // key_id → {reason, compromised_since?, at}
   const compromised = new Set();                                                  // MONOTONIC (round-14 P0-01): compromise is TERMINAL — a compromised key is never re-authorized, and its status can never be downgraded (compromised → retired) by a later revoke
   const history = new Map([[gKid, { pub: gPub, intervals: [{ from: genesis.state.time.generated_at, to: null, end: null }] }]]);
+  // §12.2/§F.5e.1 — role separation is DECLARED per publisher. Absent, this whole block is inert and the key set
+  // stays undifferentiated: a publisher that changed nothing must not stop verifying because the protocol gained
+  // a concept (§11.3 continuity). Declared, a role becomes REQUIRED on every add — a missing field must never be
+  // the strongest possible claim, so the fail direction here is closed.
+  const declRaw = genesis.state?.data?.genesis?.value?.roles;
+  let declared = null;
+  if (declRaw !== undefined) {
+    if (!Array.isArray(declRaw) || declRaw.length === 0 || !declRaw.every((r) => typeof r === 'string' && OPERATING_ROLES.has(r)))
+      return { error: 'E-GENESIS', detail: 'genesis `roles` must be a NON-EMPTY array of operating roles (' + [...OPERATING_ROLES].join('/') + ') — the authorizing roles are ceremony-set and cannot be declared here (§17)' };
+    declared = new Set(declRaw);
+  }
+  const roles = new Map([[gKid, 'name-binding-root']]);   // the root's own role is fixed by §12.1, never declared
   // §F.5e.3 — AUTHORITY TO MUTATE THE LOG IS NOT AUTHORITY TO SIGN. The admissibility invariant asked only
   // `signer ∈ active`, which made an OPERATIONAL key as powerful as the root: measured 2026-07-29, a data key
   // added another key that then verified `authoritative`, and the same data key revoked the GENESIS key as
@@ -980,7 +1003,7 @@ export function resolveKeysBytes(genesisBytes, keylogBytes) {
   // operator's served and mirrored logs), so removal costs no compatibility. `supersedes` on a ROOT-authorized
   // `add` replaces what it was for: it records succession without granting anything, and it earns its place in
   // this strict allowlist under §F.5e.2 because the verifier ACTS on it — role inheritance is derived from it.
-  const OP_FIELDS = Object.assign(Object.create(null), { add: ['op', 'pub', 'new_key_id', 'supersedes'], revoke: ['op', 'pub', 'reason', 'compromised_since'] });   // null-proto (UST-Protocol round-13 P2-01): OP_FIELDS["toString"] must be undefined, not an inherited function
+  const OP_FIELDS = Object.assign(Object.create(null), { add: ['op', 'pub', 'new_key_id', 'supersedes', 'role'], revoke: ['op', 'pub', 'reason', 'compromised_since'] });   // null-proto (UST-Protocol round-13 P2-01): OP_FIELDS["toString"] must be undefined, not an inherited function
   const derive = (i, pub, label) => {                                            // strict pub + derived key_id
     if (strictB64url(pub, 32) === null) return { error: { error: 'E-KEY', detail: 'entry ' + i + ' ' + label + ' pub not a 32-byte base64url key' } };
     return { kid: keyId(pub) };
@@ -1013,6 +1036,17 @@ export function resolveKeysBytes(genesisBytes, keylogBytes) {
       const d = derive(i, op.pub, op.op); if (d.error) return d.error;
       if (op.new_key_id !== undefined && op.new_key_id !== d.kid) return { error: 'E-KEY', detail: 'entry ' + i + ' new_key_id != H(ust:keylog, pub)' };
       if (compromised.has(d.kid)) return { error: 'E-KEY', detail: 'entry ' + i + ' cannot re-authorize a COMPROMISED key (terminal, round-14 P0-01)' };
+      // §12.2 — the role, under the DECLARED regime only. Inheritance PROPAGATES down a lineage and can never
+      // INTRODUCE: a parallel add has no lineage, so it must state its own role (§F.5e.1).
+      const inherited = op.supersedes !== undefined ? roles.get(op.supersedes) : undefined;
+      if (declared === null) {
+        if (op.role !== undefined) return { error: 'E-MALFORMED', detail: 'entry ' + i + ' carries a `role` but this genesis declares no role separation — a field the verifier cannot act on is refused (§F.5e.2)' };
+      } else {
+        const r = op.role ?? inherited;
+        if (r === undefined) return { error: 'E-KEY', detail: 'entry ' + i + ' has no `role` and inherits none — this genesis DECLARES role separation, and a missing role must not be the strongest possible claim (§12.2)' };
+        if (!declared.has(r)) return { error: 'E-KEY', detail: 'entry ' + i + ' role "' + r + '" is not one this genesis declared (' + [...declared].join('/') + ')' };
+        roles.set(d.kid, r);
+      }
       all.set(d.kid, op.pub); active.set(d.kid, op.pub);
       { const h = history.get(d.kid), t = e.state.time.generated_at;                // round-15 P0-02: re-add after retirement OPENS A NEW interval (never reuses the old authorized_at)
         if (!h) history.set(d.kid, { pub: op.pub, intervals: [{ from: t, to: null, end: null }] });
@@ -1046,7 +1080,7 @@ export function resolveKeysBytes(genesisBytes, keylogBytes) {
     }
     prevHash = contentHash(e);
   }
-  return { validKeys: all, active, revoked, history, head: prevHash };            // validKeys = the all-ever BINDING map; head (§12.2a) = last entry content_hash (genesis if empty)
+  return { validKeys: all, active, revoked, history, roles, declaredRoles: declared, head: prevHash };            // validKeys = the all-ever BINDING map; head (§12.2a) = last entry content_hash (genesis if empty)
 }
 // CONVENIENCE object adapter over `resolveKeysBytes` (round-47 rev70) — serialize each live argument to canonical bytes (the
 // structural keylog before the self-verifying genesis, whose own mutation fails its signature), then call the SOUND bytes-core.

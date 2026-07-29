@@ -257,7 +257,7 @@ export const decryptKey = (b64, pass) => {
 // Build genesis + key-log[0] (adds an operational key) and SELF-CHECK both (fail-closed, 9th audit #6):
 // a ceremony tool must never emit an output it hasn't verified. Throws before returning if either fails.
 // `warnings` carries the gold ASSURANCE LIMIT so the orchestrator (and the test) can assert it (9th audit #5).
-export async function buildCeremony({ domain, profile = 'silver', maxP, maxBytes = null, cadence = null, checkpointAuthority = null, recovery = null, signerRef }) {
+export async function buildCeremony({ domain, profile = 'silver', maxP, maxBytes = null, cadence = null, checkpointAuthority = null, recovery = null, roles = null, signerRef }) {
   const warnings = [];
   // Each tier is about ITS OWN thing (owner 2026-07-12). gold IS the hardware ceremony — and this
   // reference CLI cannot drive a hardware signer yet, so it REFUSES instead of pretending: the old
@@ -278,7 +278,7 @@ export async function buildCeremony({ domain, profile = 'silver', maxP, maxBytes
   const genesis = await W.seal(P.buildGenesis(
     { domain_shard: domain, ust_id, key_id: root.key_id }, time, root.pub,
     maxP ?? undefined, maxBytes ?? undefined, cadence ?? undefined,
-    checkpointAuthority ?? undefined, recovery ?? undefined,
+    checkpointAuthority ?? undefined, recovery ?? undefined, roles ?? undefined,
   ), root);
   const genHash = P.contentHash(genesis);
   // operational key: extractable so its PKCS#8 can be exported for the daily signer
@@ -1870,7 +1870,17 @@ async function cmdGenesis() {
   // 1–2. root key + genesis + key-log[0], all self-checked (fail-closed) inside buildCeremony
   const maxBytes = arg('max-transcript-bytes', null);
   if (maxBytes === true) { rl?.close(); die('--max-transcript-bytes needs a value'); }
-  let built; try { built = await buildCeremony({ domain, profile, maxP, maxBytes, cadence, checkpointAuthority, recovery, signerRef }); }
+  // §12.2 — role separation is DECLARED at the ceremony and NOWHERE else: adding it later means superseding the
+  // genesis, so a ceremony that cannot offer it makes the feature unreachable for every publisher.
+  const rolesArg = arg('roles', null);
+  let roles = null;
+  if (rolesArg && rolesArg !== true) {
+    roles = String(rolesArg).split(',').map((r) => r.trim()).filter(Boolean);
+    const bad = roles.filter((r) => r !== 'data' && r !== 'issuance');
+    if (bad.length) die(`--roles takes the OPERATING roles only (data, issuance) — got ${bad.join(', ')}. The authorizing roles are ceremony-structural and set by their own flags, and a role names the chain its key serves (§17).`);
+    if (!roles.length) die('--roles was given with no role — omit the flag to publish without role separation');
+  }
+  let built; try { built = await buildCeremony({ domain, profile, maxP, maxBytes, cadence, checkpointAuthority, recovery, roles, signerRef }); }
   catch (e) { rl?.close(); die(e.message); }
   const { genesis, keylog0, genHash, op, opPkcs8, pkcs8, warnings } = built;
   for (const w of warnings) console.log('\n  ⚠️  ' + w);

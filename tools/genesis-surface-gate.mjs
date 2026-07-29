@@ -35,7 +35,13 @@ const valueBlock = body.slice(body.indexOf('value: {'), body.indexOf('} } });'))
 check(valueBlock.length > 100, 'the buildGenesis value block could not be located — the gate would be vacuous');
 
 const fields = new Set();
-for (const m of valueBlock.matchAll(/(?:^|[{,\s])([a-z_]+)\s*:/gm)) fields.add(m[1]);
+// Strip COMMENTS before extracting: the field probe is a regex over the value block, so any prose containing
+// `word:` inside it was read as a field. Measured 2026-07-29 — the sentence "role separation is a DECLARED
+// refinement: presence of ..." produced a phantom field `refinement` and the gate demanded a ceremony flag for it.
+// A gate that can be fooled by a comment reports work that does not exist, which costs exactly what a missed field
+// costs: the reader stops believing it.
+const codeOnly = valueBlock.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+for (const m of codeOnly.matchAll(/(?:^|[{,\s])([a-z_]+)\s*:/gm)) fields.add(m[1]);
 for (const m of valueBlock.matchAll(/^\s*(pub|role),/gm)) fields.add(m[1]);
 fields.delete('kind'); fields.delete('value'); fields.delete('key_id'); fields.delete('keys'); fields.delete('threshold');
 check(fields.size >= 6, `only ${fields.size} genesis value fields found (${[...fields].join(', ')}) — the probe has gone blind`);

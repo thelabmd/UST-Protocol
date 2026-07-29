@@ -99,7 +99,11 @@ for (const v of V.vectors) {
     case 'b64url': check(v.id, (P.strictB64url(v.value, v.bytes) !== null) === v.expect); break;
     case 'cadence': check(v.id, P.parseCadenceInt(v.value) === v.expect); break;
     // #75 ROOT 2 — the key-log state machine as a language-neutral vector: run resolveKeys over embedded signed docs.
-    case 'keylog-state': { const r = P.resolveKeys(v.genesis, v.keylog); check(v.id, v.expect.error ? r.error === v.expect.error : (!r.error && r.active.size === v.expect.active_count && r.validKeys.size === v.expect.all_count)); break; }
+    // `expect.roles` (round 79) is OPTIONAL and additive: a vector that says nothing about roles asserts nothing
+    // about them, so every pre-role vector keeps its exact meaning — the same continuity the rule itself obeys.
+    case 'keylog-state': { const r = P.resolveKeys(v.genesis, v.keylog);
+      const rolesOk = !v.expect.roles || Object.entries(v.expect.roles).every(([k, want]) => r.roles?.get(k) === want);
+      check(v.id, v.expect.error ? r.error === v.expect.error : (!r.error && r.active.size === v.expect.active_count && r.validKeys.size === v.expect.all_count && rolesOk)); break; }
     // #75 ROOT 1 — K_n(t): authority resolved at a PROVEN anchor time (lower bound premature · upper bound X1).
     case 'authority-at-time': { const r = atU(v.doc, v.genesis, v.keylog, v.anchor_time); const id = r.identity || {}; check(v.id, v.expect.error ? (r.result === 'INVALID' && new RegExp(v.expect.error).test(r.error || '')) : (id.strength === v.expect.strength && id.status === v.expect.status)); break; }
     // #75 ROOT 3 (math-derived, no manifest) — composition authority: forkChoice/verifyStream resolve per-frame
@@ -249,6 +253,44 @@ check('G1 name-form domain_shard, no binding → INDETERMINATE (cannot confirm t
     const docK3 = P.seal(P.buildState({ domain_shard: 'v.com', ust_id: 'ust:20260628.20', key_id: K.key_id, class: 'observation' }, T, { r: { kind: 'captured', value: { x: '1' } } }), K.priv, K.pubB64);
     const v3 = P.verify(docK3, { genesis: genR, keylog: [addByR], noForkConfirmed: true, context: 'data' });
     check('F.5e.3 a RECOVERY key does NOT gain key-log signing (different chain, shared word)', v3.error === 'E-KEY');
+  }
+
+  // ── §12.2/§F.5e.1 (round 79) — key ROLES: a DECLARED refinement. The whole point of deriving it rather than
+  // choosing it was that genesis-only assignment could not express a parallel key's role at all, and demanding a
+  // role unconditionally would break every publisher that changed nothing (§11.3 continuity). Both directions are
+  // pinned here, and so is the case the ticket said nothing exercises: two ACTIVE keys with DIFFERENT roles.
+  {
+    const R1 = kp('c7'.repeat(32)), R2 = kp('d8'.repeat(32)), R3 = kp('e9'.repeat(32));
+    const mkGen = (roles) => signG(P.buildGenesis({ domain_shard: 'v.com', ust_id: 'ust:20260628.1450', key_id: G.key_id }, T, G.pubB64, undefined, undefined, undefined, undefined, undefined, roles));
+    const genPlain = mkGen(undefined), genRoles = mkGen(['data', 'issuance']);
+    const addOn = (gen, k, extra) => signG(P.buildKeyLogEntry({ domain_shard: 'v.com', ust_id: 'ust:20260628.1451', key_id: G.key_id }, T, { op: 'add', pub: k.pubB64, new_key_id: k.key_id, ...extra }, P.contentHash(gen)));
+    // CONTINUITY: an existing publisher declared nothing and is untouched — this is the leg that forbids a floor change
+    check('#106 continuity: an UNDECLARED genesis keeps the undifferentiated key set (a publisher that changed nothing is unaffected)',
+      !P.resolveKeys(genPlain, [addOn(genPlain, R1)]).error);
+    check('#106 a role on an add under an UNDECLARED genesis → E-MALFORMED (a field the verifier cannot act on is refused)',
+      P.resolveKeys(genPlain, [addOn(genPlain, R1, { role: 'data' })]).error === 'E-MALFORMED');
+    // DECLARED: the role becomes required, and only a declared one counts
+    const noRole = P.resolveKeys(genRoles, [addOn(genRoles, R1)]);
+    check('#106 under a DECLARED genesis an add with NO role → E-KEY (a missing field is never the strongest claim)',
+      noRole.error === 'E-KEY' && /no `role` and inherits none/.test(String(noRole.detail)));
+    check('#106 a role outside the operating vocabulary → E-KEY', P.resolveKeys(genRoles, [addOn(genRoles, R1, { role: 'checkpoint' })]).error === 'E-KEY');
+    // distinct case: a real operating role that THIS publisher did not declare
+    const genData = mkGen(['data']);
+    check('#106 an operating role this publisher did NOT declare → E-KEY', P.resolveKeys(genData, [addOn(genData, R1, { role: 'issuance' })]).error === 'E-KEY');
+    // the AUTHORIZING roles cannot be declared as operating ones — well-foundedness, not taste
+    check('#106 an AUTHORIZING role in the genesis `roles` declaration → E-GENESIS (the log cannot assign what authorizes it)',
+      P.resolveKeys(mkGen(['checkpoint']), []).error === 'E-GENESIS');
+    // the case the ticket named as unexercised: two ACTIVE keys, different roles
+    const a1 = addOn(genRoles, R1, { role: 'data' });
+    const a2 = signG(P.buildKeyLogEntry({ domain_shard: 'v.com', ust_id: 'ust:20260628.1452', key_id: G.key_id }, T, { op: 'add', pub: R2.pubB64, new_key_id: R2.key_id, role: 'issuance' }, P.contentHash(a1)));
+    const two = P.resolveKeys(genRoles, [a1, a2]);
+    check('#106 TWO ACTIVE keys carrying DIFFERENT roles resolve, and the roles are readable (nothing exercised this before)',
+      !two.error && two.active.size === 3 && two.roles.get(R1.key_id) === 'data' && two.roles.get(R2.key_id) === 'issuance');
+    // inheritance PROPAGATES but cannot INTRODUCE — the derivation's load-bearing asymmetry
+    const a3 = signG(P.buildKeyLogEntry({ domain_shard: 'v.com', ust_id: 'ust:20260628.1453', key_id: G.key_id }, T, { op: 'add', pub: R3.pubB64, new_key_id: R3.key_id, supersedes: R1.key_id }, P.contentHash(a2)));
+    const inh = P.resolveKeys(genRoles, [a1, a2, a3]);
+    check('#106 `supersedes` PROPAGATES the role down a lineage (no explicit role needed on a successor)',
+      !inh.error && inh.roles.get(R3.key_id) === 'data');
   }
 
   // ── rev97: `rotate` REMOVED, `supersedes` replaces what it was for (§F.5e.0) ──────────────────────

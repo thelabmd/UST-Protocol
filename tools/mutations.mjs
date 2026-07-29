@@ -17,6 +17,26 @@
 // `mustDetect` marks the verdict-seam mutations the battery treats as hard requirements; the rest are harvest — a hit
 // lowers the unproven residual, a miss is covered by the gate channel and is not a failure.
 export const MUTATIONS = [
+  // round 79 (#106) — role INHERITANCE down a lineage. Broken, `add(k, supersedes=s)` no longer carries `s`'s role,
+  // so replacing a roled key becomes impossible without restating the role by hand — and the asymmetry the whole
+  // derivation rests on ("propagates, never introduces") stops being observable at all.
+  {
+    id: 'role-inheritance-dropped', mustDetect: true, observe: ['conformance'],
+    why: 'role propagation. Broken, a successor key loses the role of the key it supersedes.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "      const inherited = op.supersedes !== undefined ? roles.get(op.supersedes) : undefined;",
+    to: "      const inherited = undefined; /* mutant */",
+  },
+  // round 79 (#106) — key ROLES under a DECLARED genesis. Broken, a missing role stops being refused: every key a
+  // publisher adds is again indistinguishable from every other, so a leak of one signs everything and revocation
+  // is all-or-nothing. This is the fail-CLOSED direction — a missing field must never be the strongest claim.
+  {
+    id: 'role-missing-not-refused', mustDetect: true, observe: ['conformance'],
+    why: 'the declared-role requirement. Broken, an unroled key is admitted under a genesis that declared separation.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "        if (r === undefined) return { error: 'E-KEY', detail: 'entry ' + i + ' has no `role` and inherits none",
+    to: "        if (false /* mutant */) return { error: 'E-KEY', detail: 'entry ' + i + ' has no `role` and inherits none",
+  },
   // round 78 (#97/tlx) — the class↔role PARTITION, one-sided. Broken, the `key` role admits every class again:
   // a data document verifies as a trust-layer document, and the shared served-log reader takes it as a log entry
   // while reporting that it VERIFIED it. This mutant is what proves the role matrix is not asserting against an

@@ -4,6 +4,14 @@
   "_pin": "Rows in the ladder with no record here. May only ever SHRINK. 94 rows existed when the gate landed; the three most recent are accounted.",
   "records": [
     {
+      "round": 79,
+      "math": "So role separation is a DECLARED refinement, the same shape as every other strength here",
+      "spec": "Key ROLES — a DECLARED refinement, never a floor change",
+      "code": "packages/ust-protocol/index.mjs :: resolveKeysBytes declared-role regime",
+      "vector": "role-06-two-active-keys-distinct-roles",
+      "test": "#106 under a DECLARED genesis an add with NO role → E-KEY (a missing field is never the strongest claim)"
+    },
+    {
       "round": 78,
       "math": "The correction is one enumeration read in BOTH directions rather than two lists that happen to agree today",
       "spec": "The role is a PARTITION of the class\n   registry, enforced in BOTH directions",

@@ -480,6 +480,18 @@
       "rev": "round78",
       "model_locus": "`key` admits exactly `{genesis, key, cadence}` and `data` admits exactly the complement",
       "conformance_check": "#97/tlx the key role admits EXACTLY the authority classes — genesis, key and cadence, measured from the set"
+    },
+    {
+      "id": "R79-role-declared-regime",
+      "rev": "round79",
+      "model_locus": "So role separation is a DECLARED refinement, the same shape as every other strength here",
+      "conformance_check": "#106 under a DECLARED genesis an add with NO role → E-KEY (a missing field is never the strongest claim)"
+    },
+    {
+      "id": "R79-role-inheritance-propagates-only",
+      "rev": "round79",
+      "model_locus": "Inheritance PROPAGATES a role; it can never INTRODUCE one",
+      "conformance_check": "#106 `supersedes` PROPAGATES the role down a lineage (no explicit role needed on a successor)"
     }
   ]
 }

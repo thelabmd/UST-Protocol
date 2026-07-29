@@ -1070,10 +1070,24 @@ existence carrying one; an entry with `op:"rotate"` MUST be rejected `E-KEY`.
   at that point AND MUST BE the genesis root** — a revoked, rotated-out, or never-authorized signer ⇒ E-KEY (this
   is what stops a revoked/superseded key from authorizing a later entry or a cadence change), and a merely-active
   non-root signer ⇒ E-KEY (§F.5e.3 — the same conjunct governs a cadence entry, §11.3). `key_op` has a CLOSED exact schema
-  per op (`add: {op, pub, new_key_id?, supersedes?}`; `revoke: {op, pub, reason, compromised_since iff compromised}`);
+  per op (`add: {op, pub, new_key_id?, supersedes?, role?}`; `revoke: {op, pub, reason, compromised_since iff compromised}`);
   an unknown `op`, a stray field, a `retired` carrying `compromised_since`, a revoke of a never-authorized key, or
   a re-authorization of a compromised key ⇒ E-KEY / E-MALFORMED, never a silent no-op. A compromised key can
   never return to `active`.
+- **Key ROLES — a DECLARED refinement, never a floor change (§F.5e.1).** A role says what a key is FOR, so a leak
+  of one key does not sign everything the publisher signs and revocation stops being all-or-nothing. The
+  vocabulary is FIXED (§17): `name-binding-root`, `checkpoint-recovery`, `authority-checkpoint` are set at the CEREMONY and cannot be
+  assigned by the key log — the log's own authority derives from them, so assigning them there would be circular;
+  `data` and `issuance` are assigned in the key log, on a root-signed `add`.
+  **The regime is declared per publisher.** A genesis whose value carries a non-empty `roles` array DECLARES role
+  separation. Then, and only then: every `add` MUST carry a `role` drawn from that declared set (a missing role
+  ⇒ **E-KEY** — a missing field must never be the strongest possible claim), and `admits(key, class)` consults
+  the role. A genesis that declares nothing keeps the undifferentiated key set, and an `add` carrying a `role`
+  the publisher never declared ⇒ **E-MALFORMED** (a field the verifier cannot act on is refused, §F.5e.2).
+  A publisher that does NOTHING is unaffected in every respect: no document changes verdict, because §11.3's
+  continuity law forbids an operator change — including this one — from invalidating data already issued.
+  `role` is INHERITED down a lineage: `add(k, supersedes=s)` gives `k` the role of `s` when `k` declares none.
+  Inheritance PROPAGATES a role and can never INTRODUCE one, which is why a parallel `add` must state its own.
 - A verifier resolves `State.id.key_id` by walking this genesis-rooted chain (bounded ≤256 entries, §13) and
   taking the key valid at the State's anchored time; a BROKEN entry chain or an entry not signed by a
   then-active key ⇒ E-KEY (a failure); a FORKED genesis ⇒ E-GENESIS; an UNREACHABLE key-log/genesis ⇒
@@ -1651,8 +1665,9 @@ Independent re-implementation is expected; the vectors make "verify without trus
 
 - **class:** `observation`, `attestation`, `derivation`, `genesis` (name-binding root, §12.1), `key` (key-log entry, §12.2), `cadence` (cadence-log entry, §11.3 — `state.data.cadence_op.value` keys `cadence, effective_from`; prev-chained, resolved at a slot's time; not valid in a `data` context, W3). (Extensible by future 1.x; unknown ⇒ E-MALFORMED.)
 - **attestation subtype (§11.3 C2):** `set` (constituents + Merkle `root`) · `checkpoint` (prev + a `checkpoint` data partition `{head, frame_count, from?, to?}`, no constituents/root) · `gap` (prev + a `gap` data partition, no constituents/root). A prev-only attestation MUST carry EXACTLY ONE of `checkpoint`/`gap` (never both/neither ⇒ E-MALFORMED) — the subtype is the named data partition, not a shape.
-- **genesis value (§12.1):** `pub`, `role:"name-binding-root"`, optional `max_partitions`, `max_transcript_bytes`, `cadence` (string integer seconds — the SIGNED stream cadence that fixes the completeness grid, §11.3; resolved, never a per-checkpoint choice), and — for the §12.3 authority-checkpoint profile — optional `checkpoint_authority:{key_id,pub}` and `recovery:{keys:{key_id:pub},threshold}` (each `key_id = H("ust:keylog", pub)`). A verifier RESOLVES the checkpoint-authority + recovery roots FROM this signed genesis (`authority_root:"genesis"`, P1-04); a root passed as a raw caller option is a consumer PIN (`authority_root:"consumer-pin"`), never silently "genesis-authorized".
-- **key-log entry** (a `class:"key"` transcript, §12.2): `state.data.key_op.value` keys `op,pub,supersedes,reason,compromised_since`; `op` ∈ `add|revoke`;
+- **genesis value (§12.1):** `pub`, `role:"name-binding-root"`, optional `roles` (a non-empty ARRAY of operating-role names the publisher will use — its presence DECLARES role separation, §12.2), `max_partitions`, `max_transcript_bytes`, `cadence` (string integer seconds — the SIGNED stream cadence that fixes the completeness grid, §11.3; resolved, never a per-checkpoint choice), and — for the §12.3 authority-checkpoint profile — optional `checkpoint_authority:{key_id,pub}` and `recovery:{keys:{key_id:pub},threshold}` (each `key_id = H("ust:keylog", pub)`). A verifier RESOLVES the checkpoint-authority + recovery roots FROM this signed genesis (`authority_root:"genesis"`, P1-04); a root passed as a raw caller option is a consumer PIN (`authority_root:"consumer-pin"`), never silently "genesis-authorized".
+- **key role (§12.2, §F.5e.1) — a FIXED vocabulary of five; a new role is a spec change, never an operator's word.** `name-binding-root` (signs the genesis) · `checkpoint-recovery` (threshold-signs a RecoveryClaim for the authority-checkpoint chain, §12.3.2) · `authority-checkpoint` (signs authority checkpoints, §12.3) — the three AUTHORIZING roles, set at the ceremony · `data` (the publisher's stream) · `issuance` (what is handed to a named recipient) — the two OPERATING roles, assigned in the key log. The two authorizing names are QUALIFIED on purpose: bare `recovery` and bare `checkpoint` each name TWO mechanisms in this protocol, and reasoning about the bare word once widened an authority set (§F.5e.3), so a role — read by a consumer to decide what a signature meant — may never carry one. Free-form names are refused deliberately: the role is read by a CONSUMER, so an open field would make "what does this signature mean" a question addressed to the publisher rather than to the protocol. `issuance` names what the role PROTECTS — a signature over something leaving the publisher for a named recipient — so a product word (`invoice`, `licence`, `receipt`) never enters the vocabulary; each is an instance of it.
+- **key-log entry** (a `class:"key"` transcript, §12.2): `state.data.key_op.value` keys `op,pub,supersedes,role,reason,compromised_since`; `op` ∈ `add|revoke`; `role` ∈ `data|issuance` (the operating roles only — the authorizing three are ceremony-set);
   `reason` ∈ `retired|compromised`. `key_id` = `H("ust:keylog", pub_raw)` (raw public-key octets, domain-separated §7 — not plain SHA256(pub)).
 - **anchor substrate (operator choice, extensible):** an entry defines the substrate's `Locator` evidence
   fields, its public-append-only-log check, its finality parameter, and — since #95 — its **inclusion
