@@ -74,7 +74,10 @@ const S0 = { active: new Set([G.key_id]), all: new Set([G.key_id]), compromised:
 
 const legalEvents = (s) => {
   const evs = [];
-  for (const signer of s.active) {
+  // §F.5e.3: the enumerator generated every ACTIVE key as a candidate signer, which is the invariant BEFORE the
+  // restriction. Key-log mutation is now root-only, so an honest sequence has exactly one signer — and the
+  // non-active-signer attack sweep below still exercises every other key against it.
+  for (const signer of [...s.active].filter((k) => k === G.key_id)) {
     for (const t of byKid.keys()) {
       if (t === G.key_id) continue;                                           // never re-add into genesis (its kid is fixed)
       evs.push({ op: 'add', signer, target: t });
@@ -126,11 +129,19 @@ function dfs(absState, log, prevHash, n) {
       const asigner = [...absState.active][0];
       const illegalEvs = [];
       for (const kid of absState.compromised) illegalEvs.push({ op: 'retire', signer: asigner, target: kid }, { op: 'compromise', signer: asigner, target: kid }, { op: 'add', signer: asigner, target: kid }, { op: 'rotate', signer: asigner, target: kid });   // compromise is TERMINAL — no re-revoke, no re-authorize
+      // §F.5e.3 — narrowing the LEGAL enumerator to a root signer shrank the space 798 → 186, which would have traded
+      // an exhaustive proof for two hand-written examples. So every ACTIVE NON-ROOT key is swept here as a mutator
+      // instead: the sequences left the legal side and must be provably refused, not merely absent.
+      for (const kid of absState.active) {
+        if (kid === G.key_id) continue;
+        for (const t of byKid.keys()) if (t !== kid) illegalEvs.push({ op: 'add', signer: kid, target: t });
+        illegalEvs.push({ op: 'compromise', signer: kid, target: G.key_id });
+      }
       for (const ev of illegalEvs) {
         illegals++;
         const entry = buildEntry(ev, prevHash, n);
         const ri = P.resolveKeys(genesis, [...log, entry]);
-        if (!ri.error) fails.push(`ILLEGAL @len${log.length}: ${ev.op}(${short(ev.target)}) re-touched a COMPROMISED key (terminal) — resolveKeys ACCEPTED it (target-state legality break)`);
+        if (!ri.error) fails.push(`ILLEGAL @len${log.length}: ${ev.op}(${short(ev.target)}) signed by ${short(ev.signer)} — a non-root mutator or a re-touched COMPROMISED key (terminal) — resolveKeys ACCEPTED it (target-state legality break)`);
       }
     }
   }

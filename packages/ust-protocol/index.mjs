@@ -946,7 +946,23 @@ export function resolveKeysBytes(genesisBytes, keylogBytes) {
   const active = new Map([[gKid, gPub]]);
   const revoked = new Map();                                                      // key_id → {reason, compromised_since?, at}
   const compromised = new Set();                                                  // MONOTONIC (round-14 P0-01): compromise is TERMINAL — a compromised key is never re-authorized, and its status can never be downgraded (compromised → retired) by a later revoke
-  const history = new Map([[gKid, { pub: gPub, intervals: [{ from: genesis.state.time.generated_at, to: null, end: null }] }]]);  // round-15 P0-02: ORDERED authorization intervals (two-sided K_n(t), F.5e). A key's lifetime is a SET of active windows; re-add opens a NEW interval, so add→retire→re-add→retire keeps the retired GAP unauthorized. Scalar first/last collapsed disjoint windows into one → a doc in the gap escaped both bounds.
+  const history = new Map([[gKid, { pub: gPub, intervals: [{ from: genesis.state.time.generated_at, to: null, end: null }] }]]);
+  // §F.5e.3 — AUTHORITY TO MUTATE THE LOG IS NOT AUTHORITY TO SIGN. The admissibility invariant asked only
+  // `signer ∈ active`, which made an OPERATIONAL key as powerful as the root: measured 2026-07-29, a data key
+  // added another key that then verified `authoritative`, and the same data key revoked the GENESIS key as
+  // `compromised` — terminal, irrecoverable. The operational key is the one living in a running service's
+  // environment, so this handed the most exposed key the power to destroy the name binding permanently, which
+  // nullifies the separation an offline root is kept for.
+  //
+  // Roles are not normative yet (#106), but the genesis ALREADY names the party this needs: the root it self-signs
+  // with. So the restriction lands now on what the genesis carries rather than waiting for the vocabulary — and
+  // when roles arrive they generalize this, they do not replace it.
+  //
+  // The genesis recovery set is deliberately NOT admitted here. It looked like it belonged — a lost root would
+  // otherwise strand the name — but those keys never sign key-log entries: they threshold-sign a RecoveryClaim
+  // that re-roots the AUTHORITY CHECKPOINT chain (§12.3.2). One word, two mechanisms. Measured: a recovery key
+  // signing a key-log entry is already refused as NOT-ACTIVE, so admitting it would have widened authority on the
+  // strength of a shared name and nothing else.
     // `rotate` REMOVED (rev97, §F.5e.0). It was signed by the key it replaced, so a key compromised but NOT YET
   // DECLARED could name a successor the attacker chose — the operator then revokes what it knows about while the
   // attacker keeps authority through a key nobody saw. Self-authorized succession turns a detected compromise into
@@ -974,6 +990,10 @@ export function resolveKeysBytes(genesisBytes, keylogBytes) {
     // can no longer authorize a later entry.
     const sKid = keyId(e.sig.pub);
     if (active.get(sKid) !== e.sig.pub) return { error: 'E-KEY', detail: 'entry ' + i + ' not signed by a currently-active key (revoked / rotated-out / never-authorized)' };
+    // §F.5e.3 second conjunct: active is NECESSARY, not SUFFICIENT. Only the genesis root or a genesis-named
+    // recovery key may mutate the log. This is a RESTRICTION — every sequence admissible after it was admissible
+    // before — so no non-mutating document that verified yesterday changes verdict.
+    if (sKid !== gKid) return { error: 'E-KEY', detail: 'entry ' + i + ' key-log mutation requires the GENESIS ROOT (§F.5e.3) — an operational key may sign documents, not grant or destroy authority' };
     const op = e.state?.data?.key_op?.value;
     // #75 P0-02d/e + P1-07 — CLOSED exact schema per op: an unknown op or a stray field is an ERROR, never a no-op.
     if (typeof op !== 'object' || op === null || typeof op.op !== 'string' || !Object.hasOwn(OP_FIELDS, op.op)) return { error: 'E-KEY', detail: 'entry ' + i + ' unknown or missing key_op.op (add|revoke)' };

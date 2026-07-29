@@ -217,6 +217,33 @@ check('G1 name-form domain_shard, no binding → INDETERMINATE (cannot confirm t
   const docE = P.seal(P.buildState({ domain_shard: 'v.com', ust_id: 'ust:20260628.11', key_id: E.key_id, class: 'observation' }, T, { r: { kind: 'captured', value: { x: '1' } } }), E.priv, E.pubB64);
   check('F1 keylog new_key_id alias→E-KEY', P.verify(docE, { genesis: gen, keylog: [alias], noForkConfirmed: true, context: 'data' }).error === 'E-KEY');
 
+  // ── §F.5e.3: an OPERATIONAL key may sign documents, not grant or destroy authority ──────────────
+  // The whole suite signs key-log entries with the genesis key, so before these vectors NOTHING exercised a
+  // non-root mutator and the restriction would have shipped unproven. Both legs are the measured attack, verbatim.
+  {
+    const addD = signG(P.buildKeyLogEntry({ domain_shard: 'v.com', ust_id: 'ust:20260628.1101', key_id: G.key_id }, T, { op: 'add', pub: K.pubB64, new_key_id: K.key_id }, P.contentHash(gen)));
+    const signK = (st) => P.seal(st, K.priv, K.pubB64);
+    // leg 1 — persistence: the data key adds a key of its own
+    const addByK = signK(P.buildKeyLogEntry({ domain_shard: 'v.com', ust_id: 'ust:20260628.1102', key_id: K.key_id }, T, { op: 'add', pub: E.pubB64, new_key_id: E.key_id }, P.contentHash(addD)));
+    const docE2 = P.seal(P.buildState({ domain_shard: 'v.com', ust_id: 'ust:20260628.17', key_id: E.key_id, class: 'observation' }, T, { r: { kind: 'captured', value: { x: '1' } } }), E.priv, E.pubB64);
+    const v1 = P.verify(docE2, { genesis: gen, keylog: [addD, addByK], noForkConfirmed: true, context: 'data' });
+    check('F.5e.3 an operational key may NOT add a key', v1.error === 'E-KEY' && /key-log mutation requires/.test(String(v1.detail)));
+    // leg 2 — the terminal one: the data key declares the GENESIS key compromised
+    const killG = signK(P.buildKeyLogEntry({ domain_shard: 'v.com', ust_id: 'ust:20260628.1103', key_id: K.key_id }, T, { op: 'revoke', pub: G.pubB64, reason: 'compromised', compromised_since: '2026-06-28T13:00:00Z' }, P.contentHash(addD)));
+    const docK2 = P.seal(P.buildState({ domain_shard: 'v.com', ust_id: 'ust:20260628.18', key_id: K.key_id, class: 'observation' }, T, { r: { kind: 'captured', value: { x: '1' } } }), K.priv, K.pubB64);
+    const v2 = P.verify(docK2, { genesis: gen, keylog: [addD, killG], noForkConfirmed: true, context: 'data' });
+    check('F.5e.3 an operational key may NOT revoke the GENESIS key (terminal destruction)', v2.error === 'E-KEY' && /key-log mutation requires/.test(String(v2.detail)));
+    // leg 3 — a genesis-named RECOVERY key does NOT thereby gain key-log signing. It threshold-signs a
+    // RecoveryClaim against the AUTHORITY CHECKPOINT chain (§12.3.2), which is a different chain. The first draft
+    // of this vector asserted the opposite and failed — the implementation was right and the reasoning was not.
+    const R = kp('55'.repeat(32));
+    const genR = signG(P.buildGenesis({ domain_shard: 'v.com', ust_id: 'ust:20260628.19', key_id: G.key_id }, T, G.pubB64, undefined, undefined, undefined, undefined, { keys: { [R.key_id]: R.pubB64 }, threshold: 1 }));
+    const addByR = P.seal(P.buildKeyLogEntry({ domain_shard: 'v.com', ust_id: 'ust:20260628.1104', key_id: R.key_id }, T, { op: 'add', pub: K.pubB64, new_key_id: K.key_id }, P.contentHash(genR)), R.priv, R.pubB64);
+    const docK3 = P.seal(P.buildState({ domain_shard: 'v.com', ust_id: 'ust:20260628.20', key_id: K.key_id, class: 'observation' }, T, { r: { kind: 'captured', value: { x: '1' } } }), K.priv, K.pubB64);
+    const v3 = P.verify(docK3, { genesis: genR, keylog: [addByR], noForkConfirmed: true, context: 'data' });
+    check('F.5e.3 a RECOVERY key does NOT gain key-log signing (different chain, shared word)', v3.error === 'E-KEY');
+  }
+
   // ── rev97: `rotate` REMOVED, `supersedes` replaces what it was for (§F.5e.0) ──────────────────────
   // The removal is prose until the verifier REFUSES the op. A model that no longer defines a transition
   // while the checker still accepts it is the worst of both: readers trust the model, machines trust the code.

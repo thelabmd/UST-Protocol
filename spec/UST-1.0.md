@@ -988,15 +988,27 @@ established at all, the `no_fork` field is ABSENT rather than filled (§15) — 
   proof}` shape as any document (nothing changes across tier OR role, §16). Each entry is a transcript with
   `state.id.class = "key"`, carrying the operation in its data and the chain link in its provenance:
   ```
-  state.data.key_op.value = { "op":"add"|"rotate"|"revoke", "pub":b64url,
+  state.data.key_op.value = { "op":"add"|"revoke", "pub":b64url, "supersedes":key_id?,
                               ["reason":"retired"|"compromised", "compromised_since":RFC3339-Z — STRICT `YYYY-MM-DDTHH:MM:SSZ`; an offset or fractional form ⇒ E-MALFORMED (lexicographic comparison is then chronologically correct)] }
   state.provenance.prev   = <content_hash of the previous entry>   // first entry's prev = genesis content_hash (§12.1)
   ```
   The added key's identifier `key_id` = `H("ust:keylog", pub_raw)` where `pub_raw` = the RAW public-key octets
   (base64url-decode of `pub`), domain-separated (§7) — NOT plain `SHA256(pub)`, NOT the base64url string;
   content-derived, unique by construction (P9), reproduced byte-for-byte by the verifier (§14 step 4). **Each
-  entry transcript MUST be signed by the CURRENT valid key**; the genesis key signs the first; each rotation is
-  authorized by the key it supersedes; `revoke` requires the current or genesis key (profile MAY require a
+  entry transcript MUST be signed by an ACTIVE key**; the genesis key signs the first; a replacement is an
+  `add` naming the replaced key in `supersedes`; `revoke` requires an active key (profile MAY require a
+
+quorum, and SHOULD restrict this — see below).
+
+**A known gap, stated rather than implied (rev97).** "Active" does not distinguish an OPERATIONAL key from an
+AUTHORITY key, so a key issued to sign observations may also add keys and revoke others — including revoking the
+genesis key as `compromised`, which is TERMINAL. The operational key is the one that lives in a running service's
+environment, so it is the most exposed key an operator holds, and this grants it the power to permanently destroy
+the name binding it serves. Measured against the reference implementation, not inferred: a data key added another
+key that then verified `authoritative`, and the same data key revoked the GENESIS key as compromised and was
+accepted (2026-07-29). §F.5e.1's role partition exists to close this; until roles land normatively a profile MUST
+NOT treat "active" as sufficient authority for key-log mutation.
+
   quorum). This forecloses M1. Because an entry is a normal transcript, it is verified by the SAME algorithm
   (§14) as any UST — the trust layer is built from the protocol's own documents.
   **Revocation semantics (P1) — decided against the anchor UPPER BOUND (X1).** The anchor gives ONLY an upper
@@ -1036,7 +1048,7 @@ existence carrying one; an entry with `op:"rotate"` MUST be rejected `E-KEY`.
   removes its target from `active` and records the reason. **Each entry MUST be signed by a key that is `active`
   at that point** — a revoked, rotated-out, or never-authorized signer ⇒ E-KEY (this is what stops a
   revoked/superseded key from authorizing a later entry or a cadence change). `key_op` has a CLOSED exact schema
-  per op (`add|rotate: {op, pub, new_key_id?}`; `revoke: {op, pub, reason, compromised_since iff compromised}`);
+  per op (`add: {op, pub, new_key_id?, supersedes?}`; `revoke: {op, pub, reason, compromised_since iff compromised}`);
   an unknown `op`, a stray field, a `retired` carrying `compromised_since`, a revoke of a never-authorized key, or
   a re-authorization of a compromised key ⇒ E-KEY / E-MALFORMED, never a silent no-op. A compromised key can
   never return to `active`.
@@ -1597,7 +1609,7 @@ reached; a document does NOT change format across tiers OR roles — even genesi
 Every verifier passes the normative test-vector suite BYTE-FOR-BYTE (§App. A) for the tiers it implements:
 FLOOR vectors — canonicalization/NFC/ordering, per-partition captured-vs-computed hashing, domain separation,
 strict-Ed25519 malleability, bounds/cycle, private-commit + AEAD↔commit binding, each error code. HIGH vectors —
-key-log chain (self-signed rotation, break/unauthorized reject, ≤256 bound, revocation window, genesis
+key-log chain (root-authorized supersession, break/unauthorized reject, ≤256 bound, revocation window, genesis
 fork/recovery), name-authority resolution. TOP vectors — anchor-proof per substrate (non-final ⇒ UNPROVEN),
 stream-genesis + stream checkpoint/omission, pinned Merkle/seed ordering. A verifier that diverges on any vector for
 a tier it claims is non-conforming — making verifier disagreement a test failure, not a settlement weapon.
@@ -2156,10 +2168,10 @@ provenance and will be lifted into this ledger when the spec is published.
 - **REV 41 (2026-07-13)** — #75 ROOT 2, the **key-log temporal state machine** (closes the whole P0-02 class,
   reproduced first). `resolveKeys` was a growing SET that never shrank, so a revoked / rotated-out / retired key
   kept "signing" later entries and cadence changes, and malformed / unknown ops were silent no-ops. It is now a
-  reducer over explicit state: `active` (may sign the NEXT entry — shrinks on revoke/rotate) is kept DISTINCT from
-  the binding set (`validKeys`, every key ever authorized, for document continuity + X1). Per §12.2, `rotate` is
-  "authorized by the key it supersedes" — the SIGNER leaves `active` (its earlier docs stay valid); `revoke`
-  removes its target; each entry MUST be signed by a currently-`active` key ⇒ E-KEY otherwise; `key_op` has a
+  reducer over explicit state: `active` (may sign the NEXT entry — shrinks on revoke/supersession) is kept DISTINCT
+  from the binding set (`validKeys`, every key ever authorized, for document continuity + X1). Per §12.2 (rev97), an
+  `add` MAY name the key it replaces in `supersedes` — the NAMED key leaves `active` (its earlier docs stay valid),
+  and the entry is authorized by whoever signed it rather than by the key being replaced; `revoke` removes its target; each entry MUST be signed by a currently-`active` key ⇒ E-KEY otherwise; `key_op` has a
   CLOSED exact schema (unknown op / stray field / retired-with-`compromised_since` / revoke-of-unknown-key /
   re-authorizing-a-compromised-key ⇒ E-KEY/E-MALFORMED, never a no-op). The CLI's operational-key rotation is now
   a root-signed `add` + separate `revoke` (the root is not superseding itself) — spec↔code↔CLI aligned. Formal
