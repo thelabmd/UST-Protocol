@@ -128,6 +128,22 @@
       "test": {
         "excluded": "The test layer is packages/ust-cli/regression.mjs — four checks pinning refusal on ambiguity, refusal of an inactive key_id, supersession of the NAMED key, and inheritance of its role, plus a non-vacuity leg asserting the fixture is one the OLD selection would have got wrong. They run under npm run test:cli, not as conformance checks, because conformance covers the verifier and this covers a ceremony tool."
       }
+    },
+    {
+      "round": 83,
+      "math": {
+        "excluded": "This round decides WHERE a sealed document of ours is displayed and what unit earns one. The formal model states what a verifier may conclude from a transcript; the placement of our own diary entry is a property of no document, and model prose written to satisfy a gate is the patch this repo rejects."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, and no conformance obligation changed. An implementation conforming to UST owes nothing about where we publish a diary entry."
+      },
+      "code": "tools/recap-render.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce so a second implementation can check itself. Nothing here touches a document or a verdict — the artifacts are a markdown file, a registry and a GitHub comment, none of which a vector describes."
+      },
+      "test": {
+        "excluded": "The test layer is the gate's own legs, run rather than described: a re-added `#### round N — recap` block in CHANGELOG.md fails, a record with neither issue nor reason fails, a registry hash absent from the store fails by name, and the floor lowered names undecided rounds. They run as npm run test:recap, not as conformance checks, which cover the verifier only."
+      }
     }
   ],
   "first_accounted_round": 76,

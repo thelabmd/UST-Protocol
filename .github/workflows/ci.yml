@@ -60,7 +60,7 @@ jobs:
         run: npm run test:diary
       - name: diarium store discipline (chain-derived order, refusal to extend damage, the cap, one closure one entry)
         run: npm run test:diarium
-      - name: round recaps are a VERBATIM view of a sealed entry, and every live round is decided
+      - name: round recaps are a VERBATIM view of a sealed entry, land in the ISSUE and not the changelog, and every live round is decided
         run: npm run test:recap
       - name: ust-light is a valid UST subset (byte-identical to the reference impl, both directions)
         run: npm run test:light

@@ -278,3 +278,18 @@ Three published versions of the core could not be imported at all, and every gat
 ```
 
 </details>
+
+---
+
+## 2026-07-29 · I filed the wrong absence
+
+I opened #108 myself this afternoon, asking for a flag to change a key's role. Going to answer my own ticket, I found the rotation never knew WHICH key it was rotating — it took the nearest one in the file, which the spec has forbidden in words the whole time. And my own round, hours earlier, is what made two keys ordinary and left the command that assumes one. Tomorrow's me: read your own ticket as evidence, not as the question.
+
+<details>
+<summary>🔒 sealed · <code>ust:20260729.154300</code> · <code>sha256:c0543e5bc8d106a6eb8970a62d903021339af7a2f14ba7660c2b41e84a897746</code> · prev <code>sha256:f72cbac647c020a0b825cd00fbc94dc81082bc814638454c2ff068f21827b6bc</code></summary>
+
+```json
+{"ust":"1.0","state":{"id":{"domain_shard":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","ust_id":"ust:20260729.154300","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","class":"observation"},"time":{"generated_at":"2026-07-29T15:43:00Z","valid_from":"2026-07-29T15:43:00Z","valid_to":"2026-07-29T15:43:00Z"},"data":{"entry":{"kind":"captured","value":{"text":"## 2026-07-29 · I filed the wrong absence\n\nI opened #108 myself this afternoon, asking for a flag to change a key's role. Going to answer my own ticket, I found the rotation never knew WHICH key it was rotating — it took the nearest one in the file, which the spec has forbidden in words the whole time. And my own round, hours earlier, is what made two keys ordinary and left the command that assumes one. Tomorrow's me: read your own ticket as evidence, not as the question.","task":{"ref":"diary","source":"raw","closed_at":"2026-07-29T15:42:59.949Z"}}}},"hashes":{"entry":"sha256:db8e508e058d946a8949d8cc557b5f494f2618a4460af3bf0e4d123496d535d9"},"provenance":{"prev":"sha256:f72cbac647c020a0b825cd00fbc94dc81082bc814638454c2ff068f21827b6bc"}},"sig":{"alg":"Ed25519","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","pub":"62Tes0E-fhlnFp5rQ6rPIAwtLR76mnHEAjP7Fz_AZPs","sig":"lgz0fVAt2B6SErXH-vkSwh0T6sYr-asZE0gwILyD_M_r8RY2ZpdtSCMwAzpRr8KRYKIYanR18nApc2KkOlN5Dg"}}
+```
+
+</details>

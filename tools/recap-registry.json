@@ -1,5 +1,5 @@
 {
-  "_": "Which sealed diary entry recaps which round. The changelog row says what BECAME; the issue comment says where the ticket and reality diverged; the diary says what the moment was. This file is the only place those are joined, because the store carries no task linkage — an entry is just signed text, and inventing one inside the store would make the diary answer to the changelog.",
+  "_": "Which sealed diary entry recaps which round. THE UNIT IS THE CLOSED ISSUE (owner, 2026-07-29): one closed issue gets one recap and one diary entry. A round that closes no issue gets neither, and records why. Today by hand — closed, invoked, recorded — and the store carries no task linkage, so this file is the only place round, issue and sealed entry are joined; inventing that linkage inside the store would make the diary answer to the changelog. The recap lands in the ISSUE and nowhere else: the diary's own homes are diarium/ and diarium.md.",
   "_first_accounted": "The rule starts where it was written. Rounds below the floor predate it and are reported, never gated: back-filling them would mean writing a diary entry today about a day I cannot remember, which is the one thing this diary is not for.",
   "first_recapped_round": 80,
   "records": [
@@ -11,11 +11,17 @@
     },
     {
       "round": 81,
-      "no_recap": "The diary is written when the owner invokes the recap, not when a round ends. Round 80's entry was sealed before this round existed, and sealed means sealed — a second entry for the same invocation would break 'one entry, one moment'. This is the ordinary case for any round that is not the last of an invocation, not an exemption."
+      "no_recap": "Round 81 closed no issue — it built the recap machinery itself. The unit is the CLOSED ISSUE: one closed issue, one recap, one diary entry. A tooling round that closes nothing has no recipient, and a diary entry written for it would be an entry written to satisfy a gate."
     },
     {
       "round": 82,
-      "no_recap": "Same invocation as rounds 80 and 81: the day's diary entry was sealed before this round existed, and sealed means sealed. The diary is written when the owner invokes the recap, not once per round."
+      "content_hash": "sha256:c0543e5bc8d106a6eb8970a62d903021339af7a2f14ba7660c2b41e84a897746",
+      "issue": 108,
+      "_issue": "Round 82 closed #108, so #108 receives the recap. My first accounting recorded `no_recap` here on the grounds that the day's entry was already sealed — wrong: the unit is the closed issue, not the invocation, and #108 being closed is exactly what earns an entry."
+    },
+    {
+      "round": 83,
+      "no_recap": "Round 83 closed no issue — it moved where a recap lands and what unit earns one. The unit is the CLOSED ISSUE: a round that closes nothing has no recipient, and an entry written for it would be an entry written to satisfy a gate."
     }
   ]
 }
