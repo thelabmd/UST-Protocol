@@ -22,6 +22,27 @@ export const MUTATIONS = [
   // those surfaces. Adding a leg to each suite would have been the appearance of coverage; adding entries HERE gives
   // each one an adversary the `drift-guards` observer already knows how to run — one corpus, the same two observations.
   {
+    id: 'name-map-root-self-admitted', gate: 'node packages/ust-protocol/security-regression.mjs',
+    why: 'the #42 consumer-admission of a name-map root. Broken, ANY root counts as admitted, so a self-supplied name-map root earns identity=authoritative — the P0-01a reproduction expects exactly that refusal.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: 'const mapRootAdmitted = (trust, root) => Array.isArray(trust?.mapRoots) && trust.mapRoots.includes(root);',
+    to: 'const mapRootAdmitted = (trust, root) => true; /* mutant */',
+  },
+  {
+    id: 'diary-cap-not-enforced', gate: 'node --test packages/diarium/test/store.test.mjs',
+    why: 'the cap the diary declares in its own rules.md. Broken, an entry over the cap is stored, so "one entry, one thing" stops being enforced by the tool and becomes a request.',
+    file: 'packages/diarium/bin/diarium.mjs',
+    from: '  if (body.length > limit) die(',
+    to: '  if (false && body.length > limit) die(',
+  },
+  {
+    id: 'authority-sequence-skip-admitted', gate: 'node packages/ust-protocol/run-arc-vectors.mjs',
+    why: 'the §12.3 authority-checkpoint sequence rule. Broken, sequence stops having to be prev+1, so a chain with a SKIPPED checkpoint verifies — the `ac-sequence-skip` arc vector expects a refusal and would get a pass.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "      if (b.sequence !== String(BigInt(prev.sequence) + 1n)) return { result: 'INVALID', error: 'E-SEQ', detail: 'sequence is not prev+1' };",
+    to: "      if (false) return { result: 'INVALID', error: 'E-SEQ', detail: 'sequence is not prev+1' }; /* mutant */",
+  },
+  {
     id: 'ssrf-private-range-opened', gate: 'node packages/ust-protocol/ssrf.test.mjs',
     why: 'the SSRF door. Broken, no address is private, so a resolved host in 127/8 or 10/8 is fetched.',
     file: 'packages/ust-protocol/ssrf.mjs',

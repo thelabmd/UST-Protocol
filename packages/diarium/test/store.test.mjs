@@ -1,4 +1,4 @@
-// @assurance 4 canfail:no — fixtures built here, asserted against the package that seals them
+// @assurance 4 canfail:cited:packages/ust-protocol/drift-guards.test.mjs — fixtures built here, asserted against the package that seals them
 // The invariants that are diarium's OWN, not the protocol's. ust-protocol already proves that a seal verifies; what is
 // unproven until tested here is the discipline layered on top — order taken from the chain rather than the filesystem,
 // a refusal to extend a broken store, the cap, and one closure owing exactly one entry.

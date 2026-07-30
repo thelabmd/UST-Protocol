@@ -336,6 +336,22 @@
       "test": {
         "excluded": "The test layer is the drift-guards observer itself, run: it injects each of the three new mutations and requires the named suite to exit non-zero, and it rejected one of them until the assertion it exposed was strengthened. It runs as npm run test:drift-guards, not as a conformance check, which covers the verifier only."
       }
+    },
+    {
+      "round": 96,
+      "math": {
+        "excluded": "The three rules these mutants break are already stated in the model where they belong — §12.3's sequence rule and #42's consumer-rooted admission. What this round adds is an adversary for suites that observe them, which is a property of our tooling and not of any transcript."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. The diary cap is our own rules.md and normative for nobody else."
+      },
+      "code": "tools/mutations.mjs",
+      "vector": {
+        "excluded": "Two of the three rules already have their vectors — `ac-sequence-skip` in the arc corpus is precisely what the sequence mutant makes pass wrongly, which is why that mutant is observable at all. The third is a cap in our own diary, which no conformance vector describes."
+      },
+      "test": {
+        "excluded": "The test layer is the drift-guards observer, run: it injects all 14 gated mutations and requires each named gate to exit non-zero. It runs as npm run test:drift-guards, not as a conformance check, which covers the verifier only."
+      }
     }
   ],
   "first_accounted_round": 76,
