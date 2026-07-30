@@ -400,6 +400,22 @@
       "test": {
         "excluded": "The test layer is the derivation's controls plus an injected breach, run: a fetch placed inside askHidden (one of the five that nothing watched before) is caught, the derivation must find at least six callees and must reject a name that cannot exist, and the extractor must fail if a body runs past a third of the file. They run as npm run test:offline, not as conformance checks, which cover the verifier only."
       }
+    },
+    {
+      "round": 100,
+      "math": {
+        "excluded": "The rung ladder and the one non-rung are already stated where they belong — §F.5.0's lattice and §12.1a's caller override — and this round changes neither. Which of OUR files gets scanned for them is a property of our tooling and has no term in the model."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. What changed is that the exemption must now cite the section that already makes it legal, which strengthens our gate rather than the spec."
+      },
+      "code": "tools/report-shape-gate.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce, and the verdict vocabulary itself is already pinned by REGISTRY and measured by spec-code-sync since round 86. This round is about which SOURCES are scanned for it, which no transcript expresses."
+      },
+      "test": {
+        "excluded": "The test layer is two controls, both run: a probe file emitting an invented rung is caught by the derived roster, and an exemption whose reason drops its section citation fails. They run as npm run test:report-shape, not as conformance checks, which cover the verifier only."
+      }
     }
   ],
   "first_accounted_round": 76,

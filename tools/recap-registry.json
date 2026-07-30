@@ -88,6 +88,10 @@
     {
       "round": 99,
       "no_recap": "Round 99 closed no issue — one step of #110's domain axis, and #110 stays open. One closed issue, one entry, without conditions."
+    },
+    {
+      "round": 100,
+      "no_recap": "Round 100 closed no issue — one step of #110's domain axis, and #110 stays open. One closed issue, one entry, without conditions."
     }
   ]
 }

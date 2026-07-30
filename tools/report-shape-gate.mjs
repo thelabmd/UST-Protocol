@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// @assurance 3 canfail:yes — the rung ladder is computed, but NON_RUNG is a hand-typed literal
+// @assurance 2 canfail:yes literal-ok:NON_RUNG is a one-entry EXEMPTION that must cite its spec section, not the domain — deriving it from what the code emits would make the check circular — while the surfaces and the ladder are both derived
 // Report SHAPE gate (rev93) — what a verifier may put in a slot it could not fill, and what vocabulary it may use
 // at all. Two domains, both ENUMERATED rather than sampled, because sampling is how each of these got in.
 //
@@ -15,7 +15,7 @@
 //   · `docs-verifier-parity` was green throughout, because its battery compares DOCUMENTS and never varied the
 //     OPTIONS. An option the second implementation reads and the reference has never heard of is unreachable by
 //     any document-shaped probe.
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import * as P from '../packages/ust-protocol/index.mjs';
 
 const U = (p) => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
@@ -40,9 +40,32 @@ check(LADDER.length >= 3, `the declared ladder has ${LADDER.length} rungs — th
 // `consumer-override` is legal and DELIBERATELY not a rung: spec §12.1a calls it "DISTINCT from `authoritative`,
 // honored only on explicit opt-in". Listed here with its reason rather than silently tolerated by a loose regex.
 const NON_RUNG = { 'consumer-override': 'spec §12.1a — a raw caller override, DISTINCT from the ladder and honored only on opt-in' };
+// An exemption is where an invented rung would hide, so it must CITE the normative text that makes it legal — a prose
+// reason can be written for anything, a section reference cannot.
+for (const [k, why] of Object.entries(NON_RUNG))
+  check(/§\d/.test(why) && why.length >= 40, `NON_RUNG['${k}'] must cite the spec section that makes it legal — an exemption without a citation is an invented rung with a sentence attached`);
 const LEGAL = new Set([...LADDER, ...Object.keys(NON_RUNG)]);
 
-for (const [name, src] of [['core', CORE], ['docs/ust-verify.mjs', WEB], ['extension/lib/ust-verify.mjs', EXT]]) {
+// THE SURFACES ARE DERIVED, and the hand-typed trio was CORRECT — measured 2026-07-30, exactly three files in the
+// tree assign a strength literal and they are those three. That is not a reason to keep typing them: a fourth
+// implementation that starts emitting one would simply not be looked at, which is the same finding round 90 made
+// about the display surfaces. The roster is every `.mjs` a package's own manifest SHIPS, plus the clean-room
+// verifier and the extension's copy of it — the files that can put a rung in front of a consumer.
+const STRENGTH = /\bstrength\s*[:=]\s*'([a-z-]+)'/g;
+const candidates = readdirSync(new URL('../packages/', import.meta.url)).flatMap((p) => {
+  try { return (JSON.parse(readFileSync(new URL(`../packages/${p}/package.json`, import.meta.url), 'utf8')).files ?? [])
+    .filter((f) => f.endsWith('.mjs')).map((f) => `packages/${p}/${f.replace(/^\.\//, '')}`); } catch { return []; }
+}).concat(readdirSync(new URL('../docs/', import.meta.url)).filter((f) => f.endsWith('.mjs')).map((f) => `docs/${f}`))
+  .concat((() => { try { return readdirSync(new URL('../extension/lib/', import.meta.url)).filter((f) => f.endsWith('.mjs')).map((f) => `extension/lib/${f}`); } catch { return []; } })());
+const SURFACES = candidates.map((f) => { try { return [f, readFileSync(new URL('../' + f, import.meta.url), 'utf8')]; } catch { return null; } })
+  .filter((x) => x && STRENGTH.test(x[1]) && (STRENGTH.lastIndex = 0) === 0);
+check(SURFACES.length >= 3, `only ${SURFACES.length} strength-emitting surface(s) derived — the scan has gone blind and this leg would pass vacuously`);
+check(SURFACES.some(([f]) => f.endsWith('ust-protocol/index.mjs')), 'the core is not among the derived surfaces — the derivation is looking in the wrong place');
+// CONTROL — the detector must discriminate, or the roster is everything or nothing.
+check(/\bstrength\s*[:=]\s*'([a-z-]+)'/.test("strength: 'authoritative'") && !/\bstrength\s*[:=]\s*'([a-z-]+)'/.test('the strength of the claim'),
+  'CONTROL: the strength-assignment detector does not discriminate an assignment from prose');
+
+for (const [name, src] of SURFACES) {
   // every value ASSIGNED to a strength must be in the legal set. `strength: 'unproven'` in the core is the TIME
   // coordinate, not identity — matched separately below so this probe does not silently conflate two axes.
   const assigned = new Set([...src.matchAll(/\bstrength\s*[:=]\s*'([a-z-]+)'/g)].map((m) => m[1]));
