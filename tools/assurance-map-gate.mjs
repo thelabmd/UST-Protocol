@@ -92,7 +92,10 @@ const EXTRACTS = /matchAll\(|\.exec\(|\.match\(|new RegExp\(/;
 // regexing its text: the behaviour decides, not a pattern over the source. Regenerate-and-diff counts the same way.
 const IMPORTS_IMPL = /^import .*from '[^']*(?:index|reference-checker|ust-verify|ust-resolve)\.mjs'/m;
 const REGENERATES = /writeFileSync|--check|git diff|regenerat/i;
-const CANFAIL = /must be able to fail|able to FAIL|negative control|gone blind|vacuou|check\(!/i;
+// A leg LABELLED `CONTROL` is the convention four gates now use, and the detector did not know it: round 92's
+// controls were real, ran, and were reported as absent. The label is structural enough to count — it is the text a
+// check prints when it fails — but it is still a word, which is why this axis is declared and not inferred.
+const CANFAIL = /must be able to fail|able to FAIL|negative control|\bCONTROL\b|gone blind|vacuou|check\(!/i;
 const ROSTER = /^(?:const|export const) [A-Z][A-Z_0-9]{2,}\s*=\s*(?:\[|new Set\(\[)[^\]]*'[^']+'\s*,\s*'[^']+'\s*,\s*'/m;
 
 const graded = [];

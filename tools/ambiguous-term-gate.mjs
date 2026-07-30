@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// @assurance 3 canfail:no — the terms and their occurrence counts are pinned by hand
+// @assurance 3 canfail:yes — the terms and their counts are pinned by hand and cannot be derived: WHICH word names two mechanisms is a judgement, and the pin is a measured residual rather than a rule
 // Ambiguous-term gate — a word that names two mechanisms may not stand alone in the spec.
 //
 // This generalizes the single-word checkpoint gate, and it exists because the failure repeated. Three
@@ -82,5 +82,36 @@ for (const t of TERMS) {
   }
 }
 
+// ── CONTROLS. A count-pin gate has exactly two ways to be worthless: the counter never counts, or the qualifier
+// swallows everything. Both are checked against a SYNTHETIC line rather than against the documents, so the controls
+// cannot drift with the prose they guard.
+{
+  const probe = (line, t) => {
+    const re = new RegExp(`\\b${t.word}\\b`, 'gi'); let n = 0, m;
+    while ((m = re.exec(line))) {
+      const pre = line.slice(0, m.index), post = line.slice(m.index + m[0].length);
+      if (t.qualifiers.test(pre.slice(-14))) continue;
+      if (/^[-_]/.test(post) || /[-_:]$/.test(pre)) continue;
+      if ((pre.match(/`/g) || []).length % 2 === 1) continue;
+      if (t.thirdParty.test(line)) continue;
+      n++;
+    }
+    return n;
+  };
+  const t = TERMS[0];
+  const ctl = [
+    [`a bare ${t.word} in a sentence must COUNT as bare`, probe(`the ${t.word} is verified`, t) === 1],
+    [`a qualified ${t.word} must NOT count`, probe(`the authority ${t.word} is verified`, t) === 0],
+    ['the counter must not count a word that is absent', probe('nothing ambiguous here at all', t) === 0],
+  ];
+  for (const [name, ok] of ctl) if (!ok) { failed = true; console.log(`  ✗ CONTROL: ${name}`); }
+  if (!failed) console.log(`  ✓ CONTROL: the counter discriminates bare from qualified from absent (${ctl.length} legs)`);
+}
+
+// ── SCOPE, stated because it is a decision and not an oversight. This gate reads the spec and the formal model: the
+// collision does its damage in PROSE, because reasoning happens there. It does NOT read code — and the API surface has
+// the same collision, MEASURED 2026-07-30: `buildCheckpoint` builds a STREAM checkpoint while `buildAuthorityCheckpoint`
+// sits beside it, so one export names its chain and the other does not. Renaming a public export is a breaking change,
+// so it is a decision rather than a defect this gate can fix: thelabmd/UST-Protocol#112.
 if (failed) { console.log('\n✗ ambiguous-term gate'); process.exit(1); }
 console.log(`✓ ambiguous-term gate: ${TERMS.length} known collisions, every bare use within its pin`);

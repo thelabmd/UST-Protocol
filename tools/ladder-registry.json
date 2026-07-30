@@ -272,6 +272,22 @@
       "test": {
         "excluded": "The test layer is three controls, each run: `op:\"rotate\"` restored to the MCP description fails (the exact three-round miss, reproduced), an exemption that is no longer needed fails, and a blind roster or over-stripped source fails as vacuous. They run as npm run test:retired, not as conformance checks, which cover the verifier only."
       }
+    },
+    {
+      "round": 92,
+      "math": {
+        "excluded": "Which English word names two mechanisms is a fact about our prose, not about what a verifier may conclude from a document. The model already carries the qualified pair everywhere it reasons (rounds 72, 75); a term-collision registry over our own text has no term in it."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: the spec's qualification is already done and its residual pin is unchanged. What #112 raises IS spec-adjacent — a public export name — but renaming a published export is a breaking decision, and the round that decides it is the round that moves this layer."
+      },
+      "code": "tools/ambiguous-term-gate.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. A word's ambiguity in prose produces no document and changes no verdict; the wire tags that carry these concepts were never ambiguous and are already pinned by the vectors that use them."
+      },
+      "test": {
+        "excluded": "The test layer is three controls run against a synthetic line so they cannot drift with the prose they guard: a bare word must count, a qualified one must not, an absent one must not. Verified by replacing the qualifier with a catch-all, which makes every use look qualified, and they fire. They run as npm run test:ambiguous-terms, not as conformance checks, which cover the verifier only."
+      }
     }
   ],
   "first_accounted_round": 76,
