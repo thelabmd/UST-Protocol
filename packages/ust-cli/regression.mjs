@@ -11,7 +11,12 @@ import { createPrivateKey, createPublicKey } from 'node:crypto';
 
 let pass = 0, fail = 0, note = 0; const fails = [];
 const check = (id, ok, d) => { if (ok) pass++; else { fail++; fails.push(id + (d ? ' — ' + d : '')); } };
-const threw = async (fn) => { try { await fn(); return false; } catch { return true; } };
+// AUDIT #114, round 113 — `threw()` is GONE, not merely unused. It answered "did something throw?", and a
+// function with ten throw paths made that answer nearly free: round 108 measured `rotateKeylog` passing on any
+// of ten refusals when the check named one. Nine call sites now match the REASON. The tenth was the only honest
+// use — asserting a correct document does NOT throw — so the helper is inverted rather than kept beside its
+// replacement. Leaving it would leave the footgun loaded: a future check could assert a refusal without naming it.
+const didNotThrow = async (fn) => { try { await fn(); return true; } catch { return false; } };
 const threwWith = async (f, rx) => { try { await f(); return false; } catch (e) { return rx.test(String(e.message)); } };
 const DOMAIN = 'genesis-test.invalid';   // RFC 2606 test name — no real domain touched
 // P0-2 — `authoritative` name-authority is EARNED from a verified, consumer-trusted NO-FORK EVIDENCE, never a raw
@@ -80,8 +85,8 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
 {
   const g = await C.buildCeremony({ domain: DOMAIN, profile: 'silver' });
   const other = await C.buildCeremony({ domain: DOMAIN, profile: 'silver' });   // different key ⇒ different content_hash
-  check('well_known_content_hash_mismatch_fails', await threw(() => C.checkPublished(JSON.stringify(other.genesis), g.genHash)));
-  check('well_known_correct_doc_passes', !(await threw(() => C.checkPublished(JSON.stringify(g.genesis), g.genHash))));
+  check('well_known_content_hash_mismatch_fails', await threwWith(() => C.checkPublished(JSON.stringify(other.genesis), g.genHash), /content_hash differs/));
+  check('well_known_correct_doc_passes', await didNotThrow(() => C.checkPublished(JSON.stringify(g.genesis), g.genHash)));
 }
 
 // ── 5. cf_existing_record_uses_update — an existing _ust record is PUT (update), an absent one is POST (create)
@@ -101,8 +106,8 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
 {
   const g = await C.buildCeremony({ domain: DOMAIN, profile: 'silver' });
   const nc = mkCf({ existing: false, dohConfirms: false, genHash: g.genHash });
-  check('doh_readback_failure_fails', await threw(() => C.cfUpsert({ domain: DOMAIN, txt: `ust-genesis=${g.genHash}`, genHash: g.genHash, token: 'x', fetchImpl: nc.fetchImpl, sleep: async () => {} })));
-  check('cf_missing_token_fails', await threw(() => C.cfUpsert({ domain: DOMAIN, txt: 'x', genHash: g.genHash, token: '', fetchImpl: nc.fetchImpl, sleep: async () => {} })));
+  check('doh_readback_failure_fails', await threwWith(() => C.cfUpsert({ domain: DOMAIN, txt: `ust-genesis=${g.genHash}`, genHash: g.genHash, token: 'x', fetchImpl: nc.fetchImpl, sleep: async () => {} }), /public resolver still serves the OLD value/));
+  check('cf_missing_token_fails', await threwWith(() => C.cfUpsert({ domain: DOMAIN, txt: 'x', genHash: g.genHash, token: '', fetchImpl: nc.fetchImpl, sleep: async () => {} }), /ZONE-scoped CF_TOKEN/));
   // UPDATE patience (2nd live ceremony): an updated record waits through a full resolver-TTL window
   // (24 attempts, narrated) and the failure text explains TTL + the idempotent re-run — never a bare
   // "re-run or verify manually" that leaves the operator guessing.
@@ -237,8 +242,8 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
   // fail-closed: an invalid genesis never reaches the network
   const tam = JSON.parse(bytes); tam.state.data.genesis.value.pub = 'AAAA' + tam.state.data.genesis.value.pub.slice(4);
   const net = mkApi({ proxied: true });
-  check('cfpublish_invalid_genesis_never_touches_network', await threw(() => C.cfPublish({ domain: DOMAIN, genesisText: JSON.stringify(tam), token: 'x', fetchImpl: net.fetchImpl })) && net.calls.length === 0);
-  check('cfpublish_missing_token_fails', await threw(() => C.cfPublish({ domain: DOMAIN, genesisText: bytes, token: '', fetchImpl: net.fetchImpl })));
+  check('cfpublish_invalid_genesis_never_touches_network', await threwWith(() => C.cfPublish({ domain: DOMAIN, genesisText: JSON.stringify(tam), token: 'x', fetchImpl: net.fetchImpl }), /refusing to publish: the genesis does not VERIFY/) && net.calls.length === 0);
+  check('cfpublish_missing_token_fails', await threwWith(() => C.cfPublish({ domain: DOMAIN, genesisText: bytes, token: '', fetchImpl: net.fetchImpl }), /cf adapter needs CF_TOKEN/));
 
   // proxied zone, no prior route → script PUT + route POST, proxied:true, no PATCH
   const a = mkApi({ proxied: true });
@@ -282,7 +287,7 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
   const written = []; let ranIn = null;
   const ok = await C.wranglerDeploy({ domain: DOMAIN, genesisText: bytes, writeImpl: (p, c) => written.push(p), execImpl: async (cwd) => { ranIn = cwd; return 0; } });
   check('wrangler_deploy_writes_and_runs', written.length === 2 && ranIn !== null && ok.genHash === g.genHash);
-  check('wrangler_deploy_failure_names_login', await threw(() => C.wranglerDeploy({ domain: DOMAIN, genesisText: bytes, writeImpl: () => {}, execImpl: async () => 1 })));
+  check('wrangler_deploy_failure_names_login', await threwWith(() => C.wranglerDeploy({ domain: DOMAIN, genesisText: bytes, writeImpl: () => {}, execImpl: async () => 1 }), /wrangler deploy failed/));
 
   // least-privilege pin: the prescribed login is the MINIMAL 5-scope consent, never the default 28 —
   // and the failure message carries it (a user should never be steered to the broad grant).
@@ -293,7 +298,7 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
   // fail-closed: an invalid genesis never reaches disk OR exec
   const tam = JSON.parse(bytes); tam.state.data.genesis.value.pub = 'AAAA' + tam.state.data.genesis.value.pub.slice(4);
   const w2 = []; let ran2 = false;
-  check('wrangler_invalid_genesis_never_writes', await threw(() => C.wranglerDeploy({ domain: DOMAIN, genesisText: JSON.stringify(tam), writeImpl: (p) => w2.push(p), execImpl: async () => { ran2 = true; return 0; } })) && w2.length === 0 && !ran2);
+  check('wrangler_invalid_genesis_never_writes', await threwWith(() => C.wranglerDeploy({ domain: DOMAIN, genesisText: JSON.stringify(tam), writeImpl: (p) => w2.push(p), execImpl: async () => { ran2 = true; return 0; } }), /refusing to publish: the genesis does not VERIFY/) && w2.length === 0 && !ran2);
 
   // the prefilled token page: DNS:edit preselected — the deep-link shape is pinned
   check('dns_token_url_is_prefilled', C.CF_DNS_TOKEN_URL.startsWith('https://dash.cloudflare.com/profile/api-tokens?') && decodeURIComponent(C.CF_DNS_TOKEN_URL).includes('"key":"dns"') && decodeURIComponent(C.CF_DNS_TOKEN_URL).includes('"type":"edit"'));
@@ -518,7 +523,7 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
   check('p0_api_road_publishes_keylog_route', apiCalls.filter((c) => c.u.endsWith('/workers/routes') && c.m === 'POST').length === 2);
   const foreignKl = JSON.stringify([foreign.keylog0]);
   const net2 = [];
-  check('p0_unchained_keylog_never_deploys', await threw(() => C.cfPublish({ domain: DOMAIN, genesisText: bytes, keylogText: foreignKl, token: 'x', fetchImpl: async (u) => { net2.push(u); return { json: async () => ({}) }; } })) && net2.length === 0);
+  check('p0_unchained_keylog_never_deploys', await threwWith(() => C.cfPublish({ domain: DOMAIN, genesisText: bytes, keylogText: foreignKl, token: 'x', fetchImpl: async (u) => { net2.push(u); return { json: async () => ({}) }; } }), /refusing to publish the key log/) && net2.length === 0);
   check('keylog_chain_validator_bites', C.validateKeylogChain(g.genesis, [foreign.keylog0]) !== null && C.validateKeylogChain(g.genesis, [g.keylog0]) === null);
 
   // P1: remint probe is three-state and fail-closed
@@ -754,7 +759,7 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
   }
   const enc = C.encryptKey(Buffer.from(await crypto.subtle.exportKey('pkcs8', root.privateKey)), 'pw');
   check('rotate_root_backup_roundtrip', (await C.rootSignerFrom(C.decryptKey(enc, 'pw'), root.pub)).pub === root.pub);
-  check('rotate_wrong_passphrase_throws', await threw(async () => C.decryptKey(enc, 'wrong')));
+  check('rotate_wrong_passphrase_throws', await threwWith(async () => C.decryptKey(enc, 'wrong'), /unable to authenticate|Unsupported state/i));
 }
 
 console.log(`\nPASS ${pass} FAIL ${fail} NOTES ${note}`);

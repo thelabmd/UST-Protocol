@@ -146,6 +146,10 @@
     {
       "round": 112,
       "no_recap": "Round 112 closed no issue — it corrects round 111's own fix inside the already-closed #114, and a correction to a closed issue is a comment on it rather than a new recap."
+    },
+    {
+      "round": 113,
+      "no_recap": "Round 113 closed no issue — it retires the residual round 108 declared inside the already-closed #114, and a residual closed after the fact is a comment on that issue rather than a new recap."
     }
   ]
 }

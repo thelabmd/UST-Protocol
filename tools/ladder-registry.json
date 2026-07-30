@@ -604,6 +604,22 @@
       "test": {
         "excluded": "This layer resolves against vectors/conformance-checks.json, the roster of executed CONFORMANCE checks, and conformance exercises the verifier rather than our anchoring connectors. The tests are the corpus mutants `rekor-treehead-signature-unchecked` and `ots-explorer-conflict-ignored` in tools/mutations.mjs, run by drift-guards: 15 gated mutations became 17, and each makes the suite that cites it go red."
       }
+    },
+    {
+      "round": 113,
+      "math": {
+        "excluded": "Whether OUR regression suite names the refusal it asserts is a property of our evidence discipline, not of the protocol. The model states obligations on the verifier; none of them changed, and none of them speak about the CLI's ceremony helpers."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. How our CLI regression asserts a throw binds nobody implementing UST."
+      },
+      "code": "packages/ust-cli/regression.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. Asserting the REASON for a host throw in a ceremony helper produces no document and changes no verdict; the demonstration is the swap control described in the changelog row."
+      },
+      "test": {
+        "excluded": "This layer resolves against vectors/conformance-checks.json, the roster of executed CONFORMANCE checks, and conformance exercises the verifier rather than the CLI's ceremony surface. The test is the suite itself — packages/ust-cli/regression.mjs, run as npm run test:cli-regression — where a wrong pattern fails the named check, and swapping the two token patterns fails exactly two."
+      }
     }
   ],
   "first_accounted_round": 76,
