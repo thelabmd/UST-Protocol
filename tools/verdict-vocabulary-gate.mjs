@@ -20,7 +20,7 @@ import * as P from '../packages/ust-protocol/index.mjs';
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 // Both sets come from the canonical REGISTRY, which spec-code-sync MEASURES against actual code usage — so they are
 // no longer typed here. Moving a list is not an upgrade; the measurement is. `results` there also carries the
-// totality-guard `E-MALFORMED`, which is not a verdict a SURFACE may print, so this gate keeps §14's three.
+// totality-guard `E-MALFORMED`, which is not a verdict a SURFACE may print, so this gate keeps §15's three outcome kinds.
 const COMPLETENESS = P.REGISTRY.completeness;
 const RESULTS = P.REGISTRY.results.filter((r) => !r.startsWith('E-'));
 

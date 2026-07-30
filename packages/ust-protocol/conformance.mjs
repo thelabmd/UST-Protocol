@@ -936,7 +936,7 @@ console.log('\n═════════════════════�
     const a1 = P.resolveAuthority(doc, hostile()); const a2 = P.resolveKeys(gen, arrH); const a3 = await P.forkChoice([hostile()], {}); const a4 = await P.verifyAsync(doc, hostile()); const a5 = await P.resolveByDiscovery(doc, {}, hostile());
     // This line used to assert THREE DIFFERENT SHAPES for one refusal and so pinned the inconsistency in place:
     // `.error` for two boundaries, `.result` for three. Round 103 moved the two VERDICT-shaped ones to the shape every
-    // other refusal uses — `{result:'INVALID', error:'E-MALFORMED'}` — so a consumer switching on §14's three verdict
+    // other refusal uses — `{result:'INVALID', error:'E-MALFORMED'}` — so a consumer switching on §15's three outcome
     // values no longer falls through. `forkChoice` still answers a different question under the same field name and is
     // asserted in its own shape until that is decided: thelabmd/UST-Protocol#111.
     p19ok = a1.error === 'E-MALFORMED' && a2.error === 'E-MALFORMED'

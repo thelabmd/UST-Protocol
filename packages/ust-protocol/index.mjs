@@ -2600,7 +2600,7 @@ export const REGISTRY = deepFreeze({   // round-25 P0-04 — DEEP-frozen: the ca
   // for three rounds (round 84). `results` is the VERIFY verdict only: `forkChoice` returns a `result: 'CANONICAL'`
   // under the same field name for a different question (which candidate is canonical), and that collision is
   // named in the sync check rather than absorbed by widening this set.
-  // §14's verdict vocabulary, and now nothing else: round 103 moved the totality guards of `verifyAsync` and
+  // The three OUTCOME KINDS §15 enumerates, and now nothing else: round 103 moved the totality guards of `verifyAsync` and
   // `resolveByDiscovery` from `{result:'E-MALFORMED'}` to `{result:'INVALID', error:'E-MALFORMED'}` — the shape every
   // other refusal already used. `forkChoice` still answers a DIFFERENT question under this field name and keeps its
   // own set below; qualifying that is a breaking change and stays open as thelabmd/UST-Protocol#111.
