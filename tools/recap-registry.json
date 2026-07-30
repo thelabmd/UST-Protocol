@@ -149,7 +149,8 @@
     },
     {
       "round": 113,
-      "no_recap": "Round 113 closed no issue — it retires the residual round 108 declared inside the already-closed #114, and a residual closed after the fact is a comment on that issue rather than a new recap."
+      "issue": 114,
+      "content_hash": "sha256:6658d8fa58b277b18262b2488c33172512623fdf74dd0c5cc2a7f7d0b95a29f5"
     }
   ]
 }
