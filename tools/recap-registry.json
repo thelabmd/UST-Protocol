@@ -122,6 +122,10 @@
     {
       "round": 106,
       "no_recap": "Round 106 closed no issue — the second pass of #114, which stays open until the audit finishes and its after-table is written."
+    },
+    {
+      "round": 107,
+      "no_recap": "Round 107 closed no issue — the third pass of #114, which stays open until the audit finishes and its after-table is written."
     }
   ]
 }

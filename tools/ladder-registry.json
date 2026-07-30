@@ -506,6 +506,22 @@
       "test": {
         "excluded": "The test layer is the two controls, each run twice — before the floors both gates PASSED on an emptied input, after them both fail. They run as npm run test:ambiguous-terms and test:vacuity, not as conformance checks, which cover the verifier only."
       }
+    },
+    {
+      "round": 107,
+      "math": {
+        "excluded": "Which of OUR files describes a key_op to a producer is a property of this repository's surfaces, not of what a verifier may conclude. The admissible ops and fields the contracts must match are already bound to the reducer, and that binding is what the model speaks about."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. §12.2's field list is one of the two contracts checked, and it is unchanged."
+      },
+      "code": "tools/keyop-contract-gate.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. A producer-facing DESCRIPTION is prose or a schema string, not a document, and the entries it must match are already pinned by the vectors that exercise add and revoke."
+      },
+      "test": {
+        "excluded": "The test layer is two controls, both run: a third producer-shaped field list added to a shipped file is named by the gate, and the detector is asserted to tell a field list from prose that merely mentions key_op. They run as npm run test:keyop, not as a conformance check, which covers the verifier only."
+      }
     }
   ],
   "first_accounted_round": 76,

@@ -18,7 +18,7 @@
 // and `rotateKeylog` a live export; only the key-log OP of that name is retired. A textual sweep would have to
 // tell those apart and would get it wrong — so the gate enumerates the DOMAIN from the source instead: the ops and
 // per-op fields the reducer actually admits, compared BOTH WAYS against every contract that describes them.
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
@@ -39,8 +39,23 @@ if (decl) for (const m of decl[0].matchAll(/(\w+):\s*\[([^\]]*)\]/g))
   OPS.set(m[1], m[2].split(',').map((s) => s.trim().replace(/['"]/g, '')).filter(Boolean).filter((f) => f !== 'op'));
 check(OPS.size >= 2, `OP_FIELDS yielded ${OPS.size} op(s) — the extraction has gone blind`);
 
-// ── every surface that TELLS a producer what a key_op looks like. A contract absent from this roster is a contract
-// nobody checks, so the roster is enumerated here and each entry must actually match something.
+// ── every surface that TELLS a producer what a key_op looks like. The roster below was TYPED, and measured
+// 2026-07-30 it is complete — exactly two files in the tree describe key_op fields to a producer, and they are these
+// two. A correct list is not a checked list (rounds 90 and 100 found the same thing twice): a THIRD contract added
+// tomorrow would simply not be looked at. So the candidates are DERIVED and every one of them must be in the roster.
+const DESCRIBES = /op:\s*"add|\{\s*op,\s*pub/;
+const candidates = [
+  ...readdirSync(new URL('../packages/', import.meta.url)).flatMap((pk) => {
+    try { return (JSON.parse(readFileSync(new URL(`../packages/${pk}/package.json`, import.meta.url), 'utf8')).files ?? [])
+      .filter((f) => f.endsWith('.mjs')).map((f) => `packages/${pk}/${f.replace(/^\.\//, '')}`); } catch { return []; }
+  }),
+  'spec/UST-1.0.md', 'spec/UST-1.0-formal-model.md',
+  ...readdirSync(new URL('../docs/', import.meta.url)).filter((f) => f.endsWith('.mjs')).map((f) => `docs/${f}`),
+].filter((f) => { try { return DESCRIBES.test(U(f)); } catch { return false; } });
+check(candidates.length >= 2, `only ${candidates.length} producer-facing key_op description(s) found — the derivation has gone blind and this roster would be unchecked`);
+// CONTROL — the detector must discriminate a field list from a mere mention of `key_op`.
+check(DESCRIBES.test('op:"add", pub') && !DESCRIBES.test('the key_op walk rejects it'),
+  'CONTROL: the contract detector does not tell a field list from prose that merely names key_op');
 const CONTRACTS = [
   { id: 'ust-mcp :: ust_build_key_log', src: U('packages/ust-mcp/index.mjs'),
     rx: /key_op: \{ type: 'object', description: '([^']*)'/ },
@@ -72,6 +87,10 @@ for (const c of CONTRACTS) {
       `${c.id}: op \`${op}\` advertises fields [${set(fields)}] and the reducer admits [${set(OPS.get(op))}] — a field missing here is a capability a producer cannot discover; a field extra here is an entry that fails E-MALFORMED`);
   }
 }
+
+// every DERIVED candidate must be in the hand-written roster: a new contract fails here until it is checked
+for (const c of candidates) check(CONTRACTS.some((x) => x.src === U(c)),
+  `${c} describes a key_op to a producer and is NOT among the contracts this gate checks — add it, or it advertises whatever it likes`);
 
 // the roster itself must be able to fail
 check(CONTRACTS.length >= 2, 'fewer than two producer-facing contracts are enumerated — the roster has shrunk to a sample');
