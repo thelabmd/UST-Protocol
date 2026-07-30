@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 3 canfail:no — LADDER_CLOSED_AT is a hand-typed ceiling
 // CHANGELOG rev-ladder gate — the CHANGELOG can never silently go stale (owner rule: push = changelog).
 //
 // The current REFERENCE_CHECKER_VERSION rev MUST have a row in CHANGELOG.md's rev-ladder. A checker rev bump without a

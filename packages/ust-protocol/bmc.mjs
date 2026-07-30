@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 3 canfail:no — exhaustive over a case space declared in this file
 // bmc.mjs — BOUNDED-EXHAUSTIVE MODEL CHECK of the byte automaton `checkAuthorityProofBytes`.
 //
 // The Checker Soundness theorem (reference-checker.mjs) is proved BY STRUCTURAL INDUCTION on the proof term π:

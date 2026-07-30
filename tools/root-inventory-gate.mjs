@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 3 canfail:yes — git lists the files, but DECLARED is a hand-typed map — the weaker side
 // Root INVENTORY gate — the top level of a public protocol repository is enumerated, not accumulated.
 //
 // MEASURED, 2026-07-28: two files the owner did not recognise were sitting in the root — `wdir.json` and `gm.json`.

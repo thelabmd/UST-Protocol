@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:yes — the index handling extracted from the connector source
 // Unbounded-index gate — arithmetic on a counter we do not own may not carry a ceiling.
 //
 // A public transparency log's index is an EXTERNAL counter. It grows without asking us, it never resets, and the

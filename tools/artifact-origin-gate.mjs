@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:yes — artifact origin extracted from the source that constructs it
 // Artifact-ORIGIN gate — an artifact the publish path CONSTRUCTS must be declared as such, and its construction must
 // extend what is live rather than replace it.
 //

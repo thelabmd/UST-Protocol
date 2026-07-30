@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 1a canfail:yes — byte comparison against the PUBLISHED registry artifact
 // npm-drift gate — a PUBLISHED version is immutable. The conformance version-gate keeps spec==package==vectors
 // consistent INTERNALLY, but nothing stopped repo code from drifting under an already-published version label
 // ("same version, different bytes" — how rc.6 gained `completeness` in-repo while npm rc.6 didn't have it).

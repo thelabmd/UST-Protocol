@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:no — a hostile Proxy over an export roster taken from the source
 // test:module-seam-totality — S1 MODULE-SEAM closure (trust-boundary law UST-5tm). A NOT-OURS module (a substrate
 // verifier: OTS / Rekor / git / IPFS / Bitcoin — OPEN-ENDED, third-party) has a HOSTILE invocation AND a HOSTILE
 // return: it may throw on the call, or return a revoked / throwing-trap Proxy that host-throws when we touch or decode

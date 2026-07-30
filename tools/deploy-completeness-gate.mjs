@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:yes — deploy call sites extracted from the CLI source
 // Deploy COMPLETENESS gate — a deploy is constructed from the complete discovery set or not at all.
 //
 // MEASURED, 2026-07-27: five sites construct a deploy. Two passed the cadence log and the preserved witness anchors;

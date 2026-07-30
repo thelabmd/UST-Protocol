@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:no — the packages/ tree enumerated from the filesystem against the README table
 // Package-enumeration gate (UST-l63) — `packages/*` is described in THREE places, and until now none of them was
 // checked against the directory it describes.
 //

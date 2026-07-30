@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 3 canfail:yes — RESULTS and COMPLETENESS are hand-typed literals
 // Verdict-vocabulary gate — no surface may NAME a verdict the reference cannot RETURN.
 //
 // Three separate places had drifted onto one invented word, `proven`, and each drift was a different kind of harm:

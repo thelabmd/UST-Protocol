@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:no — vectors regenerated from the reference impl; the diff is the gate
 // Generate LANGUAGE-NEUTRAL conformance vectors for the assurance arc (authority-checkpoint chain, freshness,
 // recovery, epoch transition, terminality, uniqueness, no-fork). Each vector carries PRE-SIGNED inputs + the expected
 // verdict, so ANY implementation (a second runner, e.g. a Go SDK, #34) can execute the SAME contract without

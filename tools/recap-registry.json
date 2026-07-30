@@ -28,6 +28,10 @@
       "content_hash": "sha256:0eeeeeaf51ec4cdf21f2e34f3d315342796c33c0ec090c04114ef5a60c33d7db",
       "issue": 109,
       "_issue": "Round 84 closed #109, so #109 receives the recap — one closed issue, one recap, one entry."
+    },
+    {
+      "round": 85,
+      "no_recap": "Round 85 closed no issue — it turns #110's hand-written map into a gate, and #110 stays open on the remaining work. The unit is the CLOSED ISSUE: a round that closes nothing has no recipient."
     }
   ]
 }

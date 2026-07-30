@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 3 canfail:yes — the rung ladder is computed, but NON_RUNG is a hand-typed literal
 // Report SHAPE gate (rev93) — what a verifier may put in a slot it could not fill, and what vocabulary it may use
 // at all. Two domains, both ENUMERATED rather than sampled, because sampling is how each of these got in.
 //

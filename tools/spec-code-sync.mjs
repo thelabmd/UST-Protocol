@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:no — spec regions regenerated from the code REGISTRY and diffed
 // spec↔code drift gate (UST-oy8) — LAYER 2: assert the canonical REGISTRY (index.mjs) EQUALS the code's ACTUAL literal
 // usage. Layer 1 (spec == REGISTRY) is `gen-spec-registry.mjs && git diff --exit-code`. Together: spec == registry ==
 // code, no silent string drift. This is the check that would have caught the 2026-07-14 drifts: E-ASSURANCE (thrown,

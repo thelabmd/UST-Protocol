@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:yes — attribution extracted from the source, with mutants as the non-vacuity leg
 // Verdict-attribution gate — a VALID verdict must name the rules that produced it, and the name must MOVE when they do.
 //
 // Why: until now a verdict said `VALID:TOP` and nothing else. Two verifiers on different revisions produced

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:yes — rounds enumerated from CHANGELOG; hashes recomputed from the signed bytes
 // Round RECAP renderer — the sealed diary entry, rendered for the issue the round closed.
 //
 // The changelog row says WHAT BECAME. The issue comment says where the ticket and reality diverged. The diary says

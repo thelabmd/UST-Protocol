@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:yes — genesis fields extracted from the builder source, both directions
 // Genesis SURFACE gate — every field `buildGenesis` can place in a genesis must be reachable from the tool that
 // performs the ceremony, or excluded here with a reason.
 //

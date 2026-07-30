@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 3 canfail:yes — COMMANDS is a hand-typed list of the stream surface
 // Stream CONSUMPTION gate — the dual of `discovery-serving-gate`. That one asks whether an artifact a ceremony
 // PRODUCES has somewhere to be served; this one asks whether it has somewhere to be CONSUMED, and whether the
 // command that consumes it can tell an argument from a filename.

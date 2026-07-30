@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:no — the §14 case labels checked against RULE_CONTRACT in the code
 // rule-lockstep — the §14 authority DECISION-RELATION is FROZEN (Q1, UST-y2p / spec §14+§15+§19 "never processes rules
 // it doesn't have"). The 15 inference rules are a CLOSED set: RULE_CONTRACTS is the single source, REFERENCE_CHECKER_RULES
 // derives from it, and every rule has a dispatch case. A 16th rule (a new RULE_CONTRACTS key) fails RED here — convergence

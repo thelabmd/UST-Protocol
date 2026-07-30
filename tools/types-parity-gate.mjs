@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:yes — declarations regenerated from the source and diffed
 // Types-parity gate — a declaration may not describe a version of the source that no longer exists.
 //
 // #105: nobody shipped types, so every TypeScript consumer wrote their own. The reference operator's said

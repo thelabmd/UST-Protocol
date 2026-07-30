@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 3 canfail:no — STANCE, CAPS and SURFACES are hand-typed literals
 // Capability parity gate (UST-kdb) — the FORCING FUNCTION so a spec capability can NEVER silently lag a surface
 // (the UST-3dj class: an agent/CLI surface that resolves/verifies but quietly drops a capability the core added).
 //

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:no — light panels regenerated from the dark originals; the diff is the gate
 // Derive every light-theme illustration from its dark original. The light files are DERIVED artefacts — never edited
 // by hand — so this runs in the same pipeline as the panel and status generators, and light-variant-gate re-runs the
 // derivation to prove none has drifted.

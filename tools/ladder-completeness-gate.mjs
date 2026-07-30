@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:yes literal-ok:LAYERS is the five-layer law itself, not a roster of instances — a wrong entry there would be a different law, not a stale list — live rounds enumerated from CHANGELOG; the retro pin bounds a CLOSED table only
 // Ladder COMPLETENESS gate (#99) — the law of this repo is `math → spec → code → vector → test`, in BOTH
 // directions, closed by a CHANGELOG row. Nothing enumerated the law itself, so on 2026-07-27 three rounds shipped
 // with layers skipped and all 42 gates stayed green through every one of them:

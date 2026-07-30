@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 3 canfail:yes — ATTEST_EXEMPT is a hand-typed exemption list
 // Discovery SERVING gate — the relation nothing checked until 2026-07-27: an artifact a command PRODUCES must have a
 // path that SERVES it, and that path must exist on EVERY road to production.
 //

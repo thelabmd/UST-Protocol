@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 3 canfail:yes — OFFLINE_CALLEES is a hand-typed list of the air-gapped half
 // Offline-ceremony gate — the air-gapped half must be unable to reach the network, by POSITION, not by intention.
 //
 // The whole value of an air-gapped ceremony is one sentence an operator gets to say afterwards: "the crown key was

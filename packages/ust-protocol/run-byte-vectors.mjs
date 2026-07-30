@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:no — runs the committed byte vectors through the reference checker
 // LANGUAGE-NEUTRAL runner: decode each byte-vector (base64url → bytes), run checkAuthorityProofBytes, assert result +
 // (for a negative) that the reason carries the expected code. No object builders — this is exactly what a Rust/Go/WASM/
 // Lean-extracted checker would run. Also enforces the security-condition coverage manifest (every side-condition has a

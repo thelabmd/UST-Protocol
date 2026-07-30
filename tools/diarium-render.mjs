@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 1a canfail:no — the SIGNED store decides, read through the package that verifies the chain
 // diarium.md renderer — the repo-specific SUPERSTRUCTURE over the ordinary `diarium` package.
 //
 // The package is the base and runs here exactly as it runs for anyone: `diarium scan | status | write | verify`, a

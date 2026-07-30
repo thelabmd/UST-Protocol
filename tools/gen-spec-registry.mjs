@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:no — spec registry blocks regenerated from the code REGISTRY
 // spec↔code drift gate (UST-oy8) — LAYER 1: RENDER the spec's canonical string-set regions FROM the code REGISTRY
 // (index.mjs), so spec prose cannot silently disagree with the implementation. Each region is delimited by
 // `<!-- BEGIN spec-sync:NAME -->` / `<!-- END spec-sync:NAME -->` in spec/UST-1.0.md; this rewrites the content

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:no — runs the committed arc vectors through the reference impl
 // Independent runner for the LANGUAGE-NEUTRAL assurance-arc vectors (vectors/arc-vectors.json). It loads only the JSON
 // + the public API and asserts each pre-signed vector's verdict — so this file IS the template a SECOND implementation
 // (e.g. a Go SDK, #34) mirrors to prove the SAME contract. No key generation, no internal state: the vectors carry it.

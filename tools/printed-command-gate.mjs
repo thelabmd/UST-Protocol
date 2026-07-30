@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:yes — commands extracted from the dispatcher source, both directions
 // Printed-command gate — an instruction the tool prints must be one the tool can run.
 //
 // MEASURED, 2026-07-28: the air-gapped handoff told the operator to run `ust publish --domain … --genesis … --keylog …`

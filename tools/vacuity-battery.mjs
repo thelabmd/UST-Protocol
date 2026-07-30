@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 3 canfail:yes — it mutates the code and observes, but WHICH checks must be covered is a pin
 // VACUITY BATTERY (C3 — execution → NON-VACUITY). The third and last direction of the model↔code lockstep.
 //
 // What the other gates already prove, and what they cannot:

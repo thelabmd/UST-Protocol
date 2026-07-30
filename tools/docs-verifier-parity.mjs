@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 1b canfail:no — the clean-room web verifier and the reference must agree on every vector
 // docs/ VERIFIER PARITY gate (round-53/54 — UST-ybn / UST-0q7). The clean-room web verifier (docs/ust-verify.mjs, the
 // zero-dependency LIGHT floor served by GitHub Pages) and the reference verifier (ust-protocol) MUST return the SAME
 // verdict on every LIGHT-floor case — the README promises "two conforming verifiers agree because the verdict is a total

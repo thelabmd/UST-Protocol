@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 3 canfail:no — the terms and their occurrence counts are pinned by hand
 // Ambiguous-term gate — a word that names two mechanisms may not stand alone in the spec.
 //
 // This generalizes the single-word checkpoint gate, and it exists because the failure repeated. Three

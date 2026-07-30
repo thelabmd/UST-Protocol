@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:no — the §8 ABNF checked against the code that parses it
 // ust_id tier gate (UST-gqj) — the §8 ABNF and the code must agree that HH/MM/SS carry NO separator.
 //
 // The conformance vectors already lock the BEHAVIOUR: a coarser frame is a literal string prefix of every finer frame,

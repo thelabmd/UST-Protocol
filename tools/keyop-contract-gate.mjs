@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:yes — ops and per-op fields enumerated from the reducer that enforces them
 // KEY-OP CONTRACT GATE — what a surface TELLS a producer to build must be what the verifier admits.
 //
 // MEASURED 2026-07-29, and it had been wrong for three rounds: the MCP tool `ust_build_key_log` advertised

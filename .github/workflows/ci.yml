@@ -64,6 +64,8 @@ jobs:
         run: npm run test:recap
       - name: key_op contract (what a surface tells a producer to build == what the verifier admits)
         run: npm run test:keyop
+      - name: assurance map (every CI step declares what decides its dispute, and the code must support the claim)
+        run: npm run test:assurance-map
       - name: ust-light is a valid UST subset (byte-identical to the reference impl, both directions)
         run: npm run test:light
       - name: light README panels are DERIVED from the dark originals, never hand-edited

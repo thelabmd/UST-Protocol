@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 1b canfail:yes — the clean-room browser resolver and the reference must agree on every vector
 // Cadence PARITY gate — the clean-room browser resolver and the reference resolver must give the SAME answer on every
 // `cadence-resolve` vector, or the README's promise ("two conforming verifiers agree because the verdict is a total
 // deterministic function") is false for the grid a completeness claim is measured against.

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 4 canfail:no — assertions written by hand over fixtures built here
 // CLI ceremony regression — the 9th audit's seven points, frozen as tests so a TENTH audit can't silently
 // reintroduce the ninth defect. Each check name IS the guarantee it locks. Runs the exported ceremony core
 // (no live network: CF fetch + DoH readback are injected). Prints `PASS n FAIL n NOTES n` like conformance.

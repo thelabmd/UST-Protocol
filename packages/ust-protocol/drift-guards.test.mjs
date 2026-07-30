@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:no — injects a fake drift into each from-code gate and requires it to fire
 // test:drift-guards — the META-gate (owner, round-51: "жёсткая гарантия обновления либо ловли несоответствий без тихих багов").
 // The from-code gates (R31 partition, capability-parity, spec-code-sync, BMC denominator, model-lockstep, model-domain,
 // retired-mechanisms) are supposed to be FAIL-CLOSED: a new export / error code / interpreter rule / model note / retired

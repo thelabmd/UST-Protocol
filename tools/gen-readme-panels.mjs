@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:no — panels regenerated from the real CLI help and the svg sources
 // README illustration panels — TUI-style (btop/lazygit) SVGs, the same visual language as .github/status.svg
 // (gen-status-svg.mjs). Five panels: anatomy (what a transcript IS), tiers (what each verdict adds), chain (layered
 // shards / graduated visibility), time (the shared ust:ID axis), map (the repository). Deterministic pure functions

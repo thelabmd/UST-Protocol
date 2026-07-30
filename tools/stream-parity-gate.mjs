@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 1b canfail:yes literal-ok:FULL/HOLE/VOCAB are the CASE LIST, not the decider — the decider is a disagreement between two implementations; coverage is bounded by three fixtures, which is the other axis — both verifiers must return the same completeness verdict
 // STREAM parity gate — the clean-room verifier's completeness verdict must equal the reference's, case for case.
 //
 // Why it exists: docs/ust-verify.mjs carried the comment "Mirrors ust-protocol.verifyStream so the two cross-check" and

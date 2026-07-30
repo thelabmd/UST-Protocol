@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 1a canfail:yes — npm pack plus node module resolution inside the tarball
 // Package CONTENTS gate — what `files` ships must be able to RUN, not merely to match.
 //
 // MEASURED 2026-07-29, and it was live in the registry: `ust-protocol@1.0.0-rc.38` and `rc.39` — the published

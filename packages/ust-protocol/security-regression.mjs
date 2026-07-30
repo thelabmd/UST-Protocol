@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 4 canfail:no — our own reproductions of past external-audit findings
 // Phase 0 — rc.33 external-audit remediation (epic UST-1o6). Each of the 5 P0 + key P1 attacks is encoded as an
 // assertion of the SECURE outcome. It is RED now (the code is still vulnerable); it is the acceptance gate that must
 // go GREEN, one vector at a time, as the STRUCTURAL fix lands (UST-0ol). NOT yet wired into the blocking CI — that

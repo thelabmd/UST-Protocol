@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:yes — light panels compared against the dark originals they derive from
 // Light-variant gate — every `.github/<panel>-light.svg` must equal the palette map applied to its dark original.
 //
 // The light files exist because the diagrams were authored in GitHub's dark palette and rendered as a black block on

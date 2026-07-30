@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:no — every theorem the model cites resolved against the EXECUTED check list
 // MODEL ↔ CODE LOCKSTEP GUARD — "math is provable through code". The formal model (NON-NORMATIVE) cites each theorem's
 // realization as an italicised conformance-check label: *"...check label..."*. This guard asserts every such citation
 // is a REAL check in conformance.mjs — so a theorem cannot claim a property the running suite does not verify. Pair it

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:no — the README version regenerated from the package manifest
 // Version sync gate — the README Status line AND the private monorepo-root package.json version both track the CANONICAL
 // `VERSION.spec` (packages/ust-protocol/index.mjs), the ONE version source (rc.6 "one version source"). Counterpart to
 // gen-spec-registry.mjs for the spec: run it, then `git diff --exit-code README.md package.json`, so neither can silently

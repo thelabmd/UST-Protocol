@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 3 canfail:no — SURFACES is a hand-typed two-entry list of rendering surfaces
 // Display-safety gate (#73) — the human renderers must neutralize Unicode format characters before showing an
 // untrusted value, and the two renderers must not drift apart.
 //

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:no — every enforcement realization checked against the executed check list
 // model-lockstep gate (round-26 step 5; REBUILT round-27 P1-02) — the enforcement that stops the lockstep-lie CLASS.
 //
 // The recurring failure: the formal model writes a realization note asserting an invariant is ENFORCED, but the only

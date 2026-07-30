@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 3 canfail:yes — PIN is a hand-typed capability table
 // Version-truth gate — a version must be traceable to a written round, and the distance to what the
 // world can install must be a NUMBER somebody looked at.
 //

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:no — the implementation is exercised against an abstract model written in this same file
 // temporal-bmc.mjs — BOUNDED-EXHAUSTIVE MODEL CHECK of the key-log TEMPORAL state machine (§12.2 #75 ROOT 2).
 //
 // bmc.mjs covers the STRUCTURAL dimension (the proof term). This covers the TEMPORAL dimension: the key-log is a state

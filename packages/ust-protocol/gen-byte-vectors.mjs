@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:no — byte vectors regenerated from the reference impl; the diff is the gate
 // Generate the LANGUAGE-NEUTRAL byte-vectors for the rev3 checker boundary + a security-condition coverage manifest.
 // Each vector is { id, note, package_b64url, config_b64url, expected: { result, code? } } — pure BYTES in, verdict out,
 // so ANY implementation (Node / Rust / Go / WASM / Lean-extracted) can run checkAuthorityProofBytes over one corpus.

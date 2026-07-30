@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:no — the status panel regenerated from VERSION.spec
 // README status panel — a TUI-style (btop/lazygit) SVG generated from the CANONICAL `VERSION.spec`, the same one
 // version source the README alt-text and root package.json track (gen-readme-version.mjs). Deterministic (a pure
 // function of VERSION.spec — no dates, no randomness), so `git diff --exit-code .github/status.svg` gates drift the

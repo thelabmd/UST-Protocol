@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 3 canfail:yes — hand-typed expectations about what a self-check may assert
 // Ceremony self-check gate (rev95) — a ceremony's self-check must assert the invariant the ceremony PRESERVES,
 // never a property of the WORLD it does not determine.
 //

@@ -160,6 +160,22 @@
       "test": {
         "excluded": "The test layer is packages/ust-cli/regression.mjs — five checks pinning a required role under declaration, refusal of an undeclared role name, refusal of a role under an undeclared genesis, the plain parallel add that had no path at all, and that it carries no role — plus keyop-contract-gate's two negative controls. They run under npm run test:cli and npm run test:keyop, not as conformance checks, which cover the verifier only."
       }
+    },
+    {
+      "round": 85,
+      "math": {
+        "excluded": "This round grades our own assurance machinery. The formal model states what a verifier may conclude from a transcript; how strong each of OUR gates is, is not a property of any document, and model prose written to satisfy a gate is the patch this repo rejects."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. An independent implementation owes nothing about how we grade our own CI."
+      },
+      "code": "tools/assurance-map-gate.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. The artifacts here are a workflow file and the source of the gates themselves; no transcript and no verdict is involved, so a vector could only restate a gate that runs from the files it grades."
+      },
+      "test": {
+        "excluded": "The test layer is the gate's four negative controls, run rather than described: a new CI step with no grade fails, an over-claimed 1a fails, a canfail:yes with no leg fails, a removed marker fails. They run as npm run test:assurance-map, not as conformance checks, which cover the verifier only."
+      }
     }
   ],
   "first_accounted_round": 76,

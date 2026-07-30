@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 3 canfail:no — RULES is a hand-typed list of 19 rule names; nothing in this file generates cases
 // Reference-checker robustness fuzz — hardens the TCB (check_C) directly. The checker is the ONLY trusted function of
 // the authority layer, so its core invariants must hold under adversarial input: TOTAL (never throws), CLOSED
 // tri-state (VALID | INVALID | INDETERMINATE), DETERMINISTIC (same input → same output), and never a false accept

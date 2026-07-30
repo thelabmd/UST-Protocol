@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 3 canfail:no — the fingerprints and their occurrence counts are pinned by hand
 // RETIRED-MECHANISMS GATE — an abandoned path must not walk back into the documents.
 //
 // WHY THIS EXISTS. The rc.37 arc abandoned two whole approaches and retired a long list of individual mechanisms:

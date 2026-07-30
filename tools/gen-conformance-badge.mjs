@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:no — counts recomputed from the vectors and the runner; the diff is the gate
 // Conformance badge — a STATIC shields.io badge whose NUMBERS are generated from the real, drift-gated counts, NEVER
 // hand-typed. Earlier this was a shields `endpoint` badge reading .github/badge-conformance.json over
 // raw.githubusercontent — a fragile DYNAMIC chain (shields' dynamic backend + a second network fetch) that broke while

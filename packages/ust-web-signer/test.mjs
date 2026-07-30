@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 1b canfail:no — the web signer and the core must cross-verify each other cryptographically
 // Cross-compat proof: a document SIGNED by ust-web-signer (WebCrypto) must verify VALID under ust-protocol
 // (node:crypto) — two independent implementations agreeing that the bytes/preimage/signature line up.
 import * as W from './index.mjs';

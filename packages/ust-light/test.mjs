@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 1b canfail:no — ust-light and the reference impl must agree byte-for-byte, both directions
 // ust-light validity: prove a ust-light document IS a valid UST document. Cross-verify BOTH directions against the
 // full reference verifier, and prove byte-identity (same canon/hash/sig) — the whole point of "a lite doc verifies
 // VALID:LIGHT under full UST, and lite accepts any UST doc at the LIGHT floor".

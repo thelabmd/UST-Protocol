@@ -54,6 +54,7 @@
     "test:diary": "node tools/diarium-render.mjs --check",
     "test:recap": "node tools/recap-render.mjs --check",
     "test:keyop": "node tools/keyop-contract-gate.mjs",
+    "test:assurance-map": "node tools/assurance-map-gate.mjs",
     "test:display": "node tools/display-safety-gate.mjs",
     "test:packages": "node tools/package-enumeration-gate.mjs",
     "test:root": "node tools/root-inventory-gate.mjs",

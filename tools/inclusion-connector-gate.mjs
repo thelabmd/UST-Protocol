@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 2 canfail:no — a hostile connector return admitted through the seam the core defines
 // Inclusion-connector gate — anchor inclusion is a CONNECTOR, and the seam must hold like every other not-ours seam.
 //
 // Owner call 2026-07-26: core + connectors at every level is what makes this adoptable, so the protocol does not name a

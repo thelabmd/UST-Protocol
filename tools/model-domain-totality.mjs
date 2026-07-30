@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @assurance 3 canfail:no — model sections are computed, but the exclusions are a pinned registry
 // MODEL-DOMAIN TOTALITY GATE — the missing DOMAIN of the model↔code lockstep.
 //
 // Every existing gate keys on a population something DELIBERATELY joined:
