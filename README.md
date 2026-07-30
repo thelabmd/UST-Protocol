@@ -277,6 +277,13 @@ console.log(verify(doc, { context: 'data' }).result);          // → VALID:LIGH
 Working on the protocol itself? `npm install && npm test` runs the conformance suite (spec == package == vectors) —
 see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
+**The most useful thing you can do here is disagree with us.** Three open issues cannot be closed from the inside,
+because in each of them we would be checking our own work: [#113](https://github.com/thelabmd/UST-Protocol/issues/113)
+regrade the CI gates independently, [#83](https://github.com/thelabmd/UST-Protocol/issues/83) read the formal model
+as an expert, [#34](https://github.com/thelabmd/UST-Protocol/issues/34) write a third implementation clean-room from
+the spec. Two implementations already agree byte-for-byte and both were written here — a blind spot through both is
+invisible. See *What we cannot do for ourselves* in [`CONTRIBUTING.md`](CONTRIBUTING.md#what-we-cannot-do-for-ourselves).
+
 Want an agent to keep a memory it cannot rewrite afterwards? `npm i -D diarium` — a closed task becomes a sealed,
 `prev`-chained entry ([`packages/diarium`](packages/diarium)).
 

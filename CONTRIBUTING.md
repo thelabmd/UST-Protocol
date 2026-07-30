@@ -4,6 +4,28 @@
 Thanks for looking. UST is trust infrastructure, so the bar is correctness first — the checker is a TCB and the
 spec has a formal model behind it. This guide is short and it is honest about the discipline.
 
+## What we cannot do for ourselves
+
+Most of this repository is checked by machinery we wrote. That machinery has been audited — by us — and the audit
+found eleven defects in the gates themselves rather than in the code they guard (#110). Which is exactly why the
+three things below cannot be closed from the inside, and why they are the most useful contributions available:
+
+- **[#113](https://github.com/thelabmd/UST-Protocol/issues/113) — regrade the CI steps independently.** Every gate
+  here carries a declared grade for *what decides its dispute*, and every one of those grades was written by the
+  person who wrote the gate. The criterion is written down so a second grader answers the same question. **A
+  disagreement is the finding**, not an error to correct: it marks a place where our model of our own instrument is
+  wrong, which is the one thing the instrument cannot measure about itself.
+- **[#83](https://github.com/thelabmd/UST-Protocol/issues/83) — read the formal model as an expert, and disagree.**
+  The model and the code move in lockstep and each is checked against the other; neither is checked against a
+  reviewer who has no stake in the design being right.
+- **[#34](https://github.com/thelabmd/UST-Protocol/issues/34) — a third implementation, clean-room from the spec.**
+  Two implementations already cross-verify byte-for-byte, and both were written here: a blind spot that runs through
+  both is invisible to that check. A port from the spec alone — Go, Rust, anything — is the only thing that turns
+  agreement into evidence. `PORTING.md` states what it must reproduce; `vectors/` is the arbiter.
+
+If you take one, say so on the issue first — not for permission, but so two people do not spend a week on the same
+disagreement.
+
 ## Ground rules
 
 - **The conformance vectors are the canon.** `vectors/` (byte vectors + language-neutral conformance + arc vectors)
