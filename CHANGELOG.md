@@ -31,6 +31,19 @@ Opened because rc.41 is PUBLISHED and a published version is immutable. What lan
 turned on the repository itself — the gates run against the artifact a stranger installs rather than against a
 working tree, which is only possible because rc.41 shipped first.
 
+**PUBLISHED 2026-07-30** — `@ust-protocol/cli@1.0.0-rc.73`, the last package the repo held ahead of npm. It carries
+round 103's change at the surface: `forkChoice` returns `kind: 'fork-choice'` and a REFUSED result with its reason,
+so the CLI prints the error beside the verdict instead of an error code standing where a verdict belongs. With it,
+`npm-drift` reports **8 published checked, 0 ahead-of-npm** — every package in this tree now equals the artifact a
+stranger installs, which is the state the self-audit above was run against.
+
+Verified from a clean install rather than from the registry's metadata, because that is the probe that caught
+rc.36/38/39: `npm i` into an empty directory, then run the binary. The first screen renders the seal, names the
+protocol, and derives `v1.0 rc41` from the CORE — the CLI's own number is never printed there, since what a reader
+needs is the wire version their document must conform to and the candidate that decides what a check MEANS. The
+TTY-gated banner itself could not be rendered in this environment (no pty), so it is verified as SOURCE in the
+published tarball, not as pixels — stated rather than glossed.
+
 | version | round | what closed |
 |---------|-------|-------------|
 | **tooling**<br>**#114** | 111 | **The audit's own numbers disagreed by one, and the one was the anchoring step.** Collecting the after-table for #114 I read `58/58 steps green` beside `57 CI steps graded` and stopped: two tools enumerate ONE domain — `.github/workflows/ci.yml` — and differed. `assurance-map` required `run:` on the line straight after `- name:`, and **`connector receipts (OTS + Rekor)` carries a comment between them**, so it had been dropped in silence for as long as the gate existed while the gate printed *every CI step is graded*. The step that vanished is the one that mints EXTERNAL anchoring receipts. **The floor is why nothing noticed** — `steps.length > 20` is a number somebody chose and 57 satisfies it exactly as happily as 58: round 102's ratchet class caught doing the damage it was predicted to do. The roster no longer matches a pattern; the workflow is split on the step boundary and **every block must yield a command or FAIL**, plus a both-ways count against those boundaries. Downstream, two suites came into view carrying no grade at all: `ust-ots-verify` and `ust-rekor-verify`. I marked them `1a` and **the gate refused me** — 1a means authored by nobody here, and their real Bitcoin and Sigstore bytes are CAPTURED, with the explorer mocked and nothing re-fetching. Regraded `3`, which moves the ledger's headline the WRONG way, 8 → 9 hand-typed, and it is recorded rather than smoothed. The can-fail vocabulary also missed them: `check(!` and CONTROL are how a GATE proves its leg, while a suite proves it by asserting a REFUSAL — widened narrowly to an expected value that IS a refusal, with a control that an ordinary assertion still does not count. New mutant `unreadable-ci-step` holds the class: drift-guards 14 → 15. |
