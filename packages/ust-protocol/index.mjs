@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.40', revision: 64 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.41', revision: 64 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -2594,6 +2594,24 @@ export const REGISTRY = deepFreeze({   // round-25 P0-04 — DEEP-frozen: the ca
   tiers: Object.keys(TIER_RANK),                                    // NONE/LIGHT/HIGH/TOP — single-sourced from TIER_RANK
   assuranceAxes: ASSURANCE_AXES,                                    // single-sourced from the #78 lattice (§F.5.0)
   evidenceOrder: ['proven-after', 'not-after', 'unproven'],        // compareEvidenceOrder returns (§12.3.5)
+  // §14 verdict RESULTS and §11.3 completeness words. Registered here — and MEASURED against actual usage by
+  // spec-code-sync — because a machine-checkable string set that is NOT in this registry becomes a hand-typed
+  // roster in whichever gate needs it, which is how `OP_FIELDS` let a retired op survive in a producer contract
+  // for three rounds (round 84). `results` is the VERIFY verdict only: `forkChoice` returns a `result: 'CANONICAL'`
+  // under the same field name for a different question (which candidate is canonical), and that collision is
+  // named in the sync check rather than absorbed by widening this set.
+  // MEASURED, not endorsed: `E-MALFORMED` appears in the RESULT slot from the totality guards of the public async
+  // entry points (`verifyAsync`, `resolveByDiscovery`), where §14's vocabulary is VALID/INVALID/INDETERMINATE.
+  // It fails CLOSED — `isValid` tests the `VALID:` prefix, so an error code there is never valid — and it is a
+  // caller-error path, so this is a shape wart rather than a hole. Registered so it is visible and cannot grow
+  // silently; whether the slot should carry a code at all is thelabmd/UST-Protocol#111.
+  results: ['VALID', 'INVALID', 'INDETERMINATE', 'E-MALFORMED'],
+  completeness: ['none', 'provisional', 'chain-consistent', 'complete'],
+  // `forkChoice` answers a DIFFERENT question under the SAME field name, and the collision is registered rather
+  // than absorbed: it overlaps `results` at INDETERMINATE and borrows an ERROR CODE, `E-PREV`, as a result value.
+  // A consumer reading `result` cannot tell which vocabulary it is in without knowing which call produced it.
+  // Registered so the set is MEASURED and cannot grow silently; resolving the collision is thelabmd/UST-Protocol#111.
+  forkChoiceResults: ['CANONICAL', 'MULTI_AUTHORITY', 'INDETERMINATE', 'E-PREV', 'E-MALFORMED'],
   verifiedEvidenceFields: { required: ['proof_kind', 'subject', 'source_id', 'facts'], optional: ['verifier_id', 'verifier_version'] },
   // M3 — the SIGNED connector-receipt claim (§12.3.5): facts only; a capability/assurance/independence field is E-EVIDENCE.
   evidenceReceiptClaimFields: { required: ['version', 'purpose', 'domain_shard', 'active_genesis', 'genesis_epoch', 'subject', 'proof_kind', 'facts', 'issued_at'], optional: ['payload_digest'] },

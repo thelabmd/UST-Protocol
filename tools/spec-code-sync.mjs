@@ -43,6 +43,26 @@ check('verifiedEvidenceFields', veFields, [...REGISTRY.verifiedEvidenceFields.re
 // round-50 P1-04 — the L1 checker's FULL error codes (E-CONFIG-*, E-TERM-*, E-WITNESS-* …, not the `E-[A-Z]+` prefixes) vs its
 // own registered set: a new/typo checker code fails until registered. Closes the "index-only" blind spot over the TCB.
 check('checkerErrorCodes', [...refSrc.matchAll(/['"`](E-[A-Z][A-Z0-9-]*)/g)].map((m) => m[1]), REFERENCE_CHECKER_ERROR_CODES);
+// §14 verdict results — MEASURED, and the measurement must not absorb a collision. `result:` names TWO fields in the
+// core: the §14 verdict, and `forkChoice`'s answer to "which candidate is canonical". They are measured SEPARATELY
+// against separate registered sets, because widening one to cover the other would let a surface print a forkchoice
+// outcome as a verdict — and `forkChoice` even returns the error code `E-PREV` under that name.
+// comments stripped first, and by measurement: an earlier version of THIS check read a `result: 'CANONICAL'`
+// written inside the REGISTRY comment three lines above it and reported the core as drifting.
+const bare = src.replace(/\/\/[^\n]*/g, '');
+// forkChoice is bounded by LINES, not by a lazy `\n}` — the lazy form stopped at an inner block and leaked
+// the function's own vocabulary into the verdict set.
+const bl = bare.split('\n');
+const fcFrom = bl.findIndex((l) => l.startsWith('export async function forkChoice'));
+const fcTo = bl.findIndex((l, i) => i > fcFrom && l.startsWith('export '));
+const fcBody = bl.slice(fcFrom, fcTo).join('\n');
+const fcResults = [...fcBody.matchAll(/result:\s*['"`]([A-Z][A-Z_-]*)['"`]/g)].map((m) => m[1]);
+check('forkChoiceResults', fcResults, REGISTRY.forkChoiceResults);
+const verdictResults = [...bare.replace(fcBody, '').matchAll(/result:\s*['"`]([A-Z][A-Z_-]*)['"`]/g)].map((m) => m[1]);
+check('results', verdictResults, REGISTRY.results);
+// §11.3 completeness words, from the field the stream verdict actually sets
+check('completeness', [...src.matchAll(/\bcomplete:\s*['"`]([a-z-]+)['"`]/g)].map((m) => m[1]), REGISTRY.completeness);
+
 
 console.log('\n  spec-code-sync (LAYER 2 — REGISTRY == code usage):');
 report.forEach((r) => console.log(r));

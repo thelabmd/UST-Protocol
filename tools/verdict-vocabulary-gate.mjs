@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// @assurance 3 canfail:yes — RESULTS and COMPLETENESS are hand-typed literals
+// @assurance 2 canfail:yes — both vocabularies come from REGISTRY, which spec-code-sync measures against code usage
 // Verdict-vocabulary gate — no surface may NAME a verdict the reference cannot RETURN.
 //
 // Three separate places had drifted onto one invented word, `proven`, and each drift was a different kind of harm:
@@ -18,8 +18,11 @@ import { fileURLToPath } from 'node:url';
 import * as P from '../packages/ust-protocol/index.mjs';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
-const COMPLETENESS = ['none', 'provisional', 'chain-consistent', 'complete'];
-const RESULTS = ['VALID', 'INVALID', 'INDETERMINATE'];
+// Both sets come from the canonical REGISTRY, which spec-code-sync MEASURES against actual code usage — so they are
+// no longer typed here. Moving a list is not an upgrade; the measurement is. `results` there also carries the
+// totality-guard `E-MALFORMED`, which is not a verdict a SURFACE may print, so this gate keeps §14's three.
+const COMPLETENESS = P.REGISTRY.completeness;
+const RESULTS = P.REGISTRY.results.filter((r) => !r.startsWith('E-'));
 
 // Every word the repo may use for a completeness verdict, and nothing else. Retired words are listed so the gate says
 // WHY a word is refused rather than only that it is.

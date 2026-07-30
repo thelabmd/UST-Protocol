@@ -176,6 +176,22 @@
       "test": {
         "excluded": "The test layer is the gate's four negative controls, run rather than described: a new CI step with no grade fails, an over-claimed 1a fails, a canfail:yes with no leg fails, a removed marker fails. They run as npm run test:assurance-map, not as conformance checks, which cover the verifier only."
       }
+    },
+    {
+      "round": 86,
+      "math": {
+        "excluded": "This round registers and MEASURES string sets the code already uses. No admissibility rule, no verdict and no transition changed — the model states what a verifier may conclude, and a registry of the words it prints is bookkeeping over that. The one thing the measurement surfaced that IS model-adjacent, an error code in the verdict slot, is filed as #111 rather than settled here."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: the §14 vocabulary is unchanged, and the sets added to REGISTRY are not among the regions gen-spec-registry renders into the spec, so no spec text changed. Whether the totality guard's shape should change is #111's first box, and changing it would be the round that moves this layer."
+      },
+      "code": "packages/ust-protocol/index.mjs :: REGISTRY results/completeness/forkChoiceResults",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. These sets are about which WORDS the implementation emits, measured from its source; a vector would exercise a verdict rather than enumerate the vocabulary. #111's last box asks for the vector that IS missing — one pinning the totality-guard verdict shape — and that belongs to the round that decides the shape."
+      },
+      "test": {
+        "excluded": "The test layer is spec-code-sync's three MEASURED comparisons — results, completeness and forkChoiceResults against actual code usage — plus the negative control they already carry: a set that drifts fails by name. They run as npm run test:spec-sync, not as conformance checks, which cover the verifier only. A conformance check name was written here first, copied from round 79 to satisfy the layer; the gate accepted it because the name exists, which is precisely the accounting-from-memory failure this registry was built to stop."
+      }
     }
   ],
   "first_accounted_round": 76,

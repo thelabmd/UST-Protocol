@@ -32,6 +32,10 @@
     {
       "round": 85,
       "no_recap": "Round 85 closed no issue — it turns #110's hand-written map into a gate, and #110 stays open on the remaining work. The unit is the CLOSED ISSUE: a round that closes nothing has no recipient."
+    },
+    {
+      "round": 86,
+      "no_recap": "Round 86 closed no issue — it FILED one (#111). The unit is the CLOSED issue: a round that opens work rather than finishing it has no recipient for a recap."
     }
   ]
 }
