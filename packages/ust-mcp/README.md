@@ -36,6 +36,11 @@ Or in any MCP client config:
 | `ust_build_observation` | Build (unsigned) an observation; returns `state` + `content_hash` + `signing_input` |
 | `ust_combine_derivation` | Build a derivation chained to other records by content-hash (auto seed) |
 | `ust_combine_attestation` | Build an attestation over N constituents (auto Merkle root) |
+| `ust_build_genesis` | CEREMONY (build, unsigned): the name-binding GENESIS — the self-signed root that weds a domain to a key. The MCP holds no key: it returns the unsigned state + `signing_input`, and the operator signs |
+| `ust_build_key_log` | CEREMONY (build, unsigned): a key-log entry that ADDs or REVOKEs a key. There is deliberately no `rotate` op — a self-authorized succession would let a compromised key name its own successor |
+| `ust_build_cadence` | CEREMONY (build, unsigned): declare the stream grid in seconds from `effective_from` onward, prev-chained from the genesis for the first entry |
+| `ust_resolve_cadence` | What grid does this publisher declare at a given moment? Resolves the cadence in force at `at` from the genesis plus the signed cadence log, verifying every entry |
+| `ust_fork_choice` | Fork-choice for ONE `ust_id` when you hold two or more documents claiming it with different content — a dual-writer race, or an adversary. The anchor decides, never the candidates |
 | `ust_resolve` | Resolve name authority → `authoritative` / `self-asserted` |
 | `ust_anchor_verify` | Verify a time-anchor's Merkle inclusion proof |
 | `ust_verify_stream` | Verify a RANGE (e.g. ust(001)…ust(007) fetched from an archive) as one authority's complete, prev-chained stream → `proven`/`provisional` (retrieval is the product's job, not the protocol's) |

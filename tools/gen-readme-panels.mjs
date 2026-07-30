@@ -216,14 +216,26 @@ panel('ust-map', 'REPOSITORY MAP',
   const cli = fileURLToPath(new URL('../packages/ust-cli/index.mjs', import.meta.url));
   const out = spawnSync(process.execPath, [cli], { encoding: 'utf8' });
   if (out.status !== 0) throw new Error('ust CLI no-arg help exited ' + out.status);
-  const rows = out.stderr.split('\n').filter((l) => /^\s+ust /.test(l)).map((l) => {
+  // The help screen carries a GLYPH before each command and groups them under block headers, and a long description
+  // continues on the next line. Parsing it as one-line-per-command silently returned zero rows the moment that
+  // shape changed — measured 2026-07-30, the restructure into blocks broke this parser and the git-diff gate caught
+  // it. So: a row STARTS at a glyphed `ust …` line, and a deeply-indented line with no command of its own is that
+  // row's description continuing, never a row of its own and never dropped.
+  const rows = [];
+  for (const l of out.stderr.split('\n')) {
+    const isCmd = /^\s+(?:\S\s+)?ust /.test(l);
+    if (!isCmd) {
+      // a continuation belongs to the row above: deep indent, prose, and no block header (those carry no lowercase `ust`)
+      if (rows.length && /^\s{20,}\S/.test(l) && !/^\s*[A-Z& ]+—/.test(l)) rows[rows.length - 1].desc += ' ' + l.trim();
+      continue;
+    }
     // the help aligns columns with 2+ spaces — including INSIDE a usage ("ust canon  <file|->"), so split on runs
     // and absorb leading arg-shaped parts (<…> / --…) into the usage; the first prose part starts the description.
-    const parts = l.trim().split(/\s{2,}/);
+    const parts = l.trim().replace(/^\S\s+(?=ust )/, '').split(/\s{2,}/);
     let usage = parts[0], i = 1;
     while (i < parts.length && /^(<|--)/.test(parts[i])) usage += ' ' + parts[i++];
-    return { usage, desc: parts.slice(i).join(' ') };
-  });
+    rows.push({ usage, desc: parts.slice(i).join(' ') });
+  }
   if (rows.length < 8) throw new Error('parsed only ' + rows.length + ' CLI commands — help format changed, update the parser');
   // the alt is DERIVED from the same parsed rows the panel draws (so it stays in sync with the real binary) but reads as prose.
   const cliAlt = 'The ust CLI — one entrypoint, the whole command surface (parsed from the real binary’s help). Install with npm i -g @ust-protocol/cli. The ' + rows.length + ' subcommands: ' + rows.map((r) => r.usage.split(' ').slice(1).join(' ') + ' (' + r.desc + ')').join('; ') + '. Exit 0 = VALID with the tier in the verdict, 1 = not; the ceremony self-verifies its outputs, fail-closed.';

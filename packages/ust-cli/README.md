@@ -1,26 +1,101 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
-# ust — the reference CLI
+# UST Protocol — the reference CLI
 
-One entrypoint for [UST 1.0](https://github.com/thelabmd/UST-Protocol) — verify machine-readable state, run the genesis ceremony, attest the discovery serving contract. The Go binary reproduces this surface, so `ust` is one static, language-agnostic tool.
+```
+
+     ▄▀▀▀▀▀▀▀▀▀▀▀▀█▄
+    █ ▄▄      ▄▄    █              UST Protocol
+  ▄▄▀ ▀▀ ▄▄▄  ▀▀    █              RSS for State
+  ▄█▀▀ ▀█▄▀▄▄▀ ▀█▀  █    █▀▄   ▄▄
+   ▀█               █▄   █▄ ██▀ █
+     █               ▀▄▄  █   ▄█
+     █                  ▀▀   █▀
+     █▄      ▄              █▀
+     ███▄    █    █       ▄█▀
+   ▄▀▀  ██▄▄▄█     ▀▄▄▄▄█▀▀
+   ▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀
+```
+
+**Verify machine-readable state without trusting whoever handed it to you.**
+
+UST (Universal State Transcript) is trust infrastructure for data: a signed, canonical, tamper-evident record of
+*state* — some data about the world at a moment — that verifies the same no matter how it reached you: a cache, a
+mirror, another agent, a file on a stick. TLS secures the pipe; **UST secures the payload**, so the guarantee
+travels *with* the data instead of with the connection.
+
+`ust` is the reference implementation: one command that reads those records and answers with a **verdict**, plus
+the tools to become a publisher of them yourself. The Go binary reproduces this same surface, so `ust` is one
+static, language-agnostic tool.
+
+## What it proves — and what it doesn't
+
+UST proves **fixation, not truth**: *this publisher committed to this data, at this moment, unchanged.* It does
+not prove the data is *correct* — a publisher can sign a wrong reading and the signature will be perfectly valid.
+What you learn is **whom to hold accountable** and **that nothing was altered on the way**. That is a real,
+bounded guarantee rather than an oracle of truth, and the CLI is careful never to claim more than it checked.
+
+## What you can do with it
+
+| | |
+|---|---|
+| **Read and judge** | Point it at a document and get `VALID` / `INVALID` / `INDETERMINATE` — never a bare "ok". Print canonical bytes to compare another language's implementation. Judge a whole RANGE of documents at once — chain, forks, completeness. When two documents claim the same moment, decide which is canonical. **None of this touches anything.** |
+| **Become a publisher** | Run the ceremony that binds your domain to a key, add and retire keys as your operation changes, and declare the grid your stream follows. **Needs your root key**, and the tool never emits an artifact it has not verified first. |
+| **Serve what you published** | Deploy the serving surface on your own stack or one-click on Cloudflare, mirror it to a second vendor so your identity does not rest on one provider, and log it in a public transparency log. **This writes to the world.** |
+
+## Why run it at all
+
+A verdict from this tool is worth something specific: it says *how much* trust was actually earned rather than
+just passing or failing. A lone document gets you integrity and a **claimed** publisher. Bring the publisher's
+genesis and key-log and the name becomes **provably** theirs. Add anchored time and the document is proven to
+have existed by a real moment. The tier is part of the answer, so you can tell an unchecked property from a
+confirmed one — which is the whole difference between a check and a reassurance.
 
 ```bash
 npm i -g @ust-protocol/cli               # installs the `ust` command
 npx @ust-protocol/cli verify doc.json    # or one-shot, no install
+ust                                      # the command surface, grouped by what it does to you
 ```
 
 ## Commands
+
+Three groups, by what a command DOES TO YOU — the same order the tool prints on its first screen.
+The tool shows the protocol version there, derived from the core; this page deliberately does not, because a
+version typed into a README is a claim that goes stale in silence.
+
+### READ & VERDICT — safe, touches nothing
 
 | command | what it does |
 |---|---|
 | `ust verify <file\|->` | verify a transcript (blob / base64 / json). exit 0 = VALID, 1 = not. Auto-resolves the publisher's discovery + witness surfaces and cross-checks witness anchors (Rekor/Bitcoin) → **VALID:HIGH out of the box** when the no-fork evidence confirms |
 | `ust verify <doc> --genesis <f> --keylog <f,f…> [--no-fork-confirmed]` | the OFFLINE road: supply the trust chain yourself; `--no-fork-confirmed` is your air-gap assertion → **VALID:HIGH** |
-| `ust witness rekor --domain <d> [--deploy]` | log the genesis to Sigstore Rekor (a fast, independent witness substrate) and, with `--deploy`, serve/refresh `/.well-known/ust-witness` |
+| `ust stream <frames…> [--genesis <f>] [--checkpoint <f>]` | a verdict about a RANGE, not one document — chain · forks · **completeness** (a stream property, never a single document's) |
 | `ust canon <file\|->` | print canonical bytes + hash — diff any other-language implementation against this |
+| `ust forkchoice <docs…>` | pick the CANONICAL document among candidates for ONE `ust_id` — canonical means anchor-included, so the choice is decided outside the candidates themselves |
+| `ust discovery <domain> [--mirror url,url] [--expect sha256:…]` | probe a domain's serving surface and report an honest verdict — on ANY infrastructure |
+
+### CEREMONY — touches your identity, needs the root key
+
+| command | what it does |
+|---|---|
 | `ust genesis --domain <d>` | run the HIGH genesis ceremony (interactive; see the road below) |
-| `ust discovery <domain> [--mirror url,url] [--expect sha256:…]` | attest the §20.1 serving contract on ANY infrastructure |
+| `ust key add --domain <d> --root <enc> --role <data\|issuance>` | ADD a key BESIDE the current one — never replaces it. The ROLE is fixed at genesis and is a partition of the active set, not a label the entry chooses |
+| `ust rotate --domain <d> --root <enc>` | APPEND a key rotation to the served log. Never re-mints: documents signed by the old key stay valid, because succession is STATED in the log rather than inferred |
+| `ust cadence --domain <d> --root <enc> --seconds <n> --effective-from <slot>` | DECLARE the signed grid your stream follows — what a completeness verdict is measured against, signed rather than assumed |
+
+### PUBLISH — writes to the world
+
+| command | what it does |
+|---|---|
 | `ust publish cf --domain <d> --genesis <f> [--auth wrangler] [--flip-proxy]` | deploy the Cloudflare serving adapter for an existing genesis |
-| `ust stream <frames…> [--genesis <f>] [--checkpoint <f>]` | the RANGE verdict — chain · forks · **completeness** (a stream property, never a single document's) |
-| `ust mirror <domain> [--publish gh --repo o/r]` | publish + attest a second-vendor mirror (§20.1 vendor-independence) |
+| `ust mirror <domain> [--publish gh --repo o/r]` | publish and attest a SECOND-vendor copy, so your identity does not rest on one provider |
+| `ust witness rekor --domain <d> [--deploy]` | log the genesis to Sigstore Rekor (a fast, independent witness substrate) and, with `--deploy`, serve/refresh `/.well-known/ust-witness` |
+
+### Key operations are ROOT-only
+
+`key add`, `rotate` and `cadence` all take `--root`: they are signed by the crown, never by the warm key they
+govern. A self-authorized succession would let a compromised key name its own successor, so the protocol removed
+that path rather than guard it — `rotate` as a *key-log op* does not exist, and `ust rotate` appends a rotation
+that the ROOT states.
 
 ## The tier ladder (what verify can prove)
 

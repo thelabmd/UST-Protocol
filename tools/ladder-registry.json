@@ -620,6 +620,22 @@
       "test": {
         "excluded": "This layer resolves against vectors/conformance-checks.json, the roster of executed CONFORMANCE checks, and conformance exercises the verifier rather than the CLI's ceremony surface. The test is the suite itself — packages/ust-cli/regression.mjs, run as npm run test:cli-regression — where a wrong pattern fails the named check, and swapping the two token patterns fails exactly two."
       }
+    },
+    {
+      "round": 114,
+      "math": {
+        "excluded": "Whether OUR package pages enumerate OUR surfaces is a property of our documentation, not of the protocol. The formal model states obligations on producers and verifiers; none of them changed, and the totality discipline being applied here is the one this repository already imposes on itself."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. Which commands a README lists, and how a first screen groups them, binds nobody implementing UST."
+      },
+      "code": "tools/printed-command-gate.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. A README table and a help screen produce no document and change no verdict; the artefacts here are the two enumeration legs and the placeholder rule, exercised by editing the surfaces they read."
+      },
+      "test": {
+        "excluded": "The controls ran and are recorded rather than committed: removing the required road from the screen line makes the gate fail by name, and emptying either README fails the enumeration in the direction that names the missing command or tool. Committing a broken screen to freeze the control would ship a wrong first impression, which is the thing this round exists to fix."
+      }
     }
   ],
   "first_accounted_round": 76,

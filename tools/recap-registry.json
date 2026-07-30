@@ -151,6 +151,10 @@
       "round": 113,
       "issue": 114,
       "content_hash": "sha256:6658d8fa58b277b18262b2488c33172512623fdf74dd0c5cc2a7f7d0b95a29f5"
+    },
+    {
+      "round": 114,
+      "no_recap": "Round 114 closed no issue — the owner asked for the package pages to be actualized directly, and the work has no ticket to receive a recap comment."
     }
   ]
 }
