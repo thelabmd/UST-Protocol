@@ -35,9 +35,19 @@ function probe(m) {
   try {
     const mutated = applyMutation(m, orig);
     if (mutated === null) { F.push(`${name}: injection ANCHOR not found (or ambiguous) — the source moved; update the mutation in tools/mutations.mjs (a silent drift-guard hole)`); return; }
-    writeFileSync(path, mutated);
-    if (gateRejects(m.gate)) pass++;
-    else F.push(`${name}: the gate did NOT reject the injected drift — it is NOT fail-closed (a NEW ${name.split('→')[0].trim()} could ship silently)`);
+    // AUDIT #114, pass 4 — ASSERT THE REASON, NOT THE REFUSAL. This asserted only that the gate exits non-zero AFTER
+    // the injection, so a gate already failing for an unrelated reason counted as having caught the drift, and so
+    // would one whose anchor merely broke the file's syntax. The BEFORE leg isolates the mutation as the cause: the
+    // gate must be GREEN on the clean tree and RED after. Same lesson as round 74 and round 95, one level up — this
+    // is the meta-gate, so it was the last place the shape survived.
+    if (!gateRejects(m.gate)) {
+      // clean tree, gate green: only now is a post-injection failure attributable to the injection
+      writeFileSync(path, mutated);
+      if (gateRejects(m.gate)) pass++;
+      else F.push(`${name}: the gate did NOT reject the injected drift — it is NOT fail-closed (a NEW ${name.split('→')[0].trim()} could ship silently)`);
+    } else {
+      F.push(`${name}: its gate \`${m.gate}\` is ALREADY RED on the clean tree, so a red run after injection proves nothing about this mutation — fix the gate first`);
+    }
   } finally { writeFileSync(path, backup); }                  // restore no matter what
 }
 

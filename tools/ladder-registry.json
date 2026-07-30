@@ -522,6 +522,22 @@
       "test": {
         "excluded": "The test layer is two controls, both run: a third producer-shaped field list added to a shipped file is named by the gate, and the detector is asserted to tell a field list from prose that merely mentions key_op. They run as npm run test:keyop, not as a conformance check, which covers the verifier only."
       }
+    },
+    {
+      "round": 108,
+      "math": {
+        "excluded": "Whether OUR assertions name the reason they test is a property of our test suites. The model's own binding rule already demands that a cited theorem resolve to an executed check, which is the same discipline one layer up and is unchanged by this round."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. The refusals whose reasons are now matched are unchanged; only the assertions about them are stricter."
+      },
+      "code": "packages/ust-protocol/drift-guards.test.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce, and round 74 already added the vector that asserts a REASON rather than a code for the transition it covers. This round is about assertions over a CLI core and a meta-gate, neither of which produces a transcript."
+      },
+      "test": {
+        "excluded": "The test layer is two controls, both run: a gate made red BEFORE injection is named instead of counted, and a refusal message replaced with an unrelated one makes the named regression check fail. They run as npm run test:drift-guards and test:cli, not as conformance checks, which cover the verifier only."
+      }
     }
   ],
   "first_accounted_round": 76,

@@ -697,7 +697,9 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
   check('rotate_appends_never_rewrites', P.contentHash(r.keylog[0]) === P.contentHash(kl0) && r.keylog.length === 2);
   const rv = await C.rotateKeylog({ genesis, keylog: [kl0], rootSigner: root, reason: 'retired', time: Tr, ustId: 'ust:20260628.1002' });
   check('rotate_reason_retired_revokes', !!rv.revokedPub && rv.keylog.length === 3);
-  check('rotate_compromised_needs_since', await threw(() => C.rotateKeylog({ genesis, keylog: [kl0], rootSigner: root, reason: 'compromised', time: Tr, ustId: 'x' })));
+  // AUDIT #114, pass 4 — `rotateKeylog` has TEN throw paths, so a bare `threw()` passed if ANY refusal fired, related
+  // or not. Asserting the REASON is round 74's lesson, and round 95 found me committing it again in this same file.
+  check('rotate_compromised_needs_since', await threwWith(() => C.rotateKeylog({ genesis, keylog: [kl0], rootSigner: root, reason: 'compromised', time: Tr, ustId: 'x' }), /compromised-since/));
   // #106 — `addKeylogKey` is the testable core of `ust key add`: a key BESIDE the current one. The distinction
   // that matters is that it does NOT supersede, which is exactly what inheritance cannot express (§F.5e.1).
   {
@@ -718,9 +720,11 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
       await threwWith(() => C.addKeylogKey({ genesis: gR, keylog: [k0], rootSigner: root, time: Tr, ustId: 'ust:20260628.1005' }),
         /must state its own role/));
     check('keyadd_declaring_genesis_refuses_an_undeclared_role',
-      await threw(() => C.addKeylogKey({ genesis: gR, keylog: [k0], rootSigner: root, role: 'receipts', time: Tr, ustId: 'ust:20260628.1005' })));
+      await threwWith(() => C.addKeylogKey({ genesis: gR, keylog: [k0], rootSigner: root, role: 'receipts', time: Tr, ustId: 'ust:20260628.1005' }),
+        /is not one this genesis declared/));
     check('keyadd_UNDECLARED_genesis_refuses_a_role',
-      await threw(() => C.addKeylogKey({ genesis, keylog: [kl0], rootSigner: root, role: 'data', time: Tr, ustId: 'ust:20260628.1005' })));
+      await threwWith(() => C.addKeylogKey({ genesis, keylog: [kl0], rootSigner: root, role: 'data', time: Tr, ustId: 'ust:20260628.1005' }),
+        /declares NO role separation/));
     {   // the case that had no path at all: a plain parallel add under a genesis that declares nothing
       const p1 = await C.addKeylogKey({ genesis, keylog: [kl0], rootSigner: root, time: Tr, ustId: 'ust:20260628.1005' });
       const ksp = P.resolveKeys(genesis, p1.keylog);
@@ -734,9 +738,11 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
     // can terminally retire a key must not pick which one.
     const two = a1.keylog;
     check('rotate_refuses_when_the_subject_is_ambiguous',
-      await threw(() => C.rotateKeylog({ genesis: gR, keylog: two, rootSigner: root, time: Tr, ustId: 'ust:20260628.1004' })));
+      await threwWith(() => C.rotateKeylog({ genesis: gR, keylog: two, rootSigner: root, time: Tr, ustId: 'ust:20260628.1004' }),
+        /must NAME its subject/));
     check('rotate_refuses_a_key_id_that_is_not_active',
-      await threw(() => C.rotateKeylog({ genesis: gR, keylog: two, rootSigner: root, supersedesKeyId: 'sha256:' + '0'.repeat(64), time: Tr, ustId: 'ust:20260628.1004' })));
+      await threwWith(() => C.rotateKeylog({ genesis: gR, keylog: two, rootSigner: root, supersedesKeyId: 'sha256:' + '0'.repeat(64), time: Tr, ustId: 'ust:20260628.1004' }),
+        /is not an ACTIVE operational key/));
     const rn = await C.rotateKeylog({ genesis: gR, keylog: two, rootSigner: root, supersedesKeyId: K1.key_id, reason: 'retired', time: Tr, ustId: 'ust:20260628.1004' });
     const ksn = P.resolveKeys(gR, rn.keylog);
     check('rotate_supersedes_the_NAMED_key_not_the_last_added', rn.supersededKeyId === K1.key_id && P.keyId(rn.revokedPub) === K1.key_id);
