@@ -68,7 +68,12 @@ const glob = (p) => {
 };
 
 // ── evidence, read from each tool's own source
-const MARKER = /@assurance\s+(1a|1b|2|3|4)\s+canfail:(yes|no)([^\n]*)/;
+// `canfail:cited:<path>` — the control for a suite sometimes lives in ANOTHER step, and recording `no` there
+// understates: the conformance suite demonstrably can fail, because tools/vacuity-battery.mjs breaks the verifier on
+// purpose and requires registered checks to notice. So a citation is allowed and VERIFIED: the cited file must exist,
+// must itself declare `canfail:yes`, and may not itself cite — the chain terminates at a real leg, so this cannot
+// become a way to launder a missing control by pointing at something that also points elsewhere.
+const MARKER = /@assurance\s+(1a|1b|2|3|4)\s+canfail:(yes|no|cited:[\w./-]+)([^\n]*)/;
 // "external" = the CASES are not authored here. A subprocess or the network qualifies; so does pseudorandomness,
 // which is why a fuzzer belongs in this row — the inputs are generated, not chosen by whoever wrote the file.
 const EXTERNAL = /execFileSync\(|execSync\(|fetch\(|\bspawn\b|Math\.random|randomBytes|randomInt/;
@@ -108,6 +113,12 @@ for (const st of steps) {
     graded.push({ step: st.name, rank: 1, canfail: true, files: [] });
     continue;
   }
+  // STEP-LEVEL evidence, read from the command rather than declared: a step that REGENERATES an artifact and then
+  // `git diff --exit-code`s it against the committed one can fail BY CONSTRUCTION — change the source and the diff is
+  // non-empty. That is a stronger control than any leg a file could carry about itself, and it is visible in ci.yml,
+  // so it is derived rather than claimed. Without this, `model-lockstep` sat in the weakest quadrant while its whole
+  // mechanism is a regenerate-and-diff.
+  const structural = /git diff --exit-code/.test(expand(st.run));
   let worst = 0, anyFail = true;
   for (const f of files) {
     let src;
@@ -130,10 +141,21 @@ for (const st of steps) {
     if (RANK[g] <= 3 && ROSTER.test(src)) check(/literal-ok:/.test(tail),
       `${f} claims ${g} and carries a top-level literal roster of 3+ strings. Under the weaker-side rule that roster IS its domain unless stated otherwise: add \`literal-ok:<why this literal is not the domain>\` to the marker.`);
     if (cf === 'yes') check(CANFAIL.test(src), `${f} declares canfail:yes and carries no leg that proves it — no negative control, no blindness probe, no \`check(!…)\``);
+    if (cf.startsWith('cited:')) {
+      const target = cf.slice(6);
+      let tsrc = null;
+      try { tsrc = U(target); } catch { /* named below */ }
+      check(!!tsrc, `${f} cites ${target} as its control and that file does not exist`);
+      if (tsrc) {
+        const tm = MARKER.exec(tsrc);
+        check(!!tm && tm[2] === 'yes', `${f} cites ${target} as its control, and ${target} does not itself declare canfail:yes — a citation must terminate at a real leg`);
+        check(CANFAIL.test(tsrc), `${f} cites ${target}, which carries no leg proving it can fail either`);
+      }
+    }
     worst = Math.max(worst, RANK[g]);
-    if (cf === 'no') anyFail = false;
+    if (cf === 'no') anyFail = false;   // a citation counts as declared: it was verified above
   }
-  graded.push({ step: st.name, rank: worst, canfail: anyFail, files });
+  graded.push({ step: st.name, rank: worst, canfail: anyFail || structural, files });
 }
 
 // ── the distribution, and the quadrant that matters: domain from memory AND nothing proving the gate can fail

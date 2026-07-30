@@ -288,6 +288,22 @@
       "test": {
         "excluded": "The test layer is three controls run against a synthetic line so they cannot drift with the prose they guard: a bare word must count, a qualified one must not, an absent one must not. Verified by replacing the qualifier with a catch-all, which makes every use look qualified, and they fire. They run as npm run test:ambiguous-terms, not as conformance checks, which cover the verifier only."
       }
+    },
+    {
+      "round": 93,
+      "math": {
+        "excluded": "This round changes what counts as evidence that OUR gates can fail. The formal model states what a verifier may conclude from a document; where a negative control lives is a property of our workflow, and model prose written to satisfy a gate is the patch this repo rejects."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. An independent implementation owes nothing about how we evidence our own controls."
+      },
+      "code": "tools/assurance-map-gate.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. The artifacts here are marker lines and a workflow command; the adversary the citations point AT is the mutation applicator, which is itself the vector-adjacent mechanism and already registered."
+      },
+      "test": {
+        "excluded": "The test layer is three controls, each run: a citation to a file that does not exist fails, a citation to a file that itself cites fails, and removing `git diff --exit-code` from a script puts its step back in the weakest quadrant. They run as npm run test:assurance-map, not as conformance checks, which cover the verifier only."
+      }
     }
   ],
   "first_accounted_round": 76,

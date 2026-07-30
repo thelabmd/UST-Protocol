@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// @assurance 2 canfail:no — byte-vector corpus regenerated and diffed against the committed one
+// @assurance 2 canfail:cited:tools/vacuity-battery.mjs — byte-vector corpus regenerated and diffed; the battery mutates reference-checker.mjs and requires the corpus to notice
 // Reference-checker vectors — the checker ACCEPTS a genuine corroborated proof, and every past P0 is either an
 // UNBUILDABLE term or a structured reject. An UNTRUSTED prover (this file) proposes packages; check_C is the oracle.
 import * as P from './index.mjs';

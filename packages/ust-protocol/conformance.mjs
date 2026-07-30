@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// @assurance 4 canfail:yes — our checks over our vectors; the vacuity battery is what makes them non-empty
+// @assurance 4 canfail:cited:tools/vacuity-battery.mjs — our checks over our vectors; the battery breaks the verifier on purpose and requires registered checks to notice (13 of 66 proven, residual pinned there)
 // Conformance runner (rc.2): every primitive vector + every negative class verified against ust-protocol.
 // Negatives are CONSTRUCTED from the live impl (not skipped), so this is a real pass/fail. HIGH/TOP built inline.
 import * as P from './index.mjs';
