@@ -192,6 +192,22 @@
       "test": {
         "excluded": "The test layer is spec-code-sync's three MEASURED comparisons — results, completeness and forkChoiceResults against actual code usage — plus the negative control they already carry: a set that drifts fails by name. They run as npm run test:spec-sync, not as conformance checks, which cover the verifier only. A conformance check name was written here first, copied from round 79 to satisfy the layer; the gate accepted it because the name exists, which is precisely the accounting-from-memory failure this registry was built to stop."
       }
+    },
+    {
+      "round": 87,
+      "math": {
+        "excluded": "This round records the trajectory of our own assurance machinery. The formal model states what a verifier may conclude from a transcript; how many of OUR gates are hand-typed this week is a property of no document, and model prose written to satisfy a gate is the patch this repo rejects."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. An implementation conforming to UST owes nothing about how we track our own CI over time."
+      },
+      "code": "tools/assurance-map-gate.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. The artifact here is a ledger of counts over the workflow file; no transcript and no verdict is involved, so a vector could only restate a check that runs from the files it counts."
+      },
+      "test": {
+        "excluded": "The test layer is the verification leg itself, which is the whole mechanism rather than an addition to it: a plain run recomputes the distribution and fails if the last recorded row disagrees, so a hand-edited row and an unrecorded grade move both fail. It runs as npm run test:assurance-map, not as a conformance check, which covers the verifier only."
+      }
     }
   ],
   "first_accounted_round": 76,

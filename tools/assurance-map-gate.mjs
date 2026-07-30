@@ -31,7 +31,7 @@
 // `2` truthfully about the extraction while the literal is the real domain — so grade ≤2 plus a literal roster
 // demands an explicit `literal-ok:<reason>`, which forces the author to look at it rather than proving anything.
 // What this gate does prove: no step is UNGRADED, and no step claims a strength its code cannot support.
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, writeFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
 
@@ -137,6 +137,41 @@ for (const st of steps) {
 const dist = {};
 for (const g of graded) dist[g.rank] = (dist[g.rank] ?? 0) + 1;
 const quadrant = graded.filter((g) => g.rank >= 4 && !g.canfail);
+
+// ── THE LEDGER. The distribution was computed every run and thrown away, so there was no trajectory: the quadrant
+// could be claimed to be shrinking and nothing showed it. Rows carry ONLY computed numbers — no date and no commit,
+// because git already knows when each row landed and a timestamp would make a re-run differ from itself. Runs-to-green
+// is deliberately absent: it lives in the CI run history, which is an external generator, and copying it into a file
+// I maintain would turn a measured fact into a reported one.
+//
+// The gate WRITES it with --record and VERIFIES it otherwise: a plain run asserts the last row equals a fresh
+// computation, so a hand-edited row, or a grade that moved without being recorded, fails. Same shape as diarium.md
+// against its store — the file is a view, the computation is the source.
+const LEDGER = 'tools/assurance-ledger.jsonl';
+const row = { steps: graded.length, '1a': dist[1] ?? 0, '1b': dist[2] ?? 0, '2': dist[3] ?? 0, '3': dist[4] ?? 0,
+  '4': dist[5] ?? 0, canfail: graded.filter((g) => g.canfail).length,
+  quadrant: quadrant.map((q) => q.step).sort() };
+const rows = existsSync(ROOT + LEDGER)
+  ? U(LEDGER).split('\n').filter(Boolean).map((l) => JSON.parse(l)) : [];
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+if (process.argv.includes('--record')) {
+  if (rows.length && same(rows[rows.length - 1], row)) {
+    console.log(`\n  assurance ledger   nothing to record — the distribution is unchanged (${rows.length} row(s))`);
+  } else {
+    writeFileSync(ROOT + LEDGER, rows.concat([row]).map((r) => JSON.stringify(r)).join('\n') + '\n');
+    console.log(`\n  assurance ledger   row ${rows.length + 1} recorded — quadrant ${row.quadrant.length}, hand-typed ${row['3']}`);
+  }
+  process.exit(0);
+}
+check(rows.length > 0, `${LEDGER} has no rows — record the first with \`node tools/assurance-map-gate.mjs --record\``);
+if (rows.length) check(same(rows[rows.length - 1], row),
+  `${LEDGER}'s last row disagrees with a fresh computation. A grade moved without being recorded, or the row was edited by hand — record it: \`node tools/assurance-map-gate.mjs --record\``);
+// the trajectory must be able to be read, not only written
+if (rows.length > 1) {
+  const first = rows[0], last = rows[rows.length - 1];
+  console.log(`  ↘  ledger: ${rows.length} rows · hand-typed ${first['3']} → ${last['3']} · quadrant ${first.quadrant.length} → ${last.quadrant.length}`);
+}
 
 check(graded.length === steps.length, 'a step was dropped between parsing and grading');
 check(!graded.some((g) => g.rank === 0), 'a step graded 0 — the rank never got assigned');
