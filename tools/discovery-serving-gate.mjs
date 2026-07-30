@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// @assurance 3 canfail:yes — ATTEST_EXEMPT is a hand-typed exemption list
+// @assurance 2 canfail:yes literal-ok:ATTEST_EXEMPT is an EXEMPTION that must cite its tracking issue, not the domain — DISCOVERY_ARTIFACTS is imported from the CLI and the produced set is scanned from it
 // Discovery SERVING gate — the relation nothing checked until 2026-07-27: an artifact a command PRODUCES must have a
 // path that SERVES it, and that path must exist on EVERY road to production.
 //
@@ -89,6 +89,10 @@ check(routed.length === DISCOVERY_ARTIFACTS.length, `the API road created ${rout
 // §20.1 probe. That is a real hole, not a decision — filed as #91, and listed here so the boundary is VISIBLE.
 // When the probe lands, delete this line and the gate tightens by itself.
 const ATTEST_EXEMPT = { witness: 'no §20.1 probe yet — tracked in #91; served by the adapter but unattestable today' };
+// An exemption is where an unattestable artifact would hide, so it may not be added SILENTLY: each entry must cite the
+// issue or spec section that makes it legal. A prose reason can be written for anything; a reference cannot.
+for (const [k, why] of Object.entries(ATTEST_EXEMPT))
+  check(/#\d+|§\d/.test(why) && why.length >= 40, `ATTEST_EXEMPT['${k}'] must cite the issue or spec section that makes it legal — an exemption without one is an unattested artifact with a sentence attached`);
 // attestDiscovery returns early when (1) fails — "nothing downstream is meaningful without it" — so the harness must
 // actually serve a verifying genesis, or every later probe is unreached and the leg measures the early return.
 const probeIds = [];

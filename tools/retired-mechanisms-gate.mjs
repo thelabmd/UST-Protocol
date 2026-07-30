@@ -80,6 +80,9 @@ for (const r of RETIRED) {
   const why = CODE_EXEMPT[r.id];
   if (hits && !why) failures.push(`[${r.id}] appears ${hits}× in SHIPPED CODE with comments stripped — retired in ${r.retiredIn}. A retired mechanism may be remembered in a comment; it may not be present in code that runs.`);
   if (hits && why && why.length < 60) failures.push(`[${r.id}] CODE_EXEMPT reason is ${why.length} chars — under 60 is a placeholder, not a decision`);
+  // an exemption may not be added SILENTLY: it must cite what covers the retirement instead — a check name, an
+  // issue or a spec section. A prose reason can be written for anything; a reference cannot (round 102).
+  if (hits && why && !/#\d+|§\d|"#\d|check/i.test(why)) failures.push(`[${r.id}] CODE_EXEMPT must NAME what covers the retirement instead — a check, an issue or a spec section`);
   if (!hits && why) failures.push(`[${r.id}] carries a CODE_EXEMPT and no longer appears in shipped code — remove the exemption, it now reads as a live boundary that is gone`);
 }
 // the code leg must be able to FAIL, and the roster must not be empty

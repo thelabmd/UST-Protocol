@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// @assurance 3 canfail:yes — model sections are computed, but the exclusions are a pinned registry: WHICH section is legitimately unbound is a judgement, not a derivation
+// @assurance 2 canfail:yes literal-ok:the EXCLUSIONS live in the model itself as `**Binding: none|pending — …**` markers drawn from a CLOSED reason set, and `pending` without a tracker reference already fails, so an exclusion cannot be invented here — the sections are computed from the document and EXPECTED_SECTIONS is an exact-equality pin that fails when wrong rather than a bound that tolerates more
 // MODEL-DOMAIN TOTALITY GATE — the missing DOMAIN of the model↔code lockstep.
 //
 // Every existing gate keys on a population something DELIBERATELY joined:

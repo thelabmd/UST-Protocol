@@ -26,6 +26,16 @@
 // never a lie, and forcing an upgrade would make the gate argue for stronger claims, which is the wrong direction
 // for anything called assurance.
 //
+// WHAT A LITERAL IS, because "hand-typed" was doing four jobs and grading them alike (round 102). The test is not
+// whether a literal is present but whether a WRONG VALUE of it lets a defect through:
+//   · a DOMAIN — the set that gets checked. A wrong entry means something is not checked. Grade 3.
+//   · an EXEMPTION — what is excused. A wrong entry lets a real case pass, so it earns 2 ONLY when it cannot be added
+//     silently: each entry must cite the issue or spec section that makes it legal, and a citation is checkable.
+//   · an ANNOTATION — text that does not affect what passes. A wrong reason misleads a reader and hides nothing. 2.
+//   · a RATCHET — a residual bound that can be LOOSENED to tolerate more. Grade 3, always: `PINNED_UNPROVEN = 54`
+//     raised to 60 tolerates six more unproven checks, and no citation rule can fix a number that means "how much we
+//     are still willing to miss".
+//
 // HONEST LIMIT, stated so the number is not read as more than it is: a declaration wrong in a way the evidence
 // does not contradict still passes. A file that both extracts from source AND carries a literal roster can claim
 // `2` truthfully about the extraction while the literal is the real domain — so grade ≤2 plus a literal roster

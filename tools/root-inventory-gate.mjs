@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// @assurance 3 canfail:yes — git lists the files, but DECLARED is a hand-typed map — the weaker side
+// @assurance 1a canfail:yes literal-ok:DECLARED s VALUES are annotations that gate nothing — the SET comes from `git ls-files`, an answer no one can fake inside this gate, and it is checked in both directions so an undeclared file and a stale declaration both fail
 // Root INVENTORY gate — the top level of a public protocol repository is enumerated, not accumulated.
 //
 // MEASURED, 2026-07-28: two files the owner did not recognise were sitting in the root — `wdir.json` and `gm.json`.

@@ -432,6 +432,22 @@
       "test": {
         "excluded": "The test layer is the control, run: a self-check conditioning on `corroborated` is caught, which was silently legal before this round, plus two legs asserting the ladder derivation is in use and rejects a rung that does not exist. They run as npm run test:ceremony, not as conformance checks, which cover the verifier only."
       }
+    },
+    {
+      "round": 102,
+      "math": {
+        "excluded": "This round defines what kind of thing a hand-typed literal is in OUR gates and regrades three of them. The formal model states what a verifier may conclude from a transcript; the taxonomy of our own tooling has no term in it, and writing one to satisfy a gate is the patch this repo rejects."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. The exclusion markers model-domain reads are already normative in the formal model and unchanged."
+      },
+      "code": "tools/assurance-map-gate.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. A grading criterion for our own gates produces no document and changes no verdict."
+      },
+      "test": {
+        "excluded": "The test layer is the citation control, run: an ATTEST_EXEMPT reason that drops its issue reference fails. The regrades themselves are checked continuously by the assurance map, which refuses a declaration its code cannot support. They run as npm run test:serving and npm run test:assurance-map, not as conformance checks, which cover the verifier only."
+      }
     }
   ],
   "first_accounted_round": 76,
