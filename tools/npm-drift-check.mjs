@@ -54,6 +54,53 @@ for (const ws of workspaces) {
   } finally { rmSync(tmp, { recursive: true, force: true }); }
 }
 
+// ── A DIST-TAG IS A POINTER, AND WE GATED ONLY WHAT IT POINTS AT.
+// MEASURED 2026-07-30, after the owner noticed the tags looked odd: `ust-protocol@next` resolved to rc.36 — a
+// version THIS REPO ITSELF deprecated as BROKEN, with a message saying it cannot be imported — and `npm i
+// ust-protocol@next` duly failed with ERR_MODULE_NOT_FOUND. Worse, `npm i ust-protocol@rc` is the install command
+// printed in that package's own README, and `rc` pointed at rc.22, nineteen versions and every key-handling round
+// behind. Five more packages carried the same shape.
+//
+// The byte-diff above proves the ARTIFACT under a version label is immutable. It says nothing about which label a
+// stranger actually resolves, and a tag is the only thing most people ever type. So: every tag of every package is
+// enumerated from the registry and must point at the CURRENT published version, and never at a version we have
+// disowned. A tag that should differ must say why, here, in the file.
+const TAG_EXEMPT = {};   // `<pkg>@<tag>` → why it legitimately points elsewhere. Empty: all tags track the release.
+for (const [name, st] of pubState) {
+  let tags, deprecated = {};
+  try { tags = JSON.parse(execSync(`npm view ${name} dist-tags --json`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })); }
+  catch (e) { drift++; console.error(`  ✗ ${name}: dist-tags UNREADABLE — a pointer that cannot be inspected cannot be trusted, failing closed: ${String(e.message).split('\n')[0]}`); continue; }
+  const entries = Object.entries(tags ?? {});
+  if (!entries.length) { drift++; console.error(`  ✗ ${name}: the registry reports NO dist-tags — the enumeration has gone blind and this leg would pass vacuously`); continue; }
+  for (const [tag, ver] of entries) {
+    const key = `${name}@${tag}`;
+    // a version WE disowned must never be reachable by a name someone types
+    let dep = '';
+    try { dep = execSync(`npm view ${name}@${ver} deprecated`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(); } catch { /* absent ⇒ not deprecated */ }
+    if (dep) { drift++; console.error(`  ✗ ${key} → ${ver}, which is DEPRECATED: "${dep.slice(0, 90)}…" — anyone typing this tag installs a version we disowned`); continue; }
+    if (!st.published) { console.log(`  ℹ  ${key} → ${ver} (repo is ahead; the tag still points at a live version)`); continue; }
+    if (ver === st.version) { console.log(`  ✓ ${key} → ${ver}`); continue; }
+    const why = (TAG_EXEMPT[key] ?? '').trim();
+    if (why.length >= 60) { console.log(`  ℹ  ${key} → ${ver}, declared: ${why.slice(0, 70)}…`); continue; }
+    drift++;
+    console.error(`  ✗ ${key} → ${ver} but the released version is ${st.version} — a stranger typing \`npm i ${name}@${tag}\` gets neither what we ship nor what we test. Move it, or declare in TAG_EXEMPT why it points elsewhere.`);
+  }
+}
+
+// CONTROL for the leg above. The honest control would move a tag to a stale version and watch this go red — and it
+// is NOT run, because for its duration a stranger typing that tag would install the wrong thing. So the mechanism is
+// controlled instead, against a REAL external datum rather than a synthetic one: rc.36 is deprecated on the registry
+// as BROKEN, and the detector must see it. If that probe ever comes back empty, either the deprecation was undone or
+// this leg has gone blind — both are reasons to stop, and neither is silent.
+{
+  let dep36 = '';
+  try { dep36 = execSync('npm view ust-protocol@1.0.0-rc.36 deprecated', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(); } catch { /* leave empty ⇒ fails below */ }
+  if (!dep36) { drift++; console.error('  ✗ CONTROL: ust-protocol@1.0.0-rc.36 is deprecated on npm and the probe reports nothing — the deprecation leg cannot fire, so every tag above passed for free'); }
+  else console.log('  ✓ CONTROL: the deprecation probe sees a really-deprecated version');
+  const mismatch = '1.0.0-rc.1' !== '1.0.0-rc.2';
+  if (!mismatch) { drift++; console.error('  ✗ CONTROL: the version comparison accepts two different versions as equal'); }
+}
+
 // ── the version LINE's status marker must match the registry (round 77). A hand-written marker DRIFTS: the heading
 // `## rc.38 line — published 2026-07-28` stood while rc.39 was published too and carried nothing, so the mark read
 // as a distinction that did not exist. Published is the SILENT default — every line reaches it. The OPEN line is the

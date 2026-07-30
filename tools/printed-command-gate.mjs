@@ -13,7 +13,7 @@
 //
 // So: every command string the tool prints is extracted and checked against the dispatch table it will actually be
 // dispatched through, and a subcommand that requires a road argument must carry one.
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 
 const SRC = readFileSync(new URL('../packages/ust-cli/index.mjs', import.meta.url), 'utf8');
 const fail = []; let pass = 0;
@@ -114,6 +114,31 @@ for (const t of TOOLS) check(MCP_README.includes(t),
 for (const t of [...MCP_README.matchAll(/^\| `(ust_\w+)` \|/gm)].map((m) => m[1]))
   check(TOOLS.has(t), `packages/ust-mcp/README.md lists \`${t}\` as a tool and the server registers no such tool`);
 check([...MCP_README.matchAll(/^\| `(ust_\w+)` \|/gm)].length >= 10, 'the MCP README tool table yielded fewer than ten rows — the reverse leg has gone blind');
+
+// ── A PACKAGE README MAY NOT USE A NOTATION IT NEVER EXPLAINS.
+// The owner's rule, given twice: `attest the §20.1 serving contract` teaches a first-time reader nothing — on npm it
+// is not even a link, just characters. But the first cut of this leg banned `§` outright and immediately fired on
+// `ust-light`, whose page opens with `The floor, in five rules (§ = spec/UST-1.0.md)` and then names every rule
+// before citing it. That page is doing exactly what the rule wants; the rule was written wider than the defect.
+//
+// So the checkable property is the honest one: a page that uses `§` must SAY what `§` points at, once, where a
+// reader meets it. And a bare `#123` has no place on an npm page at all — it renders as text and means nothing to
+// anyone outside this repository's issue tracker.
+const PKG_READMES = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).workspaces
+  .map((w) => `${w}/README.md`)
+  .filter((f) => { try { readFileSync(new URL('../' + f, import.meta.url)); return true; } catch { return false; } });
+check(PKG_READMES.length >= 6, `only ${PKG_READMES.length} package READMEs found — the sweep has gone blind`);
+for (const f of PKG_READMES) {
+  const text = readFileSync(new URL('../' + f, import.meta.url), 'utf8');
+  if (/§/.test(text)) check(/§\s*=|§[^\s]*\s*(?:of|in)\s|spec\/UST-1\.0\.md/.test(text),
+    `${f} uses \`§\` and never says what it points at. A reader on npm sees characters, not a link — bind it once (\`§ = spec/UST-1.0.md\`) or describe the property instead.`);
+  for (const m of text.matchAll(/(?<![\w/])#\d{2,4}\b/g))
+    check(false, `${f} cites \`${m[0]}\` — an issue number, which renders as plain text on npm and means nothing to a reader outside this tracker. Say what the finding WAS.`);
+}
+// CONTROL — the binding must be recognised, and its absence must fire
+check(/§\s*=|§[^\s]*\s*(?:of|in)\s|spec\/UST-1\.0\.md/.test('five rules (§ = spec/UST-1.0.md)')
+  && !/§\s*=|§[^\s]*\s*(?:of|in)\s|spec\/UST-1\.0\.md/.test('attest the §20.1 serving contract'),
+  'CONTROL: the notation-binding probe does not tell an explained § from a bare one');
 
 console.log(`\n  printed commands   PASS ${pass}   FAIL ${fail.length}   (${COMMANDS.size} subcommands · ${checked} printed instructions checked)`);
 if (fail.length) { fail.forEach((f) => console.log('    ✗ ' + f)); process.exit(1); }

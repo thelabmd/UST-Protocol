@@ -636,6 +636,22 @@
       "test": {
         "excluded": "The controls ran and are recorded rather than committed: removing the required road from the screen line makes the gate fail by name, and emptying either README fails the enumeration in the direction that names the missing command or tool. Committing a broken screen to freeze the control would ship a wrong first impression, which is the thing this round exists to fix."
       }
+    },
+    {
+      "round": 115,
+      "math": {
+        "excluded": "Which npm tag resolves to which of OUR builds, and whether OUR audit invitation states measured numbers, are properties of our distribution and our documentation. The formal model states obligations on producers and verifiers and is unchanged by both."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. A dist-tag is a registry pointer and binds nobody implementing UST."
+      },
+      "code": "tools/audit-claims-gate.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. A registry pointer and a number in a markdown file produce no document and change no verdict; the artefacts are the two enumeration legs, one over the registry's tags and one over the claims in the section."
+      },
+      "test": {
+        "excluded": "The live control for the tag leg is deliberately NOT run and says so in the file: moving a tag to a stale version would serve a stranger the wrong build for the duration. The mechanism is controlled instead against a real external datum — rc.36's deprecation must remain visible to the probe — and the claims gate is controlled by its own blind-domain floor plus an explicit refusal of the retired 32/32 string."
+      }
     }
   ],
   "first_accounted_round": 76,

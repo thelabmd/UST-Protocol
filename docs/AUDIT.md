@@ -36,7 +36,7 @@ We have already done extensive **self**-review (§6). We are buying the thing se
 
 ```
 npm     npm i ust-protocol@rc          # the reference verifier + producer (Apache-2.0, zero-dep, node:crypto)
-        npx -y @ust-protocol/mcp@rc   # the MCP server (11 tools)
+        npx -y @ust-protocol/mcp@rc   # the MCP server (14 tools)
         npm i @ust-protocol/web-signer@rc  # the WebCrypto browser signer (producer side)
 git     github.com/thelabmd/UST-Protocol   # monorepo — everything below in one clone
           spec/UST-1.0.md              # the normative specification (this is the source of truth)
@@ -139,10 +139,17 @@ residual risk, and what would you require before a `1.0.0` final tag?
 ## 9. What we have already done (so you go deeper, not sideways)
 
 - **Six adversarial red-team passes** on the v1.0 final form + four on the v0.29 predecessor — all self-review.
-- **26 deterministic conformance vectors** plus a behavioral conformance runner (56 checks total), and the reference impl passes them (one known note: duplicate-key
+- **128 deterministic conformance vectors** plus a behavioral conformance runner (**748 registered checks**), and the reference impl passes them (one known note: duplicate-key
   rejection needs a raw-bytes JSON parser — `JSON.parse` collapses dups — a harness limitation, not an impl flaw).
-- **Two independent implementations** (`ust-protocol` node + `ust-verify-web` clean-room WebCrypto) cross-checked: **32/32 agree, 0 divergence**.
-- **Twenty+ diverse-model adversarial audit rounds folded in STRUCTURALLY** (reference-checker `rev3 → rev17`): each round independently reproduces an external model's findings, adjudicates each against the formal model, and fixes the whole class — not point-wise. The per-round rev-ladder is in [`CHANGELOG.md`](../CHANGELOG.md).
+- **Two independent implementations** (`ust-protocol` node + a clean-room WebCrypto verifier in `docs/`) run
+  side by side on every case of the parity suite and must agree on the verdict, including the tier: **13 cases,
+  0 divergences** as of rev64. The previous wording claimed 32/32; that number came from an older harness and no
+  longer corresponded to anything this tree runs, so it is replaced by what `npm run test:docs-parity` prints
+  today. A count of independent agreements is the one number an auditor weighs most, and it was overstated.
+- **113 recorded rounds** in `CHANGELOG.md`, carrying the reference-checker from `rev3` to `rev64`. The adversarial
+  ones are folded in STRUCTURALLY rather than patched: each round that found something states the MECHANISM, not
+  the instance, and closes it with a check that fails on the next instance of the same class. The round count and
+  the revision range are both measurable from this tree; "how adversarial" is a judgement and is left to you.
 - **Honest disclosure:** all of the above is one team's work → correlated blind spots. That is precisely the gap
   an external adversarial review closes. Please assume the design is wrong somewhere and find it.
 ```

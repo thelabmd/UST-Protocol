@@ -51,10 +51,22 @@ have existed by a real moment. The tier is part of the answer, so you can tell a
 confirmed one — which is the whole difference between a check and a reassurance.
 
 ```bash
-npm i -g @ust-protocol/cli               # installs the `ust` command
-npx @ust-protocol/cli verify doc.json    # or one-shot, no install
-ust                                      # the command surface, grouped by what it does to you
+npx -y @ust-protocol/cli                 # run it, no install — the command surface
+npx -y @ust-protocol/cli verify doc.json # verify something straight away
 ```
+
+Install it permanently if you use it often:
+
+```bash
+npm i -g @ust-protocol/cli               # installs the `ust` command
+ust                                      # same surface, shorter to type
+```
+
+> `npm i -g` writes into node's global prefix, and on a stock macOS or Linux node that directory belongs to root —
+> the install then fails with `EACCES: permission denied`. Do **not** fix it with `sudo`: packages installed as root
+> leave files your user cannot update later. Point the prefix at your own home once instead —
+> `npm config set prefix ~/.npm-global` and add `~/.npm-global/bin` to your `PATH` — or just keep using `npx`, which
+> needs no install at all.
 
 ## Commands
 
@@ -157,16 +169,16 @@ The serving contract is infrastructure-agnostic (properties, not vendors). The c
 |---|---|---|
 | `bronze` | software | plain b64 (quick floor) |
 | `silver` | software | **passphrase-encrypted** (the standard operator ceremony) |
-| `gold` | **hardware** (pkcs11 / air-gapped) | — this CLI cannot drive a hardware signer yet and **refuses honestly** instead of pretending; a silver root upgrades to hardware later via a §12.1 supersession |
+| `gold` | **hardware** (pkcs11 / air-gapped) | — this CLI cannot drive a hardware signer yet and **refuses honestly** instead of pretending; a silver root can be superseded by a hardware one later, without invalidating anything already signed |
 
 Other flags: `--max-partitions N` (signed capacity — bounds earned by ceremony) · `--witness url,url` (prepared at ceremony; execute later with `ust witness rekor`). Every option is also asked interactively — flags only preselect.
 
 ## `ust discovery` — attest any stack
 
-Four probes of the §20.1 serving contract, fail-closed, honest verdict:
+Four probes of what a publisher must SERVE for anyone to resolve their identity — fail-closed, honest verdict:
 
 ```
-✅ well-known verifies (§14) and matches the expected hash
+✅ the served genesis verifies on its own and matches the expected hash
 ✅ _ust TXT carries the same hash        (mismatch = FAILED, absence = NOT ATTESTED)
 ✅ query-robustness: a random unknown ?param returns byte-identical bytes
 ⬜ vendor-independence: every declared --mirror carries the same content_hash
