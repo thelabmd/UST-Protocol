@@ -240,6 +240,22 @@
       "test": {
         "excluded": "The test layer is the four controls, each run: a name that cannot exist must be absent from the live export set, the reverse detector must flag an unexported triaged name, a deliberately dead PRIMITIVES entry must fail, and a reason under the floor must fail. They run as npm run test:parity, not as conformance checks, which cover the verifier only."
       }
+    },
+    {
+      "round": 90,
+      "math": {
+        "excluded": "The display rule is about what a HUMAN is shown, not about what a verifier may conclude — a document's verdict is identical whether or not the renderer neutralizes format characters. The model states admissibility and verdicts; a rendering obligation has no term in it, which is why #73 was a surface gate from the start."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently and no verifier accepts or refuses differently. The A-label homograph guard this round PINS is already normative (§4.3a) — what changed is that our display gate now asserts its own scope premise instead of arguing it in a comment."
+      },
+      "code": "tools/display-safety-gate.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. The A-label refusal this round leans on is already covered by the identity-hardening vectors from #40; what is new is a gate reading that refusal to justify its own scope, which no vector can express."
+      },
+      "test": {
+        "excluded": "The test layer is three controls, each run: a synthetic DOM-writing file must fail until it carries the marker, the DOM-write detector must fire on a writer and not on inert text, and the premise leg must fire when the A-label guard is weakened — which is how the leg's own vacuity was found. They run as npm run test:display, not as conformance checks, which cover the verifier only."
+      }
     }
   ],
   "first_accounted_round": 76,
