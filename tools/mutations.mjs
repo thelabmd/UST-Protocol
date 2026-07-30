@@ -220,6 +220,28 @@ export const MUTATIONS = [
     gateName: 'new checker error code → spec-code-sync',
   },
   {
+    // AUDIT #114 — the OTS half of the same lesson. A disagreeing explorer is the ONLY thing standing between a
+    // forged block claim and finality, and the suite asserts exactly that. Break it and those assertions go true.
+    id: 'ots-explorer-conflict-ignored', gate: 'node packages/ust-ots-verify/index.test.mjs',
+    why: 'the §17 explorer-conflict rule. Ignored, a single lying explorer is enough to call a claim anchored.',
+    file: 'packages/ust-ots-verify/index.mjs',
+    from: 'if (blk.merkle_root !== wantMerkle) { conflict = true; continue; }',
+    to: 'if (blk.merkle_root !== wantMerkle) { continue; }',
+    observe: [],
+  },
+  {
+    // AUDIT #114, second look. The connector suites had no can-fail demonstration at all, and my first answer was to
+    // WIDEN the vocabulary that looks for one — a gate refused my claim, so I moved the gate. The two SSRF suites
+    // already show the right shape: they do not ARGUE they can fail, they CITE a mutant that makes them fail. This is
+    // that mutant for Rekor. Break the tree-head signature check and the suite's `final: false` assertions go true.
+    id: 'rekor-treehead-signature-unchecked', gate: 'node packages/ust-rekor-verify/index.test.mjs',
+    why: "the LOG's signature over its tree head. Unchecked, ANY checkpoint reads as signed by Rekor, which is the one thing that binds a root to the log rather than to itself.",
+    file: 'packages/ust-rekor-verify/index.mjs',
+    from: "if (edVerify('sha256', body, pubKey, sig.subarray(4))) return true;",
+    to: "if (edVerify('sha256', body, pubKey, sig.subarray(4)) || true) return true;",
+    observe: [],
+  },
+  {
     // AUDIT #114 MEASURED 2026-07-30: the assurance roster silently held 57 of 58 steps for as long as it existed —
     // `connector receipts (OTS + Rekor)` carries a comment between `- name:` and `run:`, and the old parser required
     // them adjacent. It vanished, and the gate reported the remaining 57 as "every CI step". Nothing in the corpus

@@ -59,6 +59,7 @@ const NAME = { 1: '1a external generator', 2: '1b cross-implementation', 3: '2 d
 
 // ── steps whose command runs no file of ours, so there is nowhere to put a marker. Each needs its reason HERE.
 const NO_FILE = {
+  'optional peer for the REAL substrate path': 'installs a peer and runs no file of ours, so there is nowhere to put a marker. It carries no claim of its own: what it enables is graded downstream, where drift-guards injects into the OTS connector and requires that suite to go red. A step that only makes another step possible is graded there, not here.',
   'dependency audit': '`npm audit` runs no file of ours: the domain is the public advisory database, which nobody here authored or can edit. Grade 1a by construction — there is no roster to drift.',
 };
 
@@ -125,19 +126,14 @@ const REGENERATES = /writeFileSync|--check|git diff|regenerat/i;
 // A leg LABELLED `CONTROL` is the convention four gates now use, and the detector did not know it: round 92's
 // controls were real, ran, and were reported as absent. The label is structural enough to count — it is the text a
 // check prints when it fails — but it is still a word, which is why this axis is declared and not inferred.
-// AUDIT #114 — this vocabulary was written when the roster held GATES only, and it shows: `check(!` and the word
-// CONTROL are how a tool of ours proves its leg. A node:test suite proves the same thing by ASSERTING A REFUSAL —
-// `final` comes back false, the call rejects, the verdict is INVALID. When the roster gained the connector-receipt
-// step (it had been dropped in silence, see the step parser above), two suites carrying four negative assertions
-// each were told they carried none. The added forms are deliberately narrow: an expected value that IS a refusal,
-// not merely any assertion that could go red — every assertion can go red, so that would grade nothing.
-const CANFAIL = /must be able to fail|able to FAIL|negative control|\bCONTROL\b|gone blind|vacuou|check\(!|assert\.(?:rejects|throws)\(|assert\.equal\([^)]*,\s*(?:false|'INVALID'|"INVALID")\)/i;
+// AUDIT #114 — I widened this vocabulary to `assert.rejects` / an asserted `false`, because two connector suites
+// carried no form it knew, and then REVERTED it: a gate refused my claim and my first move was to move the gate.
+// The two SSRF suites already show the right shape — they do not ARGUE they can fail, they CITE a mutant that makes
+// them fail. `ust-rekor-verify` now cites `rekor-treehead-signature-unchecked` the same way; `ust-ots-verify`
+// declares `no` and states why it cannot cite one. A vocabulary is a claim about prose; a mutant is a demonstration.
+const ROSTER = /^(?:const|export const) [A-Z][A-Z_0-9]{2,}\s*=\s*(?:\[|new Set\(\[)[^\]]*'[^']+'\s*,\s*'[^']+'\s*,\s*'/m;
+const CANFAIL = /must be able to fail|able to FAIL|negative control|\bCONTROL\b|gone blind|vacuou|check\(!/i;
 
-// CONTROL for the forms just added — a refusal must read as a leg and an ordinary assertion must not, or the
-// widening would grade every test file in the tree as carrying a negative control.
-check(CANFAIL.test("assert.equal(r.final, false)") && CANFAIL.test("await assert.rejects(fn)")
-  && !CANFAIL.test("assert.equal(r.final, true)") && !CANFAIL.test("assert.equal(n, 3)"),
-  'CONTROL: the can-fail detector does not tell an asserted REFUSAL from an ordinary assertion');const ROSTER = /^(?:const|export const) [A-Z][A-Z_0-9]{2,}\s*=\s*(?:\[|new Set\(\[)[^\]]*'[^']+'\s*,\s*'[^']+'\s*,\s*'/m;
 
 const graded = [];
 for (const st of steps) {

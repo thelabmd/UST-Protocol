@@ -588,6 +588,22 @@
       "test": {
         "excluded": "This layer resolves against vectors/conformance-checks.json, the roster of executed CONFORMANCE checks — and conformance exercises the verifier, not our workflow parser. The test is the corpus mutant `unreadable-ci-step` in tools/mutations.mjs, run by drift-guards, which injects a CI step whose command the roster cannot read and requires assurance-map to go red: 14 gated mutations became 15. Naming a conformance check here to satisfy the resolver is the round-86 patch this repository rejects."
       }
+    },
+    {
+      "round": 112,
+      "math": {
+        "excluded": "Whether a suite of ours DEMONSTRATES its can-fail leg or merely asserts one in prose is a property of our evidence discipline. The formal model states obligations on the verifier and is unchanged; nothing here alters what a document must satisfy."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. Where our CI installs an optional peer binds nobody implementing UST."
+      },
+      "code": "tools/assurance-map-gate.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. A reverted regex in one of our gates and a reordered workflow step produce no document and change no verdict; the two corpus mutants are the pinned artefacts instead."
+      },
+      "test": {
+        "excluded": "This layer resolves against vectors/conformance-checks.json, the roster of executed CONFORMANCE checks, and conformance exercises the verifier rather than our anchoring connectors. The tests are the corpus mutants `rekor-treehead-signature-unchecked` and `ots-explorer-conflict-ignored` in tools/mutations.mjs, run by drift-guards: 15 gated mutations became 17, and each makes the suite that cites it go red."
+      }
     }
   ],
   "first_accounted_round": 76,

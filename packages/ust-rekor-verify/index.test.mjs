@@ -1,5 +1,6 @@
-// @assurance 3 canfail:yes — a REAL rekor.sigstore.dev anchor, but CAPTURED: nothing re-fetches the signed tree head,
-// so the frozen fixture decides at run time. Not 1a — the bytes came from outside once and now live here.
+// @assurance 3 canfail:cited:packages/ust-protocol/drift-guards.test.mjs — a REAL rekor.sigstore.dev anchor, but
+// CAPTURED: nothing re-fetches the signed tree head, so the frozen fixture decides at run time. The leg is not
+// argued in prose — the corpus mutant `rekor-treehead-signature-unchecked` breaks the inclusion check and this suite goes red.
 // #69 Theme A1 regression: the anchor terminates at Rekor's SIGNED tree head, never a self-consistent
 // Merkle object. Uses a captured REAL rekor.sigstore.dev anchor (noosphere genesis) as an offline vector.
 import { test } from 'node:test';

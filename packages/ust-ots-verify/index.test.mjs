@@ -1,4 +1,7 @@
-// @assurance 3 canfail:yes — a REAL Bitcoin genesis .ots, but CAPTURED: the explorer is mocked and nothing re-fetches
+// @assurance 3 canfail:cited:packages/ust-protocol/drift-guards.test.mjs — a REAL Bitcoin genesis .ots, but
+// CAPTURED: the explorer is mocked and nothing re-fetches the block, so the frozen fixture decides at run time.
+// The leg is DEMONSTRATED, not argued: `ots-explorer-conflict-ignored` makes a lying explorer count and this
+// suite goes red. That required moving the peer install ahead of drift-guards — a skipped suite proves nothing.
 // the block, so at run time the frozen fixture in this tree is what decides. Not 1a — 1a means authored by nobody here.
 // #69 Theme A2 regression: finality REQUIRES the committed value to match the REAL Bitcoin block merkle root
 // AND >= minConfirmations. Offline: a captured real genesis .ots + a mock explorer serving the real block.

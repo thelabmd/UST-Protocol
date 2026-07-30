@@ -142,6 +142,10 @@
     {
       "round": 111,
       "no_recap": "Round 111 closed no issue — the audit round of #114, which stays open until the after-table is written and the delta is readable beside the before."
+    },
+    {
+      "round": 112,
+      "no_recap": "Round 112 closed no issue — it corrects round 111's own fix inside the already-closed #114, and a correction to a closed issue is a comment on it rather than a new recap."
     }
   ]
 }
