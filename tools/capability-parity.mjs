@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// @assurance 3 canfail:no — STANCE, CAPS and SURFACES are hand-typed literals
+// @assurance 3 canfail:yes — the CLASSIFICATION is hand-typed and a misclassified export still passes; the DOMAIN is live (every core export triaged, both directions)
 // Capability parity gate (UST-kdb) — the FORCING FUNCTION so a spec capability can NEVER silently lag a surface
 // (the UST-3dj class: an agent/CLI surface that resolves/verifies but quietly drops a capability the core added).
 //
@@ -93,7 +93,31 @@ const CAPS = {
 };
 
 // Internal primitives — not user-capability units (raw hash, encoders, error types, the registry itself).
-const PRIMITIVES = new Set(['VERSION', 'STABILITY', 'REFERENCE_CHECKER_VERSION', 'REFERENCE_CHECKER_RULES', 'REFERENCE_CHECKER_ERROR_CODES', 'RULE_CONTRACTS', 'H', 'Hbytes', 'edVerifyStrict', 'strictB64url', 'parseCadenceInt', 'UstInvalid', 'UstIndeterminate', 'REGISTRY', 'noFraudProof', 'admitUtf8', 'anyLoneSurrogate', 'admitDeep', 'snapshotBytes', 'registryDigest']);   // round-19 P1-01 — shared Unicode byte-admission leaf; round-27 (3) — admitDeep, THE input-boundary primitive (canon-transparent inert snapshot), exported so its transparency is testable; round-48 P0-01 — snapshotBytes, THE byte-admission door (exact native Uint8Array → immutable copy), shared by the kernel + the two resolvers
+// PRIMITIVES was a bare Set and therefore an UNJUSTIFIED ESCAPE HATCH: an export dropped in here vanishes from the
+// capability matrix and nothing asks why. Two of its twenty entries were MEASURED DEAD on 2026-07-30 — `noFraudProof`
+// and `REFERENCE_CHECKER_ERROR_CODES` name exports the core does not have — because COVERAGE was ONE-SIDED: it asked
+// that every export be triaged and never that every triaged name still exist. Same class as round 78's one-sided
+// role partition. So each entry now carries its reason, and the partition is checked in BOTH directions.
+const PRIMITIVES = {
+  VERSION: 'the wire/spec/revision triple a report stamps itself with — it describes the implementation, not something a consumer can DO',
+  STABILITY: 'per-rung stability labels the surfaces read; a property OF the capabilities rather than one of them',
+  REFERENCE_CHECKER_VERSION: 'the L1 build identity a conformance report must name — an instrument label, and naming the instrument is not a capability',
+  REFERENCE_CHECKER_RULES: 'the checker\'s own rule vocabulary, exported so gates ENUMERATE it from source instead of typing a copy',
+  RULE_CONTRACTS: 'the §14 decision-relation contracts, exported for the same reason: rule-lockstep reads them rather than restating them',
+  REGISTRY: 'the canonical string sets, exported so spec-code-sync can measure code usage AGAINST them rather than against a typed list',
+  registryDigest: 'the digest a verdict carries for attribution, derived FROM REGISTRY — a stamp on an answer, not an answer',
+  H: 'a domain-separated hash leaf used by EVERY capability; bucketing it under one would make that one capability\'s cell lie',
+  Hbytes: 'the byte-input twin of H, and the same argument: shared by every path, owned by none',
+  edVerifyStrict: 'the signature primitive underneath every verify path — shared by all of them, so it belongs to no single one',
+  strictB64url: 'the base64url admission leaf at the byte boundary; an input-admission primitive rather than a user-meaningful act',
+  parseCadenceInt: 'the canonical positive-integer-STRING leaf (§11.3) — an admission primitive that no surface exposes on its own',
+  admitUtf8: 'the shared Unicode byte-admission leaf (round-19 P1-01), reached by every canonicalisation rather than by one capability',
+  anyLoneSurrogate: 'the other half of that same admission leaf, exported so the refusal is testable from outside the kernel',
+  admitDeep: 'THE input-boundary primitive (canon-transparent inert snapshot, round-27), exported so its transparency can be tested',
+  snapshotBytes: 'THE byte-admission door (round-48 P0-01): exact native Uint8Array to immutable copy, shared by the kernel and both resolvers',
+  UstInvalid: 'a verdict CARRIER — a typed throw. A surface cannot expose it as a capability; it is the shape an answer arrives in',
+  UstIndeterminate: 'the other verdict carrier, and the same argument: it transports a verdict rather than being one',
+};
 
 // A connector exposes the substrate seam (verifyAnchor delegate + typed evidence emit), not core names.
 const connector = (X) => (cap) => ['anchor-verify', 'typed-evidence', 'substrate-registry'].includes(cap) && typeof X.substrateVerify !== 'undefined' && typeof X.toVerifiedEvidence === 'function';
@@ -128,9 +152,25 @@ const stanceOf = (s, cap) => SURFACES[s].full.includes(cap) ? 'full' : SURFACES[
 
 // (1) COVERAGE — every capability-bearing core export is triaged (in a CAP or a PRIMITIVE).
 const covered = new Set(Object.values(CAPS).flatMap((c) => c.core));
-const untriaged = Object.keys(P).filter((k) => !covered.has(k) && !PRIMITIVES.has(k));
+const untriaged = Object.keys(P).filter((k) => !covered.has(k) && !Object.hasOwn(PRIMITIVES, k));
+// ── the OTHER direction, which was missing and cost two dead entries: every TRIAGED name must still be a live
+// export. A triage list that outlives what it triaged reads as coverage while covering nothing.
+{
+  const live = new Set(Object.keys(P));
+  const deadPrim = Object.keys(PRIMITIVES).filter((n) => !live.has(n));
+  const deadCaps = [...new Set(capIds.flatMap((c) => CAPS[c].core.filter((n) => !live.has(n))))];
+  const thin = Object.entries(PRIMITIVES).filter(([, why]) => String(why).trim().length < MIN_REASON).map(([n]) => n);
+  if (deadPrim.length) { fail++; report.push(`  ✗ COVERAGE (reverse): PRIMITIVES names ${deadPrim.length} export(s) the core does not have: [${deadPrim.join(', ')}] — a triage list that outlives its subject reads as coverage`); }
+  if (deadCaps.length) { fail++; report.push(`  ✗ COVERAGE (reverse): CAPS names ${deadCaps.length} export(s) the core does not have: [${deadCaps.join(', ')}]`); }
+  if (thin.length) { fail++; report.push(`  ✗ PRIMITIVES reason under ${MIN_REASON} chars (a placeholder, not a decision): ${thin.join(', ')}`); }
+  if (!deadPrim.length && !deadCaps.length && !thin.length)
+    report.push(`  ✓ COVERAGE (reverse): every triaged name is a live export, and all ${Object.keys(PRIMITIVES).length} PRIMITIVES carry a stated reason`);
+  // CONTROLS — both directions must be able to fail, or neither is checking anything.
+  if (live.has('ghostExportThatCannotExist')) { fail++; report.push('  ✗ CONTROL: the live-export set accepts a name that cannot exist'); }
+  if (!Object.keys({ ...PRIMITIVES, ghostTriagedNameThatCannotExist: 'x' }).filter((n) => !live.has(n)).length) { fail++; report.push('  ✗ CONTROL: the reverse detector does not flag a triaged name that is not exported'); }
+}
 if (untriaged.length) { fail++; report.push(`  ✗ COVERAGE: ${untriaged.length} core export(s) not triaged — add to a CAP or PRIMITIVES: [${untriaged.join(', ')}]`); }
-else report.push(`  ✓ COVERAGE: all ${Object.keys(P).length} core exports triaged (${covered.size} in ${capIds.length} capabilities, ${PRIMITIVES.size} primitives)`);
+else report.push(`  ✓ COVERAGE: all ${Object.keys(P).length} core exports triaged (${covered.size} in ${capIds.length} capabilities, ${Object.keys(PRIMITIVES).length} primitives)`);
 
 // (2) NO PHANTOM — CAPS never names a core export that does not exist.
 const phantom = [...covered].filter((n) => !(n in P));

@@ -224,6 +224,22 @@
       "test": {
         "excluded": "The test layer is the two controls themselves, and both were run: a ghost name in the entry-point expectation breaks the comparison, and a raised corpus floor fails by name. They run as npm run test:primitive-parity, not as conformance checks, which cover the verifier only."
       }
+    },
+    {
+      "round": 89,
+      "math": {
+        "excluded": "A partition checked on one side is a shape this model already states for KEY ROLES (§F.5e.4, round 78), and the statement is general — the object here is our capability triage list, not a transcript. Restating the same rule about our own tooling would add a model sentence that no verifier can act on, which is the patch this repo rejects."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. The capability stance the spec derives is unchanged — what changed is whether OUR gate notices a triage entry whose subject is gone."
+      },
+      "code": "tools/capability-parity.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. The artifact here is a triage list over the core's export table; no transcript and no verdict is involved, and the export table is read live rather than fixtured."
+      },
+      "test": {
+        "excluded": "The test layer is the four controls, each run: a name that cannot exist must be absent from the live export set, the reverse detector must flag an unexported triaged name, a deliberately dead PRIMITIVES entry must fail, and a reason under the floor must fail. They run as npm run test:parity, not as conformance checks, which cover the verifier only."
+      }
     }
   ],
   "first_accounted_round": 76,

@@ -44,6 +44,10 @@
     {
       "round": 88,
       "no_recap": "Round 88 closed no issue — it is one step of #110's quadrant work, and #110 stays open. One closed issue, one entry, without conditions."
+    },
+    {
+      "round": 89,
+      "no_recap": "Round 89 closed no issue — one step of #110's quadrant work, and #110 stays open. One closed issue, one entry, without conditions."
     }
   ]
 }
