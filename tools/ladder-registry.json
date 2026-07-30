@@ -208,6 +208,22 @@
       "test": {
         "excluded": "The test layer is the verification leg itself, which is the whole mechanism rather than an addition to it: a plain run recomputes the distribution and fails if the last recorded row disagrees, so a hand-edited row and an unrecorded grade move both fail. It runs as npm run test:assurance-map, not as a conformance check, which covers the verifier only."
       }
+    },
+    {
+      "round": 88,
+      "math": {
+        "excluded": "This round adds negative controls to one of our gates and corrects the sentence describing where its weakness is. No admissibility rule, verdict or transition moved; the formal model describes what a verifier may conclude from bytes, not how strong our own tooling is."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. The clean-room parity requirement PORTING.md states is unchanged — what changed is whether our gate can be shown able to fail."
+      },
+      "code": "tools/primitive-parity-gate.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce, and the parity corpus already IS a set of inputs run through both implementations. A vector here would duplicate that corpus into a file without widening it, which is the appearance of coverage rather than coverage."
+      },
+      "test": {
+        "excluded": "The test layer is the two controls themselves, and both were run: a ghost name in the entry-point expectation breaks the comparison, and a raised corpus floor fails by name. They run as npm run test:primitive-parity, not as conformance checks, which cover the verifier only."
+      }
     }
   ],
   "first_accounted_round": 76,

@@ -40,6 +40,10 @@
     {
       "round": 87,
       "no_recap": "Round 87 closed no issue. The rule is one closed issue, one diary entry, without conditions — so a round that closes nothing gets no entry, and that is the record rather than an omission."
+    },
+    {
+      "round": 88,
+      "no_recap": "Round 88 closed no issue — it is one step of #110's quadrant work, and #110 stays open. One closed issue, one entry, without conditions."
     }
   ]
 }
