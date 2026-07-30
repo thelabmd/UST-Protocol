@@ -25,7 +25,14 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
-## rc.42 line — unpublished
+## rc.42 line
+
+**PUBLISHED 2026-07-30** — all eight packages at once: `ust-protocol` rc.42, `@ust-protocol/cli` rc.76, `mcp` rc.33,
+`web-signer` rc.5, `ust-light` rc.36, `ots-verify` rc.13, `rekor-verify` rc.8, `diarium` 0.2.1. **A README only
+reaches npm on publish**, and this line is where the package pages became true: the family title, the install line,
+the explanation for a reader arriving cold, and an example that is executed by a gate rather than trusted. The wire
+did not move — see the note below. Dist-tags `rc` and `next` were moved with them, since `@rc` is the install
+command printed on those very pages.
 
 Opened because rc.41 is PUBLISHED and a published version is immutable. What lands here is the self-audit pass
 turned on the repository itself — the gates run against the artifact a stranger installs rather than against a
