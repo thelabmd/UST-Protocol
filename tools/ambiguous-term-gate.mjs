@@ -40,6 +40,7 @@
 // They moved once, when the gate's domain grew from one document to two — a domain change, stated here rather
 // than quietly absorbed, because raising a pin to silence a gate is the failure this file exists to prevent.
 import { readFileSync } from 'node:fs';
+import * as P from '../packages/ust-protocol/index.mjs';
 
 const TERMS = [
   { word: 'checkpoint', pin: 24, qualifiers: /authority[- ]|stream |hour /i,
@@ -106,6 +107,41 @@ for (const t of TERMS) {
   ];
   for (const [name, ok] of ctl) if (!ok) { failed = true; console.log(`  ✗ CONTROL: ${name}`); }
   if (!failed) console.log(`  ✓ CONTROL: the counter discriminates bare from qualified from absent (${ctl.length} legs)`);
+}
+
+// ── THE EXPORT SURFACE (#112). The prose is guarded above; the API names were not, and that is where a CONSUMER
+// reads. `buildCheckpoint` built a STREAM checkpoint three lines from `buildAuthorityCheckpoint`, which names its
+// chain — closed additively in round 104 by ADDING `buildStreamCheckpoint` rather than renaming a published export.
+//
+// The qualifier regexes above are written for PROSE (`authority `, `stream ` — with a trailing space), and applied to
+// an identifier they call `buildStreamCheckpoint` unqualified. Measured before it could mislead: the same rule in a
+// second register needs a second form, so the identifier is kebab-cased and the qualifier's word separators with it.
+//
+// The residual is a RATCHET and may only SHRINK: nine exports carry a bare `checkpoint` today, all on the authority
+// side where the compound itself names the mechanism. A NEW bare-named export raises the count and fails here.
+{
+  const kebab = (n) => n.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+  const bare = [];
+  for (const n of Object.keys(P)) for (const t of TERMS) {
+    const k = kebab(n);
+    if (!k.includes(t.word)) continue;
+    const codeQ = new RegExp(t.qualifiers.source.replace(/\[- \]/g, '-').replace(/ \|/g, '-|').replace(/ $/, '-'), 'i');
+    if (!codeQ.test(k)) { bare.push(n); break; }
+  }
+  // MEASURED, and the first value here was WRONG: I pinned 9 from my own probe and the gate found 10 — my probe
+  // qualified  by accident. Pinned at what the gate measures, never at what I counted.
+  const EXPORT_PIN = 10;
+  if (bare.length > EXPORT_PIN) {
+    failed = true;
+    console.log(`  ✗ ${bare.length} public export(s) carry a BARE ambiguous term, pinned ${EXPORT_PIN}: ${bare.sort().join(', ')}`);
+    console.log('    A consumer reads the NAME. Qualify the new one, or say in #112 why the compound already names one mechanism.');
+  } else {
+    console.log(`  ✓ export surface: ${bare.length} bare-named export(s), pin ${EXPORT_PIN} — a new one fails here (#112)`);
+    if (bare.length < EXPORT_PIN) console.log(`    ℹ  below the pin — lower EXPORT_PIN to ${bare.length}`);
+  }
+  // CONTROL — the export probe must discriminate, or the pin guards nothing.
+  if (!bare.includes('buildCheckpoint')) { failed = true; console.log('  ✗ CONTROL: the export probe does not see the known bare-named `buildCheckpoint`'); }
+  if (bare.includes('buildStreamCheckpoint')) { failed = true; console.log('  ✗ CONTROL: the code-aware qualifier does not recognise `buildStreamCheckpoint` — it would demand a rename of a name that already says its chain'); }
 }
 
 // ── SCOPE, stated because it is a decision and not an oversight. This gate reads the spec and the formal model: the

@@ -2499,7 +2499,7 @@ console.log('\n═════════════════════�
     witnessSuccessor: 'producer-builder', witnessNoShrink: 'producer-builder (the rule, shared with consumers)',
     seal: 'producer-builder', sealAuthorityCheckpoint: 'producer-builder', verifiedEvidence: 'producer-builder (raw-facts shape)',
     buildAbsence: 'producer-builder', buildAttestation: 'producer-builder', buildAuthorityCheckpoint: 'producer-builder',
-    buildAuthorityProof: 'producer-builder', buildCadenceEntry: 'producer-builder', buildCheckpoint: 'producer-builder',
+    buildAuthorityProof: 'producer-builder', buildCadenceEntry: 'producer-builder', buildCheckpoint: 'producer-builder', buildStreamCheckpoint: 'producer-builder',
     buildDerivation: 'producer-builder', buildEpochTransition: 'producer-builder', buildEvidenceReceipt: 'producer-builder',
     buildGap: 'producer-builder', buildGenesis: 'producer-builder', buildKeyLogEntry: 'producer-builder',
     buildKeylogCommitment: 'producer-builder', buildNoForkEvidence: 'producer-builder', buildRecoveryStatement: 'producer-builder',

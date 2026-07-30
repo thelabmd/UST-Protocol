@@ -426,8 +426,15 @@ export function verifiedGenesisContext(genesis) {
 }
 export const buildKeyLogEntry = (id, time, keyOp, prev) =>                         // §12.2 add|rotate|revoke
   buildState({ ...id, class: 'key' }, time, { key_op: { kind: 'captured', value: keyOp } }, { prev });
-export const buildCheckpoint = (id, time, head, frameCount, prev, interval) =>   // §11.3 M5 (interval = {from,to} for completeness, #69 C)
+// §11.3 M5 — a STREAM checkpoint: a point in the DATA chain. The name says which chain it belongs to because its
+// sibling `buildAuthorityCheckpoint` builds a point in the KEY chain, and `checkpoint` alone names both (#112).
+// `buildCheckpoint` stays as an alias below: a published export is not renamed away, it is joined.
+export const buildStreamCheckpoint = (id, time, head, frameCount, prev, interval) =>   // (interval = {from,to} for completeness, #69 C)
   buildState({ ...id, class: 'attestation' }, time, { checkpoint: { kind: 'computed', value: { head, frame_count: String(frameCount), ...(interval ? { from: interval.from, to: interval.to } : {}) } } }, { prev });
+// DEPRECATED NAME, kept because removing a published export is a compatibility event and #112 chose the additive
+// form: identical function, and the qualified name above is the one to write in new code.
+export const buildCheckpoint = buildStreamCheckpoint;
+
 export const buildGap = (id, time, prev, reason) =>                               // §11.3 C2 — a signed gap record: this slot (id.ust_id) is HONESTLY absent
   buildState({ ...id, class: 'attestation' }, time, { gap: { kind: 'computed', value: { reason: reason || 'no-frame' } } }, { prev });
 export const buildAbsence = (id, time, name, reason, extra = {}, prev) =>         // §4.4 #39 — a NEGATIVE observation: partition `name` asserts non-occurrence/unavailability (reason unreachable|no-event|unchanged); `extra` MAY carry {from,to} (the window a no-event covers) / subject

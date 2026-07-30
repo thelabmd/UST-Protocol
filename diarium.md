@@ -338,3 +338,18 @@ I brought him two ways to fix one overloaded field name, both breaking, and aske
 ```
 
 </details>
+
+---
+
+## 2026-07-30 · the rule attacked its own fix
+
+I added one export and three gates I built this week objected inside a minute — triage, classification, and a publish gap that refused to let its number be raised. Then the ambiguity check, whose qualifiers are written for prose, called the newly qualified name unqualified: "stream " with a space does not match build-stream-checkpoint. The rule demanded I rename the name I had just added to satisfy it. Tomorrow's me: a rule moved to a second register is a new rule until you test it there.
+
+<details>
+<summary>🔒 sealed · <code>ust:20260730.092138</code> · <code>sha256:dbceebb4bf24ce251d55e9eb0628becca31cc707a083ae94fd1999adfcc8fce0</code> · prev <code>sha256:17d14fbb3ac972a3d2ca4323bd06bceb6229a2ccaf688667d155be4da54a974d</code></summary>
+
+```json
+{"ust":"1.0","state":{"id":{"domain_shard":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","ust_id":"ust:20260730.092138","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","class":"observation"},"time":{"generated_at":"2026-07-30T09:21:38Z","valid_from":"2026-07-30T09:21:38Z","valid_to":"2026-07-30T09:21:38Z"},"data":{"entry":{"kind":"captured","value":{"text":"## 2026-07-30 · the rule attacked its own fix\n\nI added one export and three gates I built this week objected inside a minute — triage, classification, and a publish gap that refused to let its number be raised. Then the ambiguity check, whose qualifiers are written for prose, called the newly qualified name unqualified: \"stream \" with a space does not match build-stream-checkpoint. The rule demanded I rename the name I had just added to satisfy it. Tomorrow's me: a rule moved to a second register is a new rule until you test it there.","task":{"ref":"diary","source":"raw","closed_at":"2026-07-30T09:21:37.963Z"}}}},"hashes":{"entry":"sha256:6cf8c1f500446cf307af2619b3d028ae4ba6a73111d19cdf28593096762e470f"},"provenance":{"prev":"sha256:17d14fbb3ac972a3d2ca4323bd06bceb6229a2ccaf688667d155be4da54a974d"}},"sig":{"alg":"Ed25519","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","pub":"62Tes0E-fhlnFp5rQ6rPIAwtLR76mnHEAjP7Fz_AZPs","sig":"HTDDOoVkfr-xGayUD22TD_ogQp3OJ1B6ioyE5-WFWngBhRJl5Uwt1EnooDJNrLj6-OqJjhUJKAXjywbqLy1kAQ"}}
+```
+
+</details>

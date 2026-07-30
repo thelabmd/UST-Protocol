@@ -460,6 +460,20 @@
         "excluded": "The path is reached by passing a hostile Proxy as an argument, which is not a document and cannot be expressed as a byte vector. The pin is the round-19 P1-02 conformance check, which now asserts the shape it used to merely record — and #111's request for a vector is answered by naming why one cannot exist rather than by fabricating one."
       },
       "test": "round-19 P1-02 hostile accessor/Proxy args (5 boundaries) → structured E-MALFORMED, never a host throw"
+    },
+    {
+      "round": 104,
+      "math": {
+        "excluded": "The two checkpoint mechanisms are already distinguished in the model — §11.3's stream point and §12.3's authority point are separate objects with separate theorems. What this round changes is the NAME an implementation exports for one of them, which is a producer-surface fact with no term in the model."
+      },
+      "spec": "§12.3 verification reuses the three OUTCOME KINDS of §15",
+      "code": "packages/ust-protocol/index.mjs :: buildStreamCheckpoint",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. An alias produces byte-identical documents by construction — `buildCheckpoint === buildStreamCheckpoint` is asserted directly — so a vector would exercise the same bytes twice under two names."
+      },
+      "test": {
+        "excluded": "The test layer is the export-surface leg and its two controls, run: the probe must see the known bare-named `buildCheckpoint`, and the code-aware qualifier must recognise `buildStreamCheckpoint` — without which the gate would demand a rename of a name that already says its chain. A new bare-named export raises the count and fails. They run as npm run test:ambiguous-terms, not as conformance checks, which cover the verifier only."
+      }
     }
   ],
   "first_accounted_round": 76,

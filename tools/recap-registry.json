@@ -108,6 +108,12 @@
       "content_hash": "sha256:17d14fbb3ac972a3d2ca4323bd06bceb6229a2ccaf688667d155be4da54a974d",
       "issue": 111,
       "_issue": "Round 103 closed #111, so #111 receives the recap — one closed issue, one entry."
+    },
+    {
+      "round": 104,
+      "content_hash": "sha256:dbceebb4bf24ce251d55e9eb0628becca31cc707a083ae94fd1999adfcc8fce0",
+      "issue": 112,
+      "_issue": "Round 104 closed #112, so #112 receives the recap — one closed issue, one entry."
     }
   ]
 }

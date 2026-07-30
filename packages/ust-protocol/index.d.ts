@@ -22,7 +22,7 @@ export function buildAbsence(id: unknown, time: unknown, name: unknown, reason: 
 export function buildAttestation(id: unknown, time: unknown, data: unknown, constituents: unknown, prev?: unknown): Record<string, unknown>;
 export function buildAuthorityCheckpoint(arg0?: unknown): { version: unknown; purpose: unknown; domain_shard: unknown; genesis_epoch: unknown; sequence: unknown; checkpoint_authority: unknown; keylog: unknown };
 export function buildCadenceEntry(id: unknown, time: unknown, cadence: unknown, effectiveFrom: unknown, prev: unknown): unknown;
-export function buildCheckpoint(id: unknown, time: unknown, head: unknown, frameCount: unknown, prev: unknown, interval?: unknown): Record<string, unknown>;
+export const buildCheckpoint: unknown;
 export function buildDerivation(id: unknown, time: unknown, data: unknown, basedOn: unknown, prev?: unknown): Record<string, unknown>;
 export function buildEpochTransition(fields: unknown, privKeyObj: unknown, issuerPubB64url: unknown): { claim: unknown; issuer_id: unknown; sig: unknown };
 export function buildEvidenceReceipt(fields: unknown, privKeyObj: unknown, issuerPubB64url: unknown): { claim: unknown; issuer_id: unknown; sig: unknown };
@@ -33,6 +33,7 @@ export function buildKeyLogEntry(id: unknown, time: unknown, keyOp: unknown, pre
 export function buildNoForkEvidence(fields: unknown, privKeyObj: unknown, issuerPubB64url: unknown): { claim: unknown; issuer_id: unknown; sig: unknown };
 export function buildRecoveryStatement(fields: unknown, privKeyObj: unknown, issuerPubB64url: unknown): { claim: unknown; issuer_id: unknown; sig: unknown };
 export function buildState(id: unknown, time: unknown, data: unknown, provenance: unknown, opts: unknown): Record<string, unknown>;
+export function buildStreamCheckpoint(id: unknown, time: unknown, head: unknown, frameCount: unknown, prev: unknown, interval?: unknown): Record<string, unknown>;
 export function buildUniquenessAttestation(fields: unknown, privKeyObj: unknown, issuerPubB64url: unknown): { claim: unknown; issuer_id: unknown; sig: unknown };
 export function buildVerifiableMap(leaves: unknown): { siblings: unknown };
 export function canon(v: unknown): string;
