@@ -166,7 +166,8 @@
     },
     {
       "round": 117,
-      "no_recap": "Round 117 closed no issue — UST#115 stays open until its false central claim is corrected in place and the remaining producer-surface question is answered there."
+      "issue": 115,
+      "content_hash": "sha256:fa5b410356f2dadd68559daa7e0a2e07040adb64951aa53b148bc4b74bee29f4"
     }
   ]
 }
