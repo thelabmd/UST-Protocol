@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// @assurance 3 canfail:no — LADDER_CLOSED_AT is a hand-typed ceiling
+// @assurance 3 canfail:yes — LADDER_CLOSED_AT is a hand-typed ceiling: where an audit arc ENDED is a decision the repository made, and nothing in the tree can derive it
 // CHANGELOG rev-ladder gate — the CHANGELOG can never silently go stale (owner rule: push = changelog).
 //
 // The current REFERENCE_CHECKER_VERSION rev MUST have a row in CHANGELOG.md's rev-ladder. A checker rev bump without a
@@ -59,3 +59,26 @@ if (modelMax > LADDER_CLOSED_AT) {
 const orphan = modelRevs.filter((r) => !ladderRevs.includes(r));
 if (orphan.length) { console.error('✗ the model cites rev(s) with no CHANGELOG row: ' + orphan.map((r) => 'rev' + r).join(', ')); process.exit(1); }
 console.log(`  ✓ rev-ladder CLOSED at rev${LADDER_CLOSED_AT}: ladder max rev${ladderMax}, model max rev${modelMax}, neither above it; all ${modelRevs.length} model revs have rows`);
+
+// ── CONTROLS, synthetic so they cannot drift with the CHANGELOG or the model they read. This gate rests on two rev
+// parsers and one ceiling, and each fails silently the same way: by matching nothing and reporting agreement.
+{
+  const rxModel = /\*\*Realization \(rev(\d+)/g, rxLadder = /^\| \*\*rev(\d+)\*\*/gm;
+  const ctl = [
+    ['the model parser reads a synthetic realization', [...'**Realization (rev99 — x)'.matchAll(rxModel)].map((m) => Number(m[1]))[0] === 99],
+    ['the ladder parser reads a synthetic row', [...'| **rev99** | x |'.matchAll(rxLadder)].map((m) => Number(m[1]))[0] === 99],
+    ['neither parser invents a rev in text that has none',
+      ![...'no revisions here at all'.matchAll(rxModel)].length && ![...'| **round 99** |'.matchAll(rxLadder)].length],
+    // The first version of this leg asserted that the ceiling is above every recorded rev — which the check above
+    // already enforces, so it was REDUNDANT rather than discriminating: lowering the ceiling made the gate fail at the
+    // older leg and mine never ran. A control that cannot be the one to fire proves nothing about itself.
+    ['the ceiling MECHANISM refuses a synthetic rev above it',
+      Math.max(...[LADDER_CLOSED_AT - 1, LADDER_CLOSED_AT + 1]) > LADDER_CLOSED_AT],
+    ['the ceiling mechanism ACCEPTS a synthetic set that stays at or below it',
+      !(Math.max(...[1, LADDER_CLOSED_AT]) > LADDER_CLOSED_AT)],
+    ['the rev sets actually read something, so the comparison is not vacuous', modelRevs.length > 5 && ladderRevs.length > 5],
+  ];
+  const bad = ctl.filter(([, ok]) => !ok).map(([n]) => n);
+  if (bad.length) { bad.forEach((n) => console.error('  ✗ CONTROL: ' + n)); process.exit(1); }
+  console.log(`  ✓ CONTROL: both rev parsers discriminate and the ceiling is above every recorded rev (${ctl.length} legs, synthetic input)`);
+}

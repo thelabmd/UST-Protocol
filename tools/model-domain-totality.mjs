@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// @assurance 3 canfail:no — model sections are computed, but the exclusions are a pinned registry
+// @assurance 3 canfail:yes — model sections are computed, but the exclusions are a pinned registry: WHICH section is legitimately unbound is a judgement, not a derivation
 // MODEL-DOMAIN TOTALITY GATE — the missing DOMAIN of the model↔code lockstep.
 //
 // Every existing gate keys on a population something DELIBERATELY joined:
@@ -167,4 +167,23 @@ console.log(`  normative spec: ${specHeads.length - specUnbound.length}/${specHe
 for (const s of specUnbound.slice(0, 8)) console.log(`    ${s}`);
 if (specUnbound.length > 8) console.log(`    … and ${specUnbound.length - 8} more`);
 {
+}
+
+// ── CONTROLS. This gate rests on two mechanisms, and each has one way to be worthless: the heading scanner never
+// finds a section, or the binding test accepts a citation that resolves against nothing. Both are checked against
+// SYNTHETIC input rather than against the model, so a control cannot drift with the document it guards.
+{
+  const ctl = [
+    ['the heading scanner finds a synthetic F-section',
+      [...'\n## F.9.9 a fabricated section that exists only in this control\n'.matchAll(/\n(#{2,4}) (F\.[0-9a-z.]+[^\n]*)/g)].length === 1],
+    ['the heading scanner finds nothing in text that has no F-section',
+      [...'\n## Appendix B history\n'.matchAll(/\n(#{2,4}) (F\.[0-9a-z.]+[^\n]*)/g)].length === 0],
+    ['the executed manifest does NOT contain a check name that cannot exist',
+      !EXECUTED_SET.has('a check name that cannot exist — control')],
+    ['the manifest is not empty, so binding against it is not vacuous', EXECUTED.length > 100],
+    ['the section pin matches what was measured, so the pin is not decoration', heads.length === EXPECTED_SECTIONS],
+  ];
+  const bad = ctl.filter(([, ok]) => !ok).map(([n]) => n);
+  if (bad.length) { bad.forEach((n) => console.error('  ✗ CONTROL: ' + n)); process.exit(1); }
+  console.log(`  ✓ CONTROL: the heading scanner and the binding test both discriminate (${ctl.length} legs, synthetic input)`);
 }

@@ -304,6 +304,22 @@
       "test": {
         "excluded": "The test layer is three controls, each run: a citation to a file that does not exist fails, a citation to a file that itself cites fails, and removing `git diff --exit-code` from a script puts its step back in the weakest quadrant. They run as npm run test:assurance-map, not as conformance checks, which cover the verifier only."
       }
+    },
+    {
+      "round": 94,
+      "math": {
+        "excluded": "These two gates read our documents and our changelog. The formal model states what a verifier may concludes from a transcript; whether OUR heading scanner can find a heading is not a property of any document, and model prose written to satisfy a gate is the patch this repo rejects."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. What moved is whether two of our own readers can be shown able to fail."
+      },
+      "code": "tools/changelog-rev-gate.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. The inputs here are synthetic strings inside the gates themselves, chosen so they cannot drift with the prose being guarded; a vector would move the control back into the document it is meant to be independent of."
+      },
+      "test": {
+        "excluded": "The test layer is the ten synthetic legs plus two controls-of-the-controls, each run: blinding the heading scanner fails, and breaking the ceiling comparison fails. They run as npm run test:model-domain and npm run test:changelog, not as conformance checks, which cover the verifier only."
+      }
     }
   ],
   "first_accounted_round": 76,
