@@ -25,7 +25,11 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
-## rc.43 line — unpublished
+## rc.43 line
+
+**PUBLISHED 2026-07-30** — `ust-protocol` rc.43 and `@ust-protocol/cli` rc.77, with `rc` and `next`
+moved onto them. A producer-side fix reaches producers only when they can install it, and this one removes a way to
+sign an identity that no consumer could ever resolve.
 
 Opened because rc.42 is PUBLISHED and a published version is immutable. This line carries a producer-side
 correction the spec had already decided and the builder had not: `roles` declares role separation only when it is
