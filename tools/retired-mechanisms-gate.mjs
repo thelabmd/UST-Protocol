@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// @assurance 3 canfail:no — the fingerprints and their occurrence counts are pinned by hand
+// @assurance 3 canfail:yes — the fingerprint LIST is history and cannot be derived from anything; but the CODE side is now zero-tolerance over a roster derived from the shipping manifests
 // RETIRED-MECHANISMS GATE — an abandoned path must not walk back into the documents.
 //
 // WHY THIS EXISTS. The rc.37 arc abandoned two whole approaches and retired a long list of individual mechanisms:
@@ -24,7 +24,7 @@
 // unsound idea re-worded. (b) The fingerprint list is only as complete as the changelog's own record of what was
 // retired — a wrong decision the ladder never wrote down is invisible here. (c) Counting is not reading: the gate
 // proves nobody added a mention silently, not that the existing mentions are correct.
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 
 const spec = readFileSync(new URL('../spec/UST-1.0.md', import.meta.url), 'utf8');
 const model = readFileSync(new URL('../spec/UST-1.0-formal-model.md', import.meta.url), 'utf8');
@@ -51,7 +51,42 @@ const RETIRED = [
   { id: 'depth-64 cap in admitDeep',      rx: /depth[- ]64/g,                   retiredIn: 'rev30 (falsely rejected a valid deep document)',   spec: 0, model: 1 },
 ];
 
+// ── THE CODE SIDE, and it is where the real miss happened. Round 84: the key-log `rotate` op, removed in rev97, was
+// still advertised to agents by the MCP tool description for THREE ROUNDS while this gate ran green — correctly, since
+// it reads the two DOCUMENTS by design. So the same fingerprints are now checked against SHIPPED CODE, and there the
+// rule is ZERO rather than a pin: a retired mechanism may be REMEMBERED in a comment (that convention is right and is
+// why comments are stripped first) but it may not appear in code that runs.
+//
+// The roster is DERIVED, not typed: every `.mjs` each package's own manifest says it SHIPS, plus the clean-room
+// verifiers we serve from docs/. A new package or a new shipped file is covered the moment it is declared.
+const shipped = readdirSync(new URL('../packages/', import.meta.url)).flatMap((p) => {
+  try { return (JSON.parse(readFileSync(new URL(`../packages/${p}/package.json`, import.meta.url), 'utf8')).files ?? [])
+    .filter((f) => f.endsWith('.mjs')).map((f) => `packages/${p}/${f.replace(/^\.\//, '')}`); } catch { return []; }
+}).concat(readdirSync(new URL('../docs/', import.meta.url)).filter((f) => /^ust-.*\.mjs$/.test(f)).map((f) => `docs/${f}`));
+const bare = shipped.map((f) => {
+  try { return readFileSync(new URL('../' + f, import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, ''); }
+  catch { return ''; }
+}).join('\n');
+
+// A fingerprint that matches LIVE code and is not a resurrection needs its reason here — and the reason must name what
+// covers the retirement INSTEAD, or it is an excuse.
+const CODE_EXEMPT = {
+  'keylogHeadAnchor → attested': 'the FIELD is live and legitimate; what rev40 retired is the INFERENCE from it to `attested`, which no textual guard can express. That inference is covered by two conformance checks by name: "#40 VERIFIED keylogHeadAnchor NO LONGER earns attested" and "#40 keylogHeadAnchor WITHOUT substrateVerify → NOT attested". The fingerprint is imprecise for the code side and precise enough for the documents.',
+};
+
 const failures = [];
+for (const r of RETIRED) {
+  const hits = (bare.match(r.rx) || []).length;
+  const why = CODE_EXEMPT[r.id];
+  if (hits && !why) failures.push(`[${r.id}] appears ${hits}× in SHIPPED CODE with comments stripped — retired in ${r.retiredIn}. A retired mechanism may be remembered in a comment; it may not be present in code that runs.`);
+  if (hits && why && why.length < 60) failures.push(`[${r.id}] CODE_EXEMPT reason is ${why.length} chars — under 60 is a placeholder, not a decision`);
+  if (!hits && why) failures.push(`[${r.id}] carries a CODE_EXEMPT and no longer appears in shipped code — remove the exemption, it now reads as a live boundary that is gone`);
+}
+// the code leg must be able to FAIL, and the roster must not be empty
+if (shipped.length < 8) failures.push(`only ${shipped.length} shipped file(s) resolved from the manifests — the code roster has gone blind and this leg would pass vacuously`);
+if (!/export/.test(bare)) failures.push('the stripped shipped code contains no `export` — stripping removed everything and the leg is vacuous');
+if (/RETIRED_CONTROL_TOKEN_THAT_CANNOT_EXIST/.test(bare)) failures.push('the code probe matched a token that cannot exist');
+
 for (const r of RETIRED) {
   const got = { spec: (spec.match(r.rx) || []).length, model: (model.match(r.rx) || []).length };
   for (const doc of ['spec', 'model']) {
@@ -68,4 +103,5 @@ if (failures.length) {
   process.exit(1);
 }
 const total = RETIRED.reduce((a, r) => a + r.spec + r.model, 0);
+console.log(`  ✓ code side: ${shipped.length} shipped file(s) carry NO retired mechanism with comments stripped (${Object.keys(CODE_EXEMPT).length} named exemption)`);
 console.log(`✓ retired mechanisms: ${RETIRED.length} abandoned paths/mechanisms tracked, ${total} reviewed mentions pinned across spec + formal model — none can be re-specified, or newly mentioned, without a human re-pin (textual guard: catches a return under its own name, not the same idea re-worded)`);

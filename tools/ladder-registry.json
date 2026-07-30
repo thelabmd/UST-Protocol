@@ -256,6 +256,22 @@
       "test": {
         "excluded": "The test layer is three controls, each run: a synthetic DOM-writing file must fail until it carries the marker, the DOM-write detector must fire on a writer and not on inert text, and the premise leg must fire when the A-label guard is weakened — which is how the leg's own vacuity was found. They run as npm run test:display, not as conformance checks, which cover the verifier only."
       }
+    },
+    {
+      "round": 91,
+      "math": {
+        "excluded": "A retired mechanism is a fact about this repository's history, not about what a verifier may conclude from a document. §F.5e.0 already states WHY the `rotate` transition is absent — the model carries the reasoning; this gate carries the guard that it stays absent, and those are different layers by design."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. The retirements themselves are already normative where they belong — §12.2 states there is deliberately no `rotate` transition."
+      },
+      "code": "tools/retired-mechanisms-gate.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce, and the `rotate` refusal already has one from round 74 asserting the REASON and not merely the refusal. What this round adds is a guard over our own shipped sources, which no transcript can express."
+      },
+      "test": {
+        "excluded": "The test layer is three controls, each run: `op:\"rotate\"` restored to the MCP description fails (the exact three-round miss, reproduced), an exemption that is no longer needed fails, and a blind roster or over-stripped source fails as vacuous. They run as npm run test:retired, not as conformance checks, which cover the verifier only."
+      }
     }
   ],
   "first_accounted_round": 76,
