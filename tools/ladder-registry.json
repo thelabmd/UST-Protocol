@@ -352,6 +352,22 @@
       "test": {
         "excluded": "The test layer is the drift-guards observer, run: it injects all 14 gated mutations and requires each named gate to exit non-zero. It runs as npm run test:drift-guards, not as a conformance check, which covers the verifier only."
       }
+    },
+    {
+      "round": 97,
+      "math": {
+        "excluded": "The rule vocabulary the fuzzer now derives is the reference checker's own, and the model already binds every rule it cites to an executed check. Where the fuzzer READS that vocabulary from is a property of our tooling, not of any transcript."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. PORTING.md requires an independent implementation to reproduce the checker's rules, and that requirement is unchanged — what changed is that our own fuzzer reads them instead of copying them."
+      },
+      "code": "packages/ust-protocol/reference-checker.fuzz.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. The fuzzer's inputs are generated from a seed and are deliberately not a corpus; pinning them as vectors would freeze the one thing about it that is meant to be generated."
+      },
+      "test": {
+        "excluded": "The test layer is two controls in the fuzzer itself, run: every live checker rule must be present in the pool, or the fuzzer exercises a subset while reporting a run over the whole; and every adversarial non-rule must carry a reason over the floor. It runs as npm run test:reference-checker-fuzz, not as a conformance check, which covers the verifier only."
+      }
     }
   ],
   "first_accounted_round": 76,

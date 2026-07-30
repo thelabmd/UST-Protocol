@@ -76,6 +76,10 @@
     {
       "round": 96,
       "no_recap": "Round 96 closed no issue — it empties #110's weakest quadrant, and #110 stays open on the domain axis and the independent regrade. One closed issue, one entry, without conditions."
+    },
+    {
+      "round": 97,
+      "no_recap": "Round 97 closed no issue — one step of #110's quadrant work on the domain axis, and #110 stays open. One closed issue, one entry, without conditions."
     }
   ]
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// @assurance 3 canfail:no — RULES is a hand-typed list of 19 rule names; nothing in this file generates cases
+// @assurance 2 canfail:yes literal-ok:NON_RULES is the ADVERSARIAL half — names the checker must refuse, which are chosen and cannot be read off anything — while the valid half is derived from REFERENCE_CHECKER_RULES — the rule pool is enumerated from the checker's own export, so a new rule is fuzzed the moment it exists
 // Reference-checker robustness fuzz — hardens the TCB (check_C) directly. The checker is the ONLY trusted function of
 // the authority layer, so its core invariants must hold under adversarial input: TOTAL (never throws), CLOSED
 // tri-state (VALID | INVALID | INDETERMINATE), DETERMINISTIC (same input → same output), and never a false accept
@@ -48,7 +48,23 @@ for (const wid of Object.keys(validPkg.witnesses)) {
 }
 
 // 3) random adversarial + garbage terms — total, tri-state, deterministic (no accept requirement; just no crash)
-const RULES = ['Genesis', 'CheckpointZero', 'CheckpointStep', 'ConnectorEvidence', 'AfterOrder', 'Corroborated', 'MapUnique', 'QuorumAgreement', 'ReinforceMap', 'ReinforceQuorum', 'FutureGenesisCommitment', 'ActivateGenesis', 'NameBound', 'Anchored', 'ProjectAssurance', 'Verified', 'PredicateGraph', 'Trusted', '__bogus'];
+// THE VALID HALF IS DERIVED, and it had to be: this list typed all 15 checker rules by hand, so adding a rule to the
+// checker left the fuzzer silently not fuzzing it. `REFERENCE_CHECKER_RULES` is exported for exactly this — a gate
+// enumerates from the source instead of keeping a copy — and the copy is now gone.
+//
+// The INVALID half cannot be derived, by definition: these are names the checker must REFUSE, and an adversarial input
+// is chosen rather than read off anything. Each says why it is here, so the set is a decision and not a leftover.
+const NON_RULES = {
+  Verified: 'a predicate STATE, not a rule — feeding it as a rule must be refused, and it is the near-miss a reader would most plausibly write',
+  Trusted: 'the same shape one level up: a trust conclusion offered where a rule name belongs',
+  PredicateGraph: 'the TYPE of the whole term offered as one of its members — the self-referential input that a naive dispatcher accepts',
+  __bogus: 'a name that could never be a rule at all, so the refusal is not resting on plausibility',
+};
+const RULES = [...P.REFERENCE_CHECKER_RULES, ...Object.keys(NON_RULES)];
+// CONTROL — the derivation must actually be in use. If a live checker rule is missing from the pool, the fuzzer is
+// exercising a subset of the checker while reporting a run over it.
+for (const r of P.REFERENCE_CHECKER_RULES) if (!RULES.includes(r)) { console.error('  ✗ CONTROL: live rule ' + r + ' is not in the fuzz pool'); process.exit(1); }
+if (Object.values(NON_RULES).some((w) => String(w).length < 60)) { console.error('  ✗ CONTROL: a NON_RULES reason is a placeholder, not a decision'); process.exit(1); }
 const rng = mulberry32(0xC0FFEE);
 const pick = (a) => a[Math.floor(rng() * a.length)];
 const randWid = () => Object.keys(validPkg.witnesses).concat(['sha256:' + 'de'.repeat(32), 'not-a-hash', ''])[Math.floor(rng() * (Object.keys(validPkg.witnesses).length + 3))];
