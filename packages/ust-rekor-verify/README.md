@@ -1,11 +1,21 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
-# @ust-protocol/rekor-verify
+# UST Protocol — the Rekor anchor verifier
+
+UST (Universal State Transcript) is trust infrastructure for data: a signed, canonical, tamper-evident record of
+*state* — some data about the world at a moment — that verifies the same however it reached you. TLS secures the
+pipe; **UST secures the payload**, so the guarantee travels with the data instead of with the connection.
 
 An **opt-in witness substrate** for [UST](https://github.com/thelabmd/UST-Protocol) — Sigstore
 [Rekor](https://docs.sigstore.dev/logging/overview/), a public append-only transparency log. A second
 substrate next to Bitcoin ([@ust-protocol/ots-verify](https://www.npmjs.com/package/@ust-protocol/ots-verify)):
 logging is **seconds** (not Bitcoin's hours) and **independent of the publisher**. Trade-off: you trust the
 Rekor operator's log (its own witnesses co-sign the tree head); Bitcoin is trustless but slow. Accept BOTH.
+
+## Install
+
+```bash
+npm i @ust-protocol/rekor-verify
+```
 
 ```js
 import { substrateVerify as ots } from '@ust-protocol/ots-verify';

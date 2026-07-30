@@ -140,6 +140,88 @@ check(/§\s*=|§[^\s]*\s*(?:of|in)\s|spec\/UST-1\.0\.md/.test('five rules (§ = 
   && !/§\s*=|§[^\s]*\s*(?:of|in)\s|spec\/UST-1\.0\.md/.test('attest the §20.1 serving contract'),
   'CONTROL: the notation-binding probe does not tell an explained § from a bare one');
 
+// ── THE FAMILY, and the version that must not be typed. Swept 2026-07-30 after the owner said the same defects were
+// probably in every package, and he was right: seven of eight pages titled themselves with a bare npm name, so a
+// reader landing on `@ust-protocol/rekor-verify` had nothing telling them what family it belongs to. And `diarium`
+// stated its own version in prose — `0.1.0` while the package was `0.2.0`, a claim that went stale exactly the way
+// a typed version always does. The title rule is DERIVED from the package name rather than a list: anything named
+// `ust-*` or `@ust-protocol/*` is protocol surface and says so; `diarium` is a product built ON the protocol and is
+// correctly outside the family.
+for (const f of PKG_READMES) {
+  const dir = f.replace(/\/README\.md$/, '');
+  const pkg = JSON.parse(readFileSync(new URL('../' + dir + '/package.json', import.meta.url), 'utf8'));
+  const text = readFileSync(new URL('../' + f, import.meta.url), 'utf8');
+  const title = /^# (.+)$/m.exec(text);
+  check(!!title, `${f} has no title — the page a stranger lands on must name itself`);
+  const isFamily = /^(ust-|@ust-protocol\/)/.test(pkg.name);
+  if (title && isFamily) check(title[1].startsWith('UST Protocol — '),
+    `${f} titles itself "${title[1].slice(0, 40)}" — a reader landing here from a search has no idea it belongs to UST. Protocol-surface packages open with "UST Protocol — <what it is>".`);
+  // a version typed into a page is a claim nobody updates
+  check(!text.includes(pkg.version),
+    `${f} states its own version \`${pkg.version}\` in the text. It is stale the moment the next one publishes, and nothing here regenerates prose — say what the package IS, and let the registry state which version you are reading.`);
+}
+// CONTROL — the family rule must reject a bare name and the version rule must see a real one
+check('UST Protocol — the MCP server'.startsWith('UST Protocol — ') && !'@ust-protocol/mcp'.startsWith('UST Protocol — '),
+  'CONTROL: the title rule accepts a bare package name as a family title');
+
+// ── AN EXAMPLE THAT NO LONGER IMPORTS IS THE HARDEST FORM OF A STALE PAGE: the reader copies it and it throws.
+// Every named import in every package README is resolved against the REAL module namespace — imported, not grepped,
+// because a re-export is invisible to a pattern over the source. Swept 2026-07-30: eight pages, zero broken imports.
+// The one apparent hit was my own probe attributing `import { substrateVerify } from '@ust-protocol/ots-verify'` to
+// `ust-protocol`, on the strength of a substring. Both connectors export it. Named, because a sweep that reports one
+// finding and resolves it to zero has to say so, or the next reader assumes it found something.
+const WS_BY_NAME = new Map(JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).workspaces
+  .map((w) => [JSON.parse(readFileSync(new URL('../' + w + '/package.json', import.meta.url), 'utf8')).name, w]));
+let examplesChecked = 0;
+for (const f of PKG_READMES) {
+  const text = readFileSync(new URL('../' + f, import.meta.url), 'utf8');
+  for (const m of text.matchAll(/import \{([^}]+)\} from '([^']+)'/g)) {
+    const from = m[2];
+    const ws = WS_BY_NAME.get(from) ?? (from.startsWith('.') ? f.replace(/\/README\.md$/, '') : null);
+    if (!ws) continue;                                    // an external module is not ours to keep current
+    let ns;
+    try { ns = await import(new URL('../' + ws + '/index.mjs', import.meta.url).href); }
+    catch (e) { check(false, `${f}: the example imports from ${from} and that module will not load: ${String(e.message).slice(0, 70)}`); continue; }
+    for (const raw of m[1].split(',')) {
+      const name = raw.trim().split(/\s+as\s+/)[0].trim();
+      if (!name) continue;
+      examplesChecked++;
+      check(name in ns, `${f} shows \`import { ${name} } from '${from}'\` and that module exports no such name — a reader who copies the example gets a crash, which is the loudest way a page can be out of date`);
+    }
+  }
+}
+check(examplesChecked >= 10, `only ${examplesChecked} example imports resolved — the sweep has gone blind and this leg would pass vacuously`);
+
+// ── AN EXAMPLE MARKED `runnable:` IS A PROMISE, AND IT IS KEPT BY RUNNING IT.
+// "Current" is not only that the imports resolve — the owner's words: the METHODS must work. Measured 2026-07-30 by
+// executing every js block in every package page: two of eight ran, six are fragments with placeholders (`doc`,
+// `genesis`, `key_id`), which is a fair documentation idiom and not a defect. So the rule is not "every block runs"
+// — it is that a block PROMISING to run does. The first end-to-end example I wrote for the core called
+// `signer.seal(state)`, which does not exist; running it is what said so, and reading it would not have.
+import { execFileSync as runFile } from 'node:child_process';
+import { fileURLToPath as toPath } from 'node:url';
+const ROOT = toPath(new URL('../', import.meta.url));
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+let runnable = 0;
+for (const f of PKG_READMES) {
+  const text = readFileSync(new URL('../' + f, import.meta.url), 'utf8');
+  for (const b of text.matchAll(/```js\n((?:.|\n)*?)```/g)) {
+    if (!/^\s*\/\/ runnable:/m.test(b[1])) continue;
+    runnable++;
+    // run INSIDE the repo, where the workspace packages resolve exactly as they do for an installer
+    const dir = mkdtempSync(ROOT + '.ex-');
+    try {
+      writeFileSync(dir + '/example.mjs', b[1]);
+      runFile(process.execPath, [dir + '/example.mjs'], { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
+      pass++;
+    } catch (e) {
+      check(false, `${f}: an example marked \`runnable:\` does NOT run — ${String(e.stderr || e.message).split('\n').find((l) => /Error/.test(l))?.trim().slice(0, 90) ?? 'no output'}. A page that says "copy this and it works" has to be true, or it is worse than no example.`);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  }
+}
+check(runnable >= 3, `only ${runnable} runnable example(s) found across the package pages — the sweep has gone blind, or the pages stopped promising anything a reader can execute`);
+
 console.log(`\n  printed commands   PASS ${pass}   FAIL ${fail.length}   (${COMMANDS.size} subcommands · ${checked} printed instructions checked)`);
 if (fail.length) { fail.forEach((f) => console.log('    ✗ ' + f)); process.exit(1); }
 console.log('  ✓ every command the tool prints is one the tool can run');

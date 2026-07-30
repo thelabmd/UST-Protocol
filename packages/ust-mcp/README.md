@@ -1,4 +1,9 @@
-# @ust-protocol/mcp
+<!-- SPDX-License-Identifier: CC-BY-4.0 -->
+# UST Protocol — the MCP server
+
+UST (Universal State Transcript) is trust infrastructure for data: a signed, canonical, tamper-evident record of
+*state* — some data about the world at a moment — that verifies the same however it reached you. TLS secures the
+pipe; **UST secures the payload**, so the guarantee travels with the data instead of with the connection.
 
 **An MCP server that lets an agent verify, create, and combine UST records — using only this server and its own key.**
 
@@ -9,6 +14,12 @@ of state is what it claims — who published it, when, unchanged — without tru
 > **Release candidate.** The wire format `ust:"1.0"` is stable across all rc's; this package pins its own rc on npm — pin exact versions. Extensively
 > red-teamed; multiple external AI reviews folded in structurally; an independent human cryptographic audit is
 > pending. Suitable for evaluation. Pin exact versions.
+
+## Install
+
+```bash
+npm i @ust-protocol/mcp
+```
 
 ## Run
 

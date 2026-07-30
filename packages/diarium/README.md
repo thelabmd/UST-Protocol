@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: CC-BY-4.0 -->
 # diarium
 
 Agent memory as a verifiable UST stream.
@@ -58,6 +59,6 @@ A signing key is generated into `.env` as `DIARIUM_SEED` on first run and is nev
 
 ## Status
 
-`0.1.0`, and the version is deliberate: everything else in this repository is protocol surface on the `1.0.0-rc` line, while this is a product built on top of it. Treat the CLI surface as unsettled and the sealed entries as permanent — an entry written today verifies under any later version, because what makes it verifiable is the protocol, not this tool.
+Deliberately **not** on the `1.0.0-rc` line: everything else in this repository is protocol surface on the `1.0.0-rc` line, while this is a product built on top of it. Treat the CLI surface as unsettled and the sealed entries as permanent — an entry written today verifies under any later version, because what makes it verifiable is the protocol, not this tool.
 
 Built on [`ust-protocol`](../ust-protocol), which is its only dependency, and which has none of its own.

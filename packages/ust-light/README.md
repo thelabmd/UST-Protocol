@@ -1,5 +1,9 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
-# ust-light — the UST 1.0 LIGHT floor, standalone
+# UST Protocol — the LIGHT floor, standalone
+
+UST (Universal State Transcript) is trust infrastructure for data: a signed, canonical, tamper-evident record of
+*state* — some data about the world at a moment — that verifies the same however it reached you. TLS secures the
+pipe; **UST secures the payload**, so the guarantee travels with the data instead of with the connection.
 
 Publish and verify a **signed, canonical, addressable, string-only, bounded JSON state** with a **carried key** —
 in a minute, with zero dependencies (Node `crypto`: Ed25519 + SHA-256). No genesis, key-log, anchoring, checkpoints,
@@ -9,6 +13,12 @@ primitives are byte-identical to the reference implementation (`test.mjs` proves
 
 LIGHT = **integrity + a CLAIMED key**. It does NOT resolve name authority (HIGH) or anchored time (TOP) — for those,
 use the full `ust-protocol`. LIGHT identity is reported `self-asserted`.
+
+## Install
+
+```bash
+npm i ust-light
+```
 
 ## The floor, in five rules (§ = `spec/UST-1.0.md`)
 
@@ -26,6 +36,7 @@ use the full `ust-protocol`. LIGHT identity is reported `self-asserted`.
 ## Use
 
 ```js
+// runnable: node this file as-is.
 import { keypair, buildState, seal, verify } from 'ust-light';
 
 const kp = keypair();

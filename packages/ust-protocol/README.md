@@ -1,4 +1,5 @@
-# ust-protocol
+<!-- SPDX-License-Identifier: CC-BY-4.0 -->
+# UST Protocol — the reference implementation
 
 **Verify machine-readable state without trusting whoever handed it to you.**
 
@@ -35,6 +36,30 @@ const r = verify(doc);
   committed to, unchanged.
 - **`INVALID`** — a check failed (tampering, bad signature, malformed) — with an `error` code.
 - **`INDETERMINATE`** — something needed for a higher tier was *unavailable* (not a failure; retry).
+
+## Run it end to end — copy this file and it works
+
+```js
+// runnable: node this file. No network, no keys to obtain — it makes its own.
+import { verify, isValid, contentHash } from 'ust-protocol';
+import { generateSigner, signObservation, nowFrame } from '@ust-protocol/web-signer';
+
+const signer = await generateSigner();                       // Ed25519, private key stays in WebCrypto
+const { ust_id, time } = nowFrame();
+const doc = await signObservation(signer, {
+  ust_id, time,
+  data: { reading: { kind: 'captured', value: { temp_c: '21.4' } } },   // string-only leaves, verbatim
+});
+
+const v = verify(doc);
+console.log(v.result, isValid(v), contentHash(doc).slice(0, 20) + '…');   // VALID:LIGHT true sha256:…
+
+doc.state.data.reading.value.temp_c = '99.9';                 // tamper with one leaf
+console.log(verify(doc).result, verify(doc).error);           // INVALID E-CANON
+```
+
+Identity here is the KEY, not a name — `domain_shard` is the signer's own `key_id`, so nothing is claimed that
+cannot be checked from the document alone. That is the LIGHT tier being honest about its own reach.
 
 ## What it proves — and what it doesn't
 

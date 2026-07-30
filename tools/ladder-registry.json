@@ -652,6 +652,22 @@
       "test": {
         "excluded": "The live control for the tag leg is deliberately NOT run and says so in the file: moving a tag to a stale version would serve a stranger the wrong build for the duration. The mechanism is controlled instead against a real external datum — rc.36's deprecation must remain visible to the probe — and the claims gate is controlled by its own blind-domain floor plus an explicit refusal of the retired 32/32 string."
       }
+    },
+    {
+      "round": 116,
+      "math": {
+        "excluded": "Whether OUR package pages name their family, carry an install line, and ship an example that executes is a property of our documentation. The formal model states obligations on producers and verifiers and is untouched by every change in this round."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. A README title and a runnable snippet bind nobody implementing UST."
+      },
+      "code": "tools/printed-command-gate.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. A page title, an install line and a marked example produce no document and change no verdict; the artefacts are the four enumeration legs over the package pages."
+      },
+      "test": {
+        "excluded": "The test is the gate EXECUTING the marked examples: each `runnable:` block is written out and run inside the repo, so a page promising 'copy this and it works' is checked by doing it. Controlled by breaking one and watching the named check fail. It runs as npm run test:printed-commands, not as a conformance check, which exercises the verifier only."
+      }
     }
   ],
   "first_accounted_round": 76,

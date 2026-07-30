@@ -159,6 +159,10 @@
     {
       "round": 115,
       "no_recap": "Round 115 closed no issue — the owner spotted the tags on the npm page directly, and the work has no ticket to receive a recap comment."
+    },
+    {
+      "round": 116,
+      "no_recap": "Round 116 closed no issue — the owner asked directly for every package page to be checked and brought up to the CLI's shape; there is no ticket to receive a recap comment."
     }
   ]
 }
