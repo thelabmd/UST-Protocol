@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.42', revision: 64 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.43', revision: 64 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -351,7 +351,13 @@ export const buildGenesis = (id, time, pub, maxPartitions, maxTranscriptBytes, c
     // §12.2 — role separation is a DECLARED refinement: presence of a non-empty `roles` turns it on for THIS
     // publisher. Absent, the key set stays undifferentiated and nothing about an existing publisher changes —
     // §11.3's continuity law forbids an operator change, including this one, from invalidating issued data.
-    ...(roles !== undefined ? { roles: [...roles].map(String) } : {}),
+    // §12.1: "a genesis whose value carries a NON-EMPTY `roles` array DECLARES role separation" — so non-empty is
+    // what decides, and `!== undefined` was the wrong predicate in two directions. `null` reached the spread and
+    // threw a raw TypeError (a builder must not host-throw), and `[]` was WRITTEN into the signed genesis, where it
+    // declares nothing per the spec yet is refused by `resolveKeys` as E-GENESIS. That second one is the dangerous
+    // half: the document VERIFIES on its own, so a ceremony could sign and publish an identity from which no
+    // consumer can ever resolve a key. The spec already decided this; the builder now says the same thing.
+    ...(roles?.length ? { roles: [...roles].map(String) } : {}),
     // P1-04 — the genesis CARRIES its own checkpoint-authority + recovery set, so `authority_root` is RESOLVED from
     // the signed genesis, not a raw caller pin. `recovery.keys` is a {key_id: pub} map (each key_id = H(ust:keylog, pub)).
     ...(checkpointAuthority ? { checkpoint_authority: { key_id: checkpointAuthority.key_id, pub: checkpointAuthority.pub } } : {}),

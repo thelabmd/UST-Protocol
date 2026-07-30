@@ -668,6 +668,20 @@
       "test": {
         "excluded": "The test is the gate EXECUTING the marked examples: each `runnable:` block is written out and run inside the repo, so a page promising 'copy this and it works' is checked by doing it. Controlled by breaking one and watching the named check fail. It runs as npm run test:printed-commands, not as a conformance check, which exercises the verifier only."
       }
+    },
+    {
+      "round": 117,
+      "math": {
+        "excluded": "The invariant was already stated and needed no change — §12.1's own words, *a genesis whose value carries a NON-EMPTY roles array DECLARES role separation*, are what decided the predicate. This round brought the code to the mathematics rather than the other way round, which is why nothing in the model moved."
+      },
+      "spec": "non-empty `roles` array DECLARES role",
+      "code": "packages/ust-protocol/index.mjs",
+      "vector": {
+        "excluded": "The refusal already has its enforcement in resolveKeys and is exercised by building the genesis and reading the error; what changed is the BUILDER, which can no longer emit that document at all. A vector pins bytes a producer may emit, and the point of this round is that these bytes are no longer emittable."
+      },
+      "test": {
+        "excluded": "The test is the runnable example on the package page, executed by the printed-command gate: it mints a genesis and key-log and reaches VALID:HIGH, so the construction path is checked by running it rather than asserted. The builder's four cases (null, [], undefined, non-empty) were each measured directly; the ceremony leg is covered by the CLI regression, which runs green with the stricter self-check."
+      }
     }
   ],
   "first_accounted_round": 76,

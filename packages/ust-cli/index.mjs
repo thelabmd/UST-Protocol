@@ -290,6 +290,14 @@ export async function buildCeremony({ domain, profile = 'silver', maxP, maxBytes
   const keylog0 = await W.seal(P.buildKeyLogEntry({ domain_shard: domain, ust_id, key_id: root.key_id }, time, { op: 'add', pub: op.pub, new_key_id: op.key_id }, genHash), root);
   if (!P.isValid(P.verify(genesis))) throw new Error('self-check FAILED: genesis does not verify');
   if (!P.isValid(P.verify(keylog0, { context: 'key' }))) throw new Error('self-check FAILED: key-log[0] does not verify');
+  // A ceremony must never emit an output it has not verified — and VERIFYING the two documents is weaker than the
+  // property they exist for. MEASURED: a genesis carrying `roles: []` verifies VALID:LIGHT on its own and is then
+  // REFUSED by `resolveKeys` (E-GENESIS, the array must be non-empty), so this self-check would have signed and
+  // published an identity from which no consumer could ever resolve a key. The builder now cannot produce that
+  // genesis, and this leg makes the ceremony check the property rather than its shadow: the pair must RESOLVE.
+  const selfKeys = P.resolveKeys(genesis, [keylog0]);
+  if (selfKeys.error) throw new Error('self-check FAILED: the genesis + key-log do not RESOLVE (' + selfKeys.error + ': ' + (selfKeys.detail ?? '') + ') — they verify as documents but no consumer could resolve a key from them');
+  if (!(selfKeys.active?.size >= 2)) throw new Error('self-check FAILED: the resolved key set holds ' + (selfKeys.active?.size ?? 0) + ' active key(s) — a ceremony must leave the root AND the operational key active');
   return { genesis, keylog0, genHash, op, opPkcs8, pkcs8, warnings };
 }
 

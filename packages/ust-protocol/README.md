@@ -61,6 +61,46 @@ console.log(verify(doc).result, verify(doc).error);           // INVALID E-CANON
 Identity here is the KEY, not a name — `domain_shard` is the signer's own `key_id`, so nothing is claimed that
 cannot be checked from the document alone. That is the LIGHT tier being honest about its own reach.
 
+
+## Mint a trust chain and reach VALID:HIGH — also runnable
+
+```js
+// runnable: node this file. Builds a genesis, a key-log, and a document that resolves to VALID:HIGH.
+import { buildGenesis, buildKeyLogEntry, buildState, verify, resolveKeys, contentHash } from 'ust-protocol';
+import { generateSigner, seal } from '@ust-protocol/web-signer';
+
+const T = { generated_at: '2026-07-30T12:00:00Z', valid_from: '2026-07-30T12:00:00Z', valid_to: '2026-07-30T12:00:00Z' };
+const DOMAIN = 'example.com';
+const root = await generateSigner();      // the crown — signs the genesis and the key log, nothing else
+const op   = await generateSigner();      // the operational key — signs your documents
+
+// 1. the genesis binds the NAME to the root key
+const genesis = await seal(buildGenesis(
+  { domain_shard: DOMAIN, ust_id: 'ust:20260730.12', key_id: root.key_id, class: 'genesis' },
+  T, root.pub, 512), root);
+
+// 2. the key log ADDS the operational key, signed by the root, chained to the genesis
+const keylog = [await seal(buildKeyLogEntry(
+  { domain_shard: DOMAIN, ust_id: 'ust:20260730.12', key_id: root.key_id },
+  T, { op: 'add', pub: op.pub }, contentHash(genesis)), root)];
+
+console.log(resolveKeys(genesis, keylog).active.size);   // 2 — root and operational. NOTE: a Map, not an object
+
+// 3. a document that CLAIMS the name, signed by the operational key
+const doc = await seal(buildState(
+  { domain_shard: DOMAIN, ust_id: 'ust:20260730.12', key_id: op.key_id, class: 'observation' },
+  T, { reading: { kind: 'captured', value: { temp_c: '21.4' } } }), op);
+
+console.log(verify(doc, { genesis, keylog }).result);    // INDETERMINATE — no no-fork evidence yet
+console.log(verify(doc, { genesis, keylog, noForkConfirmed: true, acceptConsumerOverride: true }).result);  // VALID:HIGH
+```
+
+**Why the last two lines differ, and why that is the point.** `noForkConfirmed` is the CALLER asserting there is no
+rival genesis — an air-gap assertion. It does not grant itself force: the consumer must also `acceptConsumerOverride`,
+because independence is the consumer's property, never the publisher's claim. Without either, a name claim the
+verifier cannot confirm is `INDETERMINATE` — *unavailable*, not *false*. In production you supply real no-fork
+evidence (a witness log, an anchored name-map) and the same document reaches HIGH without any override.
+
 ## What it proves — and what it doesn't
 
 UST proves **fixation, not truth**: *this publisher committed to this data, at this time, unchanged.* It does

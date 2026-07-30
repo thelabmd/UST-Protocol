@@ -163,6 +163,10 @@
     {
       "round": 116,
       "no_recap": "Round 116 closed no issue — the owner asked directly for every package page to be checked and brought up to the CLI's shape; there is no ticket to receive a recap comment."
+    },
+    {
+      "round": 117,
+      "no_recap": "Round 117 closed no issue — UST#115 stays open until its false central claim is corrected in place and the remaining producer-surface question is answered there."
     }
   ]
 }

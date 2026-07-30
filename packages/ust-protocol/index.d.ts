@@ -27,7 +27,7 @@ export function buildDerivation(id: unknown, time: unknown, data: unknown, based
 export function buildEpochTransition(fields: unknown, privKeyObj: unknown, issuerPubB64url: unknown): { claim: unknown; issuer_id: unknown; sig: unknown };
 export function buildEvidenceReceipt(fields: unknown, privKeyObj: unknown, issuerPubB64url: unknown): { claim: unknown; issuer_id: unknown; sig: unknown };
 export function buildGap(id: unknown, time: unknown, prev: unknown, reason?: unknown): Record<string, unknown>;
-export function buildGenesis(id: unknown, time: unknown, pub: unknown, maxPartitions?: unknown, maxTranscriptBytes?: unknown, cadence?: unknown, checkpointAuthority?: unknown, recovery?: unknown, roles?: unknown): Record<string, unknown>;
+export function buildGenesis(id: unknown, time: unknown, pub: unknown, maxPartitions: unknown, maxTranscriptBytes: unknown, cadence: unknown, checkpointAuthority: unknown, recovery: unknown, roles: unknown): Record<string, unknown>;
 export function buildKeylogCommitment(entryHashes: unknown): { index: unknown; siblings: unknown };
 export function buildKeyLogEntry(id: unknown, time: unknown, keyOp: unknown, prev: unknown): Record<string, unknown>;
 export function buildNoForkEvidence(fields: unknown, privKeyObj: unknown, issuerPubB64url: unknown): { claim: unknown; issuer_id: unknown; sig: unknown };

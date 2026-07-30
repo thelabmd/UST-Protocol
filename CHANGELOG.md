@@ -25,6 +25,16 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
+## rc.43 line — unpublished
+
+Opened because rc.42 is PUBLISHED and a published version is immutable. This line carries a producer-side
+correction the spec had already decided and the builder had not: `roles` declares role separation only when it is
+NON-EMPTY.
+
+| version | round | what closed |
+|---------|-------|-------------|
+| **protocol rc.43**<br>**cli rc.77** | 117 | **A ceremony could sign an identity nobody could ever resolve — and the spec had already said why.** The owner sent me back to the mathematics and refused the either/or I had written into #115. He was right on both counts. §12.1: *a genesis whose value carries a NON-EMPTY `roles` array DECLARES role separation.* **Non-empty is the predicate**, and `buildGenesis` tested `!== undefined` — wrong in two directions at once. `null` reached the spread and threw a raw `TypeError`, which a builder may never do. Worse, `[]` was WRITTEN into the signed genesis: that document **verifies VALID:LIGHT on its own** and is then REFUSED by `resolveKeys` with `E-GENESIS — must be a NON-EMPTY array`. A publisher could run the ceremony, hold a signed, self-verifying genesis, publish it, and **no consumer could ever resolve a key from it.** Dead identity, fail-closed, discovered only by whoever tried to use it. **And the ceremony's own self-check could not catch it**, because it asserted the two documents VERIFY — which is the shadow of the property, not the property. It now requires the pair to RESOLVE, with the root and the operational key both active. Swept: only `ust-protocol` and `ust-cli` build a genesis, and the CLI calls the core's builder rather than a copy, so one predicate closes every surface — `web-signer` never had one. **The either/or is gone: the spec chose, not me.** Also in this line — the whole reason it was found: **#115's central claim was FALSE and it was my measurement.** I reported six failed attempts to mint a chain; five of them were `Object.keys()` on a `Map`, which is always zero. The chain mints from the documented exports, and `new_key_id` is not required either. The page now carries a second `runnable:` example that mints genesis + key-log and reaches **VALID:HIGH**, executed by the gate — the honest closing evidence, since an example that runs cannot be a claim I mismeasured. |
+
 ## rc.42 line
 
 **PUBLISHED 2026-07-30** — all eight packages at once: `ust-protocol` rc.42, `@ust-protocol/cli` rc.76, `mcp` rc.33,
