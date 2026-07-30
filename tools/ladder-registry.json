@@ -448,6 +448,18 @@
       "test": {
         "excluded": "The test layer is the citation control, run: an ATTEST_EXEMPT reason that drops its issue reference fails. The regrades themselves are checked continuously by the assurance map, which refuses a declaration its code cannot support. They run as npm run test:serving and npm run test:assurance-map, not as conformance checks, which cover the verifier only."
       }
+    },
+    {
+      "round": 103,
+      "math": {
+        "excluded": "§14's verdict vocabulary is already stated and unchanged — this round brings two returns INTO it rather than moving it. The forkChoice discriminator is a field the verifier does not act on and could not enter a strict allowlist under §F.5e.2; it is a producer-side aid to the reader, which the model has no term for."
+      },
+      "spec": "the three OUTCOME KINDS of §15 (VALID / INVALID / INDETERMINATE)",
+      "code": "packages/ust-protocol/index.mjs :: verifyAsync totality guard",
+      "vector": {
+        "excluded": "The path is reached by passing a hostile Proxy as an argument, which is not a document and cannot be expressed as a byte vector. The pin is the round-19 P1-02 conformance check, which now asserts the shape it used to merely record — and #111's request for a vector is answered by naming why one cannot exist rather than by fabricating one."
+      },
+      "test": "round-19 P1-02 hostile accessor/Proxy args (5 boundaries) → structured E-MALFORMED, never a host throw"
     }
   ],
   "first_accounted_round": 76,

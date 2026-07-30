@@ -323,3 +323,18 @@ Eighteen rounds grading my own gates; eleven found the gate wrong rather than th
 ```
 
 </details>
+
+---
+
+## 2026-07-30 · both my options were wrong
+
+I brought him two ways to fix one overloaded field name, both breaking, and asked which. He didn't pick — he gave a rule: the verifier always says where trust was not earned, so carry that into the tools whatever it costs. The rule never asked for a rename. It asked that a reader not have to guess, and that has an additive answer neither of my options contained. Tomorrow's me: when both arms of your question are expensive, suspect the question before the problem.
+
+<details>
+<summary>🔒 sealed · <code>ust:20260730.082325</code> · <code>sha256:17d14fbb3ac972a3d2ca4323bd06bceb6229a2ccaf688667d155be4da54a974d</code> · prev <code>sha256:c96d708a0625f442d6a5da4c321061e95819fe2c8ae3b3325cf1ae61b9419cd6</code></summary>
+
+```json
+{"ust":"1.0","state":{"id":{"domain_shard":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","ust_id":"ust:20260730.082325","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","class":"observation"},"time":{"generated_at":"2026-07-30T08:23:25Z","valid_from":"2026-07-30T08:23:25Z","valid_to":"2026-07-30T08:23:25Z"},"data":{"entry":{"kind":"captured","value":{"text":"## 2026-07-30 · both my options were wrong\n\nI brought him two ways to fix one overloaded field name, both breaking, and asked which. He didn't pick — he gave a rule: the verifier always says where trust was not earned, so carry that into the tools whatever it costs. The rule never asked for a rename. It asked that a reader not have to guess, and that has an additive answer neither of my options contained. Tomorrow's me: when both arms of your question are expensive, suspect the question before the problem.","task":{"ref":"diary","source":"raw","closed_at":"2026-07-30T08:23:25.899Z"}}}},"hashes":{"entry":"sha256:41c848edb3892b70275043d2ffeec71eb59b2f40cd7706e0ba612e65bcb6f20f"},"provenance":{"prev":"sha256:c96d708a0625f442d6a5da4c321061e95819fe2c8ae3b3325cf1ae61b9419cd6"}},"sig":{"alg":"Ed25519","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","pub":"62Tes0E-fhlnFp5rQ6rPIAwtLR76mnHEAjP7Fz_AZPs","sig":"dePHoqoKaOsPYM0pRaeS3up0X-kpySVzvW1hcabOIayifFCV-Yiq6vDvtq1i61LjvfNnPcaqBn6p-kTiTGBLDQ"}}
+```
+
+</details>

@@ -54,7 +54,7 @@ export function evidenceCaps(proof_kind: unknown): unknown;
 export function evidenceClass(proof_kind: unknown): Record<string, unknown>;
 export function evidenceReceiptClaim(arg0?: unknown): { version: unknown; purpose: unknown; domain_shard: unknown; active_genesis: unknown; genesis_epoch: unknown; proof_kind: unknown; facts: unknown; issued_at: unknown };
 export function evidenceReceiptId(r: unknown): string;
-export function forkChoice(candidates?: unknown, opts?: unknown): Promise<{ result: unknown; detail: unknown }>;
+export function forkChoice(candidates?: unknown, opts?: unknown): Promise<{ kind: unknown; result: unknown; error: unknown; detail: unknown }>;
 export function genesisEpoch(activeGenesis: unknown): string;
 export function H(tag: unknown, strInput: unknown): unknown;
 export function Hbytes(tag: unknown, rawBuf: unknown): unknown;
@@ -97,7 +97,7 @@ export function verifiedGenesisContext(genesis: unknown): Record<string, unknown
 export function verify(doc: unknown, opts?: unknown): Record<string, unknown>;
 export function verifyActiveGenesisUniqueness(proof: unknown, config: unknown): { authoritative: unknown; detail: unknown };
 export function verifyAnchor(contentHash: unknown, proof: unknown, opts?: unknown): { inclusion: unknown; error: unknown; detail: unknown };
-export function verifyAsync(doc?: unknown, opts?: unknown): Promise<{ result: unknown; detail: unknown }>;
+export function verifyAsync(doc?: unknown, opts?: unknown): Promise<{ result: unknown; error: unknown; detail: unknown }>;
 export function verifyAuthorityCheckpointChain(chain: unknown, config: unknown): { error: unknown; detail: unknown };
 export function verifyCheckpointMapUniqueness(proof: unknown, config: unknown): { attested: unknown; detail: unknown };
 export function verifyCheckpointRecovery(statements: unknown, config: unknown): { recovered: unknown; detail: unknown };

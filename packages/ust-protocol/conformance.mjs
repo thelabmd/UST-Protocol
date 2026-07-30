@@ -577,8 +577,8 @@ check('F8 impossible ust_id→E-MALFORMED', P.verify(mk({ r: { kind: 'captured',
   check('#45 forkChoice: the out-raced doc is a recorded loser (VALID, not anchored)', fcWin.losers.length === 1 && fcWin.losers[0].content_hash === P.contentHash(f2));
   check('#45 forkChoice: determinism — reversed input order → SAME canonical', (await P.forkChoice([cand2, cand1], { ...fbase, substrateVerify: only1 })).content_hash === fcWin.content_hash);
   check('#45 forkChoice: neither anchored → INDETERMINATE (no guessed winner)', (await P.forkChoice([cand1, cand2], { ...fbase, substrateVerify: () => null })).result === 'INDETERMINATE');
-  check('#45 forkChoice: both anchored, one authority, distinct hash → E-PREV (equivocation)', (await P.forkChoice([cand1, cand2], { ...fbase, substrateVerify: anchorSV })).result === 'E-PREV');
-  check('#45 forkChoice: mixed ust_ids → E-MALFORMED (fork-choice is per-slot)', (await P.forkChoice([cand1, { ...docK, proof: topProof }], { ...fbase, substrateVerify: anchorSV })).result === 'E-MALFORMED');
+  check('#45 forkChoice: both anchored, one authority, distinct hash → E-PREV (equivocation)', (await P.forkChoice([cand1, cand2], { ...fbase, substrateVerify: anchorSV })).error === 'E-PREV');
+  check('#45 forkChoice: mixed ust_ids → E-MALFORMED (fork-choice is per-slot)', (await P.forkChoice([cand1, { ...docK, proof: topProof }], { ...fbase, substrateVerify: anchorSV })).error === 'E-MALFORMED');
 }
 
 // ─── rc.6 — the OBLIGATIONS TABLE (§14a): every commitment-bearing member recomputed; semantic consistency;
@@ -905,7 +905,7 @@ console.log('\n═════════════════════�
   const thrower = { ...c19 }; Object.defineProperty(thrower, 'toJSON', { enumerable: false, configurable: true, value() { throw new Error('one-shot clone fail'); } });
   let r19SubCalled = false;
   const r19a = await P.forkChoice([thrower], { genesis: gen, keylog: [], ...nfe(gen), substrateVerify: () => { r19SubCalled = true; return { final: true, time: '2026-07-13T14:05:00Z' }; } });
-  check('round-19 P0-01 forkChoice throwing-toJSON candidate → E-MALFORMED, substrate NEVER called (no live-object fallback)', r19a.result === 'E-MALFORMED' && r19SubCalled === false);
+  check('round-19 P0-01 forkChoice throwing-toJSON candidate → E-MALFORMED, substrate NEVER called (no live-object fallback)', r19a.error === 'E-MALFORMED' && r19SubCalled === false);
   const slotCand = { ...c19, state: { ...c19.state, id: { ...c19.state.id } } }; const realSlot = c19.state.id.ust_id; let slotReads = 0;
   Object.defineProperty(slotCand.state.id, 'ust_id', { enumerable: true, configurable: true, get() { slotReads++; return slotReads === 1 ? 'ust:20990101.000000' : realSlot; } });
   const r19b = await P.forkChoice([slotCand], { genesis: gen, keylog: [], ...nfe(gen), substrateVerify: async () => ({ final: true, time: '2026-07-13T14:05:00Z' }) });
@@ -934,7 +934,15 @@ console.log('\n═════════════════════�
   let p19ok = false, p19throw = false;
   try {
     const a1 = P.resolveAuthority(doc, hostile()); const a2 = P.resolveKeys(gen, arrH); const a3 = await P.forkChoice([hostile()], {}); const a4 = await P.verifyAsync(doc, hostile()); const a5 = await P.resolveByDiscovery(doc, {}, hostile());
-    p19ok = a1.error === 'E-MALFORMED' && a2.error === 'E-MALFORMED' && a3.result === 'E-MALFORMED' && a4.result === 'E-MALFORMED' && a5.verdict.result === 'E-MALFORMED';
+    // This line used to assert THREE DIFFERENT SHAPES for one refusal and so pinned the inconsistency in place:
+    // `.error` for two boundaries, `.result` for three. Round 103 moved the two VERDICT-shaped ones to the shape every
+    // other refusal uses — `{result:'INVALID', error:'E-MALFORMED'}` — so a consumer switching on §14's three verdict
+    // values no longer falls through. `forkChoice` still answers a different question under the same field name and is
+    // asserted in its own shape until that is decided: thelabmd/UST-Protocol#111.
+    p19ok = a1.error === 'E-MALFORMED' && a2.error === 'E-MALFORMED'
+      && a3.kind === 'fork-choice' && a3.result === 'REFUSED' && a3.error === 'E-MALFORMED'   // forkChoice — its own vocabulary, and it SAYS so
+      && a4.result === 'INVALID' && a4.error === 'E-MALFORMED'                  // verifyAsync — §14 shape
+      && a5.verdict.result === 'INVALID' && a5.verdict.error === 'E-MALFORMED'; // resolveByDiscovery — §14 shape
   } catch { p19throw = true; }
   check('round-19 P1-02 hostile accessor/Proxy args (5 boundaries) → structured E-MALFORMED, never a host throw', p19ok && !p19throw);
   // P0-2 — a raw air-gap assertion is NOT independent evidence: it is a `consumer-override`. It reaches the name-
@@ -977,7 +985,7 @@ console.log('\n═════════════════════�
   // P2-01 — forkChoice now admits opts (rev16 missed it): a hostile Proxy opts is a structured reject, not a host throw.
   let fcThrew = false, fcRes;
   try { fcRes = await P.forkChoice([doc], new Proxy({}, { ownKeys() { throw new Error('h'); }, get() { throw new Error('h'); }, getOwnPropertyDescriptor() { throw new Error('h'); } })); } catch { fcThrew = true; }
-  check('round-20 P2-01 forkChoice hostile opts Proxy → structured E-MALFORMED, never a host throw', !fcThrew && fcRes.result === 'E-MALFORMED');
+  check('round-20 P2-01 forkChoice hostile opts Proxy → structured E-MALFORMED, never a host throw', !fcThrew && fcRes.error === 'E-MALFORMED');
 
   // ─── round-21 (rev18) — the round-20 witness fan-out fix was LOSSY: it DISCARDED rival evidence, then minted HIGH ─────
   // P0-01 — a rival root split across entries (one without an anchor, one WITH) must UNION its anchor evidence, not

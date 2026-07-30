@@ -1623,9 +1623,9 @@ function verifyAnchorCore(contentHash, proof, opts = {}) {
 // through a single contract, and verify() never has to become async. Everything else is identical to verify().
 export async function verifyAsync(doc, opts = {}) {
   opts = admitOpts(opts);                                        // round-19 P1-02 — inert snapshot; a throwing accessor/Proxy trap → null → structured reject (not a host throw)
-  if (opts === null) return { result: 'E-MALFORMED', detail: 'opts must be an inert record (round-19 P1-02 totality)' };
+  if (opts === null) return { result: 'INVALID', error: 'E-MALFORMED', detail: 'opts must be an inert record (round-19 P1-02 totality)' };
   const D = admitDeep(doc);                                      // round-27 (3) — admit ONCE at this public door; below runs verifyCore over the inert snapshot (a getter can't split the substrate await from the sync verify)
-  if (D === ADMIT_REJECT) return { result: 'E-MALFORMED', detail: 'document is not an inert record (round-27: the ONE input boundary)' };
+  if (D === ADMIT_REJECT) return { result: 'INVALID', error: 'E-MALFORMED', detail: 'document is not an inert record (round-27: the ONE input boundary)' };
   doc = D;
   if (!doc?.proof || !opts.substrateVerify || opts.offline) return verifyCore(doc, opts);
   // round-17 P0-01 — verify an IMMUTABLE SNAPSHOT. The live object could be swapped between the await and the sync
@@ -1647,11 +1647,11 @@ export async function verifyAsync(doc, opts = {}) {
 // with no substrateVerify NO candidate is anchored ⇒ INDETERMINATE, never a guessed winner. Returns ONE verdict.
 export async function forkChoice(candidates, opts = {}) {
   opts = admitOpts(opts);                                              // round-20 P2-01 — forkChoice missed admitOpts in rev16; a hostile opts Proxy threw at `{...opts}`. Now the same inert admission as the other boundaries.
-  if (opts === null) return { result: 'E-MALFORMED', detail: 'opts must be an inert record (round-20 P2-01 totality)' };
-  try { if (!Array.isArray(candidates) || candidates.length === 0) return { result: 'E-MALFORMED', detail: 'forkChoice needs a non-empty array of candidate documents' }; }
-  catch { return { result: 'E-MALFORMED', detail: 'forkChoice needs a non-empty array of candidate documents' }; }   // round-51 — Array.isArray/.length THROW on a revoked Proxy; guard the first type-probe (totality class)
+  if (opts === null) return { kind: 'fork-choice', result: 'REFUSED', error: 'E-MALFORMED', detail: 'opts must be an inert record (round-20 P2-01 totality)' };
+  try { if (!Array.isArray(candidates) || candidates.length === 0) return { kind: 'fork-choice', result: 'REFUSED', error: 'E-MALFORMED', detail: 'forkChoice needs a non-empty array of candidate documents' }; }
+  catch { return { kind: 'fork-choice', result: 'REFUSED', error: 'E-MALFORMED', detail: 'forkChoice needs a non-empty array of candidate documents' }; }   // round-51 — Array.isArray/.length THROW on a revoked Proxy; guard the first type-probe (totality class)
   if (candidates.length > BOUNDS.forkCandidates)                      // round-21 P1-02 — F.9 fan-out: refuse an over-budget candidate count BEFORE snapshotting/verifying (never truncate a fork-choice input)
-    return { result: 'INDETERMINATE', reason: 'resource_limit', detail: `forkChoice got ${candidates.length} candidates > ${BOUNDS.forkCandidates} (§F.9 fan-out — refused, never truncated; round-21 P1-02)` };
+    return { kind: 'fork-choice', result: 'INDETERMINATE', reason: 'resource_limit', detail: `forkChoice got ${candidates.length} candidates > ${BOUNDS.forkCandidates} (§F.9 fan-out — refused, never truncated; round-21 P1-02)` };
   // round-19 P0-01 — SNAPSHOT every candidate to an inert clone BEFORE ANY read, INCLUDING the ust_id grouping below.
   // rev15 still (a) read `c.state.id.ust_id` off the LIVE object to group, and (b) fell back to the live object (`d=c`)
   // when JSON cloning threw — so a one-shot throwing toJSON, or a ust_id accessor that lies once, let the classified/
@@ -1660,13 +1660,13 @@ export async function forkChoice(candidates, opts = {}) {
   // (F.5c: canonical(ust_id) = the unique dᵢ whose content_hash ∈ leaves — a mutable original re-read mid-await breaks it).
   const snaps = [];
   for (const c of candidates) {
-    let d; try { d = JSON.parse(JSON.stringify(c)); } catch { return { result: 'E-MALFORMED', detail: 'forkChoice candidate is not an inert JSON snapshot (throwing toJSON / hostile accessor) — no live-object fallback (round-19 P0-01)' }; }
-    if (d === null || typeof d !== 'object') return { result: 'E-MALFORMED', detail: 'forkChoice candidate did not snapshot to a JSON object (round-19 P0-01)' };
+    let d; try { d = JSON.parse(JSON.stringify(c)); } catch { return { kind: 'fork-choice', result: 'REFUSED', error: 'E-MALFORMED', detail: 'forkChoice candidate is not an inert JSON snapshot (throwing toJSON / hostile accessor) — no live-object fallback (round-19 P0-01)' }; }
+    if (d === null || typeof d !== 'object') return { kind: 'fork-choice', result: 'REFUSED', error: 'E-MALFORMED', detail: 'forkChoice candidate did not snapshot to a JSON object (round-19 P0-01)' };
     snaps.push(d);
   }
   const ids = new Set(snaps.map((d) => d?.state?.id?.ust_id));         // group from the SNAPSHOT, never the live object
   if (ids.size !== 1 || ids.has(undefined))                            // fork-choice is PER-SLOT — a mixed batch is a caller bug, not a fork
-    return { result: 'E-MALFORMED', detail: 'forkChoice candidates must all share one ust_id (fork-choice is per-slot)' };
+    return { kind: 'fork-choice', result: 'REFUSED', error: 'E-MALFORMED', detail: 'forkChoice candidates must all share one ust_id (fork-choice is per-slot)' };
   const ust_id = [...ids][0];
   // verify each at its NATURAL tier (strip the floors — forkChoice does its own tier logic). A candidate is
   // ANCHOR-INCLUDED iff it VERIFIES and its content_hash sits in a substrate-final anchored root (time 'anchored').
@@ -1705,15 +1705,15 @@ export async function forkChoice(candidates, opts = {}) {
     (v.time?.strength === 'anchored' ? anchored : losers).push(rec);   // anchored = in the chain; else a valid non-anchored candidate
   }
   if (anchored.length === 0)                                           // no BOUND candidate in Fₜ yet — undecidable, wait or resolve at HIGH
-    return { result: 'INDETERMINATE', ust_id, reason: 'no authoritative anchor-included candidate', detail: 'no candidate is BOTH bound to its claimed authority (key ∈ key-log) AND in a substrate-final anchored root', losers: losers.length, invalid: invalid.length, ...(unauthenticated.length ? { unauthenticated } : {}) };
+    return { kind: 'fork-choice', result: 'INDETERMINATE', ust_id, reason: 'no authoritative anchor-included candidate', detail: 'no candidate is BOTH bound to its claimed authority (key ∈ key-log) AND in a substrate-final anchored root', losers: losers.length, invalid: invalid.length, ...(unauthenticated.length ? { unauthenticated } : {}) };
   // group anchored by AUTHORITY (domain_shard). A single authority with ≥2 DISTINCT anchored content_hashes for
   // one ust_id is EQUIVOCATION — it signed a root containing both = a non-repudiable, punishable fault (E-PREV).
   const byAuth = new Map();
   for (const a of anchored) { if (!byAuth.has(a.authority)) byAuth.set(a.authority, new Set()); byAuth.get(a.authority).add(a.content_hash); }
   for (const [authority, hashes] of byAuth) if (hashes.size >= 2)
-    return { result: 'E-PREV', ust_id, authority, detail: `operator equivocation: authority ${authority} anchored ${hashes.size} distinct content_hashes for one ust_id`, content_hashes: [...hashes].sort() };   // sorted — set-determined, not arrival-order
+    return { kind: 'fork-choice', result: 'REFUSED', error: 'E-PREV', ust_id, authority, detail: `operator equivocation: authority ${authority} anchored ${hashes.size} distinct content_hashes for one ust_id`, content_hashes: [...hashes].sort() };   // sorted — set-determined, not arrival-order
   if (byAuth.size > 1)                                                 // distinct NAMES sharing a ust_id string — not a fork; canonicity is per-authority
-    return { result: 'MULTI_AUTHORITY', ust_id, detail: 'distinct authorities anchored the same ust_id string — not a fork (canonicity is per-authority)', canonicals: anchored.map((a) => ({ authority: a.authority, content_hash: a.content_hash })).sort((x, y) => (x.authority + x.content_hash < y.authority + y.content_hash ? -1 : 1)) };
+    return { kind: 'fork-choice', result: 'MULTI_AUTHORITY', ust_id, detail: 'distinct authorities anchored the same ust_id string — not a fork (canonicity is per-authority)', canonicals: anchored.map((a) => ({ authority: a.authority, content_hash: a.content_hash })).sort((x, y) => (x.authority + x.content_hash < y.authority + y.content_hash ? -1 : 1)) };
   // round-22 P1-01 — the returned canonical must be a function of the candidate SET, not arrival order (F.5c: "two
   // consumers with the same candidate set … emit the SAME canonical"). All `anchored` here share ONE content_hash (byAuth
   // passed), but they may be equal-state / different-valid-proof variants; pick the one with the smallest canonical
@@ -1727,7 +1727,7 @@ export async function forkChoice(candidates, opts = {}) {
   // round-22 P1-01 + round-23 P1-04 — the WHOLE return is a function of the candidate SET; every diagnostic array is
   // sorted by its FULL record (a total tie-break), because content_hash alone leaves equal-hash records in arrival order.
   const bj = (x, y) => { const a = jkey(x), b = jkey(y); return a < b ? -1 : a > b ? 1 : 0; };
-  return { result: 'CANONICAL', ust_id, authority: winner.authority, content_hash: winner.content_hash, tier: winner.tier, canonical: winner.doc,
+  return { kind: 'fork-choice', result: 'CANONICAL', ust_id, authority: winner.authority, content_hash: winner.content_hash, tier: winner.tier, canonical: winner.doc,
     losers: losers.map((l) => ({ content_hash: l.content_hash, tier: l.tier, reason: 'valid but not anchor-included for this slot (out-raced or unanchored)' })).sort(bj),
     ...(unauthenticated.length ? { unauthenticated: unauthenticated.slice().sort(bj) } : {}),   // key-unbound impostors under a claimed name — recorded, never canonical
     ...(invalid.length ? { invalid: invalid.slice().sort(bj) } : {}) };
@@ -2600,18 +2600,21 @@ export const REGISTRY = deepFreeze({   // round-25 P0-04 — DEEP-frozen: the ca
   // for three rounds (round 84). `results` is the VERIFY verdict only: `forkChoice` returns a `result: 'CANONICAL'`
   // under the same field name for a different question (which candidate is canonical), and that collision is
   // named in the sync check rather than absorbed by widening this set.
-  // MEASURED, not endorsed: `E-MALFORMED` appears in the RESULT slot from the totality guards of the public async
-  // entry points (`verifyAsync`, `resolveByDiscovery`), where §14's vocabulary is VALID/INVALID/INDETERMINATE.
-  // It fails CLOSED — `isValid` tests the `VALID:` prefix, so an error code there is never valid — and it is a
-  // caller-error path, so this is a shape wart rather than a hole. Registered so it is visible and cannot grow
-  // silently; whether the slot should carry a code at all is thelabmd/UST-Protocol#111.
-  results: ['VALID', 'INVALID', 'INDETERMINATE', 'E-MALFORMED'],
+  // §14's verdict vocabulary, and now nothing else: round 103 moved the totality guards of `verifyAsync` and
+  // `resolveByDiscovery` from `{result:'E-MALFORMED'}` to `{result:'INVALID', error:'E-MALFORMED'}` — the shape every
+  // other refusal already used. `forkChoice` still answers a DIFFERENT question under this field name and keeps its
+  // own set below; qualifying that is a breaking change and stays open as thelabmd/UST-Protocol#111.
+  results: ['VALID', 'INVALID', 'INDETERMINATE'],
   completeness: ['none', 'provisional', 'chain-consistent', 'complete'],
   // `forkChoice` answers a DIFFERENT question under the SAME field name, and the collision is registered rather
   // than absorbed: it overlaps `results` at INDETERMINATE and borrows an ERROR CODE, `E-PREV`, as a result value.
   // A consumer reading `result` cannot tell which vocabulary it is in without knowing which call produced it.
   // Registered so the set is MEASURED and cannot grow silently; resolving the collision is thelabmd/UST-Protocol#111.
-  forkChoiceResults: ['CANONICAL', 'MULTI_AUTHORITY', 'INDETERMINATE', 'E-PREV', 'E-MALFORMED'],
+  // `forkChoice` answers a DIFFERENT question under the same field name, and round 103 made that impossible to
+  // misread WITHOUT renaming anything: every return now carries `kind: 'fork-choice'`, so a consumer always knows
+  // which vocabulary it is in, and the error codes moved to `error` beside `result: 'REFUSED'` — the same line the
+  // verdict guards were brought onto. Additive: no published field changed its name or disappeared.
+  forkChoiceResults: ['CANONICAL', 'MULTI_AUTHORITY', 'INDETERMINATE', 'REFUSED'],
   verifiedEvidenceFields: { required: ['proof_kind', 'subject', 'source_id', 'facts'], optional: ['verifier_id', 'verifier_version'] },
   // M3 — the SIGNED connector-receipt claim (§12.3.5): facts only; a capability/assurance/independence field is E-EVIDENCE.
   evidenceReceiptClaimFields: { required: ['version', 'purpose', 'domain_shard', 'active_genesis', 'genesis_epoch', 'subject', 'proof_kind', 'facts', 'issued_at'], optional: ['payload_digest'] },
@@ -3119,9 +3122,9 @@ export function combineSubstrates(verifiers) {
 
 export async function resolveByDiscovery(doc, opts = {}, transport = {}) {
   opts = admitOpts(opts); const T = admitOpts(transport);   // round-19 P1-02 — inert snapshots; a throwing accessor/Proxy trap on opts OR transport → null → structured reject (not a host throw)
-  if (opts === null || T === null) return { verdict: { result: 'E-MALFORMED', detail: 'opts and transport must be inert records (round-19 P1-02 totality)' }, resolution: null };
+  if (opts === null || T === null) return { verdict: { result: 'INVALID', error: 'E-MALFORMED', detail: 'opts and transport must be inert records (round-19 P1-02 totality)' }, resolution: null };
   const D = admitDeep(doc);   // round-27 (3, self-audit) — admit the doc ONCE at THIS door: the discovery `shard` (the fetch URL) and the verify verdict must read the SAME bytes, else a getter fetches one domain's genesis/witness while the verdict is over another.
-  if (D === ADMIT_REJECT) return { verdict: { result: 'E-MALFORMED', detail: 'document is not an inert record (round-27: the ONE input boundary)' }, resolution: null };
+  if (D === ADMIT_REJECT) return { verdict: { result: 'INVALID', error: 'E-MALFORMED', detail: 'document is not an inert record (round-27: the ONE input boundary)' }, resolution: null };
   doc = D;
   const { fetchImpl = fetch, substrateVerify } = T;
   const base = verify(doc, opts);

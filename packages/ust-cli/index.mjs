@@ -1608,7 +1608,9 @@ async function cmdForkChoice() {
   }
   if (r.result === 'INDETERMINATE') { console.log(`  ⏳ INDETERMINATE${ust} — ${r.detail || 'no anchor-included candidate yet'}`); process.exit(2); }
   if (r.result === 'MULTI_AUTHORITY') { console.log(`  ℹ️  MULTI_AUTHORITY${ust} — distinct authorities share the ust_id string (not a fork); each is canonical for its own name`); process.exit(2); }
-  console.log(`  ❌ ${r.result}${ust}${r.detail ? ' — ' + r.detail : ''}`);
+  // round 103 — the refusal carries its CODE in `error`, so print both: a bare `REFUSED` would hide WHICH trust was
+  // not earned, which is the one thing this tool exists to say out loud.
+  console.log(`  ❌ ${r.result}${r.error ? ' ' + r.error : ''}${ust}${r.detail ? ' — ' + r.detail : ''}`);
   process.exit(1);
 }
 

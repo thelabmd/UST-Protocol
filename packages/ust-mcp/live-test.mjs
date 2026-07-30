@@ -58,7 +58,7 @@ check('live:verify_stream = chain-consistent', (await call(client, 'ust_verify_s
 // ust_fork_choice over the wire (#45): the per-slot guard + the honest no-substrate path both dispatch.
 const sa = P.seal(P.buildState({ domain_shard: 'helioradar.com', ust_id: 'ust:20260705.1405', key_id: A.key_id, class: 'observation' }, t, { r: { kind: 'captured', value: { n: '1' } } }), A.priv, A.pubB64);
 const sb = P.seal(P.buildState({ domain_shard: 'helioradar.com', ust_id: 'ust:20260705.1405', key_id: A.key_id, class: 'observation' }, t, { r: { kind: 'captured', value: { n: '2' } } }), A.priv, A.pubB64);
-check('live:fork_choice mixed ust_id → E-MALFORMED', (await call(client, 'ust_fork_choice', { candidates: [fr0, fr1], offline: true })).result === 'E-MALFORMED');
+check('live:fork_choice mixed ust_id → E-MALFORMED', (await call(client, 'ust_fork_choice', { candidates: [fr0, fr1], offline: true })).error === 'E-MALFORMED');
 check('live:fork_choice same ust_id, no substrate → INDETERMINATE', (await call(client, 'ust_fork_choice', { candidates: [sa, sb], offline: true })).result === 'INDETERMINATE');
 
 await client.close();

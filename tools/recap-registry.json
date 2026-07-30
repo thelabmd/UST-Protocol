@@ -102,6 +102,12 @@
       "content_hash": "sha256:c96d708a0625f442d6a5da4c321061e95819fe2c8ae3b3325cf1ae61b9419cd6",
       "issue": 110,
       "_issue": "Round 102 was the last of the self-audit arc and #110 closed on it, so #110 receives the recap. The earlier `no_recap` said the round closed nothing — true when written, and the closing was the next act."
+    },
+    {
+      "round": 103,
+      "content_hash": "sha256:17d14fbb3ac972a3d2ca4323bd06bceb6229a2ccaf688667d155be4da54a974d",
+      "issue": 111,
+      "_issue": "Round 103 closed #111, so #111 receives the recap — one closed issue, one entry."
     }
   ]
 }

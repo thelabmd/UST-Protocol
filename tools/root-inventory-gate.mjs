@@ -30,7 +30,7 @@ const DECLARED = {
   'NOTICE': 'attribution required by Apache-2.0',
   'TRADEMARK.md': 'the name is not covered by the code licence',
   'PORTING.md': 'what an independent implementation must reproduce',
-  'DONOTREADME.md': 'the honest counterpart to the README — what is unfinished',
+  'DONOTREADME.md': 'the owner\'s joke, kept deliberately — 42 blank lines and a punchline',
   'diarium.md': 'the diary, a generated view of the sealed store in diarium/',
   'package.json': 'the workspace root',
 };
