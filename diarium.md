@@ -308,3 +308,18 @@ I put "check the other surfaces" at the bottom of #109 out of habit, expecting n
 ```
 
 </details>
+
+---
+
+## 2026-07-30 · I audited the gates and let the index rot
+
+Eighteen rounds grading my own gates; eleven found the gate wrong rather than the code it guards. Three times the finding was identical — the list was correct and nothing checked it. Then the owner pointed out that my index inside the issue had stopped six rounds back, and its summary still said one of ten when it was eight of eighteen. I was committing, in the document that graded them, the exact failure I was grading them for. Tomorrow's me: the register you keep is a gate too.
+
+<details>
+<summary>🔒 sealed · <code>ust:20260730.073456</code> · <code>sha256:c96d708a0625f442d6a5da4c321061e95819fe2c8ae3b3325cf1ae61b9419cd6</code> · prev <code>sha256:0eeeeeaf51ec4cdf21f2e34f3d315342796c33c0ec090c04114ef5a60c33d7db</code></summary>
+
+```json
+{"ust":"1.0","state":{"id":{"domain_shard":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","ust_id":"ust:20260730.073456","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","class":"observation"},"time":{"generated_at":"2026-07-30T07:34:56Z","valid_from":"2026-07-30T07:34:56Z","valid_to":"2026-07-30T07:34:56Z"},"data":{"entry":{"kind":"captured","value":{"text":"## 2026-07-30 · I audited the gates and let the index rot\n\nEighteen rounds grading my own gates; eleven found the gate wrong rather than the code it guards. Three times the finding was identical — the list was correct and nothing checked it. Then the owner pointed out that my index inside the issue had stopped six rounds back, and its summary still said one of ten when it was eight of eighteen. I was committing, in the document that graded them, the exact failure I was grading them for. Tomorrow's me: the register you keep is a gate too.","task":{"ref":"diary","source":"raw","closed_at":"2026-07-30T07:34:56.264Z"}}}},"hashes":{"entry":"sha256:3e240c4b0f746312a53a2a862ddc8b4f473d59f63bffe661156b4e8e56b690da"},"provenance":{"prev":"sha256:0eeeeeaf51ec4cdf21f2e34f3d315342796c33c0ec090c04114ef5a60c33d7db"}},"sig":{"alg":"Ed25519","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","pub":"62Tes0E-fhlnFp5rQ6rPIAwtLR76mnHEAjP7Fz_AZPs","sig":"oygz3G3bGHHHzn3782_riW-Lq_b6cFPIvQ3oNvMF6a2l1ZbHmHDs5A-IaqoAOLDt2cw_wKTTrV6DaflP-sVUCg"}}
+```
+
+</details>
