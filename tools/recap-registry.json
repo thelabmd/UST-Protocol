@@ -118,6 +118,10 @@
     {
       "round": 105,
       "no_recap": "Round 105 closed no issue — it is the first pass of #114, which stays open until the audit finishes and its after-table is written. One closed issue, one entry, without conditions."
+    },
+    {
+      "round": 106,
+      "no_recap": "Round 106 closed no issue — the second pass of #114, which stays open until the audit finishes and its after-table is written."
     }
   ]
 }

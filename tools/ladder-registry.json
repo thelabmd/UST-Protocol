@@ -490,6 +490,22 @@
       "test": {
         "excluded": "The test layer is the three controls, each run twice — before the fix all three gates PASSED with their input broken, after it all three fail by name. They run as npm run test:version-truth, test:retired and test:inclusion, not as conformance checks, which cover the verifier only."
       }
+    },
+    {
+      "round": 106,
+      "math": {
+        "excluded": "Vacuity is a property the model already names — §F.9 — and this round applies it to our own gates rather than to a verifier's checks. The formal model states what a verifier may conclude from a transcript; whether OUR corpus was read is not a property of any document."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. The documents the floors guard are unchanged — what changed is that emptying one now fails."
+      },
+      "code": "tools/vacuity-battery.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. The input here is an emptied source file, a state of the tree rather than a transcript, and it is exercised by emptying it and running the step."
+      },
+      "test": {
+        "excluded": "The test layer is the two controls, each run twice — before the floors both gates PASSED on an emptied input, after them both fail. They run as npm run test:ambiguous-terms and test:vacuity, not as conformance checks, which cover the verifier only."
+      }
     }
   ],
   "first_accounted_round": 76,

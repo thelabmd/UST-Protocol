@@ -59,7 +59,17 @@ const lines = [
 ];
 let failed = false;
 
+// AUDIT #114, pass 2 — the pin is a CEILING and the gate had no FLOOR, so an EMPTY spec passed: zero bare uses is
+// ≤ any pin, and "every bare use is within its pin" is vacuously true of a document with no uses at all. Measured by
+// emptying spec/UST-1.0.md and running the step, which stayed green. A corpus floor is the same instrument round 88
+// gave primitive-parity: it cannot prove the documents are right, only that they were READ.
+const TOTALS = { checkpoint: 250, rotation: 25, recovery: 80 };   // measured 2026-07-30: 305 / 33 / 101
 for (const t of TERMS) {
+  const total = (lines.join('\n').match(new RegExp(`\\b${t.word}\\b`, 'gi')) || []).length;
+  if (total < TOTALS[t.word]) {
+    failed = true;
+    console.log(`  ✗ ${t.word}: ${total} total occurrences across both documents, floor ${TOTALS[t.word]} — the corpus SHRANK, and a pin on bare uses says nothing about a document that is no longer there`);
+  }
   const bare = [];
   lines.forEach((l, i) => {
     const re = new RegExp(`\\b${t.word}\\b`, 'gi');
