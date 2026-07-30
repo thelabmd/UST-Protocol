@@ -384,6 +384,22 @@
       "test": {
         "excluded": "The test layer is the new coverage leg plus two controls, run: removing a command's row makes the gate name it, and the scan is asserted to find at least two commands and to reject a name that cannot exist. They run as npm run test:consumption, not as conformance checks, which cover the verifier only."
       }
+    },
+    {
+      "round": 99,
+      "math": {
+        "excluded": "Whether our ceremony tool reaches the network before its air-gapped half returns is a property of that tool, not of what a verifier may conclude from a transcript. The model states what a genesis document must satisfy; how the operator produced it offline is outside every term in it."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. §20.1's serving contract and the ceremony's own obligations are unchanged — what changed is how much of the offline half is watched."
+      },
+      "code": "tools/offline-ceremony-gate.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. The property here is positional inside a command — that no network call precedes a return — which produces no document and changes no verdict."
+      },
+      "test": {
+        "excluded": "The test layer is the derivation's controls plus an injected breach, run: a fetch placed inside askHidden (one of the five that nothing watched before) is caught, the derivation must find at least six callees and must reject a name that cannot exist, and the extractor must fail if a body runs past a third of the file. They run as npm run test:offline, not as conformance checks, which cover the verifier only."
+      }
     }
   ],
   "first_accounted_round": 76,

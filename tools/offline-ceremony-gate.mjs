@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// @assurance 3 canfail:yes — OFFLINE_CALLEES is a hand-typed list of the air-gapped half
+// @assurance 2 canfail:yes literal-ok:NETWORK_BY_DESIGN names the one callee that IS the network, whose call site the guarded/unguarded legs already govern — the callee set itself is DERIVED from what the command calls before the cut
 // Offline-ceremony gate — the air-gapped half must be unable to reach the network, by POSITION, not by intention.
 //
 // The whole value of an air-gapped ceremony is one sentence an operator gets to say afterwards: "the crown key was
@@ -57,18 +57,45 @@ check(unguarded.length === 0,
 // first version of this gate scanned only cmdGenesis; a mutation placed a `fetch` inside `buildCeremony` and it
 // stayed green. So the callees that run before the cut are scanned too, and there the rule is stricter: NO network
 // at all, because they have no offline branch to take.
-const OFFLINE_CALLEES = ['buildCeremony', 'encryptKey', 'ceremonyLimits', 'offlineHandoff'];
+// THE CALLEE SET IS DERIVED, and the hand-typed version was covering less than half of it. MEASURED 2026-07-30:
+// thirteen names are called before the cut; four were listed. `openReader`, `ceremonyMap`, `resolveDnsToken`,
+// `closeReader` and `askHidden` run inside the air gap and nothing was scanning them — the same shape as the
+// `buildCeremony` miss recorded above, which is what this list was created for in the first place.
+//
+// Two distinctions the derivation has to make, and both were found by getting them wrong first:
+//   · LOCAL vs TOP-LEVEL. `writeSecret`, `askOr` and sixty others are declared INSIDE cmdGenesis, so the positional
+//     cut already governs them; scanning them as separate functions made the extractor run to the end of the file and
+//     report the command's own network section as theirs.
+//   · a `const` is not a function. `CADENCE` matched at column 0 — inside a TEMPLATE STRING the ceremony emits into a
+//     worker. The declaration must be a function or an arrow, or the set fills with text.
+const NETWORK_BY_DESIGN = {
+  remintProbe: 'it IS the network reach — a re-mint probe against the live name. Its CALL SITE before the cut is what matters, and the guarded/unguarded legs above already require it to sit inside the `else` of the offline branch.',
+};
+const preCut = body.slice(0, cut);
+const topLevel = (fn) => {
+  const m = new RegExp('^(export )?(async )?(function ' + fn + '\\b|const ' + fn + '\\s*=\\s*(async\\s*)?\\()', 'm').exec(SRC);
+  if (!m) return null;
+  const from = m.index, rest = SRC.slice(from + m[0].length);
+  const nx = rest.search(/^(export )?(async )?(function \w|const \w+\s*=\s*(\(|async))/m);
+  return { at: from, src: SRC.slice(from, nx > 0 ? from + m[0].length + nx : undefined) };
+};
+const OFFLINE_CALLEES = [...new Set([...preCut.matchAll(/\b([a-zA-Z][A-Za-z0-9]{3,})\s*\(/g)].map((m) => m[1]))]
+  .filter((n) => n !== 'cmdGenesis' && topLevel(n) && !Object.hasOwn(NETWORK_BY_DESIGN, n))
+  .concat(['offlineHandoff']);   // the cut itself: it runs LAST in the offline half, so it is not "before" it
+check(OFFLINE_CALLEES.length >= 6, `only ${OFFLINE_CALLEES.length} offline callees derived — the scan has gone blind and this leg would pass vacuously`);
+check(!OFFLINE_CALLEES.includes('callThatCannotExist'), 'the callee derivation accepts a name that does not exist');
+for (const [fn, why] of Object.entries(NETWORK_BY_DESIGN)) check(String(why).length >= 60, `${fn} is exempted with a reason too short to be one`);
+
 for (const fn of OFFLINE_CALLEES) {
-  // both declaration forms: `function f(` and `const f = (…) =>`. Looking for only the first reported encryptKey
-  // as missing — a finder that cannot see a form is indistinguishable from a function that is not there.
-  const at = SRC.search(new RegExp('(export )?(async )?(function ' + fn + '\\b|const ' + fn + '\\s*=)'));
-  check(at > 0, `${fn} not found — it is named as part of the offline half and the probe cannot see it`);
-  if (at < 0) continue;
-  const next = SRC.slice(at + 10).search(/\n(export )?(async )?(function \w|const \w+\s*=\s*(\(|async))/);
-  const fnBody = SRC.slice(at, next > 0 ? at + 10 + next : undefined);
-  const hits = [...fnBody.matchAll(NET)].map((m) => m[1]);
+  const t = topLevel(fn);
+  check(!!t, `${fn} is called in the offline half and has no top-level declaration the probe can bound`);
+  if (!t) continue;
+  // CONTROL for the extractor itself: a body that runs to the end of the file means the bound was not found, and
+  // that is how a local helper was once reported as reaching the network — the command's own section, attributed to it.
+  check(t.src.length < SRC.length / 3, `${fn}: the body extraction did not find its end (${t.src.length} of ${SRC.length} chars) — it would report a neighbour's network reach as this function's`);
+  const hits = [...t.src.matchAll(NET)].map((m) => m[1]);
   check(hits.length === 0,
-    `${fn} runs in the OFFLINE half and reaches the network (${[...new Set(hits)].join(', ')}) — the air gap is broken inside a callee, where the command's own cut cannot protect it`);
+    `${fn} runs in the OFFLINE half and reaches the network (${[...new Set(hits)].join(', ')}) — the air gap is broken inside a callee, where the command's own cut cannot see it`);
 }
 
 // and the handoff must tell the operator what NOT to carry out — the crown leaving is the failure this prevents
