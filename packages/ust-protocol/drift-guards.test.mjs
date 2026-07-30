@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// @assurance 2 canfail:no — injects a fake drift into each from-code gate and requires it to fire
+// @assurance 2 canfail:yes — injecting a deliberate break and requiring the gate to reject it IS the negative control; the corpus is enumerated and its coverage asserted below
 // test:drift-guards — the META-gate (owner, round-51: "жёсткая гарантия обновления либо ловли несоответствий без тихих багов").
 // The from-code gates (R31 partition, capability-parity, spec-code-sync, BMC denominator, model-lockstep, model-domain,
 // retired-mechanisms) are supposed to be FAIL-CLOSED: a new export / error code / interpreter rule / model note / retired
@@ -15,6 +15,10 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { MUTATIONS, applyMutation } from '../../tools/mutations.mjs';
+// CONTROL — the corpus must be non-empty and every mutation that NAMES a gate must actually be run here, or this
+// meta-gate reports fail-closed over a set it never touched. The counts are asserted at the end against what ran.
+const GATED = MUTATIONS.filter((m) => m.gate);
+if (!GATED.length) { console.error('  ✗ CONTROL: no mutation names a gate — this meta-gate would pass vacuously'); process.exit(1); }
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 let pass = 0; const F = [];

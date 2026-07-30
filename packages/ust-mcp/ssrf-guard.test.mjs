@@ -1,4 +1,4 @@
-// @assurance 4 canfail:no — our own SSRF cases against our own guard
+// @assurance 4 canfail:cited:packages/ust-protocol/drift-guards.test.mjs — our own SSRF cases against our own guard
 // #69 E4 — the resolution guard refuses a public NAME that resolves to a private ADDRESS (what the lexical
 // floor cannot catch), and private IP literals directly.
 import { test } from 'node:test';

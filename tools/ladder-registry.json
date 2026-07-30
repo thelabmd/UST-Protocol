@@ -320,6 +320,22 @@
       "test": {
         "excluded": "The test layer is the ten synthetic legs plus two controls-of-the-controls, each run: blinding the heading scanner fails, and breaking the ceiling comparison fails. They run as npm run test:model-domain and npm run test:changelog, not as conformance checks, which cover the verifier only."
       }
+    },
+    {
+      "round": 95,
+      "math": {
+        "excluded": "This round gives our own suites adversaries. The formal model states what a verifier may conclude from a transcript; whether OUR SSRF test notices a broken guard is not a property of any document, and the mutations themselves are already the model-adjacent mechanism, registered in the corpus the model's lockstep guard reads."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. The three rules the new mutants break are already normative (§12.2 roles, §F.5e.3 cadence, and the SSRF refusal PORTING.md requires); what changed is that breaking them now fails a suite."
+      },
+      "code": "tools/mutations.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce, and the two protocol rules here already have theirs from rounds 76 and 84. What this round adds is an adversary for suites that are not verifiers — an SSRF door and a CLI ceremony — which no transcript can express."
+      },
+      "test": {
+        "excluded": "The test layer is the drift-guards observer itself, run: it injects each of the three new mutations and requires the named suite to exit non-zero, and it rejected one of them until the assertion it exposed was strengthened. It runs as npm run test:drift-guards, not as a conformance check, which covers the verifier only."
+      }
     }
   ],
   "first_accounted_round": 76,

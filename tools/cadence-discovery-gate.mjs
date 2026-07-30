@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// @assurance 4 canfail:no — fixtures built here; the refusal is asserted against them
+// @assurance 4 canfail:cited:packages/ust-protocol/drift-guards.test.mjs — fixtures built here; the refusal is asserted against them
 // Cadence-discovery gate — a declared grid must be REACHABLE, and an unreachable one must never be mistaken for absence.
 //
 // Why: the cadence mechanism was complete and unusable. `resolveCadence` verifies every entry (signature, class, domain,

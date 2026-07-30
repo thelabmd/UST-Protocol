@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// @assurance 4 canfail:no — assertions written by hand over fixtures built here
+// @assurance 4 canfail:cited:packages/ust-protocol/drift-guards.test.mjs — assertions written by hand over fixtures built here
 // CLI ceremony regression — the 9th audit's seven points, frozen as tests so a TENTH audit can't silently
 // reintroduce the ninth defect. Each check name IS the guarantee it locks. Runs the exported ceremony core
 // (no live network: CF fetch + DoH readback are injected). Prints `PASS n FAIL n NOTES n` like conformance.
@@ -12,6 +12,7 @@ import { createPrivateKey, createPublicKey } from 'node:crypto';
 let pass = 0, fail = 0, note = 0; const fails = [];
 const check = (id, ok, d) => { if (ok) pass++; else { fail++; fails.push(id + (d ? ' — ' + d : '')); } };
 const threw = async (fn) => { try { await fn(); return false; } catch { return true; } };
+const threwWith = async (f, rx) => { try { await f(); return false; } catch (e) { return rx.test(String(e.message)); } };
 const DOMAIN = 'genesis-test.invalid';   // RFC 2606 test name — no real domain touched
 // P0-2 — `authoritative` name-authority is EARNED from a verified, consumer-trusted NO-FORK EVIDENCE, never a raw
 // `noForkConfirmed` boolean (now only a `consumer-override`). `nfe(genesis)` mints a consumer-trusted witness's
@@ -710,8 +711,12 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
     // #109 / round 84 — whether a role is REQUIRED, FORBIDDEN or wrong is a property of the SERVED GENESIS. The
     // dispatcher used to assert it as a property of the command, leaving a publisher that declares no roles with
     // NO path to a parallel key — while `role-01` pins that exact entry as valid.
+    // round 95 — this asserted only THAT it threw, and a mutant removing the obligation still threw: with no role the
+    // NEXT line refuses `role null is not one this genesis declared`. The check passed either way and proved nothing,
+    // which is the round-74 lesson (assert the REASON, not the refusal) committed again by the same hand.
     check('keyadd_declaring_genesis_REQUIRES_a_role',
-      await threw(() => C.addKeylogKey({ genesis: gR, keylog: [k0], rootSigner: root, time: Tr, ustId: 'ust:20260628.1005' })));
+      await threwWith(() => C.addKeylogKey({ genesis: gR, keylog: [k0], rootSigner: root, time: Tr, ustId: 'ust:20260628.1005' }),
+        /must state its own role/));
     check('keyadd_declaring_genesis_refuses_an_undeclared_role',
       await threw(() => C.addKeylogKey({ genesis: gR, keylog: [k0], rootSigner: root, role: 'receipts', time: Tr, ustId: 'ust:20260628.1005' })));
     check('keyadd_UNDECLARED_genesis_refuses_a_role',

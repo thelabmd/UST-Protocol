@@ -17,6 +17,32 @@
 // `mustDetect` marks the verdict-seam mutations the battery treats as hard requirements; the rest are harvest — a hit
 // lowers the unproven residual, a miss is covered by the gate channel and is not a failure.
 export const MUTATIONS = [
+  // round 95 — THE HAND-WRITTEN SUITES. Five CI steps sat in the weakest quadrant of thelabmd/UST-Protocol#110 for one
+  // reason: their only honest negative control is a MUTANT of the surface they test, and this corpus reached none of
+  // those surfaces. Adding a leg to each suite would have been the appearance of coverage; adding entries HERE gives
+  // each one an adversary the `drift-guards` observer already knows how to run — one corpus, the same two observations.
+  {
+    id: 'ssrf-private-range-opened', gate: 'node packages/ust-protocol/ssrf.test.mjs',
+    why: 'the SSRF door. Broken, no address is private, so a resolved host in 127/8 or 10/8 is fetched.',
+    file: 'packages/ust-protocol/ssrf.mjs',
+    from: 'export function isPrivateIp(ip) {\n  const v = net.isIP(ip);',
+    to: 'export function isPrivateIp(ip) {\n  if (true) return false; /* mutant */\n  const v = net.isIP(ip);',
+  },
+  {
+    id: 'cadence-root-conjunct-removed-discovery', gate: 'node tools/cadence-discovery-gate.mjs',
+    why: 'the §F.5e.3 cadence conjunct, observed THROUGH discovery rather than through the reducer: an operational key moves the grid and the served contract still reports a declared cadence.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "    if (sKid !== gKid) return { error: 'E-KEY', detail: 'cadence entry ' + i + ' cadence mutation requires the GENESIS ROOT",
+    to: "    if (false && sKid !== gKid) return { error: 'E-KEY', detail: 'cadence entry ' + i + ' cadence mutation requires the GENESIS ROOT",
+  },
+  {
+    id: 'keyadd-role-obligation-dropped', gate: 'node packages/ust-cli/regression.mjs',
+    why: 'the §12.2 role obligation in the CLI core (round 84). Broken, a DECLARING genesis stops requiring a role, so a parallel key is added with none and the entry is E-KEY when served.',
+    file: 'packages/ust-cli/index.mjs',
+    from: '  if (declares && !role) throw new Error(',
+    to: '  if (false && declares && !role) throw new Error(',
+  },
+
   // round 79 (#106) — role INHERITANCE down a lineage. Broken, `add(k, supersedes=s)` no longer carries `s`'s role,
   // so replacing a roled key becomes impossible without restating the role by hand — and the asymmetry the whole
   // derivation rests on ("propagates, never introduces") stops being observable at all.
