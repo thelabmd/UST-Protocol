@@ -538,6 +538,40 @@
       "test": {
         "excluded": "The test layer is two controls, both run: a gate made red BEFORE injection is named instead of counted, and a refusal message replaced with an unrelated one makes the named regression check fail. They run as npm run test:drift-guards and test:cli, not as conformance checks, which cover the verifier only."
       }
+    },
+    {
+      "round": 109,
+      "math": {
+        "excluded": "Whether OUR enumeration reports what it skips is a property of our tooling. The model's own totality discipline — a domain enumerated in both directions — is the rule being applied here, and it is unchanged by applying it."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. Which of our packages appear in the README is not a conformance obligation."
+      },
+      "code": "tools/package-enumeration-gate.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. A package manifest flag produces no document and changes no verdict; it is exercised by flipping the flag and running the gate."
+      },
+      "test": {
+        "excluded": "The test layer is the control, run: a package marked private without a stated reason now fails, where before the gate passed in silence. Four further probes are recorded as negative results with what they probed. They run as npm run test:packages, not as a conformance check, which covers the verifier only."
+      }
+    },
+    {
+      "round": 110,
+      "math": {
+        "excluded": "The measurement is about our tooling's ability to notice its own blindness. Nothing in the formal model asserts anything about how our gates extract from source; the model's own totality obligations are unchanged and were not consulted."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently. How a gate of ours extracts a set from a source file is not a conformance obligation on anybody."
+      },
+      "code": {
+        "excluded": "The pass changed no file, and that is its result. Seven extraction sites were blinded by making their patterns unmatchable and every one exited 1, so there was nothing to repair; writing a change anyway would be grading to a conclusion."
+      },
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. A blinded regex in one of our gates produces no document and changes no verdict; the probe is running the gate against a source it can no longer match."
+      },
+      "test": {
+        "excluded": "The probes ARE the test layer and they are recorded rather than committed: each blinding is a one-line pattern edit, run, restore. Committing them would freeze a hostile edit of a gate into the tree; the reproduction is stated in the changelog row instead."
+      }
     }
   ],
   "first_accounted_round": 76,

@@ -66,8 +66,17 @@ const readme = readFileSync(ROOT + 'README.md', 'utf8');
 // ── 2. the README Layout table
 const rows = [...readme.matchAll(/^\|\s*`packages\/([\w.@/-]+?)\/?`\s*\|([^|]*)\|/gm)].map((m) => ({ dir: m[1], cell: m[2] }));
 const rowDirs = new Set(rows.map((r) => r.dir));
+// AUDIT #114, pass 5 — NO SILENT DROP. `private` removed a package from this enumeration with no mention at all:
+// measured by flipping the flag on ust-light, after which the gate passed and said nothing. Zero packages are private
+// today, so it is an UNUSED escape hatch — the cheapest kind to walk through. A skip must be REPORTED, and a private
+// package must carry its reason like every other exemption in this repository.
+const PRIVATE_OK = {};   // name → why it is not for readers. Empty today: nothing is private.
+const skipped = pkgs.filter((p) => p.private).map((p) => p.dir);
+for (const d of skipped) ok(`private package ${d} states why it is not for readers`, Object.hasOwn(PRIVATE_OK, d) && String(PRIVATE_OK[d]).length >= 40,
+  'a package that leaves this enumeration by a flag must say why, or the flag is a way out of being checked');
+if (skipped.length) console.log(`  ℹ  skipped as private: ${skipped.join(', ')} — reported, never silent`);
 for (const p of pkgs) {
-  if (p.private) continue;                                     // a private package is not for readers
+  if (p.private) continue;                                     // reported above, never dropped in silence
   ok(`table row for packages/${p.dir}`, rowDirs.has(p.dir), 'add a row to the README Layout table');
   const row = rows.find((r) => r.dir === p.dir);
   // the npm name matters more than the directory: a reader installs the name
