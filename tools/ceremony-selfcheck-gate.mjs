@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// @assurance 3 canfail:yes — hand-typed expectations about what a self-check may assert
+// @assurance 2 canfail:yes literal-ok:the three RESOLVER entries are a judgement — which call answers a world question cannot be read off anything — while the RUNG half is derived from the core's identity ladder
 // Ceremony self-check gate (rev95) — a ceremony's self-check must assert the invariant the ceremony PRESERVES,
 // never a property of the WORLD it does not determine.
 //
@@ -31,12 +31,23 @@ lines.forEach((l, i) => { if (/self-check FAILED/.test(l)) sites.push({ line: i 
 check(sites.length >= 4, `only ${sites.length} self-check sites found — the probe has gone blind`);
 
 // A self-check may not condition on a world property. These are the resolver calls that ANSWER a world question.
+// The RESOLVER half is a judgement — which calls answer a world question cannot be read off anything, so these three
+// are named with their reasons. The RUNG half is DERIVED, and it had to be: this list named `'authoritative'` and left
+// `corroborated` and `self-asserted` out, so a self-check conditioning on either would have passed. Neither appears in
+// the CLI today [measured], so nothing was broken — the gap was in the watching, which is the third time that sentence
+// has been written this week. The ladder is read from the core, so a NEW rung is forbidden the moment it exists.
+const CORE = readFileSync(new URL('../packages/ust-protocol/index.mjs', import.meta.url), 'utf8');
+const ladder = (CORE.match(/identity:\s*\[([^\]]+)\]/) ?? [, ''])[1].match(/'([a-z-]+)'/g) ?? [];
+check(ladder.length >= 3, `the identity ladder read from the core has ${ladder.length} rung(s) — the derivation has gone blind and the rung half of WORLD would be empty`);
 const WORLD = [
   ['resolveAuthority', 'name authority — depends on witness evidence a ceremony neither holds nor should'],
   ['noForkConfirmed', 'a caller no-fork assertion — #98 hardened the protocol so this can never confer authority'],
   ['acceptConsumerOverride', 'a consumer opt-in — the ceremony is not the consumer'],
-  ["'authoritative'", 'the authoritative rung is a property of the world, not of what the ceremony produced'],
+  ...ladder.map((r) => [r, `the ${r.replace(/'/g, '')} rung is a property of the WORLD, not of what the ceremony produced — derived from the core's ladder, so this list cannot fall behind it`]),
 ];
+// CONTROL — the derivation must actually reach the ladder, and must not swallow prose.
+check(WORLD.some(([n]) => n === "'corroborated'"), 'the rung half of WORLD did not pick up `corroborated` — the ladder derivation is not in use');
+check(!WORLD.some(([n]) => n === "'nosuchrung'"), 'the ladder derivation accepts a rung that does not exist');
 for (const s of sites) {
   // the whole statement, not just the line: a check may span the two lines above it
   // the window must INCLUDE the matched line: the condition and its exit live ON it. The first version excluded

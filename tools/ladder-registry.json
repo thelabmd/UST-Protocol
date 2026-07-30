@@ -416,6 +416,22 @@
       "test": {
         "excluded": "The test layer is two controls, both run: a probe file emitting an invented rung is caught by the derived roster, and an exemption whose reason drops its section citation fails. They run as npm run test:report-shape, not as conformance checks, which cover the verifier only."
       }
+    },
+    {
+      "round": 101,
+      "math": {
+        "excluded": "The identity ladder this round derives from is already stated in §F.5.0's lattice, and what a ceremony may assert about it is rev95's realization note, which stands. The model says what a verifier concludes; which of OUR tool's lines may mention a rung is a property of the tool."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. The rungs and their meanings are unchanged — what changed is that our gate reads them from the core instead of naming one."
+      },
+      "code": "tools/ceremony-selfcheck-gate.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. A ceremony self-check produces no document — it is a refusal inside a command — and the rungs it must not condition on are already pinned by the vectors that exercise them."
+      },
+      "test": {
+        "excluded": "The test layer is the control, run: a self-check conditioning on `corroborated` is caught, which was silently legal before this round, plus two legs asserting the ladder derivation is in use and rejects a rung that does not exist. They run as npm run test:ceremony, not as conformance checks, which cover the verifier only."
+      }
     }
   ],
   "first_accounted_round": 76,
