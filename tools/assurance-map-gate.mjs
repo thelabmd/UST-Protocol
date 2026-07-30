@@ -65,8 +65,23 @@ const NO_FILE = {
 // ── the DOMAIN: the steps CI actually runs, read from the workflow CI itself executes
 const CI = U('.github/workflows/ci.yml');
 const SCRIPTS = JSON.parse(U('package.json')).scripts;
-const steps = [...CI.matchAll(/- name: (.+?)\n\s+run: ((?:.|\n(?!\s+- name))+?)\n(?=\s+- name|\s*$)/g)]
-  .map((m) => ({ name: m[1].trim(), run: m[2].trim().split('\n').map((x) => x.trim()).join(' ') }));
+// AUDIT #114, pass 3+5 — the roster DROPPED A STEP IN SILENCE for as long as this gate has existed. The old form
+// required `run:` on the line straight after `- name:`, and `connector receipts (OTS + Rekor)` carries a comment
+// between the two — so it parsed 57 of 58 steps, printed "every CI step is graded", and the one step it could not
+// see was the one that mints EXTERNAL anchoring receipts. The floor below it (`> 20`) is why nothing noticed: a
+// number somebody chose passes at 57 exactly as happily as at 58, which is round 102's ratchet class caught doing
+// the damage it was predicted to do. So the roster is no longer a pattern that happens to match — the file is split
+// on the step boundary and EVERY block must yield a command. A step this gate cannot read now FAILS here.
+const blocks = CI.split(/^\s*- name: /m).slice(1);
+const steps = blocks.map((b) => {
+  const name = b.split('\n')[0].trim();
+  const at = b.search(/^\s*run:/m);
+  return { name, run: at < 0 ? null : b.slice(at).replace(/^\s*run:\s*\|?/, '').trim().split('\n').map((x) => x.trim()).join(' ') };
+});
+for (const st of steps) check(st.run !== null,
+  `CI step \`${st.name}\` declares no command this gate can read — an unparsed step used to VANISH from the roster while the gate reported the rest as complete`);
+check(steps.length === (CI.match(/^\s*- name: /gm) ?? []).length,
+  'the parsed roster and the step boundaries in the workflow disagree — the enumeration is a sample, not the domain');
 check(steps.length > 20, `only ${steps.length} CI steps parsed — the roster has gone blind and this gate would pass vacuously`);
 
 const expand = (cmd, depth = 0) => depth > 6 ? cmd
@@ -110,8 +125,19 @@ const REGENERATES = /writeFileSync|--check|git diff|regenerat/i;
 // A leg LABELLED `CONTROL` is the convention four gates now use, and the detector did not know it: round 92's
 // controls were real, ran, and were reported as absent. The label is structural enough to count — it is the text a
 // check prints when it fails — but it is still a word, which is why this axis is declared and not inferred.
-const CANFAIL = /must be able to fail|able to FAIL|negative control|\bCONTROL\b|gone blind|vacuou|check\(!/i;
-const ROSTER = /^(?:const|export const) [A-Z][A-Z_0-9]{2,}\s*=\s*(?:\[|new Set\(\[)[^\]]*'[^']+'\s*,\s*'[^']+'\s*,\s*'/m;
+// AUDIT #114 — this vocabulary was written when the roster held GATES only, and it shows: `check(!` and the word
+// CONTROL are how a tool of ours proves its leg. A node:test suite proves the same thing by ASSERTING A REFUSAL —
+// `final` comes back false, the call rejects, the verdict is INVALID. When the roster gained the connector-receipt
+// step (it had been dropped in silence, see the step parser above), two suites carrying four negative assertions
+// each were told they carried none. The added forms are deliberately narrow: an expected value that IS a refusal,
+// not merely any assertion that could go red — every assertion can go red, so that would grade nothing.
+const CANFAIL = /must be able to fail|able to FAIL|negative control|\bCONTROL\b|gone blind|vacuou|check\(!|assert\.(?:rejects|throws)\(|assert\.equal\([^)]*,\s*(?:false|'INVALID'|"INVALID")\)/i;
+
+// CONTROL for the forms just added — a refusal must read as a leg and an ordinary assertion must not, or the
+// widening would grade every test file in the tree as carrying a negative control.
+check(CANFAIL.test("assert.equal(r.final, false)") && CANFAIL.test("await assert.rejects(fn)")
+  && !CANFAIL.test("assert.equal(r.final, true)") && !CANFAIL.test("assert.equal(n, 3)"),
+  'CONTROL: the can-fail detector does not tell an asserted REFUSAL from an ordinary assertion');const ROSTER = /^(?:const|export const) [A-Z][A-Z_0-9]{2,}\s*=\s*(?:\[|new Set\(\[)[^\]]*'[^']+'\s*,\s*'[^']+'\s*,\s*'/m;
 
 const graded = [];
 for (const st of steps) {

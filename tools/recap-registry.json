@@ -138,6 +138,10 @@
     {
       "round": 110,
       "no_recap": "Round 110 closed no issue — the sixth pass of #114, which stays open until the audit finishes and its after-table is written."
+    },
+    {
+      "round": 111,
+      "no_recap": "Round 111 closed no issue — the audit round of #114, which stays open until the after-table is written and the delta is readable beside the before."
     }
   ]
 }

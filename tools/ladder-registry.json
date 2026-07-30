@@ -572,6 +572,22 @@
       "test": {
         "excluded": "The probes ARE the test layer and they are recorded rather than committed: each blinding is a one-line pattern edit, run, restore. Committing them would freeze a hostile edit of a gate into the tree; the reproduction is stated in the changelog row instead."
       }
+    },
+    {
+      "round": 111,
+      "math": {
+        "excluded": "Whether OUR roster reads every step of OUR workflow is a property of our tooling, not of the protocol. The model's totality obligations are unchanged; the rule being applied — enumerate the domain, never a pattern that resembles it — is the one this repository already imposes on the verifier."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. Which of our CI steps carry an assurance marker binds nobody implementing UST."
+      },
+      "code": "tools/assurance-map-gate.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. A workflow step this gate could not parse produces no document and changes no verdict; the corpus mutant is the pinned artefact instead, injecting the exact shape that used to vanish."
+      },
+      "test": {
+        "excluded": "This layer resolves against vectors/conformance-checks.json, the roster of executed CONFORMANCE checks — and conformance exercises the verifier, not our workflow parser. The test is the corpus mutant `unreadable-ci-step` in tools/mutations.mjs, run by drift-guards, which injects a CI step whose command the roster cannot read and requires assurance-map to go red: 14 gated mutations became 15. Naming a conformance check here to satisfy the resolver is the round-86 patch this repository rejects."
+      }
     }
   ],
   "first_accounted_round": 76,

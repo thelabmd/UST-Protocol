@@ -220,6 +220,18 @@ export const MUTATIONS = [
     gateName: 'new checker error code → spec-code-sync',
   },
   {
+    // AUDIT #114 MEASURED 2026-07-30: the assurance roster silently held 57 of 58 steps for as long as it existed —
+    // `connector receipts (OTS + Rekor)` carries a comment between `- name:` and `run:`, and the old parser required
+    // them adjacent. It vanished, and the gate reported the remaining 57 as "every CI step". Nothing in the corpus
+    // held that class, so this mutant does: a step whose command the gate cannot read must FAIL, never disappear.
+    id: 'unreadable-ci-step', observe: [],
+    why: 'a CI step the assurance roster cannot parse — the shape that used to leave the domain in silence.',
+    file: '.github/workflows/ci.yml',
+    from: '      - name: web-signer cross-verification',
+    to: '      - name: drift step with no readable command\n        uses: ./nonexistent\n      - name: web-signer cross-verification',
+    gate: 'node tools/assurance-map-gate.mjs',
+  },
+  {
     // rev89 MEASURED: zero registered checks on the conformance channel — same finding as `unregistered-error-code`.
     id: 'sixteenth-inference-rule', observe: [],
     why: 'a 16th rule in a decision relation frozen at 15.',
