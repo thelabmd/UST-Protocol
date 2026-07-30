@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// @assurance 3 canfail:yes — COMMANDS is a hand-typed list of the stream surface
+// @assurance 2 canfail:yes — the command set is DERIVED from the source (every body that parses positionals) and the flag classification is checked against it both ways
 // Stream CONSUMPTION gate — the dual of `discovery-serving-gate`. That one asks whether an artifact a ceremony
 // PRODUCES has somewhere to be served; this one asks whether it has somewhere to be CONSUMED, and whether the
 // command that consumes it can tell an argument from a filename.
@@ -26,8 +26,11 @@ const fail = [];
 let pass = 0;
 const check = (ok, msg) => { if (ok) pass++; else fail.push(msg); };
 
-// The commands under this gate, with their DECLARED classification. Adding a positional-taking command without a
-// row here fails leg 1, which is the point: the row is how the classification becomes reviewable.
+// The commands under this gate, with their DECLARED classification. The claim that used to stand here — "adding a
+// positional-taking command without a row here fails leg 1" — was FALSE: leg 1 pins the `--`-prefix pattern, and
+// nothing enumerated this set at all, so a third command parsing positionals would simply not be looked at while the
+// gate reported over "2 positional-taking commands". The set is now DERIVED from the CLI source (leg 0b below) and
+// these rows are the classification, which legs 2 and 3 already check against the source in both directions.
 const COMMANDS = [
   { fn: 'cmdStream', value: STREAM_VALUE_FLAGS, bool: new Set() },
   { fn: 'cmdForkChoice', value: FORKCHOICE_VALUE_FLAGS, bool: FORKCHOICE_BOOL_FLAGS },
@@ -49,6 +52,20 @@ const bodyOf = (fn) => {
   const end = SRC.indexOf('\n}\n', start);
   return end < 0 ? SRC.slice(start) : SRC.slice(start, end);
 };
+
+// ── 0b. THE DOMAIN, enumerated from the source: every command whose body parses positionals must have a row above.
+// A classification is only as good as the set it classifies, and this set was the one thing nobody checked.
+{
+  const found = [...SRC.matchAll(/function (cmd\w+)\(/g)].map((m) => m[1])
+    .filter((fn) => { const b = bodyOf(fn); return b && /positionals\(process\.argv\.slice\(/.test(b); });
+  const declared = new Set(COMMANDS.map((c) => c.fn));
+  for (const fn of found) check(declared.has(fn), `${fn} parses positionals and has no row in COMMANDS — it is not classified, so positionals() cannot know which of its flags take a value`);
+  for (const fn of declared) check(found.includes(fn), `COMMANDS classifies ${fn} and no such command parses positionals any more — a stale row reads as coverage`);
+  // CONTROL — the scan must discriminate, or the enumeration is a list of everything or of nothing.
+  check(found.length >= 2, `the positional-command scan found ${found.length} — it has gone blind and this leg would pass vacuously`);
+  check(!found.includes('cmdThatCannotExist'), 'the scan accepts a command that does not exist');
+}
+
 
 for (const { fn, value, bool } of COMMANDS) {
   const body = bodyOf(fn);

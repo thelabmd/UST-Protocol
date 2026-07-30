@@ -368,6 +368,22 @@
       "test": {
         "excluded": "The test layer is two controls in the fuzzer itself, run: every live checker rule must be present in the pool, or the fuzzer exercises a subset while reporting a run over the whole; and every adversarial non-rule must carry a reason over the floor. It runs as npm run test:reference-checker-fuzz, not as a conformance check, which covers the verifier only."
       }
+    },
+    {
+      "round": 98,
+      "math": {
+        "excluded": "Which CLI commands take positional arguments is a property of our tool's surface, not of what a verifier may conclude from a transcript. The stream verdicts these commands produce are already bound by the model where they belong."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. §11.3's stream semantics are unchanged — what changed is whether our gate notices a new command that parses positionals."
+      },
+      "code": "tools/stream-consumption-gate.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. The artifact here is argv handling in a command-line tool; the flag-parsing behaviour is already exercised by this gate's own positionals() legs, which are unit assertions rather than transcripts."
+      },
+      "test": {
+        "excluded": "The test layer is the new coverage leg plus two controls, run: removing a command's row makes the gate name it, and the scan is asserted to find at least two commands and to reject a name that cannot exist. They run as npm run test:consumption, not as conformance checks, which cover the verifier only."
+      }
     }
   ],
   "first_accounted_round": 76,
