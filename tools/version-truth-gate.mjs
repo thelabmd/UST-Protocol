@@ -51,7 +51,9 @@ const check = (ok, msg) => { if (ok) pass++; else fail.push(msg); };
 // the workspace DIRECTORY travels with the manifest. Deriving it from the package name looked
 // obvious and was wrong — `@ust-protocol/mcp` lives in `packages/ust-mcp`, not `packages/mcp`.
 const pkgs = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).workspaces
-  .map((w) => { try { return { dir: w, ...JSON.parse(readFileSync(join(root, w, 'package.json'), 'utf8')) }; } catch { return null; } })
+  // AUDIT #114 — this used to return null and the package silently left the check: a corrupt manifest was a PASS,
+  // measured. A gate that sees less when its input breaks is fail-OPEN, which is the one direction it may not be.
+  .map((w) => { try { return { dir: w, ...JSON.parse(readFileSync(join(root, w, 'package.json'), 'utf8')) }; } catch (e) { fail.push(`${w}/package.json is unreadable or not JSON (${String(e.message).slice(0, 60)}) — a package whose manifest cannot be read is NOT checked, so this fails instead of skipping it`); return null; } })
   .filter((p) => p && p.name && p.version);
 check(pkgs.length >= 3, `only ${pkgs.length} workspace packages resolved — the gate would be near-vacuous`);
 

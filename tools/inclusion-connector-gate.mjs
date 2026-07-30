@@ -91,7 +91,11 @@ ok('a hostile verifiers ARRAY (throwing Proxy) fails CLOSED to an empty router, 
 
 // the rekor connector claims ONLY a declared rfc6962-raw tree, and never guesses a leaf convention
 ok('the rekor inclusion connector DECLINES a proof that does not declare its scheme (returns null, not false)', await (async () => {
-  let mod; try { mod = await import('../packages/ust-rekor-verify/index.mjs'); } catch { return true; }
+  // AUDIT #114 — this returned TRUE when the import failed, so a missing connector was a PASS, measured. It is a
+  // WORKSPACE package, always present in a correct tree: absence means the tree is broken, not that the check is
+  // inapplicable. Graceful degradation belongs at RUNTIME, where the connector is genuinely optional; a gate that
+  // degrades gracefully is a gate that stops asking.
+  let mod; try { mod = await import('../packages/ust-rekor-verify/index.mjs'); } catch (e) { console.log(`    ✗ ust-rekor-verify could not be imported (${String(e.code || e.message).slice(0, 50)}) — the connector under test is absent, so this proves nothing`); return false; }
   if (typeof mod.inclusionVerify !== 'function') return false;
   return mod.inclusionVerify(CH, goodProof) === null && P.verifyAnchor(CH, goodProof, { inclusionVerify: P.combineInclusion([mod.inclusionVerify]) }).inclusion === true;
 })(), 'it must not answer for a tree the publisher never declared — a guessed leaf convention verifies somebody else\'s entry');

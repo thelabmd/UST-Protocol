@@ -63,9 +63,13 @@ const shipped = readdirSync(new URL('../packages/', import.meta.url)).flatMap((p
   try { return (JSON.parse(readFileSync(new URL(`../packages/${p}/package.json`, import.meta.url), 'utf8')).files ?? [])
     .filter((f) => f.endsWith('.mjs')).map((f) => `packages/${p}/${f.replace(/^\.\//, '')}`); } catch { return []; }
 }).concat(readdirSync(new URL('../docs/', import.meta.url)).filter((f) => /^ust-.*\.mjs$/.test(f)).map((f) => `docs/${f}`));
+// AUDIT #114 — the catch used to return '' and the file was scanned as EMPTY: a retired mechanism inside an
+// unreadable shipped file was a PASS, measured. An unreadable input is now a failure, because a gate that sees
+// less when its input breaks is fail-OPEN.
+const unreadable = [];
 const bare = shipped.map((f) => {
   try { return readFileSync(new URL('../' + f, import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, ''); }
-  catch { return ''; }
+  catch (e) { unreadable.push(`${f} (${String(e.code || e.message).slice(0, 40)})`); return ''; }
 }).join('\n');
 
 // A fingerprint that matches LIVE code and is not a resurrection needs its reason here — and the reason must name what
@@ -86,6 +90,7 @@ for (const r of RETIRED) {
   if (!hits && why) failures.push(`[${r.id}] carries a CODE_EXEMPT and no longer appears in shipped code — remove the exemption, it now reads as a live boundary that is gone`);
 }
 // the code leg must be able to FAIL, and the roster must not be empty
+if (unreadable.length) failures.push(`${unreadable.length} shipped file(s) could not be READ and were scanned as empty: ${unreadable.join(', ')} — a retired mechanism inside one of them would pass silently`);
 if (shipped.length < 8) failures.push(`only ${shipped.length} shipped file(s) resolved from the manifests — the code roster has gone blind and this leg would pass vacuously`);
 if (!/export/.test(bare)) failures.push('the stripped shipped code contains no `export` — stripping removed everything and the leg is vacuous');
 if (/RETIRED_CONTROL_TOKEN_THAT_CANNOT_EXIST/.test(bare)) failures.push('the code probe matched a token that cannot exist');

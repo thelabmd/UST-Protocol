@@ -474,6 +474,22 @@
       "test": {
         "excluded": "The test layer is the export-surface leg and its two controls, run: the probe must see the known bare-named `buildCheckpoint`, and the code-aware qualifier must recognise `buildStreamCheckpoint` — without which the gate would demand a rename of a name that already says its chain. A new bare-named export raises the count and fails. They run as npm run test:ambiguous-terms, not as conformance checks, which cover the verifier only."
       }
+    },
+    {
+      "round": 105,
+      "math": {
+        "excluded": "Fail-closed is a property the model already requires of the VERIFIER — §14 is normative, ordered and fail-closed. This round applies the same direction to our gates, which are not verifiers and have no term in the model; restating the rule about our tooling would be model prose written to satisfy a gate."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. The spec already demands fail-closed of an implementation; what changed is that three of OUR gates now obey it too."
+      },
+      "code": "tools/version-truth-gate.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. The inputs here are a corrupt manifest, an unreadable file and an absent module — states of the filesystem, not transcripts, and each is exercised by breaking it and running the gate."
+      },
+      "test": {
+        "excluded": "The test layer is the three controls, each run twice — before the fix all three gates PASSED with their input broken, after it all three fail by name. They run as npm run test:version-truth, test:retired and test:inclusion, not as conformance checks, which cover the verifier only."
+      }
     }
   ],
   "first_accounted_round": 76,

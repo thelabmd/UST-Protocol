@@ -25,10 +25,28 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
+## rc.42 line — unpublished
+
+Opened because rc.41 is PUBLISHED and a published version is immutable. What lands here is the self-audit pass
+turned on the repository itself — the gates run against the artifact a stranger installs rather than against a
+working tree, which is only possible because rc.41 shipped first.
+
+| version | round | what closed |
+|---------|-------|-------------|
+| **tooling**<br>**#114** | 105 | **First audit pass — FAIL-CLOSED — and three gates PASSED when their own input became unreadable.** MEASURED, each by breaking the input and running the gate rather than by reading it: a package whose `package.json` is corrupt left `version-truth` entirely (`catch { return null }`, filtered out — a broken manifest was a PASS); a shipped file that cannot be READ was scanned as EMPTY by `retired-mechanisms`, so a retired mechanism hiding inside one would never be seen; and `inclusion-connector` returned **true** when the connector under test could not be imported, which is a gate reporting success about a thing that was not there. All three now fail by name. **The direction is the whole finding:** each `catch` made the gate see LESS, and a gate that sees less when its input breaks is fail-OPEN — the one direction it may not be, and the direction its own subject is forbidden from taking. `inclusion-connector` is the sharpest: graceful degradation is CORRECT at runtime, where the connector is genuinely optional, and wrong in a gate, because a gate that degrades gracefully is a gate that stops asking. **Nineteen candidates, three real — and the sixteen are my noise, named rather than hidden:** most `catch` blocks there ARE the behaviour under test (a hostile connector's throw is a structured reject) or sit behind a vacuity guard that already fails. **One survived the same probe and is worth more than the three fixes:** `report-shape` refused an unreadable surface — not by accident, but because round 100 gave it *the core must be present* and *at least three surfaces*. The guard written five rounds ago is what made the difference between it and the three that fell, which is the argument for those legs stated as evidence rather than as belief. |
+
 ## rc.41 line
 
 Opened because rc.40 is PUBLISHED and a published version is immutable: this line registers three canonical
 string sets in the core, which changes `index.mjs`, so the core needed a new number before the change could land.
+
+**PUBLISHED 2026-07-30** — `ust-protocol@1.0.0-rc.41`, and not on a schedule: `version-truth` refused the tree.
+A new export in the repo and absent from npm is a capability gap pinned at ZERO, and that gate's own text says
+*publish, or state the policy — do not raise the number*. So the line shipped when the ratchet said it must, which
+is the ratchet doing exactly the job it was pinned for. It carries: the three canonical string sets measured
+against code usage (round 86), §15's outcome kinds restored to the verdict slot and `kind: 'fork-choice'` added
+(round 103), and `buildStreamCheckpoint` beside its alias (round 104). Alongside it: `@ust-protocol/cli` rc.72,
+`@ust-protocol/mcp` rc.31.
 
 | version | round | what closed |
 |---------|-------|-------------|

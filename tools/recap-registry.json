@@ -114,6 +114,10 @@
       "content_hash": "sha256:dbceebb4bf24ce251d55e9eb0628becca31cc707a083ae94fd1999adfcc8fce0",
       "issue": 112,
       "_issue": "Round 104 closed #112, so #112 receives the recap — one closed issue, one entry."
+    },
+    {
+      "round": 105,
+      "no_recap": "Round 105 closed no issue — it is the first pass of #114, which stays open until the audit finishes and its after-table is written. One closed issue, one entry, without conditions."
     }
   ]
 }
