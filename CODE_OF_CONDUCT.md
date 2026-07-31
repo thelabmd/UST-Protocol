@@ -24,8 +24,9 @@ someone's kitchen.
 - Give credit generously; take corrections gracefully.
 - No harassment, no publishing anyone's private data, no being a jerk.
 
-If something goes wrong anyway, report it privately via **Security → Report a vulnerability**
-(only maintainers see it). We will handle it fairly and respect the reporter's privacy.
+If something goes wrong anyway, report it privately through this repository's
+**Security → Report a vulnerability** form (only maintainers see it). We will handle it fairly and
+respect the reporter's privacy.
 
 ## Ah, yes
 

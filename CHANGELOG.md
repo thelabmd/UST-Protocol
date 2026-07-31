@@ -25,7 +25,12 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
-## rc.51 line — unpublished
+## rc.51 line
+
+**PUBLISHED 2026-07-31** — `ust-protocol` rc.51, `@ust-protocol/cli` rc.84, `@ust-protocol/mcp` rc.40,
+`ust-light` rc.40, `@ust-protocol/web-signer` rc.9, `@ust-protocol/ots-verify` rc.17,
+`@ust-protocol/rekor-verify` rc.12, `@ust-protocol/operator` 0.1.7 and `diarium` 0.2.6 — every dist-tag
+moved with them. The declaration fixes of rounds 127-129 are what a stranger installs now.
 
 Opened because rc.48 is PUBLISHED and a published version is immutable. **rc.49 and rc.50 were never
 published** — they are version numbers this tree passed through while the line stayed open, and the rows
