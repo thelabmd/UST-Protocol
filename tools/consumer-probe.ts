@@ -21,8 +21,12 @@ export function probe(): void {
   if (bytes.length === 0 || hash.length === 0) throw new Error('empty canonical form');
 
   // ── 3. VERIFY and READ THE VERDICT. This is the reason a consumer needs types at all: the verdict is a
-  // CONTROL-FLOW value, not a display value — `isValid` decides whether the next line may run.
-  const verdict = P.verify(genesis);
+  // CONTROL-FLOW value, not a display value — `isValid` decides whether the next line may run. `result` is a
+  // DECLARED field now (#117), so reading it needs no guard and no cast; `id` is declared optional because a
+  // failing verdict genuinely has none, which is the runtime measured rather than the specification read.
+  const verdict: P.UstVerdict = P.verify(genesis);
+  const result: string = verdict.result;
+  if (result.length === 0) throw new Error('empty verdict');
   const ok: boolean = P.isValid(verdict);
   if (!ok) return;
 

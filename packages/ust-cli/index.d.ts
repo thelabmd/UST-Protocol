@@ -4,6 +4,16 @@
 // `types-parity-gate` fails when a declaration and its export disagree. Value types are `unknown`
 // where nobody has refined them yet — a complete loose declaration beats a precise stale one, which
 // is the defect this file exists to prevent (#105).
+//
+// WHAT `unknown` MEANS HERE (#117). It is a promise we are NOT making, never a generator that gave up:
+// this file is derived from a JavaScript body, and a shape it cannot prove is left for you to narrow
+// rather than asserted. Narrowing costs a type guard and the compiler then proves the result; a
+// confident wrong type costs you a crash. Two return types WERE confidently wrong and are now honest
+// `unknown` — that direction is the fix, not a regression.
+//
+// The three shapes below are the exception, because a consumer cannot avoid them and because they are
+// MEASURED from real values this suite builds, not read off the specification. A gate rebuilds those
+// values and fails if a declared key is missing, so they cannot drift into being the stale kind.
 // Package: @ust-protocol/cli
 
 export function addKeylogKey(arg0?: unknown): Promise<{ keylog: unknown; newKey: unknown }>;

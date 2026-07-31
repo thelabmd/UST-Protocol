@@ -4,7 +4,21 @@
 // `types-parity-gate` fails when a declaration and its export disagree. Value types are `unknown`
 // where nobody has refined them yet — a complete loose declaration beats a precise stale one, which
 // is the defect this file exists to prevent (#105).
+//
+// WHAT `unknown` MEANS HERE (#117). It is a promise we are NOT making, never a generator that gave up:
+// this file is derived from a JavaScript body, and a shape it cannot prove is left for you to narrow
+// rather than asserted. Narrowing costs a type guard and the compiler then proves the result; a
+// confident wrong type costs you a crash. Two return types WERE confidently wrong and are now honest
+// `unknown` — that direction is the fix, not a regression.
+//
+// The three shapes below are the exception, because a consumer cannot avoid them and because they are
+// MEASURED from real values this suite builds, not read off the specification. A gate rebuilds those
+// values and fails if a declared key is missing, so they cannot drift into being the stale kind.
 // Package: ust-protocol
+
+export interface UstState { id: Record<string, unknown>; time: unknown; data: unknown; hashes: unknown }
+export interface UstDocument { ust: unknown; state: UstState; sig: unknown }
+export interface UstVerdict { result: string; error: unknown; detail: unknown; tier: unknown; id?: unknown }
 
 export function admitDeep(v: unknown, seen?: unknown): unknown;
 export function admitUtf8(bytes: unknown): unknown;
@@ -91,7 +105,7 @@ export function resolveCheckpointRoots(genesis: unknown): unknown;
 export function resolveKeys(genesis: unknown, keylog?: unknown): unknown;
 export function resolveKeysBytes(genesisBytes: unknown, keylogBytes: unknown): unknown;
 export const RULE_CONTRACTS: unknown;
-export function seal(state: unknown, privKeyObj: unknown, pubB64url: unknown): { ust: unknown; state: unknown; sig: unknown };
+export function seal(state: unknown, privKeyObj: unknown, pubB64url: unknown): UstDocument;
 export function sealAuthorityCheckpoint(body: unknown, privKeyObj: unknown, pubB64url: unknown): { body: unknown; sig: unknown };
 export function seed(contentHashes: unknown): string;
 export function signedContent(doc: unknown): string;
@@ -105,7 +119,7 @@ export class UstIndeterminate extends Error { constructor(verdict?: unknown); }
 export class UstInvalid extends Error { constructor(verdict?: unknown); }
 export function verifiedEvidence(arg0?: unknown): { proof_kind: unknown; subject: unknown; source_id: unknown; facts: unknown };
 export function verifiedGenesisContext(genesis: unknown): unknown;
-export function verify(doc: unknown, opts?: unknown): unknown;
+export function verify(doc: unknown, opts?: unknown): UstVerdict;
 export function verifyActiveGenesisUniqueness(proof: unknown, config: unknown): unknown;
 export function verifyAnchor(contentHash: unknown, proof: unknown, opts?: unknown): unknown;
 export function verifyAsync(doc: unknown, opts?: unknown): Promise<unknown>;
@@ -116,7 +130,7 @@ export function verifyCheckpointRecovery(statements: unknown, config: unknown): 
 export function verifyCheckpointUniqueness(attestations: unknown, config: unknown): unknown;
 export function verifyEpochTransition(statement: unknown, config: unknown): unknown;
 export function verifyEvidenceReceipt(receipt: unknown, config: unknown): unknown;
-export function verifyJson(rawBytes: unknown, opts?: unknown): { result: unknown; reason: unknown; detail: unknown };
+export function verifyJson(rawBytes: unknown, opts?: unknown): UstVerdict;
 export function verifyKeylogTerminality(head_: unknown, proof?: unknown): unknown;
 export function verifyNoForkEvidence(evidence: unknown, config: unknown): unknown;
 export function verifyOrThrow(doc: unknown, opts?: unknown): unknown;

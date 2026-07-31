@@ -25,6 +25,14 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
+## rc.50 line — unpublished
+
+Opened because rc.49 is unpublished but its line is written; this row is the same arc, one round on.
+
+| version | round | what closed |
+|---------|-------|-------------|
+| **rc.50**<br>**cli rc.83**<br>**mcp rc.39**<br>**light rc.39**<br>**web-signer rc.8**<br>**ots-verify rc.16**<br>**rekor-verify rc.11**<br>**operator 0.1.6**<br>**diarium 0.2.5** | 128 | **The two items #117 asked for that round 127 did not do — and it would have closed with them unticked.** The declarations now carry the three shapes a consumer cannot avoid, and every key in them was READ from a real value rather than off the specification: a builder returns `{ id, time, data, hashes }`, `seal` returns `{ ust, state, sig }`, and a verdict is `{ result, error, detail, tier }` with `id` present ONLY when it verified — so `id` is optional and the rest are not. Declaring `id` required would have been the same unsoundness this arc removed from the arity, one level along. **A named interface is the one hand-written thing in a generated file, so it is the one thing that can go stale** — which is the defect #105 named. It is therefore inside a gate: the probe REBUILDS the genesis, seals it, verifies it, and checks both directions — a declared key missing from the real value fails, and a key the runtime always returns that the declaration withholds fails too. And `unknown` now SAYS what it means, at the top of every generated file: a promise we are not making, never a generator that gave up — narrowing costs a type guard and the compiler proves the result, while a confident wrong type costs a crash. |
+
 ## rc.49 line — unpublished
 
 Opened because rc.48 is PUBLISHED and a published version is immutable.

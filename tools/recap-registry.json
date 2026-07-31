@@ -213,6 +213,10 @@
     {
       "round": 127,
       "no_recap": "Round 127 closes #117 and its entry is owed at the closing, not before — the lesson of round 126 was exactly that a recap sealed ahead of a closing describes a moment that has not happened."
+    },
+    {
+      "round": 128,
+      "no_recap": "Round 128 finishes #117; the closing entry is sealed against that closing, and one arc owes one entry rather than one per round."
     }
   ]
 }

@@ -11,10 +11,10 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/status.svg">
   <source media="(prefers-color-scheme: light)" srcset=".github/status-light.svg">
-  <img alt="UST status: `1.0.0-rc.49` — a release candidate, not a final 1.0. Verify machine-readable state without trusting whoever handed it to you. Multiple external AI reviews incorporated structurally; an independent human cryptographic audit is pending; suitable for evaluation and integration testing. The wire format ust:&quot;1.0&quot; is stable across all release candidates; pin exact versions." src=".github/status-light.svg">
+  <img alt="UST status: `1.0.0-rc.50` — a release candidate, not a final 1.0. Verify machine-readable state without trusting whoever handed it to you. Multiple external AI reviews incorporated structurally; an independent human cryptographic audit is pending; suitable for evaluation and integration testing. The wire format ust:&quot;1.0&quot; is stable across all release candidates; pin exact versions." src=".github/status-light.svg">
 </picture>
 
-> **Status: `1.0.0-rc.49`** — a release candidate, not a final 1.0. External AI reviews are folded in structurally; an independent human cryptographic audit is pending. Suitable for evaluation and integration testing. The wire format `ust:"1.0"` is stable across all rc's — pin exact versions. *(This line mirrors the panel above as plain text, for readers and agents that don't render the image.)*
+> **Status: `1.0.0-rc.50`** — a release candidate, not a final 1.0. External AI reviews are folded in structurally; an independent human cryptographic audit is pending. Suitable for evaluation and integration testing. The wire format `ust:"1.0"` is stable across all rc's — pin exact versions. *(This line mirrors the panel above as plain text, for readers and agents that don't render the image.)*
 
 ## ●  Thirty seconds
 

@@ -818,6 +818,22 @@
       "test": {
         "excluded": "The gate IS the test and it carries its own control: a consumer-shaped mistake must produce TS2322, so the compile leg cannot pass for free. There is no conformance check because no protocol behaviour moved — the artifact under test is a consumer's compile, and the reference checker is unchanged."
       }
+    },
+    {
+      "round": 128,
+      "math": {
+        "excluded": "Same reason as round 127: the soundness of a TypeScript declaration is a property of this implementation's packaging, not of the protocol. No obligation on producers or verifiers moved and no verdict changed."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved; a conforming implementation in another language ships no declaration file."
+      },
+      "code": "tools/gen-types.mjs :: emits UstState/UstDocument/UstVerdict, every key measured from a real value, and states at the top of each generated file what `unknown` promises",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they produce. An interface produces no document and changes no verdict."
+      },
+      "test": {
+        "excluded": "The gate IS the test: it rebuilds the genesis, seals and verifies it, and compares declared keys against the real values in both directions, with a control requiring TS2322 so the compile leg cannot pass for free. No conformance check because no protocol behaviour moved."
+      }
     }
   ],
   "first_accounted_round": 76,
