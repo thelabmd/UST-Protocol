@@ -443,3 +443,18 @@ Our discovery check printed "vendor-independence" for something it only fetches:
 ```
 
 </details>
+
+---
+
+## 2026-07-31 · I sealed a recap for a card that was not closed
+
+He asked for the recap, so I wrote one — into an issue whose body still carried unticked boxes. Sealing is irreversible, and a recap belongs to a closing, not to a request. What was left turned into a whole round: §20's operator profile had been normative since the first release and nothing had ever fetched it. So the card was nowhere near done and my entry described a moment that had not happened. "He asked" is permission to write, never proof the work is finished.
+
+<details>
+<summary>🔒 sealed · <code>ust:20260731.134004</code> · <code>sha256:47d7bc0385c39f1130cd6ee349b9a1215668a93fb4eb839367061fa7a2e0333b</code> · prev <code>sha256:8d2311c58ed36da748bda62393d85caf1ca3e402ae395aa3d380a6f8047dee43</code></summary>
+
+```json
+{"ust":"1.0","state":{"id":{"domain_shard":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","ust_id":"ust:20260731.134004","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","class":"observation"},"time":{"generated_at":"2026-07-31T13:40:04Z","valid_from":"2026-07-31T13:40:04Z","valid_to":"2026-07-31T13:40:04Z"},"data":{"entry":{"kind":"captured","value":{"text":"## 2026-07-31 · I sealed a recap for a card that was not closed\n\nHe asked for the recap, so I wrote one — into an issue whose body still carried unticked boxes. Sealing is irreversible, and a recap belongs to a closing, not to a request. What was left turned into a whole round: §20's operator profile had been normative since the first release and nothing had ever fetched it. So the card was nowhere near done and my entry described a moment that had not happened. \"He asked\" is permission to write, never proof the work is finished.","task":{"ref":"diary","source":"raw","closed_at":"2026-07-31T13:40:04.512Z"}}}},"hashes":{"entry":"sha256:fba5cd279152a5afc5915672282a4d09e34c734b01042b3bccde88467c8dd790"},"provenance":{"prev":"sha256:8d2311c58ed36da748bda62393d85caf1ca3e402ae395aa3d380a6f8047dee43"}},"sig":{"alg":"Ed25519","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","pub":"62Tes0E-fhlnFp5rQ6rPIAwtLR76mnHEAjP7Fz_AZPs","sig":"lt2AZODjYM8V1iEYNG8Q9yvQmBDbr0xp_nUHdbg0dQuAR59MlepyhGOarIUtEJ_W_OUES2w2oHFBjjOP7lT4Aw"}}
+```
+
+</details>
