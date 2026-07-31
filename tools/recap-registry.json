@@ -220,7 +220,8 @@
     },
     {
       "round": 129,
-      "no_recap": "Round 129 completes #117; the entry is owed at the closing, and one arc owes one entry rather than one per round."
+      "issue": 117,
+      "content_hash": "sha256:ebc566957fe10c012a4c3ff11bad86940590c78b987a146a35706a85b915c1bf"
     }
   ]
 }
