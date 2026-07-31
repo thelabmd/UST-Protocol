@@ -162,6 +162,25 @@ function returnTypeOf(rawBody, isAsync) {
     // Find the RETURNED object literal by balancing braces, not by a regex anchored at the end of a string:
     // a block body is `{ … return { … }; }`, so the literal sits in the middle and every positional pattern I
     // tried matched the wrong brace. Balance from `return {` and read the top-level keys.
+    // A function with MORE THAN ONE object-return shape must not have one of them declared as its type. Measured
+    // 2026-07-30 (UST#116): six declarations typed only `{ error, detail }` — the GUARD clause — because this read
+    // the FIRST `return {` it found and stopped. `resolveKeys` returns that shape on refusal and
+    // `{active, validKeys, revoked, history, head, …}` on success, so a consumer writing the correct thing got a
+    // compile error and reached for `as any`. Sampling the first branch is the same defect as sampling a syntax
+    // form: it describes the case in front of the probe, not the function. Where the shapes disagree the honest
+    // declaration is `unknown` — it forces the caller to narrow instead of confidently misleading them.
+    const shapes = new Set();
+    for (const m2 of expr.matchAll(/\breturn\s*\{/g)) {
+      const o = expr.indexOf('{', m2.index);
+      let dd = 0, cc = -1;
+      for (let k = o; k < expr.length; k++) {
+        if (expr[k] === '{') dd++;
+        else if (expr[k] === '}') { dd--; if (dd === 0) { cc = k; break; } }
+      }
+      if (cc > o) shapes.add(expr.slice(o + 1, cc).replace(/\s+/g, ' ').trim().slice(0, 200));
+      if (shapes.size > 1) break;
+    }
+    if (shapes.size > 1) return 'unknown';
     const retAt = expr.search(/\breturn\s*\{/);
     if (retAt >= 0) {
       const open = expr.indexOf('{', retAt);

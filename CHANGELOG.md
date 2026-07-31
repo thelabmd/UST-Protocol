@@ -25,6 +25,15 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
+## rc.45 line — unpublished
+
+Opened because rc.44 is PUBLISHED and a published version is immutable. It carries the LAST item of UST#116 — the
+one I closed the issue with unticked.
+
+| version | round | what closed |
+|---------|-------|-------------|
+| **protocol rc.45**<br>**cli rc.79** · **mcp rc.34**<br>**web-signer rc.6** · **light rc.37**<br>**ots-verify rc.14** · **rekor-verify rc.9** | 119 | **I closed an issue with a real item unticked, and the owner caught it in the checkboxes.** Six declarations typed only `{ error, detail }` — the GUARD clause — because the generator read the FIRST `return {` it found and stopped. `resolveKeys` returns that on refusal and `{active, validKeys, revoked, history, head}` on success, so **a consumer writing the correct thing got a compile error and reached for `as any`** — which is how a wrong type spreads instead of being reported. **Sampling the first branch is the same defect as sampling a syntax form**, met twice in two rounds: it describes the case in front of the probe, not the function. Where the shapes disagree the declaration is now `unknown` — weaker, and true. That forces a caller to narrow rather than confidently misleading them, and it is the same call as the previous round's: an honest weak type beats a confident wrong one. Verified from the consumer side, which is where the whole thing surfaced: a TypeScript file importing `resolveKeys` and calling it now compiles. **On the process, since it is the actual lesson:** the issue was CLOSED and had to be reopened. Ticking what is done is not bookkeeping — an unticked box is the only thing standing between a residual and a closure that looks complete, and checkboxes live in comments too, not only in the body. |
+
 ## rc.44 line
 
 **PUBLISHED 2026-07-31** — `ust-protocol` rc.44 and `@ust-protocol/cli` rc.78, tags moved with them.

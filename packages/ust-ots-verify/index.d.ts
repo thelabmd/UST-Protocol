@@ -6,7 +6,7 @@
 // is the defect this file exists to prevent (#105).
 // Package: @ust-protocol/ots-verify
 
-export function makeSubstrateVerify(arg0?: unknown): { final: unknown; time: unknown };
+export function makeSubstrateVerify(arg0?: unknown): unknown;
 export function parseOtsBitcoin(ots: unknown): unknown;
 export const substrateVerify: unknown;
 export function toVerifiedEvidence(subject: unknown, result?: unknown, source_id?: unknown): { proof_kind: unknown; subject: unknown; source_id: unknown; facts: unknown };

@@ -698,6 +698,22 @@
       "test": {
         "excluded": "The test is tools/types-integrity-gate.mjs, run as a CI step: it compiles each shipped declaration file and compares its declarations against the imported module's exports in both directions. Its control writes the exact shape that shipped — a required parameter after an optional one — and requires TS1016, so a compile leg that stopped running fails by name rather than passing for free."
       }
+    },
+    {
+      "round": 119,
+      "math": {
+        "excluded": "What a declaration file says about a return value is a statement about one language's view of our code, not about the protocol. No obligation on producers or verifiers moved, and the model says nothing about TypeScript."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. A return type in a .d.ts binds nobody implementing UST."
+      },
+      "code": "tools/gen-types.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. A return type produces no document and changes no verdict; the artefact is the generator refusing to claim one branch of a function that has several."
+      },
+      "test": {
+        "excluded": "The check is the types-integrity gate already added in round 118 — it compiles every shipped declaration file, and a return type that names one branch of several compiles fine, so the gate cannot adjudicate this. What decided it was the consumer probe: a TypeScript file importing resolveKeys and calling it, which failed before and compiles now. Stated rather than dressed as gated: the gate does not cover this, and saying so is the point."
+      }
     }
   ],
   "first_accounted_round": 76,

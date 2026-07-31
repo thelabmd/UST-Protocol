@@ -7,7 +7,7 @@
 // Package: @ust-protocol/rekor-verify
 
 export function inclusionVerify(contentHash: unknown, proof: unknown): Record<string, unknown>;
-export function makeSubstrateVerify(arg0?: unknown): { final: unknown; time: unknown };
+export function makeSubstrateVerify(arg0?: unknown): unknown;
 export const substrateVerify: unknown;
 export function toVerifiedEvidence(subject: unknown, result?: unknown, source_id?: unknown): { proof_kind: unknown; subject: unknown; source_id: unknown; facts: unknown };
 export function verifyCheckpoint(checkpoint: unknown, expectedRootHex: unknown, expectedTreeSize: unknown, pubKey: unknown): string;

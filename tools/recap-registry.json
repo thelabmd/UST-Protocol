@@ -173,6 +173,10 @@
       "round": 118,
       "issue": 116,
       "content_hash": "sha256:47745d7922ba0d4543589e1ba38be92035109d6d41a19226dbd8e02f62b8ac8d"
+    },
+    {
+      "round": 119,
+      "no_recap": "Round 119 finishes UST#116, whose recap was already written and posted for round 118 — one closed issue keeps one diary entry, and re-recapping the same issue because it reopened would double-count the moment."
     }
   ]
 }
