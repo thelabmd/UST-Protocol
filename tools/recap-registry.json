@@ -171,7 +171,8 @@
     },
     {
       "round": 118,
-      "no_recap": "Round 118 closes UST#116, and the recap for it is owed once the line publishes — the issue stays open until the fix is installable, since a broken declaration file only stops harming consumers when a fixed one reaches npm."
+      "issue": 116,
+      "content_hash": "sha256:47745d7922ba0d4543589e1ba38be92035109d6d41a19226dbd8e02f62b8ac8d"
     }
   ]
 }
