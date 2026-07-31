@@ -528,6 +528,18 @@
       "rev": "rev99",
       "model_locus": "adding `S` to `D` can only turn a `skip` into a `FAIL`, never a `skip` into a pass",
       "conformance_check": "#102 declaring is MONOTONE IN OBLIGATION: no declaration turns an absent surface into a pass"
+    },
+    {
+      "id": "R71-darkness-not-decidable-from-one-substrate",
+      "rev": "rev71",
+      "model_locus": "`obs(s, w) = absent` occurs in two distinct worlds",
+      "conformance_check": "#120 ADVERSARIAL: darkness is NOT decidable from one substrate — one silent declared leg yields PARTIAL, never dark"
+    },
+    {
+      "id": "R72-undeclared-anchor-still-counts",
+      "rev": "rev71",
+      "model_locus": "the anchored row never consults the declaration, so silence in",
+      "conformance_check": "#120 ADVERSARIAL: an UNDECLARED substrate carrying an anchor still counts — silence in the profile cannot hide evidence"
     }
   ]
 }

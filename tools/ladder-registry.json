@@ -798,7 +798,7 @@
     {
       "round": 126,
       "math": "a surface that is THERE is evidence whichever way the profile reads",
-      "spec": "A profile MUST NOT relocate the standard surfaces.",
+      "spec": "A profile MUST NOT relocate the standard surfaces",
       "code": "packages/ust-protocol/index.mjs :: surfaceVerdict decides the (declared, observed) 2x2 and refuses a relocated standard surface; packages/ust-cli/index.mjs fetches /.well-known/ust and defers the meaning of absence to it",
       "vector": "surface-profile-relocation-reject",
       "test": "#102 ADVERSARIAL: a profile cannot RELOCATE a standard surface — a named key-log location is refused, resolution stays at the well-known path"
@@ -858,6 +858,14 @@
       "code": "tools/worked-example-gate.mjs :: every fenced json block declares SKELETON or WORKED EXAMPLE, and a marked one is verified by the reference checker",
       "vector": "depth-law-covers-whole-ustid-space",
       "test": "#101 THEOREM F.9.5-b: the depth bound STRICTLY DOMINATES the addressing — the entire ust_id second-space seals at depth 7 <= 8"
+    },
+    {
+      "round": 131,
+      "math": "a quantifier over an unknown set is not a claim",
+      "spec": "**And it MUST declare the substrates it anchors into.**",
+      "code": "packages/ust-protocol/index.mjs :: anchorRollup reuses surfaceVerdict for the per-substrate verdict and adds only the roll-up over the declared set",
+      "vector": "anchor-rollup-one-silent-leg-is-partial",
+      "test": "#120 ADVERSARIAL: darkness is NOT decidable from one substrate — one silent declared leg yields PARTIAL, never dark"
     }
   ],
   "first_accounted_round": 76,

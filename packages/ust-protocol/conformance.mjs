@@ -12,7 +12,7 @@ const withWitnessClock = async (clock, body) => { __setWitnessClockForConformanc
 // runtime-namespace totality net. Define it ONCE here (used by R47) and cross-check it below against CLASS — MAY_THROW(n) ⟺
 // CLASS[n] !== 'surface', so the two can no longer diverge. (Totality itself is already guaranteed by R34's surface×BATTERY.)
 const MAY_THROW_TOTALITY = (n) => /^(build|seal|make)/.test(n) || /(Claim|Leaf|Id|Epoch)$/.test(n) || /^Ust[A-Z]/.test(n)
-  || ['canon', 'H', 'Hbytes', 'keyId', 'merkleRoot', 'partitionHash', 'contentHash', 'signedContent', 'admitUtf8', 'anyLoneSurrogate', 'ustGrid', 'blindPartition', 'blindedCommit', 'seed', 'axisRank', 'evidenceCaps', 'admitDeep', 'isValid', 'verifiedEvidence', 'replicationAgreement', 'surfaceVerdict'].includes(n)
+  || ['canon', 'H', 'Hbytes', 'keyId', 'merkleRoot', 'partitionHash', 'contentHash', 'signedContent', 'admitUtf8', 'anyLoneSurrogate', 'ustGrid', 'blindPartition', 'blindedCommit', 'seed', 'axisRank', 'evidenceCaps', 'admitDeep', 'isValid', 'verifiedEvidence', 'replicationAgreement', 'surfaceVerdict', 'anchorRollup'].includes(n)
   || ['verifyOrThrow', 'assertValid'].includes(n);
 
 const V = JSON.parse(readFileSync(new URL('../../vectors/conformance-vectors.json', import.meta.url)));
@@ -81,6 +81,13 @@ for (const v of V.vectors) {
       check(v.id, moments === v.expect.moments && d === v.expect.depth
         && (d <= dMax) === v.expect.withinBound
         && Math.pow(breadth, d - 1) < moments && moments <= Math.pow(breadth, d));
+      break;
+    }
+    // #120 / F.5q — the roll-up over declared anchoring substrates. A port must reproduce that ONE silent leg is
+    // PARTIAL and that no declaration yields UNKNOWN, never the reassuring answer.
+    case 'anchor-rollup': {
+      const r = P.anchorRollup(v.input);
+      check(v.id, r.status === v.expect.status && r.silent.length === v.expect.silent);
       break;
     }
     case 'discovery-surface': {
@@ -1373,6 +1380,31 @@ console.log('\n═════════════════════�
     try { P.surfaceVerdict({ surface: 'keylog', declared: true, observed: 'present', standardLocation: false }); return false; }
     catch (e) { return e.code === 'E-DISCOVERY'; }
   })());
+  // ── #120 / F.5q — the ANCHORING axis: one silent leg is not a dark publisher
+  const roll = (d, o) => P.anchorRollup({ declared: d, observed: o });
+  check('#120 ADVERSARIAL: darkness is NOT decidable from one substrate — one silent declared leg yields PARTIAL, never dark', (() => {
+    const r = roll(['git', 'ots', 'ipfs'], { ots: 'anchored', ipfs: 'anchored' });
+    return r.status === 'partial' && r.silent.length === 1 && r.silent[0] === 'git';
+  })());
+  check('#120 ADVERSARIAL: an UNDECLARED substrate carrying an anchor still counts — silence in the profile cannot hide evidence', (() => {
+    const r = roll(['git'], { git: 'anchored', ots: 'anchored' });
+    return r.status === 'printing' && r.perSubstrate.some((v) => v.surface === 'ots' && v.status === 'attested');
+  })());
+  check('#120 nothing on ANY declared substrate is DARK — the universal claim, and only over the declared set',
+    roll(['git', 'ots', 'ipfs'], {}).status === 'dark');
+  check('#120 with NO declaration the answer is unknown, never printing — a quantifier over an undeclared set is not a claim', (() => {
+    const r = roll([], { git: 'anchored' });
+    return r.status === 'unknown' && r.silent.length === 0;
+  })());
+  check('#120 the per-substrate verdict is the SAME function as F.5p, not a second copy', (() => {
+    const r = roll(['git'], {});
+    const direct = P.surfaceVerdict({ surface: 'git', declared: true, observed: 'absent' });
+    return JSON.stringify(r.perSubstrate[0]) === JSON.stringify(direct);
+  })());
+  check('#120 a non-array declared set is REFUSED — the quantifier needs a domain it can range over', (() => {
+    try { P.anchorRollup({ declared: 'git', observed: {} }); return false; } catch (e) { return e.code === 'E-DISCOVERY'; }
+  })());
+
   check('#102 a third observation state is refused rather than falling through the 2x2', (() => {
     try { P.surfaceVerdict({ surface: 'witness', declared: true, observed: 'maybe' }); return false; }
     catch (e) { return e.code === 'E-DISCOVERY'; }
@@ -2623,6 +2655,7 @@ console.log('\n═════════════════════�
     seal: 'producer-builder', sealAuthorityCheckpoint: 'producer-builder', verifiedEvidence: 'producer-builder (raw-facts shape)',
     replicationAgreement: 'producer-builder (byte-agreement shape; throws on a self-declared independence coordinate, F.5o)',
     surfaceVerdict: 'producer-builder (the (declared, observed) 2x2; throws on a relocated standard surface or a third observation state, F.5p)',
+    anchorRollup: 'producer-builder (the roll-up over declared substrates; throws when the quantifier has no domain to range over, F.5q)',
     buildAbsence: 'producer-builder', buildAttestation: 'producer-builder', buildAuthorityCheckpoint: 'producer-builder',
     buildAuthorityProof: 'producer-builder', buildCadenceEntry: 'producer-builder', buildCheckpoint: 'producer-builder', buildStreamCheckpoint: 'producer-builder',
     buildDerivation: 'producer-builder', buildEpochTransition: 'producer-builder', buildEvidenceReceipt: 'producer-builder',

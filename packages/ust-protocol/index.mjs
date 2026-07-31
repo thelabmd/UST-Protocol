@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.52', revision: 70 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.53', revision: 71 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -1206,6 +1206,34 @@ export function surfaceVerdict({ surface, declared = false, observed, standardLo
   return declared
     ? deepFreeze({ surface, status: 'failed', reason: 'declared-and-absent' })     // a promise not kept
     : deepFreeze({ surface, status: 'not-offered', reason: 'undeclared-and-absent' });   // settled, not a transient
+}
+// #120 / F.5q — the ANCHORING axis. A publisher anchors a closed window into SEVERAL substrates, and one silent
+// leg is three different incidents wearing one observation: the publisher printed nothing anywhere it promised
+// to, one leg is down while the chain still prints, or that substrate was never part of the commitment.
+//
+// The per-substrate verdict is `surfaceVerdict` UNCHANGED — same 2x2, different subject — so this reuses it
+// rather than restating the reasoning. What is new is the roll-up, and it carries the theorem: `dark` quantifies
+// over the DECLARED set, and a quantifier over an undeclared set is not a claim. With no declaration the honest
+// answer is `unknown`, never `printing` — an observer that never had grounds for the universal statement must
+// not manufacture the reassuring one.
+//
+// Written after making the mistake it forbids: one substrate was checked and the conclusion was written about
+// the publisher. A single silent leg reads as EXISTS, never as FOR ALL.
+export function anchorRollup({ declared = [], observed = {} } = {}) {
+  if (!Array.isArray(declared)) throw Object.assign(new Error('E-DISCOVERY: `declared` must be an array of substrate names — the universal claim quantifies over it'), { code: 'E-DISCOVERY' });
+  const perSubstrate = [];
+  // every substrate MENTIONED anywhere: declared ones carry an obligation, observed-only ones can still supply
+  // evidence, because the anchored row never consults the declaration (F.5p admissibility, unchanged).
+  for (const s of new Set([...declared, ...Object.keys(observed)]))
+    perSubstrate.push(surfaceVerdict({ surface: s, declared: declared.includes(s), observed: observed[s] === 'anchored' ? 'present' : 'absent' }));
+
+  const onDeclared = perSubstrate.filter((v) => declared.includes(v.surface));
+  const silent = onDeclared.filter((v) => v.status === 'failed').map((v) => v.surface);
+  const status = declared.length === 0 ? 'unknown'          // no domain ⇒ no universal claim is available at all
+    : silent.length === declared.length ? 'dark'            // nothing on ANY substrate it promised
+    : silent.length > 0 ? 'partial'                         // named legs down, the chain still prints
+    : 'printing';
+  return deepFreeze({ status, declared: [...declared], silent, perSubstrate: deepFreeze(perSubstrate) });
 }
 // UST-0ol Phase 2 — evidence CAPABILITY as a SET (P2-02: capabilities are not a scalar rank). A predicate is
 // satisfiable ONLY by an admissible capability; strong derivation checks this before trusting a piece of evidence,

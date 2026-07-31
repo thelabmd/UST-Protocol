@@ -1,6 +1,6 @@
 {
   "name": "ust-light",
-  "version": "1.0.0-rc.41",
+  "version": "1.0.0-rc.42",
   "description": "UST 1.0 LIGHT floor — standalone, zero-dependency sign/verify for canonical, addressable, string-only signed state. A ust-light document is a valid UST document.",
   "type": "module",
   "main": "index.mjs",

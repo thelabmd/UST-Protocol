@@ -3,7 +3,7 @@
 
 *This specification text is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](../LICENSE-SPEC). Reference code in this repository is licensed Apache-2.0. Use of the name **UST** / **Universal State Transcript** and the **UST-compatible** claim: see [TRADEMARK.md](../TRADEMARK.md).*
 
-> **Release candidate — `1.0.0-rc.52`.** This specification has been extensively red-teamed; an independent
+> **Release candidate — `1.0.0-rc.53`.** This specification has been extensively red-teamed; an independent
 > external cryptographic audit is pending. It is subject to change until `1.0.0` final. The wire format `ust:"1.0"`
 > is stable across all rc's — pin exact versions. Per-version history is in [`CHANGELOG.md`](../CHANGELOG.md).
 
@@ -1834,7 +1834,19 @@ kept — while an **undeclared** absent surface is NOT OFFERED. A surface that i
 silence in the profile can never hide evidence, so declaring is monotone in obligation and grants the operator
 nothing (formal model F.5p).
 
-A profile MUST NOT relocate the standard surfaces. `ust-genesis`, `ust-keylog`, `ust-witness` and `ust-cadence`
+**And it MUST declare the substrates it anchors into.** A publisher may anchor a closed window into several
+substrates. An observer that finds no anchor on ONE of them cannot tell whether the publisher printed nothing
+anywhere it promised to, whether a single leg is down while the chain still prints, or whether that substrate was
+never part of the publisher's commitment — three different incidents from one identical observation. So a profile
+lists them, and a verdict decomposes: **per substrate**, and a publisher-level roll-up over the declared set.
+`dark` — nothing on ANY declared substrate — is a claim with a universal quantifier, and a quantifier over an
+undeclared set is not a claim at all: without the list an observer can only ever say *"this one is silent"*
+(formal model F.5q). The same admissibility as above holds — declaring can only create an obligation, never earn
+a pass, and an anchor that IS present counts whether or not the profile mentions its substrate.
+
+A profile MUST NOT relocate the standard surfaces, and MUST NOT confer validity on an anchor by naming its
+substrate: a declared substrate is a place to LOOK, and what is found there is verified by that substrate's own
+rules (§12.3, anchor verification) exactly as if the profile had said nothing. `ust-genesis`, `ust-keylog`, `ust-witness` and `ust-cadence`
 resolve at the §20.1 well-known locations and ONLY there: a verifier that read the trust chain from a location the
 profile names would be rooting authority in bytes served by the very host whose authority is in question. A
 locator in a profile is therefore admissible strictly as an ADDITIONAL copy, compared by `content_hash` under the

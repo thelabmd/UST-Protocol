@@ -65,7 +65,7 @@ const CAPS = {
   // #102 / F.5o — the SERVING axis. A consumer-meaningful act (do the copies a publisher named agree byte for
   // byte?) whose whole discipline is what it REFUSES to answer: independence is not decidable from the bytes,
   // so it is not in this capability and no surface may report it. `ust discovery --mirror` is the CLI face.
-  'byte-agreement':     { core: ['replicationAgreement', 'surfaceVerdict'], cli: '--mirror' },
+  'byte-agreement':     { core: ['replicationAgreement', 'surfaceVerdict', 'anchorRollup'], cli: '--mirror' },
   'stream-verify':      { core: ['verifyStream'], mcp: 'ust_verify_stream', cli: 'verifyStream' },
   'typed-evidence':     { core: ['verifiedEvidence', 'evidenceClass', 'evidenceCaps', 'compareEvidenceOrder', 'EVIDENCE_CAPS_UNIVERSE'] },
   // M3 (UST-6vj C2) — provenance-bearing evidence: a SIGNED connector receipt verified against consumer-admitted

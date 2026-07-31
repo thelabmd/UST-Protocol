@@ -25,6 +25,18 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
+## rc.53 line
+
+**PUBLISHED 2026-07-31** — the whole set (`ust-protocol` rc.53, `cli` rc.86, `mcp` rc.42, `light` rc.42,
+`web-signer` rc.11, `ots-verify` rc.19, `rekor-verify` rc.14, `operator` 0.1.9, `diarium` 0.2.8); every
+dist-tag moved. `anchorRollup` is installable, which is what an operator needs to watch its own chain.
+
+Opened because rc.52 is PUBLISHED and a published version is immutable.
+
+| version | round | what closed |
+|---------|-------|-------------|
+| **rc.53**<br>**cli rc.86**<br>**mcp rc.42**<br>**light rc.42**<br>**web-signer rc.11**<br>**ots-verify rc.19**<br>**rekor-verify rc.14**<br>**operator 0.1.9**<br>**diarium 0.2.8** | 131 | **"The publisher is dark" is a claim with a UNIVERSAL quantifier, and we had no declared set for it to range over.** F.5p separated the two facts behind one `absent` on the DISCOVERY axis; the ANCHORING axis had the same defect and no declaration. A publisher anchors a closed window into several substrates, and an observer finding nothing on ONE of them cannot tell three different incidents apart: the publisher printed nothing anywhere it promised, one leg is down while the chain still prints, or that substrate was never part of the commitment. **Theorem F.5q-a**: `dark` is not measurable in the observation of any single substrate — `absent` on one leg arises in both worlds, so no function of it separates them. **Theorem F.5q-b**, the sharper half: `dark` quantifies over the declared set, and a quantifier over an UNDECLARED set is not a claim at all — so the declaration does not sharpen an available verdict, it brings the verdict into existence. Corollary: an observer without the list is forced into one of two failures, crying outage on every dropped leg (`exists` reported as `for all`) or staying silent while the publisher is genuinely dark. Realized by REUSING `surfaceVerdict` unchanged — same 2×2, different subject — with `anchorRollup` adding only the roll-up; a conformance check asserts the per-substrate verdict is byte-identical to calling F.5p directly, so this cannot drift into a second copy of the reasoning. With no declaration the status is **`unknown`, never `printing`**: an observer that never had grounds for the universal claim must not manufacture the reassuring one. Written after making the mistake it forbids — checking one substrate and writing the conclusion about the publisher. Four `anchor-rollup` vectors, six checks (790 total), two mutants, residual unmoved. |
+
 ## rc.52 line
 
 **PUBLISHED 2026-07-31** — `ust-protocol` rc.52, `@ust-protocol/cli` rc.85, `@ust-protocol/mcp` rc.41,

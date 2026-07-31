@@ -2252,6 +2252,56 @@ and it is corrected in the same change that first gives the profile a reader.
 - the 2×2 is decided by the core, not by each tool: declared+absent FAILS, undeclared+absent is NOT OFFERED, and both present cases attest.
 - declaring is monotone in obligation: no declaration turns an absent surface into a pass.
 
+## F.5q Darkness is a UNIVERSAL claim, so its domain must be declared (#120)
+
+F.5p separated the two facts hiding behind one `absent` on the DISCOVERY axis. The ANCHORING axis has the same
+defect and had no declaration: a publisher may anchor a closed window into several substrates, and an observer
+looking at one of them and finding nothing cannot say what happened.
+
+**The lifted 2×2.** Let `A ⊆ Subs` be the substrates the profile declares the publisher anchors into, and for a
+closed window `w` let `obs(s, w) ∈ {anchored, absent}`. The per-substrate verdict is F.5p's table with the
+subject changed — declared+absent FAILS, undeclared+absent is not-offered, and anchored attests either way — so
+it is the SAME function, applied to a different subject, and must be realized by the same code rather than a
+second copy of the reasoning.
+
+**What is new is the roll-up, and it is where the interesting negative lives.**
+
+  `dark(n, w) := ∀ s ∈ A : obs(s, w) = absent`         — the publisher printed nothing anywhere it promised to
+  `partial(n, w) := (∃ s ∈ A : obs(s, w) = absent) ∧ ¬dark(n, w)`   — named legs are down, the chain still prints
+
+**Theorem F.5q-a (darkness is not decidable from one substrate).** Fix any `s ∈ A`. Then `dark(n, w)` is not
+measurable in `σ(obs(s, w))`.
+*Proof.* `obs(s, w) = absent` occurs in two distinct worlds: one where every substrate in `A` is silent, and one
+where only `s` is. The observation is identical in both, so no function of it separates them. ∎
+
+That is the same shape as F.5o — a single observation that two different worlds produce — and it is the formal
+statement of a mistake made while filing this: one substrate was checked and the conclusion was written about the
+publisher. The honest reading of a single silent leg is `∃`, never `∀`.
+
+**Theorem F.5q-b (the universal quantifier needs its domain).** `dark(n, w)` quantifies over `A`. An observer
+without `A` can form EXISTENTIAL statements — **this substrate is silent** — and cannot form the universal one at
+all, because a quantifier over an unknown set is not a claim. Hence the declaration is not a convenience that
+sharpens an available verdict; it is what brings the verdict into existence.
+*Proof.* Measurability of `∀ s ∈ A : P(s)` requires `A` to be determined; with `A` unknown the observer's
+σ-algebra contains `P(s)` for each substrate it happens to know and no event equal to their intersection over the
+true `A`, since that intersection is not a function of what was observed. ∎
+
+**Corollary (why an outside observer without the declaration is useless in both directions).** Missing `A`, an
+observer either raises an outage on every dropped leg — `∃` reported as `∀` — or reports nothing while the
+publisher is genuinely dark, because it never had grounds for the universal claim. Both failures are forced, not
+sloppy: the information was never present.
+
+**Admissibility, unchanged from F.5p.** Declaring a substrate is monotone in obligation — it can turn a shrug
+into a FAILURE and never a shrug into a pass — and the anchored row never consults the declaration, so silence in
+the profile cannot hide an anchor that exists. And, as in F.5p, a declared substrate is a place to LOOK: validity
+is decided by that substrate's own verification, never conferred by the publisher having named it.
+
+**Binding: realized** — *"#120 ADVERSARIAL: darkness is NOT decidable from one substrate — one silent declared leg yields PARTIAL, never dark"*, *"#120 ADVERSARIAL: an UNDECLARED substrate carrying an anchor still counts — silence in the profile cannot hide evidence"*.
+
+**Conformance (math ⇒ code ⇒ green vector, `packages/ust-protocol/conformance.mjs`).**
+- the per-substrate verdict is the SAME function as F.5p's, not a second copy.
+- the roll-up separates dark from partial, and an empty declared set yields neither.
+
 ## F.6 Composition — the event algebra
 
 An **anchored existence-and-commitment claim** is an event `A ∈ Fₜ`; an UNANCHORED signed claim is a document

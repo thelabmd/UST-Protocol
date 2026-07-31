@@ -32,6 +32,7 @@ export type UstStreamVerdict = UstStreamComplete | UstError;
 
 export function admitDeep(v: unknown, seen?: unknown): unknown;
 export function admitUtf8(bytes: unknown): unknown;
+export function anchorRollup(arg0?: unknown): unknown;
 export function anyLoneSurrogate(root: unknown): unknown;
 export function assertValid(verdict: unknown): unknown;
 export const ASSURANCE_AXES: unknown;

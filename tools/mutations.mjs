@@ -64,6 +64,24 @@ export const MUTATIONS = [
     to: '  if (false && declares && !role) throw new Error(',
   },
 
+  // round 131 (#120) — F.5q-a. Broken, ANY silent declared leg reads as dark, so a single dropped substrate
+  // raises a full outage: `exists` reported as `for all`, which is the mistake the theorem exists to forbid.
+  {
+    id: 'one-silent-leg-reads-as-dark', mustDetect: true, observe: ['conformance'],
+    why: 'the roll-up. Broken, one silent declared substrate is reported as a dark publisher.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "    : silent.length === declared.length ? 'dark'            // nothing on ANY substrate it promised",
+    to: "    : silent.length > 0 ? 'dark' /* mutant */",
+  },
+  // round 131 (#120) — F.5q admissibility. Broken, an anchor on an UNDECLARED substrate stops counting, so a
+  // profile that names nothing hides evidence that is plainly there.
+  {
+    id: 'undeclared-anchor-stops-counting', mustDetect: true, observe: ['conformance'],
+    why: 'the anchored row. Broken, evidence on a substrate the profile omits is discarded.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "  for (const s of new Set([...declared, ...Object.keys(observed)]))",
+    to: "  for (const s of new Set([...declared])) /* mutant */",
+  },
   // round 99 (#102) — F.5p relocation closure. Broken, a profile-named location for a standard surface is accepted
   // instead of refused, so a verifier could read the trust chain from a place the audited host itself chose.
   {
