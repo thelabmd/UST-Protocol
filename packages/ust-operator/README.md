@@ -37,5 +37,13 @@ base). Each piece PRODUCES exactly what `ust-protocol` VERIFIES — round-trip `
 - The store abstraction (where docs live) — `@ust-protocol/operator` is store-agnostic; the engine wires the store + ingest.
 
 ## Layering (proven)
-`ust-protocol` (stateless base, public) ← `@ust-protocol/operator` (this, stateful operator) ← engine. Both packages
-complete; next is the MCP wrapper (gh#99) over both.
+`ust-protocol` (stateless base) ← `@ust-protocol/operator` (this, stateful) ← an operator's engine.
+
+**The boundary, as a rule rather than a list.** A thing belongs HERE when it is state over time that every operator
+needs and none of them decides differently: a prev-chain, a key log, a checkpoint's shape, composition above the
+breadth law. A thing belongs in the ENGINE when the answer is an operator's own: which store, which cadence, when to
+seal, what to ingest, which infrastructure. And a thing belongs in the BASE only if a verifier must know it to reach
+a verdict — the base holds no state and never will.
+
+That line is the whole point of this package. Where operator variance has nowhere to live, it arrives at the
+protocol as a request to extend it, and a base that grows a field per operator stops being a base.
