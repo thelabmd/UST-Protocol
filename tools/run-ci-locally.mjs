@@ -18,8 +18,19 @@ const lines = YML.split('\n');
 const steps = [];
 let pendingName = null;
 for (const l of lines) {
+// A step this runner happily parses can still be a workflow GitHub CANNOT LOAD. Measured 2026-07-31: a rename put
+// `- name: @ust-protocol/operator …` into the file; `@` is a RESERVED INDICATOR in YAML, so the run reported zero
+// jobs and "workflow file issue" while this runner reported 63/63 green. The local mirror validated the steps and
+// never the document — the same shape as every other gate that passed on something the real system refuses.
+// Narrow on purpose: an unquoted scalar may not OPEN with an indicator character. That is the rule that bit.
   const name = /^\s*-\s*name:\s*(.+?)\s*$/.exec(l);
-  if (name) { pendingName = name[1]; continue; }
+  if (name) {
+    if (/^[@`%&*!|>]/.test(name[1])) {
+      console.error(`\n  ✗ workflow YAML: step name opens with the reserved indicator '${name[1][0]}' and is unquoted — GitHub will refuse to load this file:\n    ${name[1].slice(0, 90)}`);
+      process.exit(1);
+    }
+    pendingName = name[1]; continue;
+  }
   const run = /^\s*(?:-\s*)?run:\s*(.+?)\s*$/.exec(l);
   if (run) { steps.push({ name: pendingName ?? run[1], cmd: run[1] }); pendingName = null; }
 }
