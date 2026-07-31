@@ -778,6 +778,22 @@
       "test": {
         "excluded": "The gate IS the test, and it carries its own control: a floor one release behind must be red. There is no conformance check because no conformance behaviour moved."
       }
+    },
+    {
+      "round": 125,
+      "math": {
+        "excluded": "The shape of our own release ledger is not a protocol object. No obligation on producers or verifiers moved and no verdict changes."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: a conforming implementation in another language keeps no CHANGELOG of ours."
+      },
+      "code": "tools/version-truth-gate.mjs :: the record's SHAPE is checked where its domain was already enumerated — one section per version, no section both unpublished and PUBLISHED, rounds descend, one row per round",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they produce. A section header produces no document and changes no verdict."
+      },
+      "test": {
+        "excluded": "The gate IS the test and carries its own blindness control: fewer than 20 parsed round rows fails, so the scanner going blind cannot make the legs pass for free."
+      }
     }
   ],
   "first_accounted_round": 76,

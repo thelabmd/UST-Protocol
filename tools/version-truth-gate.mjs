@@ -43,11 +43,6 @@ const root = new URL('..', import.meta.url).pathname;
 // baseline — if a gap reappears, publish or state the policy, do not raise the number.
 const PIN = {
   untraced: 3,          // versions with no CHANGELOG row: mcp rc.29, web-signer rc.3, ots-verify rc.10
-  // round 123 (#102): `replicationAgreement` is in the tree and not yet on npm. Publishing is a decision the
-  // owner makes explicitly and never a side effect of a green gate, so the gap is DECLARED here instead of being
-  // closed by a quiet publish. An outsider reading this knows exactly what `npm i ust-protocol` does not yet
-  // give them, and the gate reports on its own when the gap shrinks so this pin cannot outlive the reason.
-  'ust-protocol': 1,
 };
 
 const fail = []; const notes = []; let pass = 0;
@@ -66,6 +61,52 @@ check(pkgs.length >= 3, `only ${pkgs.length} workspace packages resolved — the
 const CH = readFileSync(join(root, 'CHANGELOG.md'), 'utf8');
 const lineHeads = [...CH.matchAll(/^## (?:\[Unreleased\] — )?(rc\.\d+)[^\n]*$/gm)].map((m) => m[1]);
 check(lineHeads.length >= 1, 'no `## … rc.N line` section found — versions have nowhere to be traced to');
+
+// ── the SHAPE of the record, measured 2026-07-31 after the owner read it and asked what it was. `rc.46` had TWO
+// section headers: one carrying `PUBLISHED 2026-07-31`, one labelled `— unpublished` — for a version I had
+// published myself — with rounds 121 and 122 filed under the section that called itself unpublished, in the
+// opposite order to every other section in the file. The reader could not tell which rounds actually shipped.
+//
+// This gate PRINTED the duplicate in its own failure text (`it has: rc.46, rc.46, rc.45, …`) and passed on it. A
+// value a gate is willing to display and unwilling to check is the quietest way for a defect to be inside the
+// evidence and outside the enforcement — so the shape is checked here, where the domain is already enumerated.
+{
+  const dupes = lineHeads.filter((v, i) => lineHeads.indexOf(v) !== i);
+  check(dupes.length === 0,
+    `the CHANGELOG has more than one section for ${[...new Set(dupes)].join(', ')} — a version is ONE line, and two ` +
+    `sections for it split the rounds that shipped in it from the rounds that claim not to have. Merge them.`);
+
+  // MEASURED, not assumed: 5 sections read newest-first, 1 oldest-first, 3 carry a single row, and rc.38/rc.39 are
+  // neither. So "newest-first" is the convention of the file without being true of all of it, and round 67 owns two
+  // rows (`cli rc.68` and `ledger`) where the file's own format for a multi-artifact round is one row with `<br>`.
+  // Those are HISTORICAL records. Rewriting their prose to satisfy a gate written years later would be editing the
+  // record to fit the tool, so the legacy is NAMED and pinned here instead — it can shrink, never grow, and every
+  // section written from now on is held to the convention.
+  //
+  // Reported honestly because the first run of this leg cried 15 duplicate rounds and 14 were MY OWN noise: the
+  // scanner was reading the rev-ladder and milestone tables too, where `| **LIGHT** | 6 |` is not a round at all.
+  const LEGACY_UNORDERED = new Set(['rc.39', 'rc.38', 'rc.37']);   // three, all older than the convention
+  const LEGACY_TWICE = new Set([67]);
+
+  const bodies = CH.split(/^## /m).slice(1).filter((b) => /^rc\.\d+/.test(b));
+  const rowsIn = (b) => [...b.matchAll(/^\| .*? \| (\d+) \| /gm)].map((m) => Number(m[1]));
+  for (const b of bodies) {
+    const head = b.split('\n')[0], id = /^(rc\.\d+)/.exec(head)[1];
+    check(!(/unpublished/i.test(head) && /\*\*PUBLISHED\b/.test(b)),
+      `the section \`## ${head.trim().slice(0, 40)}\` is headed unpublished and carries a PUBLISHED banner — one of the two is false, and a reader cannot tell which`);
+    const rounds = rowsIn(b);
+    if (LEGACY_UNORDERED.has(id)) continue;
+    check(rounds.every((n, i) => i === 0 || rounds[i - 1] > n),
+      `rounds in \`## ${head.trim().slice(0, 40)}\` run ${rounds.join(', ')} — this file reads newest-first, and a section that does not reads as a different chronology rather than a different section`);
+  }
+
+  // a round is recorded ONCE across the version lines — the duplicate section is exactly how one could be filed twice
+  const allRounds = bodies.flatMap(rowsIn);
+  const twice = [...new Set(allRounds.filter((v, i) => allRounds.indexOf(v) !== i))].filter((n) => !LEGACY_TWICE.has(n));
+  check(twice.length === 0, `round(s) ${twice.join(', ')} appear in more than one row — a round is one event and owes one row (this file's format for a multi-artifact round is ONE row with \`<br>\` between the versions)`);
+  check(allRounds.length >= 20, `only ${allRounds.length} round row(s) parsed from the version lines — the row scanner has gone blind and the checks above passed for free`);
+  for (const n of LEGACY_TWICE) check(allRounds.filter((x) => x === n).length > 1, `round ${n} no longer has two rows — the legacy pin outlived its reason and must be removed, not carried`);
+}
 
 // the protocol package is the one the line headers track; others are named in rows
 const untraced = [];

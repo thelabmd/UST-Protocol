@@ -199,6 +199,10 @@
     {
       "round": 124,
       "no_recap": "Round 124 closes no issue — it is the packaging gate the round-123 work exposed. Its lesson is already carried by round 123's entry: a suite that passes inside the workspace is not a suite that passed for a stranger."
+    },
+    {
+      "round": 125,
+      "no_recap": "Round 125 closes no issue — it repairs the ledger's own shape after the owner read it and asked what it was. Its lesson belongs with round 123's entry rather than in one of its own: I satisfied a gate by adding a section instead of editing the header it pointed at."
     }
   ]
 }
