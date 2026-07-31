@@ -25,7 +25,11 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
-## rc.44 line — unpublished
+## rc.44 line
+
+**PUBLISHED 2026-07-31** — `ust-protocol` rc.44 and `@ust-protocol/cli` rc.78, tags moved with them.
+A broken declaration file stops harming consumers only when a fixed one is installable, so this line was not done
+until it shipped: every version that carried types before this one truncated silently.
 
 Opened because rc.43 is PUBLISHED and a published version is immutable. This line carries the first devDependency
 this repository has ever had, and the reason it earns its place.
