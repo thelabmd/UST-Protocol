@@ -802,6 +802,22 @@
       "code": "packages/ust-protocol/index.mjs :: surfaceVerdict decides the (declared, observed) 2x2 and refuses a relocated standard surface; packages/ust-cli/index.mjs fetches /.well-known/ust and defers the meaning of absence to it",
       "vector": "surface-profile-relocation-reject",
       "test": "#102 ADVERSARIAL: a profile cannot RELOCATE a standard surface — a named key-log location is refused, resolution stays at the well-known path"
+    },
+    {
+      "round": 127,
+      "math": {
+        "excluded": "The soundness/completeness pair for a DECLARATION is a property of the reference implementation's packaging, not of the protocol: no obligation on producers or verifiers moved, no verdict changes, and a conforming implementation in another language ships no .d.ts at all. The invariant is stated where it is enforced (tools/gen-types.mjs, tools/consumer-probe-gate.mjs) and in issue 117."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved. The wire, the canonical form and every verdict are untouched."
+      },
+      "code": "tools/gen-types.mjs :: the optionality prover asks whether EVERY use is guarded, counts guard REGIONS rather than sites, and ignores comments; the object-literal return rule no longer matches any block body with a colon",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. A type declaration produces no document and changes no verdict; the artifact under test is the consumer's compile, not the transcript."
+      },
+      "test": {
+        "excluded": "The gate IS the test and it carries its own control: a consumer-shaped mistake must produce TS2322, so the compile leg cannot pass for free. There is no conformance check because no protocol behaviour moved — the artifact under test is a consumer's compile, and the reference checker is unchanged."
+      }
     }
   ],
   "first_accounted_round": 76,

@@ -9,4 +9,4 @@
 export function makeSubstrateVerify(arg0?: unknown): unknown;
 export function parseOtsBitcoin(ots: unknown): unknown;
 export const substrateVerify: unknown;
-export function toVerifiedEvidence(subject: unknown, result?: unknown, source_id?: unknown): { proof_kind: unknown; subject: unknown; source_id: unknown; facts: unknown };
+export function toVerifiedEvidence(subject: unknown, result: unknown, source_id?: unknown): { proof_kind: unknown; subject: unknown; source_id: unknown; facts: unknown };

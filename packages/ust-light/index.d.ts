@@ -6,7 +6,7 @@
 // is the defect this file exists to prevent (#105).
 // Package: ust-light
 
-export function buildState(id: unknown, time: unknown, data: unknown, provenance?: unknown): Record<string, unknown>;
+export function buildState(id: unknown, time: unknown, data: unknown, provenance: unknown): unknown;
 export function canon(v: unknown): string;
 export function contentHash(doc: unknown): string;
 export function H(tag: unknown, str: unknown): unknown;
@@ -15,4 +15,4 @@ export function keypair(): { privateKey: unknown; pub: unknown; key_id: unknown 
 export function seal(state: unknown, privateKey: unknown, pubB64url: unknown): { ust: unknown; state: unknown; sig: unknown };
 export function seed(contentHashes: unknown): string;
 export function signedContent(doc: unknown): string;
-export function verify(doc?: unknown): unknown;
+export function verify(doc: unknown): unknown;

@@ -53,9 +53,52 @@ export function parseParams(raw) {
 // signature. So: scan the body for a guard on that name and mark it optional. Only TRAILING parameters qualify,
 // scanning right to left and stopping at the first that is not guarded, because an optional argument in the
 // middle is not omissible anyway.
-function guardedInBody(name, body) {
+// #117 — THE QUESTION THIS ASKS DECIDES WHETHER THE ANSWER IS SOUND. It used to ask "does a guard mentioning this
+// name exist ANYWHERE in the body?", and existence is the wrong quantifier: one guarded use plus one unguarded use
+// still crashes when the argument is omitted. Measured, that shipped: `assertValid(verdict?: unknown)` — declared
+// optional, while `assertValid()` throws `E-MALFORMED — no verdict`. TypeScript admitted a call that can never
+// succeed, which is the exact failure mode #116 existed to end, one level down.
+//
+// So the quantifier is UNIVERSAL now: optional iff EVERY occurrence of the name is guarded. That is fail-closed —
+// an unprovable parameter stays required, costing a consumer a pad, never a runtime crash — and it REMOVES some
+// optionals that were there before. Removing them is the point.
+//
+// A use counts as guarded when it is the subject of a guard (`x ??`, `x ?.`, `x ===/!== undefined`, `x &&`, `!x`,
+// `x ||`), the object of one (`?? x`, `&& x`), or sits inside a `?:` whose test mentions the name. Anything else
+// — a bare read, a property access, a call — is an unguarded use and settles it.
+function guardedInBody(name, rawBody) {
   const n = name.replace(/[$]/g, '\\$');
-  return new RegExp(`(\\?\\?|\\|\\||&&|\\?\\.)\\s*${n}\\b|\\b${n}\\s*(\\?\\?|\\?[^.]|===\\s*undefined|!==\\s*undefined|\\|\\||&&)|!\\s*${n}\\b`).test(body);
+  // COMMENTS ARE NOT USES. `buildGenesis` guards `roles` completely and stayed required, because the sentence
+  // above it explains what a non-empty `roles` means — prose mentioning the name defeated a universal quantifier
+  // over occurrences. Blanked rather than deleted so every index below still lines up with the real source.
+  const body = rawBody.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, (m) => ' '.repeat(m.length));
+  // A guard protects a REGION, not a character. `...(prev !== undefined ? { prev } : {})` mentions `prev` twice and
+  // both are safe, because the guard heads the whole parenthesised group. Counting guard SITES scored that 1-of-2
+  // and demoted a genuinely optional parameter — measured while writing this, and it is the same mistake in the
+  // opposite direction: too strict is not automatically safe, it just moves the cost onto every consumer.
+  const SITE = new RegExp(`\\b${n}\\s*(?:\\?\\.|\\?\\?|===\\s*undefined|!==\\s*undefined|\\|\\||&&|\\?[^.])|!\\s*${n}\\b`, 'g');
+  const ALL = new RegExp(`\\b${n}\\b`, 'g');
+  const occurrences = [...body.matchAll(ALL)].map((m) => m.index);
+  if (!occurrences.length) return false;                           // never mentioned ⇒ nothing proven, stay required
+
+  // the region a guard site protects: the innermost parentheses enclosing it (its whole conditional expression).
+  const regions = [];
+  for (const s of body.matchAll(SITE)) {
+    let depth = 0, open = -1;
+    for (let i = s.index; i >= 0; i--) {                           // walk left to the unmatched `(`
+      const c = body[i];
+      if (c === ')') depth++;
+      else if (c === '(') { if (depth === 0) { open = i; break; } depth--; }
+    }
+    if (open < 0) { regions.push([s.index, s.index + s[0].length]); continue; }   // not parenthesised: the site only
+    depth = 0;
+    for (let i = open; i < body.length; i++) {
+      const c = body[i];
+      if (c === '(') depth++;
+      else if (c === ')') { depth--; if (depth === 0) { regions.push([open, i + 1]); break; } }
+    }
+  }
+  return occurrences.every((at) => regions.some(([a, b]) => at >= a && at < b));
 }
 // The body must end where the FUNCTION ends. A fixed-size window spills into the next declaration and picks up
 // its guards: with 4000 characters, `buildCheckpoint`'s required `prev` was relaxed to optional by a guard
@@ -202,7 +245,13 @@ function returnTypeOf(rawBody, isAsync) {
         if (uniq.length && uniq.length <= 12) return `{ ${uniq.map((k) => `${k}: unknown`).join('; ')} }`;
       }
     }
-    if (/return\s*\{|^\s*\{[^}]*:/.test(body) || /=>\s*\(\s*\{/.test(body)) return 'Record<string, unknown>';
+    // `^\s*\{[^}]*:` was meant to catch an arrow whose body IS an object literal. It also matches every BLOCK
+    // body containing a colon, which is nearly all of them — so `isPublicDnsShard` was declared
+    // `Record<string, unknown>` and returns a boolean, and `axisRank` the same and returns a number. A confidently
+    // WRONG type is worse than `unknown`: a consumer writes `r.whatever`, the compiler agrees, and the value is
+    // undefined at runtime. The literal form is only unambiguous when there is no `return` to disagree with it.
+    const isExpressionObjectBody = !/\breturn\b/.test(body) && /^\s*\{[^}]*:/.test(body);
+    if (/return\s*\{/.test(body) || isExpressionObjectBody || /=>\s*\(\s*\{/.test(body)) return 'Record<string, unknown>';
     // For an EXPRESSION arrow the body already begins past the `=>`, so a pattern anchored on the arrow never
     // matches — `buildCheckpoint` is `=> buildState({…})` and stayed `unknown` until this was anchored on the
     // body's own start instead. Same correction as the brace-matching one, in the other direction.

@@ -126,6 +126,8 @@ jobs:
         run: npm run test:package-contents
       - name: audit-claims gate (every number in the audit invitation is one this tree produces)
         run: node tools/audit-claims-gate.mjs --write && git diff --exit-code -- docs/AUDIT.md && node tools/audit-claims-gate.mjs
+      - name: consumer probe (a typed consumer can build, verify and judge with the declarations we ship)
+        run: node tools/consumer-probe-gate.mjs
       - name: dependency floors (a package declares the sibling version this tree actually tested against)
         run: node tools/dependency-floor-gate.mjs --write && git diff --exit-code -- '**/package.json' && node tools/dependency-floor-gate.mjs
       - name: root inventory (every top-level file AND directory is declared, not accumulated)

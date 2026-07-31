@@ -209,6 +209,10 @@
       "round": 126,
       "issue": 102,
       "content_hash": "sha256:47d7bc0385c39f1130cd6ee349b9a1215668a93fb4eb839367061fa7a2e0333b"
+    },
+    {
+      "round": 127,
+      "no_recap": "Round 127 closes #117 and its entry is owed at the closing, not before — the lesson of round 126 was exactly that a recap sealed ahead of a closing describes a moment that has not happened."
     }
   ]
 }
