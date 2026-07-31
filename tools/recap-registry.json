@@ -225,7 +225,8 @@
     },
     {
       "round": 130,
-      "no_recap": "pending — round 130 closes #101 and its entry is sealed at that closing"
+      "issue": 101,
+      "content_hash": "sha256:0d29346bf3bbc7142da1e6c1cbe2930dfb6a2400c6525855807883ad1c6df55f"
     }
   ]
 }
