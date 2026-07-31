@@ -3,7 +3,7 @@
 
 *This specification text is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](../LICENSE-SPEC). Reference code in this repository is licensed Apache-2.0. Use of the name **UST** / **Universal State Transcript** and the **UST-compatible** claim: see [TRADEMARK.md](../TRADEMARK.md).*
 
-> **Release candidate — `1.0.0-rc.45`.** This specification has been extensively red-teamed; an independent
+> **Release candidate — `1.0.0-rc.46`.** This specification has been extensively red-teamed; an independent
 > external cryptographic audit is pending. It is subject to change until `1.0.0` final. The wire format `ust:"1.0"`
 > is stable across all rc's — pin exact versions. Per-version history is in [`CHANGELOG.md`](../CHANGELOG.md).
 
@@ -404,7 +404,7 @@ following REQUIRED tightenings. A value violating any rule is malformed (E-CANON
 4. **Leaves:** strings only (§5). Encountering a JSON number/boolean/null leaf ⇒ E-CANON.
 5. **Depth/size:** within §13 bounds; exceeding ⇒ E-BOUNDS.
 
-**Pinned value encodings (M9) — VALUE-MODEL conventions, NOT canon rules (ustate-finding).** `canon` is
+**Pinned value encodings (M9) — VALUE-MODEL conventions, NOT canon rules (@ust-protocol/operator-finding).** `canon` is
 FIELD-AGNOSTIC: it serializes strings faithfully and cannot know a string is a timestamp or binary, so these are
 enforced where the field TYPE is known (§14 step 5 shape), not inside `canon`: timestamps MUST be RFC 3339 UTC
 with a literal `Z`, no fractional seconds, no numeric offset, NO leap seconds (`:60`), and valid ranges only (month 01-12, day 01-31, hour 00-23, minute/second 00-59; publishers MUST smear leap seconds to `:59` so two conforming verifiers ALWAYS agree, I4) (e.g. `2026-07-04T08:06:30Z`) — any other form ⇒
@@ -1914,15 +1914,26 @@ A derived state (e.g. an audio rendering) built on another publisher's reading �
 ### 21.2 Attestation — a sealed hour over N constituents
 A notary-grade seal: `class:"attestation"`, `constituents` = the frame hashes, `root` = their Merkle root,
 `prev` links the stream. No data of its own (content lives in the constituents + root).
+
+**An hour rarely fits in one node, and the shape below is the general one.** Breadth is capped at 64 per node
+(§13) and NO declaration raises it — unlike partitions and size, a structural bound earns no capacity ladder,
+because the remedy is not a bigger bound but another level. An hour at a 30 s cadence holds 120 frames; at the
+finest grid `ust_id` can address — one second — it holds 3600. Both seal at **depth 2**: `⌈N/64⌉` nodes of at
+most 64 each, then a root over those nodes. `⌈3600/64⌉ = 57 ≤ 64`, so every hour the addressing is able to
+express is reachable in two levels, and a day is 24 hour-roots in three.
+
+Sealing `N > 64` constituents FLAT is not a larger seal — it is a document every verifier must refuse with
+`E-BOUNDS`. The example therefore shows the ROOT of a two-level seal; a leaf node has the same shape with its
+own ≤64 frame hashes.
 ```json
 { "ust": "1.0",
   "state": {
     "id": { "domain_shard":"noosphere.md", "ust_id":"ust:20260424.15", "key_id":"sha256:aa…", "class":"attestation" },
     "time": { "generated_at":"2026-04-24T16:00:30Z", "valid_from":"2026-04-24T15:00:00Z", "valid_to":"2026-04-24T16:00:00Z" },
-    "data": { "seal": { "kind":"computed", "value":{ "frame_count":"120", "tier":"hour" } } },
+    "data": { "seal": { "kind":"computed", "value":{ "frame_count":"120", "node_count":"2", "tier":"hour" } } },
     "hashes": { "seal":"sha256:…" },
     "provenance": {
-      "constituents": [ "sha256:<slot 1>", "sha256:<slot 2>", "…", "sha256:<slot 120>" ],
+      "constituents": [ "sha256:<node 1 — frames 1…64>", "sha256:<node 2 — frames 65…120>" ],
       "root": "sha256:<Merkle root, byte-ascending>",
       "prev": "sha256:<previous hour attestation>" } },
   "sig": { "alg":"Ed25519", "key_id":"sha256:aa…", "sig":"…" } }
@@ -1977,7 +1988,7 @@ attestation-root vectors, and one vector per error code (§15). A verifier is co
 of them byte-for-byte. The STARTER suite has SHIPPED (11 vectors: floor canon + per-partition/content hash +
 Ed25519 sig-valid/tampered + canon-reject×3 + bounds + two full documents `doc-01` VALID / `doc-02` tampered,
 independently agent-verified). The FULL suite (strict-Ed25519 malleability, key-log resolution, anchor-proof
-per substrate, one-per-error-code) is pending the `ustate` reference implementation.
+per substrate, one-per-error-code) is pending the `@ust-protocol/operator` reference implementation.
 
 ---
 

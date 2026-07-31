@@ -23,7 +23,9 @@ AGENTS.md
 .agents/
 
 # private — operator toolkit (never published, not part of the public standard)
-packages/ustate/
+# packages/ust-operator/ — OPENED 2026-07-31. It is the operator layer, and the barrier to becoming an
+# operator is exactly what it removes: with the call standardised outside (RFC 10008, MCP 2026-07-28),
+# a private operator layer means every operator writes it again. `private: true` still keeps it off npm.
 packages/ust-mcp/conformance.mjs
 packages/ust-mcp/demo-all.mjs
 packages/ust-mcp/demo-mcp-ladder.mjs

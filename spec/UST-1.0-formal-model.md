@@ -2342,7 +2342,21 @@ breadth 64); oversized arrays chunk; deep data restructures; long key histories 
 long walks continue across bounded calls. Each transformation preserves the existence and hash-binding of the
 represented state while keeping every single verification inside a universal resource envelope.
 
-**Binding: none — numbers-normative-in-§13.** Escape transformations are arithmetic over the §13 constants.
+**The escape is checked against what the protocol can ADDRESS, not merely asserted as sufficient (rev65).**
+`4096 = 64²` is a statement about the transformation; whether it suffices depends on how much a publisher can
+legitimately have. `ust_id` resolves to the second (`"ust:" YYYYMMDD "." HH [ MM [ SS ] ]`, tiers hour ⊃
+minute ⊃ second), so the finest grid a declared cadence can place in one hour holds `3600` moments — and
+`⌈3600 / 64⌉ = 57 ≤ 64`, so **every hour the addressing is able to express seals at depth 2**, with `4096 −
+3600 = 496` of slack. A day is `24` hour roots and seals at depth 3. The reach therefore covers the addressing
+with room, and `W_ABS² = P_ABS` ties the structural reach of two levels to the absolute partition ceiling —
+which is why moving `W_ABS` would decouple two constants that currently agree.
+
+**Realization (rev65).** Measured 2026-07-31: a flat attestation over 120 referents — one hour at the 30 s
+cadence a live publisher declares — returns `INVALID E-BOUNDS`; the same 120 as two nodes of 60 under one root
+verifies. The transformation is realized in the operator layer (`packages/ust-operator`), never in the base: the base
+VERIFIES a composed tree and building one is a producer's job.
+
+**Binding: realized** — *"#101 ADVERSARIAL: a capacity grant does NOT admit an over-breadth FLAT seal — capacity is VOLUME, breadth is STRUCTURE"*. The arithmetic was always over the §13 constants; what is now an obligation is that no declaration may reach a structural bound, which a check refuses rather than a sentence asserts.
 
 ### F.9.6 Calibration of the numerical constants
 

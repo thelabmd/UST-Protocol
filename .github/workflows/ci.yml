@@ -128,6 +128,8 @@ jobs:
         run: node tools/audit-claims-gate.mjs --write && git diff --exit-code -- docs/AUDIT.md && node tools/audit-claims-gate.mjs
       - name: root inventory (every top-level file AND directory is declared, not accumulated)
         run: node tools/root-inventory-gate.mjs
+      - name: @ust-protocol/operator round-trip (the operator layer PRODUCES exactly what the base VERIFIES)
+        run: node packages/ust-operator/conformance.mjs
       - name: types integrity (every shipped .d.ts COMPILES and declares exactly what its module exports)
         run: node tools/types-integrity-gate.mjs
       - name: npm-drift gate (a published version is immutable)

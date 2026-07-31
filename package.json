@@ -1,6 +1,6 @@
 {
   "name": "ust",
-  "version": "1.0.0-rc.45",
+  "version": "1.0.0-rc.46",
   "private": true,
   "description": "UST (Universal State Transcript) — specification, conformance vectors, and reference implementations. Trust infrastructure for machine-readable state.",
   "license": "Apache-2.0",
@@ -12,7 +12,8 @@
     "packages/ust-light",
     "packages/ust-ots-verify",
     "packages/ust-rekor-verify",
-    "packages/diarium"
+    "packages/diarium",
+    "packages/ust-operator"
   ],
   "scripts": {
     "test": "node packages/ust-protocol/conformance.mjs && node packages/ust-protocol/run-arc-vectors.mjs",

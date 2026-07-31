@@ -492,6 +492,12 @@
       "rev": "round79",
       "model_locus": "Inheritance PROPAGATES a role; it can never INTRODUCE one",
       "conformance_check": "#106 `supersedes` PROPAGATES the role down a lineage (no explicit role needed on a successor)"
+    },
+    {
+      "id": "R65-structural-bound-escaped-by-composition",
+      "rev": "rev65",
+      "model_locus": "The escape is checked against what the protocol can ADDRESS, not merely asserted as sufficient",
+      "conformance_check": "#101 ADVERSARIAL: a capacity grant does NOT admit an over-breadth FLAT seal — capacity is VOLUME, breadth is STRUCTURE"
     }
   ]
 }

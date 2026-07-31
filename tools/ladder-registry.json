@@ -730,6 +730,30 @@
       "test": {
         "excluded": "The control is run and recorded rather than committed: a stray directory staged into the index makes the gate fail by name, and committing that directory to freeze the control would ship the very thing this round removes. It runs as a CI step now, which is the change that matters — before this round the gate was never executed at all."
       }
+    },
+    {
+      "round": 121,
+      "math": "The escape is checked against what the protocol can ADDRESS",
+      "spec": "An hour rarely fits in one node, and the shape below is the general one",
+      "code": "packages/ust-operator/index.mjs",
+      "vector": "breadth-flat-over-law-reject",
+      "test": "#101 ADVERSARIAL: a capacity grant does NOT admit an over-breadth FLAT seal — capacity is VOLUME, breadth is STRUCTURE"
+    },
+    {
+      "round": 122,
+      "math": {
+        "excluded": "A package name is a fact about the npm registry, not about the protocol. No obligation on producers or verifiers moved; the model is untouched by what a directory is called."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently. Which name our operator layer carries binds nobody implementing UST."
+      },
+      "code": "tools/npm-drift-check.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. A rename produces no document and changes no verdict; the artefact is the gate learning to tell an unpublished package from an unreadable one."
+      },
+      "test": {
+        "excluded": "The check is the npm-drift gate itself, run against a tree containing a genuinely unpublished package — which is what exposed the ordering bug in the first place. Committing a fake unpublished package to freeze that control would add a package nobody wants for the sake of a test."
+      }
     }
   ],
   "first_accounted_round": 76,

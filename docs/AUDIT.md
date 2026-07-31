@@ -30,7 +30,7 @@ We have already done extensive **self**-review (§6). We are buying the thing se
 - **Data correctness** — UST proves _fixation, not truth_; a publisher may sign a wrong reading. Not a flaw.
 - The **substrate's** own security (e.g. Bitcoin/OpenTimestamps) — trusted as an external anchor.
 - The **operator's key custody** (genesis ceremony, HSM) — an operational concern, not the protocol.
-- `ustate` (operator toolkit, unpublished), noosphere business logic/pricing, and any web/frontend pentest.
+- `@ust-protocol/operator` (operator toolkit, unpublished), noosphere business logic/pricing, and any web/frontend pentest.
 
 ## 3. Where to get everything
 
@@ -139,14 +139,14 @@ residual risk, and what would you require before a `1.0.0` final tag?
 ## 9. What we have already done (so you go deeper, not sideways)
 
 - **Six adversarial red-team passes** on the v1.0 final form + four on the v0.29 predecessor — all self-review.
-- **128 deterministic conformance vectors** plus a behavioral conformance runner (**748 registered checks**), and the reference impl passes them (one known note: duplicate-key
+- **129 deterministic conformance vectors** plus a behavioral conformance runner (**754 registered checks**), and the reference impl passes them (one known note: duplicate-key
   rejection needs a raw-bytes JSON parser — `JSON.parse` collapses dups — a harness limitation, not an impl flaw).
 - **Two independent implementations** (`ust-protocol` node + a clean-room WebCrypto verifier in `docs/`) run
   side by side on every case of the parity suite and must agree on the verdict, including the tier: **13 cases,
   0 divergences** as of rev64. The previous wording claimed 32/32; that number came from an older harness and no
   longer corresponded to anything this tree runs, so it is replaced by what `npm run test:docs-parity` prints
   today. A count of independent agreements is the one number an auditor weighs most, and it was overstated.
-- **118 recorded rounds** in `CHANGELOG.md`, carrying the reference-checker from `rev3` to `rev64`. The adversarial
+- **120 recorded rounds** in `CHANGELOG.md`, carrying the reference-checker from `rev3` to `rev64`. The adversarial
   ones are folded in STRUCTURALLY rather than patched: each round that found something states the MECHANISM, not
   the instance, and closes it with a check that fails on the next instance of the same class. The round count and
   the revision range are both measurable from this tree; "how adversarial" is a judgement and is left to you.

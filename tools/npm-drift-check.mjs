@@ -67,6 +67,10 @@ for (const ws of workspaces) {
 // disowned. A tag that should differ must say why, here, in the file.
 const TAG_EXEMPT = {};   // `<pkg>@<tag>` → why it legitimately points elsewhere. Empty: all tags track the release.
 for (const [name, st] of pubState) {
+  // A package that is not on npm has no dist-tags, and that is the honest "repo is ahead" state this gate already
+  // knows how to report — not an unreadable pointer. Measured 2026-07-31 on the first genuinely unpublished package
+  // in the tree: the fetch ran BEFORE the published check and failed closed on a package that simply is not there.
+  if (!st.published) { console.log(`  → ${name}: not on npm — no dist-tags to check`); continue; }
   let tags, deprecated = {};
   try { tags = JSON.parse(execSync(`npm view ${name} dist-tags --json`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })); }
   catch (e) { drift++; console.error(`  ✗ ${name}: dist-tags UNREADABLE — a pointer that cannot be inspected cannot be trusted, failing closed: ${String(e.message).split('\n')[0]}`); continue; }

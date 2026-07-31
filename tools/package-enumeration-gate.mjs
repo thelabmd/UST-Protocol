@@ -20,11 +20,10 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 
-// A directory under packages/ without a package.json is not a package. That is legitimate — `ustate` is the internal
+// A directory under packages/ without a package.json is not a package. That is legitimate — `@ust-protocol/operator` is the internal
 // operator toolkit, deliberately unpublished — but it must be DECLARED here with a reason, so an accidentally
 // unfinished package cannot hide in the same silence.
 const NOT_A_PACKAGE = {
-  ustate: 'internal operator toolkit — deliberately not an npm package (see the npm-split rule: verification is public, the engine is not)',
 };
 
 let pass = 0; const fail = [];
@@ -44,7 +43,7 @@ for (const d of dirs) {
   pkgs.push({ dir: d, name: j.name, private: !!j.private, version: j.version });
 }
 // A declared non-package must not have quietly become a package, and a declaration must not outlive what it describes.
-// But absence is not automatically staleness: `ustate` is gitignored on purpose (the internal operator toolkit is not
+// But absence is not automatically staleness: `@ust-protocol/operator` is gitignored on purpose (the internal operator toolkit is not
 // in the public repository), so CI never sees the directory that a developer machine does. Git is the authority on
 // "deliberately absent" — asking it is the difference between a gate that works in both places and one that is green
 // locally and red on push, which is exactly how this gate first shipped.
@@ -70,7 +69,13 @@ const rowDirs = new Set(rows.map((r) => r.dir));
 // measured by flipping the flag on ust-light, after which the gate passed and said nothing. Zero packages are private
 // today, so it is an UNUSED escape hatch — the cheapest kind to walk through. A skip must be REPORTED, and a private
 // package must carry its reason like every other exemption in this repository.
-const PRIVATE_OK = {};   // name → why it is not for readers. Empty today: nothing is private.
+// `private: true` means NOT PUBLISHED TO NPM. It does not mean "not for readers" — round 109 wrote the rule as
+// though the two were the same, and `@ust-protocol/operator` is the case that separates them: its source is open precisely so any
+// operator can read and run it, while publishing waits for a second operator. So the declaration states the npm
+// decision and whether the page is for readers, which are two answers, not one.
+const PRIVATE_OK = {
+  'ust-operator': 'the operator layer: SOURCE is open so any operator can read and run it, and `private: true` only holds it off npm until there is a second operator. It belongs in the README enumeration — readers are exactly who it is for.',
+};
 const skipped = pkgs.filter((p) => p.private).map((p) => p.dir);
 for (const d of skipped) ok(`private package ${d} states why it is not for readers`, Object.hasOwn(PRIVATE_OK, d) && String(PRIVATE_OK[d]).length >= 40,
   'a package that leaves this enumeration by a flag must say why, or the flag is a way out of being checked');

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.45', revision: 64 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.46', revision: 64 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -1108,7 +1108,7 @@ export function resolveKeys(genesis, keylog = []) {
   return resolveKeysBytes(gEnc, kEnc);
 }
 
-// ─── §12 HIGH name-authority resolution. STATELESS: the caller (ustate/engine) supplies the genesis +
+// ─── §12 HIGH name-authority resolution. STATELESS: the caller (@ust-protocol/operator/engine) supplies the genesis +
 //     key-log transcripts (retrieval is the stateful layer's job) and asserts no-fork from the witness (W1).
 // ─── §12.1a / P0-2 (audit) — NAME NO-FORK EVIDENCE. `authoritative` name-authority is EARNED, never self-declared:
 //     it requires a TYPED, domain-separated no-fork claim signed by a witness the CONSUMER trusts (resolved against
@@ -1538,7 +1538,7 @@ export function resolveAuthority(doc, opts = {}) {
 
 // ─── TOP §11.2 anchor-proof: recompute the Merkle inclusion path content_hash→root (RFC 6962, domain-sep
 //     ust:leaf/ust:node). The SUBSTRATE check (e.g. bitcoin-ots) is DELEGATED to opts.substrateVerify (needs
-//     external Bitcoin access — the caller/ustate's job). Returns { inclusion, time, status, anchorTime? }.
+//     external Bitcoin access — the caller/@ust-protocol/operator's job). Returns { inclusion, time, status, anchorTime? }.
 // round-28 P1-02 — public DOOR admits the proof once (a hostile getter → structured E-ANCHOR, never a host throw); the
 // internal verifyCore calls verifyAnchorCore over the ALREADY-admitted doc.proof, so the substrate-receipt identity shim
 // (`a === capA`) is not broken by a re-clone. Same public-door/internal-core split as verify.

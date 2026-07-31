@@ -182,6 +182,14 @@
     {
       "round": 120,
       "no_recap": "Round 120 closed no issue — the owner spotted scratch in the public tree directly, and there is no ticket to receive a recap comment."
+    },
+    {
+      "round": 121,
+      "no_recap": "Round 121 does not close #101 — the spec and the layer now teach the law, and the issue stays open until its own checkboxes are ticked and the example is reviewed."
+    },
+    {
+      "round": 122,
+      "no_recap": "Round 122 closed no issue — the owner named the package during the work, and there is no ticket to receive a recap comment."
     }
   ]
 }

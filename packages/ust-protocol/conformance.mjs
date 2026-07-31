@@ -1256,6 +1256,33 @@ console.log('\n═════════════════════�
   check('audit P1: mapInclusion:true does NOT grant authoritative (no map verifier yet)', P.resolveAuthority(gen, { genesis: gen, keylog: [], mapInclusion: true }).strength !== 'authoritative');
 }
 
+// ─── #101 STRUCTURAL BOUNDS ARE ESCAPED BY COMPOSITION, NEVER BY DECLARATION (F.9.5, rev65).
+// Partitions and size earn a capacity ladder from an authoritative genesis; BREADTH and DEPTH do not, and the
+// specification's own worked example sealed an hour FLAT over 120 constituents — a document every verifier must
+// refuse. The adversarial half is the load-bearing one: no grant, no declaration and no authority may make a
+// flat over-breadth seal admissible, because capacity answers "how much" and composition answers "how deep".
+{
+  const tt = { generated_at: '2026-07-31T10:00:00Z', valid_from: '2026-07-31T10:00:00Z', valid_to: '2026-07-31T11:00:00Z' };
+  const idA = { domain_shard: A.key_id, ust_id: 'ust:20260731.10', key_id: A.key_id, class: 'attestation' };
+  const hs = (n) => Array.from({ length: n }, (_, i) => 'sha256:' + String(i).padStart(64, '0'));
+  const attest = (cs) => P.seal(P.buildAttestation(idA, tt, { seal: { kind: 'computed', value: { n: String(cs.length) } } }, cs), A.priv, A.pubB64);
+  check('#101 a seal at exactly the breadth law (64) is admissible', P.isValid(P.verify(attest(hs(64)))));
+  check('#101 ADVERSARIAL: a FLAT seal one referent over the law is REFUSED with E-BOUNDS', (() => {
+    const v = P.verify(attest(hs(65))); return v.result === 'INVALID' && v.error === 'E-BOUNDS';
+  })());
+  check('#101 ADVERSARIAL: a capacity grant does NOT admit an over-breadth FLAT seal — capacity is VOLUME, breadth is STRUCTURE', (() => {
+    const v = P.verify(attest(hs(120)), { capacity: { maxPartitions: 4096 } });
+    return v.result === 'INVALID' && v.error === 'E-BOUNDS';
+  })());
+  check('#101 the SAME 120 composed as two nodes under one root verifies — the escape is real, not rhetorical', (() => {
+    const n1 = attest(hs(64)), n2 = attest(hs(56));
+    const root = attest([P.contentHash(n1), P.contentHash(n2)]);
+    return P.isValid(P.verify(n1)) && P.isValid(P.verify(n2)) && P.isValid(P.verify(root));
+  })());
+  check('#101 the reach covers what ust_id can ADDRESS: ceil(3600/64) = 57 nodes, and 57 <= 64, so one root closes an hour at second resolution',
+    Math.ceil(3600 / 64) === 57 && Math.ceil(3600 / 64) <= 64);
+}
+
 // ─── #44 AGENT-SAFETY — throw-on-non-VALID (control flow, not an advisory field) + machine-structured verdict.
 {
   const goodDoc = mk();
