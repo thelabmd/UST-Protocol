@@ -194,7 +194,8 @@
     },
     {
       "round": 123,
-      "no_recap": "Round 123 does not close #102 — it lands the correctness half (the leg is renamed to the byte-agreement it measures, and the core refuses a self-declared independence coordinate). The issue's first two work items, declaring where the discovery artifacts live, are UNBLOCKED by this round and not done in it: naming copies in a profile was only safe once the leg stopped claiming independence."
+      "issue": 102,
+      "content_hash": "sha256:8d2311c58ed36da748bda62393d85caf1ca3e402ae395aa3d380a6f8047dee43"
     },
     {
       "round": 124,
