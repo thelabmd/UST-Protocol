@@ -94,6 +94,28 @@ check(new Set(touched).size >= 5, `${PROBE} calls only ${new Set(touched).size} 
   }
 }
 
+// ── leg 5: THE INEXPRESSIBLE RESIDUAL MUST STAY EMPTY, or be named. TypeScript can only make a SUFFIX
+// optional, so a parameter the runtime guards that sits BEFORE an unguarded one cannot be declared optional at
+// all — the declaration is then sound and incomplete, and a consumer padding it with `undefined` is doing the
+// right thing without being told so. MEASURED today: zero such parameters. That is worth asserting rather than
+// assuming, because the day one appears it must be NAMED, not silently accepted as "just how it is".
+{
+  const SRC_MJS = readFileSync(ROOT + 'packages/ust-protocol/index.mjs', 'utf8');
+  const DTS2 = readFileSync(ROOT + 'packages/ust-protocol/index.d.ts', 'utf8');
+  const residual = [];
+  for (const m of DTS2.matchAll(/^export function (\w+)\(([^)]*)\)/gm)) {
+    const declared = m[2].split(',').map((x) => x.trim());
+    const sig = new RegExp(`export (?:const|function|async function) ${m[1]}\\s*=?\\s*\\(([^)]*)\\)`).exec(SRC_MJS);
+    if (!sig) continue;
+    const real = sig[1].split(',').map((x) => x.trim());
+    declared.forEach((d, i) => { if (!/\?:/.test(d) && /=/.test(real[i] ?? '')) residual.push(`${m[1]}(${d.split(':')[0]})`); });
+  }
+  check(residual.length === 0,
+    `${residual.length} parameter(s) carry a DEFAULT in the source and are declared REQUIRED: ${residual.slice(0, 5).join(', ')}. ` +
+    `That is the inexpressible residual — TypeScript makes only a SUFFIX optional — and it must be NAMED in the ` +
+    `declaration so a consumer knows padding with \`undefined\` is legitimate, not a workaround.`);
+}
+
 // ── the compile leg must be able to FAIL, and for the RIGHT reason: a consumer-shaped mistake, not a syntax error.
 {
   const ctl = ROOT + '.probe-gate-control.ts';
