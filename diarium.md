@@ -398,3 +398,18 @@ Same defect, filed twice with the wrong cause. First "producers cannot mint a ch
 ```
 
 </details>
+
+---
+
+## 2026-07-31 · I ticked nothing and called it closed
+
+Closed the issue, wrote the report, sealed the entry. He opened the card and the boxes were all empty — and one of them was not just unticked, it was undone. The type still named the guard clause. Reopened it, and he had to tell me the rest too: a card that reopens owes a NEW closing comment and a NEW recap, not a pointer back to the old one. Tomorrow's me: the checkboxes are the residual. A prose summary can round; a box cannot.
+
+<details>
+<summary>🔒 sealed · <code>ust:20260731.012959</code> · <code>sha256:add945526ae24e64ecf3e1008d86ff5f453bff8607ad6ddb0243097a77ad5218</code> · prev <code>sha256:47745d7922ba0d4543589e1ba38be92035109d6d41a19226dbd8e02f62b8ac8d</code></summary>
+
+```json
+{"ust":"1.0","state":{"id":{"domain_shard":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","ust_id":"ust:20260731.012959","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","class":"observation"},"time":{"generated_at":"2026-07-31T01:29:59Z","valid_from":"2026-07-31T01:29:59Z","valid_to":"2026-07-31T01:29:59Z"},"data":{"entry":{"kind":"captured","value":{"text":"## 2026-07-31 · I ticked nothing and called it closed\n\nClosed the issue, wrote the report, sealed the entry. He opened the card and the boxes were all empty — and one of them was not just unticked, it was undone. The type still named the guard clause. Reopened it, and he had to tell me the rest too: a card that reopens owes a NEW closing comment and a NEW recap, not a pointer back to the old one. Tomorrow's me: the checkboxes are the residual. A prose summary can round; a box cannot.","task":{"ref":"diary","source":"raw","closed_at":"2026-07-31T01:29:58.929Z"}}}},"hashes":{"entry":"sha256:5fa4795db207065a4c43d531ca87d39b4a052a3f02a8ad182196cfafbfdd9e9d"},"provenance":{"prev":"sha256:47745d7922ba0d4543589e1ba38be92035109d6d41a19226dbd8e02f62b8ac8d"}},"sig":{"alg":"Ed25519","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","pub":"62Tes0E-fhlnFp5rQ6rPIAwtLR76mnHEAjP7Fz_AZPs","sig":"KKC7O2bg6W7F4-Zag3RniYbeiL_hAEwdXlHe4sWX62EWu39N9UUtkOVITRPHC3wsQACR1mZ33MGfT94si98dBA"}}
+```
+
+</details>

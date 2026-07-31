@@ -25,7 +25,11 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
-## rc.45 line — unpublished
+## rc.45 line
+
+**PUBLISHED 2026-07-31** — seven packages: `ust-protocol` rc.45, `cli` rc.79, `mcp` rc.34,
+`web-signer` rc.6, `ust-light` rc.37, `ots-verify` rc.14, `rekor-verify` rc.9. One change to how a return type is
+inferred touched every package that ships declarations, which is what a shared generator means.
 
 Opened because rc.44 is PUBLISHED and a published version is immutable. It carries the LAST item of UST#116 — the
 one I closed the issue with unticked.
