@@ -1,6 +1,21 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 # UST Protocol — the reference implementation
 
+```
+
+     ▄▀▀▀▀▀▀▀▀▀▀▀▀█▄
+    █ ▄▄      ▄▄    █              UST Protocol
+  ▄▄▀ ▀▀ ▄▄▄  ▀▀    █              RSS for State
+  ▄█▀▀ ▀█▄▀▄▄▀ ▀█▀  █    █▀▄   ▄▄
+   ▀█               █▄   █▄ ██▀ █
+     █               ▀▄▄  █   ▄█
+     █                  ▀▀   █▀
+     █▄      ▄              █▀
+     ███▄    █    █       ▄█▀
+   ▄▀▀  ██▄▄▄█     ▀▄▄▄▄█▀▀
+   ▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀
+```
+
 **Verify machine-readable state without trusting whoever handed it to you.**
 
 UST (Universal State Transcript) is trust infrastructure for data: a signed, canonical, tamper-evident record of

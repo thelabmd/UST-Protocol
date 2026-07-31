@@ -1,5 +1,20 @@
 # UST Protocol — the operator layer
 
+```
+
+     ▄▀▀▀▀▀▀▀▀▀▀▀▀█▄
+    █ ▄▄      ▄▄    █              UST Protocol
+  ▄▄▀ ▀▀ ▄▄▄  ▀▀    █              RSS for State
+  ▄█▀▀ ▀█▄▀▄▄▀ ▀█▀  █    █▀▄   ▄▄
+   ▀█               █▄   █▄ ██▀ █
+     █               ▀▄▄  █   ▄█
+     █                  ▀▀   █▀
+     █▄      ▄              █▀
+     ███▄    █    █       ▄█▀
+   ▄▀▀  ██▄▄▄█     ▀▄▄▄▄█▀▀
+   ▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀
+```
+
 > `§` refers to [`spec/UST-1.0.md`](../../spec/UST-1.0.md) throughout.
 
 `@ust-protocol/operator` = "UST state": working with the protocol's STATE over time. Builds ON `ust-protocol` (the stateless
