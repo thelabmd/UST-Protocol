@@ -3,7 +3,7 @@
 
 *This specification text is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](../LICENSE-SPEC). Reference code in this repository is licensed Apache-2.0. Use of the name **UST** / **Universal State Transcript** and the **UST-compatible** claim: see [TRADEMARK.md](../TRADEMARK.md).*
 
-> **Release candidate — `1.0.0-rc.47`.** This specification has been extensively red-teamed; an independent
+> **Release candidate — `1.0.0-rc.48`.** This specification has been extensively red-teamed; an independent
 > external cryptographic audit is pending. It is subject to change until `1.0.0` final. The wire format `ust:"1.0"`
 > is stable across all rc's — pin exact versions. Per-version history is in [`CHANGELOG.md`](../CHANGELOG.md).
 
@@ -1626,7 +1626,7 @@ rule is: **verify in the control flow, not as an advisory field.**
 **Canonical INVALID error-code set** (generated from `index.mjs` `REGISTRY` by `tools/gen-spec-registry.mjs` — do
 not edit by hand; the `spec-code-sync` gate keeps it == the codes the implementation actually emits):
 <!-- BEGIN spec-sync:error-codes -->
-`E-MALFORMED`, `E-CANON`, `E-BOUNDS`, `E-CYCLE`, `E-SIG`, `E-KEY`, `E-GENESIS`, `E-ANCHOR`, `E-COMMIT`, `E-ROOT`, `E-SEED`, `E-PREV`, `E-AUTHORITY`, `E-SEQ`, `E-EVIDENCE`, `E-ASSURANCE`, `E-BYTES`, `E-REPLICATION`
+`E-MALFORMED`, `E-CANON`, `E-BOUNDS`, `E-CYCLE`, `E-SIG`, `E-KEY`, `E-GENESIS`, `E-ANCHOR`, `E-COMMIT`, `E-ROOT`, `E-SEED`, `E-PREV`, `E-AUTHORITY`, `E-SEQ`, `E-EVIDENCE`, `E-ASSURANCE`, `E-BYTES`, `E-REPLICATION`, `E-DISCOVERY`
 <!-- END spec-sync:error-codes -->
 
 ---
@@ -1815,7 +1815,7 @@ layering fix, REV6.)
 ## 20. Operator profile (instantiation boundary)
 
 Discoverable from `domain_shard` (`/.well-known/ust`, corroborated against the anchored key log, §12) and
-declaring the operator's choices, none of which relax §3: signature scheme + key-log location; anchoring
+declaring the operator's choices, none of which relax §3: signature scheme; anchoring
 substrate(s); partition schema (names + captured/computed designation); source registry; cadence; the
 hour-close timeout (§8.1); stream checkpoint cadence for sequenced streams (§11.3 — SHOULD for any stream that wants
 provable completeness); a private-nonce uniqueness log (§10 I6/Z2 — SHOULD: the verifier cannot detect
@@ -1824,6 +1824,21 @@ cross-document nonce reuse, so the operator must); size bounds
 changelog: unanchored records near a genesis-recovery boundary fail HIGH by design (X3) — consumers must be able to
 see why, not guess. The protocol fixes the mechanism; the profile carries the
 operator. Each operator publishes its own profile (substrates, cadence, custody, disclosure) alongside its genesis.
+
+**What the profile MUST declare, and what it MUST NOT.** A profile MUST list the optional surfaces this operator
+serves (`witness`, `cadence`, and any companion copies), because absence is otherwise TWO different facts wearing
+one face: *this operator does not run that surface* (settled — unattestable now and later) and *it exists and did
+not answer* (unknown — attestable tomorrow). A verifier reading both as one shrug is discarding a distinction it
+was never given. With the declaration, a **declared** surface that does not answer is a FAILURE — a promise not
+kept — while an **undeclared** absent surface is NOT OFFERED. A surface that is PRESENT is attested either way:
+silence in the profile can never hide evidence, so declaring is monotone in obligation and grants the operator
+nothing (formal model F.5p).
+
+A profile MUST NOT relocate the standard surfaces. `ust-genesis`, `ust-keylog`, `ust-witness` and `ust-cadence`
+resolve at the §20.1 well-known locations and ONLY there: a verifier that read the trust chain from a location the
+profile names would be rooting authority in bytes served by the very host whose authority is in question. A
+locator in a profile is therefore admissible strictly as an ADDITIONAL copy, compared by `content_hash` under the
+byte-agreement property of §20.1 — never as a substitute location (F.5p).
 
 ### 20.1 Genesis discovery — the publisher SERVING contract
 

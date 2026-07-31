@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.47', revision: 65 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.48', revision: 66 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -1189,6 +1189,23 @@ export function replicationAgreement({ expected, copies = [], ...rest }) {
   for (const c of copies) (c && c.hash === expected ? agreed : disagreed).push(c && c.locator);
   // NOT ATTESTED with nothing to compare: an empty list is not agreement, and silence must never read as a pass.
   return deepFreeze({ property: 'byte-agreement', expected, agreed, disagreed, attested: copies.length > 0 && disagreed.length === 0 });
+}
+// #102 / F.5p — ABSENCE IS TWO FACTS. A surface that did not answer is either one this operator does not run
+// (settled: unattestable now and later) or one that exists and was unreachable (unknown: attestable tomorrow).
+// Observation alone cannot separate them, so both used to render as one `skip` and the distinction was discarded.
+// The §20 profile is what separates them — and it is safe BY SHAPE, not by trust: declaring a surface can only
+// turn a skip into a FAILURE, never into a pass, and a surface that is PRESENT is attested whether or not the
+// profile mentions it, so silence can never hide evidence. The verdict is the core's so no tool re-derives it.
+export function surfaceVerdict({ surface, declared = false, observed, standardLocation = true }) {
+  // F.5p: resolution roots at the well-known location and ONLY there. A profile that named its own location for a
+  // standard surface would root authority in bytes served by the host whose authority is in question, so this is
+  // refused at the boundary rather than ranked lower — a relocated root is not weaker evidence, it is not evidence.
+  if (!standardLocation) throw Object.assign(new Error(`E-DISCOVERY: '${surface}' resolves at its §20.1 well-known location and only there; a profile locator is an ADDITIONAL copy compared by content_hash (F.5o), never a substitute (F.5p)`), { code: 'E-DISCOVERY' });
+  if (observed !== 'present' && observed !== 'absent') throw Object.assign(new Error(`E-DISCOVERY: observed must be 'present' or 'absent', not ${JSON.stringify(observed)} — a third state would decide the 2x2 by falling through it`), { code: 'E-DISCOVERY' });
+  if (observed === 'present') return deepFreeze({ surface, status: 'attested', reason: 'served' });
+  return declared
+    ? deepFreeze({ surface, status: 'failed', reason: 'declared-and-absent' })     // a promise not kept
+    : deepFreeze({ surface, status: 'not-offered', reason: 'undeclared-and-absent' });   // settled, not a transient
 }
 // UST-0ol Phase 2 — evidence CAPABILITY as a SET (P2-02: capabilities are not a scalar rank). A predicate is
 // satisfiable ONLY by an admissible capability; strong derivation checks this before trusting a piece of evidence,
@@ -2617,7 +2634,7 @@ export const REGISTRY = deepFreeze({   // round-25 P0-04 — DEEP-frozen: the ca
     'ust:evidence-receipt', 'ust:evidence-receipt-signature'],
   // INVALID error codes (§15) — every code the verifier/API can emit. Ordered as §15 lists them.
   errorCodes: ['E-MALFORMED', 'E-CANON', 'E-BOUNDS', 'E-CYCLE', 'E-SIG', 'E-KEY', 'E-GENESIS', 'E-ANCHOR',
-    'E-COMMIT', 'E-ROOT', 'E-SEED', 'E-PREV', 'E-AUTHORITY', 'E-SEQ', 'E-EVIDENCE', 'E-ASSURANCE', 'E-BYTES', 'E-REPLICATION'],   // E-BYTES — the byte-admission door class (round-48 P0-01: snapshotBytes rejects a non-native-Uint8Array as E-BYTES-TYPE/-SHARED/-SIZE)
+    'E-COMMIT', 'E-ROOT', 'E-SEED', 'E-PREV', 'E-AUTHORITY', 'E-SEQ', 'E-EVIDENCE', 'E-ASSURANCE', 'E-BYTES', 'E-REPLICATION', 'E-DISCOVERY'],   // E-BYTES — the byte-admission door class (round-48 P0-01: snapshotBytes rejects a non-native-Uint8Array as E-BYTES-TYPE/-SHARED/-SIZE)
   // INDETERMINATE reasons — the §14 document-verifier's CLOSED set, and the §12.3.6 authority-checkpoint set (distinct).
   indeterminateReasons: { document: ['unavailable', 'unsupported_alg', 'resource_limit', 'stale_keylog'],
     checkpoint: ['authority_unresolved', 'terminality_unproven', 'order_unproven', 'evidence_unverified', 'chain_consistency_unproven'] },

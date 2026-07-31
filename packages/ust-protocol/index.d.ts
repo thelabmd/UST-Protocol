@@ -98,6 +98,7 @@ export function signedContent(doc: unknown): string;
 export function snapshotBytes(input: unknown, maxBytes?: unknown, sizeErr?: unknown): unknown;
 export const STABILITY: unknown;
 export function strictB64url(s: unknown, bytes: unknown): string;
+export function surfaceVerdict(arg0?: unknown): Record<string, unknown>;
 export const TIER_RANK: unknown;
 export function ustGrid(from: unknown, to: unknown, cadenceSec: unknown): Record<string, unknown>;
 export class UstIndeterminate extends Error { constructor(verdict?: unknown); }

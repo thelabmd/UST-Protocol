@@ -2201,6 +2201,57 @@ publisher), never an ASSURANCE.
 - replication is decided from bytes alone, and is silent about substrate: the two-locators-one-substrate case PASSES the replication predicate and yields no independence.
 - the adversarial direction: a locator set named by the producer cannot move the verdict's independence coordinate, matching F.5a.1's clause (2).
 
+## F.5p Absence is TWO facts, and only a declaration separates them — while a declaration may add, never relocate (#102)
+
+F.5o gave the serving axis an object. This section gives it the piece §20 promised and never delivered: the
+operator profile is normative prose that **no tool has ever fetched** — the code reaches `ust-genesis`,
+`ust-keylog`, `ust-cadence` and `ust-witness`, and never `/.well-known/ust`. So every optional surface is judged
+on observation alone, and observation cannot tell two very different worlds apart.
+
+**The collapse.** Let `S` be an optional surface for domain `n` (witness, cadence, a companion copy). A verifier
+fetching it observes `obs(S) ∈ {present, absent}`. Two situations produce `absent`:
+
+- `¬offered(S)` — this operator does not run that surface. The property is SETTLED: unattestable, now and later.
+- `offered(S) ∧ unreachable(S)` — it exists and did not answer. The property is UNKNOWN and may attest tomorrow.
+
+These are different facts with different consequences, and `σ(obs)` contains neither: both render `absent`. A
+verifier that reports one `skip` for both is not being cautious, it is discarding a distinction it was never given.
+
+**The separator, and why it is safe.** Let the profile carry `D ⊆ Surfaces`, the surfaces the operator DECLARES it
+serves. The verdict is then a function of the PAIR:
+
+| | `present` | `absent` |
+|---|---|---|
+| `S ∈ D` | attested from the bytes | **FAIL** — a declared surface that does not answer is a promise not kept |
+| `S ∉ D` | attested from the bytes | NOT OFFERED — settled, not a transient |
+
+Two properties make this admissible under the never-self-declared invariant (F.5a.1). First, **declaring is
+monotone in obligation only**: adding `S` to `D` can only turn a `skip` into a `FAIL`, never a `skip` into a pass.
+Second, **the top row does not consult `D`**: a surface that is THERE is evidence whichever way the profile reads,
+so silence cannot hide it. A profile is therefore a locator-and-obligation document — it can cost its author and
+can earn its author nothing, which is exactly the shape F.5o admitted for copies.
+
+**Theorem F.5p (a profile may ADD a locator and may never RELOCATE one).** Let `loc_std(S)` be the well-known
+location fixed by §12.1/§20.1 and `loc_D(S)` a location named in the profile. If a verifier resolved the trust
+chain at `loc_D`, then control of the profile would imply control of where authority is read — and the profile is
+served by the same host whose authority is in question, so the resolution would be rooted in the claim it is
+meant to check. Hence `loc_std` is the ONLY resolution root for genesis, key-log, witness and cadence, and a
+profile locator is admissible strictly as an ADDITIONAL copy under F.5o (compared by `content_hash`, never
+substituted for). *Proof.* Resolution at `loc_D` makes the map `n ↦ authority(n)` measurable in σ(bytes served by
+`n`), which is the self-rooting F.5a.1 excludes; `loc_std` is fixed by the specification and outside the
+publisher's choice at verification time. ∎
+
+**What this corrects in the specification.** §20 lists "key-log location" among the operator's profile choices,
+which is exactly the relocation this theorem forbids. Nothing reads it — the profile has never been fetched — so
+no deployed verifier resolves that way; the clause is a latent contradiction with §12.1 rather than a live one,
+and it is corrected in the same change that first gives the profile a reader.
+
+**Binding: realized** — *"#102 ADVERSARIAL: a profile cannot RELOCATE a standard surface — a named key-log location is refused, resolution stays at the well-known path"*, *"#102 ADVERSARIAL: an UNDECLARED surface that is PRESENT is still attested — silence cannot hide evidence"*.
+
+**Conformance (math ⇒ code ⇒ green vector, `packages/ust-protocol/conformance.mjs`).**
+- the 2×2 is decided by the core, not by each tool: declared+absent FAILS, undeclared+absent is NOT OFFERED, and both present cases attest.
+- declaring is monotone in obligation: no declaration turns an absent surface into a pass.
+
 ## F.6 Composition — the event algebra
 
 An **anchored existence-and-commitment claim** is an event `A ∈ Fₜ`; an UNANCHORED signed claim is a document

@@ -64,6 +64,34 @@ export const MUTATIONS = [
     to: '  if (false && declares && !role) throw new Error(',
   },
 
+  // round 99 (#102) — F.5p relocation closure. Broken, a profile-named location for a standard surface is accepted
+  // instead of refused, so a verifier could read the trust chain from a place the audited host itself chose.
+  {
+    id: 'profile-relocation-admitted', mustDetect: true, observe: ['conformance'],
+    why: 'the relocation refusal. Broken, a standard surface may be resolved at a location the profile names.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "  if (!standardLocation) throw Object.assign(new Error(`E-DISCOVERY: '${surface}' resolves at its §20.1 well-known location and only there; a profile locator is an ADDITIONAL copy compared by content_hash (F.5o), never a substitute (F.5p)`), { code: 'E-DISCOVERY' });",
+    to: "  if (false) throw new Error('unreachable'); /* mutant */",
+  },
+  // round 99 (#102) — F.5p's "silence cannot hide evidence". Broken, the PRESENT row consults the declaration, so
+  // an operator serving a witness while declaring nothing has that evidence ignored — the profile would become a
+  // filter on what a verifier is allowed to see, which is the opposite of a locator.
+  {
+    id: 'present-surface-consults-declaration', mustDetect: true, observe: ['conformance'],
+    why: 'the present row. Broken, a served surface is only attested when the profile also names it.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "  if (observed === 'present') return deepFreeze({ surface, status: 'attested', reason: 'served' });",
+    to: "  if (observed === 'present') return deepFreeze({ surface, status: declared ? 'attested' : 'not-offered', reason: 'served' }); /* mutant */",
+  },
+  // round 99 (#102) — F.5p's monotonicity. Broken, an UNDECLARED absent surface reads as attested, so an operator
+  // that declares nothing gets every optional property for free — silence would become the strongest claim.
+  {
+    id: 'undeclared-absence-reads-attested', mustDetect: true, observe: ['conformance'],
+    why: 'the 2x2 itself. Broken, an absent surface nobody declared is reported as attested.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "    : deepFreeze({ surface, status: 'not-offered', reason: 'undeclared-and-absent' });   // settled, not a transient",
+    to: "    : deepFreeze({ surface, status: 'attested', reason: 'undeclared-and-absent' }); /* mutant */",
+  },
   // round 98 (#102) — the SERVING axis of "independence is never self-declared" (F.5o). Broken, the core stops
   // REFUSING a caller-supplied independence coordinate and just drops it, so a publisher naming its own copies
   // can hand the verifier a property no fetch can decide and nothing objects. The refusal is the whole mechanism:
@@ -297,7 +325,11 @@ export const MUTATIONS = [
     id: 'unregistered-realization', observe: [],
     why: 'a model enforcement Realization with no registry record.',
     file: 'spec/UST-1.0-formal-model.md',
-    append: '\n**Realization (rev99 — drift probe).** A fake enforcement claim with no registry record.\n',
+    // The sentinel was `rev99` until 2026-07-31, when a round registered records AT rev99 and silently
+    // DISABLED this probe: rule 2 found a record for the rev and passed. A sentinel that can collide with a
+    // real value is not a sentinel. `rev0` cannot occur (revisions are 1-based and monotone), and the note now
+    // also CITES a check nobody registered, so rule 3 catches it even if rule 2 is ever satisfied by accident.
+    append: '\n**Realization (rev0 — drift probe).** A fake enforcement claim with no registry record, citing *"DRIFT PROBE: a check no registry records"*.\n',
     gate: 'node tools/model-lockstep-gate.mjs',
     gateName: 'model Realization without a registry record → model-lockstep',
   },

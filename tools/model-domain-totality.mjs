@@ -53,7 +53,7 @@ const bounds = heads.map((h) => h.pos).concat(MODEL.length);
 // section silently LEAVE the domain — renamed to a non-`F.x` heading, it would simply stop being enumerated and this
 // gate would still pass. That is the very defect class this gate exists to close, so the count is exact and any change
 // to the section inventory must be a deliberate edit here.
-const EXPECTED_SECTIONS = 41;   // 40 → 41: F.5o added (#102, rev98) — the SERVING axis of the independence closure, the one normative surface that rendered a verdict and had no object in this model.   // 34 → 35: F.5c.1 added (#95, rev86) — the anchor seam, where F.3's delegated membership assumption is paid for
+const EXPECTED_SECTIONS = 42;   // 40 → 41: F.5o added (#102, rev98) — the SERVING axis of the independence closure, the one normative surface that rendered a verdict and had no object in this model.   // 34 → 35: F.5c.1 added (#95, rev86) — the anchor seam, where F.3's delegated membership assumption is paid for
 // 39 → 40: F.5e.4 added (#97/tlx, round 78) — the verification ROLE is a partition of classes, and it had been enforced on one side only
 if (heads.length !== EXPECTED_SECTIONS)
   failures.push(`the enumerated DOMAIN changed: ${heads.length} sections found, ${EXPECTED_SECTIONS} pinned. A section was added, removed, or renamed out of the \`F.x\` convention — update EXPECTED_SECTIONS deliberately (a floor check would let a section leave the domain unnoticed)`);

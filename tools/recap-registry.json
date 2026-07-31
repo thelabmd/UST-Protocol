@@ -204,6 +204,10 @@
     {
       "round": 125,
       "no_recap": "Round 125 closes no issue — it repairs the ledger's own shape after the owner read it and asked what it was. Its lesson belongs with round 123's entry rather than in one of its own: I satisfied a gate by adding a section instead of editing the header it pointed at."
+    },
+    {
+      "round": 126,
+      "no_recap": "Round 126 completes #102's declaration items and the issue closes on it; the arc's diary entry was sealed at round 123 and a second entry for the same arc would count one moment twice."
     }
   ]
 }

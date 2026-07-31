@@ -25,6 +25,17 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
+## rc.48 line
+
+**PUBLISHED 2026-07-31** — `ust-protocol` rc.48, `@ust-protocol/cli` rc.81, `@ust-protocol/mcp` rc.37,
+`@ust-protocol/operator` 0.1.4 and `diarium` 0.2.3, every dist-tag moved with them.
+
+Opened because rc.47 is PUBLISHED and a published version is immutable.
+
+| version | round | what closed |
+|---------|-------|-------------|
+| **rc.48**<br>**cli rc.81** | 126 | **§20's operator profile has been normative since rc.1 and no tool has ever fetched it** — the code reaches `ust-genesis`, `ust-keylog`, `ust-cadence`, `ust-witness`, and never `/.well-known/ust`. So every optional surface was judged on observation alone, and observation collapses two different facts into one `absent`: *this operator does not run that surface* (settled — unattestable now and later) and *it exists and did not answer* (unknown — attestable tomorrow). Both rendered as one `skip`, which is not caution, it is discarding a distinction. **F.5p** makes the verdict a function of the PAIR `(declared, observed)`: declared+absent FAILS as a promise not kept, undeclared+absent is NOT OFFERED, and present attests either way. Two properties make it admissible under the never-self-declared invariant — declaring is **monotone in obligation** (it can only turn a skip into a failure, never into a pass), and the present row never consults the declaration, so silence cannot hide evidence. **And the profile turned out to carry a latent contradiction:** §20 listed "key-log location" among the operator's choices while §12.1/§20.1 fix it at a well-known path. A verifier resolving there would root authority in bytes served by the host whose authority is in question — Theorem F.5p forbids it, the clause is removed, and `surfaceVerdict` REFUSES a relocated surface (`E-DISCOVERY`) rather than ranking it lower: a relocated root is not weaker evidence, it is not evidence. Nothing read the profile, so this was latent rather than live, and it is corrected in the same change that first gives the profile a reader. Four `discovery-surface` vectors, six checks (772 total), and the CLI now reads the profile and defers what an absent surface MEANS to the core. |
+
 ## rc.47 line
 
 **PUBLISHED 2026-07-31** — `ust-protocol` rc.47, `@ust-protocol/cli` rc.80, `@ust-protocol/mcp` rc.36,

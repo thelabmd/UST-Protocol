@@ -861,7 +861,12 @@ export async function attestDiscovery({ domain, mirrors = [], expectHash = null,
   try {
     const wr = await get(`https://${domain}/.well-known/ust-witness`);
     if (wr.status === 404 || wr.status === 410) {
-      checks.push({ id: 'witness served (no-fork evidence)', informational: true, status: 'skip', detail: `HTTP ${wr.status} — no witness surface; a no-fork claim rests on other evidence` });
+      // F.5p: absence is TWO facts and the CORE decides which one this is, from (declared, observed).
+      const wv = P.surfaceVerdict({ surface: 'witness', declared: declaredSurfaces.has('witness'), observed: 'absent' });
+      checks.push({ id: 'witness served (no-fork evidence)', informational: wv.status !== 'failed', status: wv.status === 'failed' ? 'fail' : 'skip',
+        detail: wv.status === 'failed'
+          ? `HTTP ${wr.status} — the §20 profile DECLARES a witness surface and it did not answer: a promise not kept, not a missing option`
+          : `HTTP ${wr.status} — NOT OFFERED: no witness surface, and the profile declares none` });
     } else if (!wr.ok) throw new Error(`HTTP ${wr.status} — served but UNREADABLE (an unreadable witness is not an absent one)`);
     else {
       const w = JSON.parse(await wr.text());
@@ -900,6 +905,25 @@ export async function attestDiscovery({ domain, mirrors = [], expectHash = null,
     else checks.push({ id: 'query-robustness (cache identity ⊥ unknown query)', status: 'fail', detail: 'response VARIES with an unknown query parameter — cache-key amplification is open (§20.1)' });
   } catch (e) {
     checks.push({ id: 'query-robustness (cache identity ⊥ unknown query)', status: 'fail', detail: e.message });
+  }
+
+  // (0') the §20 OPERATOR PROFILE — normative since rc.1 and, until this round, fetched by nothing. It is what
+  // separates the two facts hiding behind one `absent`: a surface this operator does not run (settled) from one
+  // that exists and did not answer (a promise not kept). Absent profile = declares nothing, which is the honest
+  // floor: every optional surface then reports NOT OFFERED rather than FAILED, and a PRESENT one still attests.
+  let declaredSurfaces = new Set();
+  try {
+    const pr = await get(`https://${domain}/.well-known/ust`);
+    if (pr.ok) {
+      const prof = JSON.parse(await pr.text());
+      const list = Array.isArray(prof?.serves) ? prof.serves.filter((x) => typeof x === 'string') : [];
+      declaredSurfaces = new Set(list);
+      checks.push({ id: 'operator profile (§20)', informational: true, status: 'pass', detail: list.length ? `declares: ${list.join(', ')}` : 'served, declares no optional surface' });
+    } else if (pr.status === 404 || pr.status === 410) {
+      checks.push({ id: 'operator profile (§20)', informational: true, status: 'skip', detail: `HTTP ${pr.status} — no profile, so nothing is DECLARED and every optional surface reports NOT OFFERED rather than failing` });
+    } else throw new Error(`HTTP ${pr.status} — served but UNREADABLE (an unreadable profile is not an absent one)`);
+  } catch (e) {
+    checks.push({ id: 'operator profile (§20)', informational: true, status: 'fail', detail: e.message });
   }
 
   // (4) BYTE-AGREEMENT across declared copies: every named copy must carry the SAME content_hash (bytes are

@@ -794,6 +794,14 @@
       "test": {
         "excluded": "The gate IS the test and carries its own blindness control: fewer than 20 parsed round rows fails, so the scanner going blind cannot make the legs pass for free."
       }
+    },
+    {
+      "round": 126,
+      "math": "a surface that is THERE is evidence whichever way the profile reads",
+      "spec": "A profile MUST NOT relocate the standard surfaces.",
+      "code": "packages/ust-protocol/index.mjs :: surfaceVerdict decides the (declared, observed) 2x2 and refuses a relocated standard surface; packages/ust-cli/index.mjs fetches /.well-known/ust and defers the meaning of absence to it",
+      "vector": "surface-profile-relocation-reject",
+      "test": "#102 ADVERSARIAL: a profile cannot RELOCATE a standard surface — a named key-log location is refused, resolution stays at the well-known path"
     }
   ],
   "first_accounted_round": 76,

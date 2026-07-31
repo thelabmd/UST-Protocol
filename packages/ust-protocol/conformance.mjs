@@ -12,7 +12,7 @@ const withWitnessClock = async (clock, body) => { __setWitnessClockForConformanc
 // runtime-namespace totality net. Define it ONCE here (used by R47) and cross-check it below against CLASS — MAY_THROW(n) ⟺
 // CLASS[n] !== 'surface', so the two can no longer diverge. (Totality itself is already guaranteed by R34's surface×BATTERY.)
 const MAY_THROW_TOTALITY = (n) => /^(build|seal|make)/.test(n) || /(Claim|Leaf|Id|Epoch)$/.test(n) || /^Ust[A-Z]/.test(n)
-  || ['canon', 'H', 'Hbytes', 'keyId', 'merkleRoot', 'partitionHash', 'contentHash', 'signedContent', 'admitUtf8', 'anyLoneSurrogate', 'ustGrid', 'blindPartition', 'blindedCommit', 'seed', 'axisRank', 'evidenceCaps', 'admitDeep', 'isValid', 'verifiedEvidence', 'replicationAgreement'].includes(n)
+  || ['canon', 'H', 'Hbytes', 'keyId', 'merkleRoot', 'partitionHash', 'contentHash', 'signedContent', 'admitUtf8', 'anyLoneSurrogate', 'ustGrid', 'blindPartition', 'blindedCommit', 'seed', 'axisRank', 'evidenceCaps', 'admitDeep', 'isValid', 'verifiedEvidence', 'replicationAgreement', 'surfaceVerdict'].includes(n)
   || ['verifyOrThrow', 'assertValid'].includes(n);
 
 const V = JSON.parse(readFileSync(new URL('../../vectors/conformance-vectors.json', import.meta.url)));
@@ -69,6 +69,15 @@ for (const v of V.vectors) {
       const r = P.replicationAgreement(v.input);
       check(v.id, r.attested === v.expect.attested && r.agreed.length === v.expect.agreed
         && r.disagreed.length === v.expect.disagreed && !('independent' in r) && !('trust_domain' in r));
+      break;
+    }
+    // #102 / F.5p — the (declared, observed) 2×2, plus the relocation refusal a port must reproduce.
+    case 'discovery-surface': {
+      if (v.expect_error) {
+        let code = null; try { P.surfaceVerdict(v.input); } catch (e) { code = e.code; }
+        check(v.id, code === v.expect_error, `expected ${v.expect_error}`); break;
+      }
+      check(v.id, P.surfaceVerdict(v.input).status === v.expect.status);
       break;
     }
     case 'key_id': check(v.id, P.keyId(v.pub_b64url) === v.expect); break;
@@ -1319,6 +1328,27 @@ console.log('\n═════════════════════�
   })());
   check('#102 NOTHING declared is NOT ATTESTED, never a pass — silence is not agreement',
     P.replicationAgreement({ expected: H, copies: [] }).attested === false);
+
+  // ── F.5p — the 2x2 that separates "does not run it" from "did not answer"
+  const sv = (declared, observed, extra = {}) => P.surfaceVerdict({ surface: 'witness', declared, observed, ...extra });
+  check('#102 a DECLARED surface that does not answer FAILS — a promise not kept is not a shrug',
+    sv(true, 'absent').status === 'failed');
+  check('#102 an UNDECLARED absent surface is NOT OFFERED — settled, not a transient',
+    sv(false, 'absent').status === 'not-offered');
+  check('#102 ADVERSARIAL: an UNDECLARED surface that is PRESENT is still attested — silence cannot hide evidence',
+    sv(false, 'present').status === 'attested' && sv(true, 'present').status === 'attested');
+  check('#102 declaring is MONOTONE IN OBLIGATION: no declaration turns an absent surface into a pass', (() => {
+    for (const d of [true, false]) if (sv(d, 'absent').status === 'attested') return false;
+    return true;
+  })());
+  check('#102 ADVERSARIAL: a profile cannot RELOCATE a standard surface — a named key-log location is refused, resolution stays at the well-known path', (() => {
+    try { P.surfaceVerdict({ surface: 'keylog', declared: true, observed: 'present', standardLocation: false }); return false; }
+    catch (e) { return e.code === 'E-DISCOVERY'; }
+  })());
+  check('#102 a third observation state is refused rather than falling through the 2x2', (() => {
+    try { P.surfaceVerdict({ surface: 'witness', declared: true, observed: 'maybe' }); return false; }
+    catch (e) { return e.code === 'E-DISCOVERY'; }
+  })());
 }
 
 // ─── #44 AGENT-SAFETY — throw-on-non-VALID (control flow, not an advisory field) + machine-structured verdict.
@@ -2564,6 +2594,7 @@ console.log('\n═════════════════════�
     witnessSuccessor: 'producer-builder', witnessNoShrink: 'producer-builder (the rule, shared with consumers)',
     seal: 'producer-builder', sealAuthorityCheckpoint: 'producer-builder', verifiedEvidence: 'producer-builder (raw-facts shape)',
     replicationAgreement: 'producer-builder (byte-agreement shape; throws on a self-declared independence coordinate, F.5o)',
+    surfaceVerdict: 'producer-builder (the (declared, observed) 2x2; throws on a relocated standard surface or a third observation state, F.5p)',
     buildAbsence: 'producer-builder', buildAttestation: 'producer-builder', buildAuthorityCheckpoint: 'producer-builder',
     buildAuthorityProof: 'producer-builder', buildCadenceEntry: 'producer-builder', buildCheckpoint: 'producer-builder', buildStreamCheckpoint: 'producer-builder',
     buildDerivation: 'producer-builder', buildEpochTransition: 'producer-builder', buildEvidenceReceipt: 'producer-builder',

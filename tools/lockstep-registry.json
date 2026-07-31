@@ -510,6 +510,24 @@
       "rev": "rev98",
       "model_locus": "`Rep_L(n) = ∀ ℓ ∈ L : contentHash(B(ℓ)) = contentHash(g)`",
       "conformance_check": "#102 a copy that differs FAILS agreement, and one that agrees does not rescue it"
+    },
+    {
+      "id": "R68-profile-may-add-never-relocate",
+      "rev": "rev99",
+      "model_locus": "a profile may ADD a locator and may never RELOCATE one",
+      "conformance_check": "#102 ADVERSARIAL: a profile cannot RELOCATE a standard surface — a named key-log location is refused, resolution stays at the well-known path"
+    },
+    {
+      "id": "R69-silence-cannot-hide-evidence",
+      "rev": "rev99",
+      "model_locus": "a surface that is THERE is evidence whichever way the profile reads",
+      "conformance_check": "#102 ADVERSARIAL: an UNDECLARED surface that is PRESENT is still attested — silence cannot hide evidence"
+    },
+    {
+      "id": "R70-declaring-monotone-in-obligation",
+      "rev": "rev99",
+      "model_locus": "adding `S` to `D` can only turn a `skip` into a `FAIL`, never a `skip` into a pass",
+      "conformance_check": "#102 declaring is MONOTONE IN OBLIGATION: no declaration turns an absent surface into a pass"
     }
   ]
 }
