@@ -2441,9 +2441,32 @@ represented state while keeping every single verification inside a universal res
 legitimately have. `ust_id` resolves to the second (`"ust:" YYYYMMDD "." HH [ MM [ SS ] ]`, tiers hour ⊃
 minute ⊃ second), so the finest grid a declared cadence can place in one hour holds `3600` moments — and
 `⌈3600 / 64⌉ = 57 ≤ 64`, so **every hour the addressing is able to express seals at depth 2**, with `4096 −
-3600 = 496` of slack. A day is `24` hour roots and seals at depth 3. The reach therefore covers the addressing
-with room, and `W_ABS² = P_ABS` ties the structural reach of two levels to the absolute partition ceiling —
-which is why moving `W_ABS` would decouple two constants that currently agree.
+3600 = 496` of slack. `W_ABS² = P_ABS` ties the structural reach of two levels to the absolute partition
+ceiling — which is why moving `W_ABS` would decouple two constants that currently agree.
+
+**But an hour is ONE INSTANCE, and an instance is not the law (rev70).** Checking the window that prompted the
+question leaves the real question unanswered: *can the addressing ever outrun the structure at all?* The domain
+is not an hour, it is everything `ust_id` can name. Depth is the general function
+
+  `depth(N) = ⌈log_{W_ABS} N⌉`, and a composition is expressible iff `depth(N) ≤ D_MAX = 8`.
+
+The identifier's date part is `YYYYMMDD` with a four-digit year, so the whole addressable range is `0000-01-01`
+through `9999-12-31` — **3 652 060 days**, and at second precision **`3 652 060 × 86 400 = 315 537 984 000`
+moments**. That is the ENTIRE space the protocol can address at its finest tier.
+
+**Theorem F.9.5-b (the depth bound strictly dominates the addressing).** `depth(315 537 984 000) = 7 ≤ 8`.
+Therefore no composition over anything `ust_id` can name reaches the depth ceiling: the bound is not a limit on
+what UST can express, it is strictly above it, and `64⁸ = 2.815 × 10¹⁴` leaves a capacity margin of ×892 over
+the whole space. *Proof.* `64⁶ = 6.87 × 10¹⁰ < 3.155 × 10¹¹ ≤ 4.40 × 10¹² = 64⁷`, so seven levels suffice and
+six do not; `7 < 8` is the claim. ∎
+
+Read off the same function rather than asserted: an hour (`3600`) is depth 2, a day (`86 400`) depth 3, a year
+(`31 536 000`) depth 5. The day figure agrees with the older reading of it as 24 hour-roots, which is a
+composition of the same bound rather than a second rule.
+
+**Why this matters more than the hour did.** A bound that merely *happens to fit* the window someone asked about
+is a coincidence waiting to expire — the next question is a longer window and the answer has to be recomputed.
+A bound proven above the WHOLE addressable space cannot expire, because there is no larger window to ask about.
 
 **Realization (rev65).** Measured 2026-07-31: a flat attestation over 120 referents — one hour at the 30 s
 cadence a live publisher declares — returns `INVALID E-BOUNDS`; the same 120 as two nodes of 60 under one root

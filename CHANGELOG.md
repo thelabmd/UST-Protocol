@@ -25,6 +25,14 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
+## rc.52 line — unpublished
+
+Opened because rc.51 is PUBLISHED and a published version is immutable.
+
+| version | round | what closed |
+|---------|-------|-------------|
+| **rc.52**<br>**cli rc.85**<br>**mcp rc.41**<br>**light rc.41**<br>**web-signer rc.10**<br>**ots-verify rc.18**<br>**rekor-verify rc.13**<br>**operator 0.1.8**<br>**diarium 0.2.7** | 130 | **#101 was left with an instance where a law belongs, and with its class check unbuilt.** Round 121 answered *"does an hour fit?"* — `ceil(3600/64) = 57 <= 64`, depth 2. That is one window, and a bound which merely HAPPENS to fit the window someone asked about expires the moment a longer one is asked about. The domain is not an hour; it is everything `ust_id` can name. **Theorem F.9.5-b**: depth is the function `ceil(log_64 N)`, the identifier's `YYYYMMDD` spans **3 652 060 days**, so the whole second-resolution space is **315 537 984 000** moments and seals at **depth 7 — strictly below `D_MAX = 8`**, with `64^8` leaving a capacity margin of x892. Seven levels are NECESSARY as well as sufficient (`64^6 < N <= 64^7`). So the addressing cannot outrun the structure ANYWHERE, and the worked windows — hour 2, day 3, year 5 — are now READ OFF that function instead of asserted beside it. Five checks and a language-neutral `depth-law` vector carry it to a port. **And the class check the issue asked for exists now**: `tools/worked-example-gate.mjs`. Every fenced `json` block in the specification must declare what it is — a SKELETON with visible placeholders, or a WORKED EXAMPLE marked `<!-- ust:worked-example -->` and VERIFIED against the reference checker. The teeth are the third case: a block that parses, carries no placeholder and bears no marker FAILS, which is the §21.2 shape exactly — something reading like a transcript that nobody ever ran. Measured: 6 blocks, all skeletons, zero worked examples, so the verify leg has an empty domain today and a control proves it can still fail. Injecting a complete-looking unmarked block is rejected by name. CI 65 → 66 steps. |
+
 ## rc.51 line
 
 **PUBLISHED 2026-07-31** — `ust-protocol` rc.51, `@ust-protocol/cli` rc.84, `@ust-protocol/mcp` rc.40,

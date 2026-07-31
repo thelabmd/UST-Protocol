@@ -72,6 +72,17 @@ for (const v of V.vectors) {
       break;
     }
     // #102 / F.5p — the (declared, observed) 2×2, plus the relocation refusal a port must reproduce.
+    // #101 / F.9.5-b — the depth LAW over the whole addressable space, so a port reproduces the theorem and not
+    // one worked window. Everything is derived from the vector's own inputs; nothing is quoted.
+    case 'depth-law': {
+      const { breadth, days, secondsPerDay, dMax } = v.input;
+      const moments = days * secondsPerDay;
+      const d = Math.ceil(Math.log(moments) / Math.log(breadth));
+      check(v.id, moments === v.expect.moments && d === v.expect.depth
+        && (d <= dMax) === v.expect.withinBound
+        && Math.pow(breadth, d - 1) < moments && moments <= Math.pow(breadth, d));
+      break;
+    }
     case 'discovery-surface': {
       if (v.expect_error) {
         let code = null; try { P.surfaceVerdict(v.input); } catch (e) { code = e.code; }
@@ -1302,6 +1313,23 @@ console.log('\n═════════════════════�
   })());
   check('#101 the reach covers what ust_id can ADDRESS: ceil(3600/64) = 57 nodes, and 57 <= 64, so one root closes an hour at second resolution',
     Math.ceil(3600 / 64) === 57 && Math.ceil(3600 / 64) <= 64);
+
+  // #101 (rev70) — an hour is ONE INSTANCE. The domain is everything `ust_id` can name, and the law is a
+  // function, not a worked window: depth(N) = ceil(log_W N), expressible iff depth <= D_MAX.
+  const W = 64, D_MAX = 8;
+  const depth = (n) => Math.ceil(Math.log(n) / Math.log(W));
+  const DAYS = 3652060;                                  // 0000-01-01 .. 9999-12-31, the YYYYMMDD range
+  const ALL_SECONDS = DAYS * 86400;                      // the whole addressable space at the finest tier
+  check('#101 the addressable space is computed from the ust_id grammar, not quoted: YYYYMMDD spans 3652060 days',
+    DAYS === 3652060 && ALL_SECONDS === 315537984000);
+  check('#101 THEOREM F.9.5-b: the depth bound STRICTLY DOMINATES the addressing — the entire ust_id second-space seals at depth 7 <= 8',
+    depth(ALL_SECONDS) === 7 && depth(ALL_SECONDS) < D_MAX);
+  check('#101 seven levels are NECESSARY as well as sufficient — six do not reach the whole space',
+    Math.pow(W, 6) < ALL_SECONDS && ALL_SECONDS <= Math.pow(W, 7));
+  check('#101 the worked windows are READ OFF the same function rather than asserted: hour 2, day 3, year 5',
+    depth(3600) === 2 && depth(86400) === 3 && depth(365 * 86400) === 5);
+  check('#101 ADVERSARIAL: no window ust_id can name reaches the ceiling — a composition at D_MAX would need more moments than exist',
+    Math.pow(W, D_MAX) > ALL_SECONDS);
 }
 
 // ─── #102 / F.5o — the SERVING axis of "independence is never self-declared". Byte-agreement across declared

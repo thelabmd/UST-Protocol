@@ -1,5 +1,5 @@
 {
-  "version": "UST 1.0 conformance vectors (rc.51 - REGISTRY registers and MEASURES the verdict, completeness and forkChoice result vocabularies against actual code usage; the measurement found an error code in the RESULT slot and a second vocabulary under the same field name, #111; prior rc.40: external-audit remediation: 5 P0 fixed structurally (epic UST-1o6); prior rc.33: #75 ROOT 3 (math-derived, NO manifest): forkChoice/verifyStream resolve per-frame AUTHORITY (impersonation P0-03) + grid EQUALITY (off-grid P0-04); stream-authority/stream-grid/fork-choice vectors; prior: - #75 ROOT 1 two-phase verify + anchor-time (authority-at-time vectors: retired/compromised/premature K_n(t) window judged against the PROVEN anchor); prior: - #75 ROOT 2 key-log temporal state machine (keylog-state vectors: revoked/rotated-out/retired key cannot sign later; closed key_op schema); prior: - #75 strict encoders P1-01/02/03 (utf8-reject, b64url, cadence); prior: — self-audit fix: freshness:attested now requires a VERIFIED keylogHeadAnchor (inclusion + substrate-final), a raw self-computed head hash proves nothing = overclaim closed. Prior: #41 canon arbiter, #40 identity hardening, #44 agent-safety, #45 downgrade + fork-choice)",
+  "version": "UST 1.0 conformance vectors (rc.52 - REGISTRY registers and MEASURES the verdict, completeness and forkChoice result vocabularies against actual code usage; the measurement found an error code in the RESULT slot and a second vocabulary under the same field name, #111; prior rc.40: external-audit remediation: 5 P0 fixed structurally (epic UST-1o6); prior rc.33: #75 ROOT 3 (math-derived, NO manifest): forkChoice/verifyStream resolve per-frame AUTHORITY (impersonation P0-03) + grid EQUALITY (off-grid P0-04); stream-authority/stream-grid/fork-choice vectors; prior: - #75 ROOT 1 two-phase verify + anchor-time (authority-at-time vectors: retired/compromised/premature K_n(t) window judged against the PROVEN anchor); prior: - #75 ROOT 2 key-log temporal state machine (keylog-state vectors: revoked/rotated-out/retired key cannot sign later; closed key_op schema); prior: - #75 strict encoders P1-01/02/03 (utf8-reject, b64url, cadence); prior: — self-audit fix: freshness:attested now requires a VERIFIED keylogHeadAnchor (inclusion + substrate-final), a raw self-computed head hash proves nothing = overclaim closed. Prior: #41 canon arbiter, #40 identity hardening, #44 agent-safety, #45 downgrade + fork-choice)",
   "note": "Deterministic + reproducible. Keypairs from fixed seeds (A=0011..eeff, B=ffee..1100). canon=JCS tightened; H(tag,x)=sha256(ascii(tag)||0x00||x); content_hash=H(\"ust:state\",canon({ust,state})); key_id=H(\"ust:keylog\",raw_pub); partition_hash=H(\"ust:shard\",canon({domain_shard,ust_id,partition,value})) — UNIFORM, every partition binds domain_shard, name is a VALUE (non-colliding), no domain-less computed. Each vector states the SPEC rule it pins. Signature-type vectors use expect: 'VALID' | 'E-SIG' for the Ed25519 PRIMITIVE check (strict, canonical-S); this is not a document verdict — a conforming verifier's document verdict is always tier-qualified (VALID:LIGHT/HIGH/TOP), never a bare VALID. Partition names inside hash/commit inputs (e.g. 'secret') are arbitrary sample names, not protocol features.",
   "seeds": {
     "A": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
@@ -5822,6 +5822,22 @@
         "attested": true,
         "agreed": 1,
         "disagreed": 0
+      }
+    },
+    {
+      "id": "depth-law-covers-whole-ustid-space",
+      "kind": "depth-law",
+      "rule": "F.9.5-b depth(N)=ceil(log_64 N); the ENTIRE ust_id second-resolution space (3652060 days x 86400) seals at depth 7, strictly below D_MAX=8",
+      "input": {
+        "breadth": 64,
+        "days": 3652060,
+        "secondsPerDay": 86400,
+        "dMax": 8
+      },
+      "expect": {
+        "moments": 315537984000,
+        "depth": 7,
+        "withinBound": true
       }
     }
   ]

@@ -850,6 +850,14 @@
       "test": {
         "excluded": "The gate IS the test: it checks both branches of each union against values rebuilt from the corpus, in both directions, with a control requiring TS2322. No conformance check because no protocol behaviour moved."
       }
+    },
+    {
+      "round": 130,
+      "math": "Therefore no composition over anything `ust_id` can name reaches the depth ceiling",
+      "spec": "### 21.2 Attestation — a sealed hour over N constituents",
+      "code": "tools/worked-example-gate.mjs :: every fenced json block declares SKELETON or WORKED EXAMPLE, and a marked one is verified by the reference checker",
+      "vector": "depth-law-covers-whole-ustid-space",
+      "test": "#101 THEOREM F.9.5-b: the depth bound STRICTLY DOMINATES the addressing — the entire ust_id second-space seals at depth 7 <= 8"
     }
   ],
   "first_accounted_round": 76,
