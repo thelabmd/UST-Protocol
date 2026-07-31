@@ -25,7 +25,14 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
-## rc.46 line — unpublished
+## rc.46 line
+
+**PUBLISHED 2026-07-31** — `ust-protocol` rc.46 and `@ust-protocol/mcp` rc.35, tags moved with them.
+**`@ust-protocol/operator` 0.1.0 published too, and the order is the point.** npm first REFUSED it on
+`private: true` — the flag doing exactly its job, stopping a registry write nobody had authorised. The owner then
+authorised it: the decision to open was already written, and the name had been corrected away from a third
+party's. So the flag came off deliberately rather than by momentum, which is the only way that flag is worth
+having. The barrier to becoming a UST operator is now an install.
 
 Opened because rc.45 is PUBLISHED and a published version is immutable. Nothing in this line touches the wire.
 

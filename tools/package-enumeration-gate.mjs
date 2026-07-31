@@ -74,7 +74,6 @@ const rowDirs = new Set(rows.map((r) => r.dir));
 // operator can read and run it, while publishing waits for a second operator. So the declaration states the npm
 // decision and whether the page is for readers, which are two answers, not one.
 const PRIVATE_OK = {
-  'ust-operator': 'the operator layer: SOURCE is open so any operator can read and run it, and `private: true` only holds it off npm until there is a second operator. It belongs in the README enumeration — readers are exactly who it is for.',
 };
 const skipped = pkgs.filter((p) => p.private).map((p) => p.dir);
 for (const d of skipped) ok(`private package ${d} states why it is not for readers`, Object.hasOwn(PRIVATE_OK, d) && String(PRIVATE_OK[d]).length >= 40,

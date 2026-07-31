@@ -56,6 +56,12 @@ precisely this; a Go `ust canon` ships with the Go SDK (#34) so cross-SDK diffs 
   producer. `@ust-protocol/web-signer` hides this for JS; other languages call their stdlib Ed25519 over the
   returned `signing_input`.
 
+A port that only VERIFIES needs nothing above the base. A port that PRODUCES a stream will meet the same
+state-over-time problems the JS operator layer already solves — prev-chains per tier, checkpoints with observed
+interval bounds, and composition above the breadth law. `@ust-protocol/operator` is not normative and you are
+free to ignore it, but its round-trip conformance is a useful oracle: every piece PRODUCES exactly what the base
+VERIFIES, so a port can check itself against the same expectations.
+
 Ed25519 note: RFC 8032 is deterministic **by construction** (the nonce is `H(prefix‖message)`, no RNG in
 signing), so there is no RFC 6979 concern — the only entropy requirement is CSPRNG **key generation**.
 

@@ -1,10 +1,9 @@
 {
   "name": "@ust-protocol/operator",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.1.1",
   "type": "module",
-  "description": "The STATEFUL UST operator layer — chains, key logs, checkpoints, anchor batches. Builds on ust-protocol (the stateless base) and produces exactly what it verifies. NOTE: the bare name `@ust-protocol/operator` on npm belongs to a third party (a state-management library) and must never be taken — this package lives under the scope we publish.",
-  "main": "index.mjs",
+  "description": "The STATEFUL UST operator layer — chains, key logs, checkpoints, anchor batches, and composition above the structural bounds. Builds on ust-protocol (the stateless base) and produces exactly what it verifies. NOTE: the bare name `ustate` on npm belongs to a third party and must never be taken.",
+  "main": "./index.mjs",
   "types": "./index.d.ts",
   "exports": {
     ".": {
@@ -14,8 +13,8 @@
     }
   },
   "files": [
-    "index.mjs",
-    "index.d.ts",
+    "./index.mjs",
+    "./index.d.ts",
     "README.md"
   ],
   "scripts": {

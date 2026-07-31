@@ -274,6 +274,20 @@ const doc = await signObservation(s, { ust_id, time, data: { capture: { kind: 'c
 console.log(verify(doc, { context: 'data' }).result);          // → VALID:LIGHT
 ```
 
+**Running a stream, not a document?** `ust-protocol` is stateless on purpose — it verifies what you hand it and
+holds nothing between calls. State over time lives one layer up, in
+[`@ust-protocol/operator`](https://www.npmjs.com/package/@ust-protocol/operator): prev-chains per tier, key logs,
+hour checkpoints with observed interval bounds, anchor batches, and composition above the structural bounds
+(`sealTree` seals any N by nesting at breadth 64 — an hour at second resolution is 57 nodes and one root).
+
+That layer exists so operators can differ WITHOUT the protocol changing. Every operator has its own storage,
+cadence and infrastructure; if that variance has nowhere to live, it arrives here as a request to extend the base.
+The base stays small; the layer absorbs the difference.
+
+```bash
+npm i @ust-protocol/operator
+```
+
 Working on the protocol itself? `npm install && npm test` runs the conformance suite (spec == package == vectors) —
 see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
@@ -339,7 +353,7 @@ rung (`attested_withheld: "experimental-gate"`); the top rung is reachable only 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/ust-map.svg">
   <source media="(prefers-color-scheme: light)" srcset=".github/ust-map-light.svg">
-  <img alt="Repository map. spec/ holds the normative UST-1.0.md plus a measure-theoretic formal model. vectors/ holds language-neutral conformance vectors and a byte corpus — the cross-implementation arbiter. packages/ holds ust-protocol (the zero-dep reference verifier + producer), ust-cli (the ust command: verify, canon, the HIGH genesis ceremony, witness), ust-mcp (an MCP server so agents verify natively), ust-light (a byte-identical minimal subset), ust-web-signer (WebCrypto browser signing with non-extractable keys), ust-ots-verify / ust-rekor-verify (opt-in Bitcoin/OTS and Sigstore Rekor anchor substrates), and diarium (agent memory as a verifiable stream — a product built on the protocol). docs/ is the client-side web verifier plus zero-dependency single-file verifiers. tools/ are the drift gates that keep spec = code = vectors = README = these panels in sync." src=".github/ust-map-light.svg">
+  <img alt="Repository map. spec/ holds the normative UST-1.0.md plus a measure-theoretic formal model. vectors/ holds language-neutral conformance vectors and a byte corpus — the cross-implementation arbiter. packages/ holds ust-protocol (the zero-dep reference verifier + producer), ust-cli (the ust command: verify, canon, the HIGH genesis ceremony, witness), ust-mcp (an MCP server so agents verify natively), ust-light (a byte-identical minimal subset), ust-operator is the stateful layer above the stateless base; ust-web-signer (WebCrypto browser signing with non-extractable keys), ust-ots-verify / ust-rekor-verify (opt-in Bitcoin/OTS and Sigstore Rekor anchor substrates), and diarium (agent memory as a verifiable stream — a product built on the protocol). docs/ is the client-side web verifier plus zero-dependency single-file verifiers. tools/ are the drift gates that keep spec = code = vectors = README = these panels in sync." src=".github/ust-map-light.svg">
 </picture>
 
 | Path | What |
@@ -350,6 +364,7 @@ rung (`attested_withheld: "experimental-gate"`); the top rung is reachable only 
 | `vectors/` | deterministic conformance vectors — any implementation should pass them (the cross-language canon arbiter) |
 | `packages/ust-protocol/` | the stateless reference verifier + producer ([npm](https://www.npmjs.com/package/ust-protocol)) |
 | `packages/ust-mcp/` | an MCP server exposing UST to agents ([npm](https://www.npmjs.com/package/@ust-protocol/mcp)) |
+| `packages/ust-operator/` | the stateful operator layer — chains, key logs, checkpoints, composition above the structural bounds ([npm](https://www.npmjs.com/package/@ust-protocol/operator)) |
 | `packages/ust-web-signer/` | WebCrypto browser signer ([npm](https://www.npmjs.com/package/@ust-protocol/web-signer)) |
 | `packages/ust-cli/` | the `ust` command — verify / canon / the HIGH genesis ceremony / witness ([npm](https://www.npmjs.com/package/@ust-protocol/cli)) |
 | `packages/ust-light/` | the zero-dependency LIGHT floor — a byte-identical minimal subset ([npm](https://www.npmjs.com/package/ust-light)) |
