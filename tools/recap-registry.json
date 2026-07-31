@@ -189,7 +189,8 @@
     },
     {
       "round": 122,
-      "no_recap": "Round 122 closed no issue — the owner named the package during the work, and there is no ticket to receive a recap comment."
+      "issue": 118,
+      "content_hash": "sha256:2908e48b0b49d5eb553b50a5d48d5e8b86c77c8dfb6322cee527e7250ac69729"
     }
   ]
 }
