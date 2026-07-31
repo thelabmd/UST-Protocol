@@ -754,6 +754,30 @@
       "test": {
         "excluded": "The check is the npm-drift gate itself, run against a tree containing a genuinely unpublished package — which is what exposed the ordering bug in the first place. Committing a fake unpublished package to freeze that control would add a package nobody wants for the sake of a test."
       }
+    },
+    {
+      "round": 123,
+      "math": "`Ind_L` is not measurable in `σ(bytes)` and no function of the observations decides",
+      "spec": "an implementation asked to carry an independence coordinate alongside the copies MUST refuse it",
+      "code": "packages/ust-protocol/index.mjs :: replicationAgreement — the core owns both the verdict and the refusal; packages/ust-cli/index.mjs calls it instead of deciding",
+      "vector": "replication-self-declared-independence-reject",
+      "test": "#102 ADVERSARIAL: a producer-declared locator set does NOT raise the independence coordinate (F.5a.1 transposed to serving)"
+    },
+    {
+      "round": 124,
+      "math": {
+        "excluded": "A dependency range is a fact about a package registry, not about the protocol. No obligation on producers or verifiers moved and no verdict changes; the model has nothing to say about how an implementation is installed."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: the wire, the canonical form and every verdict are untouched. A conforming implementation in another language has no package.json at all."
+      },
+      "code": "tools/dependency-floor-gate.mjs :: enumerates every cross-package edge from the manifests and pins the floor to the sibling's current version",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. A manifest range produces no document and changes no verdict; the artifact under test here is the install, not the transcript."
+      },
+      "test": {
+        "excluded": "The gate IS the test, and it carries its own control: a floor one release behind must be red. There is no conformance check because no conformance behaviour moved."
+      }
     }
   ],
   "first_accounted_round": 76,

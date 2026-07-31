@@ -2158,6 +2158,49 @@ ANY index of the committed tree, adjacent or not.
 
 Sound against the P0-02 reproduction (`security-regression.mjs`: a real length-3 log presented as length-1 ⇒ not terminal).
 
+## F.5o Discovery attestation measures REPLICATION; independence is not in `σ(bytes)` (#102)
+
+The serving contract of §20.1 is the one normative surface that renders a verdict and had **no object in this
+model**. That is why the independence discipline of F.5a.1 — stated for witnesses, restated for quorum in F.5j —
+never reached it, and the discovery attestation has been reporting an independence claim it cannot decide.
+
+**The observable.** For a domain `n` with primary genesis `g`, a locator set `L = {ℓ₁, …, ℓ_k}` is offered as
+companion copies. A verifier fetching `ℓ` observes exactly one thing: the byte-string `B(ℓ)`. Define
+
+  `Rep_L(n) = ∀ ℓ ∈ L : contentHash(B(ℓ)) = contentHash(g)`
+
+`Rep_L` is measurable in `σ(bytes)`: fetch, hash, compare. It needs no consumer configuration, which is precisely
+why it is attestable by a stranger — and precisely why it cannot carry the independence coordinate.
+
+**Independence, lifted.** F.5a.1 fixes independence as the consumer partition `dom_C`. Lifted from issuers to
+locators, `dom_C : locator → trustDomain`, the event of interest is `Ind_L(C) = |{dom_C(ℓ) : ℓ ∈ L}| ≥ 2`.
+
+**Theorem F.5o (replication does not imply independence).** `Rep_L(n) ⊬ Ind_L(C)`.
+*Proof.* The verifier's whole observation of `L` is the tuple `(B(ℓ₁), …, B(ℓ_k))`. Fix any two locators serving
+byte-identical genesis. That same tuple arises when the locators are two hostnames on one provider, one account,
+one region (`|{dom_C(ℓ)}| = 1`) and when they sit in genuinely disjoint failure domains (`= 2`). The two worlds are
+observationally identical, so `Ind_L` is not measurable in `σ(bytes)` and no function of the observations decides
+it. ∎
+
+**Corollary F.5o (why the declaration site decides whether this is a mislabel or a self-grant).** `Rep_L` reported
+as independence is an overstatement whoever chose `L`. But when `L` is CONSUMER-supplied the consumer at least
+selected the substrates it wanted compared; when `L` is PRODUCER-declared — a locator list in the operator's own
+profile or genesis — a publisher raises its own independence coordinate by choosing which two URLs to name. That is
+exactly the self-declaration Theorem F.5a.1 excludes, transposed from the witness axis to the serving axis, and it
+is F.5j's clause verbatim: *many endpoints under ONE `dom_C` value do not manufacture independence*.
+
+**The honest decomposition.** §20.1's fourth probe reports `Rep_L` under its own name — byte-agreement across
+declared copies, an integrity property and a real one. The independence coordinate enters this axis as it does
+every other: through `C`, or through external evidence, never through the publisher's locator list. A publisher
+declaring companions is therefore declaring a LOCATOR (where to look, checkable, and a false one only costs the
+publisher), never an ASSURANCE.
+
+**Binding: realized** — *"#102 discovery: byte-agreement across declared copies is REPLICATION — two locators under one substrate satisfy it"*, *"#102 ADVERSARIAL: a producer-declared locator set does NOT raise the independence coordinate (F.5a.1 transposed to serving)"*.
+
+**Conformance (math ⇒ code ⇒ green vector, `packages/ust-protocol/conformance.mjs`).**
+- replication is decided from bytes alone, and is silent about substrate: the two-locators-one-substrate case PASSES the replication predicate and yields no independence.
+- the adversarial direction: a locator set named by the producer cannot move the verdict's independence coordinate, matching F.5a.1's clause (2).
+
 ## F.6 Composition — the event algebra
 
 An **anchored existence-and-commitment claim** is an event `A ∈ Fₜ`; an UNANCHORED signed claim is a document

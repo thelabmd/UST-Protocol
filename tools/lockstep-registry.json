@@ -498,6 +498,18 @@
       "rev": "rev65",
       "model_locus": "The escape is checked against what the protocol can ADDRESS, not merely asserted as sufficient",
       "conformance_check": "#101 ADVERSARIAL: a capacity grant does NOT admit an over-breadth FLAT seal — capacity is VOLUME, breadth is STRUCTURE"
+    },
+    {
+      "id": "R66-serving-axis-independence-not-self-declared",
+      "rev": "rev98",
+      "model_locus": "Discovery attestation measures REPLICATION; independence is not in `σ(bytes)`",
+      "conformance_check": "#102 ADVERSARIAL: a producer-declared locator set does NOT raise the independence coordinate (F.5a.1 transposed to serving)"
+    },
+    {
+      "id": "R67-substituted-copy-must-fail-agreement",
+      "rev": "rev98",
+      "model_locus": "`Rep_L(n) = ∀ ℓ ∈ L : contentHash(B(ℓ)) = contentHash(g)`",
+      "conformance_check": "#102 a copy that differs FAILS agreement, and one that agrees does not rescue it"
     }
   ]
 }

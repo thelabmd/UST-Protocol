@@ -82,6 +82,7 @@ export const REFERENCE_CHECKER_RULES: unknown;
 export const REFERENCE_CHECKER_VERSION: unknown;
 export const REGISTRY: unknown;
 export function registryDigest(): unknown;
+export function replicationAgreement(arg0?: unknown): Record<string, unknown>;
 export function resolveAuthority(doc?: unknown, opts?: unknown): unknown;
 export function resolveByDiscovery(doc: unknown, opts?: unknown, transport?: unknown): Promise<unknown>;
 export function resolveCadence(genesis: unknown, cadenceLog?: unknown, atTime?: unknown, opts?: unknown): unknown;

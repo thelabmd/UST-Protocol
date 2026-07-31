@@ -12,7 +12,7 @@ const withWitnessClock = async (clock, body) => { __setWitnessClockForConformanc
 // runtime-namespace totality net. Define it ONCE here (used by R47) and cross-check it below against CLASS — MAY_THROW(n) ⟺
 // CLASS[n] !== 'surface', so the two can no longer diverge. (Totality itself is already guaranteed by R34's surface×BATTERY.)
 const MAY_THROW_TOTALITY = (n) => /^(build|seal|make)/.test(n) || /(Claim|Leaf|Id|Epoch)$/.test(n) || /^Ust[A-Z]/.test(n)
-  || ['canon', 'H', 'Hbytes', 'keyId', 'merkleRoot', 'partitionHash', 'contentHash', 'signedContent', 'admitUtf8', 'anyLoneSurrogate', 'ustGrid', 'blindPartition', 'blindedCommit', 'seed', 'axisRank', 'evidenceCaps', 'admitDeep', 'isValid', 'verifiedEvidence'].includes(n)
+  || ['canon', 'H', 'Hbytes', 'keyId', 'merkleRoot', 'partitionHash', 'contentHash', 'signedContent', 'admitUtf8', 'anyLoneSurrogate', 'ustGrid', 'blindPartition', 'blindedCommit', 'seed', 'axisRank', 'evidenceCaps', 'admitDeep', 'isValid', 'verifiedEvidence', 'replicationAgreement'].includes(n)
   || ['verifyOrThrow', 'assertValid'].includes(n);
 
 const V = JSON.parse(readFileSync(new URL('../../vectors/conformance-vectors.json', import.meta.url)));
@@ -59,6 +59,18 @@ for (const v of V.vectors) {
       check(v.id, threw, 'expected E-CANON'); break;
     }
     case 'hash': check(v.id, P.H(v.tag, P.canon(v.input)) === v.expect); break;
+    // #102 / F.5o — byte-agreement across declared copies. A port must reproduce BOTH the verdict and the REFUSAL:
+    // an independence coordinate offered by the caller is an error, never a field that is quietly dropped.
+    case 'replication': {
+      if (v.expect_error) {
+        let code = null; try { P.replicationAgreement(v.input); } catch (e) { code = e.code; }
+        check(v.id, code === v.expect_error, `expected ${v.expect_error}`); break;
+      }
+      const r = P.replicationAgreement(v.input);
+      check(v.id, r.attested === v.expect.attested && r.agreed.length === v.expect.agreed
+        && r.disagreed.length === v.expect.disagreed && !('independent' in r) && !('trust_domain' in r));
+      break;
+    }
     case 'key_id': check(v.id, P.keyId(v.pub_b64url) === v.expect); break;
     case 'commit': check(v.id, P.H('ust:shard', P.canon(v.input)) === v.expect); break;
     case 'seed': check(v.id, P.seed(v.input) === v.expect); break;
@@ -1281,6 +1293,32 @@ console.log('\n═════════════════════�
   })());
   check('#101 the reach covers what ust_id can ADDRESS: ceil(3600/64) = 57 nodes, and 57 <= 64, so one root closes an hour at second resolution',
     Math.ceil(3600 / 64) === 57 && Math.ceil(3600 / 64) <= 64);
+}
+
+// ─── #102 / F.5o — the SERVING axis of "independence is never self-declared". Byte-agreement across declared
+// copies is decidable from bytes; independence is not, and the core must refuse to carry it either way.
+{
+  const H = 'sha256:' + 'a'.repeat(64), OTHER = 'sha256:' + 'b'.repeat(64);
+  check('#102 discovery: byte-agreement across declared copies is REPLICATION — two locators under one substrate satisfy it', (() => {
+    // both locators deliberately sit on ONE provider. The predicate PASSES, and that is its exact meaning:
+    // the observation is the bytes, and the bytes cannot tell this apart from two genuinely separate vendors.
+    const r = P.replicationAgreement({ expected: H, copies: [{ locator: 'https://a.one-provider.example/g', hash: H }, { locator: 'https://b.one-provider.example/g', hash: H }] });
+    return r.attested === true && r.property === 'byte-agreement' && r.agreed.length === 2
+      && !('independent' in r) && !('vendor' in r) && !('trust_domain' in r);
+  })());
+  check('#102 ADVERSARIAL: a producer-declared locator set does NOT raise the independence coordinate (F.5a.1 transposed to serving)', (() => {
+    for (const k of ['independent', 'trust_domain', 'vendor', 'assurance', 'strength']) {
+      try { P.replicationAgreement({ expected: H, copies: [{ locator: 'https://m.example/g', hash: H }], [k]: true }); return false; }
+      catch (e) { if (e.code !== 'E-REPLICATION') return false; }
+    }
+    return true;
+  })());
+  check('#102 a copy that differs FAILS agreement, and one that agrees does not rescue it', (() => {
+    const r = P.replicationAgreement({ expected: H, copies: [{ locator: 'https://ok.example/g', hash: H }, { locator: 'https://bad.example/g', hash: OTHER }] });
+    return r.attested === false && r.agreed.length === 1 && r.disagreed.length === 1;
+  })());
+  check('#102 NOTHING declared is NOT ATTESTED, never a pass — silence is not agreement',
+    P.replicationAgreement({ expected: H, copies: [] }).attested === false);
 }
 
 // ─── #44 AGENT-SAFETY — throw-on-non-VALID (control flow, not an advisory field) + machine-structured verdict.
@@ -2525,6 +2563,7 @@ console.log('\n═════════════════════�
     // by both sides rather than copied into each.
     witnessSuccessor: 'producer-builder', witnessNoShrink: 'producer-builder (the rule, shared with consumers)',
     seal: 'producer-builder', sealAuthorityCheckpoint: 'producer-builder', verifiedEvidence: 'producer-builder (raw-facts shape)',
+    replicationAgreement: 'producer-builder (byte-agreement shape; throws on a self-declared independence coordinate, F.5o)',
     buildAbsence: 'producer-builder', buildAttestation: 'producer-builder', buildAuthorityCheckpoint: 'producer-builder',
     buildAuthorityProof: 'producer-builder', buildCadenceEntry: 'producer-builder', buildCheckpoint: 'producer-builder', buildStreamCheckpoint: 'producer-builder',
     buildDerivation: 'producer-builder', buildEpochTransition: 'producer-builder', buildEvidenceReceipt: 'producer-builder',

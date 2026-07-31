@@ -43,6 +43,11 @@ const root = new URL('..', import.meta.url).pathname;
 // baseline — if a gap reappears, publish or state the policy, do not raise the number.
 const PIN = {
   untraced: 3,          // versions with no CHANGELOG row: mcp rc.29, web-signer rc.3, ots-verify rc.10
+  // round 123 (#102): `replicationAgreement` is in the tree and not yet on npm. Publishing is a decision the
+  // owner makes explicitly and never a side effect of a green gate, so the gap is DECLARED here instead of being
+  // closed by a quiet publish. An outsider reading this knows exactly what `npm i ust-protocol` does not yet
+  // give them, and the gate reports on its own when the gap shrinks so this pin cannot outlive the reason.
+  'ust-protocol': 1,
 };
 
 const fail = []; const notes = []; let pass = 0;

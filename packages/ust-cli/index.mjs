@@ -902,19 +902,33 @@ export async function attestDiscovery({ domain, mirrors = [], expectHash = null,
     checks.push({ id: 'query-robustness (cache identity ⊥ unknown query)', status: 'fail', detail: e.message });
   }
 
-  // (4) vendor-independence: every declared mirror must carry the SAME content_hash (bytes are content-
-  // addressed — the mirror is untrusted, the hash decides). No mirror declared = NOT ATTESTED, never a pass.
-  if (!mirrors.length) checks.push({ id: 'vendor-independence (≥1 independent mirror)', status: 'skip', detail: 'no --mirror declared — property NOT ATTESTED' });
+  // (4) BYTE-AGREEMENT across declared copies: every named copy must carry the SAME content_hash (bytes are
+  // content-addressed — the copy is untrusted, the hash decides). None declared = NOT ATTESTED, never a pass.
+  //
+  // This leg is NOT vendor-independence and this tool must never call it that (§20.1, formal model F.5o).
+  // Fetching two URLs and comparing hashes is decidable from the bytes; whether those URLs sit in different
+  // failure domains is NOT — two hostnames on one provider, one account, one region produce an observation
+  // identical to two genuinely separate vendors. Naming the leg after the property it cannot decide would let
+  // whoever supplies the list grant the property by choosing it, which is the self-declaration F.5a.1 excludes
+  // on the witness axis. Independence enters from consumer configuration or external evidence, never from here.
+  if (!mirrors.length) checks.push({ id: 'byte-agreement across declared copies (≥1 copy)', status: 'skip', detail: 'no --mirror declared — property NOT ATTESTED' });
+  const fetched = [];
   for (const m of mirrors) {
     try {
       const t = await get(m).then((r) => (r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`))));
       const { verdict: mv, doc: d } = verifyRaw(t);
-      if (!P.isValid(mv)) throw new Error('mirror document does not VERIFY' + (mv.error ? ` (${mv.error})` : ''));
-      if (P.contentHash(d) !== hash) throw new Error('mirror carries a DIFFERENT genesis (content_hash differs)');
-      checks.push({ id: 'mirror ' + m, status: 'pass', detail: 'content_hash matches' });
+      if (!P.isValid(mv)) throw new Error('copy does not VERIFY' + (mv.error ? ` (${mv.error})` : ''));
+      fetched.push({ locator: m, hash: P.contentHash(d) });
     } catch (e) {
-      checks.push({ id: 'mirror ' + m, status: 'fail', detail: e.message });
+      checks.push({ id: 'copy ' + m, status: 'fail', detail: e.message });
     }
+  }
+  // the VERDICT is the core's, never this tool's: `replicationAgreement` decides byte-agreement and has no
+  // independence coordinate to report, so there is nothing here to overstate (#102, F.5o).
+  if (fetched.length) {
+    const rep = P.replicationAgreement({ expected: hash, copies: fetched });
+    for (const l of rep.agreed) checks.push({ id: 'copy ' + l, status: 'pass', detail: 'content_hash matches' });
+    for (const l of rep.disagreed) checks.push({ id: 'copy ' + l, status: 'fail', detail: 'copy carries a DIFFERENT genesis (content_hash differs)' });
   }
   return { hash, checks, verdict: verdictOf(checks) };
 }
@@ -1079,10 +1093,14 @@ export function ceremonySummary({ domain, genHash, opKeyId, maxP, cadence, outDi
   ];
 }
 
-// ─── vendor-independence: the MIRROR method (owner: a general CLI method — and never trust the user's
-// word that the bytes are there; ATTEST by fetching). A mirror is BY DEFINITION on a second vendor, so
-// the roads mirror the serving adapter: by-hand anywhere + a gh one-click (delegate to the vendor's own
-// authenticated CLI, exactly like wrangler for CF).
+// ─── the MIRROR method — publish a SECOND copy and attest that it AGREES (owner: a general CLI method —
+// and never trust the user's word that the bytes are there; ATTEST by fetching). The roads mirror the
+// serving adapter: by-hand anywhere + a gh one-click (delegate to the vendor's own authenticated CLI,
+// exactly like wrangler for CF).
+//
+// The earlier version of this comment read "a mirror is BY DEFINITION on a second vendor" — an ASSUMPTION
+// standing where a check belongs. Putting the copy somewhere separate is the operator's duty (§20.1) and a
+// good reason to run this command; what the command can PROVE is only that the copies agree byte for byte.
 
 // Fetch the CANONICAL surfaces (hash-verified) and attest every mirror URL against them — the mirror is
 // untrusted by design: bytes are fetched, verified as UST, and content_hash-matched. Never a claim.
@@ -1417,7 +1435,7 @@ async function cmdDiscovery() {
     console.log('  PARTIAL = no violation found, but unchecked properties remain:');
     for (const c of checks.filter((x) => x.status === 'skip')) {
       if (c.id.startsWith('DNS record')) console.log('    → publish the _ust TXT (ust-genesis=<content_hash>) and re-run');
-      else if (c.id.startsWith('vendor-independence')) console.log(`    → declare an independent mirror:  ${invocation()} discovery ${domain} --mirror <url>`);
+      else if (c.id.startsWith('byte-agreement')) console.log(`    → name a copy to compare bytes against:  ${invocation()} discovery ${domain} --mirror <url>\n      (this attests the copies AGREE; whether they sit on independent vendors is yours to know, not this tool's to attest)`);
       else if (c.id.startsWith('cadence')) console.log(`    → declare the stream grid (a COLD root-key ceremony; needed before a range can read \`complete\`):\n        ${invocation()} cadence --domain ${domain} --root <encrypted-root.b64> --seconds <n> --effective-from <a FUTURE ust_id>`);
       else console.log('    → ' + c.id + ' — ' + c.detail);
     }
@@ -1622,10 +1640,10 @@ async function cmdForkChoice() {
   process.exit(1);
 }
 
-// ─── ust mirror <domain> — vendor-independence on a SECOND vendor, attested never claimed ─────────────
+// ─── ust mirror <domain> — publish a SECOND copy; byte-agreement attested, independence never claimed ──
 async function cmdMirror() {
   const domain = process.argv[3];
-  if (!domain || domain.startsWith('--')) die('usage: ust mirror <domain> [--publish gh --repo owner/repo [--dir mirror]] [--url g1,g2] [--keylog-url k1]\n  publish/attest EXACT copies of your live identity on a SECOND vendor (§20.1 vendor-independence)');
+  if (!domain || domain.startsWith('--')) die('usage: ust mirror <domain> [--publish gh --repo owner/repo [--dir mirror]] [--url g1,g2] [--keylog-url k1]\n  publish EXACT copies of your live identity on a SECOND vendor (§20.1) and ATTEST that they agree byte for byte');
   const tty = !!process.stdin.isTTY;
   const genesisUrls = String(arg('url', '') || '').split(',').filter(Boolean);
   const keylogUrls = String(arg('keylog-url', '') || '').split(',').filter(Boolean);
@@ -1677,9 +1695,11 @@ async function cmdMirror() {
   const a = await attestDiscovery({ domain, mirrors: genesisUrls, expectHash: m.canonHash });
   printChecks(a.checks);
   const complete = a.verdict === 'ATTESTED' && !m.failed;
-  console.log(`\n  RESULT: ${complete ? '✅ COMPLETE — every §20.1 property attested, vendor-independence included' : m.failed || a.verdict === 'FAILED' ? '❌ FAILED — fix the ❌ lines above and re-run' : '⬜ PARTIAL — see the ⬜ lines above'}`);
+  console.log(`\n  RESULT: ${complete ? '✅ COMPLETE — every ATTESTABLE §20.1 property holds, byte-agreement included' : m.failed || a.verdict === 'FAILED' ? '❌ FAILED — fix the ❌ lines above and re-run' : '⬜ PARTIAL — see the ⬜ lines above'}`);
   if (complete) {
-    console.log('  keep the mirror URL(s) declared to your consumers (operator profile) and re-attest anytime:');
+    console.log('  vendor-independence is NOT among them: that the copies sit in separate failure domains is');
+    console.log('  your operational fact, which no verifier can read out of the bytes (§20.1, F.5o).');
+    console.log('  keep the copy URL(s) declared to your consumers (operator profile) and re-attest anytime:');
     console.log(`    ${invocation()} discovery ${domain} --mirror ${genesisUrls[0]}`);
   }
   process.exit(m.failed || a.verdict === 'FAILED' ? 1 : a.verdict === 'PARTIAL' ? 2 : 0);

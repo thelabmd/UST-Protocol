@@ -191,6 +191,14 @@
       "round": 122,
       "issue": 118,
       "content_hash": "sha256:2908e48b0b49d5eb553b50a5d48d5e8b86c77c8dfb6322cee527e7250ac69729"
+    },
+    {
+      "round": 123,
+      "no_recap": "Round 123 does not close #102 — it lands the correctness half (the leg is renamed to the byte-agreement it measures, and the core refuses a self-declared independence coordinate). The issue's first two work items, declaring where the discovery artifacts live, are UNBLOCKED by this round and not done in it: naming copies in a profile was only safe once the leg stopped claiming independence."
+    },
+    {
+      "round": 124,
+      "no_recap": "Round 124 closes no issue — it is the packaging gate the round-123 work exposed. Its lesson is already carried by round 123's entry: a suite that passes inside the workspace is not a suite that passed for a stranger."
     }
   ]
 }

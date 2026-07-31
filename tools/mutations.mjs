@@ -64,6 +64,26 @@ export const MUTATIONS = [
     to: '  if (false && declares && !role) throw new Error(',
   },
 
+  // round 98 (#102) — the SERVING axis of "independence is never self-declared" (F.5o). Broken, the core stops
+  // REFUSING a caller-supplied independence coordinate and just drops it, so a publisher naming its own copies
+  // can hand the verifier a property no fetch can decide and nothing objects. The refusal is the whole mechanism:
+  // silently ignoring the field looks identical from the outside right up until some surface starts reading it.
+  {
+    id: 'serving-independence-self-declared-admitted', mustDetect: true, observe: ['conformance'],
+    why: 'the serving-axis independence closure. Broken, a self-declared independence coordinate is ignored instead of refused.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "    if (k in rest) throw Object.assign(new Error(`E-REPLICATION: byte-agreement is decidable from bytes; '${k}' is not (F.5o) — independence enters from consumer configuration or external evidence, never from the locator list`), { code: 'E-REPLICATION' });",
+    to: "    if (false && k in rest) throw new Error('unreachable'); /* mutant */",
+  },
+  // round 98 (#102) — byte-agreement must FAIL on a copy that differs. Broken, disagreement is recorded but the
+  // verdict still reads attested, so a copy serving a DIFFERENT genesis passes the one check that would catch it.
+  {
+    id: 'replication-disagreement-still-attested', mustDetect: true, observe: ['conformance'],
+    why: 'byte-agreement itself. Broken, a copy carrying a different content_hash no longer fails the property.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "  return deepFreeze({ property: 'byte-agreement', expected, agreed, disagreed, attested: copies.length > 0 && disagreed.length === 0 });",
+    to: "  return deepFreeze({ property: 'byte-agreement', expected, agreed, disagreed, attested: copies.length > 0 }); /* mutant */",
+  },
   // round 79 (#106) — role INHERITANCE down a lineage. Broken, `add(k, supersedes=s)` no longer carries `s`'s role,
   // so replacing a roled key becomes impossible without restating the role by hand — and the asymmetry the whole
   // derivation rests on ("propagates, never introduces") stops being observable at all.

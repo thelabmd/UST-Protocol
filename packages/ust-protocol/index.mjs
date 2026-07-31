@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.46', revision: 64 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.47', revision: 65 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -1172,6 +1172,23 @@ export function evidenceClass(proof_kind) {
     case 'rfc3161-tsa':       return 'trusted-timestamp';
     default:                  return 'opaque';                               // ⇒ INDETERMINATE(unsupported) upstream
   }
+}
+// #102 / F.5o — the SERVING axis of the same invariant, and the core owns it so no tool decides it again.
+// `content-addressed` above already names what a companion copy earns: content-equality + availability. It does
+// NOT name independence, and this is the function that keeps it that way. Given an expected hash and the copies a
+// publisher (or a consumer) named, the verdict is decidable from BYTES ALONE — fetch, hash, compare. Whether two
+// locators sit in different failure domains is invisible in what they serve: two hostnames on one provider, one
+// account, one region produce an observation identical to two genuinely separate vendors (Theorem F.5o). So the
+// result shape has no independence coordinate, and a caller asking for one is REFUSED rather than humoured —
+// the same closure `verifiedEvidence` applies on the witness axis, where a self-declared `independent` throws.
+export function replicationAgreement({ expected, copies = [], ...rest }) {
+  for (const k of ['independent', 'trust_domain', 'vendor', 'assurance', 'strength'])   // serving-axis twin of the facts-only rule
+    if (k in rest) throw Object.assign(new Error(`E-REPLICATION: byte-agreement is decidable from bytes; '${k}' is not (F.5o) — independence enters from consumer configuration or external evidence, never from the locator list`), { code: 'E-REPLICATION' });
+  if (typeof expected !== 'string' || !expected) throw Object.assign(new Error('E-REPLICATION: expected content_hash required'), { code: 'E-REPLICATION' });
+  const agreed = [], disagreed = [];
+  for (const c of copies) (c && c.hash === expected ? agreed : disagreed).push(c && c.locator);
+  // NOT ATTESTED with nothing to compare: an empty list is not agreement, and silence must never read as a pass.
+  return deepFreeze({ property: 'byte-agreement', expected, agreed, disagreed, attested: copies.length > 0 && disagreed.length === 0 });
 }
 // UST-0ol Phase 2 — evidence CAPABILITY as a SET (P2-02: capabilities are not a scalar rank). A predicate is
 // satisfiable ONLY by an admissible capability; strong derivation checks this before trusting a piece of evidence,
@@ -2600,7 +2617,7 @@ export const REGISTRY = deepFreeze({   // round-25 P0-04 — DEEP-frozen: the ca
     'ust:evidence-receipt', 'ust:evidence-receipt-signature'],
   // INVALID error codes (§15) — every code the verifier/API can emit. Ordered as §15 lists them.
   errorCodes: ['E-MALFORMED', 'E-CANON', 'E-BOUNDS', 'E-CYCLE', 'E-SIG', 'E-KEY', 'E-GENESIS', 'E-ANCHOR',
-    'E-COMMIT', 'E-ROOT', 'E-SEED', 'E-PREV', 'E-AUTHORITY', 'E-SEQ', 'E-EVIDENCE', 'E-ASSURANCE', 'E-BYTES'],   // E-BYTES — the byte-admission door class (round-48 P0-01: snapshotBytes rejects a non-native-Uint8Array as E-BYTES-TYPE/-SHARED/-SIZE)
+    'E-COMMIT', 'E-ROOT', 'E-SEED', 'E-PREV', 'E-AUTHORITY', 'E-SEQ', 'E-EVIDENCE', 'E-ASSURANCE', 'E-BYTES', 'E-REPLICATION'],   // E-BYTES — the byte-admission door class (round-48 P0-01: snapshotBytes rejects a non-native-Uint8Array as E-BYTES-TYPE/-SHARED/-SIZE)
   // INDETERMINATE reasons — the §14 document-verifier's CLOSED set, and the §12.3.6 authority-checkpoint set (distinct).
   indeterminateReasons: { document: ['unavailable', 'unsupported_alg', 'resource_limit', 'stale_keylog'],
     checkpoint: ['authority_unresolved', 'terminality_unproven', 'order_unproven', 'evidence_unverified', 'chain_consistency_unproven'] },

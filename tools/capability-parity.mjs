@@ -62,6 +62,10 @@ const CAPS = {
   'consumer-trust-root':{ core: ['quorumTrustDomains'], mcp: 'trustRoots', cli: '--trust-root' },
   'anchor-verify':      { core: ['verifyAnchor'], mcp: 'ust_anchor_verify', cli: '--require-anchored' },
   'fork-choice':        { core: ['forkChoice'], mcp: 'ust_fork_choice' },
+  // #102 / F.5o — the SERVING axis. A consumer-meaningful act (do the copies a publisher named agree byte for
+  // byte?) whose whole discipline is what it REFUSES to answer: independence is not decidable from the bytes,
+  // so it is not in this capability and no surface may report it. `ust discovery --mirror` is the CLI face.
+  'byte-agreement':     { core: ['replicationAgreement'], cli: '--mirror' },
   'stream-verify':      { core: ['verifyStream'], mcp: 'ust_verify_stream', cli: 'verifyStream' },
   'typed-evidence':     { core: ['verifiedEvidence', 'evidenceClass', 'evidenceCaps', 'compareEvidenceOrder', 'EVIDENCE_CAPS_UNIVERSE'] },
   // M3 (UST-6vj C2) — provenance-bearing evidence: a SIGNED connector receipt verified against consumer-admitted
@@ -142,7 +146,7 @@ const SURFACES = {
   // ceremonies) so a human explicitly grants agent rights — NOT 'stays core+CLI forever'. NOTE: no-fork-evidence /
   // anchor-verify are marked full on the CONSUME side; a produce/consume axis split is the honest refinement (UST-<top>).
   'ust-mcp':          { probe: mcpProbe, full: ['canon', 'content-address', 'build-transcript', 'verify', 'resolve-authority', 'no-fork-evidence', 'consumer-trust-root', 'anchor-verify', 'fork-choice', 'stream-verify', 'cadence-grid', 'cadence-declare'], subset: [], naReason: 'deferred to the planned operator MCP over @ust-protocol/operator (privilege-separation: a human explicitly grants agent rights) — NOT core+CLI-forever; TOP-produce is the one agent touch still to be built for noosphere', naSpecific: { 'sign': 'the agent signs with its OWN key; build tools return signing_input, the MCP never holds a private key', 'negative-observation': 'agent-appropriate (a normal negative observation, NOT operator) — new per #39; an MCP absence verb is planned, not yet built' } },
-  'ust-cli':          { probe: cliProbe, full: ['canon', 'content-address', 'build-transcript', 'sign', 'verify', 'resolve-authority', 'no-fork-evidence', 'consumer-trust-root', 'anchor-verify', 'stream-verify', 'checkpoint-chain', 'keylog-commitment', 'discovery-shard', 'cadence-grid', 'cadence-declare'], subset: [], naReason: 'not exposed by the reference operator CLI', naSpecific: { 'negative-observation': 'new per #39; a `ust absence` command is planned, not yet built' } },
+  'ust-cli':          { probe: cliProbe, full: ['canon', 'content-address', 'build-transcript', 'sign', 'verify', 'resolve-authority', 'no-fork-evidence', 'consumer-trust-root', 'anchor-verify', 'stream-verify', 'checkpoint-chain', 'keylog-commitment', 'discovery-shard', 'cadence-grid', 'cadence-declare', 'byte-agreement'], subset: [], naReason: 'not exposed by the reference operator CLI', naSpecific: { 'negative-observation': 'new per #39; a `ust absence` command is planned, not yet built' } },
 };
 
 const capIds = Object.keys(CAPS);

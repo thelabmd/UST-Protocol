@@ -3,7 +3,7 @@
 
 *This specification text is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](../LICENSE-SPEC). Reference code in this repository is licensed Apache-2.0. Use of the name **UST** / **Universal State Transcript** and the **UST-compatible** claim: see [TRADEMARK.md](../TRADEMARK.md).*
 
-> **Release candidate — `1.0.0-rc.46`.** This specification has been extensively red-teamed; an independent
+> **Release candidate — `1.0.0-rc.47`.** This specification has been extensively red-teamed; an independent
 > external cryptographic audit is pending. It is subject to change until `1.0.0` final. The wire format `ust:"1.0"`
 > is stable across all rc's — pin exact versions. Per-version history is in [`CHANGELOG.md`](../CHANGELOG.md).
 
@@ -1626,7 +1626,7 @@ rule is: **verify in the control flow, not as an advisory field.**
 **Canonical INVALID error-code set** (generated from `index.mjs` `REGISTRY` by `tools/gen-spec-registry.mjs` — do
 not edit by hand; the `spec-code-sync` gate keeps it == the codes the implementation actually emits):
 <!-- BEGIN spec-sync:error-codes -->
-`E-MALFORMED`, `E-CANON`, `E-BOUNDS`, `E-CYCLE`, `E-SIG`, `E-KEY`, `E-GENESIS`, `E-ANCHOR`, `E-COMMIT`, `E-ROOT`, `E-SEED`, `E-PREV`, `E-AUTHORITY`, `E-SEQ`, `E-EVIDENCE`, `E-ASSURANCE`, `E-BYTES`
+`E-MALFORMED`, `E-CANON`, `E-BOUNDS`, `E-CYCLE`, `E-SIG`, `E-KEY`, `E-GENESIS`, `E-ANCHOR`, `E-COMMIT`, `E-ROOT`, `E-SEED`, `E-PREV`, `E-AUTHORITY`, `E-SEQ`, `E-EVIDENCE`, `E-ASSURANCE`, `E-BYTES`, `E-REPLICATION`
 <!-- END spec-sync:error-codes -->
 
 ---
@@ -1874,11 +1874,23 @@ the mechanism is the publisher's choice:**
   cache-key amplification — per-request forced origin work, a cost-DoS that can price the discovery
   surface out of availability exactly when a verifier needs it. Edge-strip, origin normalization, a CDN
   rule or a proxy cache-key map all conform; the property, not the mechanism, is normative.
-- **Vendor-independence.** Availability of the genesis bytes MUST NOT depend on ONE serving vendor: at
-  least one INDEPENDENT mirror of the exact bytes exists. Because the genesis is content-addressed, a
-  verifier MAY fetch from ANY mirror and accept the bytes iff their `content_hash` equals the expected
-  value (pinned, from the DNS record, or from the well-known root). Mirrors carry AVAILABILITY, never
-  AUTHORITY — name authority resolves ONLY per §12.1 (name-binding root + positive witness confirmation).
+- **Vendor-independence (an OBLIGATION, and not an attestable one).** Availability of the genesis bytes
+  MUST NOT depend on ONE serving vendor: at least one INDEPENDENT copy of the exact bytes exists. This is a
+  real duty on the operator, and it is NOT decidable by any verifier from the served bytes — whether two
+  locators share a provider, an account or a region is invisible in what they serve. A verifier therefore
+  attests the property below and never this one; independence enters only from consumer configuration or
+  external evidence, exactly as on the witness axis (§12.1, formal model F.5a.1 and F.5o).
+- **Byte-agreement across declared copies (REPLICATION — this is what is attestable).** Every copy a
+  publisher names MUST serve bytes whose `content_hash` equals the expected value (pinned, from the DNS
+  record, or from the well-known root). Because the genesis is content-addressed, a verifier MAY fetch from
+  ANY named copy and accept on hash equality alone; the copy is untrusted and the hash decides. A named copy
+  that differs, or does not serve, FAILS this property. Copies carry AVAILABILITY, never AUTHORITY — name
+  authority resolves ONLY per §12.1 (name-binding root + positive witness confirmation) — and, per F.5o,
+  never INDEPENDENCE: satisfying byte-agreement across two locators on one substrate is not a defect of the
+  check, it is the check's exact meaning. A publisher naming copies declares a LOCATOR, never an assurance —
+  and an implementation asked to carry an independence coordinate alongside the copies MUST refuse it
+  (`E-REPLICATION`) rather than accept and ignore it: a field that is silently dropped is one some later
+  surface starts reading.
 - **Method floor.** Plain `GET` (SHOULD also `HEAD`). Discovery is deliberately the simplest possible HTTP
   surface; parametrized query/verify transports are a SERVICE surface, out of scope here.
 
@@ -1886,8 +1898,10 @@ the mechanism is the publisher's choice:**
 by: (1) fetching the well-known and VERIFYING the transcript (§14, fail-closed); (2) matching its
 `content_hash` against the DNS record (when present) and the expected/pinned value; (3) probing
 query-robustness — a random unrecognized parameter MUST yield byte-identical content (and, where cache
-metadata is observable, MUST NOT key a distinct cache entry); (4) hash-matching each declared mirror. The
-reference ceremony (`ust genesis`) performs (1)–(2) fail-closed today; (3)–(4) are its natural extension.
+metadata is observable, MUST NOT key a distinct cache entry); (4) hash-matching each declared copy — which
+attests BYTE-AGREEMENT and, per F.5o, is silent about vendor-independence: an attestation MUST NOT report
+the latter, whoever supplied the locator list. The reference ceremony (`ust genesis`) performs (1)–(2)
+fail-closed today; (3)–(4) are its natural extension.
 
 ---
 

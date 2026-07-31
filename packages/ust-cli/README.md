@@ -181,10 +181,17 @@ Four probes of what a publisher must SERVE for anyone to resolve their identity 
 ✅ the served genesis verifies on its own and matches the expected hash
 ✅ _ust TXT carries the same hash        (mismatch = FAILED, absence = NOT ATTESTED)
 ✅ query-robustness: a random unknown ?param returns byte-identical bytes
-⬜ vendor-independence: every declared --mirror carries the same content_hash
+⬜ byte-agreement: every declared --mirror carries the same content_hash
 ```
 
 Verdict: `ATTESTED` (everything ran and passed) / `PARTIAL` (no violation, but unchecked properties remain — with targeted hints) / `FAILED` (exit 1). Conformance is never granted on unchecked properties.
+
+**What the fourth probe is not.** The protocol also obliges an operator not to rest availability on one vendor —
+and that duty is *not attestable*. Fetching two URLs and comparing hashes proves the copies **agree**; whether they
+sit in different failure domains is invisible in what they serve, since two hostnames on one provider look
+exactly like two vendors. So this tool attests agreement and never reports independence, whoever named the
+copies. Independence reaches a verdict the same way it does everywhere else in UST: from *your* configuration
+or outside evidence, never from the publisher's own list.
 
 ## Custody model
 
