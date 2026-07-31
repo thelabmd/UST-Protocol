@@ -20,6 +20,16 @@ export interface UstState { id: Record<string, unknown>; time: unknown; data: un
 export interface UstDocument { ust: unknown; state: UstState; sig: unknown }
 export interface UstVerdict { result: string; error: unknown; detail: unknown; tier: unknown; id?: unknown }
 
+// A function with two OUTCOMES is a discriminated union, not an untypeable value. Saying "these are unions,
+// so one interface would lie" and leaving them `unknown` was a substitution — TypeScript has unions, and the
+// branches below were READ from real values: the resolved branch from a corpus key-log vector, the error
+// branch from a rejected one. Discriminate on `error` in `res` and the compiler narrows for you.
+export interface UstError { error: string; detail: unknown }
+export interface UstKeysResolved { validKeys: unknown; active: unknown; revoked: unknown; history: unknown; roles: unknown; declaredRoles: unknown; head: string }
+export type UstKeyResolution = UstKeysResolved | UstError;
+export interface UstStreamComplete { complete: string; head?: unknown; detail?: unknown; interval?: unknown; reason?: unknown }
+export type UstStreamVerdict = UstStreamComplete | UstError;
+
 export function admitDeep(v: unknown, seen?: unknown): unknown;
 export function admitUtf8(bytes: unknown): unknown;
 export function anyLoneSurrogate(root: unknown): unknown;
@@ -102,7 +112,7 @@ export function resolveByDiscovery(doc: unknown, opts?: unknown, transport?: unk
 export function resolveCadence(genesis: unknown, cadenceLog?: unknown, atTime?: unknown, opts?: unknown): unknown;
 export function resolveCadenceBytes(genesisBytes: unknown, cadenceLogBytes: unknown, atTime: unknown, keylogBytes: unknown): unknown;
 export function resolveCheckpointRoots(genesis: unknown): unknown;
-export function resolveKeys(genesis: unknown, keylog?: unknown): unknown;
+export function resolveKeys(genesis: unknown, keylog?: unknown): UstKeyResolution;
 export function resolveKeysBytes(genesisBytes: unknown, keylogBytes: unknown): unknown;
 export const RULE_CONTRACTS: unknown;
 export function seal(state: unknown, privKeyObj: unknown, pubB64url: unknown): UstDocument;
@@ -134,7 +144,7 @@ export function verifyJson(rawBytes: unknown, opts?: unknown): UstVerdict;
 export function verifyKeylogTerminality(head_: unknown, proof?: unknown): unknown;
 export function verifyNoForkEvidence(evidence: unknown, config: unknown): unknown;
 export function verifyOrThrow(doc: unknown, opts?: unknown): unknown;
-export function verifyStream(frames: unknown, config: unknown): unknown;
+export function verifyStream(frames: unknown, config: unknown): UstStreamVerdict;
 export const VERSION: unknown;
 export function witnessNoFork(shard: unknown, genesisHash: unknown, opts: unknown): Promise<unknown>;
 export function witnessNoShrink(prior: unknown, next: unknown): string;

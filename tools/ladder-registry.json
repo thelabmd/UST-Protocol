@@ -834,6 +834,22 @@
       "test": {
         "excluded": "The gate IS the test: it rebuilds the genesis, seals and verifies it, and compares declared keys against the real values in both directions, with a control requiring TS2322 so the compile leg cannot pass for free. No conformance check because no protocol behaviour moved."
       }
+    },
+    {
+      "round": 129,
+      "math": {
+        "excluded": "As in rounds 127-128: declaration soundness is a property of this implementation's packaging, not of the protocol. No producer obligation moved and no verdict changed."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved; a conforming implementation in another language ships no declaration file."
+      },
+      "code": "tools/gen-types.mjs :: UstKeyResolution and UstStreamVerdict declared as discriminated unions, every branch read from a real value rather than from the source",
+      "vector": {
+        "excluded": "The corpus is the SOURCE of the measurement here rather than its target: the resolving key-log vectors supplied the success branch. No new vector, because no document bytes and no verdict changed."
+      },
+      "test": {
+        "excluded": "The gate IS the test: it checks both branches of each union against values rebuilt from the corpus, in both directions, with a control requiring TS2322. No conformance check because no protocol behaviour moved."
+      }
     }
   ],
   "first_accounted_round": 76,

@@ -285,11 +285,21 @@ const SHAPES_SRC = [
   'export interface UstState { id: Record<string, unknown>; time: unknown; data: unknown; hashes: unknown }',
   'export interface UstDocument { ust: unknown; state: UstState; sig: unknown }',
   'export interface UstVerdict { result: string; error: unknown; detail: unknown; tier: unknown; id?: unknown }',
+  '',
+  '// A function with two OUTCOMES is a discriminated union, not an untypeable value. Saying "these are unions,',
+  '// so one interface would lie" and leaving them `unknown` was a substitution — TypeScript has unions, and the',
+  '// branches below were READ from real values: the resolved branch from a corpus key-log vector, the error',
+  '// branch from a rejected one. Discriminate on `error` in `res` and the compiler narrows for you.',
+  'export interface UstError { error: string; detail: unknown }',
+  'export interface UstKeysResolved { validKeys: unknown; active: unknown; revoked: unknown; history: unknown; roles: unknown; declaredRoles: unknown; head: string }',
+  'export type UstKeyResolution = UstKeysResolved | UstError;',
+  'export interface UstStreamComplete { complete: string; head?: unknown; detail?: unknown; interval?: unknown; reason?: unknown }',
+  'export type UstStreamVerdict = UstStreamComplete | UstError;',
 ].join('\n');
 const SHAPES_FOR = new Set(['ust-protocol']);
 // a function whose return was MEASURED. Nothing is inferred here — the map is checked by a gate that builds
 // the value and compares keys, so an entry that stops being true fails rather than quietly misleading.
-const SHAPE_RETURNS = { seal: 'UstDocument', verify: 'UstVerdict', verifyJson: 'UstVerdict' };
+const SHAPE_RETURNS = { seal: 'UstDocument', verify: 'UstVerdict', verifyJson: 'UstVerdict', resolveKeys: 'UstKeyResolution', verifyStream: 'UstStreamVerdict' };
 
 const render = (pkg, decls) => {
   const head = [

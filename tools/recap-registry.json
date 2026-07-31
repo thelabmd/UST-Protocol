@@ -217,6 +217,10 @@
     {
       "round": 128,
       "no_recap": "Round 128 finishes #117; the closing entry is sealed against that closing, and one arc owes one entry rather than one per round."
+    },
+    {
+      "round": 129,
+      "no_recap": "Round 129 completes #117; the entry is owed at the closing, and one arc owes one entry rather than one per round."
     }
   ]
 }

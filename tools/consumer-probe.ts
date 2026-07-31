@@ -30,7 +30,19 @@ export function probe(): void {
   const ok: boolean = P.isValid(verdict);
   if (!ok) return;
 
-  // ── 4. AN HONEST `unknown`, NARROWED — no cast. `ustGrid` returns `string[] | null` at runtime and the
+  // ── 4. A DISCRIMINATED UNION, narrowed by the compiler. Two outcomes is not "untypeable" — it is what a
+  // union is for, and this is the shape a consumer meets every time they resolve a trust chain. `'error' in res`
+  // is the discriminator; after it, TypeScript knows which branch it is and so does the reader.
+  const res: P.UstKeyResolution = P.resolveKeys(genesis, []);
+  if ('error' in res) {
+    const why: string = res.error;                        // the failing branch, typed
+    if (why.length === 0) throw new Error('empty error code');
+  } else {
+    const head: string = res.head;                        // the resolving branch, typed
+    if (head.length === 0) throw new Error('empty key-log head');
+  }
+
+  // ── 5. AN HONEST `unknown`, NARROWED — no cast. `ustGrid` returns `string[] | null` at runtime and the
   // generator will not claim that from a JavaScript body, so it says `unknown`. That is the promise we chose in
   // #116: a weak type a consumer can narrow beats a confident one that is wrong. This is what narrowing costs —
   // three lines, no `as`, and the compiler proves the result rather than being told.

@@ -76,6 +76,17 @@ check(lineHeads.length >= 1, 'no `## … rc.N line` section found — versions h
     `the CHANGELOG has more than one section for ${[...new Set(dupes)].join(', ')} — a version is ONE line, and two ` +
     `sections for it split the rounds that shipped in it from the rounds that claim not to have. Merge them.`);
 
+  // AT MOST ONE UNPUBLISHED LINE. A version line is opened by a PUBLICATION — the header of every published one
+  // says so ("Opened because rc.N is PUBLISHED and a published version is immutable") — and a round that lands
+  // while the line is still open belongs in that line as another ROW. MEASURED 2026-07-31: three stacked
+  // `## rc.NN line — unpublished` headers, rc.49 / rc.50 / rc.51, each opened by a round and each carrying a
+  // sentence I wrote to justify opening it. The owner read them and said it had become a system. It had: this is
+  // the duplicate-rc.46 shape again — satisfying a surface by ADDING structure instead of using what is there.
+  const unpubCount = (CH.match(/^## rc\.\d+ line — unpublished/gm) ?? []).length;
+  check(unpubCount <= 1,
+    `${unpubCount} version lines are headed \`— unpublished\`. A line is opened by a PUBLICATION and never by a ` +
+    `round: while the current line is unpublished, a new round is another ROW in it. Merge them, keeping every row.`);
+
   // MEASURED, not assumed: 5 sections read newest-first, 1 oldest-first, 3 carry a single row, and rc.38/rc.39 are
   // neither. So "newest-first" is the convention of the file without being true of all of it, and round 67 owns two
   // rows (`cli rc.68` and `ledger`) where the file's own format for a multi-artifact round is one row with `<br>`.
