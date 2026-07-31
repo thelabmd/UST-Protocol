@@ -64,3 +64,4 @@ export function verifyRaw(raw?: unknown, opts?: unknown): { verdict: unknown; do
 export function whatsNextSummary(arg0?: unknown): Record<string, unknown>;
 export const WRANGLER_LOGIN_CMD: unknown;
 export function wranglerDeploy(arg0?: unknown): Promise<{ genHash: unknown; script: unknown; route: unknown; dir: unknown }>;
+export const ghMirrorPublish: unknown;

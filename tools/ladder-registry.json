@@ -682,6 +682,22 @@
       "test": {
         "excluded": "The test is the runnable example on the package page, executed by the printed-command gate: it mints a genesis and key-log and reaches VALID:HIGH, so the construction path is checked by running it rather than asserted. The builder's four cases (null, [], undefined, non-empty) were each measured directly; the ceremony leg is covered by the CLI regression, which runs green with the stricter self-check."
       }
+    },
+    {
+      "round": 118,
+      "math": {
+        "excluded": "The rule that decided the fix is TypeScript's grammar, not this protocol's model: a required parameter may not follow an optional one. Nothing in the formal model speaks about declaration files, and no obligation on producers or verifiers moved."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. A .d.ts is a convenience for one language's consumers and binds nobody implementing UST."
+      },
+      "code": "tools/gen-types.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. A declaration file produces no document and changes no verdict; the artefact here is the gate, which compiles every shipped .d.ts with a real compiler rather than pattern-matching it."
+      },
+      "test": {
+        "excluded": "The test is tools/types-integrity-gate.mjs, run as a CI step: it compiles each shipped declaration file and compares its declarations against the imported module's exports in both directions. Its control writes the exact shape that shipped — a required parameter after an optional one — and requires TS1016, so a compile leg that stopped running fails by name rather than passing for free."
+      }
     }
   ],
   "first_accounted_round": 76,

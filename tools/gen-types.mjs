@@ -19,6 +19,7 @@
 // needed to know a sixth parameter existed. Value types are `unknown` until someone refines them by hand,
 // which is honest — a loose declaration that is complete beats a precise one that is stale. Refinement is
 // incremental and the gate keeps it in sync either way.
+import { pathToFileURL } from 'node:url';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -79,8 +80,26 @@ function relaxTrailing(params, body) {
   return params;
 }
 
-export function declarationsFor(src) {
+export function declarationsFor(src, resolveModule) {
   const decls = [];
+  // `export { a, b } from './other.mjs'` — a form this generator did not read, so SEVEN names left the module at
+  // runtime with no declaration at all (measured 2026-07-30: 108 declared against 117 exported). A consumer who
+  // deletes their hand-written types loses them silently. The names are followed into the module they come from
+  // and declared from ITS source, so a re-export is typed like anything else rather than dropped.
+  for (const m of src.matchAll(/^export \{([^}]+)\} from '([^']+)';/gm)) {
+    const names = m[1].split(',').map((x) => x.trim().split(/\s+as\s+/).pop().trim()).filter(Boolean);
+    const from = resolveModule?.(m[2]);
+    if (!from) { for (const n of names) decls.push({ kind: 'const', name: n, type: 'unknown' }); continue; }
+    const inner = declarationsFor(from);
+    for (const n of names) {
+      const d = inner.find((x) => x.name === n);
+      decls.push(d ? { ...d, name: n } : { kind: 'const', name: n, type: 'unknown' });
+    }
+  }
+  // `export class X extends Error` — the third form the generator did not know. Two error classes left the module
+  // undeclared, and a consumer catching them by type had nothing to catch by.
+  for (const m of src.matchAll(/^export class (\w+)(?:\s+extends\s+(\w+))?\s*\{/gm))
+    decls.push({ kind: 'class', name: m[1], extends: m[2] ?? null });
   for (const m of src.matchAll(/^export (?:async )?function (\w+)\s*\(([\s\S]*?)\)\s*\{/gm)) {
     const body = bodyOf(src, m.index + m[0].length - 1);
     const isA = /^export async/.test(m[0]);
@@ -202,6 +221,18 @@ const render = (pkg, decls) => {
   ];
   const body = decls.map((d) => {
     if (d.kind === 'const') return `export const ${d.name}: unknown;`;
+    if (d.kind === 'class')
+      return `export class ${d.name}${d.extends ? ' extends ' + d.extends : ''} { constructor(verdict?: unknown); }`;
+    // TypeScript forbids a required parameter AFTER an optional one; JavaScript permits it, and our own core uses
+    // it — `buildAbsence(id, time, name, reason, extra = {}, prev)` is legal JS and, transcribed literally, an
+    // ILLEGAL declaration. MEASURED 2026-07-30 from a consumer: the shipped index.d.ts carried two TS1016 errors,
+    // and everything declared BELOW them was lost to the compiler — `resolveKeys`, three lines past the second one,
+    // read as "does not exist". A parse error in a .d.ts is not a style problem: it truncates the file silently,
+    // and `skipLibCheck` does not help because it skips CHECKING, not PARSING.
+    // The grammar decides the fix, not preference: optionality is contagious to the right. A caller passing every
+    // argument still type-checks, so nothing true becomes unexpressible.
+    let seenOptional = false;
+    for (const p of d.params) { if (p.optional && !p.rest) seenOptional = true; else if (seenOptional && !p.rest) p.optional = true; }
     const ps = d.params.map((p) => `${p.rest ? '...' : ''}${p.name}${p.optional && !p.rest ? '?' : ''}: ${p.rest ? 'unknown[]' : 'unknown'}`).join(', ');
     return `export function ${d.name}(${ps}): ${d.ret ?? (d.async ? 'Promise<unknown>' : 'unknown')};`;
   });
@@ -222,7 +253,20 @@ for (const w of workspaces) {
   const main = pkg.main ?? 'index.mjs';
   let src;
   try { src = readFileSync(join(root, w, main), 'utf8'); } catch { continue; }
-  const decls = declarationsFor(src);
+  // COMPLETENESS BY CONSTRUCTION. Patterns over source text will always miss a form — measured 2026-07-30:
+  // `export { … } from` cost seven declarations, `export class` two, and `ghMirrorPublish` is reachable at runtime
+  // (the regression suite calls it through the namespace) in a form four separate greps did not find. Chasing forms
+  // is unwinnable; the MODULE knows its own exports. Anything the namespace has and the parser missed is declared
+  // as `unknown` — an honest weak type beats a name a consumer cannot reach at all, and the gate then compares both
+  // directions so the gap can never be silent again.
+  const decls = declarationsFor(src, (rel) => {
+    try { return readFileSync(join(root, w, rel.replace(/^\.\//, '')), 'utf8'); } catch { return null; }
+  });
+  try {
+    const ns = await import(pathToFileURL(join(root, w, main)).href);
+    for (const name of Object.keys(ns))
+      if (name !== 'default' && !decls.some((d) => d.name === name)) decls.push({ kind: 'const', name, type: 'unknown' });
+  } catch { /* not importable here: the source-derived set is all we can honestly claim */ }
   if (!decls.length) continue;
   writeFileSync(join(root, w, main.replace(/\.m?js$/, '.d.ts')), render(pkg.name, decls));
   wrote++; total += decls.length;

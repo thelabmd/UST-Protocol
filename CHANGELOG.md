@@ -25,6 +25,15 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
+## rc.44 line — unpublished
+
+Opened because rc.43 is PUBLISHED and a published version is immutable. This line carries the first devDependency
+this repository has ever had, and the reason it earns its place.
+
+| version | round | what closed |
+|---------|-------|-------------|
+| **protocol rc.44**<br>**cli rc.78** | 118 | **We shipped a declaration file that does not compile, and nothing here could have noticed — because nothing here had a compiler.** Found downstream, in a consumer: `ust-protocol/index.d.ts` carried two `TS1016` errors — a required parameter after an optional one. **JavaScript permits that and TypeScript does not**; our own core writes `buildAbsence(id, time, name, reason, extra = {}, prev)`, legal JS, and the generator transcribed it literally into an illegal declaration. **The consequence is the finding, not the syntax:** a parse error TRUNCATES a `.d.ts`. `resolveKeys` sits three lines past the second error and read as *does not exist* to a consumer who had done nothing wrong, while `skipLibCheck` — which skips CHECKING, not PARSING — hid it from everyone. The grammar decided the fix, not preference: optionality is contagious to the right, and a caller passing every argument still type-checks, so nothing true became unexpressible. **Nine exports had no declaration at all**, because the generator matched SYNTAX FORMS while the module also uses `export { … } from` (seven) and `export class` (two). It now follows re-exports and knows classes — and then a tenth, `ghMirrorPublish`, turned out to be reachable at runtime in a form **four separate greps did not find**. Chasing forms is unwinnable, so the generator stopped chasing: **it imports the module and declares anything the parser missed**, weakly typed rather than absent, because an honest `unknown` beats a name a consumer cannot reach. **New `types-integrity` gate, and it needed the decision it exposed:** `typescript` is now a devDependency — the first in a repository proud of having none. It earns it, because *we ship types* was a claim nothing could check; a gate that cannot compile is a gate that cannot fail. Two legs: every shipped `.d.ts` COMPILES, and its declarations equal the module's runtime exports BOTH directions. Control: the exact shape that shipped — a required parameter after an optional one — must produce `TS1016`, or the compile leg is not running. CI 60 → 61 steps, 213 declarations across 7 packages, all six type files at zero errors. |
+
 ## rc.43 line
 
 **PUBLISHED 2026-07-30** — `ust-protocol` rc.43 and `@ust-protocol/cli` rc.77, with `rc` and `next`
