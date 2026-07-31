@@ -25,6 +25,14 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
+## rc.46 line — unpublished
+
+Opened because rc.45 is PUBLISHED and a published version is immutable. Nothing in this line touches the wire.
+
+| version | round | what closed |
+|---------|-------|-------------|
+| **tooling** | 120 | **I pushed scratch into the PUBLIC repository, and the gate written for exactly that was never wired into CI.** `.ex-tmp/probe.ts` — a temp file this repository's own gates create while they run — was caught by `git add -A` and shipped. Removed and gitignored, along with the other path the gates write (`.types-gate-control.d.ts`), so an interrupted run can no longer be committed. **But the removal is the small half.** `tools/root-inventory-gate.mjs` was written on 28 July for this exact class — two stray output redirects the owner did not recognise in the root — and `grep -c root-inventory .github/workflows/ci.yml` returns **0**. It has never run. A gate that exists and is not executed asserts nothing, which is the same finding as *57 of 58 steps graded* three rounds ago, in a different disguise: there it was a step the map could not see, here a gate nobody called. **And its domain was one level too shallow:** it enumerates top-level FILES, so `.ex-tmp/probe.ts` was invisible to it by construction — the defect was one level below where it looked, which is why it passed while the scratch sat in the tree. Top-level DIRECTORIES are enumerated now, each declared with what it is for; the first run found two that nobody had ever declared, `art/` and `releases/`, both real and now written down. Control: a stray directory staged into the index fails by name. CI 61 → 62 steps. |
+
 ## rc.45 line
 
 **PUBLISHED 2026-07-31** — seven packages: `ust-protocol` rc.45, `cli` rc.79, `mcp` rc.34,

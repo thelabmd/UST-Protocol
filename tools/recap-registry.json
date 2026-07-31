@@ -178,6 +178,10 @@
       "round": 119,
       "issue": 116,
       "content_hash": "sha256:add945526ae24e64ecf3e1008d86ff5f453bff8607ad6ddb0243097a77ad5218"
+    },
+    {
+      "round": 120,
+      "no_recap": "Round 120 closed no issue — the owner spotted scratch in the public tree directly, and there is no ticket to receive a recap comment."
     }
   ]
 }

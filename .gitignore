@@ -44,3 +44,11 @@ INTERNAL-*
 .beads-credential-key
 .beads/proxieddb/
 .claude-asserted-state/
+
+# Transient scratch created BY THE GATES themselves while they run: the printed-command gate writes a runnable
+# example into a temp dir under the repo (the workspace must resolve exactly as it does for an installer), and the
+# types gate writes a control declaration. Both clean up after themselves — but a `git add -A` during a run, or
+# after an interrupted one, catches them. MEASURED 2026-07-31: `.ex-tmp/probe.ts` reached the PUBLIC repo that way.
+.ex-tmp/
+.ex-*/
+.types-gate-control.d.ts

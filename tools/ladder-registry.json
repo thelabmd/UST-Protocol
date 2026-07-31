@@ -714,6 +714,22 @@
       "test": {
         "excluded": "The check is the types-integrity gate already added in round 118 — it compiles every shipped declaration file, and a return type that names one branch of several compiles fine, so the gate cannot adjudicate this. What decided it was the consumer probe: a TypeScript file importing resolveKeys and calling it, which failed before and compiles now. Stated rather than dressed as gated: the gate does not cover this, and saying so is the point."
       }
+    },
+    {
+      "round": 120,
+      "math": {
+        "excluded": "What sits at the root of our repository is a property of our housekeeping, not of the protocol. The model states obligations on producers and verifiers and is untouched; the rule applied here — enumerate the level you actually mean — is the one this repository already imposes on itself."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, no conformance obligation changed. A directory listing binds nobody implementing UST."
+      },
+      "code": "tools/root-inventory-gate.mjs",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce. A tracked directory produces no document and changes no verdict; the artefact is the gate's new domain plus the CI step that finally executes it."
+      },
+      "test": {
+        "excluded": "The control is run and recorded rather than committed: a stray directory staged into the index makes the gate fail by name, and committing that directory to freeze the control would ship the very thing this round removes. It runs as a CI step now, which is the change that matters — before this round the gate was never executed at all."
+      }
     }
   ],
   "first_accounted_round": 76,
