@@ -17,7 +17,7 @@
 // Package: @ust-protocol/cli
 
 export function addKeylogKey(arg0?: unknown): Promise<{ keylog: unknown; newKey: unknown }>;
-export const ARTIFACT_ORIGIN: unknown;
+export const ARTIFACT_ORIGIN: Readonly<{ genesis: 'loaded'; keylog: 'loaded'; cadence: 'loaded'; witness: 'derived' }>;
 export function askHidden(q: unknown, fallbackAsk: unknown): Promise<string>;
 export function attestDiscovery(arg0?: unknown): Promise<{ hash: unknown; checks: unknown; verdict: unknown }>;
 export function attestMirror(arg0?: unknown): Promise<{ canonHash: unknown; results: unknown; failed: unknown }>;

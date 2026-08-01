@@ -19,6 +19,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
 const U = (p) => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
+const CI_YML = (() => { try { return U('.github/workflows/ci.yml'); } catch { return ''; } })();
 const REG = JSON.parse(U('tools/ladder-registry.json'));
 const MODEL = U('spec/UST-1.0-formal-model.md');
 const SPEC = U('spec/UST-1.0.md');
@@ -58,7 +59,18 @@ const RESOLVES = {
   spec: (v) => SPEC.includes(v),
   code: (v) => { const f = v.split(' :: ')[0].trim(); try { U(f); return true; } catch { return false; } },
   vector: (v) => VECTORS.some((x) => x.id === v),
-  test: (v) => EXECUTED.has(v),
+  // A test reference is EVIDENCE THAT SOMETHING RAN. Usually that is a conformance check id from one of the
+  // two rosters. But a round whose test layer is a GATE has no check id — the gate itself is the executed
+  // artifact, and refusing it would force such rounds into exclusions, which is how a gate goes unrecorded.
+  // Accepted only when the file exists AND the CI workflow actually invokes it: a path nobody runs is not
+  // evidence, it is a claim.
+  test: (v) => {
+    if (EXECUTED.has(v)) return true;
+    const f = v.split(' :: ')[0].trim();
+    if (!/^tools\/[\w.-]+\.mjs$/.test(f)) return false;
+    try { U(f); } catch { return false; }
+    return CI_YML.includes(f);
+  },
 };
 
 // ── WHERE a round is recorded moved, and the gate had to move with it (round 77). The reference-checker rev-ladder

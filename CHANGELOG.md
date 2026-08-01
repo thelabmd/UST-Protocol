@@ -25,6 +25,12 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
+## rc.63 line
+
+| version | round | what closed |
+|---------|-------|-------------|
+| **rc.63**<br>**operator 0.9.1**<br>**cli rc.96**<br>**mcp rc.52**<br>**light rc.52**<br>**web-signer rc.21**<br>**ots-verify rc.29**<br>**rekor-verify rc.24**<br>**diarium 0.2.18** | 141 | **A declared vocabulary a consumer cannot name is not a vocabulary (#125).** Round 140 put `HEAD_STATES` in the layer so two operators emit the same word — and the first typed consumer could not name a state, because every exported CONST shipped as `unknown`. Unlike a return type, a const has exactly ONE initializer, so there is nothing to disagree with: where it is an object literal of quoted strings, the keys and the values are stated outright. Four vocabularies now declare themselves — `HEAD_STATES`, `STREAM_KEYS`, `STABILITY`, `ARTIFACT_ORIGIN` — and anything that is not a literal-of-strings stays `unknown`, because guessing is the failure this generator refuses. **Two silent mistakes on the way, both caught by reading the artifact rather than the intent:** the first attempt counted commas to decide whether every member was a string, and a comma inside a trailing `//` comment made every vocabulary look mixed — the change did nothing at all and said nothing about it. Then the inference was computed and DISCARDED, because the renderer hardcoded `unknown` for every const; improving the producer changed no output. **And a declaration like this must be gated or it drifts:** renaming a member in the source leaves the old name compiling against a value that no longer has it. The types-integrity gate now compares each declared vocabulary against the RUNTIME object, with a floor so the leg cannot go blind, and the check is mutation-tested by renaming a member. |
+
 ## rc.62 line
 
 | version | round | what closed |

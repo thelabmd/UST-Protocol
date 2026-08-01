@@ -20,7 +20,7 @@ export function advanceHead(store: unknown, arg1?: unknown): Promise<string>;
 export class AnchorBatch { constructor(verdict?: unknown); }
 export function assembleLayers(layers: unknown, arg1?: unknown): { valid: unknown; seedOk: unknown; perLayer: unknown; verifiedDepth: unknown };
 export const BREADTH: unknown;
-export const HEAD_STATES: unknown;
+export const HEAD_STATES: Readonly<{ consistent: 'consistent'; recovered: 'recovered'; unverified: 'unverified'; refused: 'refused' }>;
 export class KeyLog { constructor(verdict?: unknown); }
 export function layerSeed(subordinateDocs: unknown): unknown;
 export function loadStreamState(store: unknown): Promise<{ head: unknown; count: unknown; cpHead: unknown; spanFrom: unknown; spanTo: unknown }>;
@@ -32,7 +32,7 @@ export function recoverHead(store: unknown, arg1?: unknown): Promise<{ state: un
 export function sealLayerChain(outerState: unknown, subordinateDocs: unknown, sign: unknown): unknown;
 export function sealTree(idMeta: unknown, time: unknown, hashes: unknown, sign: unknown, arg4?: unknown): Promise<unknown>;
 export class Stream { constructor(verdict?: unknown); }
-export const STREAM_KEYS: unknown;
+export const STREAM_KEYS: Readonly<{ head: 'ust:stream:head'; count: 'ust:stream:count'; cpHead: 'ust:stream:cp-head'; spanFrom: 'ust:stream:span-from'; spanTo: 'ust:stream:span-to' }>;
 export const substrates: unknown;
 export function substrateVerifier(deps?: unknown): unknown;
 export class Tiers { constructor(verdict?: unknown); }

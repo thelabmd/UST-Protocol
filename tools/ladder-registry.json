@@ -966,6 +966,20 @@
         "excluded": "No document bytes and no verdict change: the vocabulary describes a producer's recovery outcome, which appears in no document a verifier reads."
       },
       "test": "#124 F.5r-g.1 the outcome vocabulary is DECLARED BY THE LAYER and total — an operator that has to invent a word for one of these cases makes its telemetry incomparable with every other operator's"
+    },
+    {
+      "round": 141,
+      "math": {
+        "excluded": "What a generator can soundly infer is a property of this implementation's packaging, not of the protocol: no producer obligation moved and no verdict changed. The mathematical content — that a total outcome set is an interface — was decided in round 140."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved. §11.3 already requires a producer to report one of the declared states; this round only makes that set nameable by a typed consumer."
+      },
+      "code": "tools/gen-types.mjs :: an exported const initialized with an object literal of quoted strings declares its keys and values; the renderer stops discarding the inferred type",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they produce. A declaration produces no document and changes no verdict."
+      },
+      "test": "tools/types-integrity-gate.mjs :: every declared vocabulary is compared against the RUNTIME object, with a floor so the leg cannot go blind; mutation-tested by renaming a member"
     }
   ],
   "first_accounted_round": 76,

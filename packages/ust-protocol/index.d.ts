@@ -121,7 +121,7 @@ export function sealAuthorityCheckpoint(body: unknown, privKeyObj: unknown, pubB
 export function seed(contentHashes: unknown): string;
 export function signedContent(doc: unknown): string;
 export function snapshotBytes(input: unknown, maxBytes?: unknown, sizeErr?: unknown): unknown;
-export const STABILITY: unknown;
+export const STABILITY: Readonly<{ light: 'stable'; high: 'stable'; corroborated: 'experimental-usable'; attested: 'experimental-extension' }>;
 export function strictB64url(s: unknown, bytes: unknown): string;
 export function surfaceVerdict(arg0?: unknown): unknown;
 export const TIER_RANK: unknown;

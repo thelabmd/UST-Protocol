@@ -24,6 +24,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const fail = [];
+let vocabularies = 0;
 let pass = 0;
 const check = (ok, msg) => { if (ok) pass++; else fail.push(msg); };
 
@@ -61,8 +62,20 @@ for (const w of WORKSPACES) {
   for (const name of declared) check(exported.includes(name),
     `${dts} declares \`${name}\` and the module exports no such name — a promise about a door that is not there`);
   check(exported.length > 0, `${pkg.name} exports nothing at runtime — the namespace probe has gone blind and both directions above would pass for free`);
+
+  // ── leg 3: a DECLARED VOCABULARY must equal the value it describes. A const whose keys and string values
+  // are written into the declaration is the most useful kind for a consumer and the most dangerous kind to
+  // let drift: renaming a member in the source leaves the old name compiling against a value that no longer
+  // has it. Compare the declaration against the RUNTIME object, not against the source that produced both.
+  for (const m of readFileSync(ROOT + dts, 'utf8').matchAll(/^export const (\w+): Readonly<\{([^}]*)\}>/gm)) {
+    const declaredPairs = Object.fromEntries([...m[2].matchAll(/([A-Za-z_$][\w$]*): '([^']*)'/g)].map((x) => [x[1], x[2]]));
+    check(JSON.stringify(declaredPairs) === JSON.stringify(ns[m[1]]),
+      `${pkg.name} declares \`${m[1]}\` as ${JSON.stringify(declaredPairs)} and the value is ${JSON.stringify(ns[m[1]])} — a vocabulary that disagrees with itself is worse than an undeclared one, because a consumer compiles against the wrong word`);
+    vocabularies++;
+  }
 }
 check(checked >= 5, `only ${checked} package(s) ship declarations — the roster has gone blind`);
+check(vocabularies >= 3, `only ${vocabularies} declared vocabular(y/ies) were compared against their values — the leg has gone blind and would pass for free`);
 
 // ── the compile leg must be able to FAIL, proven against the exact shape that shipped: JS allows a defaulted
 // parameter before a required one, TypeScript does not, and that is what truncated the file.

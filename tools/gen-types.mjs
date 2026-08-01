@@ -175,7 +175,29 @@ export function declarationsFor(src, resolveModule) {
     decls.push({ kind: 'function', name: m[1], params: relaxTrailing(parseParams(m[2]), body2), async: isA2, ret: returnTypeOf(body2, isA2) });
   }
   for (const m of src.matchAll(/^export const (\w+)\s*=\s*(?!\(|async)/gm)) {
-    if (!decls.some((d) => d.name === m[1])) decls.push({ kind: 'const', name: m[1] });
+    // A CONST HAS EXACTLY ONE INITIALIZER, so unlike a return type there is nothing to disagree with. Where it
+    // is an object literal of quoted strings — a declared vocabulary such as STREAM_KEYS or HEAD_STATES — the
+    // keys AND the values are stated outright and a consumer can reach them. Measured 2026-08-01: every const
+    // in the operator package shipped as `unknown`, so the first typed consumer of the state vocabulary could
+    // not name a state without re-declaring the layer's own contract locally — the divergence that vocabulary
+    // exists to prevent. Anything that is not a literal-of-strings stays `unknown`: no guessing.
+    if (!decls.some((d) => d.name === m[1])) {
+      const tail = src.slice(m.index + m[0].length);
+      const lit = tail.match(/^\s*(?:Object\.freeze\(\s*)?\{([\s\S]*?)\}\s*\)?\s*;/);
+      let type;
+      if (lit) {
+        // Comments first: a `//` explanation after an entry may contain commas, and counting them as
+        // separators made every vocabulary look like it held non-string members. Measured — the first
+        // attempt at this changed nothing at all, silently.
+        const bare = lit[1].replace(/\/\/[^\n]*/g, '');
+        const parts = bare.split(',').map((x) => x.trim()).filter(Boolean);
+        const pairs = parts.map((x) => x.match(/^([A-Za-z_$][\w$]*)\s*:\s*'([^']*)'$/));
+        if (parts.length && pairs.every(Boolean)) {
+          type = 'Readonly<{ ' + pairs.map((e) => `${e[1]}: '${e[2]}'`).join('; ') + ' }>';
+        }
+      }
+      decls.push({ kind: 'const', name: m[1], ...(type ? { type } : {}) });
+    }
   }
   return decls.sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -345,7 +367,10 @@ const render = (pkg, decls) => {
   ];
   const body = decls.map((d) => {
     if (SHAPES_FOR.has(pkg) && d.kind === 'function' && SHAPE_RETURNS[d.name]) d = { ...d, ret: SHAPE_RETURNS[d.name] };
-    if (d.kind === 'const') return `export const ${d.name}: unknown;`;
+    // The inferred type was computed and then DISCARDED here — this line hardcoded `unknown` for every const,
+    // so improving the producer changed nothing and did so silently. Read what the renderer emits, not what the
+    // parser decided.
+    if (d.kind === 'const') return `export const ${d.name}: ${d.type ?? 'unknown'};`;
     if (d.kind === 'class')
       return `export class ${d.name}${d.extends ? ' extends ' + d.extends : ''} { constructor(verdict?: unknown); }`;
     // TypeScript forbids a required parameter AFTER an optional one; JavaScript permits it, and our own core uses
