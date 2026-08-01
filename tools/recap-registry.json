@@ -259,6 +259,10 @@
     {
       "round": 138,
       "no_recap": "Round 138 does not close #124 — the layer offers the check; the issue closes when an operator calls it before building and the reconciliation is measured on a live stream."
+    },
+    {
+      "round": 139,
+      "no_recap": "Round 139 does not close #124 — the layer can recover; the issue closes when an operator recovers from its own published set after a restart and it is measured live."
     }
   ]
 }

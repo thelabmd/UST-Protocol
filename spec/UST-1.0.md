@@ -3,7 +3,7 @@
 
 *This specification text is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](../LICENSE-SPEC). Reference code in this repository is licensed Apache-2.0. Use of the name **UST** / **Universal State Transcript** and the **UST-compatible** claim: see [TRADEMARK.md](../TRADEMARK.md).*
 
-> **Release candidate — `1.0.0-rc.60`.** This specification has been extensively red-teamed; an independent
+> **Release candidate — `1.0.0-rc.61`.** This specification has been extensively red-teamed; an independent
 > external cryptographic audit is pending. It is subject to change until `1.0.0` final. The wire format `ust:"1.0"`
 > is stable across all rc's — pin exact versions. Per-version history is in [`CHANGELOG.md`](../CHANGELOG.md).
 
@@ -801,6 +801,15 @@ head against THE DOCUMENT IT LAST PUBLISHED, re-assert that head if it is absent
 it names the same successor of the same predecessor — and MUST NOT extend a head that matches neither its last
 observation nor its last emission. A producer that cannot establish this after a restart MUST treat its head
 as unverified rather than assume it (formal model F.5r-f).
+
+That unverified state is recoverable, and a producer that can read its own published documents MUST recover
+rather than assume: the stored head is a CACHE of a fact whose home is the published set. Given the last
+published document `d`, a producer MUST adopt `h(d)` when the stored head equals `prev(d)` — the document
+itself proves it is that head's successor — and MUST REFUSE when `d` neither is nor extends what the pointer
+holds, because adopting a head that does not extend the stored one can chain the next frame beneath another
+writer's live branch. The search for `d` walks the declared cadence grid backwards and MUST be bounded;
+exhausting the bound yields `unverified`, which is a gap to be STATED under §11.1, not inferred
+(formal model F.5r-g).
 
 **Checkpoints (M5).** Checkpoints are themselves `prev`-chained frames (`class:"attestation"`) that assert the
 stream head + frame count over an interval. The asserted `frame_count` is CUMULATIVE from the stream origin, so

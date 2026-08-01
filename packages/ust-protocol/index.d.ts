@@ -31,7 +31,7 @@ export interface UstStreamComplete { complete: string; head?: unknown; detail?: 
 export type UstStreamVerdict = UstStreamComplete | UstError;
 
 export function admitDeep(v: unknown, seen?: unknown): unknown;
-export function admitUtf8(bytes: unknown): unknown;
+export function admitUtf8(bytes: unknown): { err: unknown };
 export function anchorRollup(arg0?: unknown): unknown;
 export function anyLoneSurrogate(root: unknown): unknown;
 export function assertValid(verdict: unknown): unknown;
@@ -46,7 +46,7 @@ export function blindPartition(name: unknown, value: unknown, arg2?: unknown): {
 export function buildAbsence(id: unknown, time: unknown, name: unknown, reason: unknown, extra?: unknown, prev?: unknown): unknown;
 export function buildAttestation(id: unknown, time: unknown, data: unknown, constituents: unknown, prev?: unknown): Record<string, unknown>;
 export function buildAuthorityCheckpoint(arg0?: unknown): { version: unknown; purpose: unknown; domain_shard: unknown; genesis_epoch: unknown; sequence: unknown; checkpoint_authority: unknown; keylog: unknown };
-export function buildAuthorityProof(inputs?: unknown): unknown;
+export function buildAuthorityProof(inputs?: unknown): { term: unknown; witnesses: unknown };
 export function buildCadenceEntry(id: unknown, time: unknown, cadence: unknown, effectiveFrom: unknown, prev: unknown): unknown;
 export const buildCheckpoint: unknown;
 export function buildDerivation(id: unknown, time: unknown, data: unknown, basedOn: unknown, prev?: unknown): Record<string, unknown>;
@@ -64,7 +64,7 @@ export function buildUniquenessAttestation(fields: unknown, privKeyObj: unknown,
 export function buildVerifiableMap(leaves: unknown): unknown;
 export function canon(v: unknown): string;
 export function capAssurance(state: unknown, ceiling: unknown): Record<string, unknown>;
-export function checkAuthorityProof(obj: unknown, config: unknown): unknown;
+export function checkAuthorityProof(obj: unknown, config: unknown): { result: unknown; reason: unknown };
 export function checkAuthorityProofBytes(packageBytes: unknown, configBytes: unknown): unknown;
 export function checkBounds(rawDoc: unknown): string;
 export function checkpointMapLeaf(arg0: unknown): unknown;
@@ -109,8 +109,8 @@ export const REGISTRY: unknown;
 export function registryDigest(): unknown;
 export function replicationAgreement(arg0?: unknown): unknown;
 export function resolveAuthority(doc: unknown, opts?: unknown): unknown;
-export function resolveByDiscovery(doc: unknown, opts?: unknown, transport?: unknown): Promise<unknown>;
-export function resolveCadence(genesis: unknown, cadenceLog?: unknown, atTime?: unknown, opts?: unknown): unknown;
+export function resolveByDiscovery(doc: unknown, opts?: unknown, transport?: unknown): Promise<{ verdict: unknown; resolution: unknown }>;
+export function resolveCadence(genesis: unknown, cadenceLog?: unknown, atTime?: unknown, opts?: unknown): { error: unknown; detail: unknown };
 export function resolveCadenceBytes(genesisBytes: unknown, cadenceLogBytes: unknown, atTime: unknown, keylogBytes: unknown): unknown;
 export function resolveCheckpointRoots(genesis: unknown): unknown;
 export function resolveKeys(genesis: unknown, keylog?: unknown): UstKeyResolution;
@@ -132,8 +132,8 @@ export function verifiedEvidence(arg0?: unknown): { proof_kind: unknown; subject
 export function verifiedGenesisContext(genesis: unknown): unknown;
 export function verify(doc: unknown, opts?: unknown): UstVerdict;
 export function verifyActiveGenesisUniqueness(proof: unknown, config: unknown): unknown;
-export function verifyAnchor(contentHash: unknown, proof: unknown, opts?: unknown): unknown;
-export function verifyAsync(doc: unknown, opts?: unknown): Promise<unknown>;
+export function verifyAnchor(contentHash: unknown, proof: unknown, opts?: unknown): { inclusion: unknown; error: unknown; detail: unknown };
+export function verifyAsync(doc: unknown, opts?: unknown): Promise<{ result: unknown; error: unknown; detail: unknown }>;
 export function verifyAuthorityBundle(inputs?: unknown, config?: unknown): unknown;
 export function verifyAuthorityCheckpointChain(chain: unknown, config: unknown): unknown;
 export function verifyCheckpointMapUniqueness(proof: unknown, config: unknown): unknown;
@@ -142,7 +142,7 @@ export function verifyCheckpointUniqueness(attestations: unknown, config: unknow
 export function verifyEpochTransition(statement: unknown, config: unknown): unknown;
 export function verifyEvidenceReceipt(receipt: unknown, config: unknown): unknown;
 export function verifyJson(rawBytes: unknown, opts?: unknown): UstVerdict;
-export function verifyKeylogTerminality(head_: unknown, proof?: unknown): unknown;
+export function verifyKeylogTerminality(head_: unknown, proof?: unknown): { terminal: unknown; detail: unknown };
 export function verifyNoForkEvidence(evidence: unknown, config: unknown): unknown;
 export function verifyOrThrow(doc: unknown, opts?: unknown): unknown;
 export function verifyStream(frames: unknown, config: unknown): UstStreamVerdict;

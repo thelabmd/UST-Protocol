@@ -212,6 +212,23 @@ function returnTypeOf(rawBody, isAsync) {
     // compile error and reached for `as any`. Sampling the first branch is the same defect as sampling a syntax
     // form: it describes the case in front of the probe, not the function. Where the shapes disagree the honest
     // declaration is `unknown` — it forces the caller to narrow instead of confidently misleading them.
+    // A SHAPE IS ITS KEYS, NOT ITS TEXT. The rule above is right and stays: where two returns disagree on what
+    // a consumer can reach, declaring one of them is confidently misleading. But comparing the raw source made
+    // every branch whose VALUE EXPRESSIONS differ look like a disagreement — `{ state: 'unverified', head: await
+    // store.get(k) }` and `{ state: cond ? a : b, head: published }` offer a consumer exactly the same two
+    // fields. Measured 2026-08-01 by the first typed consumer of `reconcileHead`: the declaration shipped
+    // `Promise<unknown>`, and reading `r.state` did not compile — the same wall #117 was about, reached by a
+    // different road. Key sets decide; disagreeing key sets still collapse to `unknown`.
+    const keysOfLiteral = (lit) => {
+      const out = []; let depth = 0, buf = '';
+      for (const ch of lit + ',') {
+        if ('([{'.includes(ch)) depth++;
+        else if (')]}'.includes(ch)) depth--;
+        if (ch === ',' && depth === 0) { const k = buf.trim().split(':')[0].trim(); if (/^[A-Za-z_$][\w$]*$/.test(k)) out.push(k); buf = ''; continue; }
+        buf += ch;
+      }
+      return [...new Set(out)].sort();
+    };
     const shapes = new Set();
     for (const m2 of expr.matchAll(/\breturn\s*\{/g)) {
       const o = expr.indexOf('{', m2.index);
@@ -220,7 +237,7 @@ function returnTypeOf(rawBody, isAsync) {
         if (expr[k] === '{') dd++;
         else if (expr[k] === '}') { dd--; if (dd === 0) { cc = k; break; } }
       }
-      if (cc > o) shapes.add(expr.slice(o + 1, cc).replace(/\s+/g, ' ').trim().slice(0, 200));
+      if (cc > o) shapes.add(keysOfLiteral(expr.slice(o + 1, cc)).join(','));
       if (shapes.size > 1) break;
     }
     if (shapes.size > 1) return 'unknown';

@@ -19,7 +19,7 @@
 export function addKeylogKey(arg0?: unknown): Promise<{ keylog: unknown; newKey: unknown }>;
 export const ARTIFACT_ORIGIN: unknown;
 export function askHidden(q: unknown, fallbackAsk: unknown): Promise<string>;
-export function attestDiscovery(arg0?: unknown): Promise<unknown>;
+export function attestDiscovery(arg0?: unknown): Promise<{ hash: unknown; checks: unknown; verdict: unknown }>;
 export function attestMirror(arg0?: unknown): Promise<{ canonHash: unknown; results: unknown; failed: unknown }>;
 export function buildCeremony(arg0?: unknown): Promise<{ genesis: unknown; keylog0: unknown; genHash: unknown; op: unknown; opPkcs8: unknown; pkcs8: unknown; warnings: unknown }>;
 export function buildWitnessLog(genesisText: unknown, anchors?: unknown, priorLogText?: unknown): unknown;
@@ -57,7 +57,7 @@ export function openReader(createInterface: unknown): unknown;
 export function parseKeylogRaw(raw: unknown): unknown;
 export function parseLogRaw(raw: unknown, label?: unknown): unknown;
 export function positionals(argv: unknown, valueFlags: unknown): unknown;
-export function rawTextOf(raw: unknown): unknown;
+export function rawTextOf(raw: unknown): { verdict: unknown; doc: unknown; text: unknown };
 export function remintProbe(arg0?: unknown): Promise<unknown>;
 export const RESERVED_TEST_NAME: unknown;
 export function rootSignerFrom(pkcs8: unknown, rootPubB64url: unknown): Promise<unknown>;

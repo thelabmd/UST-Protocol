@@ -282,6 +282,53 @@ check('Tiers:continuation-after-gap', afterGap.state.provenance.prev === P.conte
         rec.state === 'repaired' && (await flaky.get(S.STREAM_KEYS.head)) === published2);
     }
 
+    // ── F.5r-g: recovering the head from what was PUBLISHED, after the emission died with its process.
+    {
+      const mk = async () => {
+        const st = plain();
+        const g0 = sign(P.buildGenesis(id('ust:20260705.18'), t, A.pubB64));
+        const s1 = new S.Stream({ sign, genesisContentHash: P.contentHash(g0), store: st });
+        const d1 = await s1.append(id('ust:20260705.1801'), t, { sw: { kind: 'captured', value: { kp: '1' } } });
+        const d2 = await s1.append(id('ust:20260705.1802'), t, { sw: { kind: 'captured', value: { kp: '2' } } });
+        return { st, d1, d2 };
+      };
+
+      const a1 = await mk();
+      check('#124 F.5r-g the pointer already names the published head — CONSISTENT, and nothing is written',
+        (await stateOf(S.recoverHead(a1.st, { lastPublished: a1.d2 }))) === 'consistent');
+
+      const a2 = await mk();
+      await a2.st.set(S.STREAM_KEYS.head, P.contentHash(a2.d1));   // the advance for d2 was published and never recorded
+      const r2 = await S.recoverHead(a2.st, { lastPublished: a2.d2 });
+      check('#124 F.5r-g ADVERSARIAL the published document EXTENDS the stored head — `prev` is the proof, carried in the document, that this is the successor, so the head is RECOVERED',
+        r2.state === 'recovered' && (await a2.st.get(S.STREAM_KEYS.head)) === P.contentHash(a2.d2));
+
+      const a3 = await mk();
+      const fresh = plain();
+      check('#124 F.5r-g an EMPTY pointer adopts the published head — nothing was ever recorded, so there is nothing to contradict',
+        (await stateOf(S.recoverHead(fresh, { lastPublished: a3.d2 }))) === 'recovered'
+        && (await fresh.get(S.STREAM_KEYS.head)) === P.contentHash(a3.d2));
+
+      const a4 = await mk();
+      await a4.st.set(S.STREAM_KEYS.head, 'sha256:' + 'ab'.repeat(32));
+      check('#124 ADVERSARIAL F.5r-g a document that NEITHER is nor extends the stored head is REFUSED — adopting it could chain the next frame beneath another writer\'s live branch, which is the fork this prevents',
+        (await grab(() => S.recoverHead(a4.st, { lastPublished: a4.d2 }))) === 'E-FORK');
+      check('#124 F.5r-g the refusal left the stored head UNCHANGED — a recovery that overwrites on disagreement takes the stream from whoever holds it',
+        (await a4.st.get(S.STREAM_KEYS.head)) === 'sha256:' + 'ab'.repeat(32));
+
+      const a5 = await mk();
+      check('#124 F.5r-g with NO document the answer is UNVERIFIED, not a guess — reading the published set is the operator\'s capability, and a layer that faked it would assert what it cannot observe',
+        (await stateOf(S.recoverHead(a5.st, {}))) === 'unverified');
+
+      const a6 = await mk();
+      await a6.st.set(S.STREAM_KEYS.head, P.contentHash(a6.d1));
+      await S.recoverHead(a6.st, { lastPublished: a6.d2 });
+      const resumed = await new S.Stream({ sign, genesisContentHash: 'sha256:g', store: a6.st }).resumeFromStore();
+      const d3 = await resumed.append(id('ust:20260705.1803'), t, { sw: { kind: 'captured', value: { kp: '3' } } });
+      check('#124 F.5r-g END TO END after recovery the next frame extends the PUBLISHED document, not the one the stale pointer named',
+        d3.state.provenance.prev === P.contentHash(a6.d2));
+    }
+
     // ── The OTHER two members of W, each with its own outcomes. `gap` extends the chain exactly as an append
     // does; `resume` asserts a head from outside the store and is admissible only while the store agrees.
     {

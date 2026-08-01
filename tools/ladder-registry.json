@@ -946,6 +946,16 @@
         "excluded": "No document bytes and no verdict change: the frames and the checkpoint are byte-identical. What moved is which head a producer may extend, which produces no document."
       },
       "test": "#124 F.5r-f ADVERSARIAL the lost advance is REPAIRED, not repeated — publish succeeded, the head write did not, and the next interval must continue from what was PUBLISHED"
+    },
+    {
+      "round": 139,
+      "math": "The stream's head is defined by what exists, not by what is remembered",
+      "spec": "That unverified state is recoverable, and a producer that can read its own published documents MUST recover",
+      "code": "packages/ust-operator/index.mjs :: recoverHead — consistent / recovered / unverified, refusing a document that neither is nor extends the stored head, and writing through the single guard",
+      "vector": {
+        "excluded": "No document bytes and no verdict change: recovery reads documents that already exist and writes only the producer's pointer, which appears in no document."
+      },
+      "test": "#124 F.5r-g ADVERSARIAL the published document EXTENDS the stored head — `prev` is the proof, carried in the document, that this is the successor, so the head is RECOVERED"
     }
   ],
   "first_accounted_round": 76,

@@ -25,6 +25,12 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
+## rc.61 line
+
+| version | round | what closed |
+|---------|-------|-------------|
+| **operator 0.8.0**<br>**rc.61**<br>**cli rc.94**<br>**mcp rc.50**<br>**light rc.50**<br>**web-signer rc.19**<br>**ots-verify rc.27**<br>**rekor-verify rc.22**<br>**diarium 0.2.16** | 139 | **The stored head is a CACHE; the published set is the fact (#124).** F.5r-f left one case open: a process ending between publishing and recording takes its emission with it, so its successor holds no discriminator and answers `unverified`. Honest, but not final — the discriminating information did not vanish, it was PUBLISHED. A consumer walking the chain reads documents and never reads the producer's pointer, so the pointer is a cache of a fact whose home is the published set, and a cache disagreeing with its source is wrong rather than authoritative. **One document decides it, by proof rather than by trust:** the last published `d` carries `prev`, so `prev(d)` equal to the stored head is evidence INSIDE the document that `d` is that head's successor — no reliance on memory, on a timestamp, or on which writer ran last. `recoverHead` returns `consistent` · `recovered` · `unverified`, and REFUSES when `d` neither is nor extends what the pointer holds: adopting such a head could chain the next frame beneath another writer's live branch, manufacturing the fork this section prevents. A disagreement the recovery cannot explain is one it must not resolve. Reading the published set is the OPERATOR's capability — where no document is supplied, `unverified` stands and is said rather than assumed, because a layer that fabricated it would assert what it cannot observe (F.5o). The backward search is bounded by construction: documents are addressed by `ust_id`, so the cadence grid gives the order, and exhausting the bound is a GAP to be stated under §11.1, not inferred. 70 checks. **The round-135 roster gate earned itself here:** `recoverHead` was written as a direct store write and the gate refused it in the same minute — the recovery now goes through the single guard like every other writer. |
+
 ## rc.60 line
 
 | version | round | what closed |

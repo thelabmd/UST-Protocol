@@ -2483,6 +2483,49 @@ Recovering that requires reading the PUBLISHED set rather than the writer's memo
 substrate capability, not an inference: an operator that can enumerate what it published can compute the
 true head; one that cannot must say its head is unverified rather than assume it.
 
+**Theorem F.5r-g (the stored head is a CACHE; the published set is the fact).** F.5r-f leaves one case
+open: a process that ends between publishing and recording takes its emission with it, so its successor
+holds no discriminator and must answer `unverified`. That answer is honest but not final, because the
+discriminating information did not vanish — it was PUBLISHED.
+
+*The stream's head is defined by what exists, not by what is remembered.* A consumer walking the chain
+reads documents; it never reads the producer's pointer. The pointer is therefore a cache of a fact whose
+home is the published set, and a cache disagreeing with its source is wrong rather than authoritative.
+
+**The head-recovery, and why one document suffices.** Let `d` be the LAST document the publisher published and
+`H` the stored head. `d` carries `prev`, so:
+
+| observation | what it proves | action |
+|---|---|---|
+| `H = h(d)` | the pointer already names the published head | consistent |
+| `H = prev(d)` | `d` EXTENDS what the pointer names — the advance was published and not recorded | adopt `h(d)` |
+| `H = ⊥` | nothing was ever recorded | adopt `h(d)` |
+| otherwise | `d` neither is nor extends what the pointer holds | REFUSE — unverifiable |
+
+The second row is the whole point: `prev(d) = H` is a PROOF, carried in the document itself, that `d` is
+the successor of the head the pointer still names. No trust in the reader's memory, no comparison against
+a timestamp, no assumption about which of two writers ran last. ∎
+
+**Why the last row must refuse rather than adopt.** Adopting a published head that does not extend the
+stored one would take the stream from whoever legitimately holds it: if another writer advanced past `H`
+and the document read here is an older one, adopting it would chain the next frame beneath a live branch —
+manufacturing the very fork F.5r prevents. A disagreement this head-recovery cannot explain is a disagreement
+it must not resolve.
+
+**What the layer may and may not do.** Reading the published set is a SUBSTRATE capability: an operator
+that can enumerate or address its own published documents supplies the last one; the layer verifies the
+`prev` relation and decides. A layer that fabricated this capability — guessing at the head, or trusting
+the pointer because it is convenient — would be asserting a fact it cannot observe, which is the failure
+class of F.5o. Where the capability is absent, `unverified` remains the correct answer and must be said
+rather than assumed.
+
+**Bounded search.** The publisher's own addressing gives the order: documents are addressed by `ust_id`,
+a time coordinate, so "the last published document" is found by walking the declared cadence grid
+backwards from the present. The search MUST be bounded — an arbitrarily long outage would otherwise turn
+a restart into an unbounded scan — and exhausting the bound is `unverified`, not failure: an interval with
+no published document in the searched window is a GAP, and a gap is stated by a §11.1 record, not inferred
+by a reader.
+
 **Binding: realized** — *"#122 ADVERSARIAL: two appenders from one head both succeed when the head is PRIVATE — the fork is produced and neither can see it"*, *"#122 ADVERSARIAL: the two branches are NEVER reported as a fork — the chain guard fires first, so downstream detection does not happen"*.
 
 The REFUSAL itself lives one layer up and is checked there, not here: `packages/ust-operator/conformance.mjs` exercises a shared store — a second appender on one head is refused `E-FORK`, a stream resumes the same chain in another object, and a `cas`-capable store reports `prevented` while a plain one reports `detected`. The core suite must not import the operator layer; a dependency in that direction would make the TCB's own tests rest on something above it, and I nearly wrote exactly that by citing an operator check in this Binding.

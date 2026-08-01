@@ -14,6 +14,10 @@
 //     rotation (§12.3.2, alive), which names a successor in-band. Removing the first nearly took prose
 //     belonging to the second with it; six stale references survived the first sweep.
 //
+//   · `recovery`    — a THIRD mechanism joined the word in rev79: HEAD-RECOVERY (F.5r-g) restores a stream's
+//     stored head from the PUBLISHED set after a restart. It re-roots nothing and authorizes nobody — it
+//     repairs a cache — so `head-` is now an admitted qualifier, added the moment the collision appeared
+//     rather than after it did damage, which is the whole point of this gate.
 //   · `recovery`    — GENESIS-RECOVERY (§12.1 P2) re-roots the name through DOMAIN CONTROL, the arbiter that
 //     sits above the key log; CHECKPOINT-RECOVERY (§12.3.2, §F.5l) is a dormant genesis-fixed threshold that
 //     re-authorizes the AUTHORITY CHECKPOINT chain. Different roots of trust, different documents, different
@@ -47,7 +51,7 @@ const TERMS = [
     thirdParty: /rekor|sigstore|logIndex|treeSize/i },
   { word: 'rotation',   pin: 22, qualifiers: /authority[- ]|checkpoint |key[- ]|operational[- ]|hygienic |normal /i,
     thirdParty: /null/ },
-  { word: 'recovery',   pin: 17,  qualifiers: /genesis-|checkpoint-|Keys|Threshold|Claim|brute-force |key-|nonce-reuse |private |disaster /i,
+  { word: 'recovery',   pin: 17,  qualifiers: /genesis-|checkpoint-|head-|Keys|Threshold|Claim|brute-force |key-|nonce-reuse |private |disaster /i,
     thirdParty: /brute-force|nonce-reuse|low-entropy/i },
 ];
 

@@ -176,6 +176,40 @@ export async function reconcileHead(store, { observed = null, published = null }
   return { state: outcome === 'already-advanced' ? 'already-advanced' : 'repaired', head: published };
 }
 
+/**
+ * F.5r-g — RECOVER THE HEAD FROM WHAT WAS PUBLISHED, because that is where the fact lives.
+ *
+ * `reconcileHead` needs this instance's own last emission, and a process that ended between publishing and
+ * recording took that with it. Its successor holds no discriminator — but the discriminating information did
+ * not vanish, it was PUBLISHED. A consumer walking the chain reads documents and never reads the producer's
+ * pointer, so the pointer is a CACHE of a fact whose home is the published set.
+ *
+ * One document decides it, and decides it by PROOF rather than by trust: `d` carries `prev`, so `prev(d)`
+ * equal to the stored head is evidence — inside the document — that `d` is that head's successor. No reliance
+ * on memory, on a timestamp, or on which of two writers ran last.
+ *
+ * The last row REFUSES on purpose. Adopting a published head that does not extend the stored one would chain
+ * the next frame beneath another writer's live branch — manufacturing the fork this whole section prevents.
+ * A disagreement this recovery cannot explain is one it must not resolve.
+ *
+ * Reading the published set is the OPERATOR's capability; this layer verifies the relation and decides. Where
+ * no document is supplied, `unverified` stands and is said rather than assumed.
+ */
+export async function recoverHead(store, { lastPublished = null } = {}) {
+  const stored = (await store.get(STREAM_KEYS.head)) || null;
+  if (!lastPublished) return { state: 'unverified', head: stored };
+  const h = P.contentHash(lastPublished);
+  const prev = lastPublished?.state?.provenance?.prev ?? null;
+  if (stored === h) return { state: 'consistent', head: h };
+  if (stored === null || stored === prev) {
+    // Through the SINGLE guard, not around it (F.5r-c): the roster gate caught this the moment it was
+    // written as a direct store write, which is exactly what that gate exists for.
+    await advanceHead(store, { expected: stored, next: h });
+    return { state: 'recovered', head: h };
+  }
+  throw Object.assign(new Error('E-FORK: the last published document neither is nor extends the stored head — adopting it could chain the next frame beneath another writer\'s live branch, so this disagreement is refused rather than resolved (F.5r-g)'), { code: 'E-FORK' });
+}
+
 /** Read back the whole group at once — an operator sealing an interval needs the count and the checkpoint head. */
 export async function loadStreamState(store) {
   const g = async (k) => (await store.get(k)) || null;
