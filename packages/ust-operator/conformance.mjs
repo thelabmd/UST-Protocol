@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 // @ust-protocol/operator round-trip: PRODUCE with @ust-protocol/operator (stateful) → VERIFY with ust-protocol (stateless). If they agree,
 // @assurance 2 canfail:yes — every case is BUILT by this layer and VERIFIED by the base it claims to produce for;
 // the differential compares its bytes against the hardened implementation's, and a control reverts the fix to prove it fires
@@ -23,7 +24,8 @@ const id = (u, k = A) => ({ domain_shard: dom, ust_id: u, key_id: k.key_id });
 const signWith = (k) => (state) => P.seal(state, k.priv, k.pubB64);
 const sign = signWith(A);
 
-let pass = 0, fail = 0; const check = (id, ok, d) => { if (ok) pass++; else { fail++; console.log('  ✗ ' + id + (d ? ' — ' + d : '')); } };
+let pass = 0, fail = 0; const executed = [];
+const check = (id, ok, d) => { if (ok) { pass++; executed.push(id); } else { fail++; console.log('  ✗ ' + id + (d ? ' — ' + d : '')); } };
 
 // 1. Stream (+ checkpoint) → P.verifyStream
 const genesis = sign(P.buildGenesis(id('ust:20260705.18'), t, A.pubB64));
@@ -184,8 +186,70 @@ check('Tiers:continuation-after-gap', afterGap.state.provenance.prev === P.conte
       (await S.advanceHead(s2, { expected: null, next: 'sha256:x' })) === 'prevented');
     check('#122 ADVERSARIAL advanceHead with cas: the loser of a concurrent write is REFUSED and must not publish',
       (await grab(() => S.advanceHead(s2, { expected: null, next: 'sha256:y' }))) === 'E-FORK');
-    check('#122 advanceHead: ONE implementation — append routes through it, so the rule cannot have two bodies',
-      /await advanceHead\(this\.store/.test(readFileSync(new URL('./index.mjs', import.meta.url), 'utf8')));
+    // ── The OTHER two members of W, each with its own outcomes. `gap` extends the chain exactly as an append
+    // does; `resume` asserts a head from outside the store and is admissible only while the store agrees.
+    {
+      const shared = plain();
+      const g0 = sign(P.buildGenesis(id('ust:20260705.18'), t, A.pubB64));
+      const mk = () => new S.Stream({ sign, genesisContentHash: P.contentHash(g0), store: shared });
+      const one = mk(); await one.append(id('ust:20260705.1801'), t, { sw: { kind: 'captured', value: { kp: '1' } } });
+      const two = await mk().resumeFromStore();
+      check('#122 F.5r-c gap: the FIRST gap record from the observed head is accepted',
+        !!(await one.gap(id('ust:20260705.1802'), t, 'seal-delay')));
+      check('#122 ADVERSARIAL F.5r-c gap: a SECOND instance emitting a gap record from the head it observed is REFUSED — a gap record extends the chain, so it forks like any append',
+        (await grab(() => two.gap(id('ust:20260705.1802'), t, 'seal-delay'))) === 'E-FORK');
+      check('#122 F.5r-c gap: the store holds the head of the accepted record, so the object and the store never disagree',
+        (await shared.get(S.STREAM_KEYS.head)) === one.head);
+
+      check('#122 F.5r-c resume: resuming to the head the store DOES hold is accepted — the operator and the store agree',
+        !!(await mk().resume(one.head, 3)));
+      check('#122 ADVERSARIAL F.5r-c resume: resuming to a head the store does NOT hold is REFUSED — that difference is another writer, and overwriting it CAUSES the fork',
+        (await grab(() => mk().resume('sha256:somewhere-else', 3))) === 'E-FORK');
+      check('#122 F.5r-c resume: the refused resume left the stored head UNCHANGED',
+        (await shared.get(S.STREAM_KEYS.head)) === one.head);
+      const fresh = plain();
+      check('#122 F.5r-c resume: on an UNSEEDED store the operator claim stands — nobody has written, so there is nothing to contradict',
+        !!(await new S.Stream({ sign, store: fresh }).resume('sha256:known-point', 7)) && (await fresh.get(S.STREAM_KEYS.head)) === 'sha256:known-point');
+    }
+
+    // ── Tiers: each tier is its own prev-stream. Built without the operator's store they got an IN-MEMORY head,
+    // which is the private head of F.5r-a — every tier of every operator using this was forkable by construction.
+    {
+      const shared = plain();
+      const tiers = new S.Tiers({ sign, genesisContentHash: 'sha256:genesis', store: shared });
+      const lo = tiers.stream('light'), hi = tiers.stream('high');
+      await lo.append(id('ust:20260705.1801'), t, { sw: { kind: 'captured', value: { kp: 'l' } } });
+      await hi.append(id('ust:20260705.1801'), t, { sw: { kind: 'captured', value: { kp: 'h' } } });
+      check('#122 F.5r-a Tiers: a tier stream writes into the OPERATOR\'s store, not into a private map',
+        [...shared._m.keys()].length > 0);
+      check('#122 F.5r-a Tiers: the two tiers hold DIFFERENT heads under DIFFERENT keys — one key would present one stream\'s head as another\'s',
+        (await shared.get('ust:stream:light:head')) === lo.head && (await shared.get('ust:stream:high:head')) === hi.head && lo.head !== hi.head);
+      const casTiers = new S.Tiers({ sign, genesisContentHash: 'sha256:genesis', store: withCas() });
+      check('#122 F.5r-a Tiers: a PREVENTING store survives the per-tier namespace — dropping cas in the wrapper would silently downgrade the guarantee the stream then honestly reports',
+        casTiers.stream('light').guarantee === 'prevented');
+    }
+
+    // F.5r-c — THE DOMAIN IS DERIVED FROM THE SOURCE, NOT LISTED BY HAND. The previous version of this check
+    // asserted that `append` routes through the guard, which is satisfied by a layer where every OTHER
+    // head-writer is unguarded — and that is exactly what it was: `gap` and `resume` wrote the head directly
+    // while this check stayed green. W = every site that WRITES the head key; the claim is that W reduces to
+    // the guard itself. A non-writing advance needs no membership: it makes the store lag the object, and the
+    // next append's own comparison refuses it.
+    const src = readFileSync(new URL('./index.mjs', import.meta.url), 'utf8');
+    const enclosing = (upto) => {
+      const defs = [...upto.matchAll(/^(?:export\s+)?(?:async\s+)?function\s+([A-Za-z0-9_$]+)|^\s*(?:async\s+)?([A-Za-z0-9_$]+)\s*\([^)]*\)\s*\{|^([A-Za-z0-9_$.]+\.prototype\.[A-Za-z0-9_$]+)\s*=/gm)];
+      const KW = new Set(['if', 'for', 'while', 'switch', 'catch', 'return', 'do', 'else']);   // `if (…) {` reads as a definition to a regex; it is not one
+      const named = defs.map(d => d[1] ?? d[2] ?? d[3]).filter(n => n && !KW.has(n));
+      return named.length ? named[named.length - 1] : '<top-level>';
+    };
+    const writers = [...src.matchAll(/\.(?:set|cas)\(\s*STREAM_KEYS\.head\b/g)].map(m => enclosing(src.slice(0, m.index)));
+    const roster = [...new Set(writers)].sort();
+    check('#122 F.5r-c the head-key WRITER ROSTER, enumerated from source, reduces to the guard — a partly guarded layer forks exactly like an unguarded one',
+      writers.length >= 2 && roster.length === 1 && roster[0] === 'advanceHead', 'roster=' + JSON.stringify(roster));
+    check('#122 F.5r-c CONTROL: the roster reader actually resolves enclosing names — against a planted unguarded writer it names the offender, so a green roster is not a parse failure',
+      (() => { const planted = src + '\nexport async function plantedWriter(store) { await store.set(STREAM_KEYS.head, "x"); }\n';
+        const w = [...planted.matchAll(/\.(?:set|cas)\(\s*STREAM_KEYS\.head\b/g)].map(m => enclosing(planted.slice(0, m.index)));
+        return [...new Set(w)].sort().join(',') === 'advanceHead,plantedWriter'; })());
   }
 
   check('#122 with store.cas the layer reports prevented — the stronger guarantee, and only when it holds it',
@@ -213,5 +277,14 @@ console.log(fail ? '' : '  ✓ @ust-protocol/operator PRODUCES exactly what ust-
     console.log(`  ✗ ${declared} checks declared, ${pass + fail} counted — some stand BELOW the summary and reach neither the count nor the exit code`);
     process.exit(1);
   }
+}
+// The layer's roster is PUBLISHED, in the same shape and for the same reason as the core's: without it the
+// ladder gate can only resolve checks that live in the core, so every round whose test layer lands HERE would
+// be recorded as an exclusion — a structural blind spot dressed as a routine decision. Bound to the digests of
+// the source it came from, so a stale roster cannot answer for a suite that has since changed.
+if (!fail) {
+  const srcHash = (rel) => createHash('sha256').update(readFileSync(new URL(rel, import.meta.url))).digest('hex');
+  writeFileSync(new URL('../../vectors/operator-checks.json', import.meta.url),
+    JSON.stringify({ source: { conformance: srcHash('./conformance.mjs'), index: srcHash('./index.mjs') }, checks: [...new Set(executed)].sort() }, null, 0) + '\n');
 }
 if (fail) process.exit(1);

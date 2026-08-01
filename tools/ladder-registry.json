@@ -906,6 +906,16 @@
       "test": {
         "excluded": "The layer's own suite covers every outcome of advanceHead, including that a refused advance leaves the store unchanged, plus a source-read check that append has no second implementation of the rule."
       }
+    },
+    {
+      "round": 135,
+      "math": "Hence the guarded FRACTION is irrelevant",
+      "spec": "This obligation is over EVERY operation that advances the head, not over the principal one.",
+      "code": "packages/ust-operator/index.mjs :: gap and resume route through advanceHead; Tiers takes the operator store and namespaces it per tier, preserving cas",
+      "vector": {
+        "excluded": "No document bytes and no verdict change: a gap record and a checkpoint are byte-identical before and after. What moved is WHICH code paths may write the head key, which produces no document."
+      },
+      "test": "#122 F.5r-c the head-key WRITER ROSTER, enumerated from source, reduces to the guard — a partly guarded layer forks exactly like an unguarded one"
     }
   ],
   "first_accounted_round": 76,

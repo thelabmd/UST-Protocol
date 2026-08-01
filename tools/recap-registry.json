@@ -243,6 +243,10 @@
     {
       "round": 134,
       "no_recap": "Round 134 does not close #122 — the discipline is reachable now; the issue closes when an operator actually runs its head through it."
+    },
+    {
+      "round": 135,
+      "no_recap": "Round 135 does not close #122 — it completes the discipline's domain; the issue closes when an operator runs its live head through it."
     }
   ]
 }

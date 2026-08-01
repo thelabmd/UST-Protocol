@@ -2360,6 +2360,34 @@ The distinction is load-bearing and must not be blurred: a layer offering `get`/
 PREVENT forks is claiming a guarantee it does not have — the same class as reporting an unattestable
 property (F.5o) or a universal claim over an undeclared domain (F.5q). It must say which one it got.
 
+**Theorem F.5r-c (the guard belongs to the KEY, not to the method).** Let `W = {w₁ … wₙ}` be the set
+of operations an implementation offers that WRITE the head key. Fork-freedom holds iff EVERY `wᵢ`
+applies the guard.
+*Proof.* Suppose some `w_j` does not. Two appenders `A`, `B`, both invoking `w_j` from head `H`:
+neither write is conditioned on the stored head, so both land and the branches are produced exactly as
+in F.5r-a. The guards on the other `n − 1` operations change no observation in this scenario, because
+they were never invoked. Hence the guarded FRACTION is irrelevant; the outcome is determined by the
+unguarded operation alone, and an implementation with `n − 1` guarded writers is exactly as forkable as
+one with none. ∎
+
+**Corollary (what a conformance check must therefore enumerate).** A check naming ONE guarded
+operation attests nothing about `W`: it is satisfied by an implementation in which every OTHER member
+of `W` is unguarded. The obligation is to derive `W` FROM THE SOURCE — every site that writes the head
+key — and to show `W` reduces to the guard itself. Naming an instance where the claim quantifies over a
+set is the same failure as F.5q's quantifier over an undeclared domain, one layer down.
+
+**Measured (rev75).** The layer that introduced the guard had `n = 3`: `append` (guarded, and the check
+named it), `gap` — the §11.1 signed gap record, which extends the chain exactly as an append does — and
+`resume`. Both of the latter wrote the head directly. Two instances each emitting a gap record forked
+silently, and the check written one round earlier stayed green throughout, because it asserted a
+property of `append` while the specification quantifies over writers.
+
+**Admissibility of an EXTERNAL head claim (`resume`).** Resumption states a head from knowledge outside
+the store — an operator's assertion, not an observation. It is nonetheless a member of `W`, so it is
+admissible iff the stored head does not CONTRADICT it: `stored ∈ {⊥, H}`. A stored head differing from
+`H` is precisely the disagreement the discipline exists to name — another writer has been advancing —
+and overwriting it is the fork-causing act, not a repair of one.
+
 **Binding: realized** — *"#122 ADVERSARIAL: two appenders from one head both succeed when the head is PRIVATE — the fork is produced and neither can see it"*, *"#122 ADVERSARIAL: the two branches are NEVER reported as a fork — the chain guard fires first, so downstream detection does not happen"*.
 
 The REFUSAL itself lives one layer up and is checked there, not here: `packages/ust-operator/conformance.mjs` exercises a shared store — a second appender on one head is refused `E-FORK`, a stream resumes the same chain in another object, and a `cas`-capable store reports `prevented` while a plain one reports `detected`. The core suite must not import the operator layer; a dependency in that direction would make the TCB's own tests rest on something above it, and I nearly wrote exactly that by citing an operator check in this Binding.

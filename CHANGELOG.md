@@ -25,6 +25,12 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
+## rc.57 line
+
+| version | round | what closed |
+|---------|-------|-------------|
+| **operator 0.4.0**<br>**rc.57**<br>**cli rc.90**<br>**mcp rc.46**<br>**light rc.46**<br>**web-signer rc.15**<br>**ots-verify rc.23**<br>**rekor-verify rc.18**<br>**diarium 0.2.12** | 135 | **The guard was on one door of three, and the check written for it named that door.** F.5r-c: let `W` be the set of operations that WRITE the head key. Fork-freedom holds iff EVERY member applies the guard — the guarded fraction is irrelevant, because the guards on operations that were never invoked change no observation. An implementation with `n−1` guarded writers is exactly as forkable as one with none. Measured here with `n = 3`: `append` was guarded and round 134's check named it, while `gap` — the §11.1 signed gap record, which extends the chain exactly as an append does — and `resume` wrote the head directly. Two instances each emitting a gap record forked silently, and the check stayed green throughout, because it asserted a property of ONE operation where the obligation quantifies over a SET. The check is now a ROSTER derived from the source — every site writing the head key, resolved to its enclosing function, asserted to reduce to the guard — with a control that plants an unguarded writer and requires the reader to name it, so a green roster cannot be a parse failure. `resume` also gained the admissibility question it never asked: an external head claim is admissible only while the store does not CONTRADICT it, because a differing stored head is another writer advancing the stream and overwriting it CAUSES the fork rather than recovering from one. **And the same sweep found `Tiers` building every tier stream WITHOUT the operator's store** — an in-memory head, which is the private head of F.5r-a: every tier of every operator using it was forkable by construction. Each tier now gets a namespaced view of the operator's one store, and the namespace preserves `cas`, since dropping it would silently downgrade a preventing store to a detecting one. 45 checks in the layer suite; both fixes mutation-tested by reverting them and confirming the checks go red. |
+
 ## rc.56 line
 
 | version | round | what closed |

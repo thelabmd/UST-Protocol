@@ -15,6 +15,7 @@
 // satisfy a gate would be the patch this repo rejects. So the gate does NOT demand a reference on every layer. It
 // demands a DECISION on every layer: a reference that RESOLVES, or an exclusion carrying its reason IN THE FILE.
 // Same discipline already used for excluded members elsewhere: the boundary is visible rather than absent.
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
 const U = (p) => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
@@ -23,11 +24,29 @@ const MODEL = U('spec/UST-1.0-formal-model.md');
 const SPEC = U('spec/UST-1.0.md');
 const CHANGELOG = U('CHANGELOG.md');
 const VECTORS = JSON.parse(U('vectors/conformance-vectors.json')).vectors;
-const EXECUTED = new Set(JSON.parse(U('vectors/conformance-checks.json')).checks ?? JSON.parse(U('vectors/conformance-checks.json')));
+// The executed roster spans BOTH suites. Resolving only the core's meant every round whose test layer lands in
+// the operator layer had to be recorded as an exclusion — the gate would have been blind to exactly the work it
+// was watching. Each roster is bound to the digests of the source it came from, and a roster whose digests no
+// longer match is REJECTED rather than trusted: a stale list of names answers for a suite that has changed.
+const roster = (rel, sources) => {
+  let m; try { m = JSON.parse(U(rel)); } catch { return { checks: [], stale: rel + ' is missing — the gate cannot resolve test references against it' }; }
+  for (const [k, f] of Object.entries(sources)) {
+    const want = createHash('sha256').update(readFileSync(new URL('../' + f, import.meta.url))).digest('hex');
+    if (m.source?.[k] !== want) return { checks: [], stale: `${rel} was generated from a different ${f} — regenerate it, do not resolve against it` };
+  }
+  return { checks: m.checks ?? m, stale: null };
+};
+const CORE_R = roster('vectors/conformance-checks.json', { conformance: 'packages/ust-protocol/conformance.mjs', index: 'packages/ust-protocol/index.mjs' });
+const OP_R = roster('vectors/operator-checks.json', { conformance: 'packages/ust-operator/conformance.mjs', index: 'packages/ust-operator/index.mjs' });
+const EXECUTED = new Set([...CORE_R.checks, ...OP_R.checks]);
 
 const fail = [];
 let pass = 0;
 const check = (ok, msg) => { if (ok) pass++; else fail.push(msg); };
+// A roster whose digests no longer match its source is not evidence — say so here rather than resolving against it.
+check(!CORE_R.stale, 'core roster: ' + CORE_R.stale);
+check(!OP_R.stale, 'operator roster: ' + OP_R.stale);
+
 
 const LAYERS = ['math', 'spec', 'code', 'vector', 'test'];
 const MIN_REASON = 60;   // a reason shorter than this is a placeholder, not a decision

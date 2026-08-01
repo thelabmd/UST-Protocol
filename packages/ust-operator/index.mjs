@@ -275,20 +275,50 @@ export const substrateVerifier = (deps = {}) => (locator, root) => substrates[lo
 // #122 / F.5r — EVERYTHING THAT MOVES THE HEAD MUST WRITE IT. A missing write here was caught by
 // `append`'s own refusal: the next frame saw the stored head disagree with the field and refused.
 // The rule takes no exceptions — otherwise the store lags the object and the guard fires on its own side.
+// F.5r-c — THE GUARD BELONGS TO THE KEY, NOT TO THE METHOD. A gap record extends the chain exactly as an
+// append does, so two instances each emitting one fork silently. This wrote the head DIRECTLY for four
+// months and the check introduced one round earlier stayed green the whole time, because it named `append`
+// while the obligation quantifies over every writer.
 Stream.prototype.gap = async function (idMeta, time, reason = 'seal-delay') {          // §11.1 signed gap record: class:attestation, EMPTY constituents
   const state = P.buildState({ ...idMeta, class: 'attestation' }, time, { gap: { kind: 'computed', value: { reason } } }, { prev: this.head, constituents: [] });
-  const doc = this.sign(state); this.head = P.contentHash(doc); this.count++; this.frames.push(doc);
-  await this.store.set(STREAM_KEYS.head, this.head);
+  const doc = this.sign(state);
+  const next = P.contentHash(doc);
+  await advanceHead(this.store, { expected: this.head ?? null, next });
+  this.head = next; this.count++; this.frames.push(doc);
   await this.store.set(STREAM_KEYS.count, String(this.count));
   return doc;
 };
+// Resumption states a head from knowledge OUTSIDE the store — an operator's assertion, not an observation.
+// It is admissible only while the store does not CONTRADICT it: a stored head that differs is another writer
+// advancing the stream, and overwriting it CAUSES the fork rather than recovering from one. The comparison
+// below is resume's own admissibility question; the WRITE still goes through the single guard.
 Stream.prototype.resume = async function (head, count) {   // continue after an outage from a known point
+  const stored = await this.store.get(STREAM_KEYS.head);
+  if (stored !== null && stored !== head) {
+    throw Object.assign(new Error('E-FORK: resuming to a head the store does not hold — another writer advanced this stream, and overwriting its head would fork it (F.5r-c)'), { code: 'E-FORK' });
+  }
+  await advanceHead(this.store, { expected: stored, next: head });
   this.head = head; this.count = count;
-  await this.store.set(STREAM_KEYS.head, head); await this.store.set(STREAM_KEYS.count, String(count));
+  await this.store.set(STREAM_KEYS.count, String(count));
   return this;
 };  // continue after outage from a known head
+// Each tier is its OWN prev-stream, so each needs its own head — under one key they would overwrite each
+// other, which is not a fork but something worse: one stream's head presented as another's. The namespace
+// is applied HERE rather than by asking the operator to hand over five stores, because the operator's
+// infrastructure has one store and the partition is the layer's business.
+const namespaced = (store, tier) => {
+  const at = (k) => k.startsWith('ust:stream:') ? `ust:stream:${tier}:` + k.slice(11) : `${tier}:${k}`;
+  const view = { get: (k) => store.get(at(k)), set: (k, v) => store.set(at(k), v) };
+  // The capability must SURVIVE the wrapper: dropping `cas` here would silently downgrade a preventing
+  // store to a detecting one, and the stream would then honestly report the weaker guarantee it was given.
+  if (typeof store.cas === 'function') view.cas = (k, e, n) => store.cas(at(k), e, n);
+  return view;
+};
 export class Tiers {                                                             // one prev-stream per tier, shared genesis root
-  constructor({ sign, genesisContentHash }) { this.sign = sign; this.genesisContentHash = genesisContentHash; this.byTier = new Map(); }
-  stream(tier) { if (!this.byTier.has(tier)) this.byTier.set(tier, new Stream({ sign: this.sign, genesisContentHash: this.genesisContentHash })); return this.byTier.get(tier); }
+  // F.5r-a — a tier stream built WITHOUT the operator's store gets an in-memory head, which is the private
+  // head the whole section is about. This constructor accepted no store at all, so every tier of every
+  // operator using `Tiers` was forkable by construction.
+  constructor({ sign, genesisContentHash, store = memoryStore() }) { this.sign = sign; this.genesisContentHash = genesisContentHash; this.store = store; this.byTier = new Map(); }
+  stream(tier) { if (!this.byTier.has(tier)) this.byTier.set(tier, new Stream({ sign: this.sign, genesisContentHash: this.genesisContentHash, store: namespaced(this.store, tier) })); return this.byTier.get(tier); }
   tiers() { return [...this.byTier.keys()]; }                                    // declared set — a silently-absent tier is detectable vs this
 }

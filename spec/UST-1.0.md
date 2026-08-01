@@ -3,7 +3,7 @@
 
 *This specification text is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](../LICENSE-SPEC). Reference code in this repository is licensed Apache-2.0. Use of the name **UST** / **Universal State Transcript** and the **UST-compatible** claim: see [TRADEMARK.md](../TRADEMARK.md).*
 
-> **Release candidate — `1.0.0-rc.56`.** This specification has been extensively red-teamed; an independent
+> **Release candidate — `1.0.0-rc.57`.** This specification has been extensively red-teamed; an independent
 > external cryptographic audit is pending. It is subject to change until `1.0.0` final. The wire format `ust:"1.0"`
 > is stable across all rc's — pin exact versions. Per-version history is in [`CHANGELOG.md`](../CHANGELOG.md).
 
@@ -774,6 +774,13 @@ the head MUST be shared among whatever writes the stream, not private to each wr
 store offers only read-then-write **detects** a fork on the next append (the head moved); one whose
 store compares-and-sets **prevents** it. Both are acceptable; claiming the second while holding only
 the first is not — an operator MUST state which guarantee its stream rests on.
+
+This obligation is over EVERY operation that advances the head, not over the principal one. A producer
+offering several — appending a frame, emitting a §11.1 gap record, resuming after an outage — MUST apply
+the same guard to all of them: two writers using an UNGUARDED operation fork exactly as if none were
+guarded, and the guarded operations, never invoked in that run, change nothing (formal model F.5r-c).
+Resumption MUST NOT overwrite a stored head that differs from the one being resumed to; that difference is
+another writer advancing the stream, and overwriting it CAUSES the fork rather than recovering from one.
 
 **Checkpoints (M5).** Checkpoints are themselves `prev`-chained frames (`class:"attestation"`) that assert the
 stream head + frame count over an interval. The asserted `frame_count` is CUMULATIVE from the stream origin, so
