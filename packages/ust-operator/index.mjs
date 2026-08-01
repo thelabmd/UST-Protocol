@@ -83,6 +83,56 @@ export async function advanceHead(store, { expected = null, next }) {
   return 'detected';
 }
 
+/**
+ * F.5r-d — ONE DOOR PER EVENT, NOT PER VALUE. A frame entering the stream moves three stored values: the
+ * head, the cumulative count, and the observed interval. They are one fact recorded three ways, and an
+ * operator handed three doors becomes responsible for an ordering this layer already knows — a caller that
+ * advances the head and forgets the count claims a frame it never emitted, permanently, because the count is
+ * cumulative.
+ *
+ * THE GUARD GOES FIRST. Nothing else is written until the head is accepted, so a refused frame leaves the
+ * whole group untouched. Where a partial write is still possible — no store here offers a transaction — it
+ * lands on the UNDER-claiming side: a count that lags conceals no omission, while one that leads manufactures
+ * evidence of an omission the publisher did not commit.
+ *
+ * `store.incr` is used when the store offers it, for the same reason `store.cas` is: the count is a
+ * read-modify-write, and taking the stronger primitive when it exists is not optional politeness.
+ */
+export async function recordFrame(store, { expected = null, next, ust_id }) {
+  const guarantee = await advanceHead(store, { expected, next });
+  const count = typeof store.incr === 'function'
+    ? await store.incr(STREAM_KEYS.count)
+    : await (async () => { const c = Number((await store.get(STREAM_KEYS.count)) ?? 0) + 1; await store.set(STREAM_KEYS.count, String(c)); return c; })();
+  if (ust_id) {
+    if (!(await store.get(STREAM_KEYS.spanFrom))) await store.set(STREAM_KEYS.spanFrom, ust_id);
+    await store.set(STREAM_KEYS.spanTo, ust_id);
+  }
+  return { guarantee, count: Number(count) };
+}
+
+/**
+ * F.5r-d — the OTHER event: an interval was sealed. It moves the checkpoint head and OPENS the next interval.
+ *
+ * The interval reset used to live only in the object, never in the store — so a stream resumed in another
+ * process read the PREVIOUS interval's start and would have sealed the next hour with bounds that begin
+ * before it. `from` is cleared to the empty string because the port has `get`/`set` and no delete; the empty
+ * string is the layer's "unset", and every reader here treats it as such.
+ */
+export async function recordCheckpoint(store, { contentHash }) {
+  await store.set(STREAM_KEYS.cpHead, contentHash);
+  await store.set(STREAM_KEYS.spanFrom, '');
+  return contentHash;
+}
+
+/** Read back the whole group at once — an operator sealing an interval needs the count and the checkpoint head. */
+export async function loadStreamState(store) {
+  const g = async (k) => (await store.get(k)) || null;
+  return {
+    head: await g(STREAM_KEYS.head), count: Number((await store.get(STREAM_KEYS.count)) ?? 0),
+    cpHead: await g(STREAM_KEYS.cpHead), spanFrom: await g(STREAM_KEYS.spanFrom), spanTo: await g(STREAM_KEYS.spanTo),
+  };
+}
+
 export class Stream {
   /**
    * #122 / F.5r — THE HEAD MUST NOT BE PRIVATE TO THE APPENDER.
@@ -126,20 +176,17 @@ export class Stream {
     const state = P.buildState({ ...idMeta, class: cls }, time, data, this.head ? { prev: this.head } : undefined);
     const doc = this.sign(state);
     const next = P.contentHash(doc);
-    // ONE implementation of the discipline: `append` calls the same function an external builder calls.
+    // ONE implementation of the discipline: `append` calls the same door an external builder calls.
     // Two bodies for one rule would drift apart silently — which is what this layer exists to end.
     // The refusal happens BEFORE the caller can publish `doc`: it is returned only after the head moved.
-    await advanceHead(this.store, { expected: this.head ?? null, next });
+    const { count } = await recordFrame(this.store, { expected: this.head ?? null, next, ust_id: idMeta.ust_id });
     // THE RETENTION BOUNDARY: the caller verifies the range against the checkpoint just handed to it and
     // needs the frames at that moment, so they are cleared on the FIRST frame of the next interval —
     // retention bounded to one interval, legitimate use unbroken.
     if (this.intervalClosed) { this.frames = []; this.intervalClosed = false; }
-    this.head = next; this.count++; this.frames.push(doc);
+    this.head = next; this.count = count; this.frames.push(doc);
     if (!this.spanFrom) this.spanFrom = idMeta.ust_id;
     this.spanTo = idMeta.ust_id;
-    await this.store.set(STREAM_KEYS.count, String(this.count));
-    await this.store.set(STREAM_KEYS.spanFrom, this.spanFrom);
-    await this.store.set(STREAM_KEYS.spanTo, this.spanTo);
     return doc;
   }
   // A checkpoint chains to the PREVIOUS CHECKPOINT — and the first one to the GENESIS. Chaining it to the stream's
@@ -154,8 +201,7 @@ export class Stream {
   async checkpoint(idMeta, time, interval = this.observedInterval()) {
     const prev = this.cpHead ?? this.genesisContentHash ?? this.head;
     const doc = this.sign(P.buildCheckpoint(idMeta, time, this.head, this.count, prev, interval));
-    this.cpHead = P.contentHash(doc);
-    await this.store.set(STREAM_KEYS.cpHead, this.cpHead);   // a checkpoint moves state too, so it writes
+    this.cpHead = await recordCheckpoint(this.store, { contentHash: P.contentHash(doc) });
     this.intervalClosed = true;   // the caller still needs this interval's frames — see append()
 
     this.spanFrom = null;                              // the next interval starts from the next frame written
@@ -283,9 +329,9 @@ Stream.prototype.gap = async function (idMeta, time, reason = 'seal-delay') {   
   const state = P.buildState({ ...idMeta, class: 'attestation' }, time, { gap: { kind: 'computed', value: { reason } } }, { prev: this.head, constituents: [] });
   const doc = this.sign(state);
   const next = P.contentHash(doc);
-  await advanceHead(this.store, { expected: this.head ?? null, next });
-  this.head = next; this.count++; this.frames.push(doc);
-  await this.store.set(STREAM_KEYS.count, String(this.count));
+  // A gap record IS a frame entering the stream — same event, same door, same order (F.5r-d).
+  const { count } = await recordFrame(this.store, { expected: this.head ?? null, next, ust_id: idMeta.ust_id });
+  this.head = next; this.count = count; this.frames.push(doc);
   return doc;
 };
 // Resumption states a head from knowledge OUTSIDE the store — an operator's assertion, not an observation.

@@ -247,6 +247,10 @@
     {
       "round": 135,
       "no_recap": "Round 135 does not close #122 — it completes the discipline's domain; the issue closes when an operator runs its live head through it."
+    },
+    {
+      "round": 136,
+      "no_recap": "Round 136 does not close #122 — it gives the layer the doors an operator that builds its own documents needs; the issue closes when one runs its live state through them."
     }
   ]
 }

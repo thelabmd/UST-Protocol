@@ -186,6 +186,38 @@ check('Tiers:continuation-after-gap', afterGap.state.provenance.prev === P.conte
       (await S.advanceHead(s2, { expected: null, next: 'sha256:x' })) === 'prevented');
     check('#122 ADVERSARIAL advanceHead with cas: the loser of a concurrent write is REFUSED and must not publish',
       (await grab(() => S.advanceHead(s2, { expected: null, next: 'sha256:y' }))) === 'E-FORK');
+    // ── F.5r-d: the door is shaped by the EVENT. Every outcome of recordFrame / recordCheckpoint.
+    {
+      const st = plain();
+      const r1 = await S.recordFrame(st, { expected: null, next: 'sha256:f1', ust_id: 'ust:20260705.1801' });
+      check('#122 F.5r-d recordFrame: one call moves head, count and the interval start — a caller cannot advance one and forget another',
+        r1.count === 1 && (await st.get(S.STREAM_KEYS.head)) === 'sha256:f1' && (await st.get(S.STREAM_KEYS.spanFrom)) === 'ust:20260705.1801' && (await st.get(S.STREAM_KEYS.spanTo)) === 'ust:20260705.1801');
+      const r2 = await S.recordFrame(st, { expected: 'sha256:f1', next: 'sha256:f2', ust_id: 'ust:20260705.1802' });
+      check('#122 F.5r-d recordFrame: the interval START holds while its END follows the frames — the bounds are what was WRITTEN, not what a grid predicted',
+        r2.count === 2 && (await st.get(S.STREAM_KEYS.spanFrom)) === 'ust:20260705.1801' && (await st.get(S.STREAM_KEYS.spanTo)) === 'ust:20260705.1802');
+      check('#122 ADVERSARIAL F.5r-d recordFrame: a REFUSED frame moves NOTHING — the guard runs first, so a stream that correctly refused to fork does not count a frame it never emitted',
+        (await grab(() => S.recordFrame(st, { expected: 'sha256:stale', next: 'sha256:f3', ust_id: 'ust:20260705.1803' }))) === 'E-FORK'
+        && Number(await st.get(S.STREAM_KEYS.count)) === 2 && (await st.get(S.STREAM_KEYS.spanTo)) === 'ust:20260705.1802');
+
+      const counted = [];
+      const withIncr = (() => { const m = new Map(); return { get: async (k) => m.get(k) ?? null, set: async (k, v) => { m.set(k, v); },
+        incr: async (k) => { counted.push(k); const n = Number(m.get(k) ?? 0) + 1; m.set(k, String(n)); return n; } }; })();
+      const ri = await S.recordFrame(withIncr, { expected: null, next: 'sha256:i1', ust_id: 'ust:20260705.1801' });
+      check('#122 F.5r-d recordFrame USES store.incr when the store offers it — the count is a read-modify-write, and taking the atomic primitive is not optional politeness',
+        ri.count === 1 && counted.length === 1 && counted[0] === S.STREAM_KEYS.count);
+
+      await S.recordCheckpoint(st, { contentHash: 'sha256:cp1' });
+      check('#122 F.5r-d recordCheckpoint: the sealed interval is CLOSED IN THE STORE — this reset lived only in the object, so a stream resumed elsewhere read the PREVIOUS interval\'s start and would have sealed the next hour with bounds that begin before it',
+        (await st.get(S.STREAM_KEYS.cpHead)) === 'sha256:cp1' && !(await st.get(S.STREAM_KEYS.spanFrom)));
+      const after = await S.recordFrame(st, { expected: 'sha256:f2', next: 'sha256:f4', ust_id: 'ust:20260705.1900' });
+      check('#122 F.5r-d the next interval opens at the FIRST frame after the seal, and the count stays CUMULATIVE across the boundary',
+        after.count === 3 && (await st.get(S.STREAM_KEYS.spanFrom)) === 'ust:20260705.1900');
+
+      const loaded = await S.loadStreamState(st);
+      check('#122 F.5r-d loadStreamState reads the whole group back — an operator sealing an interval needs the count and the checkpoint head, and reading them one key at a time is where an operator invents its own names',
+        loaded.head === 'sha256:f4' && loaded.count === 3 && loaded.cpHead === 'sha256:cp1' && loaded.spanFrom === 'ust:20260705.1900' && loaded.spanTo === 'ust:20260705.1900');
+    }
+
     // ── The OTHER two members of W, each with its own outcomes. `gap` extends the chain exactly as an append
     // does; `resume` asserts a head from outside the store and is admissible only while the store agrees.
     {

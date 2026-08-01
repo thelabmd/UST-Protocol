@@ -3,7 +3,7 @@
 
 *This specification text is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](../LICENSE-SPEC). Reference code in this repository is licensed Apache-2.0. Use of the name **UST** / **Universal State Transcript** and the **UST-compatible** claim: see [TRADEMARK.md](../TRADEMARK.md).*
 
-> **Release candidate — `1.0.0-rc.57`.** This specification has been extensively red-teamed; an independent
+> **Release candidate — `1.0.0-rc.58`.** This specification has been extensively red-teamed; an independent
 > external cryptographic audit is pending. It is subject to change until `1.0.0` final. The wire format `ust:"1.0"`
 > is stable across all rc's — pin exact versions. Per-version history is in [`CHANGELOG.md`](../CHANGELOG.md).
 
@@ -781,6 +781,12 @@ the same guard to all of them: two writers using an UNGUARDED operation fork exa
 guarded, and the guarded operations, never invoked in that run, change nothing (formal model F.5r-c).
 Resumption MUST NOT overwrite a stored head that differs from the one being resumed to; that difference is
 another writer advancing the stream, and overwriting it CAUSES the fork rather than recovering from one.
+
+The head, the cumulative frame count and the observed interval are ONE record of one event, so a producer
+MUST advance them together and MUST place the head guard first: a refused frame that has already moved the
+count asserts coverage over a document that does not exist. Where a partial write is possible at all, it MUST
+land on the under-claiming side — a count that LEADS the frames manufactures evidence of an omission the
+publisher did not commit, while one that lags conceals none (formal model F.5r-d).
 
 **Checkpoints (M5).** Checkpoints are themselves `prev`-chained frames (`class:"attestation"`) that assert the
 stream head + frame count over an interval. The asserted `frame_count` is CUMULATIVE from the stream origin, so

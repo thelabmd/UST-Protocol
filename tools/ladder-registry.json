@@ -916,6 +916,16 @@
         "excluded": "No document bytes and no verdict change: a gap record and a checkpoint are byte-identical before and after. What moved is WHICH code paths may write the head key, which produces no document."
       },
       "test": "#122 F.5r-c the head-key WRITER ROSTER, enumerated from source, reduces to the guard — a partly guarded layer forks exactly like an unguarded one"
+    },
+    {
+      "round": 136,
+      "math": "Not one door per VALUE, but one door per EVENT",
+      "spec": "The head, the cumulative frame count and the observed interval are ONE record of one event, so a producer",
+      "code": "packages/ust-operator/index.mjs :: recordFrame / recordCheckpoint / loadStreamState; append, gap and checkpoint route through them; store.incr used when offered",
+      "vector": {
+        "excluded": "No document bytes and no verdict change: the same frames and the same checkpoint are produced before and after. What moved is which stored values one call is responsible for, which produces no document."
+      },
+      "test": "#122 ADVERSARIAL F.5r-d recordFrame: a REFUSED frame moves NOTHING — the guard runs first, so a stream that correctly refused to fork does not count a frame it never emitted"
     }
   ],
   "first_accounted_round": 76,

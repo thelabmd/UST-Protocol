@@ -2388,6 +2388,35 @@ admissible iff the stored head does not CONTRADICT it: `stored ∈ {⊥, H}`. A 
 `H` is precisely the disagreement the discipline exists to name — another writer has been advancing —
 and overwriting it is the fork-causing act, not a repair of one.
 
+**Theorem F.5r-d (one event, one door — and its internal order is forced).** Writing a frame moves
+THREE stored values: the head `H`, the cumulative count `C`, and the observed interval `S`. They are
+not three facts; they are one fact recorded three ways, and a store offering no transaction cannot
+write them simultaneously. Two consequences follow.
+
+*(i) The guard precedes the rest.* If `C` or `S` is written before the head guard runs, a REFUSED
+frame has already moved them: a stream that correctly refused to fork nevertheless counts a frame it
+never emitted, and its next stream checkpoint asserts coverage over a document that does not exist. The
+guard must therefore be the FIRST write of the group, so a refusal leaves the whole group untouched.
+
+*(ii) A partial write must land on the UNDER-claiming side.* Suppose the process stops between two of
+the three writes. If `C` lags the frames, the publisher claims FEWER frames than it delivered; if `C`
+leads, it claims MORE. Both are permanent — `C` is cumulative, so every later stream checkpoint carries the
+error — and both are detectable. They are not equally safe: an over-claim asserts a frame that was
+never emitted, and "a frame is missing" is precisely the signal that means data was WITHHELD, so the
+publisher manufactures evidence of an omission it did not commit. An under-claim never conceals one.
+Hence the order `H` then `C`, and the door that writes them must not be split into parts a caller can
+invoke separately — a caller who advances the head and forgets the count reproduces exactly the
+over-claim this ordering exists to avoid, only silently.
+
+**Corollary (what the layer must expose).** Not one door per VALUE, but one door per EVENT: a frame
+entered the stream, and an interval was sealed. A finer surface is not more flexible, it is more
+forkable — the operator becomes responsible for an ordering the layer already knows.
+
+**Measured (rev76).** The first operator kept these values in two different call sites — the head
+moved in the publish path, the count and the interval in a post-write hook — which is how the head
+came to be advanced AFTER publication (F.5r, rev74) without anything noticing: no single place held
+the group, so no single place could state its order.
+
 **Binding: realized** — *"#122 ADVERSARIAL: two appenders from one head both succeed when the head is PRIVATE — the fork is produced and neither can see it"*, *"#122 ADVERSARIAL: the two branches are NEVER reported as a fork — the chain guard fires first, so downstream detection does not happen"*.
 
 The REFUSAL itself lives one layer up and is checked there, not here: `packages/ust-operator/conformance.mjs` exercises a shared store — a second appender on one head is refused `E-FORK`, a stream resumes the same chain in another object, and a `cas`-capable store reports `prevented` while a plain one reports `detected`. The core suite must not import the operator layer; a dependency in that direction would make the TCB's own tests rest on something above it, and I nearly wrote exactly that by citing an operator check in this Binding.

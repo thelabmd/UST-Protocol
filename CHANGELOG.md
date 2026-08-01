@@ -25,6 +25,12 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
+## rc.58 line
+
+| version | round | what closed |
+|---------|-------|-------------|
+| **operator 0.5.0**<br>**rc.58**<br>**cli rc.91**<br>**mcp rc.47**<br>**light rc.47**<br>**web-signer rc.16**<br>**ots-verify rc.24**<br>**rekor-verify rc.19**<br>**diarium 0.2.13** | 136 | **One door per EVENT, not per value — and the order inside it is forced.** Asked to move four stored values off an operator and onto the layer, the measurement said they are not four things: the head, the cumulative count and the observed interval are ONE fact recorded three ways, moved by one event, while the checkpoint head is moved by another. F.5r-d: handing an operator three doors makes it responsible for an ordering the layer already knows, and a caller that advances the head and forgets the count claims a frame it never emitted — permanently, because the count is cumulative. Two consequences are now normative. **The guard is the FIRST write of the group**, so a refused frame leaves all of it untouched; otherwise a stream that correctly refused to fork still counts a frame that does not exist. **A partial write must land on the UNDER-claiming side**: an over-claim asserts a frame that was never emitted, and "a frame is missing" is exactly the signal that means data was WITHHELD, so the publisher manufactures evidence of an omission it did not commit; an under-claim conceals none. `recordFrame` and `recordCheckpoint` are those two doors, `loadStreamState` reads the group back, and `append`/`gap`/`checkpoint` all route through them. `store.incr` is used when offered, for the same reason `store.cas` is. **The sweep also closed a defect the object hid:** the interval reset lived only in the in-process field and was never written, so a stream resumed in another process read the PREVIOUS interval's start and would have sealed the next hour with bounds beginning before it. 52 checks in the layer suite; the ordering and the reset both mutation-tested. |
+
 ## rc.57 line
 
 | version | round | what closed |
