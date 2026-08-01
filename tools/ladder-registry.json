@@ -882,6 +882,14 @@
       "test": {
         "excluded": "The gate IS the test: an interface without a real sample now fails, so the gap that hid this cannot recur silently."
       }
+    },
+    {
+      "round": 133,
+      "math": "no function of `I_A` separates them, and `A` cannot refuse what it cannot see",
+      "spec": "the head MUST be shared among whatever writes the stream, not private to each writer",
+      "code": "packages/ust-operator/index.mjs :: Stream takes a store port, names STREAM_KEYS as the layer's contract, resumes from the store and refuses E-FORK on a stale head",
+      "vector": "stream-fork-visible-only-with-both-branches",
+      "test": "#122 ADVERSARIAL: two appenders from one head both succeed when the head is PRIVATE — the fork is produced and neither can see it"
     }
   ],
   "first_accounted_round": 76,

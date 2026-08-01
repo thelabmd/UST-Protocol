@@ -2302,6 +2302,72 @@ is decided by that substrate's own verification, never conferred by the publishe
 - the per-substrate verdict is the SAME function as F.5p's, not a second copy.
 - the roll-up separates dark from partial, and an empty declared set yields neither.
 
+## F.5r A producer with a PRIVATE head cannot see its own fork — and downstream detection is not guaranteed to happen (#122)
+
+The consumer side of this is already closed: `verifyStream` refuses two frames sharing a `prev`
+(**two frames share a prev**, `E-PREV`, Y1). What follows is about the OTHER side — the
+appender — and about a gap between the two that the existing check cannot close.
+
+**The setup.** Let a stream be a sequence of documents where `dₜ₊₁` carries `prev = h(dₜ)`, so the
+stream's identity at any moment is its head `Hₜ`. An appender must READ `Hₜ` to write `dₜ₊₁`. Write
+`I_A` for the information available to appender `A`: the documents `A` itself produced.
+
+**Theorem F.5r-a (producer blindness).** If the head is private to the appender, fork-freedom is not
+measurable in `I_A`.
+*Proof.* Fix `A` starting from `H₀`. In world 1, `A` alone appends and produces `d_A`. In world 2, a
+second appender `B` — same genesis, same key, its own private `H₀` — also appends, producing `d_B`
+with the same `prev`. `B`'s writes never enter `I_A`. The observation sequence of `A` is IDENTICAL in
+both worlds, so no function of `I_A` separates them, and `A` cannot refuse what it cannot see. ∎
+
+Both documents are individually VALID: each is well-formed, signed by an admitted key, and chains to
+a real predecessor. The defect is not in either document; it is in the PAIR, and neither producer
+holds the pair.
+
+**Theorem F.5r-b (downstream detection does not happen at all — measured, not assumed).** A fork is
+not two frames in one sequence; it is TWO SEQUENCES, each linear and each clean.
+*Proof.* Let `d_A` and `d_B` share `prev = h(dₜ)`. Present them to a range verifier in one array and
+the chain check fires FIRST — the second frame's `prev` no longer equals the running head, so the
+verdict is `frame i prev dangling (broken chain)`, not a fork. Reorder them and the chronology check
+fires instead. Present each branch alone, as a consumer actually receives it, and each verifies
+CLEAN: one `prev` per frame, a linear chain, a correct verdict on the evidence seen. There is no
+input under which the two branches are reported AS A FORK. ∎
+
+**Correction (rev73 — this section first claimed the opposite, and the vacuity battery refuted it).**
+The original text said `verifyStream` catches two frames sharing a `prev`, citing its `seenPrev`
+guard, and the conformance check asserted `error === 'E-PREV'` — which passes whether the fork guard
+fires or the dangling guard does, so the claim was never tested. Tightening the assertion to require
+the word *fork* in the detail turned the check RED on a clean tree: the guard is dominated by the
+chain check standing before it and is unreachable for any input. A guard that cannot fire is not a
+detector, and a specification resting on it is resting on nothing.
+
+**Corollary (the refusal has exactly one home).** Since no consumer can be shown the fork, and the
+producer with a private head cannot see it either (F.5r-a), a fork produced this way is invisible
+EVERYWHERE. That is not a weaker version of "detection is conditional" — it is the stronger claim,
+and it removes the option of leaving this to the verifier.
+
+**Where the refusal has to live.** The only party positioned to observe both attempts is whoever
+writes the head, so fork-freedom must be enforced there — which requires the head to be SHARED among
+appenders rather than private to each. Nothing downstream can compensate: the branches never meet.
+
+**And what a shared head actually buys, stated honestly.** Two mechanisms, two different claims:
+
+| store contract | what it yields |
+|---|---|
+| `get` / `set` | **DETECTION.** Between `A`'s read and `A`'s write, `B` may write. The race is not closed; the next append notices the head moved and can refuse then. |
+| compare-and-set | **PREVENTION.** The write is conditional on the head still being what was read, so only one of two concurrent appends lands. |
+
+The distinction is load-bearing and must not be blurred: a layer offering `get`/`set` that claims to
+PREVENT forks is claiming a guarantee it does not have — the same class as reporting an unattestable
+property (F.5o) or a universal claim over an undeclared domain (F.5q). It must say which one it got.
+
+**Binding: realized** — *"#122 ADVERSARIAL: two appenders from one head both succeed when the head is PRIVATE — the fork is produced and neither can see it"*, *"#122 ADVERSARIAL: the two branches are NEVER reported as a fork — the chain guard fires first, so downstream detection does not happen"*.
+
+The REFUSAL itself lives one layer up and is checked there, not here: `packages/ust-operator/conformance.mjs` exercises a shared store — a second appender on one head is refused `E-FORK`, a stream resumes the same chain in another object, and a `cas`-capable store reports `prevented` while a plain one reports `detected`. The core suite must not import the operator layer; a dependency in that direction would make the TCB's own tests rest on something above it, and I nearly wrote exactly that by citing an operator check in this Binding.
+
+**Conformance (math ⇒ code ⇒ green vector, `packages/ust-protocol/conformance.mjs`).**
+- the private-head case reproduces the fork and shows both branches individually valid.
+- the shared-head case refuses the second appender, and the refusal names which guarantee it rests on.
+
 ## F.6 Composition — the event algebra
 
 An **anchored existence-and-commitment claim** is an event `A ∈ Fₜ`; an UNANCHORED signed claim is a document

@@ -85,6 +85,17 @@ for (const v of V.vectors) {
     }
     // #120 / F.5q — the roll-up over declared anchoring substrates. A port must reproduce that ONE silent leg is
     // PARTIAL and that no declaration yields UNKNOWN, never the reassuring answer.
+    // #122 / F.5r — видимость форка. Порт обязан воспроизвести именно асимметрию: ветвь поодиночке
+    // чиста, пара — нет. Кадры строит раннер из общей головы, потому что форк это ОТНОШЕНИЕ, а не байты.
+    case 'fork-visibility': {
+      const mk = (prev, u) => P.seal(P.buildState({ domain_shard: 'e.com', ust_id: u, key_id: A.key_id, class: 'observation' }, T,
+        { r: { kind: 'captured', value: { v: u } } }, prev ? { prev } : undefined), A.priv, A.pubB64);
+      const root = mk(null, 'ust:20260628.110000'); const h = P.contentHash(root);
+      const b1 = mk(h, 'ust:20260628.110030'), b2 = mk(h, 'ust:20260628.110031');
+      const alone = !P.verifyStream([root, b1]).error && !P.verifyStream([root, b2]).error;
+      check(v.id, alone === v.expect.aloneClean && P.verifyStream([root, b1, b2]).error === v.expect.togetherError);
+      break;
+    }
     case 'anchor-rollup': {
       const r = P.anchorRollup(v.input);
       check(v.id, r.status === v.expect.status && r.silent.length === v.expect.silent);
@@ -1380,6 +1391,39 @@ console.log('\n═════════════════════�
     try { P.surfaceVerdict({ surface: 'keylog', declared: true, observed: 'present', standardLocation: false }); return false; }
     catch (e) { return e.code === 'E-DISCOVERY'; }
   })());
+  // ── #122 / F.5r — producer-side forks. The operator layer lives in another package, so this checks the
+  // INVARIANT the layer must satisfy, against the core's own view: two successors of one head is a fork,
+  // and the reference verifier already says so — what is new is WHO can see it and WHEN.
+  {
+    const mkFrame = (prevHash, ustId) => P.seal(P.buildState(
+      { domain_shard: 'e.com', ust_id: ustId, key_id: A.key_id, class: 'observation' }, T,
+      { r: { kind: 'captured', value: { v: ustId } } }, prevHash ? { prev: prevHash } : undefined), A.priv, A.pubB64);
+    const root = mkFrame(null, 'ust:20260628.100000');
+    const h = P.contentHash(root);
+    const branchA = mkFrame(h, 'ust:20260628.100030');
+    const branchB = mkFrame(h, 'ust:20260628.100031');
+    check('#122 ADVERSARIAL: two appenders from one head both succeed when the head is PRIVATE — the fork is produced and neither can see it', (() => {
+      // both branches are INDIVIDUALLY well-formed: the defect is in the pair, which is why no single
+      // producer can refuse it and why the refusal has to happen where the head is written.
+      return P.contentHash(branchA) !== P.contentHash(branchB)
+        && branchA.state.provenance.prev === h && branchB.state.provenance.prev === h;   // prev живёт в provenance, не в hashes
+    })());
+    check('#122 ADVERSARIAL: the two branches are NEVER reported as a fork — the chain guard fires first, so downstream detection does not happen', (() => {
+      // ЗАМЕРЕНО, а не предположено. Сперва здесь стояло `error === 'E-PREV'`, что проходит и при форке,
+      // и при оборванной цепи — батарея пустоты показала, что утверждение не тестируется. Уточнение до
+      // слова `fork` покрасило проверку на ЧИСТОМ дереве: страж форка стоит ПОСЛЕ проверки цепи и
+      // недостижим. Форк — это не два кадра в одной последовательности, а ДВЕ последовательности.
+      const together = P.verifyStream([root, branchA, branchB]);
+      const reordered = P.verifyStream([root, branchB, branchA]);
+      const namedFork = /fork/i.test(String(together.detail)) || /fork/i.test(String(reordered.detail));
+      return together.error === 'E-PREV' && !namedFork;
+    })());
+    check('#122 and each branch ALONE verifies clean — which is why a consumer served only one never learns of it', (() => {
+      const a = P.verifyStream([root, branchA]), b = P.verifyStream([root, branchB]);
+      return !a.error && !b.error;
+    })());
+  }
+
   // ── #120 / F.5q — the ANCHORING axis: one silent leg is not a dark publisher
   const roll = (d, o) => P.anchorRollup({ declared: d, observed: o });
   check('#120 ADVERSARIAL: darkness is NOT decidable from one substrate — one silent declared leg yields PARTIAL, never dark', (() => {

@@ -21,9 +21,11 @@ export function assembleLayers(layers: unknown, arg1?: unknown): { valid: unknow
 export const BREADTH: unknown;
 export class KeyLog { constructor(verdict?: unknown); }
 export function layerSeed(subordinateDocs: unknown): unknown;
+export function memoryStore(): { get: unknown; set: unknown };
 export function sealLayerChain(outerState: unknown, subordinateDocs: unknown, sign: unknown): unknown;
 export function sealTree(idMeta: unknown, time: unknown, hashes: unknown, sign: unknown, arg4?: unknown): Promise<unknown>;
 export class Stream { constructor(verdict?: unknown); }
+export const STREAM_KEYS: unknown;
 export const substrates: unknown;
 export function substrateVerifier(deps?: unknown): unknown;
 export class Tiers { constructor(verdict?: unknown); }

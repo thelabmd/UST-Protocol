@@ -25,6 +25,18 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
+## rc.55 line
+
+**PUBLISHED 2026-08-01** — the whole set, and `@ust-protocol/operator` at **0.2.0**: a MAJOR because
+`append`, `gap`, `checkpoint` and `resume` are now async. A stream that keeps its head in a shared store
+cannot pretend the write is free, and anyone already holding the layer must await it.
+
+Opened because rc.54 is PUBLISHED and a published version is immutable.
+
+| version | round | what closed |
+|---------|-------|-------------|
+| **rc.55**<br>**operator 0.2.0**<br>**cli rc.88**<br>**mcp rc.44**<br>**light rc.44**<br>**web-signer rc.13**<br>**ots-verify rc.21**<br>**rekor-verify rc.16**<br>**diarium 0.2.10** | 133 | **The operator layer held its whole state in process memory, so it served a job and not a publisher — and the failure mode is a silent fork.** `Stream` kept `head`, `count` and the observed span as instance fields. A restart loses them; two instances produce **two successors of one head**, and neither can see the other. **Theorem F.5r-a**: with a private head, fork-freedom is not measurable in the appender's own information — the second writer's documents never enter the first's observation, so the two worlds are indistinguishable and the producer cannot refuse what it cannot see. Both branches are individually VALID; the defect is in the PAIR, which no producer holds. **Theorem F.5r-b, and it is why this could not be left downstream:** `verifyStream` does catch two frames sharing a `prev` (`E-PREV`, Y1) — but only for a verifier holding BOTH branches, and nothing compels the branches to reach one verifier. Two instances behind a balancer, two regions, a deploy overlapping its predecessor: each consumer is served a locally consistent chain, every verdict is correct on the evidence seen, and the fork is undetected everywhere. Detection downstream is a POSSIBILITY; prevention upstream is a GUARANTEE. So `Stream` takes a **store port** (`memoryStore()` remains the default, so short jobs are untouched), `STREAM_KEYS` names the state as the LAYER's contract rather than each operator's invention, `resumeFromStore()` continues the same chain in another process, and `append` REFUSES with `E-FORK` when the stored head is not the one this instance last wrote. **And the guarantee is named honestly:** `get`/`set` yields `detected`, compare-and-set yields `prevented`, and the layer never claims the stronger one — the same discipline as not reporting an unattestable property (F.5o) or a universal claim over an undeclared domain (F.5q). Found bottom-up: a live operator had already solved this externally with five private keys, which is exactly the divergence the middle layer exists to absorb. Three checks, a `fork-visibility` vector pinning the asymmetry (each branch alone clean, the pair not), 794 checks total. |
+
 ## rc.54 line
 
 **PUBLISHED 2026-08-01** — the whole set; every dist-tag moved. `UstVerdict` now declares the conditional

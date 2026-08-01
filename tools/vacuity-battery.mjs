@@ -50,7 +50,10 @@ const MUTANTS = MUTATIONS.filter((m) => (m.observe || []).length > 0);
 // planted field is not), and a function makes the whole proof non-inert and refused at the door. Breaking one layer
 // leaves the other answering. The check asserts real behaviour; it is simply not singly falsifiable, and the corpus
 // records that instead of carrying a decorative mutant to make the number look better.
-const PINNED_UNPROVEN = 54;
+// 54 → 55 (round 133, #122): R73 утверждает свойство ПОСТРОЕНИЯ — два добавляющих от одной головы
+// производят разные валидные документы с общим prev, — и верификатора не зовёт вовсе. Мутацией
+// верификатора до него не достать по построению, а не по недосмотру. Поднято осознанно.
+const PINNED_UNPROVEN = 55;
 
 const failures = [];
 const caught = new Set();

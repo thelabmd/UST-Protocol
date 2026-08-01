@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 // @ust-protocol/operator round-trip: PRODUCE with @ust-protocol/operator (stateful) → VERIFY with ust-protocol (stateless). If they agree,
 // @assurance 2 canfail:yes — every case is BUILT by this layer and VERIFIED by the base it claims to produce for;
 // the differential compares its bytes against the hardened implementation's, and a control reverts the fix to prove it fires
@@ -27,9 +28,9 @@ let pass = 0, fail = 0; const check = (id, ok, d) => { if (ok) pass++; else { fa
 // 1. Stream (+ checkpoint) → P.verifyStream
 const genesis = sign(P.buildGenesis(id('ust:20260705.18'), t, A.pubB64));
 const stream = new S.Stream({ sign, genesisContentHash: P.contentHash(genesis) });
-stream.append(id('ust:20260705.1801'), t, { sw: { kind: 'captured', value: { kp: '1' } } });
-stream.append(id('ust:20260705.1802'), t, { sw: { kind: 'captured', value: { kp: '2' } } });
-const cp = stream.checkpoint(id('ust:20260705.1803'), t);
+await stream.append(id('ust:20260705.1801'), t, { sw: { kind: 'captured', value: { kp: '1' } } });
+await stream.append(id('ust:20260705.1802'), t, { sw: { kind: 'captured', value: { kp: '2' } } });
+const cp = await stream.checkpoint(id('ust:20260705.1803'), t);
 check('Stream→verifyStream-chain-consistent', P.verifyStream(stream.frames, { genesis, checkpoint: cp }).complete === 'chain-consistent');
 check('Stream→provisional-no-checkpoint', P.verifyStream(stream.frames, { genesis }).complete === 'provisional');
 
@@ -77,12 +78,12 @@ check('Substrate:<6conf→unproven', P.verifyAnchor(target, proofS, { substrateV
 // 7. CROSS-TIER + RESUMPTION (P6): separate prev-stream per tier; signed gap record; continuation.
 const tiers = new S.Tiers({ sign, genesisContentHash: P.contentHash(genesis) });
 const hour = tiers.stream('hour'), minute = tiers.stream('minute');
-hour.append(id('ust:20260705.23'), t, { d: { kind: 'captured', value: { v: 'h' } } });
-minute.append(id('ust:20260705.2301'), t, { d: { kind: 'captured', value: { v: 'm' } } });
+await hour.append(id('ust:20260705.23'), t, { d: { kind: 'captured', value: { v: 'h' } } });
+await minute.append(id('ust:20260705.2301'), t, { d: { kind: 'captured', value: { v: 'm' } } });
 check('Tiers:separate-prev-streams', tiers.tiers().length === 2 && hour.head !== minute.head);
-const gapDoc = hour.gap(id('ust:20260705.2302'), t, 'outage');
+const gapDoc = await hour.gap(id('ust:20260705.2302'), t, 'outage');
 check('Tiers:signed-gap-record', P.isValid(P.verify(gapDoc, { context: 'data' })) && gapDoc.state.provenance.constituents.length === 0 && gapDoc.state.provenance.prev !== undefined);
-const afterGap = hour.append(id('ust:20260705.2303'), t, { d: { kind: 'captured', value: { v: 'h2' } } });   // continuation (not re-genesis)
+const afterGap = await hour.append(id('ust:20260705.2303'), t, { d: { kind: 'captured', value: { v: 'h2' } } });   // continuation (not re-genesis)
 check('Tiers:continuation-after-gap', afterGap.state.provenance.prev === P.contentHash(gapDoc));
 
 // ── DIFFERENTIAL against the hardened shape (2026-07-31).
@@ -95,12 +96,12 @@ check('Tiers:continuation-after-gap', afterGap.state.provenance.prev === P.conte
 // something ALMOST like what the hardened path produces is a migration that silently loses a property.
 {
   const GEN = 'sha256:' + '99'.repeat(32);
-  const mk = () => { const st = new S.Stream({ sign, genesisContentHash: GEN });
-    st.append(id('ust:20260731.100000'), t, { d: { kind: 'captured', value: { v: '1' } } });
-    st.append(id('ust:20260731.100030'), t, { d: { kind: 'captured', value: { v: '2' } } });
+  const mk = async () => { const st = new S.Stream({ sign, genesisContentHash: GEN });
+    await st.append(id('ust:20260731.100000'), t, { d: { kind: 'captured', value: { v: '1' } } });
+    await st.append(id('ust:20260731.100030'), t, { d: { kind: 'captured', value: { v: '2' } } });
     return st; };
-  const mine = mk().checkpoint(id('ust:20260731.10'), t);
-  const hard = mk();
+  const mine = await (await mk()).checkpoint(id('ust:20260731.10'), t);
+  const hard = await mk();
   const theirs = sign(P.buildCheckpoint(id('ust:20260731.10'), t, hard.head, hard.count, GEN,
     { from: 'ust:20260731.100000', to: 'ust:20260731.100030' }));
   check('differential:checkpoint-bytes-match-hardened', P.canon(mine.state) === P.canon(theirs.state),
@@ -128,11 +129,60 @@ check('Tiers:continuation-after-gap', afterGap.state.provenance.prev === P.conte
   check('sealTree:refuses-an-empty-set-rather-than-sealing-nothing', (await S.sealTree(idA, t, [], sign)).error === 'E-BOUNDS');
 }
 
+// ── #122 / F.5r — THE HEAD IS SHARED, AND A STALE ONE IS REFUSED.
+// This lives HERE and not in the core suite: the core's tests must not depend on a layer above them. I
+// nearly introduced exactly that by citing an operator check in the model's Binding.
+{
+  const D = { sw: { kind: 'captured', value: { kp: 'x' } } };
+  const store = S.memoryStore();
+  const A1 = new S.Stream({ sign, store }), B1 = new S.Stream({ sign, store });
+  check('#122 the guarantee is named honestly: get/set yields detected, never prevented', A1.guarantee === 'detected');
+  await A1.append(id('ust:20260705.2400'), t, D);
+  let refused = null;
+  try { await B1.append(id('ust:20260705.2401'), t, D); } catch (e) { refused = e.code; }
+  check('#122 ADVERSARIAL: a second appender on a shared head is REFUSED — the fork is named, not produced', refused === 'E-FORK');
+  const headBeforeContinue = await store.get(S.STREAM_KEYS.head);
+  const C1 = await new S.Stream({ sign, store }).resumeFromStore();
+  const cont = await C1.append(id('ust:20260705.2402'), t, D);
+  check('#122 a stream resumed from the store continues THE SAME chain in another object',
+    C1.count === 2 && cont.state.provenance.prev === headBeforeContinue);   // continues EXACTLY the head that was in the store
+  const cas = (() => { const m = new Map(); return { get: (k) => m.get(k) ?? null, set: (k, v) => { m.set(k, v); },
+    cas: (k, expect, next) => { if ((m.get(k) ?? null) !== expect) return false; m.set(k, next); return true; } }; })();
+  {
+    // retention is bounded to ONE interval: after a checkpoint the frames are still available to the
+    // caller, and the next interval's first frame clears them. Otherwise a long-lived publisher keeps all.
+    const st2 = new S.Stream({ sign, genesisContentHash: P.contentHash(genesis) });
+    await st2.append(id('ust:20260705.2500'), t, D); await st2.append(id('ust:20260705.2501'), t, D);
+    const cp2 = await st2.checkpoint(id('ust:20260705.2502'), t);
+    const heldAtCheckpoint = st2.frames.length;
+    await st2.append(id('ust:20260705.2503'), t, D);
+    check('#122 frames are available to the caller AT the checkpoint and cleared by the next interval first frame',
+      heldAtCheckpoint >= 2 && st2.frames.length === 1 && !!cp2);
+  }
+  check('#122 with store.cas the layer reports prevented — the stronger guarantee, and only when it holds it',
+    new S.Stream({ sign, store: cas }).guarantee === 'prevented');
+}
+
 console.log('\n════════════════════════════════════════════');
 console.log('  @ust-protocol/operator round-trip vs ust-protocol   PASS ' + pass + '   FAIL ' + fail);
+
+
+
+
 console.log(fail ? '' : '  ✓ @ust-protocol/operator PRODUCES exactly what ust-protocol VERIFIES — layers compose');
 // It EXITS. Measured 2026-07-31: this file printed `FAIL 3` and returned 0, so wiring it into CI would have added a
 // step that is green while failing — the shape this repository has now met four times in one day. A check that
 // cannot fail asserts nothing, and a check that fails without saying so in its exit code is worse: it looks like
 // evidence.
+// AND LAST: the number of checks DECLARED must equal the number COUNTED. Five checks inserted below this
+// print did run — and reached neither the count nor the exit code: the suite stayed green even though they
+// could have failed. That is exactly the shape the file above calls the worst. A disagreement between
+// declared and counted now fails the suite by itself.
+{
+  const declared = (readFileSync(new URL(import.meta.url), 'utf8').match(/^\s*check\(\s*'/gm) ?? []).length;
+  if (declared !== pass + fail) {
+    console.log(`  ✗ ${declared} checks declared, ${pass + fail} counted — some stand BELOW the summary and reach neither the count nor the exit code`);
+    process.exit(1);
+  }
+}
 if (fail) process.exit(1);

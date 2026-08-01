@@ -540,6 +540,18 @@
       "rev": "rev71",
       "model_locus": "the anchored row never consults the declaration, so silence in",
       "conformance_check": "#120 ADVERSARIAL: an UNDECLARED substrate carrying an anchor still counts — silence in the profile cannot hide evidence"
+    },
+    {
+      "id": "R73-producer-blind-to-own-fork",
+      "rev": "rev72",
+      "model_locus": "no function of `I_A` separates them, and `A` cannot refuse what it cannot see",
+      "conformance_check": "#122 ADVERSARIAL: two appenders from one head both succeed when the head is PRIVATE — the fork is produced and neither can see it"
+    },
+    {
+      "id": "R74-downstream-detection-does-not-happen",
+      "rev": "rev72",
+      "model_locus": "There is no",
+      "conformance_check": "#122 ADVERSARIAL: the two branches are NEVER reported as a fork — the chain guard fires first, so downstream detection does not happen"
     }
   ]
 }

@@ -43,14 +43,90 @@ export class AnchorBatch {
 
 // ─── Stream (producer of completeness §11.3): maintain a prev-chain per (domain_shard, tier); emit checkpoints.
 //     `sign(state) → signed doc` is supplied by the operator (holds the key). Verified by P.verifyStream.
+// STREAM_KEYS is the LAYER's contract, not each operator's invention. Measured on a live operator: five
+// values tracked externally under private names against five fields held here — one idea, two
+// implementations, and nothing comparing them. Named here, two operators' state is the same shape.
+export const STREAM_KEYS = Object.freeze({ head: 'ust:stream:head', count: 'ust:stream:count', cpHead: 'ust:stream:cp-head', spanFrom: 'ust:stream:span-from', spanTo: 'ust:stream:span-to' });
+
+// Memory is the DEFAULT store, never the only one. A job that lives minutes is served by it; a publisher
+// that lives months is not, and the layer must not force the second to reimplement the first.
+export const memoryStore = () => { const m = new Map(); return { get: (k) => m.get(k) ?? null, set: (k, v) => { m.set(k, v); } }; };
+
 export class Stream {
-  constructor({ sign, genesisContentHash }) { this.sign = sign; this.genesisContentHash = genesisContentHash ?? null; this.cpHead = null; this.spanFrom = null; this.spanTo = null; this.head = genesisContentHash ?? null; this.count = 0; this.frames = []; }
-  append(idMeta, time, data, cls = 'observation') {         // idMeta = {domain_shard, ust_id, key_id}
+  /**
+   * #122 / F.5r — THE HEAD MUST NOT BE PRIVATE TO THE APPENDER.
+   *
+   * Two appenders, each holding its own head, both extend it successfully — and NEITHER sees the other:
+   * the second's writes never enter the first's information, so the observation is identical in the world
+   * with the fork and the world without. Both documents are individually VALID — the defect is in the PAIR,
+   * and no producer holds the pair.
+   *
+   * `verifyStream` has a guard for two frames sharing a `prev`, but MEASURED (rev73) it is unreachable: the
+   * chain check stands before it and fires first. A fork is not two frames in one sequence, it is TWO
+   * sequences, each linear and each clean — so no consumer is ever shown it either. Detection downstream
+   * does not happen; prevention upstream is the only place left.
+   *
+   *
+   * So the head lives in a STORE shared by the appenders. `store.cas` — compare-and-set — PREVENTS the fork;
+   * a plain `get`/`set` only DETECTS it on the next append. The layer states which one it got (`guarantee`)
+   * and never claims the stronger.
+   */
+  constructor({ sign, genesisContentHash, store = memoryStore() }) {
+    this.sign = sign; this.genesisContentHash = genesisContentHash ?? null; this.store = store;
+    this.guarantee = typeof store.cas === 'function' ? 'prevented' : 'detected';
+    // THE HEAD STARTS AT THE GENESIS, not at null: the first frame must chain to the name-binding root, or
+    // `verifyStream` answers `first frame prev != genesis content_hash (M4)`. I dropped this while rewriting,
+    // because I read the original line truncated to the terminal width — and restored it by reading the diff
+    // rather than by guessing.
+    this.cpHead = null; this.head = genesisContentHash ?? null; this.count = 0; this.spanFrom = null; this.spanTo = null;
+    this.frames = [];
+  }
+  /** Load the state this stream left behind: the same stream continues in another process. */
+  async resumeFromStore() {
+    const g = (k) => this.store.get(k);
+    this.head = (await g(STREAM_KEYS.head)) ?? null;
+    this.count = Number((await g(STREAM_KEYS.count)) ?? 0);
+    this.cpHead = (await g(STREAM_KEYS.cpHead)) ?? null;
+    this.spanFrom = (await g(STREAM_KEYS.spanFrom)) ?? null;
+    this.spanTo = (await g(STREAM_KEYS.spanTo)) ?? null;
+    return this;
+  }
+  async append(idMeta, time, data, cls = 'observation') {
+    // READ THE SHARED HEAD FIRST. If it is not the one this instance wrote, somebody else wrote in between:
+    // refuse rather than extend a head we never observed. That is the whole point — a silent fork becomes a
+    // loud refusal, at the only place positioned to see it.
+    const stored = await this.store.get(STREAM_KEYS.head);
+    // AN EMPTY store means "nobody has written yet", not a disagreement: this stream's head starts at the
+    // genesis, and before the first write there is simply nothing stored. A disagreement is when a head IS
+    // there and it is not ours.
+    //
+    // And this is exactly where the two guarantees part: with an empty store two instances both see null and
+    // both write the first frame — only compare-and-set closes that race. Which is why `detected` is honestly
+    // called detection and not prevention: such a store misses the FIRST fork and catches the second.
+    if (stored !== null && stored !== (this.head ?? null)) {
+      throw Object.assign(new Error('E-FORK: the stream head moved under this appender — another writer extended it, and continuing would produce two successors of one head (F.5r)'), { code: 'E-FORK' });
+    }
     const state = P.buildState({ ...idMeta, class: cls }, time, data, this.head ? { prev: this.head } : undefined);
     const doc = this.sign(state);
-    this.head = P.contentHash(doc); this.count++; this.frames.push(doc);
-    if (!this.spanFrom) this.spanFrom = idMeta.ust_id;      // first ust_id since the last checkpoint
-    this.spanTo = idMeta.ust_id;                            // ...and the last one, so the interval is OBSERVED
+    const next = P.contentHash(doc);
+    if (this.guarantee === 'prevented') {
+      const won = await this.store.cas(STREAM_KEYS.head, this.head ?? null, next);
+      if (!won) throw Object.assign(new Error('E-FORK: lost the compare-and-set on the stream head — a concurrent appender won, and this document must NOT be published (F.5r)'), { code: 'E-FORK' });
+    } else {
+      await this.store.set(STREAM_KEYS.head, next);
+    }
+    // THE RETENTION BOUNDARY IS HERE, not at the checkpoint: the caller verifies the range against the
+    // checkpoint just handed to it, and needs the frames at that moment. Cleared on the FIRST frame of the
+    // next interval — retention is then bounded to one interval and legitimate use is not broken. Without
+    // this, 2 880 documents a day accumulated for the life of the process while the constructor's comment
+    // described the intention rather than the code.
+    if (this.intervalClosed) { this.frames = []; this.intervalClosed = false; }
+    this.head = next; this.count++; this.frames.push(doc);
+    if (!this.spanFrom) this.spanFrom = idMeta.ust_id;
+    this.spanTo = idMeta.ust_id;
+    await this.store.set(STREAM_KEYS.count, String(this.count));
+    await this.store.set(STREAM_KEYS.spanFrom, this.spanFrom);
+    await this.store.set(STREAM_KEYS.spanTo, this.spanTo);
     return doc;
   }
   // A checkpoint chains to the PREVIOUS CHECKPOINT — and the first one to the GENESIS. Chaining it to the stream's
@@ -62,10 +138,13 @@ export class Stream {
   // forever: a consumer can be shown that nothing was DELETED and never that nothing was MISSING. The bounds are
   // the ust_ids ACTUALLY written — the observed set, not the nominal grid — so an hour that starts late and ends
   // early states what it really covered rather than what a clock would have predicted.
-  checkpoint(idMeta, time, interval = this.observedInterval()) {
+  async checkpoint(idMeta, time, interval = this.observedInterval()) {
     const prev = this.cpHead ?? this.genesisContentHash ?? this.head;
     const doc = this.sign(P.buildCheckpoint(idMeta, time, this.head, this.count, prev, interval));
     this.cpHead = P.contentHash(doc);
+    await this.store.set(STREAM_KEYS.cpHead, this.cpHead);   // a checkpoint moves state too, so it writes
+    this.intervalClosed = true;   // the caller still needs this interval's frames — see append()
+
     this.spanFrom = null;                              // the next interval starts from the next frame written
     return doc;
   }
@@ -180,11 +259,21 @@ export const substrateVerifier = (deps = {}) => (locator, root) => substrates[lo
 
 // ─── §11.3 P6 cross-tier & resumption. Each (domain_shard, tier) is its own prev-stream; resumption after an
 //     outage is a CONTINUATION (never a new stream-genesis) with an intervening signed gap record (§11.1).
-Stream.prototype.gap = function (idMeta, time, reason = 'seal-delay') {          // §11.1 signed gap record: class:attestation, EMPTY constituents
+// #122 / F.5r — EVERYTHING THAT MOVES THE HEAD MUST WRITE IT. A missing write here was caught by
+// `append`'s own refusal: the next frame saw the stored head disagree with the field and refused.
+// The rule takes no exceptions — otherwise the store lags the object and the guard fires on its own side.
+Stream.prototype.gap = async function (idMeta, time, reason = 'seal-delay') {          // §11.1 signed gap record: class:attestation, EMPTY constituents
   const state = P.buildState({ ...idMeta, class: 'attestation' }, time, { gap: { kind: 'computed', value: { reason } } }, { prev: this.head, constituents: [] });
-  const doc = this.sign(state); this.head = P.contentHash(doc); this.count++; this.frames.push(doc); return doc;
+  const doc = this.sign(state); this.head = P.contentHash(doc); this.count++; this.frames.push(doc);
+  await this.store.set(STREAM_KEYS.head, this.head);
+  await this.store.set(STREAM_KEYS.count, String(this.count));
+  return doc;
 };
-Stream.prototype.resume = function (head, count) { this.head = head; this.count = count; return this; };  // continue after outage from a known head
+Stream.prototype.resume = async function (head, count) {   // continue after an outage from a known point
+  this.head = head; this.count = count;
+  await this.store.set(STREAM_KEYS.head, head); await this.store.set(STREAM_KEYS.count, String(count));
+  return this;
+};  // continue after outage from a known head
 export class Tiers {                                                             // one prev-stream per tier, shared genesis root
   constructor({ sign, genesisContentHash }) { this.sign = sign; this.genesisContentHash = genesisContentHash; this.byTier = new Map(); }
   stream(tier) { if (!this.byTier.has(tier)) this.byTier.set(tier, new Stream({ sign: this.sign, genesisContentHash: this.genesisContentHash })); return this.byTier.get(tier); }

@@ -3,7 +3,7 @@
 
 *This specification text is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](../LICENSE-SPEC). Reference code in this repository is licensed Apache-2.0. Use of the name **UST** / **Universal State Transcript** and the **UST-compatible** claim: see [TRADEMARK.md](../TRADEMARK.md).*
 
-> **Release candidate — `1.0.0-rc.54`.** This specification has been extensively red-teamed; an independent
+> **Release candidate — `1.0.0-rc.55`.** This specification has been extensively red-teamed; an independent
 > external cryptographic audit is pending. It is subject to change until `1.0.0` final. The wire format `ust:"1.0"`
 > is stable across all rc's — pin exact versions. Per-version history is in [`CHANGELOG.md`](../CHANGELOG.md).
 
@@ -761,6 +761,19 @@ exists) ⇒ E-PREV. This forecloses "orphan a new stream to hide prior frames."
 document per `(domain_shard, ust_id, tier)`; a second document for an occupied slot is a fork ⇒ E-PREV
 (checkpoint-detected). This is precisely what makes a committed prediction NON-grindable (§10) — and it holds
 ONLY when the stream is verified complete (the range verdict, §11.3); one-off documents carry no slot-uniqueness.
+
+**And that detection is CONDITIONAL, which places a duty on the producer.** `E-PREV` fires only for a
+verifier holding BOTH branches. Nothing compels the branches to reach one verifier: a publisher whose
+appenders each keep a PRIVATE head — two instances, two regions, a deploy overlapping its predecessor
+— can serve each consumer a locally consistent chain, and every verdict rendered will be correct on
+the evidence seen while the fork exists undetected everywhere (formal model F.5r). Both documents are
+individually valid; the defect is in the pair, and no single party downstream is guaranteed to hold it.
+
+Therefore a producer of a sequenced stream MUST NOT let two appenders extend one head independently:
+the head MUST be shared among whatever writes the stream, not private to each writer. A producer whose
+store offers only read-then-write **detects** a fork on the next append (the head moved); one whose
+store compares-and-sets **prevents** it. Both are acceptable; claiming the second while holding only
+the first is not — an operator MUST state which guarantee its stream rests on.
 
 **Checkpoints (M5).** Checkpoints are themselves `prev`-chained frames (`class:"attestation"`) that assert the
 stream head + frame count over an interval. The asserted `frame_count` is CUMULATIVE from the stream origin, so

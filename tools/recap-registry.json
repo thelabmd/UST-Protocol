@@ -235,6 +235,10 @@
     {
       "round": 132,
       "no_recap": "Round 132 closes no issue — it is the first downstream finding from the noosphere integration, and its lesson belongs with the #117 arc rather than in an entry of its own."
+    },
+    {
+      "round": 133,
+      "no_recap": "Round 133 does not close #122 — the store port and the refusal are in; the issue stays open until an operator actually runs on it and the checkpoint half is moved across too."
     }
   ]
 }

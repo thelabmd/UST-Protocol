@@ -82,6 +82,16 @@ export const MUTATIONS = [
     from: "  for (const s of new Set([...declared, ...Object.keys(observed)]))",
     to: "  for (const s of new Set([...declared])) /* mutant */",
   },
+  // round 133 (#122) — цепь перестаёт ловить оборванный prev. Тогда «ветвь поодиночке верифицируется
+  // чисто» перестаёт что-либо значить: чисто проходило бы всё, и асимметрия видимости стала бы
+  // непроверяемой — а именно она обосновывает, почему отказ обязан жить у производителя.
+  {
+    id: 'chain-stops-catching-dangling-prev', mustDetect: true, observe: ['conformance'],
+    why: 'асимметрия видимости. Сломано: одна ветвь тоже перестаёт проходить, и условность обнаружения не проверить.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "    else if (p !== prevHash) return { error: 'E-PREV', detail: 'frame ' + i + ' prev dangling (broken chain)' };",
+    to: "    else if (false) return { error: 'E-PREV', detail: 'unreachable' }; /* mutant */",
+  },
   // round 99 (#102) — F.5p relocation closure. Broken, a profile-named location for a standard surface is accepted
   // instead of refused, so a verifier could read the trust chain from a place the audited host itself chose.
   {
