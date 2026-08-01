@@ -50,7 +50,7 @@ export const STREAM_KEYS = Object.freeze({ head: 'ust:stream:head', count: 'ust:
 
 // Memory is the DEFAULT store, never the only one. A job that lives minutes is served by it; a publisher
 // that lives months is not, and the layer must not force the second to reimplement the first.
-export const memoryStore = () => { const m = new Map(); return { get: (k) => m.get(k) ?? null, set: (k, v) => { m.set(k, v); } }; };
+export const memoryStore = () => { const m = new Map(); return { get: (k) => m.get(k) ?? null, set: (k, v) => { m.set(k, v); }, del: (k) => { m.delete(k); } }; };
 
 /**
  * THE HEAD DISCIPLINE, on its own — because an operator that builds its own documents cannot reach it
@@ -115,12 +115,22 @@ export async function recordFrame(store, { expected = null, next, ust_id }) {
  *
  * The interval reset used to live only in the object, never in the store — so a stream resumed in another
  * process read the PREVIOUS interval's start and would have sealed the next hour with bounds that begin
- * before it. `from` is cleared to the empty string because the port has `get`/`set` and no delete; the empty
- * string is the layer's "unset", and every reader here treats it as such.
+ * before it.
+ *
+ * F.5r-e — CLEARING IS AN OPERATION, NOT A SENTINEL. This first cleared the start by writing the empty
+ * string, on the assumption that a `get`/`set` port round-trips it. Measured in production within an hour:
+ * a REST key-value store has no path-form for an empty value and answered `400`, the seal reported success,
+ * and the interval start still held the PREVIOUS hour's first ust_id — so the next seal would have claimed
+ * an hour beginning sixty minutes before itself. Absence is not a value; a store's value domain need not
+ * contain a representation of it. A store that cannot delete cannot implement an interval lifecycle, and
+ * saying so is better than proceeding on a write that cannot be confirmed.
  */
 export async function recordCheckpoint(store, { contentHash }) {
+  if (typeof store.del !== 'function') {
+    throw Object.assign(new Error('E-STORE: this store offers no `del`, so the open interval cannot be CLEARED — an interval that never closes makes the next seal claim bounds beginning before itself (F.5r-e)'), { code: 'E-STORE' });
+  }
   await store.set(STREAM_KEYS.cpHead, contentHash);
-  await store.set(STREAM_KEYS.spanFrom, '');
+  await store.del(STREAM_KEYS.spanFrom);
   return contentHash;
 }
 
@@ -355,6 +365,9 @@ Stream.prototype.resume = async function (head, count) {   // continue after an 
 const namespaced = (store, tier) => {
   const at = (k) => k.startsWith('ust:stream:') ? `ust:stream:${tier}:` + k.slice(11) : `${tier}:${k}`;
   const view = { get: (k) => store.get(at(k)), set: (k, v) => store.set(at(k), v) };
+  // `del` carries the interval lifecycle (F.5r-e); a wrapper that drops it turns every tier into a stream
+  // whose interval can never close.
+  if (typeof store.del === 'function') view.del = (k) => store.del(at(k));
   // The capability must SURVIVE the wrapper: dropping `cas` here would silently downgrade a preventing
   // store to a detecting one, and the stream would then honestly report the weaker guarantee it was given.
   if (typeof store.cas === 'function') view.cas = (k, e, n) => store.cas(at(k), e, n);

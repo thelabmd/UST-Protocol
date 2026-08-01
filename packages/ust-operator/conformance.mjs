@@ -164,8 +164,8 @@ check('Tiers:continuation-after-gap', afterGap.state.provenance.prev === P.conte
   // ── advanceHead on its own: EVERY outcome, because an operator that builds its own documents reaches
   // the discipline only through this door. Left inside `append`, it would be reimplemented outside.
   {
-    const plain = () => { const m = new Map(); return { get: async (k) => m.get(k) ?? null, set: async (k, v) => { m.set(k, v); }, _m: m }; };
-    const withCas = () => { const m = new Map(); return { get: async (k) => m.get(k) ?? null, set: async (k, v) => { m.set(k, v); },
+    const plain = () => { const m = new Map(); return { get: async (k) => m.get(k) ?? null, set: async (k, v) => { m.set(k, v); }, del: async (k) => { m.delete(k); }, _m: m }; };
+    const withCas = () => { const m = new Map(); return { get: async (k) => m.get(k) ?? null, set: async (k, v) => { m.set(k, v); }, del: async (k) => { m.delete(k); },
       cas: async (k, expect, next) => { if ((m.get(k) ?? null) !== expect) return false; m.set(k, next); return true; }, _m: m }; };
     const grab = async (fn) => { try { await fn(); return null; } catch (e) { return e.code; } };
 
@@ -209,6 +209,10 @@ check('Tiers:continuation-after-gap', afterGap.state.provenance.prev === P.conte
       await S.recordCheckpoint(st, { contentHash: 'sha256:cp1' });
       check('#122 F.5r-d recordCheckpoint: the sealed interval is CLOSED IN THE STORE — this reset lived only in the object, so a stream resumed elsewhere read the PREVIOUS interval\'s start and would have sealed the next hour with bounds that begin before it',
         (await st.get(S.STREAM_KEYS.cpHead)) === 'sha256:cp1' && !(await st.get(S.STREAM_KEYS.spanFrom)));
+      check('#122 F.5r-e recordCheckpoint CLEARS by deleting, not by writing a sentinel — the key is GONE, not holding an empty string a substrate may refuse to store',
+        !st._m.has(S.STREAM_KEYS.spanFrom) || st._m.get(S.STREAM_KEYS.spanFrom) === undefined);
+      check('#122 ADVERSARIAL F.5r-e a store with no `del` is REFUSED rather than silently leaving the interval open — measured in production: the empty-string write was rejected 400, the seal reported success, and the next hour would have claimed bounds beginning before itself',
+        (await grab(() => S.recordCheckpoint({ get: async () => null, set: async () => {} }, { contentHash: 'sha256:cp' }))) === 'E-STORE');
       const after = await S.recordFrame(st, { expected: 'sha256:f2', next: 'sha256:f4', ust_id: 'ust:20260705.1900' });
       check('#122 F.5r-d the next interval opens at the FIRST frame after the seal, and the count stays CUMULATIVE across the boundary',
         after.count === 3 && (await st.get(S.STREAM_KEYS.spanFrom)) === 'ust:20260705.1900');

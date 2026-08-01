@@ -2417,6 +2417,31 @@ moved in the publish path, the count and the interval in a post-write hook — w
 came to be advanced AFTER publication (F.5r, rev74) without anything noticing: no single place held
 the group, so no single place could state its order.
 
+**Theorem F.5r-e (an absence the substrate cannot represent is not an absence).** The layer owns a value
+whose lifecycle includes being UNSET — the start of the open interval, cleared when the interval is
+sealed. Absence is not a value, and a store's value domain need not contain a representation of it.
+*Proof by the failure it permits.* Encode absence as a sentinel `σ` and clear by writing `σ`. If the
+substrate rejects `σ`, the write does not land and a subsequent read returns the STALE value. The layer
+then reads a value it believes it cleared, so the next interval never opens and the following seal
+asserts bounds that BEGIN BEFORE the interval it covers — the exact over-claim F.5r-d forbids, produced
+by the mechanism meant to prevent it. ∎
+
+**Measured (rev77), in production, within an hour of shipping.** `recordCheckpoint` cleared the interval
+start by writing the empty string. The reference operator's store is a REST key-value service whose
+path-form `SET` has no representation for an empty value: it answered `400 ERR wrong number of arguments`.
+The seal reported success, the interval start still held the previous hour's first `ust_id`, and the next
+seal would have claimed an hour beginning sixty minutes before itself.
+
+**Corollary (the port must carry the lifecycle, not a hope about round-tripping).** A value the layer
+clears requires a CLEARING OPERATION in the port contract — `del` — not a sentinel the layer assumes
+survives. A store that cannot delete cannot implement an interval lifecycle, and the layer must say so
+rather than proceed on a write it cannot confirm.
+
+**Corollary (an error that is not an exception).** The same measurement exposed a second failure of the
+same shape one layer down: the operator's port reported failure only for THROWN errors, so a `400`
+response was indistinguishable from success. "Fail loud" is a claim about the failure MODES a substrate
+actually uses, not about the ones a caller finds convenient to catch.
+
 **Binding: realized** — *"#122 ADVERSARIAL: two appenders from one head both succeed when the head is PRIVATE — the fork is produced and neither can see it"*, *"#122 ADVERSARIAL: the two branches are NEVER reported as a fork — the chain guard fires first, so downstream detection does not happen"*.
 
 The REFUSAL itself lives one layer up and is checked there, not here: `packages/ust-operator/conformance.mjs` exercises a shared store — a second appender on one head is refused `E-FORK`, a stream resumes the same chain in another object, and a `cas`-capable store reports `prevented` while a plain one reports `detected`. The core suite must not import the operator layer; a dependency in that direction would make the TCB's own tests rest on something above it, and I nearly wrote exactly that by citing an operator check in this Binding.

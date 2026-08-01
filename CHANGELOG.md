@@ -25,6 +25,12 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
+## rc.59 line
+
+| version | round | what closed |
+|---------|-------|-------------|
+| **operator 0.6.0**<br>**rc.59**<br>**cli rc.92**<br>**mcp rc.48**<br>**light rc.48**<br>**web-signer rc.17**<br>**ots-verify rc.25**<br>**rekor-verify rc.20**<br>**diarium 0.2.14** | 137 | **An absence the substrate cannot represent is not an absence — measured in production, one hour after round 136 shipped.** F.5r-d gave the layer the interval lifecycle; `recordCheckpoint` cleared the open interval's start by writing the EMPTY STRING, on the assumption that a `get`/`set` port round-trips it. The first operator's store is a REST key-value service whose path-form `SET` has no representation for an empty value: it answered `400 ERR wrong number of arguments`. The seal reported success, the interval start still held the PREVIOUS hour's first `ust_id`, and the next seal would have claimed an hour beginning sixty minutes before itself — the exact over-claim F.5r-d forbids, produced by the mechanism written to prevent it. F.5r-e: absence is not a value, and a store's value domain need not contain a representation of it, so a value the layer CLEARS requires a clearing OPERATION in the port contract. `del` is now part of that contract, `recordCheckpoint` clears with it, and a store that cannot delete is REFUSED with `E-STORE` rather than proceeding on a write it cannot confirm — a store that cannot close an interval cannot implement one. The per-tier namespace forwards `del` for the same reason it forwards `cas`. **A second corollary came out of the same measurement, one layer down:** the operator's port reported failure only for THROWN errors, so a `400` RESPONSE was indistinguishable from success. Fail-loud is a claim about the failure modes a substrate actually uses, not about the ones a caller finds convenient to catch. 54 checks in the layer suite; the deletion and the refusal both mutation-tested. |
+
 ## rc.58 line
 
 | version | round | what closed |

@@ -926,6 +926,16 @@
         "excluded": "No document bytes and no verdict change: the same frames and the same checkpoint are produced before and after. What moved is which stored values one call is responsible for, which produces no document."
       },
       "test": "#122 ADVERSARIAL F.5r-d recordFrame: a REFUSED frame moves NOTHING — the guard runs first, so a stream that correctly refused to fork does not count a frame it never emitted"
+    },
+    {
+      "round": 137,
+      "math": "Absence is not a value, and a store's value domain need not contain a representation of it",
+      "spec": "Where a producer's state includes a value that is CLEARED — the start of an open interval is one — the",
+      "code": "packages/ust-operator/index.mjs :: `del` enters the port contract; recordCheckpoint clears with it and refuses E-STORE without it; the per-tier namespace forwards it",
+      "vector": {
+        "excluded": "No document bytes and no verdict change: the checkpoint produced is byte-identical. What moved is how the layer clears its own state between intervals, which produces no document."
+      },
+      "test": "#122 ADVERSARIAL F.5r-e a store with no `del` is REFUSED rather than silently leaving the interval open — measured in production: the empty-string write was rejected 400, the seal reported success, and the next hour would have claimed bounds beginning before itself"
     }
   ],
   "first_accounted_round": 76,

@@ -3,7 +3,7 @@
 
 *This specification text is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](../LICENSE-SPEC). Reference code in this repository is licensed Apache-2.0. Use of the name **UST** / **Universal State Transcript** and the **UST-compatible** claim: see [TRADEMARK.md](../TRADEMARK.md).*
 
-> **Release candidate — `1.0.0-rc.58`.** This specification has been extensively red-teamed; an independent
+> **Release candidate — `1.0.0-rc.59`.** This specification has been extensively red-teamed; an independent
 > external cryptographic audit is pending. It is subject to change until `1.0.0` final. The wire format `ust:"1.0"`
 > is stable across all rc's — pin exact versions. Per-version history is in [`CHANGELOG.md`](../CHANGELOG.md).
 
@@ -787,6 +787,11 @@ MUST advance them together and MUST place the head guard first: a refused frame 
 count asserts coverage over a document that does not exist. Where a partial write is possible at all, it MUST
 land on the under-claiming side — a count that LEADS the frames manufactures evidence of an omission the
 publisher did not commit, while one that lags conceals none (formal model F.5r-d).
+
+Where a producer's state includes a value that is CLEARED — the start of an open interval is one — the
+clearing MUST be an operation the store guarantees, not a sentinel written in place of absence. A substrate
+whose value domain cannot represent the sentinel rejects the write, the producer reads back the stale value,
+and the next seal asserts an interval that begins before itself (formal model F.5r-e).
 
 **Checkpoints (M5).** Checkpoints are themselves `prev`-chained frames (`class:"attestation"`) that assert the
 stream head + frame count over an interval. The asserted `frame_count` is CUMULATIVE from the stream origin, so
