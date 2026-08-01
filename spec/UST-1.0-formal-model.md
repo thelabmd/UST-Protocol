@@ -2541,6 +2541,37 @@ two operators disagree about a case they both handle correctly.
 The layer therefore declares the COMPLETE set, refusal included, and an operator reports one of those
 words rather than one of its own. The prose around it may be in any language; the STATE is a token.
 
+**Theorem F.5r-h (UNKNOWN is not ABSENT, and an origin frame is a CLAIM).** A frame carrying no `prev`
+does not merely omit a field. It ASSERTS that the stream begins here — that no earlier frame exists for a
+verifier to demand. Emitting one is therefore an act of knowledge, and the knowledge it requires is
+exactly `H = ⊥`.
+
+*The failure.* Let a producer read its head through a port whose signature is `get(key) → value | null`.
+That type has two inhabitants where the producer needs three: a value, a definite ABSENCE, and an
+UNREADABLE state. A port that answers `null` on a failed read collapses the second and third, and the
+producer — reasoning correctly on what it was told — emits an origin frame in the middle of a live stream.
+
+*What that produces is worse than a gap.* A gap is an absence: nothing exists, and a verifier computing
+the cadence grid sees a hole it can name. An origin frame emitted from ignorance is a signed, individually
+VALID document that belongs to no chain: nothing references it and it references nothing. It is
+indistinguishable, to every consumer, from a legitimate stream-genesis — so the stream now appears to have
+two beginnings, and the earlier one cannot be reached from the later. ∎
+
+**Corollary (the direction of the refusal).** Reading the head answers whether it is SAFE TO EXTEND, and by
+the fail-direction rule such a question fails CLOSED: not knowing the head authorizes nothing — neither
+extending a head one cannot confirm, nor claiming there is none. The interval is then unpublished, which
+is a GAP, and a gap is stated under §11.1 rather than papered over with a document.
+
+**Corollary (the obligation is on the PORT, not on the reader).** A reader cannot recover a distinction
+its input never carried; no amount of care downstream separates `null`-because-absent from
+`null`-because-unreachable. The port must signal an unreadable value distinctly — by raising rather than
+returning — and a store adapter that swallows a read failure into `null` silently disarms every guard
+built on top of it, including F.5r's own comparison, which reads `null` as "nobody has written yet" and
+proceeds.
+
+**Measured (rev82).** The reference operator's pointer read was `catch { return null; }`. Its guards were
+correct and its head-recovery was correct; the input was a lie, and a lie at the port defeats both.
+
 **Binding: realized** — *"#122 ADVERSARIAL: two appenders from one head both succeed when the head is PRIVATE — the fork is produced and neither can see it"*, *"#122 ADVERSARIAL: the two branches are NEVER reported as a fork — the chain guard fires first, so downstream detection does not happen"*.
 
 The REFUSAL itself lives one layer up and is checked there, not here: `packages/ust-operator/conformance.mjs` exercises a shared store — a second appender on one head is refused `E-FORK`, a stream resumes the same chain in another object, and a `cas`-capable store reports `prevented` while a plain one reports `detected`. The core suite must not import the operator layer; a dependency in that direction would make the TCB's own tests rest on something above it, and I nearly wrote exactly that by citing an operator check in this Binding.

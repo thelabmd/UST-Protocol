@@ -174,8 +174,12 @@ check('Tiers:continuation-after-gap', afterGap.state.provenance.prev === P.conte
     const stateOf = (pr) => pr.then((r) => r.state, (e) => 'THREW:' + (e.code ?? e.message));
 
     const s1 = plain();
-    check('#122 advanceHead: an UNSEEDED store accepts the first head — nobody has written yet, which is not a disagreement',
-      (await S.advanceHead(s1, { expected: null, next: 'sha256:a' })) === 'detected' && (await s1.get(S.STREAM_KEYS.head)) === 'sha256:a');
+    check('#122 advanceHead: an UNSEEDED store accepts the first head when the caller DECLARES it — nobody has written yet, which is not a disagreement',
+      (await S.advanceHead(s1, { expected: null, next: 'sha256:a', unseeded: true })) === 'detected' && (await s1.get(S.STREAM_KEYS.head)) === 'sha256:a');
+    check('#124 ADVERSARIAL F.5r-h an empty head is REFUSED when the caller did not declare an unseeded stream — a port that answers "absent" on a failed read would otherwise disarm the guard, because null reads as "nobody has written yet" and the write proceeds',
+      (await grab(() => S.advanceHead(plain(), { expected: 'sha256:whatever', next: 'sha256:z' }))) === 'E-FORK');
+    check('#124 F.5r-h the refusal wrote NOTHING — a guard that refuses and stores anyway leaves the lie in place',
+      (await (async () => { const st = plain(); await grab(() => S.advanceHead(st, { expected: 'sha256:w', next: 'sha256:z' })); return st.get(S.STREAM_KEYS.head); })()) === null);
     check('#122 advanceHead: extending the head we observed is accepted',
       (await S.advanceHead(s1, { expected: 'sha256:a', next: 'sha256:b' })) === 'detected');
     check('#122 ADVERSARIAL advanceHead: extending a head we did NOT observe is REFUSED — that is the fork, named before it is published',
@@ -193,7 +197,7 @@ check('Tiers:continuation-after-gap', afterGap.state.provenance.prev === P.conte
     // ── F.5r-d: the door is shaped by the EVENT. Every outcome of recordFrame / recordCheckpoint.
     {
       const st = plain();
-      const r1 = await S.recordFrame(st, { expected: null, next: 'sha256:f1', ust_id: 'ust:20260705.1801' });
+      const r1 = await S.recordFrame(st, { expected: null, next: 'sha256:f1', ust_id: 'ust:20260705.1801', unseeded: true });
       check('#122 F.5r-d recordFrame: one call moves head, count and the interval start — a caller cannot advance one and forget another',
         r1.count === 1 && (await st.get(S.STREAM_KEYS.head)) === 'sha256:f1' && (await st.get(S.STREAM_KEYS.spanFrom)) === 'ust:20260705.1801' && (await st.get(S.STREAM_KEYS.spanTo)) === 'ust:20260705.1801');
       const r2 = await S.recordFrame(st, { expected: 'sha256:f1', next: 'sha256:f2', ust_id: 'ust:20260705.1802' });
@@ -206,7 +210,7 @@ check('Tiers:continuation-after-gap', afterGap.state.provenance.prev === P.conte
       const counted = [];
       const withIncr = (() => { const m = new Map(); return { get: async (k) => m.get(k) ?? null, set: async (k, v) => { m.set(k, v); },
         incr: async (k) => { counted.push(k); const n = Number(m.get(k) ?? 0) + 1; m.set(k, String(n)); return n; } }; })();
-      const ri = await S.recordFrame(withIncr, { expected: null, next: 'sha256:i1', ust_id: 'ust:20260705.1801' });
+      const ri = await S.recordFrame(withIncr, { expected: null, next: 'sha256:i1', ust_id: 'ust:20260705.1801', unseeded: true });
       check('#122 F.5r-d recordFrame USES store.incr when the store offers it — the count is a read-modify-write, and taking the atomic primitive is not optional politeness',
         ri.count === 1 && counted.length === 1 && counted[0] === S.STREAM_KEYS.count);
 
@@ -232,7 +236,7 @@ check('Tiers:continuation-after-gap', afterGap.state.provenance.prev === P.conte
       check('#124 F.5r-f reconcileHead with no last emission answers UNVERIFIED — a fresh process cannot rule this out from its own information, and saying so beats assuming',
         (await stateOf(S.reconcileHead(st))) === 'unverified');
 
-      await S.recordFrame(st, { expected: null, next: 'sha256:d1', ust_id: 'ust:20260705.1801' });
+      await S.recordFrame(st, { expected: null, next: 'sha256:d1', ust_id: 'ust:20260705.1801', unseeded: true });
       check('#124 F.5r-f reconcileHead: the advance DID land — already-advanced, and nothing is written twice',
         (await stateOf(S.reconcileHead(st, { observed: null, published: 'sha256:d1' }))) === 'already-advanced');
 

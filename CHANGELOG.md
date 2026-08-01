@@ -25,6 +25,12 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
+## rc.64 line
+
+| version | round | what closed |
+|---------|-------|-------------|
+| **operator 0.10.0**<br>**rc.64**<br>**cli rc.97**<br>**mcp rc.53**<br>**light rc.53**<br>**web-signer rc.22**<br>**ots-verify rc.30**<br>**rekor-verify rc.25**<br>**diarium 0.2.19** | 142 | **UNKNOWN is not ABSENT, and an origin frame is a CLAIM (F.5r-h).** A frame carrying no `prev` does not omit a field — it ASSERTS that the stream begins there, that no earlier frame exists for a verifier to demand. Emitting one requires knowing `H = ⊥`. A port typed `get(key) → value \| null` has two inhabitants where a producer needs THREE — a value, a definite absence, and an unreadable state — so a store answering `null` on a failed read collapses the last two, and the producer, reasoning correctly on what it was told, emits an origin frame in the middle of a live stream. **What that produces is worse than a gap:** a gap is an absence a verifier can name against the cadence grid, while this is a signed, individually VALID document belonging to no chain — indistinguishable from a legitimate stream-genesis, so the stream appears to have two beginnings and the earlier is unreachable from the later. The obligation is on the PORT: a reader cannot recover a distinction its input never carried. And the layer closes the half it can: accepting `null` unconditionally is exactly what a lying port exploits, because `null` reads as *nobody has written yet* and the write proceeds — so past the first frame an empty head is REFUSED unless the caller DECLARES an unseeded stream. The three legitimate paths declare it, and each declares it against evidence: the first frame of a stream, a recovery backed by a published document, an operator's explicit resume. 74 checks. |
+
 ## rc.63 line
 
 | version | round | what closed |

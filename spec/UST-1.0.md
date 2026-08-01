@@ -3,7 +3,7 @@
 
 *This specification text is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](../LICENSE-SPEC). Reference code in this repository is licensed Apache-2.0. Use of the name **UST** / **Universal State Transcript** and the **UST-compatible** claim: see [TRADEMARK.md](../TRADEMARK.md).*
 
-> **Release candidate — `1.0.0-rc.63`.** This specification has been extensively red-teamed; an independent
+> **Release candidate — `1.0.0-rc.64`.** This specification has been extensively red-teamed; an independent
 > external cryptographic audit is pending. It is subject to change until `1.0.0` final. The wire format `ust:"1.0"`
 > is stable across all rc's — pin exact versions. Per-version history is in [`CHANGELOG.md`](../CHANGELOG.md).
 
@@ -810,6 +810,14 @@ holds, because adopting a head that does not extend the stored one can chain the
 writer's live branch. The search for `d` walks the declared cadence grid backwards and MUST be bounded;
 exhausting the bound yields `unverified`, which is a gap to be STATED under §11.1, not inferred
 (formal model F.5r-g).
+
+A frame carrying no `prev` ASSERTS that the stream begins there. A producer MUST NOT emit one because it could
+not READ its head: not knowing the head authorizes nothing — neither extending a head it cannot confirm nor
+claiming there is none. The interval is then unpublished, which is a gap to be stated under §11.1, and that is
+strictly better than a signed document belonging to no chain, which every consumer reads as a second
+stream-genesis. Accordingly a producer's state port MUST distinguish an UNREADABLE value from an ABSENT one —
+by raising rather than returning — since a reader cannot recover a distinction its input never carried, and a
+port that returns "absent" on failure disarms every guard built on it (formal model F.5r-h).
 
 The outcomes of that head-recovery form a TOTAL set — consistent, recovered, unverified, refused — and a producer
 MUST report one of them rather than a word of its own. Two operators describing the same situation with

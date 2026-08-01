@@ -68,7 +68,7 @@ export const memoryStore = () => { const m = new Map(); return { get: (k) => m.g
  * `store.cas` PREVENTS that; a plain `get`/`set` only DETECTS it — the refusal comes one write late.
  * Which one you got is returned, never assumed.
  */
-export async function advanceHead(store, { expected = null, next, published = null }) {
+export async function advanceHead(store, { expected = null, next, published = null, unseeded = false }) {
   if (!next) throw Object.assign(new Error('E-FORK: advanceHead needs the next head'), { code: 'E-FORK' });
   // F.5r-f — THE OTHER WAY A HEAD GETS TWO SUCCESSORS, AND THE ONE THIS COMPARISON CANNOT SEE.
   //
@@ -102,6 +102,14 @@ export async function advanceHead(store, { expected = null, next, published = nu
   if (stored !== null && stored !== expected) {
     throw Object.assign(new Error('E-FORK: the stream head moved under this writer — another writer extended it, and advancing would leave two successors of one head (F.5r)'), { code: 'E-FORK' });
   }
+  // F.5r-h — AN EMPTY HEAD IS ONLY LEGITIMATE ONCE. Accepting `null` unconditionally is what a lying port
+  // exploits: a store that answers "absent" on a failed read disarms the comparison above, because `null`
+  // reads as "nobody has written yet" and the write proceeds. Past the first frame that reading is false —
+  // this stream HAS a head — so the caller must state that it expects an unseeded stream, and only the first
+  // frame does. The distinction the port failed to carry is then supplied by the one party that knows.
+  if (stored === null && !unseeded) {
+    throw Object.assign(new Error('E-FORK: the store reports NO head for a stream that has one — either the head was lost or the read failed and answered "absent"; neither authorizes extending (F.5r-h)'), { code: 'E-FORK' });
+  }
   await store.set(STREAM_KEYS.head, next);
   return 'detected';
 }
@@ -121,8 +129,8 @@ export async function advanceHead(store, { expected = null, next, published = nu
  * `store.incr` is used when the store offers it, for the same reason `store.cas` is: the count is a
  * read-modify-write, and taking the stronger primitive when it exists is not optional politeness.
  */
-export async function recordFrame(store, { expected = null, next, ust_id }) {
-  const guarantee = await advanceHead(store, { expected, next });
+export async function recordFrame(store, { expected = null, next, ust_id, unseeded = false }) {
+  const guarantee = await advanceHead(store, { expected, next, unseeded });
   const count = typeof store.incr === 'function'
     ? await store.incr(STREAM_KEYS.count)
     : await (async () => { const c = Number((await store.get(STREAM_KEYS.count)) ?? 0) + 1; await store.set(STREAM_KEYS.count, String(c)); return c; })();
@@ -218,7 +226,9 @@ export async function recoverHead(store, { lastPublished = null } = {}) {
   if (stored === null || stored === prev) {
     // Through the SINGLE guard, not around it (F.5r-c): the roster gate caught this the moment it was
     // written as a direct store write, which is exactly what that gate exists for.
-    await advanceHead(store, { expected: stored, next: h });
+    // `unseeded` здесь честно: пустой указатель принимается не по умолчанию, а ПРОТИВ опубликованного
+    // документа — решение обеспечено уликой, а не отсутствием возражений (F.5r-h).
+    await advanceHead(store, { expected: stored, next: h, unseeded: stored === null });
     return { state: 'recovered', head: h };
   }
   throw Object.assign(new Error('E-FORK: the last published document neither is nor extends the stored head — adopting it could chain the next frame beneath another writer\'s live branch, so this disagreement is refused rather than resolved (F.5r-g)'), { code: 'E-FORK' });
@@ -279,7 +289,8 @@ export class Stream {
     // ONE implementation of the discipline: `append` calls the same door an external builder calls.
     // Two bodies for one rule would drift apart silently — which is what this layer exists to end.
     // The refusal happens BEFORE the caller can publish `doc`: it is returned only after the head moved.
-    const { count } = await recordFrame(this.store, { expected: this.head ?? null, next, ust_id: idMeta.ust_id });
+    // Only the FIRST frame of a stream may meet an empty head (F.5r-h); this object knows which one that is.
+    const { count } = await recordFrame(this.store, { expected: this.head ?? null, next, ust_id: idMeta.ust_id, unseeded: this.count === 0 });
     // THE RETENTION BOUNDARY: the caller verifies the range against the checkpoint just handed to it and
     // needs the frames at that moment, so they are cleared on the FIRST frame of the next interval —
     // retention bounded to one interval, legitimate use unbroken.
@@ -430,7 +441,7 @@ Stream.prototype.gap = async function (idMeta, time, reason = 'seal-delay') {   
   const doc = this.sign(state);
   const next = P.contentHash(doc);
   // A gap record IS a frame entering the stream — same event, same door, same order (F.5r-d).
-  const { count } = await recordFrame(this.store, { expected: this.head ?? null, next, ust_id: idMeta.ust_id });
+  const { count } = await recordFrame(this.store, { expected: this.head ?? null, next, ust_id: idMeta.ust_id, unseeded: this.count === 0 });
   this.head = next; this.count = count; this.frames.push(doc);
   return doc;
 };
@@ -443,7 +454,7 @@ Stream.prototype.resume = async function (head, count) {   // continue after an 
   if (stored !== null && stored !== head) {
     throw Object.assign(new Error('E-FORK: resuming to a head the store does not hold — another writer advanced this stream, and overwriting its head would fork it (F.5r-c)'), { code: 'E-FORK' });
   }
-  await advanceHead(this.store, { expected: stored, next: head });
+  await advanceHead(this.store, { expected: stored, next: head, unseeded: stored === null });
   this.head = head; this.count = count;
   await this.store.set(STREAM_KEYS.count, String(count));
   return this;

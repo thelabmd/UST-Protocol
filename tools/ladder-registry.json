@@ -980,6 +980,16 @@
         "excluded": "Vectors pin document bytes and the verdicts they produce. A declaration produces no document and changes no verdict."
       },
       "test": "tools/types-integrity-gate.mjs :: every declared vocabulary is compared against the RUNTIME object, with a floor so the leg cannot go blind; mutation-tested by renaming a member"
+    },
+    {
+      "round": 142,
+      "math": "A frame carrying no `prev`",
+      "spec": "A frame carrying no `prev` ASSERTS that the stream begins there. A producer MUST NOT emit one because it could",
+      "code": "packages/ust-operator/index.mjs :: an empty stored head is refused past the first frame unless the caller declares an unseeded stream; the three legitimate paths declare it against evidence",
+      "vector": {
+        "excluded": "No document bytes and no verdict change: the frames produced are byte-identical. What moved is when a producer may treat an empty head as authorization, which produces no document."
+      },
+      "test": "#124 ADVERSARIAL F.5r-h an empty head is REFUSED when the caller did not declare an unseeded stream — a port that answers \"absent\" on a failed read would otherwise disarm the guard, because null reads as \"nobody has written yet\" and the write proceeds"
     }
   ],
   "first_accounted_round": 76,
