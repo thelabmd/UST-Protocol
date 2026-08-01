@@ -25,6 +25,12 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
+## rc.62 line
+
+| version | round | what closed |
+|---------|-------|-------------|
+| **operator 0.9.0**<br>**rc.62**<br>**cli rc.95**<br>**mcp rc.51**<br>**light rc.51**<br>**web-signer rc.20**<br>**ots-verify rc.28**<br>**rekor-verify rc.23**<br>**diarium 0.2.17** | 140 | **A vocabulary with a hole in it gets filled locally (#124).** F.5r-g's outcomes partition every input — the stored head equals `h(d)`, equals `prev(d)`, is absent, or is none of these, plus the case where no document is supplied. A TOTAL set of outcomes is an INTERFACE, not prose: two operators reporting the same situation must emit the same word, or their telemetry cannot be compared and neither can their incident reports. That is the same argument that put the stream state KEY NAMES in this layer rather than in each operator. **Measured the day it shipped:** the first operator to adopt the recovery minted `refused` for itself, because the layer named the three states it RETURNS and left the one it THROWS unnamed. Correct handling, private word — and two operators would then disagree about a case they both got right. `HEAD_STATES` now declares the complete set, refusal included, and a check asserts both that the set is exactly those four and that every state the layer returns is inside it. The prose an operator logs around a state may be in any language; the STATE is a token. |
+
 ## rc.61 line
 
 | version | round | what closed |

@@ -195,6 +195,20 @@ export async function reconcileHead(store, { observed = null, published = null }
  * Reading the published set is the OPERATOR's capability; this layer verifies the relation and decides. Where
  * no document is supplied, `unverified` stands and is said rather than assumed.
  */
+// F.5r-g.1 — THE COMPLETE OUTCOME SET, declared here so two operators emit the SAME word for the same
+// situation. Their telemetry and their incident reports are comparable only if the vocabulary is one; that
+// is the same argument that put STREAM_KEYS here rather than in each operator. Measured 2026-08-01: the
+// first operator to adopt this minted its own term for the refusal, because the layer named the three
+// states it RETURNS and left the one it THROWS unnamed. A vocabulary with a hole gets filled locally.
+//
+// The prose an operator logs around it may be in any language. The STATE is a token.
+export const HEAD_STATES = Object.freeze({
+  consistent: 'consistent',   // the pointer already names the last published document
+  recovered: 'recovered',     // the published document EXTENDS the pointer — the advance was published, not recorded
+  unverified: 'unverified',   // no document to decide with; a gap to be STATED (§11.1), never inferred
+  refused: 'refused',         // the document neither is nor extends the pointer — thrown as E-FORK, named here
+});
+
 export async function recoverHead(store, { lastPublished = null } = {}) {
   const stored = (await store.get(STREAM_KEYS.head)) || null;
   if (!lastPublished) return { state: 'unverified', head: stored };

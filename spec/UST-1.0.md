@@ -3,7 +3,7 @@
 
 *This specification text is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](../LICENSE-SPEC). Reference code in this repository is licensed Apache-2.0. Use of the name **UST** / **Universal State Transcript** and the **UST-compatible** claim: see [TRADEMARK.md](../TRADEMARK.md).*
 
-> **Release candidate — `1.0.0-rc.61`.** This specification has been extensively red-teamed; an independent
+> **Release candidate — `1.0.0-rc.62`.** This specification has been extensively red-teamed; an independent
 > external cryptographic audit is pending. It is subject to change until `1.0.0` final. The wire format `ust:"1.0"`
 > is stable across all rc's — pin exact versions. Per-version history is in [`CHANGELOG.md`](../CHANGELOG.md).
 
@@ -810,6 +810,11 @@ holds, because adopting a head that does not extend the stored one can chain the
 writer's live branch. The search for `d` walks the declared cadence grid backwards and MUST be bounded;
 exhausting the bound yields `unverified`, which is a gap to be STATED under §11.1, not inferred
 (formal model F.5r-g).
+
+The outcomes of that head-recovery form a TOTAL set — consistent, recovered, unverified, refused — and a producer
+MUST report one of them rather than a word of its own. Two operators describing the same situation with
+different vocabulary cannot have their telemetry or their incident reports compared, which is the same reason
+the stream state keys are named by the protocol and not by each operator (formal model F.5r-g.1).
 
 **Checkpoints (M5).** Checkpoints are themselves `prev`-chained frames (`class:"attestation"`) that assert the
 stream head + frame count over an interval. The asserted `frame_count` is CUMULATIVE from the stream origin, so

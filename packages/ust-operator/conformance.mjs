@@ -320,6 +320,13 @@ check('Tiers:continuation-after-gap', afterGap.state.provenance.prev === P.conte
       check('#124 F.5r-g with NO document the answer is UNVERIFIED, not a guess — reading the published set is the operator\'s capability, and a layer that faked it would assert what it cannot observe',
         (await stateOf(S.recoverHead(a5.st, {}))) === 'unverified');
 
+      check('#124 F.5r-g.1 the outcome vocabulary is DECLARED BY THE LAYER and total — an operator that has to invent a word for one of these cases makes its telemetry incomparable with every other operator\'s',
+        Object.keys(S.HEAD_STATES).sort().join(',') === 'consistent,recovered,refused,unverified'
+        && Object.values(S.HEAD_STATES).every((v) => typeof v === 'string' && v === v.toLowerCase()));
+      check('#124 F.5r-g.1 every state the layer RETURNS is in the declared set — a returned value outside it would be a fifth vocabulary nobody agreed to',
+        [(await S.recoverHead(plain(), {})).state,
+         (await S.recoverHead(plain(), { lastPublished: (await mk()).d2 })).state].every((v) => Object.values(S.HEAD_STATES).includes(v)));
+
       const a6 = await mk();
       await a6.st.set(S.STREAM_KEYS.head, P.contentHash(a6.d1));
       await S.recoverHead(a6.st, { lastPublished: a6.d2 });

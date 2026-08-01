@@ -20,6 +20,7 @@ export function advanceHead(store: unknown, arg1?: unknown): Promise<string>;
 export class AnchorBatch { constructor(verdict?: unknown); }
 export function assembleLayers(layers: unknown, arg1?: unknown): { valid: unknown; seedOk: unknown; perLayer: unknown; verifiedDepth: unknown };
 export const BREADTH: unknown;
+export const HEAD_STATES: unknown;
 export class KeyLog { constructor(verdict?: unknown); }
 export function layerSeed(subordinateDocs: unknown): unknown;
 export function loadStreamState(store: unknown): Promise<{ head: unknown; count: unknown; cpHead: unknown; spanFrom: unknown; spanTo: unknown }>;

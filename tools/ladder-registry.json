@@ -956,6 +956,16 @@
         "excluded": "No document bytes and no verdict change: recovery reads documents that already exist and writes only the producer's pointer, which appears in no document."
       },
       "test": "#124 F.5r-g ADVERSARIAL the published document EXTENDS the stored head — `prev` is the proof, carried in the document, that this is the successor, so the head is RECOVERED"
+    },
+    {
+      "round": 140,
+      "math": "A total set of outcomes is an INTERFACE, not prose",
+      "spec": "The outcomes of that recovery form a TOTAL set — consistent, recovered, unverified, refused — and a producer",
+      "code": "packages/ust-operator/index.mjs :: HEAD_STATES declares the complete outcome set, refusal included, so an operator reports one of those words rather than one of its own",
+      "vector": {
+        "excluded": "No document bytes and no verdict change: the vocabulary describes a producer's recovery outcome, which appears in no document a verifier reads."
+      },
+      "test": "#124 F.5r-g.1 the outcome vocabulary is DECLARED BY THE LAYER and total — an operator that has to invent a word for one of these cases makes its telemetry incomparable with every other operator's"
     }
   ],
   "first_accounted_round": 76,

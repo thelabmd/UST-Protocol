@@ -2526,6 +2526,21 @@ a restart into an unbounded scan — and exhausting the bound is `unverified`, n
 no published document in the searched window is a GAP, and a gap is stated by a §11.1 record, not inferred
 by a reader.
 
+**Corollary F.5r-g.1 (the outcome set is TOTAL, and it belongs to the layer).** The four observations in
+the table above partition every input: the stored head either equals `h(d)`, equals `prev(d)`, is absent,
+or is none of these, and no document is supplied at all in the remaining case. Nothing falls outside, and
+nothing lands in two.
+
+A total set of outcomes is an INTERFACE, not prose. Two operators reporting the same situation must emit
+the same word, or their telemetry cannot be compared and neither can their incident reports — the same
+argument that put the state KEY NAMES in the layer rather than in each operator. Measured 2026-08-01: the
+first operator to adopt this minted `refused` for the refusal, because the layer named the three states it
+RETURNS and left the one it THROWS unnamed. A vocabulary with a hole in it gets filled locally, and then
+two operators disagree about a case they both handle correctly.
+
+The layer therefore declares the COMPLETE set, refusal included, and an operator reports one of those
+words rather than one of its own. The prose around it may be in any language; the STATE is a token.
+
 **Binding: realized** — *"#122 ADVERSARIAL: two appenders from one head both succeed when the head is PRIVATE — the fork is produced and neither can see it"*, *"#122 ADVERSARIAL: the two branches are NEVER reported as a fork — the chain guard fires first, so downstream detection does not happen"*.
 
 The REFUSAL itself lives one layer up and is checked there, not here: `packages/ust-operator/conformance.mjs` exercises a shared store — a second appender on one head is refused `E-FORK`, a stream resumes the same chain in another object, and a `cas`-capable store reports `prevented` while a plain one reports `detected`. The core suite must not import the operator layer; a dependency in that direction would make the TCB's own tests rest on something above it, and I nearly wrote exactly that by citing an operator check in this Binding.

@@ -263,6 +263,10 @@
     {
       "round": 139,
       "no_recap": "Round 139 does not close #124 — the layer can recover; the issue closes when an operator recovers from its own published set after a restart and it is measured live."
+    },
+    {
+      "round": 140,
+      "no_recap": "Round 140 does not close #124 — the vocabulary is declared; the issue closes when a restart that actually lost an advance is observed."
     }
   ]
 }
