@@ -68,8 +68,31 @@ export const memoryStore = () => { const m = new Map(); return { get: (k) => m.g
  * `store.cas` PREVENTS that; a plain `get`/`set` only DETECTS it — the refusal comes one write late.
  * Which one you got is returned, never assumed.
  */
-export async function advanceHead(store, { expected = null, next }) {
+export async function advanceHead(store, { expected = null, next, published = null }) {
   if (!next) throw Object.assign(new Error('E-FORK: advanceHead needs the next head'), { code: 'E-FORK' });
+  // F.5r-f — THE OTHER WAY A HEAD GETS TWO SUCCESSORS, AND THE ONE THIS COMPARISON CANNOT SEE.
+  //
+  // A publisher whose substrate has no transaction across publish-and-record must publish FIRST (recording
+  // first leaves the head naming a document nobody can fetch). If that record then fails, the next interval
+  // reads the SAME head, extends it again, and two published documents share one `prev` — with no second
+  // writer anywhere. `expected` and `stored` are both correct and both equal, so the guard below accepts.
+  //
+  // The discriminating fact is not in the store: the writer knows WHAT IT PUBLISHED. `published` is the
+  // content_hash of this instance's last emitted document, and the rule is that the stored head must be
+  // either the head we observed or that emission — never something belonging to neither.
+  //
+  // Re-asserting a lost advance is IDEMPOTENT: it names the same successor of the same predecessor, so a
+  // retry is not a second advance. The two directions are not symmetric — retrying is safe, proceeding past
+  // a lost advance IS the fork.
+  if (published) {
+    const held = await store.get(STREAM_KEYS.head);
+    if (held === published) return 'already-advanced';            // the write did land; nothing to do
+    if (held !== null && held !== expected) {
+      throw Object.assign(new Error('E-FORK: the stored head is neither the head this writer observed nor the document it last published — it belongs to a writer whose emissions this instance has not seen (F.5r-f)'), { code: 'E-FORK' });
+    }
+    await store.set(STREAM_KEYS.head, published);                 // re-assert OUR lost advance, not a new one
+    return 'repaired';
+  }
   if (typeof store.cas === 'function') {
     const won = await store.cas(STREAM_KEYS.head, expected, next);
     if (!won) throw Object.assign(new Error('E-FORK: lost the compare-and-set on the stream head — a concurrent writer won, and this document must NOT be published (F.5r)'), { code: 'E-FORK' });
@@ -132,6 +155,25 @@ export async function recordCheckpoint(store, { contentHash }) {
   await store.set(STREAM_KEYS.cpHead, contentHash);
   await store.del(STREAM_KEYS.spanFrom);
   return contentHash;
+}
+
+/**
+ * F.5r-f — RECONCILE BEFORE EXTENDING. Call this at the START of an interval, before building anything,
+ * with the content_hash of the document THIS INSTANCE published last. It answers the question the guard
+ * cannot: did my own advance land?
+ *
+ * `already-advanced` — it did. `repaired` — it had not, and has now been re-asserted; the caller must
+ * continue from `published`, NOT from whatever it read before. `E-FORK` — the stored head belongs to
+ * neither, so another writer is extending this stream and this instance must not publish into it.
+ *
+ * A caller with no last emission — a fresh process — passes nothing and gets `unverified`: it cannot rule
+ * the case out from its own information, and saying so is the honest answer. Ruling it out would require
+ * reading the PUBLISHED set, which is a substrate capability this layer does not have and will not fake.
+ */
+export async function reconcileHead(store, { observed = null, published = null } = {}) {
+  if (!published) return { state: 'unverified', head: await store.get(STREAM_KEYS.head) };
+  const outcome = await advanceHead(store, { expected: observed, next: published, published });
+  return { state: outcome === 'already-advanced' ? 'already-advanced' : 'repaired', head: published };
 }
 
 /** Read back the whole group at once — an operator sealing an interval needs the count and the checkpoint head. */

@@ -2442,6 +2442,47 @@ same shape one layer down: the operator's port reported failure only for THROWN 
 response was indistinguishable from success. "Fail loud" is a claim about the failure MODES a substrate
 actually uses, not about the ones a caller finds convenient to catch.
 
+**Theorem F.5r-f (a single writer forks itself, and the guard is blind to it).** The guard of F.5r
+compares the head a writer OBSERVED against the head the store HOLDS, and refuses when they differ. That
+decides one of the two ways a head acquires two successors. It cannot decide the other.
+
+*The sequence.* A publisher whose substrate offers no transaction across "publish" and "record" must
+order them, and F.5r-e's measurement forces publish-first: recording first leaves the head naming a
+document that was never published, so every consumer walking the chain arrives at nothing. Then let
+writer `A`, alone, from head `H`:
+
+1. `A` reads `H`, builds `d`, PUBLISHES `d`;
+2. the write of `h(d)` FAILS — a timeout, a 5xx, or the process ending between the two steps;
+3. next interval, `A` reads `H` again, builds `d'` with `prev = H`, publishes `d'`.
+
+`d` and `d'` are two successors of `H`, both published, both individually valid: the F.5r fork, with no
+second writer anywhere.
+
+*Blindness of the guard.* At step 3 the guard evaluates `expected = H` against `stored = H`. They are
+equal, so it accepts. The guard is SOUND — it answers exactly the question posed — and the question was
+incomplete: it asks whether somebody else advanced the head, never whether THIS writer's own advance
+landed. No refinement of the comparison repairs this, because both operands are correct. ∎
+
+**Corollary (where the missing information lives).** By F.5r-b neither branch is ever reported as a fork
+downstream, and by F.5r-a the head being shared does not help, since it was never contested. The one
+party holding the discriminating fact is `A` itself, and the fact is not in the store: **`A` knows what
+it published.** The predicate that decides step 3 is `stored = h(d)` where `d` is the document this
+instance last published — a comparison between the store and the writer's own emission, not between the
+store and the writer's earlier reading.
+
+**Corollary (asymmetry of the repair).** Re-asserting `h(d)` after a failed write is IDEMPOTENT: it
+names the same successor of the same predecessor, so a retry is not a second advance and carries no risk
+of overwriting a legitimate later head — the guard's own comparison still refuses if the store has moved
+on to something that is neither `H` nor `h(d)`. The two failure directions are therefore not
+symmetric: retrying a lost advance is safe, while proceeding past one is the fork itself.
+
+**Corollary (what a process that died cannot do).** Retry alone is insufficient. A process ending
+between steps 1 and 2 has no retry left, and its successor — the next process, or another instance —
+reads a head that disagrees with the published set without holding the emission that would reveal it.
+Recovering that requires reading the PUBLISHED set rather than the writer's memory, which is a
+substrate capability, not an inference: an operator that can enumerate what it published can compute the
+true head; one that cannot must say its head is unverified rather than assume it.
+
 **Binding: realized** — *"#122 ADVERSARIAL: two appenders from one head both succeed when the head is PRIVATE — the fork is produced and neither can see it"*, *"#122 ADVERSARIAL: the two branches are NEVER reported as a fork — the chain guard fires first, so downstream detection does not happen"*.
 
 The REFUSAL itself lives one layer up and is checked there, not here: `packages/ust-operator/conformance.mjs` exercises a shared store — a second appender on one head is refused `E-FORK`, a stream resumes the same chain in another object, and a `cas`-capable store reports `prevented` while a plain one reports `detected`. The core suite must not import the operator layer; a dependency in that direction would make the TCB's own tests rest on something above it, and I nearly wrote exactly that by citing an operator check in this Binding.

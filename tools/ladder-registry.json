@@ -936,6 +936,16 @@
         "excluded": "No document bytes and no verdict change: the checkpoint produced is byte-identical. What moved is how the layer clears its own state between intervals, which produces no document."
       },
       "test": "#122 ADVERSARIAL F.5r-e a store with no `del` is REFUSED rather than silently leaving the interval open — measured in production: the empty-string write was rejected 400, the seal reported success, and the next hour would have claimed bounds beginning before itself"
+    },
+    {
+      "round": 138,
+      "math": "The guard is SOUND — it answers exactly the question posed — and the question was",
+      "spec": "The duty is not only against OTHER writers. A producer that publishes a frame and then fails to record the",
+      "code": "packages/ust-operator/index.mjs :: reconcileHead + advanceHead's `published` arm — the stored head must be our observation or our emission, and re-asserting a lost advance is idempotent",
+      "vector": {
+        "excluded": "No document bytes and no verdict change: the frames and the checkpoint are byte-identical. What moved is which head a producer may extend, which produces no document."
+      },
+      "test": "#124 F.5r-f ADVERSARIAL the lost advance is REPAIRED, not repeated — publish succeeded, the head write did not, and the next interval must continue from what was PUBLISHED"
     }
   ],
   "first_accounted_round": 76,

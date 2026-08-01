@@ -24,6 +24,7 @@ export class KeyLog { constructor(verdict?: unknown); }
 export function layerSeed(subordinateDocs: unknown): unknown;
 export function loadStreamState(store: unknown): Promise<{ head: unknown; count: unknown; cpHead: unknown; spanFrom: unknown; spanTo: unknown }>;
 export function memoryStore(): { get: unknown; set: unknown; del: unknown };
+export function reconcileHead(store: unknown, arg1?: unknown): Promise<unknown>;
 export function recordCheckpoint(store: unknown, arg1: unknown): Promise<unknown>;
 export function recordFrame(store: unknown, arg1?: unknown): Promise<{ guarantee: unknown; count: unknown }>;
 export function sealLayerChain(outerState: unknown, subordinateDocs: unknown, sign: unknown): unknown;

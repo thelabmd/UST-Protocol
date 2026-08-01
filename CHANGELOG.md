@@ -25,6 +25,12 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
+## rc.60 line
+
+| version | round | what closed |
+|---------|-------|-------------|
+| **operator 0.7.0**<br>**rc.60**<br>**cli rc.93**<br>**mcp rc.49**<br>**light rc.49**<br>**web-signer rc.18**<br>**ots-verify rc.26**<br>**rekor-verify rc.21**<br>**diarium 0.2.15** | 138 | **A single writer forks itself, and the guard is blind to it (#124).** F.5r compares the head a writer OBSERVED against the head the store HOLDS. That decides one of the two ways a head acquires two successors; it cannot decide the other. A publisher whose substrate has no transaction across publish-and-record must publish FIRST — recording first leaves the head naming a document nobody can fetch. If that record then fails (a timeout, or the process ending between the steps), the next interval reads the SAME head, extends it again, and two published documents share one `prev` with no second writer anywhere. At that moment `expected` and `stored` are both `H`: **the guard is sound and accepts, because the question it was given was incomplete.** No refinement of the comparison repairs it — both operands are correct. F.5r-f: the discriminating fact is not in the store, it is that the writer KNOWS WHAT IT PUBLISHED, so the predicate is `stored = h(d)` against this instance's last emission. `reconcileHead` is that check, called before building rather than after: `already-advanced`, `repaired`, or `E-FORK` when the stored head belongs to neither our observation nor our emission. Re-asserting is IDEMPOTENT — it names the same successor of the same predecessor — so the two directions are not symmetric: retrying a lost advance is safe, proceeding past one IS the fork. A caller with no last emission gets `unverified` rather than a guess: ruling the case out needs the PUBLISHED set, a substrate capability this layer does not have and will not fake. 63 checks; nine new, including an end-to-end run over a store that drops exactly one head write. **And the suite itself was hardened by the same round:** a mutation was "detected" by the process dying on an uncaught rejection, which ends the run before its summary AND before the declared==counted gate — the weakest signal this file can give. Every state-returning call now turns a throw into a red check. |
+
 ## rc.59 line
 
 | version | round | what closed |

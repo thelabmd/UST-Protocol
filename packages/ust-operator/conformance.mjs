@@ -168,6 +168,10 @@ check('Tiers:continuation-after-gap', afterGap.state.provenance.prev === P.conte
     const withCas = () => { const m = new Map(); return { get: async (k) => m.get(k) ?? null, set: async (k, v) => { m.set(k, v); }, del: async (k) => { m.delete(k); },
       cas: async (k, expect, next) => { if ((m.get(k) ?? null) !== expect) return false; m.set(k, next); return true; }, _m: m }; };
     const grab = async (fn) => { try { await fn(); return null; } catch (e) { return e.code; } };
+    // A THROW MUST BE A RED CHECK, NEVER A CRASH: an uncaught rejection ends the suite before its summary
+    // AND before the declared==counted gate, so a mutation would be 'caught' by the process dying — which
+    // is the weakest signal this file can give. Every state-returning call below goes through this.
+    const stateOf = (pr) => pr.then((r) => r.state, (e) => 'THREW:' + (e.code ?? e.message));
 
     const s1 = plain();
     check('#122 advanceHead: an UNSEEDED store accepts the first head — nobody has written yet, which is not a disagreement',
@@ -220,6 +224,62 @@ check('Tiers:continuation-after-gap', afterGap.state.provenance.prev === P.conte
       const loaded = await S.loadStreamState(st);
       check('#122 F.5r-d loadStreamState reads the whole group back — an operator sealing an interval needs the count and the checkpoint head, and reading them one key at a time is where an operator invents its own names',
         loaded.head === 'sha256:f4' && loaded.count === 3 && loaded.cpHead === 'sha256:cp1' && loaded.spanFrom === 'ust:20260705.1900' && loaded.spanTo === 'ust:20260705.1900');
+    }
+
+    // ── F.5r-f: the fork a SINGLE writer makes when its own head write is lost. Every outcome.
+    {
+      const st = plain();
+      check('#124 F.5r-f reconcileHead with no last emission answers UNVERIFIED — a fresh process cannot rule this out from its own information, and saying so beats assuming',
+        (await stateOf(S.reconcileHead(st))) === 'unverified');
+
+      await S.recordFrame(st, { expected: null, next: 'sha256:d1', ust_id: 'ust:20260705.1801' });
+      check('#124 F.5r-f reconcileHead: the advance DID land — already-advanced, and nothing is written twice',
+        (await stateOf(S.reconcileHead(st, { observed: null, published: 'sha256:d1' }))) === 'already-advanced');
+
+      // THE SCENARIO: the document is published, the head write is LOST. The store still holds d1.
+      const lost = { state: await stateOf(S.reconcileHead(st, { observed: 'sha256:d1', published: 'sha256:d2' })), head: await st.get(S.STREAM_KEYS.head) };
+      check('#124 F.5r-f ADVERSARIAL the lost advance is REPAIRED, not repeated — publish succeeded, the head write did not, and the next interval must continue from what was PUBLISHED',
+        lost.state === 'repaired' && lost.head === 'sha256:d2' && (await st.get(S.STREAM_KEYS.head)) === 'sha256:d2');
+      // A THROW HERE MUST BE A RED CHECK, NOT A CRASH. An uncaught rejection ends the suite before its
+      // summary and before the declared==counted gate, so the mutation that removes the idempotence
+      // short-circuit would be "detected" by the process dying — the worst signal in the file.
+      const again = await stateOf(S.reconcileHead(st, { observed: 'sha256:d1', published: 'sha256:d2' }));
+      check('#124 F.5r-f the repair is IDEMPOTENT — re-asserting names the same successor of the same predecessor, so a retry is not a second advance',
+        again === 'already-advanced' && (await st.get(S.STREAM_KEYS.head)) === 'sha256:d2', 'got ' + again);
+
+      await st.set(S.STREAM_KEYS.head, 'sha256:someone-else');
+      check('#124 ADVERSARIAL F.5r-f a head belonging to NEITHER our observation nor our emission is REFUSED — that is another writer extending this stream, and publishing into it is the fork',
+        (await grab(() => S.reconcileHead(st, { observed: 'sha256:d1', published: 'sha256:d2' }))) === 'E-FORK');
+      check('#124 F.5r-f the refusal left the stored head UNCHANGED — a refusal that still wrote would take the stream from its rightful writer',
+        (await st.get(S.STREAM_KEYS.head)) === 'sha256:someone-else');
+
+      const fresh = plain();
+      const seeded = { state: await stateOf(S.reconcileHead(fresh, { observed: null, published: 'sha256:first' })) };
+      check('#124 F.5r-f on an UNSEEDED store the emission stands — nobody has written, so there is nothing our advance could have raced',
+        seeded.state === 'repaired' && (await fresh.get(S.STREAM_KEYS.head)) === 'sha256:first');
+    }
+
+    // ── END TO END: the whole failure, on a Stream, with a store that drops exactly one head write.
+    {
+      const m = new Map(); let dropNext = false;
+      const flaky = { get: async (k) => m.get(k) ?? null, del: async (k) => { m.delete(k); },
+        set: async (k, v) => { if (k === S.STREAM_KEYS.head && dropNext) { dropNext = false; throw new Error('network'); } m.set(k, v); } };
+      const g0 = sign(P.buildGenesis(id('ust:20260705.18'), t, A.pubB64));
+      const s1 = new S.Stream({ sign, genesisContentHash: P.contentHash(g0), store: flaky });
+      const d1 = await s1.append(id('ust:20260705.1801'), t, { sw: { kind: 'captured', value: { kp: '1' } } });
+      dropNext = true;
+      let published2 = null;
+      try { await s1.append(id('ust:20260705.1802'), t, { sw: { kind: 'captured', value: { kp: '2' } } }); }
+      catch { published2 = null; }
+      // The document WAS built and signed before the store was touched — a real publisher would already have
+      // shipped it. Reproduce that: take its hash from a rebuild of the same state.
+      const st2 = P.buildState({ ...id('ust:20260705.1802'), class: 'observation' }, t, { sw: { kind: 'captured', value: { kp: '2' } } }, { prev: P.contentHash(d1) });
+      published2 = P.contentHash(sign(st2));
+      check('#124 F.5r-f END TO END the store still holds the OLD head after the dropped write — this is the state in which a writer forks itself',
+        (await flaky.get(S.STREAM_KEYS.head)) === P.contentHash(d1));
+      const rec = { state: await stateOf(S.reconcileHead(flaky, { observed: P.contentHash(d1), published: published2 })) };
+      check('#124 F.5r-f END TO END reconciling before the next interval REPAIRS the head to the published document, so the next frame extends it instead of forking it',
+        rec.state === 'repaired' && (await flaky.get(S.STREAM_KEYS.head)) === published2);
     }
 
     // ── The OTHER two members of W, each with its own outcomes. `gap` extends the chain exactly as an append

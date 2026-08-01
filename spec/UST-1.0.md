@@ -3,7 +3,7 @@
 
 *This specification text is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](../LICENSE-SPEC). Reference code in this repository is licensed Apache-2.0. Use of the name **UST** / **Universal State Transcript** and the **UST-compatible** claim: see [TRADEMARK.md](../TRADEMARK.md).*
 
-> **Release candidate — `1.0.0-rc.59`.** This specification has been extensively red-teamed; an independent
+> **Release candidate — `1.0.0-rc.60`.** This specification has been extensively red-teamed; an independent
 > external cryptographic audit is pending. It is subject to change until `1.0.0` final. The wire format `ust:"1.0"`
 > is stable across all rc's — pin exact versions. Per-version history is in [`CHANGELOG.md`](../CHANGELOG.md).
 
@@ -792,6 +792,15 @@ Where a producer's state includes a value that is CLEARED — the start of an op
 clearing MUST be an operation the store guarantees, not a sentinel written in place of absence. A substrate
 whose value domain cannot represent the sentinel rejects the write, the producer reads back the stale value,
 and the next seal asserts an interval that begins before itself (formal model F.5r-e).
+
+The duty is not only against OTHER writers. A producer that publishes a frame and then fails to record the
+new head — a timeout, or the process ending between the two steps — will read the SAME head next interval and
+extend it a second time, producing two successors with no second writer involved. The stored head and the head
+it observed agree, so a comparison between them cannot detect it. A producer MUST therefore check the stored
+head against THE DOCUMENT IT LAST PUBLISHED, re-assert that head if it is absent — which is idempotent, since
+it names the same successor of the same predecessor — and MUST NOT extend a head that matches neither its last
+observation nor its last emission. A producer that cannot establish this after a restart MUST treat its head
+as unverified rather than assume it (formal model F.5r-f).
 
 **Checkpoints (M5).** Checkpoints are themselves `prev`-chained frames (`class:"attestation"`) that assert the
 stream head + frame count over an interval. The asserted `frame_count` is CUMULATIVE from the stream origin, so
