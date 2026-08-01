@@ -100,7 +100,18 @@ check(new Set(touched).size >= 5, `${PROBE} calls only ${new Set(touched).size} 
       `\`${iface}\` declares \`${f.name}\` and what ${what} actually returns has no such key (${Object.keys(value).join(', ')}) — a precise STALE declaration is worse than a loose complete one, which is the defect these interfaces exist inside a gate to avoid`);
   }
   // and the other direction: a key the runtime ALWAYS has and the declaration withholds is a promise not made
-  for (const [iface, value] of [['UstState', state], ['UstDocument', doc], ['UstKeysResolved', keysOk], ['UstError', keysErr], ['UstStreamComplete', streamOk]]) {
+  // THE REVERSE DIRECTION MUST COVER EVERY DECLARED INTERFACE, NOT A LIST I REMEMBERED. `UstVerdict` was absent
+  // from this list, and a real consumer's build caught what the gate did not: the core emits `publisher` or
+  // `publisher_claimed` depending on whether the name resolved, and the declaration mentioned neither. A gate
+  // whose domain is hand-picked checks the instances it thought of — the exact defect this repository keeps
+  // finding under other names. So the interfaces are ENUMERATED from the declaration file, and one without a
+  // sample FAILS rather than being quietly skipped.
+  const SAMPLES = { UstState: state, UstDocument: doc, UstVerdict: verdict, UstKeysResolved: keysOk, UstError: keysErr, UstStreamComplete: streamOk };
+  const declaredIfaces = [...DTS.matchAll(/export interface (\w+) \{/g)].map((m) => m[1]);
+  check(declaredIfaces.length >= 5, `only ${declaredIfaces.length} interface(s) found in the declaration file — the enumeration has gone blind`);
+  for (const name of declaredIfaces) check(Object.hasOwn(SAMPLES, name),
+    `\`${name}\` is declared and this gate has no real value to check it against — add one. An interface nobody samples is a promise nobody verifies, which is how \`UstVerdict\` went two fields stale until a consumer's build failed.`);
+  for (const [iface, value] of declaredIfaces.filter((n) => SAMPLES[n]).map((n) => [n, SAMPLES[n]])) {
     const declared = new Set((keysOf(iface) ?? []).map((f) => f.name));
     for (const k of Object.keys(value)) check(declared.has(k),
       `${iface}: the runtime always returns \`${k}\` and the declaration does not mention it — a consumer cannot reach a value we do in fact promise`);

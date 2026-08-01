@@ -25,6 +25,17 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
+## rc.54 line
+
+**PUBLISHED 2026-08-01** — the whole set; every dist-tag moved. `UstVerdict` now declares the conditional
+publisher fields, which is what unblocked the first real consumer.
+
+Opened because rc.53 is PUBLISHED and a published version is immutable.
+
+| version | round | what closed |
+|---------|-------|-------------|
+| **rc.54**<br>**cli rc.87**<br>**mcp rc.43**<br>**light rc.43**<br>**web-signer rc.12**<br>**ots-verify rc.20**<br>**rekor-verify rc.15**<br>**operator 0.1.10**<br>**diarium 0.2.9** | 132 | **The first real consumer found what the gate did not, within minutes of installing rc.53.** Moving an engine from rc.45 to rc.53 broke its build with three `TS2339`: `publisher` and `publisher_claimed` do not exist on `UstVerdict`. The consumer was right and the DECLARATION was wrong — the core emits one or the other depending on whether the name resolved (`nameAuthoritative ? { publisher } : { publisher_claimed }`), and the interface mentioned neither. Both are now declared OPTIONAL, because either may be absent and declaring one required would forbid the other's world. **The gate defect is the real finding.** `consumer-probe-gate` checks both directions — a declared key missing from the real value, and a runtime key the declaration withholds — but the reverse leg ran over a HAND-PICKED list of five interfaces, and `UstVerdict` was not in it. A gate whose domain is a list checks the instances someone thought of; this repository has found that defect under half a dozen names and I wrote it again inside the gate built to prevent it. The interfaces are now ENUMERATED from the declaration file, and one without a real sample FAILS rather than being quietly skipped. Worth noting what this cost before it was caught: the fields were removed from the verdict shape at rev83 and the consumer's tests kept reading them for **eight release candidates**, because `Record<string, unknown>` let any property access compile. #117's whole argument, demonstrated on the first consumer to try it. |
+
 ## rc.53 line
 
 **PUBLISHED 2026-07-31** — the whole set (`ust-protocol` rc.53, `cli` rc.86, `mcp` rc.42, `light` rc.42,

@@ -866,6 +866,22 @@
       "code": "packages/ust-protocol/index.mjs :: anchorRollup reuses surfaceVerdict for the per-substrate verdict and adds only the roll-up over the declared set",
       "vector": "anchor-rollup-one-silent-leg-is-partial",
       "test": "#120 ADVERSARIAL: darkness is NOT decidable from one substrate — one silent declared leg yields PARTIAL, never dark"
+    },
+    {
+      "round": 132,
+      "math": {
+        "excluded": "Declaration soundness is a property of this implementation's packaging, not of the protocol; no producer obligation moved and no verdict changed."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: the verdict's runtime shape is unchanged, only its declaration caught up with it."
+      },
+      "code": "tools/gen-types.mjs :: UstVerdict declares the conditional publisher / publisher_claimed fields as optional; tools/consumer-probe-gate.mjs :: the reverse direction enumerates every declared interface instead of a hand-picked list",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they produce. An interface field produces no document and changes no verdict."
+      },
+      "test": {
+        "excluded": "The gate IS the test: an interface without a real sample now fails, so the gap that hid this cannot recur silently."
+      }
     }
   ],
   "first_accounted_round": 76,

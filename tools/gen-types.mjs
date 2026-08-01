@@ -284,7 +284,10 @@ function returnTypeOf(rawBody, isAsync) {
 const SHAPES_SRC = [
   'export interface UstState { id: Record<string, unknown>; time: unknown; data: unknown; hashes: unknown }',
   'export interface UstDocument { ust: unknown; state: UstState; sig: unknown }',
-  'export interface UstVerdict { result: string; error: unknown; detail: unknown; tier: unknown; id?: unknown }',
+  // `publisher` / `publisher_claimed` are CONDITIONAL: the core emits one or the other depending on whether the
+  // name was authoritatively resolved (index.mjs — `nameAuthoritative ? { publisher } : { publisher_claimed }`).
+  // Both optional, because either may be absent; declaring one required would forbid the other's world.
+  'export interface UstVerdict { result: string; error: unknown; detail: unknown; tier: unknown; id?: unknown; publisher?: unknown; publisher_claimed?: unknown }',
   '',
   '// A function with two OUTCOMES is a discriminated union, not an untypeable value. Saying "these are unions,',
   '// so one interface would lie" and leaving them `unknown` was a substitution — TypeScript has unions, and the',

@@ -231,6 +231,10 @@
     {
       "round": 131,
       "no_recap": "Round 131 does not close #120 — the declaration and the roll-up are in, and the issue stays open until a profile actually carries a substrate list end to end."
+    },
+    {
+      "round": 132,
+      "no_recap": "Round 132 closes no issue — it is the first downstream finding from the noosphere integration, and its lesson belongs with the #117 arc rather than in an entry of its own."
     }
   ]
 }

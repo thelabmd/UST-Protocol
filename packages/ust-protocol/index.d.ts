@@ -18,7 +18,7 @@
 
 export interface UstState { id: Record<string, unknown>; time: unknown; data: unknown; hashes: unknown }
 export interface UstDocument { ust: unknown; state: UstState; sig: unknown }
-export interface UstVerdict { result: string; error: unknown; detail: unknown; tier: unknown; id?: unknown }
+export interface UstVerdict { result: string; error: unknown; detail: unknown; tier: unknown; id?: unknown; publisher?: unknown; publisher_claimed?: unknown }
 
 // A function with two OUTCOMES is a discriminated union, not an untypeable value. Saying "these are unions,
 // so one interface would lie" and leaving them `unknown` was a substitution — TypeScript has unions, and the
