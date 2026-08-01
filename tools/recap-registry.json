@@ -239,6 +239,10 @@
     {
       "round": 133,
       "no_recap": "Round 133 does not close #122 — the store port and the refusal are in; the issue stays open until an operator actually runs on it and the checkpoint half is moved across too."
+    },
+    {
+      "round": 134,
+      "no_recap": "Round 134 does not close #122 — the discipline is reachable now; the issue closes when an operator actually runs its head through it."
     }
   ]
 }

@@ -25,6 +25,12 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
+## rc.56 line
+
+| version | round | what closed |
+|---------|-------|-------------|
+| **operator 0.3.0**<br>**rc.56**<br>**cli rc.89**<br>**mcp rc.45**<br>**light rc.45**<br>**web-signer rc.14**<br>**ots-verify rc.22**<br>**rekor-verify rc.17**<br>**diarium 0.2.11** | 134 | **The head discipline was locked inside `append`, so the first operator to try it could not reach it.** `Stream.append` couples three things — build, sign, advance — which serves a producer whose documents the LAYER makes. It does not serve one that assembles its own: from sources, with its own publish semantics, its own NX collision handling. Measured on the first real operator: it builds slots itself and would have had to reimplement the F.5r rule outside, which is exactly the duplication this layer exists to end. `advanceHead(store, { expected, next })` is now exported on its own, and `append` routes through it — a conformance check reads the source to assert there is only ONE body for the rule, because two would drift apart silently. **And the finding that justified it came from the operator side, in production code five weeks old:** the slot writer advances the head AFTER publishing, and its failure path swallowed the error with the comment *"pointer loss is self-healing: next slot re-reads"*. That is backwards. Re-reading a head that did not advance chains the NEXT slot to the SAME head — measured against the reference verifier, the hour then returns `E-PREV: frame 2 prev dangling (broken chain)`. Not self-healing: a broken hour. No test caught it because there was nothing to catch — the code did exactly what its comment said. Eight checks over every outcome of the discipline, including that a REFUSED advance leaves the store unchanged: a refusal that still wrote would be worse than none. 34 checks in the layer suite. |
+
 ## rc.55 line
 
 **PUBLISHED 2026-08-01** — the whole set, and `@ust-protocol/operator` at **0.2.0**: a MAJOR because

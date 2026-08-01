@@ -159,6 +159,35 @@ check('Tiers:continuation-after-gap', afterGap.state.provenance.prev === P.conte
     check('#122 frames are available to the caller AT the checkpoint and cleared by the next interval first frame',
       heldAtCheckpoint >= 2 && st2.frames.length === 1 && !!cp2);
   }
+  // ── advanceHead on its own: EVERY outcome, because an operator that builds its own documents reaches
+  // the discipline only through this door. Left inside `append`, it would be reimplemented outside.
+  {
+    const plain = () => { const m = new Map(); return { get: async (k) => m.get(k) ?? null, set: async (k, v) => { m.set(k, v); }, _m: m }; };
+    const withCas = () => { const m = new Map(); return { get: async (k) => m.get(k) ?? null, set: async (k, v) => { m.set(k, v); },
+      cas: async (k, expect, next) => { if ((m.get(k) ?? null) !== expect) return false; m.set(k, next); return true; }, _m: m }; };
+    const grab = async (fn) => { try { await fn(); return null; } catch (e) { return e.code; } };
+
+    const s1 = plain();
+    check('#122 advanceHead: an UNSEEDED store accepts the first head — nobody has written yet, which is not a disagreement',
+      (await S.advanceHead(s1, { expected: null, next: 'sha256:a' })) === 'detected' && (await s1.get(S.STREAM_KEYS.head)) === 'sha256:a');
+    check('#122 advanceHead: extending the head we observed is accepted',
+      (await S.advanceHead(s1, { expected: 'sha256:a', next: 'sha256:b' })) === 'detected');
+    check('#122 ADVERSARIAL advanceHead: extending a head we did NOT observe is REFUSED — that is the fork, named before it is published',
+      (await grab(() => S.advanceHead(s1, { expected: 'sha256:a', next: 'sha256:c' }))) === 'E-FORK');
+    check('#122 advanceHead: the refused write left the store UNCHANGED — a refusal that still wrote would be worse than none',
+      (await s1.get(S.STREAM_KEYS.head)) === 'sha256:b');
+    check('#122 advanceHead: a missing next is refused rather than storing nothing under the head',
+      (await grab(() => S.advanceHead(s1, { expected: 'sha256:b' }))) === 'E-FORK');
+
+    const s2 = withCas();
+    check('#122 advanceHead with cas reports PREVENTED — the stronger guarantee, and only when the store gives it',
+      (await S.advanceHead(s2, { expected: null, next: 'sha256:x' })) === 'prevented');
+    check('#122 ADVERSARIAL advanceHead with cas: the loser of a concurrent write is REFUSED and must not publish',
+      (await grab(() => S.advanceHead(s2, { expected: null, next: 'sha256:y' }))) === 'E-FORK');
+    check('#122 advanceHead: ONE implementation — append routes through it, so the rule cannot have two bodies',
+      /await advanceHead\(this\.store/.test(readFileSync(new URL('./index.mjs', import.meta.url), 'utf8')));
+  }
+
   check('#122 with store.cas the layer reports prevented — the stronger guarantee, and only when it holds it',
     new S.Stream({ sign, store: cas }).guarantee === 'prevented');
 }

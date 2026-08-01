@@ -890,6 +890,22 @@
       "code": "packages/ust-operator/index.mjs :: Stream takes a store port, names STREAM_KEYS as the layer's contract, resumes from the store and refuses E-FORK on a stale head",
       "vector": "stream-fork-visible-only-with-both-branches",
       "test": "#122 ADVERSARIAL: two appenders from one head both succeed when the head is PRIVATE — the fork is produced and neither can see it"
+    },
+    {
+      "round": 134,
+      "math": {
+        "excluded": "F.5r already states the rule; this round changes WHERE it is reachable from, not what it says. No obligation on producers or verifiers moved and no verdict changed."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: the producer duty in §11.3 is unchanged, only the layer's surface for meeting it."
+      },
+      "code": "packages/ust-operator/index.mjs :: advanceHead exported on its own; append routes through it so the rule has ONE body",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they produce. An exported function produces no document and changes no verdict."
+      },
+      "test": {
+        "excluded": "The layer's own suite covers every outcome of advanceHead, including that a refused advance leaves the store unchanged, plus a source-read check that append has no second implementation of the rule."
+      }
     }
   ],
   "first_accounted_round": 76,

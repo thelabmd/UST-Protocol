@@ -52,6 +52,37 @@ export const STREAM_KEYS = Object.freeze({ head: 'ust:stream:head', count: 'ust:
 // that lives months is not, and the layer must not force the second to reimplement the first.
 export const memoryStore = () => { const m = new Map(); return { get: (k) => m.get(k) ?? null, set: (k, v) => { m.set(k, v); } }; };
 
+/**
+ * THE HEAD DISCIPLINE, on its own — because an operator that builds its own documents cannot reach it
+ * inside `append`.
+ *
+ * `Stream.append` couples three things: build, sign, advance. That serves a producer whose documents the
+ * layer makes. It does not serve one that assembles its own — from sources, with its own publish
+ * semantics — and such an operator would otherwise reimplement the rule, which is the duplication this
+ * layer exists to end. Measured on the first operator to try it.
+ *
+ * The rule is F.5r: extend only the head you observed. `expected` is what this writer read before
+ * building; if the store no longer holds it, somebody else advanced in between and continuing would put
+ * two successors under one head.
+ *
+ * `store.cas` PREVENTS that; a plain `get`/`set` only DETECTS it — the refusal comes one write late.
+ * Which one you got is returned, never assumed.
+ */
+export async function advanceHead(store, { expected = null, next }) {
+  if (!next) throw Object.assign(new Error('E-FORK: advanceHead needs the next head'), { code: 'E-FORK' });
+  if (typeof store.cas === 'function') {
+    const won = await store.cas(STREAM_KEYS.head, expected, next);
+    if (!won) throw Object.assign(new Error('E-FORK: lost the compare-and-set on the stream head — a concurrent writer won, and this document must NOT be published (F.5r)'), { code: 'E-FORK' });
+    return 'prevented';
+  }
+  const stored = await store.get(STREAM_KEYS.head);
+  if (stored !== null && stored !== expected) {
+    throw Object.assign(new Error('E-FORK: the stream head moved under this writer — another writer extended it, and advancing would leave two successors of one head (F.5r)'), { code: 'E-FORK' });
+  }
+  await store.set(STREAM_KEYS.head, next);
+  return 'detected';
+}
+
 export class Stream {
   /**
    * #122 / F.5r — THE HEAD MUST NOT BE PRIVATE TO THE APPENDER.
@@ -92,34 +123,16 @@ export class Stream {
     return this;
   }
   async append(idMeta, time, data, cls = 'observation') {
-    // READ THE SHARED HEAD FIRST. If it is not the one this instance wrote, somebody else wrote in between:
-    // refuse rather than extend a head we never observed. That is the whole point — a silent fork becomes a
-    // loud refusal, at the only place positioned to see it.
-    const stored = await this.store.get(STREAM_KEYS.head);
-    // AN EMPTY store means "nobody has written yet", not a disagreement: this stream's head starts at the
-    // genesis, and before the first write there is simply nothing stored. A disagreement is when a head IS
-    // there and it is not ours.
-    //
-    // And this is exactly where the two guarantees part: with an empty store two instances both see null and
-    // both write the first frame — only compare-and-set closes that race. Which is why `detected` is honestly
-    // called detection and not prevention: such a store misses the FIRST fork and catches the second.
-    if (stored !== null && stored !== (this.head ?? null)) {
-      throw Object.assign(new Error('E-FORK: the stream head moved under this appender — another writer extended it, and continuing would produce two successors of one head (F.5r)'), { code: 'E-FORK' });
-    }
     const state = P.buildState({ ...idMeta, class: cls }, time, data, this.head ? { prev: this.head } : undefined);
     const doc = this.sign(state);
     const next = P.contentHash(doc);
-    if (this.guarantee === 'prevented') {
-      const won = await this.store.cas(STREAM_KEYS.head, this.head ?? null, next);
-      if (!won) throw Object.assign(new Error('E-FORK: lost the compare-and-set on the stream head — a concurrent appender won, and this document must NOT be published (F.5r)'), { code: 'E-FORK' });
-    } else {
-      await this.store.set(STREAM_KEYS.head, next);
-    }
-    // THE RETENTION BOUNDARY IS HERE, not at the checkpoint: the caller verifies the range against the
-    // checkpoint just handed to it, and needs the frames at that moment. Cleared on the FIRST frame of the
-    // next interval — retention is then bounded to one interval and legitimate use is not broken. Without
-    // this, 2 880 documents a day accumulated for the life of the process while the constructor's comment
-    // described the intention rather than the code.
+    // ONE implementation of the discipline: `append` calls the same function an external builder calls.
+    // Two bodies for one rule would drift apart silently — which is what this layer exists to end.
+    // The refusal happens BEFORE the caller can publish `doc`: it is returned only after the head moved.
+    await advanceHead(this.store, { expected: this.head ?? null, next });
+    // THE RETENTION BOUNDARY: the caller verifies the range against the checkpoint just handed to it and
+    // needs the frames at that moment, so they are cleared on the FIRST frame of the next interval —
+    // retention bounded to one interval, legitimate use unbroken.
     if (this.intervalClosed) { this.frames = []; this.intervalClosed = false; }
     this.head = next; this.count++; this.frames.push(doc);
     if (!this.spanFrom) this.spanFrom = idMeta.ust_id;

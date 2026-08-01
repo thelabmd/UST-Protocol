@@ -16,6 +16,7 @@
 // values and fails if a declared key is missing, so they cannot drift into being the stale kind.
 // Package: @ust-protocol/operator
 
+export function advanceHead(store: unknown, arg1?: unknown): Promise<string>;
 export class AnchorBatch { constructor(verdict?: unknown); }
 export function assembleLayers(layers: unknown, arg1?: unknown): { valid: unknown; seedOk: unknown; perLayer: unknown; verifiedDepth: unknown };
 export const BREADTH: unknown;
