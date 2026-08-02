@@ -25,7 +25,7 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
-## rc.66 line — unpublished
+## rc.66 line
 
 | version | round | what closed |
 |---------|-------|-------------|
