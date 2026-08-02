@@ -203,13 +203,21 @@ export function declarationsFor(src, resolveModule) {
       if (!type) {
         const lit = tail.match(/^\s*(?:Object\.freeze\(\s*)?\{([\s\S]*?)\}\s*\)?\s*;/);
         if (lit) {
-          const entries = [...lit[1].matchAll(/([A-Za-z_$][\w$]*)\s*:\s*(?:Object\.freeze\(\s*)?\[([^\]]*)\]/g)];
+          // A member name may be QUOTED — `'name-binding-root'` cannot be a bare identifier — and reading only
+          // bare ones dropped it SILENTLY, emitting a declaration short one member. The integrity gate caught
+          // it, which is the only reason it is not shipped: a generator that under-reads produces a file that
+          // compiles and lies. Both halves must accept the quoted form, the extractor AND the member count,
+          // or the count agrees with the extractor about a member neither of them saw.
+          const KEY = "(?:([A-Za-z_$][\\w$]*)|'([^']+)')";
+          const entries = [...lit[1].matchAll(new RegExp(KEY + "\\s*:\\s*(?:Object\\.freeze\\(\\s*)?\\[([^\\]]*)\\]", 'g'))]
+            .map((m) => [m[1] ?? m[2], m[3]]);
           const bare = lit[1].replace(/\/\/[^\n]*/g, '');
-          const members = (bare.match(/[A-Za-z_$][\w$]*\s*:/g) || []).length;
+          const members = (bare.match(new RegExp(KEY + "\\s*:", 'g')) || []).length;
           if (entries.length && entries.length === members) {
-            const parts = entries.map((e) => {
-              const items = e[2].split(',').map((x) => x.trim()).filter(Boolean).map((x) => x.match(/^'([^']*)'$/));
-              return items.every(Boolean) ? `${e[1]}: readonly [${items.map((m) => `'${m[1]}'`).join(', ')}]` : null;
+            const parts = entries.map(([name, list]) => {
+              const items = list.split(',').map((x) => x.trim()).filter(Boolean).map((x) => x.match(/^'([^']*)'$/));
+              const key = /^[A-Za-z_$][\w$]*$/.test(name) ? name : `'${name}'`;
+              return items.every(Boolean) ? `${key}: readonly [${items.map((m) => `'${m[1]}'`).join(', ')}]` : null;
             });
             if (parts.every(Boolean)) type = 'Readonly<{ ' + parts.join('; ') + ' }>';
           }

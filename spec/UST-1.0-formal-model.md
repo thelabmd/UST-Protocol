@@ -854,7 +854,23 @@ call it: three of the five roles authorized (each enforced where its object is v
 operator actually ASSIGNS authorized nothing. One word, two mechanisms — the collision this model names
 elsewhere, inside a single vocabulary.
 
-  `data ↦ {observation, derivation, attestation}` · `issuance ↦ {attestation}`
+  `name-binding-root ↦ {genesis, key, cadence}` · `data ↦ {observation, derivation, attestation}` ·
+  `issuance ↦ {attestation}`
+
+**The root is in the table (rev91), and F.7c is why.** A closed vocabulary that leaves one member without a
+stated meaning has the identical defect for that member as an open field would for all of them: “what did this
+signature mean” becomes a question addressed to the publisher. The root's set is its FUNCTION — bind the name,
+authorize the log — which is the key context and nothing else. This is NOT containment and does not pretend to
+be: a compromised root simply adds itself a `data` key. What it buys is that the addition leaves a SIGNED,
+CHAINED entry in the public key log, so a quiet act becomes a loud one; and it makes the declaration honest —
+a publisher that says “I separate my keys” now says it about the strongest key too, instead of about everyone
+but itself.
+
+*Enforced only under a DECLARED regime, and that condition is load-bearing.* The root carries its role always,
+declared or not, so an unconditional check would refuse every document of a minimal publisher that signs with
+its own root and keeps no key log. “A publisher that does NOTHING is unaffected in every respect” is the
+invariant, and one condition is what keeps it true — the same condition that was correctly REMOVED in rev89 as
+unreachable, and is reachable now precisely because the root joined the table.
 
 **Why that cut and not another.** An issued document ATTESTS to what the publisher observed; it does not CREATE
 the observation. So a leaked `issuance` key may re-state what the stream already contains and may never mint a

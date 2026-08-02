@@ -1054,7 +1054,7 @@
     {
       "round": 149,
       "math": "The normative class-sets, without which the predicate cannot be evaluated (rev89)",
-      "spec": "the role against a NORMATIVE class-set: **`data` admits `observation`/`derivation`/`attestation`;",
+      "spec": "the role against a NORMATIVE class-set: **`name-binding-root` admits `genesis`/`key`/`cadence`; `data` admits",
       "code": "packages/ust-protocol/index.mjs :: ROLE_CLASSES + admits(k,c) enforced in resolveAuthority as E-KEY, refusal rather than downgrade",
       "vector": "admits-issuance-observation-refused",
       "test": "admits-issuance-observation-refused"
@@ -1070,6 +1070,14 @@
         "excluded": "The theorem is about which arguments a predicate CAN take, not about a verdict on bytes. Its consequences are already pinned by the round-149 matrix; a vector here would restate them."
       },
       "test": "admits-issuance-observation-refused"
+    },
+    {
+      "round": 151,
+      "math": "The root is in the table (rev91), and F.7c is why",
+      "spec": "because a closed vocabulary with one member left unstated has, for that member, the same defect an open field",
+      "code": "packages/ust-protocol/index.mjs :: ROLE_CLASSES gains name-binding-root, and the declared-regime condition returns as load-bearing because the root carries its role always",
+      "vector": "admits-root-signs-data-under-declared-regime-refused",
+      "test": "admits-root-signs-data-undeclared-unaffected"
     }
   ],
   "first_accounted_round": 76,

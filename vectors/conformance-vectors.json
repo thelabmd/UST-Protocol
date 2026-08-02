@@ -8143,6 +8143,445 @@
       },
       "expect": "admitted",
       "note": "no `roles` in the genesis ⇒ the undifferentiated key set ⇒ no class is refused for a role reason"
+    },
+    {
+      "kind": "role-admits",
+      "id": "admits-root-signs-data-under-declared-regime-refused",
+      "rule": "§12.2 / F.5e.1 — admits(k, c): under a DECLARED role regime a key signs only the classes its role admits. `data` admits observation/derivation/attestation; `issuance` admits attestation only — an issued document ATTESTS to what the publisher observed and never mints the observation.",
+      "genesis": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "roles.example",
+            "ust_id": "ust:20260802.1000",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "genesis"
+          },
+          "time": {
+            "generated_at": "2026-08-02T10:00:00Z",
+            "valid_from": "2026-08-02T10:00:00Z",
+            "valid_to": "2026-08-02T10:00:00Z"
+          },
+          "data": {
+            "genesis": {
+              "kind": "captured",
+              "value": {
+                "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+                "role": "name-binding-root",
+                "cadence": "30",
+                "roles": [
+                  "data",
+                  "issuance"
+                ]
+              }
+            }
+          },
+          "hashes": {
+            "genesis": "sha256:74201efdf0eb5de6c0d455201eadc1d00f4d41a82665209766f75af8949ce783"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "12TMkk2bCCWwSiboXR4zpQpuXS9gAPbt_rFb0OQCrv9Rr4CVrJmkXNr6pNV1hofHxIbGUNi_6hE5gfBwx_5MBw"
+        }
+      },
+      "keylog": [
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "roles.example",
+              "ust_id": "ust:20260802.1001",
+              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+              "class": "key"
+            },
+            "time": {
+              "generated_at": "2026-08-02T10:01:00Z",
+              "valid_from": "2026-08-02T10:01:00Z",
+              "valid_to": "2026-08-02T10:01:00Z"
+            },
+            "data": {
+              "key_op": {
+                "kind": "captured",
+                "value": {
+                  "op": "add",
+                  "pub": "Lk6D_bLYj4jF8D5mPDnqP5x1NjErYqKwmpVxLczxGkA",
+                  "role": "data"
+                }
+              }
+            },
+            "hashes": {
+              "key_op": "sha256:f41cb29ac875f47e369fc5256e95983a76e9c2d2ed01983cc7883d8688ddf6b5"
+            },
+            "provenance": {
+              "prev": "sha256:794ec63d3c4d4a1c594f1fe05a331c53a70b920a0956181492819bd4e08ad2bc"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+            "sig": "_5tljR_SJmgQHvzKPEi-TH9_VC08K68HPpiKAr5E8LZtCPhzzvl4fPh2I6Pl0gD7nQwA3MgR7x4Gt8NlcF01DA"
+          }
+        },
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "roles.example",
+              "ust_id": "ust:20260802.1001",
+              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+              "class": "key"
+            },
+            "time": {
+              "generated_at": "2026-08-02T10:01:00Z",
+              "valid_from": "2026-08-02T10:01:00Z",
+              "valid_to": "2026-08-02T10:01:00Z"
+            },
+            "data": {
+              "key_op": {
+                "kind": "captured",
+                "value": {
+                  "op": "add",
+                  "pub": "F8t5-ytBIPKx7GXkGY1uCLKOgT_rAeSkAIObheGAgM4",
+                  "role": "issuance"
+                }
+              }
+            },
+            "hashes": {
+              "key_op": "sha256:f41d5a8357695db733a9c1affe74a9947578ad511255647ed45d21c466250d4d"
+            },
+            "provenance": {
+              "prev": "sha256:76b4200ace588f1758f6ec44584feb88b0042b85c589e29152947908b49c952e"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+            "sig": "ECob7eewt_AL4JsPYcGJK-VzpHqQIzMOChrDXonCagiFvz7ZGG69SbVCMkS_Bv2bud4u72Ru_cyTpaG21QNYDQ"
+          }
+        }
+      ],
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "roles.example",
+            "ust_id": "ust:20260802.100200",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "observation"
+          },
+          "time": {
+            "generated_at": "2026-08-02T10:02:00Z",
+            "valid_from": "2026-08-02T10:02:00Z",
+            "valid_to": "2026-08-02T10:02:00Z"
+          },
+          "data": {
+            "weather": {
+              "kind": "captured",
+              "value": {
+                "x": "1"
+              }
+            }
+          },
+          "hashes": {
+            "weather": "sha256:30769a3f8c70d53e0ba545b4ce08ca15bda1f4447a5d1ad4eb4c219e1cfc3297"
+          },
+          "provenance": {
+            "prev": "sha256:794ec63d3c4d4a1c594f1fe05a331c53a70b920a0956181492819bd4e08ad2bc"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "j5SQGqmh4Tjfqm7wN2VNfl7ef8pZ7V29TNT-xRs53o-PRS9xQLsOyuiQ1R1QhU5c-wIxj10EGvAk5cujvxoNDA"
+        }
+      },
+      "expect": "E-KEY",
+      "note": "a publisher that says \"I separate my keys\" says it about the strongest key too — otherwise the declaration reads about everyone but itself"
+    },
+    {
+      "kind": "role-admits",
+      "id": "admits-root-signs-data-undeclared-unaffected",
+      "rule": "§12.2 / F.5e.1 — admits(k, c): under a DECLARED role regime a key signs only the classes its role admits. `data` admits observation/derivation/attestation; `issuance` admits attestation only — an issued document ATTESTS to what the publisher observed and never mints the observation.",
+      "genesis": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "roles.example",
+            "ust_id": "ust:20260802.1000",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "genesis"
+          },
+          "time": {
+            "generated_at": "2026-08-02T10:00:00Z",
+            "valid_from": "2026-08-02T10:00:00Z",
+            "valid_to": "2026-08-02T10:00:00Z"
+          },
+          "data": {
+            "genesis": {
+              "kind": "captured",
+              "value": {
+                "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+                "role": "name-binding-root",
+                "cadence": "30"
+              }
+            }
+          },
+          "hashes": {
+            "genesis": "sha256:92c7f3127e107696f99bcc43d14d1b883082c8aca687bc3a96df1cde1bb1a955"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "k10ICL7tyMG7KF0Mr8rNQJ2Xznt-tQdJSLyLLSqrLvBMbECIcjbnqdm-3ZOsn5fTc9IqfmfgmCL_GcIkADF7CA"
+        }
+      },
+      "keylog": [
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "roles.example",
+              "ust_id": "ust:20260802.1001",
+              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+              "class": "key"
+            },
+            "time": {
+              "generated_at": "2026-08-02T10:01:00Z",
+              "valid_from": "2026-08-02T10:01:00Z",
+              "valid_to": "2026-08-02T10:01:00Z"
+            },
+            "data": {
+              "key_op": {
+                "kind": "captured",
+                "value": {
+                  "op": "add",
+                  "pub": "Lk6D_bLYj4jF8D5mPDnqP5x1NjErYqKwmpVxLczxGkA"
+                }
+              }
+            },
+            "hashes": {
+              "key_op": "sha256:0a6f335d6bd0139426bc8911bd1843727bfef9a9032f837efbf8789099b18b83"
+            },
+            "provenance": {
+              "prev": "sha256:5c227a1c7a70d4aae25800f10b8bddca4ad7353c0953890b5dcd3129814ab865"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+            "sig": "QDAOWSz3vshoU5WJhZo3QJccgLjVtSQWLc3xW72XaVNeqPYuLjFt_QIUZ7OR_0EeLH2vN1JCqMGjnsGBoqe_BQ"
+          }
+        }
+      ],
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "roles.example",
+            "ust_id": "ust:20260802.100200",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "observation"
+          },
+          "time": {
+            "generated_at": "2026-08-02T10:02:00Z",
+            "valid_from": "2026-08-02T10:02:00Z",
+            "valid_to": "2026-08-02T10:02:00Z"
+          },
+          "data": {
+            "weather": {
+              "kind": "captured",
+              "value": {
+                "x": "1"
+              }
+            }
+          },
+          "hashes": {
+            "weather": "sha256:30769a3f8c70d53e0ba545b4ce08ca15bda1f4447a5d1ad4eb4c219e1cfc3297"
+          },
+          "provenance": {
+            "prev": "sha256:5c227a1c7a70d4aae25800f10b8bddca4ad7353c0953890b5dcd3129814ab865"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "sgFgQzxzzpb-lLKEGfqIn74Zikf466qgoqdDsQYkDISigLfIyJfVnj-kzM2X-dVO7jalQa6ShAeavcZocjF-Dw"
+        }
+      },
+      "expect": "admitted",
+      "note": "a minimal publisher with NO key log signs everything with its own root — declaring nothing must change nothing (§12.2)"
+    },
+    {
+      "kind": "role-admits",
+      "id": "admits-root-signs-key-log-under-declared-regime",
+      "rule": "§12.2 / F.5e.1 — admits(k, c): under a DECLARED role regime a key signs only the classes its role admits. `data` admits observation/derivation/attestation; `issuance` admits attestation only — an issued document ATTESTS to what the publisher observed and never mints the observation.",
+      "genesis": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "roles.example",
+            "ust_id": "ust:20260802.1000",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "genesis"
+          },
+          "time": {
+            "generated_at": "2026-08-02T10:00:00Z",
+            "valid_from": "2026-08-02T10:00:00Z",
+            "valid_to": "2026-08-02T10:00:00Z"
+          },
+          "data": {
+            "genesis": {
+              "kind": "captured",
+              "value": {
+                "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+                "role": "name-binding-root",
+                "cadence": "30",
+                "roles": [
+                  "data",
+                  "issuance"
+                ]
+              }
+            }
+          },
+          "hashes": {
+            "genesis": "sha256:74201efdf0eb5de6c0d455201eadc1d00f4d41a82665209766f75af8949ce783"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "12TMkk2bCCWwSiboXR4zpQpuXS9gAPbt_rFb0OQCrv9Rr4CVrJmkXNr6pNV1hofHxIbGUNi_6hE5gfBwx_5MBw"
+        }
+      },
+      "keylog": [
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "roles.example",
+              "ust_id": "ust:20260802.1001",
+              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+              "class": "key"
+            },
+            "time": {
+              "generated_at": "2026-08-02T10:01:00Z",
+              "valid_from": "2026-08-02T10:01:00Z",
+              "valid_to": "2026-08-02T10:01:00Z"
+            },
+            "data": {
+              "key_op": {
+                "kind": "captured",
+                "value": {
+                  "op": "add",
+                  "pub": "Lk6D_bLYj4jF8D5mPDnqP5x1NjErYqKwmpVxLczxGkA",
+                  "role": "data"
+                }
+              }
+            },
+            "hashes": {
+              "key_op": "sha256:f41cb29ac875f47e369fc5256e95983a76e9c2d2ed01983cc7883d8688ddf6b5"
+            },
+            "provenance": {
+              "prev": "sha256:794ec63d3c4d4a1c594f1fe05a331c53a70b920a0956181492819bd4e08ad2bc"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+            "sig": "_5tljR_SJmgQHvzKPEi-TH9_VC08K68HPpiKAr5E8LZtCPhzzvl4fPh2I6Pl0gD7nQwA3MgR7x4Gt8NlcF01DA"
+          }
+        },
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "roles.example",
+              "ust_id": "ust:20260802.1001",
+              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+              "class": "key"
+            },
+            "time": {
+              "generated_at": "2026-08-02T10:01:00Z",
+              "valid_from": "2026-08-02T10:01:00Z",
+              "valid_to": "2026-08-02T10:01:00Z"
+            },
+            "data": {
+              "key_op": {
+                "kind": "captured",
+                "value": {
+                  "op": "add",
+                  "pub": "F8t5-ytBIPKx7GXkGY1uCLKOgT_rAeSkAIObheGAgM4",
+                  "role": "issuance"
+                }
+              }
+            },
+            "hashes": {
+              "key_op": "sha256:f41d5a8357695db733a9c1affe74a9947578ad511255647ed45d21c466250d4d"
+            },
+            "provenance": {
+              "prev": "sha256:76b4200ace588f1758f6ec44584feb88b0042b85c589e29152947908b49c952e"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+            "sig": "ECob7eewt_AL4JsPYcGJK-VzpHqQIzMOChrDXonCagiFvz7ZGG69SbVCMkS_Bv2bud4u72Ru_cyTpaG21QNYDQ"
+          }
+        }
+      ],
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "roles.example",
+            "ust_id": "ust:20260802.1001",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "key"
+          },
+          "time": {
+            "generated_at": "2026-08-02T10:01:00Z",
+            "valid_from": "2026-08-02T10:01:00Z",
+            "valid_to": "2026-08-02T10:01:00Z"
+          },
+          "data": {
+            "key_op": {
+              "kind": "captured",
+              "value": {
+                "op": "add",
+                "pub": "F8t5-ytBIPKx7GXkGY1uCLKOgT_rAeSkAIObheGAgM4",
+                "role": "issuance"
+              }
+            }
+          },
+          "hashes": {
+            "key_op": "sha256:f41d5a8357695db733a9c1affe74a9947578ad511255647ed45d21c466250d4d"
+          },
+          "provenance": {
+            "prev": "sha256:794ec63d3c4d4a1c594f1fe05a331c53a70b920a0956181492819bd4e08ad2bc"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "OuahA_grmF6gXts1Lw8LaH5j-e8cI9cU25hraVjYESzlx-v3zK6Xir7BugZyozamagColXLdib0R1RzNIsSnCw"
+        }
+      },
+      "expect": "admitted",
+      "note": "the root keeps its function: a class:\"key\" entry is exactly what its set admits"
     }
   ]
 }

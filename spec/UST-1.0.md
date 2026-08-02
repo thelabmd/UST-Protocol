@@ -1189,8 +1189,14 @@ existence carrying one; an entry with `op:"rotate"` MUST be rejected `E-KEY`.
   **The regime is declared per publisher.** A genesis whose value carries a non-empty `roles` array DECLARES role
   separation. Then, and only then: every `add` MUST carry a `role` drawn from that declared set (a missing role
   ⇒ **E-KEY** — a missing field must never be the strongest possible claim), and `admits(key, class)` consults
-  the role against a NORMATIVE class-set: **`data` admits `observation`/`derivation`/`attestation`;
-  `issuance` admits `attestation` only.** An issued document ATTESTS to what the publisher observed and never
+  the role against a NORMATIVE class-set: **`name-binding-root` admits `genesis`/`key`/`cadence`; `data` admits
+  `observation`/`derivation`/`attestation`; `issuance` admits `attestation` only.** The ROOT is in the table
+  because a closed vocabulary with one member left unstated has, for that member, the same defect an open field
+  would have for all of them (F.7c) — its set is its FUNCTION: bind the name, authorize the log. It is not
+  containment (a compromised root adds itself a `data` key) but it forces that step to leave a signed, chained
+  entry in the public key log, and it makes the declaration cover the strongest key rather than everyone but
+  it. Enforced ONLY where separation is declared: a minimal publisher signing everything with its own root and
+  keeping no key log is unaffected, as §12.2 promises. An issued document ATTESTS to what the publisher observed and never
   mints the observation, so a leaked issuance key cannot fabricate what the publisher saw. A document whose
   class the signing key's role does not admit is **E-KEY** — a REFUSAL, not a downgrade to `self-asserted`,
   because leaving it valid at the LIGHT floor is the outcome the role exists to prevent (the three

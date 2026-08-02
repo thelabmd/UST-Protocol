@@ -72,10 +72,15 @@ for (const w of WORKSPACES) {
     // admits. Reading only the string form scored that declaration as `{}` and failed a correct file: the
     // checker has to know every shape the generator can emit, or the pair drifts in the direction where the
     // GATE is wrong, which is the worse one because it trains you to edit the code until the gate is happy.
+    // A member name may be QUOTED (`'name-binding-root'` is not a bare identifier). Reading only bare names
+    // made this gate report a CORRECT declaration as short one member — the generator had just been taught the
+    // same lesson, and teaching only one side leaves the pair disagreeing in the direction where the GATE is
+    // wrong, which is the worse one: it trains you to edit the code until the gate is happy.
+    const K = "(?:([A-Za-z_$][\\w$]*)|'([^']+)')";
     const declaredPairs = Object.fromEntries([
-      ...[...m[2].matchAll(/([A-Za-z_$][\w$]*): '([^']*)'/g)].map((x) => [x[1], x[2]]),
-      ...[...m[2].matchAll(/([A-Za-z_$][\w$]*): readonly \[([^\]]*)\]/g)]
-        .map((x) => [x[1], x[2].split(',').map((t) => t.trim().replace(/^'|'$/g, '')).filter(Boolean)]),
+      ...[...m[2].matchAll(new RegExp(K + ": '([^']*)'", 'g'))].map((x) => [x[1] ?? x[2], x[3]]),
+      ...[...m[2].matchAll(new RegExp(K + ': readonly \\[([^\\]]*)\\]', 'g'))]
+        .map((x) => [x[1] ?? x[2], x[3].split(',').map((t) => t.trim().replace(/^'|'$/g, '')).filter(Boolean)]),
     ]);
     check(JSON.stringify(declaredPairs) === JSON.stringify(ns[m[1]]),
       `${pkg.name} declares \`${m[1]}\` as ${JSON.stringify(declaredPairs)} and the value is ${JSON.stringify(ns[m[1]])} — a vocabulary that disagrees with itself is worse than an undeclared one, because a consumer compiles against the wrong word`);

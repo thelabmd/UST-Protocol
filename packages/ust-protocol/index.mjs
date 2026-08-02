@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.67', revision: 90 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.67', revision: 91 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -496,6 +496,16 @@ const AUTHORITY_CLASSES = new Set(['genesis', 'key', 'cadence']);
 // one role per key), not the class space. `issuance ⊊ data` is a hierarchy of capability over a partition of
 // keys, which is exactly how the ceremony roles already read.
 export const ROLE_CLASSES = Object.freeze({
+  // The ROOT is in this table too (rev91), because a closed vocabulary with one member left without a stated
+  // meaning has the identical defect for that member as an open field would for all of them (F.7c): "what did
+  // this signature mean" becomes a question addressed to the publisher. Its set is its FUNCTION — bind the name
+  // and authorize the log — which is the key context, and nothing else.
+  //
+  // This is not containment and does not pretend to be: a compromised root simply adds itself a `data` key.
+  // What it buys is that the addition leaves a SIGNED, CHAINED entry in the public key log, so the quiet act
+  // becomes a loud one. And it makes the declaration honest — a publisher that says "I separate my keys" now
+  // says it about every key including the strongest, instead of about everyone but itself.
+  'name-binding-root': Object.freeze(['genesis', 'key', 'cadence']),
   data: Object.freeze(['observation', 'derivation', 'attestation']),
   issuance: Object.freeze(['attestation']),
 });
@@ -1567,13 +1577,16 @@ export function resolveAuthority(doc, opts = {}) {
   // (a checkpoint signed by a non-authority is INVALID, never downgraded); this extends the same rule rather
   // than inventing a second one. Only under a DECLARED regime: a publisher with no `roles` is unaffected.
   {
-    // The regime gate is NOT repeated here, and that is deliberate: under an undeclared regime `resolveKeys`
-    // assigns no operating role at all, so `allowed` is already absent. Writing `declaredRoles && …` looked
-    // like a second protection and was UNREACHABLE — mutation-tested: removing it turned nothing red, which
-    // is the same vacuity this repository refuses everywhere else. One condition, and it is the real one.
+    // THE REGIME GATE IS LOAD-BEARING AGAIN, and the reason is worth keeping. In rev89 it was unreachable —
+    // under an undeclared regime no OPERATING role is assigned, so `allowed` was already absent — and it was
+    // removed rather than left as a protection that protects nothing. rev91 gives the ROOT a class-set, and
+    // the root carries its role ALWAYS, declared regime or not. Without this condition a minimal publisher
+    // that signs everything with its own root key — no key log at all — would suddenly answer E-KEY on every
+    // document. "A publisher that does NOTHING is unaffected in every respect" (§12.2) is the invariant, and
+    // this single condition is what keeps it true.
     const r = rk.roles?.get(doc.state.id.key_id);
     const allowed = r === undefined ? null : ROLE_CLASSES[r];
-    if (allowed && !allowed.includes(doc.state.id.class))
+    if (rk.declaredRoles && allowed && !allowed.includes(doc.state.id.class))
       return { error: 'E-KEY', detail: 'key role "' + r + '" does not admit class "' + doc.state.id.class + '" — this publisher DECLARED role separation, and the role admits ' + allowed.join('/') + ' (§12.2 admits(k,c))' };
   }
   // §12.2/#75 ROOT 1 — K_n(t) is a TWO-SIDED window over ORDERED authorization intervals (round-15 P0-02). A document is

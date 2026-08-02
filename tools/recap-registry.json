@@ -307,6 +307,10 @@
     {
       "round": 150,
       "no_recap": "Round 150 dissolves a question rather than closing an issue: #130's root question stays open and the reference operator's ceremony is unblocked but not run. The recap belongs to the round that runs it."
+    },
+    {
+      "round": 151,
+      "no_recap": "Round 151 closes #130. The recap belongs with the ceremony it unblocks, which is the reference operator's and has not been run."
     }
   ]
 }
