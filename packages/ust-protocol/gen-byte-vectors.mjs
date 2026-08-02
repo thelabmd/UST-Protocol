@@ -354,7 +354,10 @@ const MANIFEST = {
   note_positive_shape: 'Positive-shape / arg-dependent invariants (config_id set-order equality P1-07; limits-getter totality P1-01; Uint8Array-only P2-01; single-read reads===1; carrier separation; permutation invariance) are covered by JS property tests in reference-checker.test.mjs, not negative byte-vectors — the {result,code} byte form cannot express a positive equality or a non-bytes input.',
 };
 
-const vectors = { protocol: 'UST', suite: 'checker-byte-vectors', reference_checker: REFERENCE_CHECKER_VERSION, note: 'language-neutral: decode base64url → bytes → checkAuthorityProofBytes(package, config); assert result and (for a negative) that reason contains code.', vectors: V };
+// F.5t — a corpus is ABOUT the protocol, it is not a document OF it. `protocol: 'UST'` at the top level of a
+// non-document tells a machine to apply the verifier, and the failure it gets is the one reserved for a
+// corrupt document. `conformance_for` states the relation and claims nothing.
+const vectors = { conformance_for: 'UST', suite: 'checker-byte-vectors', reference_checker: REFERENCE_CHECKER_VERSION, note: 'language-neutral: decode base64url → bytes → checkAuthorityProofBytes(package, config); assert result and (for a negative) that reason contains code.', vectors: V };
 writeFileSync(new URL('../../vectors/checker-byte-vectors.json', import.meta.url), JSON.stringify(vectors, null, 2) + '\n');
 writeFileSync(new URL('../../vectors/checker-security-manifest.json', import.meta.url), JSON.stringify(MANIFEST, null, 2) + '\n');
 console.log('wrote vectors/checker-byte-vectors.json (' + V.length + ' vectors) + vectors/checker-security-manifest.json (' + MANIFEST.security_conditions.length + ' conditions)');

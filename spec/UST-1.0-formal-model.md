@@ -2580,6 +2580,55 @@ The REFUSAL itself lives one layer up and is checked there, not here: `packages/
 - the private-head case reproduces the fork and shows both branches individually valid.
 - the shared-head case refuses the second appender, and the refusal names which guarantee it rests on.
 
+## F.5t The NAME is a claim, and an unverifiable one is worse than none
+
+A consumer decides whether to verify an artifact by reading how it identifies itself. An artifact carrying
+the protocol's name tells a machine to APPLY THIS PROTOCOL'S VERIFIER. That is an instruction, not a
+decoration, and it is read mechanically — before any documentation, by a party that has none.
+
+**Theorem F.5t (a label that fails verification is indistinguishable from a damaged document).** Let `A`
+be an artifact carrying the protocol name and not conforming to it. A consumer applies the verifier and
+gets a failure. MEASURED, that failure is `INVALID: E-MALFORMED` — the same verdict AND the same error code
+a TRUNCATED or CORRUPTED document produces. Nothing in the observation separates NEVER-A-DOCUMENT from
+ARRIVED-DAMAGED, so a benign artifact emits the signal of a broken transfer. ∎
+
+*Stated at the strength the measurement supports, and no further.* A TAMPERED document — one whose bytes
+were altered after signing — answers `E-CANON`, so the labelled non-document is distinguishable from
+forgery and NOT from damage. The weaker claim is the true one and is sufficient: a consumer that retries a
+"damaged" fetch, alerts on corruption, or quarantines the source is responding to an incident that never
+happened.
+
+**Corollary (the exception list is the divergence).** A consumer that learns to special-case the artifact
+must carry a private list of things that wear the name and must not be verified. Two consumers' lists
+differ, and an artifact absent from one list fails there while passing here — the protocol's whole purpose
+is to remove exactly that class of private knowledge.
+
+**Corollary (there are two honest options, and no third).** Either the artifact IS a document of the
+protocol, or it does not carry the name. "Carry the name and document the deviation" is not available: the
+label is read by machines that never read the documentation. Companion files that plainly are not
+documents — timestamp proofs, indexes, manifests — do not carry the name and raise no question.
+
+**Corollary (and the cost falls on the party that is trying to be honest).** The artifacts most likely to
+be labelled loosely are the ones an operator publishes to be TRANSPARENT — incident records, evidence,
+mirrors. So the failure lands precisely where the operator was doing something right, and turns a mirror
+full of evidence into a mirror full of unverifiable claims.
+
+**Binding: realized** — *"#115 F.5t ADVERSARIAL a labelled NON-DOCUMENT is INDISTINGUISHABLE from a damaged one — same verdict AND same error code as a truncated document, so a benign file emits the signal of a broken transfer"* · *"#115 F.5t an artifact WEARING the protocol name and lacking state/sig does NOT verify — the label is an instruction to apply this verifier, and it is obeyed"*.
+
+And a GATE beyond them, because the theorem has a second subject the conformance suite cannot reach: not the
+verdict a document produces but the set of artifacts a tree PUBLISHES. `tools/protocol-name-gate.mjs`
+examines every artifact wearing the name, judged by DOCUMENT SHAPE rather than by directory, verified in the context its
+own `class` demands; a negative sample's expectation is read from its recipe rather than from a list inside
+the gate, since a gate carrying its own exceptions is the private knowledge this theorem is about. A floor
+on the examined count keeps the roster from going blind, and a planted unsigned artifact proves the gate
+can fail.
+
+**Measured (rev83).** The reference operator's outage records — the independent evidence its own gap
+records were about to cite — carry `"protocol": "UST"`, no version, no `state`, no signature. Their
+integrity rests on an append-only log and a timestamp proof, which establish TIME and EXISTENCE and say
+nothing about authorship. Citing them as evidence in one's own favour is therefore self-attestation with
+extra steps, and the label made it look like more.
+
 ## F.6 Composition — the event algebra
 
 An **anchored existence-and-commitment claim** is an event `A ∈ Fₜ`; an UNANCHORED signed claim is a document

@@ -990,6 +990,16 @@
         "excluded": "No document bytes and no verdict change: the frames produced are byte-identical. What moved is when a producer may treat an empty head as authorization, which produces no document."
       },
       "test": "#124 ADVERSARIAL F.5r-h an empty head is REFUSED when the caller did not declare an unseeded stream — a port that answers \"absent\" on a failed read would otherwise disarm the guard, because null reads as \"nobody has written yet\" and the write proceeds"
+    },
+    {
+      "round": 143,
+      "math": "the protocol's name tells a machine to APPLY THIS PROTOCOL'S VERIFIER. That is an instruction, not a",
+      "spec": "An artifact that carries this protocol's name MUST verify under it. The name is an instruction to a machine —",
+      "code": "packages/ust-protocol/gen-byte-vectors.mjs :: the byte-vector corpus states `conformance_for` instead of claiming to be a document of the protocol",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they produce. This round is about artifacts that are NOT documents wearing the name, which by definition produce no verdict to pin."
+      },
+      "test": "#115 F.5t ADVERSARIAL a labelled NON-DOCUMENT is INDISTINGUISHABLE from a damaged one — same verdict AND same error code as a truncated document, so a benign file emits the signal of a broken transfer"
     }
   ],
   "first_accounted_round": 76,

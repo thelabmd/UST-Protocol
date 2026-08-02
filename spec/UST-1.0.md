@@ -3,7 +3,7 @@
 
 *This specification text is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](../LICENSE-SPEC). Reference code in this repository is licensed Apache-2.0. Use of the name **UST** / **Universal State Transcript** and the **UST-compatible** claim: see [TRADEMARK.md](../TRADEMARK.md).*
 
-> **Release candidate — `1.0.0-rc.64`.** This specification has been extensively red-teamed; an independent
+> **Release candidate — `1.0.0-rc.65`.** This specification has been extensively red-teamed; an independent
 > external cryptographic audit is pending. It is subject to change until `1.0.0` final. The wire format `ust:"1.0"`
 > is stable across all rc's — pin exact versions. Per-version history is in [`CHANGELOG.md`](../CHANGELOG.md).
 
@@ -1905,6 +1905,14 @@ lists them, and a verdict decomposes: **per substrate**, and a publisher-level r
 undeclared set is not a claim at all: without the list an observer can only ever say *"this one is silent"*
 (formal model F.5q). The same admissibility as above holds — declaring can only create an obligation, never earn
 a pass, and an anchor that IS present counts whether or not the profile mentions its substrate.
+
+An artifact that carries this protocol's name MUST verify under it. The name is an instruction to a machine —
+*apply this verifier* — read before any documentation, by a party that has none; an artifact that wears it and
+fails answers `INVALID: E-MALFORMED` — the same verdict and error code a TRUNCATED or CORRUPTED document
+produces — so a benign file emits the signal of a broken transfer and a consumer may retry, alert or
+quarantine over an incident that never happened. There are two honest options and no third: BE a document of this protocol, or do not carry its name.
+Companion files that plainly are not documents — timestamp proofs, indexes, manifests — raise no question
+because they never claim it (formal model F.5t).
 
 A profile MUST NOT relocate the standard surfaces, and MUST NOT confer validity on an anchor by naming its
 substrate: a declared substrate is a place to LOOK, and what is found there is verified by that substrate's own

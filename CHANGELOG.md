@@ -25,6 +25,12 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
+## rc.65 line
+
+| version | round | what closed |
+|---------|-------|-------------|
+| **rc.65**<br>**cli rc.98**<br>**mcp rc.54**<br>**light rc.54**<br>**operator 0.10.1**<br>**web-signer rc.23**<br>**ots-verify rc.31**<br>**rekor-verify rc.26**<br>**diarium 0.2.20** | 143 | **The NAME is a claim, and an unverifiable one is worse than none (F.5t).** An artifact carrying this protocol's name tells a machine to apply this protocol's verifier — an instruction, read mechanically, before any documentation, by a party that has none. If it then fails, the consumer sees the observation reserved for a CORRUPT OR FORGED document: nothing separates *"this was never a document"* from *"this document was tampered with"*, so a benign file emits an attack's signal. The remedy a consumer reaches for — a private list of things that wear the name and must not be verified — is exactly the divergence this protocol exists to remove, and two consumers' lists differ. There are two honest options and no third: BE a document of the protocol, or do not carry its name; companion files that plainly are not documents raise no question because they never claim it. **Measured on the reference operator, and the cost fell where it always does — on the party trying to be transparent:** its outage records, the INDEPENDENT evidence its gap records were about to cite, carry `"protocol": "UST"` with no version, no `state` and NO SIGNATURE. Their integrity rests on an append-only log and a timestamp proof, which establish TIME and EXISTENCE and say nothing about authorship — so citing them in one's own favour is self-attestation with extra steps, and the label made it look like more. A gate now examines every artifact in this tree that wears the name: judged by DOCUMENT SHAPE rather than by directory, verified in the context its own `class` demands, and a negative sample's expectation is READ FROM ITS RECIPE rather than from a list inside the gate — a gate carrying its own exceptions is the private knowledge this theorem is about. It found one instance here: the byte-vector corpus claimed `protocol: "UST"` at its top level while being a corpus ABOUT the protocol; now `conformance_for`. |
+
 ## rc.64 line
 
 | version | round | what closed |

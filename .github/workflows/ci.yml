@@ -26,6 +26,8 @@ jobs:
         run: npm run test:bmc
       - name: temporal model check — key-log state machine vs an independent abstract model + exhaustive non-active-signer soundness over every reachable interleaving
         run: npm run test:temporal-bmc
+      - name: protocol-name gate (an artifact wearing the name MUST verify under it)
+        run: npm run test:protocol-name
       - name: model <-> code guard (every formal theorem is a real conformance check)
         run: npm run test:model
       - name: model-lockstep guard (every enforcement realization cites an ADVERSARIAL-closure check, not just the happy path)

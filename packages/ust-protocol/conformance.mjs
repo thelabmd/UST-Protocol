@@ -2923,6 +2923,41 @@ console.log('\n═════════════════════�
   if (unbacked.length) { fail++; fails.push('LOCKSTEP IN-PROCESS: registered checks that did NOT run+pass in-process → ' + unbacked.join(',')); }
 }
 console.log('  ust-protocol ' + P.VERSION.spec + ' conformance vs ' + V.version);
+// ── F.5t — THE NAME IS A CLAIM. An artifact wearing the protocol name and not conforming to it is a
+// VERIFIER-level fact, so it is checked here and not only by the tree gate: what a consumer observes is
+// what decides whether the label is harmless.
+{
+  const labelled = { protocol: 'UST', kind: 'outage-proof', detected_at: '2026-08-01T04:18:54.694Z', hash: 'sha256:' + 'c2'.repeat(32) };
+  const vL = P.verify(labelled, { context: 'data' });
+  check('#115 F.5t an artifact WEARING the protocol name and lacking state/sig does NOT verify — the label is an instruction to apply this verifier, and it is obeyed',
+    vL.result === 'INVALID');
+  const truncated = { ust: '1.0', state: { id: { domain_shard: 'x', ust_id: 'ust:20260705.18', key_id: 'k' } } };
+  const vT = P.verify(truncated, { context: 'data' });
+  check('#115 F.5t ADVERSARIAL a labelled NON-DOCUMENT is INDISTINGUISHABLE from a damaged one — same verdict AND same error code as a truncated document, so a benign file emits the signal of a broken transfer',
+    vL.result === vT.result && vL.error === vT.error && vL.error === 'E-MALFORMED');
+  const tampered = JSON.parse(readFileSync(new URL('../../examples/ust-sample-TAMPERED.json', import.meta.url), 'utf8'));
+  const vF = P.verify(tampered, { context: 'data' });
+  check('#115 F.5t and it IS distinguishable from FORGERY — a tampered document answers E-CANON, so the theorem is stated at the strength the measurement supports and no further',
+    vF.error === 'E-CANON' && vF.error !== vL.error);
+}
+
+// NO CHECK MAY STAND BELOW THIS PRINT. Measured 2026-08-02: three checks added after it RAN, reached the
+// executed manifest, and were absent from PASS — and before that a ReferenceError in the same block killed
+// the process AFTER the print, so a reader grepping for `PASS` saw a green suite that had crashed.
+//
+// The operator suite asserts declared == counted; that invariant does not hold here, where checks run in
+// LOOPS over vectors and one call site produces many. The property that does hold is POSITIONAL, and it is
+// the one that actually failed: nothing that counts may appear after the count is printed. The needle is
+// assembled at runtime so this block does not match itself.
+{
+  const src = readFileSync(new URL(import.meta.url), 'utf8');
+  const needle = 'che' + 'ck(';
+  const tail = src.slice(src.indexOf("console.log('  PA" + "SS '"));
+  if (tail.includes(needle)) {
+    console.log('\n  \u2717 a check stands BELOW the summary print — it reaches neither the count nor the exit code');
+    process.exit(1);
+  }
+}
 console.log('  PASS ' + pass + '   FAIL ' + fail + '   NOTES ' + note);
 if (fails.length) { console.log('\n  FAILURES:'); fails.forEach(f => console.log('    ✗ ' + f)); }
 else console.log('  ✓ all exercised checks pass (primitives + 6 findings + Gemini-B + HIGH + TOP)');
