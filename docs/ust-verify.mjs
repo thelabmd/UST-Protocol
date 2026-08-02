@@ -87,7 +87,15 @@ export async function verify(doc, opts = {}) {
     if (!TS.test(st.time.generated_at || '') || !TS.test(st.time.valid_from || '') || !TS.test(st.time.valid_to || '')) return bad('E-MALFORMED', 'bad timestamp (not ISO-Z)');
     for (const t of [st.time.generated_at, st.time.valid_from, st.time.valid_to]) if (!tsCal(t)) return bad('E-MALFORMED', 'timestamp date not on the calendar');
     if (KEYID_FORM.test(id.domain_shard) && id.domain_shard !== id.key_id) return bad('E-MALFORMED', 'key-form domain_shard != key_id (self-certifying)');
-    if (opts.context === 'data' && (id.class === 'key' || id.class === 'genesis' || id.class === 'cadence')) return bad('E-MALFORMED', 'class ' + id.class + ' not valid in data context (W3)');
+    // W3 / F.5e.4 — the verification ROLE is a PARTITION of classes, and a partition enforced on ONE SIDE is not
+    // one. This file checked only the first line for a year: an `observation`, `attestation` or `derivation`
+    // presented in the KEY context was admitted here and refused by the reference — three more permissive-
+    // direction cells, found the moment this gate started enumerating the corpus instead of a hand battery.
+    // The set is written ONCE and read in both directions, because two hand-typed lists is how it went one-sided.
+    const AUTHORITY_CLASSES = ['genesis', 'key', 'cadence'];
+    const isAuthority = AUTHORITY_CLASSES.includes(id.class);
+    if (opts.context === 'data' && isAuthority) return bad('E-MALFORMED', 'class ' + id.class + ' not valid in data context (W3)');
+    if (opts.context === 'key' && !isAuthority) return bad('E-MALFORMED', 'class ' + id.class + ' not valid in key context (W3) — the key role admits exactly ' + AUTHORITY_CLASSES.join('/'));
     // step 2 — content_hash + bijection + per-partition
     const ch = await contentHash(doc);
     // §13 structural bounds — the SAME hard ceilings as the reference verifier (I4:
@@ -153,7 +161,25 @@ export async function verify(doc, opts = {}) {
       if (new Set(pr.constituents).size !== pr.constituents.length) return bad('E-MALFORMED', 'duplicate hash in constituents');
       if (pr.root !== undefined && (await merkleRoot(pr.constituents)) !== pr.root) return bad('E-ROOT', 'attestation root mismatch');
     }
-    if (id.class === 'attestation') { const isGap = pr?.prev !== undefined && (pr?.constituents === undefined || pr.constituents.length === 0); if (!isGap && (pr?.constituents === undefined || pr?.root === undefined)) return bad('E-MALFORMED', 'attestation MUST carry constituents + root'); }
+    // §11.3 C2 — the attestation SUBTYPE is the named data partition, never a shape. This used to read "prev +
+    // empty constituents ⇒ a gap, the only exception", which is the PRE-C2 rule: it admitted a bare prev-only
+    // attestation (the checkpoint/gap collision C2 closed), a checkpoint or gap carrying a root, and two named
+    // subtypes at once — seven cells where this verifier answered VALID:LIGHT and the reference answered
+    // E-MALFORMED, in the permissive direction, on a surface a stranger runs in a browser. The parity battery
+    // was green because no vector exercised a subtype. Declared here rather than imported: this file is
+    // clean-room BY DESIGN, so the two lists are meant to be independent and the parity gate is what keeps
+    // them honest — which is why that gate now enumerates the whole corpus instead of a hand-written sample.
+    if (id.class === 'attestation') {
+      const empty = pr?.constituents === undefined || pr.constituents.length === 0;
+      if (empty) {
+        if (pr?.prev === undefined) return bad('E-MALFORMED', 'a no-constituents attestation MUST carry provenance.prev (checkpoint, gap or anchor)');
+        const named = ['checkpoint', 'gap', 'anchor'].filter((n) => st.data?.[n] !== undefined);
+        if (named.length !== 1) return bad('E-MALFORMED', 'a prev-only attestation MUST carry EXACTLY ONE of data.checkpoint / data.gap / data.anchor');
+        const rooted = named[0] === 'anchor';                       // `root` FOLLOWS the subtype, in both directions
+        if (rooted && pr?.root === undefined) return bad('E-MALFORMED', 'an anchor attestation MUST carry provenance.root');
+        if (!rooted && pr?.root !== undefined) return bad('E-MALFORMED', 'a ' + named[0] + ' attestation MUST NOT carry a root');
+      } else if (pr?.root === undefined) return bad('E-MALFORMED', 'a set attestation MUST carry constituents + root');
+    }
     // step 4 — authenticity: closed sig schema + alg + key_id consistency + strict Ed25519 over canon({ust,state})
     const S = canon({ ust: doc.ust, state: st });
     // §13 NORMATIVE size ladder at LIGHT (rc.12): metric = UTF-8 bytes of S. This verifier takes no
@@ -213,16 +239,49 @@ export async function verify(doc, opts = {}) {
 //
 // Now: the reference vocabulary, the interval-faithfulness check, and the cadence grid. `complete` (no-omission) is
 // reachable ONLY through grid equality; without a resolved cadence the ceiling is `chain-consistent`, stated as such.
-export async function verifyStream(frames, { genesis, checkpoint, cadence } = {}) {
+export async function verifyStream(frames, { genesis, checkpoint, cadence, keylog = [] } = {}) {
   if (!Array.isArray(frames) || !frames.length) return { complete: 'none' };
   const authority = frames[0].state.id.domain_shard;
   let prevHash = genesis ? await contentHash(genesis) : null;
+  // §12.2 — the authority's key set, resolved from the SIGNED genesis and its key log. A key_id maps to the
+  // exact `pub` the authority declared, so a frame reusing a bound key_id under a different key is refused too.
+  // Revocation WINDOWS need anchored time and are not decided here (the same boundary ust-resolve.mjs states);
+  // what IS decided is membership, which is what impersonation turns on.
+  let boundKeys = null;
+  if (genesis) {
+    if (genesis.state?.id?.domain_shard !== authority) return { error: 'E-AUTHORITY', detail: 'genesis domain_shard != stream authority (' + authority + ')' };
+    if (!Array.isArray(keylog)) return { error: 'E-MALFORMED', detail: 'key log must be an array' };
+    boundKeys = new Map([[genesis.state.id.key_id, genesis.state.data?.genesis?.value?.pub]]);
+    let kprev = prevHash;
+    for (const [i, e] of keylog.entries()) {
+      const ev = await verify(e, { context: 'key' });
+      if (ev.error) return { error: 'E-AUTHORITY', detail: 'key-log entry ' + i + ' does not verify: ' + ev.error };
+      if (e.state.id.class !== 'key') return { error: 'E-AUTHORITY', detail: 'key-log entry ' + i + ' is not class:key' };
+      if (e.state.id.domain_shard !== authority) return { error: 'E-AUTHORITY', detail: 'key-log entry ' + i + ' domain mismatch' };
+      if (e.state.provenance?.prev !== kprev) return { error: 'E-AUTHORITY', detail: 'key-log entry ' + i + ' does not chain' };
+      if (!boundKeys.has(e.sig.key_id)) return { error: 'E-AUTHORITY', detail: 'key-log entry ' + i + ' is not signed by a then-current key' };
+      const op = e.state.data?.key_op?.value ?? {};
+      if (op.op === 'add' && op.pub) boundKeys.set(await keyId(op.pub), op.pub);
+      if (op.op === 'revoke' && op.pub) boundKeys.delete(await keyId(op.pub));
+      kprev = await contentHash(e);
+    }
+  }
   const seenUstId = new Set(), seenPrev = new Set();
   for (let i = 0; i < frames.length; i++) {
     const f = frames[i];
     const v = await verify(f, { context: 'data' });
-    if (v.result.slice(0,6) !== 'VALID:') return { error: 'E-SIG', detail: 'frame ' + i + ' invalid: ' + v.error };
+    // round-53 (UST-ybn), swept here in rev85: fail only on a real INTEGRITY error. A name-form frame with a
+    // valid signature is INDETERMINATE — identity is unconfirmed at bare LIGHT — and that is a SEPARATE axis
+    // from the stream's completeness. Demanding `VALID:` here answered E-SIG, a forgery signal, for an honest
+    // name-form stream: the reference fixed this two rounds ago and the clean-room copy never received it.
+    if (v.error) return { error: 'E-SIG', detail: 'frame ' + i + ' invalid: ' + v.error };
     if (f.state.id.domain_shard !== authority) return { error: 'E-AUTHORITY', detail: 'frame ' + i + ' domain_shard != stream authority' };
+    // #75 P0-03b, swept here in rev85 — WITHOUT this, an impostor's frames chained onto a VICTIM'S genesis hash
+    // were reported `complete` UNDER THE VICTIM'S NAME. The reference closed it after an external audit; this
+    // clean-room copy never received it, and the parity battery could not see it because every hand-written
+    // stream case was key-form, where `domain_shard == key_id` makes impersonation impossible by construction.
+    // The LIGHT `domain_shard` is a CLAIM; binding to the authority's key set is the proof.
+    if (boundKeys && boundKeys.get(f.state.id.key_id) !== f.sig.pub) return { error: 'E-AUTHORITY', detail: 'frame ' + i + ' key not bound to the authority key-log — impersonation (key ∉ K_A, §12.2)' };
     if (seenUstId.has(f.state.id.ust_id)) return { error: 'E-PREV', detail: 'duplicate ust_id (fork): ' + f.state.id.ust_id };
     seenUstId.add(f.state.id.ust_id);
     const p = f.state.provenance?.prev;
@@ -235,7 +294,10 @@ export async function verifyStream(frames, { genesis, checkpoint, cadence } = {}
   if (checkpoint) {
     if (!genesis) return { complete: 'provisional', head: prevHash, reason: 'origin-unbound: no genesis (TOP needs a HIGH origin)' };   // F2
     const cv = await verify(checkpoint, { context: 'data' });
-    if (cv.result.slice(0,6) !== 'VALID:' || checkpoint.state.id.class !== 'attestation') return { error: 'E-PREV', detail: 'invalid checkpoint' };
+    // The SAME pre-round-53 rule stood twice in this one function — once per frame, once here. A name-form
+    // checkpoint carries a valid signature and INDETERMINATE identity, which is not an integrity failure, so
+    // fixing only the frame loop would have left the identical defect one screen down. Integrity error only.
+    if (cv.error || checkpoint.state.id.class !== 'attestation') return { error: 'E-PREV', detail: 'invalid checkpoint' };
     if (checkpoint.state.id.domain_shard !== authority) return { error: 'E-AUTHORITY', detail: 'checkpoint not from the stream authority' };
     const a = checkpoint.state.data.checkpoint?.value;
     if (!a || a.head !== prevHash || String(a.frame_count) !== String(frames.length)) return { error: 'E-PREV', detail: 'checkpoint contradicts observed set' };

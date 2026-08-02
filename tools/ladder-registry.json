@@ -1008,6 +1008,18 @@
       "code": "packages/ust-protocol/index.mjs :: PREV_ONLY_SUBTYPES + buildAnchorCommitment — `root` FOLLOWS the subtype (required for anchor, forbidden for checkpoint/gap) instead of being flatly prohibited",
       "vector": "subtype-anchor-with-root",
       "test": "F4b prev-only subtype vocabulary is TOTAL in the corpus — every runtime name admitted AND refused by a vector"
+    },
+    {
+      "round": 145,
+      "math": {
+        "excluded": "No new rule. All three defects are EXISTING rules — C2 subtype discipline, the F.5e.4 two-sided class-role partition, and #75 P0-03b key binding — that a clean-room copy never received. Inventing a theorem for a propagation would misdescribe the round."
+      },
+      "spec": {
+        "excluded": "The spec already states each of the three. A copy that lags the spec is a code defect, not a spec gap; changing the text would have hidden which layer was wrong."
+      },
+      "code": "docs/ust-verify.mjs :: C2 subtype discipline, the two-sided W3 partition, key binding to the authority key-log, and INDETERMINATE-is-not-an-integrity-error at both sites",
+      "vector": "subtype-anchor-with-root",
+      "test": "F4b prev-only subtype vocabulary is TOTAL in the corpus — every runtime name admitted AND refused by a vector"
     }
   ],
   "first_accounted_round": 76,

@@ -10,6 +10,7 @@
 import * as P from '../packages/ust-protocol/index.mjs';
 import { verify as web } from '../docs/ust-verify.mjs';
 import { createPrivateKey, createPublicKey } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 
 const kp = (seedHex) => {
   const priv = createPrivateKey({ key: Buffer.concat([Buffer.from('302e020100300506032b657004220420', 'hex'), Buffer.from(seedHex, 'hex')]), format: 'der', type: 'pkcs8' });
@@ -51,15 +52,47 @@ const battery = [
   ['cadence entry without a cadence_op partition → INVALID', cadNoOp, 'key'],
 ];
 
+// THE BATTERY IS A SAMPLE, AND A SAMPLE CANNOT PROVE PARITY. The comment above the cadence rows already records
+// this failing once: "a battery that does not name a class cannot detect a divergence in it — enumerate the
+// DOMAIN of classes, not a sample." The remedy applied then was four more hand-written rows, which names four
+// more instances. It recurred one level down: nothing here named an attestation SUBTYPE, and rev84 measured
+// SEVEN cells where the web verifier answered VALID:LIGHT and the reference answered E-MALFORMED — the
+// pre-C2 rule, still live in the browser, in the permissive direction.
+//
+// So the domain is now the CORPUS: every conformance vector that carries a whole document is driven through
+// both verifiers. A vector added for any reason, by anyone, becomes a parity case the same day — which is the
+// only version of this gate that cannot go blind again. The hand battery stays because it holds cases the
+// corpus does not (context pairs, tolerated shapes); it is now the supplement, not the population.
+const V = JSON.parse(readFileSync(new URL('../vectors/conformance-vectors.json', import.meta.url), 'utf8')).vectors;
+const fromCorpus = V.filter((v) => v && v.doc && v.doc.state && v.doc.sig)
+  .map((v) => [`vector:${v.kind}/${v.id}`, v.doc, v.role ?? 'data']);
+
 let fail = 0;
-for (const [name, doc, context] of battery) {
+for (const [name, doc, context] of [...battery, ...fromCorpus]) {
   const p = P.verify(doc, { context }), w = await web(doc, { context });
   const pv = p.result || p.error || '?', wv = w.result || w.error || '?';
   const agree = pv === wv;
   if (!agree) fail++;
-  console.log((agree ? '  ✓ ' : '  ✗ DIVERGE ') + name + '  — ref:' + pv + '  web:' + wv);
+  if (!agree || !name.startsWith('vector:')) console.log((agree ? '  ✓ ' : '  ✗ DIVERGE ') + name + '  — ref:' + pv + '  web:' + wv);
+}
+// A floor, so an empty or mis-filtered corpus reads as a broken gate rather than a clean run.
+const FLOOR = 20;
+if (fromCorpus.length < FLOOR) { fail++; console.log(`  ✗ only ${fromCorpus.length} document-bearing vectors resolved from the corpus (floor ${FLOOR}) — the corpus leg has gone blind`); }
+// CONTROL — the comparison must be able to go RED. A gate whose detector is never exercised proves nothing
+// about the runs it passes, so a STUB verifier that answers VALID:LIGHT to everything is driven through the
+// same loop: it must diverge from the reference on at least one enumerated case. (The first version of this
+// control compared a value with itself and was true by construction — vacuous, and it would have shipped.)
+{
+  const stub = async () => ({ result: 'VALID:LIGHT' });
+  let split = 0;
+  for (const [, doc, context] of fromCorpus) {
+    const p = P.verify(doc, { context }), s = await stub();
+    if ((p.result || p.error) !== (s.result || s.error)) split++;
+  }
+  if (split === 0) { fail++; console.log('  ✗ CONTROL: an always-VALID stub agreed with the reference on every case — the comparison does not discriminate'); }
+  else console.log(`  ✓ CONTROL: an always-VALID stub diverges on ${split} enumerated case(s) — the detector fires`);
 }
 console.log(fail
   ? `\n✗ docs-verifier-parity — ${fail} divergence(s): the clean-room web verifier disagrees with the reference`
-  : '\n✓ docs-verifier-parity — clean-room web verifier agrees with the reference on every case');
+  : `\n✓ docs-verifier-parity — clean-room web verifier agrees with the reference on all ${battery.length + fromCorpus.length} cases (${battery.length} named + ${fromCorpus.length} enumerated from the vector corpus)`);
 process.exit(fail ? 1 : 0);

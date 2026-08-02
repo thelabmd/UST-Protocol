@@ -283,6 +283,10 @@
     {
       "round": 144,
       "no_recap": "Round 144 opens the form and closes nothing operator-side: #127 also owes a check an operator can point at ITS OWN tree, and the reference operator still publishes 956 unsigned anchors it will not rewrite. The recap belongs to the round that ships the commitment on a live stream."
+    },
+    {
+      "round": 145,
+      "no_recap": "Round 145 propagates three existing rules to a copy and replaces the sampling gate that hid them; it closes no issue of its own. The finding it produced — a public verifier reporting an impostor stream as complete under the victim name — belongs in the recap of the round that audits the remaining clean-room surfaces, not this one."
     }
   ]
 }

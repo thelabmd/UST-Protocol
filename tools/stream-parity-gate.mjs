@@ -16,6 +16,7 @@
 import * as P from '../packages/ust-protocol/index.mjs';
 import { verifyStream as web } from '../docs/ust-verify.mjs';
 import { createPrivateKey, createPublicKey } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 
 const kp = (fill) => {
   const seed = Buffer.alloc(32, fill);
@@ -58,6 +59,18 @@ const cases = [
   ['interval does not bound the set (wrong `to`) → E-PREV', build(FULL, 60, { from: 'ust:20260726.1000', to: 'ust:20260726.1005' }), 60],
   ['an off-grid frame → E-PREV', build([S('10', '00'), ['ust:20260726.100030', '2026-07-26T10:00:30Z'], S('10', '01')], 60, { from: 'ust:20260726.1000', to: 'ust:20260726.1001' }), 60],
 ];
+
+// The same lesson the docs-verifier battery learned twice (rev85): a hand list is a SAMPLE, and a sample
+// cannot prove parity — it only proves the cases someone thought of. The stream vectors in the conformance
+// corpus already carry exactly this shape, so they are enumerated here too and a stream vector added for any
+// reason becomes a parity case the same day. Cadence is read from the vector's OWN signed genesis rather than
+// guessed, so a mismatch is a real divergence and not this harness feeding the two verifiers different inputs.
+const CORPUS = JSON.parse(readFileSync(new URL('../vectors/conformance-vectors.json', import.meta.url), 'utf8')).vectors
+  .filter((v) => Array.isArray(v.frames) && v.genesis)
+  .map((v) => [`vector:${v.kind}/${v.id}`, { genesis: v.genesis, frames: v.frames, checkpoint: v.checkpoint ?? null },
+    v.genesis?.state?.data?.genesis?.value?.cadence ? Number(v.genesis.state.data.genesis.value.cadence) : null]);
+cases.push(...CORPUS);
+if (CORPUS.length < 3) { console.log(`  ✗ only ${CORPUS.length} stream vectors resolved from the corpus — the corpus leg has gone blind`); process.exitCode = 1; }
 
 const norm = (r) => JSON.stringify({ complete: r.complete, error: r.error, hole: r.hole, cadence: r.cadence });
 let pass = 0; const fail = [];
