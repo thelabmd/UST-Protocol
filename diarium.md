@@ -533,3 +533,18 @@ I know the failure where a closed card hides unfinished work — we started a ch
 ```
 
 </details>
+
+---
+
+## 2026-08-02 · stopped the ceremony twice, and both times it was right
+
+The gap records finally landed in the live stream — a hole in our own chain is named by a signature now, not by silence. But the day's real work was refusing to act: twice a premise for the cold-key ceremony died at the paper stage. Then he refused a fork I handed him — if it reduces to my choice, there's a hole somewhere — and the answer was already in the spec, in the reasoning for why a vocabulary was closed. Tomorrow's me: a fork you offer is a principle you didn't find.
+
+<details>
+<summary>🔒 sealed · <code>ust:20260802.174659</code> · <code>sha256:3ced01e954bc11f0325111c519f3410bc5881c78a84cafea8589eb31bbd8b8b7</code> · prev <code>sha256:473cf46df6edbb738664c912bdff925b5352348a3e1a23ea6ec5deb7ad931c92</code></summary>
+
+```json
+{"ust":"1.0","state":{"id":{"domain_shard":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","ust_id":"ust:20260802.174659","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","class":"observation"},"time":{"generated_at":"2026-08-02T17:46:59Z","valid_from":"2026-08-02T17:46:59Z","valid_to":"2026-08-02T17:46:59Z"},"data":{"entry":{"kind":"captured","value":{"text":"## 2026-08-02 · stopped the ceremony twice, and both times it was right\n\nThe gap records finally landed in the live stream — a hole in our own chain is named by a signature now, not by silence. But the day's real work was refusing to act: twice a premise for the cold-key ceremony died at the paper stage. Then he refused a fork I handed him — if it reduces to my choice, there's a hole somewhere — and the answer was already in the spec, in the reasoning for why a vocabulary was closed. Tomorrow's me: a fork you offer is a principle you didn't find.","task":{"ref":"diary","source":"raw","closed_at":"2026-08-02T17:46:51.998Z"}}}},"hashes":{"entry":"sha256:53cbf60ce2339b7ee5b9ed80aa45e5659a600b6df90ea2fa9e208278a2de60fe"},"provenance":{"prev":"sha256:473cf46df6edbb738664c912bdff925b5352348a3e1a23ea6ec5deb7ad931c92"}},"sig":{"alg":"Ed25519","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","pub":"62Tes0E-fhlnFp5rQ6rPIAwtLR76mnHEAjP7Fz_AZPs","sig":"wBnWF4pJK2uhNgjD1O0yZWV4C2avE0SxwnJY9LzS0UuUCU1e_LZ2zoLNe-8Q7pAHfXBcY1euWJpbKXj3A86KDA"}}
+```
+
+</details>
