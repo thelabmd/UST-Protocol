@@ -6430,6 +6430,628 @@
       },
       "expect": "E-MALFORMED",
       "note": "a prev-only attestation naming no subtype — the collision C2 closed"
+    },
+    {
+      "kind": "noevent-backing",
+      "id": "noevent-all-observed",
+      "rule": "§11.1 / F.5v — a covered slot counts as observed only via a POSITIVE observation; a signed gap record is the publisher's own disclaimer of observation and is BLIND, and an attestation covering no slot is never asked",
+      "window": {
+        "from": "ust:20260802.100000",
+        "to": "ust:20260802.100100"
+      },
+      "genesis": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "noevent.example",
+            "ust_id": "ust:20260802.1000",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "genesis"
+          },
+          "time": {
+            "generated_at": "2026-08-02T10:00:00Z",
+            "valid_from": "2026-08-02T10:00:00Z",
+            "valid_to": "2026-08-02T10:00:00Z"
+          },
+          "data": {
+            "genesis": {
+              "kind": "captured",
+              "value": {
+                "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+                "role": "name-binding-root",
+                "cadence": "30"
+              }
+            }
+          },
+          "hashes": {
+            "genesis": "sha256:f88f242f519ba3f71b21c4704666482c27b09d35711a726f7d56f01c3a9e8908"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "RHjUKElQ4Tjf3rA_iKrQM6uRbNRXK2WoMDwCekZFHd5jBqDQXJPbCnCtb2xhP4v2Q5KELCYVnWopdfI0PA68AQ"
+        }
+      },
+      "frames": [
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "noevent.example",
+              "ust_id": "ust:20260802.100000",
+              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+              "class": "observation"
+            },
+            "time": {
+              "generated_at": "2026-08-02T10:00:00Z",
+              "valid_from": "2026-08-02T10:00:00Z",
+              "valid_to": "2026-08-02T10:00:00Z"
+            },
+            "data": {
+              "weather": {
+                "kind": "captured",
+                "value": {
+                  "x": "1"
+                }
+              }
+            },
+            "hashes": {
+              "weather": "sha256:f9a85a7e9ad5b9c0c6d4ab34cdd5db7f04b4b7fe8a2f5ad0dd2fe05697194308"
+            },
+            "provenance": {
+              "prev": "sha256:4d748cec6f6da6a31aac2701be027439e00459ad7bbbf55cf79fbb80af3fc06b"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+            "sig": "0MNHq-B96p7U-u1KrR4yzL59W4n483FU2CSakl3wEGJralkZTU6peRXIXEcwtvVyLtrHPgbIWK27I4cbvD3sAg"
+          }
+        },
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "noevent.example",
+              "ust_id": "ust:20260802.100030",
+              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+              "class": "observation"
+            },
+            "time": {
+              "generated_at": "2026-08-02T10:00:30Z",
+              "valid_from": "2026-08-02T10:00:30Z",
+              "valid_to": "2026-08-02T10:00:30Z"
+            },
+            "data": {
+              "weather": {
+                "kind": "captured",
+                "value": {
+                  "x": "1"
+                }
+              }
+            },
+            "hashes": {
+              "weather": "sha256:8965d45ee718c7a39fdd6cc2d665de339faf878260be27e82a260929a720fad4"
+            },
+            "provenance": {
+              "prev": "sha256:fd923c08e313b159e9e6a441a840b7deae4634ca928bc199bce18ba5ccd49c3b"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+            "sig": "INU37A4UgMeE0Sa7O2_5_lyfsRZqvayX_bIB5Cw_TYlEArWzL1Y34xD9oaVH-TjzKcdaZZ51Ic4wzT0tG4BRAA"
+          }
+        },
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "noevent.example",
+              "ust_id": "ust:20260802.100100",
+              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+              "class": "observation"
+            },
+            "time": {
+              "generated_at": "2026-08-02T10:01:00Z",
+              "valid_from": "2026-08-02T10:01:00Z",
+              "valid_to": "2026-08-02T10:01:00Z"
+            },
+            "data": {
+              "weather": {
+                "kind": "captured",
+                "value": {
+                  "x": "1"
+                }
+              }
+            },
+            "hashes": {
+              "weather": "sha256:ddfcbc16801352e4f9cb1e001761201d304ef030950fd6256486667e022f0fed"
+            },
+            "provenance": {
+              "prev": "sha256:97821ec3163bf8f7e4f456ce46b915ffb9504098500f753aa23cb77ab3a19b27"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+            "sig": "3ZAGhAuRrROl8jRMwok1ZQuVz-sUgud1hI2cRhtSapqgDDDUSsQwoDSJ2LC1KvAXP2Ys5LnAMn6tWaByk5SECQ"
+          }
+        }
+      ],
+      "checkpoint": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "noevent.example",
+            "ust_id": "ust:20260802.100200",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "attestation"
+          },
+          "time": {
+            "generated_at": "2026-08-02T10:02:00Z",
+            "valid_from": "2026-08-02T10:02:00Z",
+            "valid_to": "2026-08-02T10:02:00Z"
+          },
+          "data": {
+            "checkpoint": {
+              "kind": "computed",
+              "value": {
+                "head": "sha256:69b37c59ef778ab9921230704cde9b1bad99ee4938afdabdd10f56f8b369c26e",
+                "frame_count": "3",
+                "from": "ust:20260802.100000",
+                "to": "ust:20260802.100100"
+              }
+            }
+          },
+          "hashes": {
+            "checkpoint": "sha256:6c50162101de8927901e01903f228dc2c22e7730f9a03bff816cba5375a5465d"
+          },
+          "provenance": {
+            "prev": "sha256:69b37c59ef778ab9921230704cde9b1bad99ee4938afdabdd10f56f8b369c26e"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "6uRRbyO1d-oXI-VzOUdEXxcwkwH7ZGIS3qgvz14kuAe9-rWpmAQ46Ey3WkpqJDez2u3GfqibZYAnpYtA9W_qCA"
+        }
+      },
+      "expect": "completeness-backed",
+      "note": "every grid slot carries a positive observation"
+    },
+    {
+      "kind": "noevent-backing",
+      "id": "noevent-gap-record-is-blind",
+      "rule": "§11.1 / F.5v — a covered slot counts as observed only via a POSITIVE observation; a signed gap record is the publisher's own disclaimer of observation and is BLIND, and an attestation covering no slot is never asked",
+      "window": {
+        "from": "ust:20260802.100000",
+        "to": "ust:20260802.100100"
+      },
+      "genesis": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "noevent.example",
+            "ust_id": "ust:20260802.1000",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "genesis"
+          },
+          "time": {
+            "generated_at": "2026-08-02T10:00:00Z",
+            "valid_from": "2026-08-02T10:00:00Z",
+            "valid_to": "2026-08-02T10:00:00Z"
+          },
+          "data": {
+            "genesis": {
+              "kind": "captured",
+              "value": {
+                "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+                "role": "name-binding-root",
+                "cadence": "30"
+              }
+            }
+          },
+          "hashes": {
+            "genesis": "sha256:f88f242f519ba3f71b21c4704666482c27b09d35711a726f7d56f01c3a9e8908"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "RHjUKElQ4Tjf3rA_iKrQM6uRbNRXK2WoMDwCekZFHd5jBqDQXJPbCnCtb2xhP4v2Q5KELCYVnWopdfI0PA68AQ"
+        }
+      },
+      "frames": [
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "noevent.example",
+              "ust_id": "ust:20260802.100000",
+              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+              "class": "observation"
+            },
+            "time": {
+              "generated_at": "2026-08-02T10:00:00Z",
+              "valid_from": "2026-08-02T10:00:00Z",
+              "valid_to": "2026-08-02T10:00:00Z"
+            },
+            "data": {
+              "weather": {
+                "kind": "captured",
+                "value": {
+                  "x": "1"
+                }
+              }
+            },
+            "hashes": {
+              "weather": "sha256:f9a85a7e9ad5b9c0c6d4ab34cdd5db7f04b4b7fe8a2f5ad0dd2fe05697194308"
+            },
+            "provenance": {
+              "prev": "sha256:4d748cec6f6da6a31aac2701be027439e00459ad7bbbf55cf79fbb80af3fc06b"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+            "sig": "0MNHq-B96p7U-u1KrR4yzL59W4n483FU2CSakl3wEGJralkZTU6peRXIXEcwtvVyLtrHPgbIWK27I4cbvD3sAg"
+          }
+        },
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "noevent.example",
+              "ust_id": "ust:20260802.100030",
+              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+              "class": "attestation"
+            },
+            "time": {
+              "generated_at": "2026-08-02T10:00:30Z",
+              "valid_from": "2026-08-02T10:00:30Z",
+              "valid_to": "2026-08-02T10:00:30Z"
+            },
+            "data": {
+              "gap": {
+                "kind": "computed",
+                "value": {
+                  "reason": "publisher-unreachable"
+                }
+              }
+            },
+            "hashes": {
+              "gap": "sha256:d4e89758989fca9ac10707a423ab7fd998130f5f05b15756088d721ccb732d2d"
+            },
+            "provenance": {
+              "prev": "sha256:fd923c08e313b159e9e6a441a840b7deae4634ca928bc199bce18ba5ccd49c3b"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+            "sig": "l-2BigdND_d7SgmGq_o_XXYERRADh43lGNNxdkcKcIYQhi9WDqQ-YMYRyYpaCahihgp7aEZa6Z1dUEgl-MLTBw"
+          }
+        },
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "noevent.example",
+              "ust_id": "ust:20260802.100100",
+              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+              "class": "observation"
+            },
+            "time": {
+              "generated_at": "2026-08-02T10:01:00Z",
+              "valid_from": "2026-08-02T10:01:00Z",
+              "valid_to": "2026-08-02T10:01:00Z"
+            },
+            "data": {
+              "weather": {
+                "kind": "captured",
+                "value": {
+                  "x": "1"
+                }
+              }
+            },
+            "hashes": {
+              "weather": "sha256:ddfcbc16801352e4f9cb1e001761201d304ef030950fd6256486667e022f0fed"
+            },
+            "provenance": {
+              "prev": "sha256:5d09fb196033231367f176869427f3e4dd708d6d7b3c6665cdd5c0141a8a9968"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+            "sig": "1gJHfwkK8I2ZIT-LFxP9pmAGjLLVYZW09LMt_OHjGns5DO9j0XkZZz8vh8zGEO9Kfx1N0522BnbjQ5ZK6PaGCw"
+          }
+        }
+      ],
+      "checkpoint": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "noevent.example",
+            "ust_id": "ust:20260802.100200",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "attestation"
+          },
+          "time": {
+            "generated_at": "2026-08-02T10:02:00Z",
+            "valid_from": "2026-08-02T10:02:00Z",
+            "valid_to": "2026-08-02T10:02:00Z"
+          },
+          "data": {
+            "checkpoint": {
+              "kind": "computed",
+              "value": {
+                "head": "sha256:ff5cd20154b0167cb92052d10a4b3147567e02afdffbeb94029fb32cba858a6e",
+                "frame_count": "3",
+                "from": "ust:20260802.100000",
+                "to": "ust:20260802.100100"
+              }
+            }
+          },
+          "hashes": {
+            "checkpoint": "sha256:6b87399ece73cf22d6a001c4a906c023c492f95ec40ac05da5efe0b8c7c1fe16"
+          },
+          "provenance": {
+            "prev": "sha256:ff5cd20154b0167cb92052d10a4b3147567e02afdffbeb94029fb32cba858a6e"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "KtinYf9QU32R0S035cgOv9NXIz57uKDf8a68gNx2A96MPkI1b9dkUvJtpbbf88ltEC1YJTVGjYtUmZOepGZnAw"
+        }
+      },
+      "expect": "observation-gap",
+      "note": "the middle slot is covered ONLY by a signed gap record — the publisher stated it produced no frame there, so a hidden event is not impossible"
+    },
+    {
+      "kind": "noevent-backing",
+      "id": "noevent-checkpoint-in-window-not-asked",
+      "rule": "§11.1 / F.5v — a covered slot counts as observed only via a POSITIVE observation; a signed gap record is the publisher's own disclaimer of observation and is BLIND, and an attestation covering no slot is never asked",
+      "window": {
+        "from": "ust:20260802.100000",
+        "to": "ust:20260802.100100"
+      },
+      "genesis": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "noevent.example",
+            "ust_id": "ust:20260802.1000",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "genesis"
+          },
+          "time": {
+            "generated_at": "2026-08-02T10:00:00Z",
+            "valid_from": "2026-08-02T10:00:00Z",
+            "valid_to": "2026-08-02T10:00:00Z"
+          },
+          "data": {
+            "genesis": {
+              "kind": "captured",
+              "value": {
+                "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+                "role": "name-binding-root",
+                "cadence": "30"
+              }
+            }
+          },
+          "hashes": {
+            "genesis": "sha256:f88f242f519ba3f71b21c4704666482c27b09d35711a726f7d56f01c3a9e8908"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "RHjUKElQ4Tjf3rA_iKrQM6uRbNRXK2WoMDwCekZFHd5jBqDQXJPbCnCtb2xhP4v2Q5KELCYVnWopdfI0PA68AQ"
+        }
+      },
+      "frames": [
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "noevent.example",
+              "ust_id": "ust:20260802.100000",
+              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+              "class": "observation"
+            },
+            "time": {
+              "generated_at": "2026-08-02T10:00:00Z",
+              "valid_from": "2026-08-02T10:00:00Z",
+              "valid_to": "2026-08-02T10:00:00Z"
+            },
+            "data": {
+              "weather": {
+                "kind": "captured",
+                "value": {
+                  "x": "1"
+                }
+              }
+            },
+            "hashes": {
+              "weather": "sha256:f9a85a7e9ad5b9c0c6d4ab34cdd5db7f04b4b7fe8a2f5ad0dd2fe05697194308"
+            },
+            "provenance": {
+              "prev": "sha256:4d748cec6f6da6a31aac2701be027439e00459ad7bbbf55cf79fbb80af3fc06b"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+            "sig": "0MNHq-B96p7U-u1KrR4yzL59W4n483FU2CSakl3wEGJralkZTU6peRXIXEcwtvVyLtrHPgbIWK27I4cbvD3sAg"
+          }
+        },
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "noevent.example",
+              "ust_id": "ust:20260802.100030",
+              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+              "class": "observation"
+            },
+            "time": {
+              "generated_at": "2026-08-02T10:00:30Z",
+              "valid_from": "2026-08-02T10:00:30Z",
+              "valid_to": "2026-08-02T10:00:30Z"
+            },
+            "data": {
+              "weather": {
+                "kind": "captured",
+                "value": {
+                  "x": "1"
+                }
+              }
+            },
+            "hashes": {
+              "weather": "sha256:8965d45ee718c7a39fdd6cc2d665de339faf878260be27e82a260929a720fad4"
+            },
+            "provenance": {
+              "prev": "sha256:fd923c08e313b159e9e6a441a840b7deae4634ca928bc199bce18ba5ccd49c3b"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+            "sig": "INU37A4UgMeE0Sa7O2_5_lyfsRZqvayX_bIB5Cw_TYlEArWzL1Y34xD9oaVH-TjzKcdaZZ51Ic4wzT0tG4BRAA"
+          }
+        },
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "noevent.example",
+              "ust_id": "ust:20260802.100045",
+              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+              "class": "attestation"
+            },
+            "time": {
+              "generated_at": "2026-08-02T10:00:45Z",
+              "valid_from": "2026-08-02T10:00:45Z",
+              "valid_to": "2026-08-02T10:00:45Z"
+            },
+            "data": {
+              "checkpoint": {
+                "kind": "computed",
+                "value": {
+                  "head": "sha256:97821ec3163bf8f7e4f456ce46b915ffb9504098500f753aa23cb77ab3a19b27",
+                  "frame_count": "2"
+                }
+              }
+            },
+            "hashes": {
+              "checkpoint": "sha256:73799f939561d742d3a9309c454baa30ac6d05e4a94afdc1e82a61024531a4bb"
+            },
+            "provenance": {
+              "prev": "sha256:97821ec3163bf8f7e4f456ce46b915ffb9504098500f753aa23cb77ab3a19b27"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+            "sig": "XL6mHvwDRY8WoWL910lnoxV5Nwqoe4t-F7XRnOQCfjml0ZhYt4vxzHrXBpNWEcvjDXg2qO846lablCqmDoubCw"
+          }
+        },
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "noevent.example",
+              "ust_id": "ust:20260802.100100",
+              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+              "class": "observation"
+            },
+            "time": {
+              "generated_at": "2026-08-02T10:01:00Z",
+              "valid_from": "2026-08-02T10:01:00Z",
+              "valid_to": "2026-08-02T10:01:00Z"
+            },
+            "data": {
+              "weather": {
+                "kind": "captured",
+                "value": {
+                  "x": "1"
+                }
+              }
+            },
+            "hashes": {
+              "weather": "sha256:ddfcbc16801352e4f9cb1e001761201d304ef030950fd6256486667e022f0fed"
+            },
+            "provenance": {
+              "prev": "sha256:81412f076b6fed306a1168dbe5149e6a8dbfee0b61042730bf43e9a30662fb76"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+            "sig": "APZbi-zsQrd8QDyap74cB18xVOuL6iDXYPZILerpUz6R1mlgQxH7hYB3ryxosVLZrLG3vBxtkv4FVewA_t-6CQ"
+          }
+        }
+      ],
+      "checkpoint": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "noevent.example",
+            "ust_id": "ust:20260802.100200",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "attestation"
+          },
+          "time": {
+            "generated_at": "2026-08-02T10:02:00Z",
+            "valid_from": "2026-08-02T10:02:00Z",
+            "valid_to": "2026-08-02T10:02:00Z"
+          },
+          "data": {
+            "checkpoint": {
+              "kind": "computed",
+              "value": {
+                "head": "sha256:337e11e17e9d5be8fe9c3ac79d3f7e7b1f8361cb10871450cd39200e1eab7a45",
+                "frame_count": "4",
+                "from": "ust:20260802.100000",
+                "to": "ust:20260802.100100"
+              }
+            }
+          },
+          "hashes": {
+            "checkpoint": "sha256:8725f7b6545e6b5ae47e3a36d72fa97b07ca4b48060c3754133450e07987d2c6"
+          },
+          "provenance": {
+            "prev": "sha256:337e11e17e9d5be8fe9c3ac79d3f7e7b1f8361cb10871450cd39200e1eab7a45"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "x7EfpfDVqNicvc29ZavRpj9LSOOzAdMGwVRJSmXx0AIs4hSByN8J1dKmN1Gi3tLVLMO_d44-G3u9mofjCjGcCQ"
+        }
+      },
+      "expect": "completeness-backed",
+      "note": "a stream checkpoint inside the window covers no grid slot, so it is never asked whether it observed — and must not flip the verdict"
     }
   ]
 }

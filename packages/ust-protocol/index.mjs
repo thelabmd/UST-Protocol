@@ -2870,8 +2870,29 @@ export function noEventBacking(claimWindow, streamResult, frames) {
   // open) is BLIND — the publisher saw nothing, a hidden event is not impossible. And when `claimWindow.subject` is set,
   // the observation must be OF that subject: a `complete` stream about partition X does not, alone, deny an event about Y.
   const POSITIVE = new Set(['no-event', 'unchanged']);
-  const observedSubject = (f, subj) => Object.entries(f?.state?.data || {}).some(([name, p]) => (subj === undefined || name === subj) && p && (p.kind === 'captured' || p.kind === 'computed' || (p.kind === 'absence' && POSITIVE.has(p.value?.reason))));
-  const gap = frames.some((f) => { const e = ustToEpoch(f?.state?.id?.ust_id); return e !== null && e >= w0 && e <= w1 && !observedSubject(f, claimWindow.subject); });
+  // rev86 / F.5v — COVERAGE IS NOT OBSERVATION. A grid slot is covered either by a slot-bearing frame or by a
+  // signed GAP RECORD, and only the first involves looking at anything. A gap record is the publisher's own
+  // signed statement that it produced NO frame for that slot — the strongest possible disclaimer of
+  // observation — so it may never strengthen a negative claim. It did: `data.gap` is a `computed` partition,
+  // the predicate below accepted any `computed` partition, and a window covered by gap records graded
+  // `completeness-backed`. That inverts the record's purpose, since the more honestly a publisher confesses
+  // its outages the stronger its "nothing happened" became.
+  //
+  // The fix is CLASS-FIRST rather than name-first: an attestation speaks about DOCUMENTS, an observation about
+  // the WORLD, so no attestation ever contributes an observation whatever partitions it carries. And the
+  // question is asked ONLY of frames that COVER a slot — the same rule verifyStream uses for completeness — so
+  // a stream checkpoint or a batch commitment inside the window is neither asked nor counted.
+  // FAIL-CLOSED, and the direction is the whole point. Asking "does this frame COVER a slot?" and skipping the
+  // ones that do not match is fail-OPEN: a frame whose class is unrecognised falls out of the question and is
+  // silently treated as harmless. The question here is "was this window safely observed?", so the default must
+  // be BLIND. Therefore only a POSITIVELY identified non-covering shape is excused — an attestation that is not
+  // a gap record, i.e. a stream checkpoint or a batch commitment, which cover no grid slot by construction —
+  // and everything else in the window is asked and must answer with an observation. (Measured while writing
+  // this: the first version excused anything it did not recognise, and the existing blind-slot check caught it.)
+  const coversNoSlot = (f) => f?.state?.id?.class === 'attestation' && f?.state?.data?.gap === undefined;
+  const observedSubject = (f, subj) => f?.state?.id?.class !== 'attestation'
+    && Object.entries(f?.state?.data || {}).some(([name, p]) => (subj === undefined || name === subj) && p && (p.kind === 'captured' || p.kind === 'computed' || (p.kind === 'absence' && POSITIVE.has(p.value?.reason))));
+  const gap = frames.some((f) => { const e = ustToEpoch(f?.state?.id?.ust_id); return e !== null && e >= w0 && e <= w1 && !coversNoSlot(f) && !observedSubject(f, claimWindow.subject); });
   return gap ? 'observation-gap' : 'completeness-backed';                // a blind slot OR one that never observed the subject breaks the no-event guarantee
 }
 

@@ -890,8 +890,16 @@ therefore trusts a no-event claim over `[from,to]` **only** when the interval th
 (`streamResult.interval`) CONTAINS `[from,to]` — read FROM the verified stream result, never a caller-supplied
 stream checkpoint, so a spoofed stream checkpoint cannot forge a backing. `noEventBacking(window, streamResult, frames)` then GRADES it:
 `completeness-backed` needs `complete` (NO-OMISSION: every grid slot is a frame or a signed gap) **AND** OBSERVATIONAL
-coverage — every covered slot was POSITIVELY observed. A slot where the publisher was UNREACHABLE (a blind
-`kind:"absence"`/`reason:"unreachable"`) observed NOTHING, so a hidden event is not impossible there ⇒ `observation-gap`;
+coverage — every covered slot was POSITIVELY observed. **Positive observation is a CLOSED set and everything else
+is blind (F.5v)**, because listing blind cases instead of positive ones once let a gap record pass as an
+observation: a slot counts as observed only when a slot-bearing `observation`/`derivation` frame carries a
+`captured`/`computed` partition, or an `absence` whose reason OBSERVED non-occurrence (`no-event`/`unchanged`).
+Everything else is blind ⇒ `observation-gap`. That includes a slot where the publisher was UNREACHABLE (a blind
+`kind:"absence"`/`reason:"unreachable"`), and — necessarily — **a slot covered only by a signed GAP RECORD**: the
+record IS the publisher's own statement that it produced no frame there, so it is the strongest possible
+disclaimer of observation and may never strengthen a negative claim. An `attestation` never observes (it speaks
+about documents, not the world), and the question is asked ONLY of frames that COVER a slot, so a
+stream checkpoint inside the window is neither asked nor counted;
 without `frames` observation cannot be checked ⇒ `observation-unchecked`. A `chain-consistent` interval yields
 `no-deletion-only` — no EMITTED frame was deleted, but an OMITTED slot could still hide the event, a PARTIAL backing;
 otherwise `publisher-asserted` / `not-applicable`. Two things `noEventBacking` does NOT do, which the CALLER MUST: bind

@@ -1020,6 +1020,14 @@
       "code": "docs/ust-verify.mjs :: C2 subtype discipline, the two-sided W3 partition, key binding to the authority key-log, and INDETERMINATE-is-not-an-integrity-error at both sites",
       "vector": "subtype-anchor-with-root",
       "test": "F4b prev-only subtype vocabulary is TOTAL in the corpus — every runtime name admitted AND refused by a vector"
+    },
+    {
+      "round": 146,
+      "math": "A declared absence is the STRONGEST statement that nothing was observed — so it may never back a no-event claim (#115)",
+      "spec": "Everything else is blind ⇒ `observation-gap`. That includes a slot where the publisher was UNREACHABLE (a blind",
+      "code": "packages/ust-protocol/index.mjs :: noEventBacking — coversNoSlot/observedSubject are class-first and fail-CLOSED, so a gap-covered slot is blind and a checkpoint covering no slot is never asked",
+      "vector": "noevent-gap-record-is-blind",
+      "test": "F.5v a slot covered ONLY by a signed gap record is BLIND — coverage is not observation, and the record IS the disclaimer"
     }
   ],
   "first_accounted_round": 76,

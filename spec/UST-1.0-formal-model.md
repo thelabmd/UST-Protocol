@@ -2686,6 +2686,44 @@ there is no document for a verifier to reject, so a check asserting its absence 
 where an operator carries one, is a LABEL in the sense of §9.1 that no verifier reads, so its realization is
 the ABSENCE of a code path, which the capability roster records rather than a check.
 
+## F.5v A declared absence is the STRONGEST statement that nothing was observed — so it may never back a no-event claim (#115)
+
+Two mechanisms of this protocol are each sound alone and, composed, produce a false negative. F.5p separated
+“not offered” from “offered and unreachable”; this is the same shape one layer down, and it bites in the
+permissive direction.
+
+**Setting.** A no-event claim over a window `W` is graded by the backing of the stream that covers it. A grid
+slot `g ∈ W` is COVERED in exactly two ways (§11.3): a slot-bearing frame with `ust_id = g`, or a signed **gap
+record** declaring that no frame exists for `g`. Both make the interval `complete`; only the first involves an
+observation.
+
+**Theorem F.5v (coverage is not observation, and a gap record is the publisher's own disclaimer).** Let
+`Cov(W)` be the covered slots and `Obs(W) ⊆ Cov(W)` those where the publisher POSITIVELY observed. A gap record
+at `g` is a signed statement by the publisher that it produced no frame for `g`; hence `g ∉ Obs(W)` **by the
+publisher's own assertion**, not by inference. Therefore `Obs(W) ⊊ Cov(W)` whenever any gap record lies in `W`,
+and grading such a window `completeness-backed` — defined as *every covered slot positively observed* — asserts
+an observation the publisher explicitly disclaimed. ∎
+
+*Corollary (the error is permissive, and it inverts the purpose of the record).* A gap record exists to make an
+absence HONEST: it converts an unexplained hole into a declared one. If that same record also strengthens a
+negative claim, then the more honestly a publisher reports its outages, the stronger its “nothing happened”
+becomes — the mechanism pays the publisher for the very blindness it was built to confess. The correct grading
+is `observation-gap`: complete and covered, and a hidden event is not impossible there.
+
+*Corollary (an ATTESTATION never observes).* The blindness is not a property of the `gap` partition's name but
+of the CLASS: an attestation speaks about documents, an observation about the world. So the predicate is
+class-first — no attestation contributes to `Obs`, whatever partitions it carries — and the slot question is
+asked only of frames that COVER a slot, which is why a stream checkpoint (covering none) is never asked and
+never counted.
+
+*Corollary (naming an instance, again).* The normative text listed one blind case — a `kind:"absence"` with
+`reason:"unreachable"` — and the implementation followed the list rather than the rule stated beside it
+(“every covered slot was POSITIVELY observed”). A gap record was not on the list, so it passed as observation.
+The enumeration must be of the POSITIVE set, which is closed and small, with everything else blind by default:
+the same fail-closed shape the `absence` reason vocabulary already uses.
+
+**Binding: realized** — *"F.5v a slot covered ONLY by a signed gap record is BLIND"* · *"F.5v a stream checkpoint inside the window is not asked whether it observed"* · *"noevent-gap-record-is-blind"*.
+
 ## F.6 Composition — the event algebra
 
 An **anchored existence-and-commitment claim** is an event `A ∈ Fₜ`; an UNANCHORED signed claim is a document

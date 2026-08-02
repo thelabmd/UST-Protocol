@@ -152,6 +152,14 @@ for (const v of V.vectors) {
     case 'attestation-subtype': { const r = P.verify(v.doc, { context: 'data' });
       const got = r.error === 'E-MALFORMED' ? 'E-MALFORMED' : 'admitted';
       check(v.id, got === v.expect, `subtype vector ${v.id}: got ${got} (${r.error ?? r.result}) expected ${v.expect}`); break; }
+    // §11.1 / F.5v — the no-event BACKING grade. The vector carries real documents and the runner does the whole
+    // walk itself (verifyStream, then grade), so a second implementation is pinned on the RULE and not on our
+    // call sequence. `completeness-backed` is the strong answer and the one a publisher benefits from, so every
+    // way of NOT earning it is worth a vector.
+    case 'noevent-backing': {
+      const sr = P.verifyStream(v.frames, { genesis: v.genesis, checkpoint: v.checkpoint, cadenceLog: [] });
+      const got = P.noEventBacking(v.window, sr, v.frames);
+      check(v.id, got === v.expect, `no-event backing ${v.id}: stream=${sr.complete} got=${got} expected=${v.expect}`); break; }
     case 'document-negative': check(v.id, P.verify(v.doc, { context: 'data' }).result === 'INVALID'); break;
     // #75 language-neutral encoder vectors (a second implementation runs the SAME cases)
     case 'utf8-reject': check(v.id, P.verifyJson(Buffer.from(v.input_hex, 'hex')).error === v.expect_error); break;
@@ -2625,6 +2633,18 @@ console.log('\n═════════════════════�
   const blindFrames = [{ state: { id: { ust_id: 'ust:20260628.11' }, data: { q: { kind: 'absence', value: { reason: 'unreachable' } } } } }];   // publisher blind at a covered slot
   check('#39 complete + observed frames ⇒ completeness-backed', P.noEventBacking(window, { complete: 'complete', interval: cover }, observedFrames) === 'completeness-backed');
   check('#39 complete + BLIND (unreachable) covered slot ⇒ observation-gap (self-audit #2: blind ≠ no-event)', P.noEventBacking(window, { complete: 'complete', interval: cover }, blindFrames) === 'observation-gap');
+  // F.5v — the composition failure: a gap record makes the interval `complete`, and it is ALSO the publisher's
+  // own signed statement that it produced no frame there. Counting it as an observation paid the publisher for
+  // the blindness the record exists to confess. Named as its own check because the vectors above grade a whole
+  // stream, and this one asserts the single predicate a second implementation is most likely to get wrong.
+  const gapCovered = [{ state: { id: { ust_id: 'ust:20260628.11', class: 'attestation' }, data: { gap: { kind: 'computed', value: { reason: 'publisher-unreachable' } } } } }];
+  check('F.5v a slot covered ONLY by a signed gap record is BLIND — coverage is not observation, and the record IS the disclaimer',
+    P.noEventBacking(window, { complete: 'complete', interval: cover }, gapCovered) === 'observation-gap');
+  // The mirror, so the rule is not enforced by refusing everything: an attestation that covers NO slot is never
+  // asked. Without this a stream checkpoint inside the window would flip a legitimate backing to observation-gap.
+  const cpInWindow = [...observedFrames, { state: { id: { ust_id: 'ust:20260628.115', class: 'attestation' }, data: { checkpoint: { kind: 'computed', value: { head: 'sha256:' + '11'.repeat(32), frame_count: '2' } } } } }];
+  check('F.5v a stream checkpoint inside the window is not asked whether it observed — it covers no grid slot',
+    P.noEventBacking(window, { complete: 'complete', interval: cover }, cpInWindow) === 'completeness-backed');
   check('#39 complete but NO frames ⇒ observation-unchecked (cannot confirm observation)', P.noEventBacking(window, { complete: 'complete', interval: cover }) === 'observation-unchecked');
   check('#39 chain-consistent covering interval ⇒ no-deletion-only (omission still possible)', P.noEventBacking(window, { complete: 'chain-consistent', interval: cover }, observedFrames) === 'no-deletion-only');
   check('#39 provisional stream ⇒ publisher-asserted', P.noEventBacking(window, { complete: 'provisional', interval: cover }, observedFrames) === 'publisher-asserted');
