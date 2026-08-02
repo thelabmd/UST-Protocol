@@ -160,6 +160,13 @@ for (const v of V.vectors) {
       const sr = P.verifyStream(v.frames, { genesis: v.genesis, checkpoint: v.checkpoint, cadenceLog: [] });
       const got = P.noEventBacking(v.window, sr, v.frames);
       check(v.id, got === v.expect, `no-event backing ${v.id}: stream=${sr.complete} got=${got} expected=${v.expect}`); break; }
+    // §12.2 / F.5e.1 — `admits(k, c)` as the full role×class matrix. The vector carries genesis + key log +
+    // document, so a second implementation resolves the role from the signed log itself. `E-KEY` is asserted
+    // exactly, not "any INVALID": a refusal for the WRONG reason would pass a looser check.
+    case 'role-admits': {
+      const r = P.verify(v.doc, { context: 'data', genesis: v.genesis, keylog: v.keylog });
+      const got = r.error === 'E-KEY' ? 'E-KEY' : 'admitted';
+      check(v.id, got === v.expect, `admits(k,c) ${v.id}: got ${got} (${r.error ?? r.result}) expected ${v.expect}`); break; }
     case 'document-negative': check(v.id, P.verify(v.doc, { context: 'data' }).result === 'INVALID'); break;
     // #75 language-neutral encoder vectors (a second implementation runs the SAME cases)
     case 'utf8-reject': check(v.id, P.verifyJson(Buffer.from(v.input_hex, 'hex')).error === v.expect_error); break;

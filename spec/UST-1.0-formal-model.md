@@ -848,6 +848,33 @@ and the document-admission predicate gains the role coordinate: `admits(k, c)` h
 `r` whose normative class-set contains `c`. `bind` and `revoked` are unchanged — a key's history is not
 role-relative, only its present authority is.
 
+**The normative class-sets, without which the predicate cannot be evaluated (rev89).** Until this revision the
+sentence above defined `admits` in terms of a class-set that was never stated, so no verification path could
+call it: three of the five roles authorized (each enforced where its object is verified) and the two an
+operator actually ASSIGNS authorized nothing. One word, two mechanisms — the collision this model names
+elsewhere, inside a single vocabulary.
+
+  `data ↦ {observation, derivation, attestation}` · `issuance ↦ {attestation}`
+
+**Why that cut and not another.** An issued document ATTESTS to what the publisher observed; it does not CREATE
+the observation. So a leaked `issuance` key may re-state what the stream already contains and may never mint a
+primary `observation` or a `derivation` — which is the containment the role exists for, expressed as a
+capability rather than as a name.
+
+*The class-sets are deliberately NOT disjoint, and this is not a weakening.* F.5e.1 partitions the KEY set
+(`active : Role ⇀ 𝒫(Keys)`, one role per key), not the class space; `issuance ⊊ data` is a hierarchy of
+capability over a partition of keys, which is exactly how the ceremony-set roles already read.
+
+*And the failure is a REFUSAL, never a downgrade.* The key is bound — the publisher's own log declares it and
+declares what it is for, and the document is outside that. Falling to `self-asserted` would leave the document
+VALID at the LIGHT floor, which is the precise outcome the role exists to prevent. `E-KEY`, as the ceremony
+roles already answer.
+
+*Open (#130): what the ROOT admits under a declared regime.* `name-binding-root` has no operating class-set, so
+today a root key signs any class even where separation is declared. Arguably a publisher that separates roles
+wants its root cold; that is a policy decision this revision does not take, and it is recorded rather than
+resolved by silence.
+
 **Where roles are assigned.** The genesis fixes part of the assignment, exactly as it already fixes the
 checkpoint-recovery set — §F.5l states that "Genesis fixes a checkpoint-recovery key set `RK` (role-separated from data and
 checkpoint keys)", so role separation at the genesis level is an existing shape of this model. What that section

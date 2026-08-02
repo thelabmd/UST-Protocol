@@ -104,6 +104,7 @@ const CAPS = {
 // role partition. So each entry now carries its reason, and the partition is checked in BOTH directions.
 const PRIMITIVES = {
   VERSION: 'the wire/spec/revision triple a report stamps itself with — it describes the implementation, not something a consumer can DO',
+  ROLE_CLASSES: 'the §12.2 class-set per operating role — the table `admits(k, c)` is evaluated against. Exported so a consumer and a second implementation READ the relation from source instead of re-typing it; it is a vocabulary the verifier consults, not an action a caller performs',
   PREV_ONLY_SUBTYPES: 'the §11.3 C2 subtype vocabulary, exported so the conformance corpus and any second implementation ENUMERATE it from source instead of re-typing three names; a vocabulary a verifier reads, not an action a consumer takes',
   STABILITY: 'per-rung stability labels the surfaces read; a property OF the capabilities rather than one of them',
   REFERENCE_CHECKER_VERSION: 'the L1 build identity a conformance report must name — an instrument label, and naming the instrument is not a capability',

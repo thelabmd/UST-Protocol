@@ -1050,6 +1050,14 @@
         "excluded": "Vectors pin document bytes and verdicts. This is the operator's STORE state after a recovery; no document differs, which is precisely why it was invisible until two members of the group were read together."
       },
       "test": "#115 F.5r-d recovery moves the WHOLE GROUP — the interval bound follows the adopted document, not only the head"
+    },
+    {
+      "round": 149,
+      "math": "The normative class-sets, without which the predicate cannot be evaluated (rev89)",
+      "spec": "the role against a NORMATIVE class-set: **`data` admits `observation`/`derivation`/`attestation`;",
+      "code": "packages/ust-protocol/index.mjs :: ROLE_CLASSES + admits(k,c) enforced in resolveAuthority as E-KEY, refusal rather than downgrade",
+      "vector": "admits-issuance-observation-refused",
+      "test": "admits-issuance-observation-refused"
     }
   ],
   "first_accounted_round": 76,

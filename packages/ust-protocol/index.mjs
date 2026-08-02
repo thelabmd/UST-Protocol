@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.66', revision: 84 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.67', revision: 89 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -480,6 +480,25 @@ const CLASSES = ['observation','attestation','derivation','genesis','key','caden
 // enforced on one side is not a partition — the class simply has two homes and its role is decided by whichever
 // caller reached it first. `cadence` sits here because the cadence log is read exactly as the key log is (§11.3).
 const AUTHORITY_CLASSES = new Set(['genesis', 'key', 'cadence']);
+// §12.2 / F.5e.1 — THE NORMATIVE CLASS-SET PER OPERATING ROLE, which is what makes `admits(k, c)` real.
+//
+// Until rev89 the model defined `admits(k, c)` as "`k ∈ active(r)` for some `r` whose normative class-set
+// contains `c`" and NO class-set was ever stated, so the predicate could not be evaluated and no verification
+// path called it. Three of the five roles authorized (the ceremony-set ones are enforced where their objects
+// are verified) and the two an operator actually assigns authorized nothing — one word, two mechanisms.
+//
+// WHY THIS CUT. An issued document ATTESTS to what the publisher observed; it does not CREATE the observation.
+// So an `issuance` key may sign an `attestation` — a receipt is one — and may never mint a primary
+// `observation` or a `derivation`. That is the containment the role exists for: a leaked issuance key cannot
+// fabricate what the publisher saw. `data` carries the publisher's stream in all its shapes.
+//
+// The class-sets are NOT disjoint, and need not be: F.5e.1 partitions the KEY set (`active : Role ⇀ 𝒫(Keys)`,
+// one role per key), not the class space. `issuance ⊊ data` is a hierarchy of capability over a partition of
+// keys, which is exactly how the ceremony roles already read.
+export const ROLE_CLASSES = Object.freeze({
+  data: Object.freeze(['observation', 'derivation', 'attestation']),
+  issuance: Object.freeze(['attestation']),
+});
 // §11.3 C2 — the prev-only attestation subtypes. The subtype is the NAMED DATA PARTITION, never a shape, so
 // this list IS the vocabulary a verifier reads: `checkpoint` asserts a stream interval, `gap` asserts a
 // declared absence, `anchor` asserts a batch root committed to a substrate (rev84, F.5u). Ordered, frozen and
@@ -1541,6 +1560,22 @@ export function resolveAuthority(doc, opts = {}) {
   // authority is granted ONLY if the doc's key_id maps to the doc's ACTUAL signing pub (binding, not membership).
   if (validKeys.get(doc.state.id.key_id) !== doc.sig.pub)
     return { strength: 'self-asserted', status: 'verified', detail: 'doc key not bound in this key-log' };
+  // `admits(k, c)` — REFUSAL, not a downgrade (rev89). The key IS bound: the publisher's own log declares this
+  // key and declares what it is for, and this document is outside it. Falling to `self-asserted` would leave
+  // the document VALID at the LIGHT floor, which is precisely the outcome the role exists to prevent — a
+  // leaked issuance key still producing verifying documents. The three ceremony-set roles already refuse
+  // (a checkpoint signed by a non-authority is INVALID, never downgraded); this extends the same rule rather
+  // than inventing a second one. Only under a DECLARED regime: a publisher with no `roles` is unaffected.
+  {
+    // The regime gate is NOT repeated here, and that is deliberate: under an undeclared regime `resolveKeys`
+    // assigns no operating role at all, so `allowed` is already absent. Writing `declaredRoles && …` looked
+    // like a second protection and was UNREACHABLE — mutation-tested: removing it turned nothing red, which
+    // is the same vacuity this repository refuses everywhere else. One condition, and it is the real one.
+    const r = rk.roles?.get(doc.state.id.key_id);
+    const allowed = r === undefined ? null : ROLE_CLASSES[r];
+    if (allowed && !allowed.includes(doc.state.id.class))
+      return { error: 'E-KEY', detail: 'key role "' + r + '" does not admit class "' + doc.state.id.class + '" — this publisher DECLARED role separation, and the role admits ' + allowed.join('/') + ' (§12.2 admits(k,c))' };
+  }
   // §12.2/#75 ROOT 1 — K_n(t) is a TWO-SIDED window over ORDERED authorization intervals (round-15 P0-02). A document is
   // key-active iff its proven anchor U lands INSIDE some active interval [from, to]; U before the FIRST authorization ⇒
   // premature; U in a retired GAP between intervals (add→retire→re-add→retire) ⇒ expired. Only decidable WITH a proven U.

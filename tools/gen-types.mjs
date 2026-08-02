@@ -196,6 +196,25 @@ export function declarationsFor(src, resolveModule) {
           type = 'Readonly<{ ' + pairs.map((e) => `${e[1]}: '${e[2]}'`).join('; ') + ' }>';
         }
       }
+      // A vocabulary is sometimes a MAP OF LISTS — `ROLE_CLASSES` is role → the classes that role admits, and
+      // it shipped as `unknown` because this reader knew maps of strings and lists of strings but not the
+      // composition. Same defect, same consequence: a typed consumer cannot name what a role admits without
+      // re-typing the protocol's own table.
+      if (!type) {
+        const lit = tail.match(/^\s*(?:Object\.freeze\(\s*)?\{([\s\S]*?)\}\s*\)?\s*;/);
+        if (lit) {
+          const entries = [...lit[1].matchAll(/([A-Za-z_$][\w$]*)\s*:\s*(?:Object\.freeze\(\s*)?\[([^\]]*)\]/g)];
+          const bare = lit[1].replace(/\/\/[^\n]*/g, '');
+          const members = (bare.match(/[A-Za-z_$][\w$]*\s*:/g) || []).length;
+          if (entries.length && entries.length === members) {
+            const parts = entries.map((e) => {
+              const items = e[2].split(',').map((x) => x.trim()).filter(Boolean).map((x) => x.match(/^'([^']*)'$/));
+              return items.every(Boolean) ? `${e[1]}: readonly [${items.map((m) => `'${m[1]}'`).join(', ')}]` : null;
+            });
+            if (parts.every(Boolean)) type = 'Readonly<{ ' + parts.join('; ') + ' }>';
+          }
+        }
+      }
       // A vocabulary is just as often an ORDERED list as a map — `PREV_ONLY_SUBTYPES` is the §11.3 C2 subtype
       // set, and it shipped as `unknown` because this reader only knew object literals. Same defect, same
       // consequence: a typed consumer cannot name a subtype without re-typing the protocol's own vocabulary,

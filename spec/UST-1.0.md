@@ -3,7 +3,7 @@
 
 *This specification text is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](../LICENSE-SPEC). Reference code in this repository is licensed Apache-2.0. Use of the name **UST** / **Universal State Transcript** and the **UST-compatible** claim: see [TRADEMARK.md](../TRADEMARK.md).*
 
-> **Release candidate — `1.0.0-rc.66`.** This specification has been extensively red-teamed; an independent
+> **Release candidate — `1.0.0-rc.67`.** This specification has been extensively red-teamed; an independent
 > external cryptographic audit is pending. It is subject to change until `1.0.0` final. The wire format `ust:"1.0"`
 > is stable across all rc's — pin exact versions. Per-version history is in [`CHANGELOG.md`](../CHANGELOG.md).
 
@@ -1189,7 +1189,12 @@ existence carrying one; an entry with `op:"rotate"` MUST be rejected `E-KEY`.
   **The regime is declared per publisher.** A genesis whose value carries a non-empty `roles` array DECLARES role
   separation. Then, and only then: every `add` MUST carry a `role` drawn from that declared set (a missing role
   ⇒ **E-KEY** — a missing field must never be the strongest possible claim), and `admits(key, class)` consults
-  the role. A genesis that declares nothing keeps the undifferentiated key set, and an `add` carrying a `role`
+  the role against a NORMATIVE class-set: **`data` admits `observation`/`derivation`/`attestation`;
+  `issuance` admits `attestation` only.** An issued document ATTESTS to what the publisher observed and never
+  mints the observation, so a leaked issuance key cannot fabricate what the publisher saw. A document whose
+  class the signing key's role does not admit is **E-KEY** — a REFUSAL, not a downgrade to `self-asserted`,
+  because leaving it valid at the LIGHT floor is the outcome the role exists to prevent (the three
+  ceremony-set roles already refuse this way; this is the same rule, not a second one). A genesis that declares nothing keeps the undifferentiated key set, and an `add` carrying a `role`
   the publisher never declared ⇒ **E-MALFORMED** (a field the verifier cannot act on is refused, §F.5e.2).
   A publisher that does NOTHING is unaffected in every respect: no document changes verdict, because §11.3's
   continuity law forbids an operator change — including this one — from invalidating data already issued.

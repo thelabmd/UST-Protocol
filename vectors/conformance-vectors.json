@@ -1,5 +1,5 @@
 {
-  "version": "UST 1.0 conformance vectors (rc.66 - a root is published TWICE and only the SEAL enumerates: the batch commitment gets the prev-only `anchor` subtype, root REQUIRED and constituents ABSENT, because enumeration is not an input to the inclusion predicate and IS a membership oracle over other principals (#127, F.5u); prior rc.65: REGISTRY registers and MEASURES the verdict, completeness and forkChoice result vocabularies against actual code usage; the measurement found an error code in the RESULT slot and a second vocabulary under the same field name, #111; prior rc.40: external-audit remediation: 5 P0 fixed structurally (epic UST-1o6); prior rc.33: #75 ROOT 3 (math-derived, NO manifest): forkChoice/verifyStream resolve per-frame AUTHORITY (impersonation P0-03) + grid EQUALITY (off-grid P0-04); stream-authority/stream-grid/fork-choice vectors; prior: - #75 ROOT 1 two-phase verify + anchor-time (authority-at-time vectors: retired/compromised/premature K_n(t) window judged against the PROVEN anchor); prior: - #75 ROOT 2 key-log temporal state machine (keylog-state vectors: revoked/rotated-out/retired key cannot sign later; closed key_op schema); prior: - #75 strict encoders P1-01/02/03 (utf8-reject, b64url, cadence); prior: — self-audit fix: freshness:attested now requires a VERIFIED keylogHeadAnchor (inclusion + substrate-final), a raw self-computed head hash proves nothing = overclaim closed. Prior: #41 canon arbiter, #40 identity hardening, #44 agent-safety, #45 downgrade + fork-choice)",
+  "version": "UST 1.0 conformance vectors (rc.67 - admits(k,c) becomes evaluable: the normative class-set per operating role is stated, so a role REFUSES a class it does not admit instead of labelling a key that authorized nothing (#130); prior rc.66: a root is published TWICE and only the SEAL enumerates: the batch commitment gets the prev-only `anchor` subtype, root REQUIRED and constituents ABSENT, because enumeration is not an input to the inclusion predicate and IS a membership oracle over other principals (#127, F.5u); prior rc.65: REGISTRY registers and MEASURES the verdict, completeness and forkChoice result vocabularies against actual code usage; the measurement found an error code in the RESULT slot and a second vocabulary under the same field name, #111; prior rc.40: external-audit remediation: 5 P0 fixed structurally (epic UST-1o6); prior rc.33: #75 ROOT 3 (math-derived, NO manifest): forkChoice/verifyStream resolve per-frame AUTHORITY (impersonation P0-03) + grid EQUALITY (off-grid P0-04); stream-authority/stream-grid/fork-choice vectors; prior: - #75 ROOT 1 two-phase verify + anchor-time (authority-at-time vectors: retired/compromised/premature K_n(t) window judged against the PROVEN anchor); prior: - #75 ROOT 2 key-log temporal state machine (keylog-state vectors: revoked/rotated-out/retired key cannot sign later; closed key_op schema); prior: - #75 strict encoders P1-01/02/03 (utf8-reject, b64url, cadence); prior: — self-audit fix: freshness:attested now requires a VERIFIED keylogHeadAnchor (inclusion + substrate-final), a raw self-computed head hash proves nothing = overclaim closed. Prior: #41 canon arbiter, #40 identity hardening, #44 agent-safety, #45 downgrade + fork-choice)",
   "note": "Deterministic + reproducible. Keypairs from fixed seeds (A=0011..eeff, B=ffee..1100). canon=JCS tightened; H(tag,x)=sha256(ascii(tag)||0x00||x); content_hash=H(\"ust:state\",canon({ust,state})); key_id=H(\"ust:keylog\",raw_pub); partition_hash=H(\"ust:shard\",canon({domain_shard,ust_id,partition,value})) — UNIFORM, every partition binds domain_shard, name is a VALUE (non-colliding), no domain-less computed. Each vector states the SPEC rule it pins. Signature-type vectors use expect: 'VALID' | 'E-SIG' for the Ed25519 PRIMITIVE check (strict, canonical-S); this is not a document verdict — a conforming verifier's document verdict is always tier-qualified (VALID:LIGHT/HIGH/TOP), never a bare VALID. Partition names inside hash/commit inputs (e.g. 'secret') are arbitrary sample names, not protocol features.",
   "seeds": {
     "A": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
@@ -7052,6 +7052,1097 @@
       },
       "expect": "completeness-backed",
       "note": "a stream checkpoint inside the window covers no grid slot, so it is never asked whether it observed — and must not flip the verdict"
+    },
+    {
+      "kind": "role-admits",
+      "id": "admits-data-observation",
+      "rule": "§12.2 / F.5e.1 — admits(k, c): under a DECLARED role regime a key signs only the classes its role admits. `data` admits observation/derivation/attestation; `issuance` admits attestation only — an issued document ATTESTS to what the publisher observed and never mints the observation.",
+      "genesis": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "roles.example",
+            "ust_id": "ust:20260802.1000",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "genesis"
+          },
+          "time": {
+            "generated_at": "2026-08-02T10:00:00Z",
+            "valid_from": "2026-08-02T10:00:00Z",
+            "valid_to": "2026-08-02T10:00:00Z"
+          },
+          "data": {
+            "genesis": {
+              "kind": "captured",
+              "value": {
+                "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+                "role": "name-binding-root",
+                "cadence": "30",
+                "roles": [
+                  "data",
+                  "issuance"
+                ]
+              }
+            }
+          },
+          "hashes": {
+            "genesis": "sha256:74201efdf0eb5de6c0d455201eadc1d00f4d41a82665209766f75af8949ce783"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "12TMkk2bCCWwSiboXR4zpQpuXS9gAPbt_rFb0OQCrv9Rr4CVrJmkXNr6pNV1hofHxIbGUNi_6hE5gfBwx_5MBw"
+        }
+      },
+      "keylog": [
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "roles.example",
+              "ust_id": "ust:20260802.1001",
+              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+              "class": "key"
+            },
+            "time": {
+              "generated_at": "2026-08-02T10:01:00Z",
+              "valid_from": "2026-08-02T10:01:00Z",
+              "valid_to": "2026-08-02T10:01:00Z"
+            },
+            "data": {
+              "key_op": {
+                "kind": "captured",
+                "value": {
+                  "op": "add",
+                  "pub": "Lk6D_bLYj4jF8D5mPDnqP5x1NjErYqKwmpVxLczxGkA",
+                  "role": "data"
+                }
+              }
+            },
+            "hashes": {
+              "key_op": "sha256:f41cb29ac875f47e369fc5256e95983a76e9c2d2ed01983cc7883d8688ddf6b5"
+            },
+            "provenance": {
+              "prev": "sha256:794ec63d3c4d4a1c594f1fe05a331c53a70b920a0956181492819bd4e08ad2bc"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+            "sig": "_5tljR_SJmgQHvzKPEi-TH9_VC08K68HPpiKAr5E8LZtCPhzzvl4fPh2I6Pl0gD7nQwA3MgR7x4Gt8NlcF01DA"
+          }
+        },
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "roles.example",
+              "ust_id": "ust:20260802.1001",
+              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+              "class": "key"
+            },
+            "time": {
+              "generated_at": "2026-08-02T10:01:00Z",
+              "valid_from": "2026-08-02T10:01:00Z",
+              "valid_to": "2026-08-02T10:01:00Z"
+            },
+            "data": {
+              "key_op": {
+                "kind": "captured",
+                "value": {
+                  "op": "add",
+                  "pub": "F8t5-ytBIPKx7GXkGY1uCLKOgT_rAeSkAIObheGAgM4",
+                  "role": "issuance"
+                }
+              }
+            },
+            "hashes": {
+              "key_op": "sha256:f41d5a8357695db733a9c1affe74a9947578ad511255647ed45d21c466250d4d"
+            },
+            "provenance": {
+              "prev": "sha256:76b4200ace588f1758f6ec44584feb88b0042b85c589e29152947908b49c952e"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+            "sig": "ECob7eewt_AL4JsPYcGJK-VzpHqQIzMOChrDXonCagiFvz7ZGG69SbVCMkS_Bv2bud4u72Ru_cyTpaG21QNYDQ"
+          }
+        }
+      ],
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "roles.example",
+            "ust_id": "ust:20260802.100200",
+            "key_id": "sha256:eea63f9cacad592e3cdafe1cb944faae1bad01f9f4abfcd40d3383ecde93285d",
+            "class": "observation"
+          },
+          "time": {
+            "generated_at": "2026-08-02T10:02:00Z",
+            "valid_from": "2026-08-02T10:02:00Z",
+            "valid_to": "2026-08-02T10:02:00Z"
+          },
+          "data": {
+            "weather": {
+              "kind": "captured",
+              "value": {
+                "x": "1"
+              }
+            }
+          },
+          "hashes": {
+            "weather": "sha256:30769a3f8c70d53e0ba545b4ce08ca15bda1f4447a5d1ad4eb4c219e1cfc3297"
+          },
+          "provenance": {
+            "prev": "sha256:794ec63d3c4d4a1c594f1fe05a331c53a70b920a0956181492819bd4e08ad2bc"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:eea63f9cacad592e3cdafe1cb944faae1bad01f9f4abfcd40d3383ecde93285d",
+          "pub": "Lk6D_bLYj4jF8D5mPDnqP5x1NjErYqKwmpVxLczxGkA",
+          "sig": "5y__wUSAf5-cP6c6oEGNjxAFmJqrwki3hj6V5a9obwA9eLB3jZJSzjTF3MlclYDfDnwh6NwMtl09pL-iNFYHDA"
+        }
+      },
+      "expect": "admitted",
+      "note": "the publisher's stream carries every shape; `data` admits observation"
+    },
+    {
+      "kind": "role-admits",
+      "id": "admits-data-derivation",
+      "rule": "§12.2 / F.5e.1 — admits(k, c): under a DECLARED role regime a key signs only the classes its role admits. `data` admits observation/derivation/attestation; `issuance` admits attestation only — an issued document ATTESTS to what the publisher observed and never mints the observation.",
+      "genesis": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "roles.example",
+            "ust_id": "ust:20260802.1000",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "genesis"
+          },
+          "time": {
+            "generated_at": "2026-08-02T10:00:00Z",
+            "valid_from": "2026-08-02T10:00:00Z",
+            "valid_to": "2026-08-02T10:00:00Z"
+          },
+          "data": {
+            "genesis": {
+              "kind": "captured",
+              "value": {
+                "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+                "role": "name-binding-root",
+                "cadence": "30",
+                "roles": [
+                  "data",
+                  "issuance"
+                ]
+              }
+            }
+          },
+          "hashes": {
+            "genesis": "sha256:74201efdf0eb5de6c0d455201eadc1d00f4d41a82665209766f75af8949ce783"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "12TMkk2bCCWwSiboXR4zpQpuXS9gAPbt_rFb0OQCrv9Rr4CVrJmkXNr6pNV1hofHxIbGUNi_6hE5gfBwx_5MBw"
+        }
+      },
+      "keylog": [
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "roles.example",
+              "ust_id": "ust:20260802.1001",
+              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+              "class": "key"
+            },
+            "time": {
+              "generated_at": "2026-08-02T10:01:00Z",
+              "valid_from": "2026-08-02T10:01:00Z",
+              "valid_to": "2026-08-02T10:01:00Z"
+            },
+            "data": {
+              "key_op": {
+                "kind": "captured",
+                "value": {
+                  "op": "add",
+                  "pub": "Lk6D_bLYj4jF8D5mPDnqP5x1NjErYqKwmpVxLczxGkA",
+                  "role": "data"
+                }
+              }
+            },
+            "hashes": {
+              "key_op": "sha256:f41cb29ac875f47e369fc5256e95983a76e9c2d2ed01983cc7883d8688ddf6b5"
+            },
+            "provenance": {
+              "prev": "sha256:794ec63d3c4d4a1c594f1fe05a331c53a70b920a0956181492819bd4e08ad2bc"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+            "sig": "_5tljR_SJmgQHvzKPEi-TH9_VC08K68HPpiKAr5E8LZtCPhzzvl4fPh2I6Pl0gD7nQwA3MgR7x4Gt8NlcF01DA"
+          }
+        },
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "roles.example",
+              "ust_id": "ust:20260802.1001",
+              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+              "class": "key"
+            },
+            "time": {
+              "generated_at": "2026-08-02T10:01:00Z",
+              "valid_from": "2026-08-02T10:01:00Z",
+              "valid_to": "2026-08-02T10:01:00Z"
+            },
+            "data": {
+              "key_op": {
+                "kind": "captured",
+                "value": {
+                  "op": "add",
+                  "pub": "F8t5-ytBIPKx7GXkGY1uCLKOgT_rAeSkAIObheGAgM4",
+                  "role": "issuance"
+                }
+              }
+            },
+            "hashes": {
+              "key_op": "sha256:f41d5a8357695db733a9c1affe74a9947578ad511255647ed45d21c466250d4d"
+            },
+            "provenance": {
+              "prev": "sha256:76b4200ace588f1758f6ec44584feb88b0042b85c589e29152947908b49c952e"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+            "sig": "ECob7eewt_AL4JsPYcGJK-VzpHqQIzMOChrDXonCagiFvz7ZGG69SbVCMkS_Bv2bud4u72Ru_cyTpaG21QNYDQ"
+          }
+        }
+      ],
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "roles.example",
+            "ust_id": "ust:20260802.100200",
+            "key_id": "sha256:eea63f9cacad592e3cdafe1cb944faae1bad01f9f4abfcd40d3383ecde93285d",
+            "class": "derivation"
+          },
+          "time": {
+            "generated_at": "2026-08-02T10:02:00Z",
+            "valid_from": "2026-08-02T10:02:00Z",
+            "valid_to": "2026-08-02T10:02:00Z"
+          },
+          "data": {
+            "weather": {
+              "kind": "computed",
+              "value": {
+                "x": "1"
+              }
+            }
+          },
+          "hashes": {
+            "weather": "sha256:30769a3f8c70d53e0ba545b4ce08ca15bda1f4447a5d1ad4eb4c219e1cfc3297"
+          },
+          "provenance": {
+            "prev": "sha256:794ec63d3c4d4a1c594f1fe05a331c53a70b920a0956181492819bd4e08ad2bc",
+            "based_on": [
+              {
+                "hash": "sha256:794ec63d3c4d4a1c594f1fe05a331c53a70b920a0956181492819bd4e08ad2bc"
+              }
+            ],
+            "seed": "sha256:2016c0ff4ebffe72f801947ada6b175fa059e3ca849a67c24ff293a1668dec91"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:eea63f9cacad592e3cdafe1cb944faae1bad01f9f4abfcd40d3383ecde93285d",
+          "pub": "Lk6D_bLYj4jF8D5mPDnqP5x1NjErYqKwmpVxLczxGkA",
+          "sig": "UMdmTSzh7leW8MoKTOJtN7mE2KUn2-3UvqWyB8sbZsdqhY2wY2t5afZQVKz8c4p1uJ0Q5eDj9ue3dwna2on2Dw"
+        }
+      },
+      "expect": "admitted",
+      "note": "the publisher's stream carries every shape; `data` admits derivation"
+    },
+    {
+      "kind": "role-admits",
+      "id": "admits-data-attestation",
+      "rule": "§12.2 / F.5e.1 — admits(k, c): under a DECLARED role regime a key signs only the classes its role admits. `data` admits observation/derivation/attestation; `issuance` admits attestation only — an issued document ATTESTS to what the publisher observed and never mints the observation.",
+      "genesis": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "roles.example",
+            "ust_id": "ust:20260802.1000",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "genesis"
+          },
+          "time": {
+            "generated_at": "2026-08-02T10:00:00Z",
+            "valid_from": "2026-08-02T10:00:00Z",
+            "valid_to": "2026-08-02T10:00:00Z"
+          },
+          "data": {
+            "genesis": {
+              "kind": "captured",
+              "value": {
+                "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+                "role": "name-binding-root",
+                "cadence": "30",
+                "roles": [
+                  "data",
+                  "issuance"
+                ]
+              }
+            }
+          },
+          "hashes": {
+            "genesis": "sha256:74201efdf0eb5de6c0d455201eadc1d00f4d41a82665209766f75af8949ce783"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "12TMkk2bCCWwSiboXR4zpQpuXS9gAPbt_rFb0OQCrv9Rr4CVrJmkXNr6pNV1hofHxIbGUNi_6hE5gfBwx_5MBw"
+        }
+      },
+      "keylog": [
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "roles.example",
+              "ust_id": "ust:20260802.1001",
+              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+              "class": "key"
+            },
+            "time": {
+              "generated_at": "2026-08-02T10:01:00Z",
+              "valid_from": "2026-08-02T10:01:00Z",
+              "valid_to": "2026-08-02T10:01:00Z"
+            },
+            "data": {
+              "key_op": {
+                "kind": "captured",
+                "value": {
+                  "op": "add",
+                  "pub": "Lk6D_bLYj4jF8D5mPDnqP5x1NjErYqKwmpVxLczxGkA",
+                  "role": "data"
+                }
+              }
+            },
+            "hashes": {
+              "key_op": "sha256:f41cb29ac875f47e369fc5256e95983a76e9c2d2ed01983cc7883d8688ddf6b5"
+            },
+            "provenance": {
+              "prev": "sha256:794ec63d3c4d4a1c594f1fe05a331c53a70b920a0956181492819bd4e08ad2bc"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+            "sig": "_5tljR_SJmgQHvzKPEi-TH9_VC08K68HPpiKAr5E8LZtCPhzzvl4fPh2I6Pl0gD7nQwA3MgR7x4Gt8NlcF01DA"
+          }
+        },
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "roles.example",
+              "ust_id": "ust:20260802.1001",
+              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+              "class": "key"
+            },
+            "time": {
+              "generated_at": "2026-08-02T10:01:00Z",
+              "valid_from": "2026-08-02T10:01:00Z",
+              "valid_to": "2026-08-02T10:01:00Z"
+            },
+            "data": {
+              "key_op": {
+                "kind": "captured",
+                "value": {
+                  "op": "add",
+                  "pub": "F8t5-ytBIPKx7GXkGY1uCLKOgT_rAeSkAIObheGAgM4",
+                  "role": "issuance"
+                }
+              }
+            },
+            "hashes": {
+              "key_op": "sha256:f41d5a8357695db733a9c1affe74a9947578ad511255647ed45d21c466250d4d"
+            },
+            "provenance": {
+              "prev": "sha256:76b4200ace588f1758f6ec44584feb88b0042b85c589e29152947908b49c952e"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+            "sig": "ECob7eewt_AL4JsPYcGJK-VzpHqQIzMOChrDXonCagiFvz7ZGG69SbVCMkS_Bv2bud4u72Ru_cyTpaG21QNYDQ"
+          }
+        }
+      ],
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "roles.example",
+            "ust_id": "ust:20260802.100200",
+            "key_id": "sha256:eea63f9cacad592e3cdafe1cb944faae1bad01f9f4abfcd40d3383ecde93285d",
+            "class": "attestation"
+          },
+          "time": {
+            "generated_at": "2026-08-02T10:02:00Z",
+            "valid_from": "2026-08-02T10:02:00Z",
+            "valid_to": "2026-08-02T10:02:00Z"
+          },
+          "data": {
+            "checkpoint": {
+              "kind": "computed",
+              "value": {
+                "head": "sha256:794ec63d3c4d4a1c594f1fe05a331c53a70b920a0956181492819bd4e08ad2bc",
+                "frame_count": "1"
+              }
+            }
+          },
+          "hashes": {
+            "checkpoint": "sha256:f0ddb018ede206bd6240fe441bb08e876121605bbddfc6e8261addc3dc10c99c"
+          },
+          "provenance": {
+            "prev": "sha256:794ec63d3c4d4a1c594f1fe05a331c53a70b920a0956181492819bd4e08ad2bc"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:eea63f9cacad592e3cdafe1cb944faae1bad01f9f4abfcd40d3383ecde93285d",
+          "pub": "Lk6D_bLYj4jF8D5mPDnqP5x1NjErYqKwmpVxLczxGkA",
+          "sig": "g_zUgecMOjksU2kfa_Ia2CBDWs0aEqpUiYQtT47k1f7VocFAWjtnJ-8uECFbk6PAHxm1c3La_z8cGeajJVviCQ"
+        }
+      },
+      "expect": "admitted",
+      "note": "the publisher's stream carries every shape; `data` admits attestation"
+    },
+    {
+      "kind": "role-admits",
+      "id": "admits-issuance-attestation",
+      "rule": "§12.2 / F.5e.1 — admits(k, c): under a DECLARED role regime a key signs only the classes its role admits. `data` admits observation/derivation/attestation; `issuance` admits attestation only — an issued document ATTESTS to what the publisher observed and never mints the observation.",
+      "genesis": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "roles.example",
+            "ust_id": "ust:20260802.1000",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "genesis"
+          },
+          "time": {
+            "generated_at": "2026-08-02T10:00:00Z",
+            "valid_from": "2026-08-02T10:00:00Z",
+            "valid_to": "2026-08-02T10:00:00Z"
+          },
+          "data": {
+            "genesis": {
+              "kind": "captured",
+              "value": {
+                "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+                "role": "name-binding-root",
+                "cadence": "30",
+                "roles": [
+                  "data",
+                  "issuance"
+                ]
+              }
+            }
+          },
+          "hashes": {
+            "genesis": "sha256:74201efdf0eb5de6c0d455201eadc1d00f4d41a82665209766f75af8949ce783"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "12TMkk2bCCWwSiboXR4zpQpuXS9gAPbt_rFb0OQCrv9Rr4CVrJmkXNr6pNV1hofHxIbGUNi_6hE5gfBwx_5MBw"
+        }
+      },
+      "keylog": [
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "roles.example",
+              "ust_id": "ust:20260802.1001",
+              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+              "class": "key"
+            },
+            "time": {
+              "generated_at": "2026-08-02T10:01:00Z",
+              "valid_from": "2026-08-02T10:01:00Z",
+              "valid_to": "2026-08-02T10:01:00Z"
+            },
+            "data": {
+              "key_op": {
+                "kind": "captured",
+                "value": {
+                  "op": "add",
+                  "pub": "Lk6D_bLYj4jF8D5mPDnqP5x1NjErYqKwmpVxLczxGkA",
+                  "role": "data"
+                }
+              }
+            },
+            "hashes": {
+              "key_op": "sha256:f41cb29ac875f47e369fc5256e95983a76e9c2d2ed01983cc7883d8688ddf6b5"
+            },
+            "provenance": {
+              "prev": "sha256:794ec63d3c4d4a1c594f1fe05a331c53a70b920a0956181492819bd4e08ad2bc"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+            "sig": "_5tljR_SJmgQHvzKPEi-TH9_VC08K68HPpiKAr5E8LZtCPhzzvl4fPh2I6Pl0gD7nQwA3MgR7x4Gt8NlcF01DA"
+          }
+        },
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "roles.example",
+              "ust_id": "ust:20260802.1001",
+              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+              "class": "key"
+            },
+            "time": {
+              "generated_at": "2026-08-02T10:01:00Z",
+              "valid_from": "2026-08-02T10:01:00Z",
+              "valid_to": "2026-08-02T10:01:00Z"
+            },
+            "data": {
+              "key_op": {
+                "kind": "captured",
+                "value": {
+                  "op": "add",
+                  "pub": "F8t5-ytBIPKx7GXkGY1uCLKOgT_rAeSkAIObheGAgM4",
+                  "role": "issuance"
+                }
+              }
+            },
+            "hashes": {
+              "key_op": "sha256:f41d5a8357695db733a9c1affe74a9947578ad511255647ed45d21c466250d4d"
+            },
+            "provenance": {
+              "prev": "sha256:76b4200ace588f1758f6ec44584feb88b0042b85c589e29152947908b49c952e"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+            "sig": "ECob7eewt_AL4JsPYcGJK-VzpHqQIzMOChrDXonCagiFvz7ZGG69SbVCMkS_Bv2bud4u72Ru_cyTpaG21QNYDQ"
+          }
+        }
+      ],
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "roles.example",
+            "ust_id": "ust:20260802.100200",
+            "key_id": "sha256:33e796a1b3ad6f82aa76323709743a4697d8d8fa8681e70419125efc258635cf",
+            "class": "attestation"
+          },
+          "time": {
+            "generated_at": "2026-08-02T10:02:00Z",
+            "valid_from": "2026-08-02T10:02:00Z",
+            "valid_to": "2026-08-02T10:02:00Z"
+          },
+          "data": {
+            "checkpoint": {
+              "kind": "computed",
+              "value": {
+                "head": "sha256:794ec63d3c4d4a1c594f1fe05a331c53a70b920a0956181492819bd4e08ad2bc",
+                "frame_count": "1"
+              }
+            }
+          },
+          "hashes": {
+            "checkpoint": "sha256:f0ddb018ede206bd6240fe441bb08e876121605bbddfc6e8261addc3dc10c99c"
+          },
+          "provenance": {
+            "prev": "sha256:794ec63d3c4d4a1c594f1fe05a331c53a70b920a0956181492819bd4e08ad2bc"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:33e796a1b3ad6f82aa76323709743a4697d8d8fa8681e70419125efc258635cf",
+          "pub": "F8t5-ytBIPKx7GXkGY1uCLKOgT_rAeSkAIObheGAgM4",
+          "sig": "XBbATyIhLjkzB2PmAG4qLtWZOnHztMY0ctYcNnXfxrouhimFNOYTddtpXj0exZmC3qridQktrMP-GXhe1rcADQ"
+        }
+      },
+      "expect": "admitted",
+      "note": "a receipt is an attestation — this is what the issuance role is FOR"
+    },
+    {
+      "kind": "role-admits",
+      "id": "admits-issuance-observation-refused",
+      "rule": "§12.2 / F.5e.1 — admits(k, c): under a DECLARED role regime a key signs only the classes its role admits. `data` admits observation/derivation/attestation; `issuance` admits attestation only — an issued document ATTESTS to what the publisher observed and never mints the observation.",
+      "genesis": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "roles.example",
+            "ust_id": "ust:20260802.1000",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "genesis"
+          },
+          "time": {
+            "generated_at": "2026-08-02T10:00:00Z",
+            "valid_from": "2026-08-02T10:00:00Z",
+            "valid_to": "2026-08-02T10:00:00Z"
+          },
+          "data": {
+            "genesis": {
+              "kind": "captured",
+              "value": {
+                "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+                "role": "name-binding-root",
+                "cadence": "30",
+                "roles": [
+                  "data",
+                  "issuance"
+                ]
+              }
+            }
+          },
+          "hashes": {
+            "genesis": "sha256:74201efdf0eb5de6c0d455201eadc1d00f4d41a82665209766f75af8949ce783"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "12TMkk2bCCWwSiboXR4zpQpuXS9gAPbt_rFb0OQCrv9Rr4CVrJmkXNr6pNV1hofHxIbGUNi_6hE5gfBwx_5MBw"
+        }
+      },
+      "keylog": [
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "roles.example",
+              "ust_id": "ust:20260802.1001",
+              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+              "class": "key"
+            },
+            "time": {
+              "generated_at": "2026-08-02T10:01:00Z",
+              "valid_from": "2026-08-02T10:01:00Z",
+              "valid_to": "2026-08-02T10:01:00Z"
+            },
+            "data": {
+              "key_op": {
+                "kind": "captured",
+                "value": {
+                  "op": "add",
+                  "pub": "Lk6D_bLYj4jF8D5mPDnqP5x1NjErYqKwmpVxLczxGkA",
+                  "role": "data"
+                }
+              }
+            },
+            "hashes": {
+              "key_op": "sha256:f41cb29ac875f47e369fc5256e95983a76e9c2d2ed01983cc7883d8688ddf6b5"
+            },
+            "provenance": {
+              "prev": "sha256:794ec63d3c4d4a1c594f1fe05a331c53a70b920a0956181492819bd4e08ad2bc"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+            "sig": "_5tljR_SJmgQHvzKPEi-TH9_VC08K68HPpiKAr5E8LZtCPhzzvl4fPh2I6Pl0gD7nQwA3MgR7x4Gt8NlcF01DA"
+          }
+        },
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "roles.example",
+              "ust_id": "ust:20260802.1001",
+              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+              "class": "key"
+            },
+            "time": {
+              "generated_at": "2026-08-02T10:01:00Z",
+              "valid_from": "2026-08-02T10:01:00Z",
+              "valid_to": "2026-08-02T10:01:00Z"
+            },
+            "data": {
+              "key_op": {
+                "kind": "captured",
+                "value": {
+                  "op": "add",
+                  "pub": "F8t5-ytBIPKx7GXkGY1uCLKOgT_rAeSkAIObheGAgM4",
+                  "role": "issuance"
+                }
+              }
+            },
+            "hashes": {
+              "key_op": "sha256:f41d5a8357695db733a9c1affe74a9947578ad511255647ed45d21c466250d4d"
+            },
+            "provenance": {
+              "prev": "sha256:76b4200ace588f1758f6ec44584feb88b0042b85c589e29152947908b49c952e"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+            "sig": "ECob7eewt_AL4JsPYcGJK-VzpHqQIzMOChrDXonCagiFvz7ZGG69SbVCMkS_Bv2bud4u72Ru_cyTpaG21QNYDQ"
+          }
+        }
+      ],
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "roles.example",
+            "ust_id": "ust:20260802.100200",
+            "key_id": "sha256:33e796a1b3ad6f82aa76323709743a4697d8d8fa8681e70419125efc258635cf",
+            "class": "observation"
+          },
+          "time": {
+            "generated_at": "2026-08-02T10:02:00Z",
+            "valid_from": "2026-08-02T10:02:00Z",
+            "valid_to": "2026-08-02T10:02:00Z"
+          },
+          "data": {
+            "weather": {
+              "kind": "captured",
+              "value": {
+                "x": "1"
+              }
+            }
+          },
+          "hashes": {
+            "weather": "sha256:30769a3f8c70d53e0ba545b4ce08ca15bda1f4447a5d1ad4eb4c219e1cfc3297"
+          },
+          "provenance": {
+            "prev": "sha256:794ec63d3c4d4a1c594f1fe05a331c53a70b920a0956181492819bd4e08ad2bc"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:33e796a1b3ad6f82aa76323709743a4697d8d8fa8681e70419125efc258635cf",
+          "pub": "F8t5-ytBIPKx7GXkGY1uCLKOgT_rAeSkAIObheGAgM4",
+          "sig": "zryM8AWERxw7TjylDdbXycQvoflQa3jK9tUYc70ylfg5pVi8s8h7FrKIUCnV2gqunQYG7uNlFio9RQHPMWgODQ"
+        }
+      },
+      "expect": "E-KEY",
+      "note": "a leaked issuance key must not be able to MINT a primary observation — refusal, never a downgrade to self-asserted"
+    },
+    {
+      "kind": "role-admits",
+      "id": "admits-issuance-derivation-refused",
+      "rule": "§12.2 / F.5e.1 — admits(k, c): under a DECLARED role regime a key signs only the classes its role admits. `data` admits observation/derivation/attestation; `issuance` admits attestation only — an issued document ATTESTS to what the publisher observed and never mints the observation.",
+      "genesis": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "roles.example",
+            "ust_id": "ust:20260802.1000",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "genesis"
+          },
+          "time": {
+            "generated_at": "2026-08-02T10:00:00Z",
+            "valid_from": "2026-08-02T10:00:00Z",
+            "valid_to": "2026-08-02T10:00:00Z"
+          },
+          "data": {
+            "genesis": {
+              "kind": "captured",
+              "value": {
+                "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+                "role": "name-binding-root",
+                "cadence": "30",
+                "roles": [
+                  "data",
+                  "issuance"
+                ]
+              }
+            }
+          },
+          "hashes": {
+            "genesis": "sha256:74201efdf0eb5de6c0d455201eadc1d00f4d41a82665209766f75af8949ce783"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "12TMkk2bCCWwSiboXR4zpQpuXS9gAPbt_rFb0OQCrv9Rr4CVrJmkXNr6pNV1hofHxIbGUNi_6hE5gfBwx_5MBw"
+        }
+      },
+      "keylog": [
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "roles.example",
+              "ust_id": "ust:20260802.1001",
+              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+              "class": "key"
+            },
+            "time": {
+              "generated_at": "2026-08-02T10:01:00Z",
+              "valid_from": "2026-08-02T10:01:00Z",
+              "valid_to": "2026-08-02T10:01:00Z"
+            },
+            "data": {
+              "key_op": {
+                "kind": "captured",
+                "value": {
+                  "op": "add",
+                  "pub": "Lk6D_bLYj4jF8D5mPDnqP5x1NjErYqKwmpVxLczxGkA",
+                  "role": "data"
+                }
+              }
+            },
+            "hashes": {
+              "key_op": "sha256:f41cb29ac875f47e369fc5256e95983a76e9c2d2ed01983cc7883d8688ddf6b5"
+            },
+            "provenance": {
+              "prev": "sha256:794ec63d3c4d4a1c594f1fe05a331c53a70b920a0956181492819bd4e08ad2bc"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+            "sig": "_5tljR_SJmgQHvzKPEi-TH9_VC08K68HPpiKAr5E8LZtCPhzzvl4fPh2I6Pl0gD7nQwA3MgR7x4Gt8NlcF01DA"
+          }
+        },
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "roles.example",
+              "ust_id": "ust:20260802.1001",
+              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+              "class": "key"
+            },
+            "time": {
+              "generated_at": "2026-08-02T10:01:00Z",
+              "valid_from": "2026-08-02T10:01:00Z",
+              "valid_to": "2026-08-02T10:01:00Z"
+            },
+            "data": {
+              "key_op": {
+                "kind": "captured",
+                "value": {
+                  "op": "add",
+                  "pub": "F8t5-ytBIPKx7GXkGY1uCLKOgT_rAeSkAIObheGAgM4",
+                  "role": "issuance"
+                }
+              }
+            },
+            "hashes": {
+              "key_op": "sha256:f41d5a8357695db733a9c1affe74a9947578ad511255647ed45d21c466250d4d"
+            },
+            "provenance": {
+              "prev": "sha256:76b4200ace588f1758f6ec44584feb88b0042b85c589e29152947908b49c952e"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+            "sig": "ECob7eewt_AL4JsPYcGJK-VzpHqQIzMOChrDXonCagiFvz7ZGG69SbVCMkS_Bv2bud4u72Ru_cyTpaG21QNYDQ"
+          }
+        }
+      ],
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "roles.example",
+            "ust_id": "ust:20260802.100200",
+            "key_id": "sha256:33e796a1b3ad6f82aa76323709743a4697d8d8fa8681e70419125efc258635cf",
+            "class": "derivation"
+          },
+          "time": {
+            "generated_at": "2026-08-02T10:02:00Z",
+            "valid_from": "2026-08-02T10:02:00Z",
+            "valid_to": "2026-08-02T10:02:00Z"
+          },
+          "data": {
+            "weather": {
+              "kind": "computed",
+              "value": {
+                "x": "1"
+              }
+            }
+          },
+          "hashes": {
+            "weather": "sha256:30769a3f8c70d53e0ba545b4ce08ca15bda1f4447a5d1ad4eb4c219e1cfc3297"
+          },
+          "provenance": {
+            "prev": "sha256:794ec63d3c4d4a1c594f1fe05a331c53a70b920a0956181492819bd4e08ad2bc",
+            "based_on": [
+              {
+                "hash": "sha256:794ec63d3c4d4a1c594f1fe05a331c53a70b920a0956181492819bd4e08ad2bc"
+              }
+            ],
+            "seed": "sha256:2016c0ff4ebffe72f801947ada6b175fa059e3ca849a67c24ff293a1668dec91"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:33e796a1b3ad6f82aa76323709743a4697d8d8fa8681e70419125efc258635cf",
+          "pub": "F8t5-ytBIPKx7GXkGY1uCLKOgT_rAeSkAIObheGAgM4",
+          "sig": "wNhlFjov7_dtwXLVKWbO_jkGhT0aVxX_QCjhYenkF-jaSozRjtrz4OjL-Df5_GZVYy91gBdpWzUDPTBQlOLEDg"
+        }
+      },
+      "expect": "E-KEY",
+      "note": "a leaked issuance key must not be able to MINT a primary derivation — refusal, never a downgrade to self-asserted"
+    },
+    {
+      "kind": "role-admits",
+      "id": "admits-undeclared-regime-unaffected",
+      "rule": "§12.2 / F.5e.1 — admits(k, c): under a DECLARED role regime a key signs only the classes its role admits. `data` admits observation/derivation/attestation; `issuance` admits attestation only — an issued document ATTESTS to what the publisher observed and never mints the observation.",
+      "genesis": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "roles.example",
+            "ust_id": "ust:20260802.1000",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "genesis"
+          },
+          "time": {
+            "generated_at": "2026-08-02T10:00:00Z",
+            "valid_from": "2026-08-02T10:00:00Z",
+            "valid_to": "2026-08-02T10:00:00Z"
+          },
+          "data": {
+            "genesis": {
+              "kind": "captured",
+              "value": {
+                "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+                "role": "name-binding-root",
+                "cadence": "30"
+              }
+            }
+          },
+          "hashes": {
+            "genesis": "sha256:92c7f3127e107696f99bcc43d14d1b883082c8aca687bc3a96df1cde1bb1a955"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "k10ICL7tyMG7KF0Mr8rNQJ2Xznt-tQdJSLyLLSqrLvBMbECIcjbnqdm-3ZOsn5fTc9IqfmfgmCL_GcIkADF7CA"
+        }
+      },
+      "keylog": [
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "roles.example",
+              "ust_id": "ust:20260802.1001",
+              "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+              "class": "key"
+            },
+            "time": {
+              "generated_at": "2026-08-02T10:01:00Z",
+              "valid_from": "2026-08-02T10:01:00Z",
+              "valid_to": "2026-08-02T10:01:00Z"
+            },
+            "data": {
+              "key_op": {
+                "kind": "captured",
+                "value": {
+                  "op": "add",
+                  "pub": "Lk6D_bLYj4jF8D5mPDnqP5x1NjErYqKwmpVxLczxGkA"
+                }
+              }
+            },
+            "hashes": {
+              "key_op": "sha256:0a6f335d6bd0139426bc8911bd1843727bfef9a9032f837efbf8789099b18b83"
+            },
+            "provenance": {
+              "prev": "sha256:5c227a1c7a70d4aae25800f10b8bddca4ad7353c0953890b5dcd3129814ab865"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+            "sig": "QDAOWSz3vshoU5WJhZo3QJccgLjVtSQWLc3xW72XaVNeqPYuLjFt_QIUZ7OR_0EeLH2vN1JCqMGjnsGBoqe_BQ"
+          }
+        }
+      ],
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "roles.example",
+            "ust_id": "ust:20260802.100200",
+            "key_id": "sha256:eea63f9cacad592e3cdafe1cb944faae1bad01f9f4abfcd40d3383ecde93285d",
+            "class": "observation"
+          },
+          "time": {
+            "generated_at": "2026-08-02T10:02:00Z",
+            "valid_from": "2026-08-02T10:02:00Z",
+            "valid_to": "2026-08-02T10:02:00Z"
+          },
+          "data": {
+            "weather": {
+              "kind": "captured",
+              "value": {
+                "x": "1"
+              }
+            }
+          },
+          "hashes": {
+            "weather": "sha256:30769a3f8c70d53e0ba545b4ce08ca15bda1f4447a5d1ad4eb4c219e1cfc3297"
+          },
+          "provenance": {
+            "prev": "sha256:5c227a1c7a70d4aae25800f10b8bddca4ad7353c0953890b5dcd3129814ab865"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:eea63f9cacad592e3cdafe1cb944faae1bad01f9f4abfcd40d3383ecde93285d",
+          "pub": "Lk6D_bLYj4jF8D5mPDnqP5x1NjErYqKwmpVxLczxGkA",
+          "sig": "a6h0XLKFos13RjRr7rXqxV-RxaNH4Vg8oFkbnDz8qPDlDngImhUJSb3eXIu3RFHk2ZlHGBw8D4fTMNBthrZXCQ"
+        }
+      },
+      "expect": "admitted",
+      "note": "no `roles` in the genesis ⇒ the undifferentiated key set ⇒ no class is refused for a role reason"
     }
   ]
 }
