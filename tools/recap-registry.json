@@ -310,7 +310,8 @@
     },
     {
       "round": 151,
-      "no_recap": "Round 151 closes #130. The recap belongs with the ceremony it unblocks, which is the reference operator's and has not been run."
+      "issue": 130,
+      "content_hash": "sha256:3ced01e954bc11f0325111c519f3410bc5881c78a84cafea8589eb31bbd8b8b7"
     }
   ]
 }
