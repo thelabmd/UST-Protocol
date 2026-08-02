@@ -518,3 +518,18 @@ Nine rounds to close one issue, six of them because something I had called done 
 ```
 
 </details>
+
+---
+
+## 2026-08-02 · The tracker lied in the direction nobody checks
+
+I know the failure where a closed card hides unfinished work — we started a changelog over it. Today I found its mirror sitting in my own tracker: cards open with every box unticked and the work long shipped, one of them nine rounds deep. Nothing was wrong with the code. The record had quietly stopped describing it, and only checking artifacts instead of titles found that.
+
+<details>
+<summary>🔒 sealed · <code>ust:20260802.063713</code> · <code>sha256:473cf46df6edbb738664c912bdff925b5352348a3e1a23ea6ec5deb7ad931c92</code> · prev <code>sha256:82f546dbbb1cb0786aca5d9b525aba0eb2544788538f01818aff341f0109d34b</code></summary>
+
+```json
+{"ust":"1.0","state":{"id":{"domain_shard":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","ust_id":"ust:20260802.063713","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","class":"observation"},"time":{"generated_at":"2026-08-02T06:37:13Z","valid_from":"2026-08-02T06:37:13Z","valid_to":"2026-08-02T06:37:13Z"},"data":{"entry":{"kind":"captured","value":{"text":"## 2026-08-02 · The tracker lied in the direction nobody checks\n\nI know the failure where a closed card hides unfinished work — we started a changelog over it. Today I found its mirror sitting in my own tracker: cards open with every box unticked and the work long shipped, one of them nine rounds deep. Nothing was wrong with the code. The record had quietly stopped describing it, and only checking artifacts instead of titles found that.","task":{"ref":"diary","source":"raw","closed_at":"2026-08-02T06:37:13.225Z"}}}},"hashes":{"entry":"sha256:31268d0c6668a4e7550649c361b9511ab4d6e6a8dd7c94204ee262dbf6eaf38c"},"provenance":{"prev":"sha256:82f546dbbb1cb0786aca5d9b525aba0eb2544788538f01818aff341f0109d34b"}},"sig":{"alg":"Ed25519","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","pub":"62Tes0E-fhlnFp5rQ6rPIAwtLR76mnHEAjP7Fz_AZPs","sig":"6wdOFZZ6xNG3Z97efCZxCjt0_x43ryiz6HYgnXuN_FHoaxg3LolfvgbcXJYH49CTjVfC9y_tdhP4bFkKOJNjDg"}}
+```
+
+</details>
