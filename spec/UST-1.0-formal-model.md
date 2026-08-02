@@ -2724,6 +2724,39 @@ the same fail-closed shape the `absence` reason vocabulary already uses.
 
 **Binding: realized** — *"F.5v a slot covered ONLY by a signed gap record is BLIND"* · *"F.5v a stream checkpoint inside the window is not asked whether it observed"* · *"noevent-gap-record-is-blind"*.
 
+## F.5w A predicate has a DOMAIN on which it is non-trivial, and key-form is where BINDING is not one (#119, carried up from round 145)
+
+The identity MODES are not two spellings of one thing. §3.1 fixes `key-form ⇒ domain_shard = key_id`, and
+`key_id = H("ust:keylog", pub)`, so the name of a key-form publisher IS its key.
+
+**Theorem F.5w (binding is vacuous in key-form).** The impersonation guard on a stream is
+`Bound(f) ≡ [ K_A(f.state.id.key_id) = f.sig.pub ]`, where `K_A` is the key set resolved from the authority
+named by `domain_shard`. In key-form that authority is `key_id` itself, so `K_A = { key_id ↦ pub }` is the
+frame's own key and `Bound(f)` reduces to `pub = pub`. The predicate is therefore an IDENTITY on the key-form
+sub-domain: it cannot distinguish any two inputs, and it cannot fail. ∎
+
+*Corollary (a green test drawn only from key-form asserts nothing about binding).* Vacuity here is not weakness
+but total absence of discrimination, so a test suite restricted to key-form documents cannot detect the removal
+of the guard, its inversion, or its complete absence. MEASURED (#119, 2026-08-02): every hand-written stream
+case in the clean-room parity battery was key-form, the clean-room verifier had NO key binding at all, and an
+impostor's frames chained onto a VICTIM's genesis were graded a `complete` stream under the victim's name.
+The battery was green throughout, and honest — it never asked a question that has an answer.
+
+*Corollary (the general shape, of which this is one instance).* For any verification predicate `P`, let
+`dom(P)` be the inputs on which `P` is not constant. A conformance set `S` with `S ∩ dom(P) = ∅` reports the
+same verdict whether `P` is implemented, mis-implemented or missing. Coverage must therefore be argued against
+`dom(P)`, not against the count of cases: `|S|` is not evidence. The sibling failures of the same day were the
+same statement at other layers — a gate that names an INSTANCE of a set, a parity battery that samples a
+population — and this one is the sharpest, because here the untested region is defined by a MODE the protocol
+itself makes trivially satisfying.
+
+*Corollary (and it is why key-form is `self-asserted`, not merely weak).* A consumer that verifies a key-form
+stream and observes that every frame's key is bound has learned NOTHING it did not already hold: it has
+confirmed an equality it supplied. This is the same reason F.5a.1 keeps independence consumer-owned — a
+property computed from the claimant's own bytes is not evidence about the claimant.
+
+**Binding: realized** — *"F.5w key-form: an impostor is caught by the NAME, never by the binding guard"* · *"F.5w name-form: the SAME impostor keeps the victim name, reaches the binding guard and is refused BY IT"*. The two checks are the theorem made executable: the identical attack is built in both modes and the verdict names WHICH guard answered. Beyond them the realization is the parity gate's population change: the clean-room verifiers are now driven by the CORPUS, whose stream vectors are NAME-form, so `dom(Bound)` is entered by construction rather than by someone remembering to enter it.
+
 ## F.6 Composition — the event algebra
 
 An **anchored existence-and-commitment claim** is an event `A ∈ Fₜ`; an UNANCHORED signed claim is a document

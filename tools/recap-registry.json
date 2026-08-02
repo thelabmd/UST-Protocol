@@ -291,6 +291,10 @@
     {
       "round": 146,
       "no_recap": "Round 146 closes a defect found while preparing #115 and does not close #115 itself: the engine still prints no gap record. The recap belongs to the round where the reference operator publishes one and a range verifies with the hole NAMED."
+    },
+    {
+      "round": 147,
+      "no_recap": "Round 147 closes an upward gap in round 145 rather than opening work: it states in the model why a green battery proved nothing. No issue changes state."
     }
   ]
 }

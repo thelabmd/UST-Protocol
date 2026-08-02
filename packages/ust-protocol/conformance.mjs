@@ -2645,6 +2645,24 @@ console.log('\n═════════════════════�
   const cpInWindow = [...observedFrames, { state: { id: { ust_id: 'ust:20260628.115', class: 'attestation' }, data: { checkpoint: { kind: 'computed', value: { head: 'sha256:' + '11'.repeat(32), frame_count: '2' } } } } }];
   check('F.5v a stream checkpoint inside the window is not asked whether it observed — it covers no grid slot',
     P.noEventBacking(window, { complete: 'complete', interval: cover }, cpInWindow) === 'completeness-backed');
+  // F.5w — the binding predicate is an IDENTITY on key-form, so the two modes are not two spellings. Executable
+  // form of the theorem: build the SAME impersonation attempt in both modes and show WHICH guard answers.
+  // In key-form the impostor cannot even pose — changing the key changes the NAME — so it is refused by the
+  // domain equality and the binding guard is never reached; a suite living only here proves nothing about it.
+  // In name-form the impostor keeps the victim's name, reaches the binding guard, and is refused BY IT.
+  {
+    const VK = kp(V.seeds.A), X = kp(V.seeds.B);              // victim and impostor
+    const chain = (dom, K, prev) => P.seal(P.buildState({ domain_shard: dom, ust_id: 'ust:20260628.1601', key_id: K.key_id, class: 'observation' },
+      T, { r: { kind: 'captured', value: { x: '1' } } }, { prev }), K.priv, K.pubB64);
+    const gv = P.seal(P.buildGenesis({ domain_shard: VK.key_id, ust_id: 'ust:20260628.1600', key_id: VK.key_id }, T, VK.pubB64, undefined, undefined, 30), VK.priv, VK.pubB64);
+    const keyFormImpostor = P.verifyStream([chain(X.key_id, X, P.contentHash(gv))], { genesis: gv, cadenceLog: [] });
+    check('F.5w key-form: an impostor is caught by the NAME, never by the binding guard — so binding is vacuous here',
+      keyFormImpostor.error === 'E-AUTHORITY' && /domain_shard/.test(String(keyFormImpostor.detail)));
+    const gn = P.seal(P.buildGenesis({ domain_shard: 'victim.example', ust_id: 'ust:20260628.1600', key_id: VK.key_id }, T, VK.pubB64, undefined, undefined, 30), VK.priv, VK.pubB64);
+    const nameFormImpostor = P.verifyStream([chain('victim.example', X, P.contentHash(gn))], { genesis: gn, cadenceLog: [] });
+    check('F.5w name-form: the SAME impostor keeps the victim name, reaches the binding guard and is refused BY IT (dom(Bound) is non-empty only here)',
+      nameFormImpostor.error === 'E-AUTHORITY' && /key not bound/.test(String(nameFormImpostor.detail)));
+  }
   check('#39 complete but NO frames ⇒ observation-unchecked (cannot confirm observation)', P.noEventBacking(window, { complete: 'complete', interval: cover }) === 'observation-unchecked');
   check('#39 chain-consistent covering interval ⇒ no-deletion-only (omission still possible)', P.noEventBacking(window, { complete: 'chain-consistent', interval: cover }, observedFrames) === 'no-deletion-only');
   check('#39 provisional stream ⇒ publisher-asserted', P.noEventBacking(window, { complete: 'provisional', interval: cover }, observedFrames) === 'publisher-asserted');

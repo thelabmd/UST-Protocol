@@ -1012,7 +1012,7 @@
     {
       "round": 145,
       "math": {
-        "excluded": "No new rule. All three defects are EXISTING rules — C2 subtype discipline, the F.5e.4 two-sided class-role partition, and #75 P0-03b key binding — that a clean-room copy never received. Inventing a theorem for a propagation would misdescribe the round."
+        "excluded": "Stated as 'no new rule' at the time, and that was WRONG about one thing: the round showed that key-form makes the binding predicate VACUOUS, which is why a green battery proved nothing. Carried up in round 147 as F.5w — this record is left as it stood so the lag is visible rather than rewritten."
       },
       "spec": {
         "excluded": "The spec already states each of the three. A copy that lags the spec is a code defect, not a spec gap; changing the text would have hidden which layer was wrong."
@@ -1028,6 +1028,16 @@
       "code": "packages/ust-protocol/index.mjs :: noEventBacking — coversNoSlot/observedSubject are class-first and fail-CLOSED, so a gap-covered slot is blind and a checkpoint covering no slot is never asked",
       "vector": "noevent-gap-record-is-blind",
       "test": "F.5v a slot covered ONLY by a signed gap record is BLIND — coverage is not observation, and the record IS the disclaimer"
+    },
+    {
+      "round": 147,
+      "math": "A predicate has a DOMAIN on which it is non-trivial, and key-form is where BINDING is not one (#119, carried up from round 145)",
+      "spec": {
+        "excluded": "The spec already fixes key-form as self-certifying (§3.1); the missing piece was the CONSEQUENCE for coverage, which is a statement about verification and belongs to the model, not to the wire format."
+      },
+      "code": "packages/ust-protocol/conformance.mjs :: the identical impersonation built in BOTH identity modes, so the verdict names which guard answered — the realization of the vacuity claim itself",
+      "vector": "sa-02-impostor-eauthority",
+      "test": "F.5w name-form: the SAME impostor keeps the victim name, reaches the binding guard and is refused BY IT (dom(Bound) is non-empty only here)"
     }
   ],
   "first_accounted_round": 76,
