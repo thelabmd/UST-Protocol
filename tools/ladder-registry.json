@@ -1058,6 +1058,18 @@
       "code": "packages/ust-protocol/index.mjs :: ROLE_CLASSES + admits(k,c) enforced in resolveAuthority as E-KEY, refusal rather than downgrade",
       "vector": "admits-issuance-observation-refused",
       "test": "admits-issuance-observation-refused"
+    },
+    {
+      "round": 150,
+      "math": "F.5x Authorization reads the DOCUMENT, so `class` is not one axis among several — it is the only one there is (#130)",
+      "spec": "known, so its arguments must be readable from that document — and a document's identity coordinates are",
+      "code": {
+        "excluded": "No code changes: round 149 already shipped the only evaluable form. This round states WHY it is the only one, which is what the operator asking 'class or tier?' needed and what the next such question will need."
+      },
+      "vector": {
+        "excluded": "The theorem is about which arguments a predicate CAN take, not about a verdict on bytes. Its consequences are already pinned by the round-149 matrix; a vector here would restate them."
+      },
+      "test": "admits-issuance-observation-refused"
     }
   ],
   "first_accounted_round": 76,

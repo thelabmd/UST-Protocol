@@ -2800,6 +2800,56 @@ property computed from the claimant's own bytes is not evidence about the claima
 
 **Binding: realized** — *"F.5w key-form: an impostor is caught by the NAME, never by the binding guard"* · *"F.5w name-form: the SAME impostor keeps the victim name, reaches the binding guard and is refused BY IT"*. The two checks are the theorem made executable: the identical attack is built in both modes and the verdict names WHICH guard answered. Beyond them the realization is the parity gate's population change: the clean-room verifiers are now driven by the CORPUS, whose stream vectors are NAME-form, so `dom(Bound)` is entered by construction rather than by someone remembering to enter it.
 
+## F.5x Authorization reads the DOCUMENT, so `class` is not one axis among several — it is the only one there is (#130)
+
+Round 149 stated the class-sets for `admits(k, c)` and an operator immediately asked the reasonable question:
+should a role bound the CLASS a key may sign, or the TIER whose chain it may extend? The question dissolves,
+and the dissolution is worth writing down because the same shape will be asked again of every future
+refinement.
+
+**Setting.** A State's identity coordinates are exactly `domain_shard, ust_id, key_id, class, parent_ust`
+(§4.2, and any other key at that level is `E-MALFORMED`). Authority is resolved from `domain_shard`: it names
+the genesis, the genesis fixes the key set, the key set admits the signature.
+
+**Theorem F.5x.1 (a per-document predicate ranges only over document coordinates).** `admits` is evaluated
+where authority is decided — at a single document, before any sequence is known. Its arguments must therefore
+be readable from that document. `tier` is not: §11.3 defines a stream as `(domain_shard, tier)` and the tier is
+recoverable only by WALKING `prev` to the stream it belongs to. So `admits(k, tier)` is not a stronger axis
+than `admits(k, c)`; it is not evaluable at that layer at all. Of the coordinates a document does carry, only
+`class` describes what the document IS. ∎
+
+*Corollary (this was never a choice).* Choosing "class or tier" reads like a design fork and is not one. Any
+axis a document does not carry can only be enforced where sequences are verified, and that enforcement already
+exists and is a different mechanism: `verifyStream` binds every frame's key to the resolved authority set. A
+role does not compete with it and cannot replace it.
+
+**Theorem F.5x.2 (two services under ONE authority are not separable by role when they share a class).** Let
+services `A` and `B` publish under the same `domain_shard` and both emit documents of class `c`. Their
+signatures are then admitted by the same predicate `admits(·, c)`, so no assignment of roles distinguishes
+them: a role that admits `c` for one admits `c` for the other. Separation of what a key may AUTHORIZE
+therefore requires separation of `domain_shard` — the coordinate that resolves to a key set. ∎
+
+*Corollary (the operator instance).* A liveness observer emits `class:"observation"` — it saw the silence
+itself — and so does the publisher's slot stream. Under one name, no role separates them; the observer's key
+is a publisher key. Under its own name, the containment is not a field a reader must consult but the identity
+resolution itself.
+
+**Theorem F.5x.3 (a second name cannot manufacture apparent independence, so containment and self-deception
+are not a trade-off).** The objection to a second name is that one operator holding two names LOOKS plural.
+But independence is not in `σ(bytes)` (F.5o): a verifier cannot derive it from names, and must take it from
+its own trust roots. MEASURED on the reference operator (2026-08-02): resolving its own served witness yields
+
+    no independent no-fork evidence; a served witness only corroborates → authority pending
+
+`corroborated`, never `authoritative`. The protocol REFUSES to read two names of one operator as
+independence; a correct consumer therefore cannot be misled by the structure. ∎
+
+*Corollary (where the deception can actually live).* Not in the key layout — in the PROSE. An operator may
+still cite its own secondary as if it were third-party evidence, and no verifier is consulted when a human
+reads a claim. So the discipline this needs is one of CITATION, and it is the operator's, not the protocol's.
+
+**Binding: realized** — *"admits-issuance-observation-refused"* · *"F.5v a stream checkpoint inside the window is not asked whether it observed"*. F.5x.1 is realized by the shape of the predicate that shipped in round 149 (it takes a class because a document offers nothing else); F.5x.3 by the measured refusal above, which is the same path `#113` tracks.
+
 ## F.6 Composition — the event algebra
 
 An **anchored existence-and-commitment claim** is an event `A ∈ Fₜ`; an UNANCHORED signed claim is a document

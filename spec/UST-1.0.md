@@ -1194,7 +1194,19 @@ existence carrying one; an entry with `op:"rotate"` MUST be rejected `E-KEY`.
   mints the observation, so a leaked issuance key cannot fabricate what the publisher saw. A document whose
   class the signing key's role does not admit is **E-KEY** — a REFUSAL, not a downgrade to `self-asserted`,
   because leaving it valid at the LIGHT floor is the outcome the role exists to prevent (the three
-  ceremony-set roles already refuse this way; this is the same rule, not a second one). A genesis that declares nothing keeps the undifferentiated key set, and an `add` carrying a `role`
+  ceremony-set roles already refuse this way; this is the same rule, not a second one).
+  **The axis is not a choice (F.5x).** `admits` is evaluated at a single document, before any sequence is
+  known, so its arguments must be readable from that document — and a document's identity coordinates are
+  exactly `domain_shard, ust_id, key_id, class, parent_ust`. A stream's `tier` is NOT among them: §11.3 defines
+  a stream as `(domain_shard, tier)` and the tier is recoverable only by walking `prev`. So a role bounds the
+  CLASS a key may sign; bounding which chain a key may extend is a different mechanism, already enforced where
+  sequences are verified (every frame's key is bound to the resolved authority set, §11.3).
+  **Consequently two services under ONE `domain_shard` that emit the same class are NOT separable by role** —
+  the same predicate admits both. Separating what a key may authorize means separating `domain_shard`, the
+  coordinate that resolves to a key set. That is containment, and it is not a claim of independence: a verifier
+  cannot derive independence from names at all (F.5o), so two names of one operator resolve to `corroborated`
+  and never to `authoritative`. The protocol refuses that reading; only an operator's own PROSE can still cite
+  its secondary as third-party evidence, and that discipline is the operator's. A genesis that declares nothing keeps the undifferentiated key set, and an `add` carrying a `role`
   the publisher never declared ⇒ **E-MALFORMED** (a field the verifier cannot act on is refused, §F.5e.2).
   A publisher that does NOTHING is unaffected in every respect: no document changes verdict, because §11.3's
   continuity law forbids an operator change — including this one — from invalidating data already issued.

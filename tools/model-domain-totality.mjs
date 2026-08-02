@@ -53,7 +53,10 @@ const bounds = heads.map((h) => h.pos).concat(MODEL.length);
 // section silently LEAVE the domain — renamed to a non-`F.x` heading, it would simply stop being enumerated and this
 // gate would still pass. That is the very defect class this gate exists to close, so the count is exact and any change
 // to the section inventory must be a deliberate edit here.
-const EXPECTED_SECTIONS = 48;   // 47 → 48: F.5w (rev87) — у предиката есть ОБЛАСТЬ, на которой он
+const EXPECTED_SECTIONS = 49;   // 48 → 49: F.5x (rev90) — авторизация читает ДОКУМЕНТ, поэтому `class`
+//   не одна ось из нескольких, а единственная имеющаяся: тира в координатах состояния нет, он
+//   восстанавливается только проходом по цепи. И два сервиса под ОДНИМ именем ролью не разделяются.
+//    // 47 → 48: F.5w (rev87) — у предиката есть ОБЛАСТЬ, на которой он
 //   нетривиален, и key-form — та область, где привязка ключа тождественно истинна. Поднято НАВЕРХ из
 //   раунда 145, где математика была объявлена исключённой ошибочно.
 // 46 → 47: F.5v (rev86) — покрытие слота НЕ ЕСТЬ наблюдение: запись о

@@ -303,6 +303,10 @@
     {
       "round": 149,
       "no_recap": "Round 149 makes admits(k,c) real and leaves one question open in the same issue (what the ROOT admits under a declared regime). The recap belongs to the round that closes #130, not to the one that closes half of it."
+    },
+    {
+      "round": 150,
+      "no_recap": "Round 150 dissolves a question rather than closing an issue: #130's root question stays open and the reference operator's ceremony is unblocked but not run. The recap belongs to the round that runs it."
     }
   ]
 }
