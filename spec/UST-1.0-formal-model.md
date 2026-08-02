@@ -2925,6 +2925,39 @@ is the point, not a gap.
 
 **Binding: none — definitional.** An instantiation note showing one concrete reading of Ω; illustrative, not obligating.
 
+## F.7c A normative statement is DETERMINED, or it is unfinished — a preference is not an answer
+
+A protocol earns its name by giving two independent parties the same answer. So a place in the normative
+surface where the answer depends on WHO IS ASKED is not a liberty granted to implementers; it is a rule that
+has not been found yet.
+
+**The distinction that keeps this from proving too much.** Two different things look like a choice:
+
+- a **parameter** — cadence, capacity, the anchoring window, a consumer's trust roots. The protocol EXPECTS the
+  value to differ, the value is DECLARED, and the verdict is a function of the declaration. Two operators
+  choosing differently are both answered correctly, and each answer is reproducible by anyone holding the same
+  declaration;
+- an **undetermined rule** — what a field MEANS, which classes a role admits, whether an absence is a gap. Here
+  two answers give two different verdicts **on the same bytes under the same consumer configuration**, so the
+  meaning is not fixed and conformance is unstated.
+
+**The test is therefore mechanical.** Hold the bytes and the consumer configuration fixed and vary only the
+disputed answer. If the verdict moves, the dispute is about a RULE and must be resolved before the text ships.
+If the verdict follows a declaration instead, it is a parameter and the freedom is designed.
+
+**Corollary (a vocabulary must answer for every member).** §12.2 closes the key-role vocabulary with an explicit
+reason: the role is read by a CONSUMER, so an open field would make “what did this signature mean” a question
+addressed to the publisher rather than to the protocol. A CLOSED vocabulary that leaves one member without a
+stated meaning has the identical defect for that member — the question is unanswerable by the protocol exactly
+where it was supposed to be answered. Closing a vocabulary and leaving a hole in it are the same omission.
+
+**Corollary (where the freedom actually lives).** An operator's genuine liberty is the DECLARATION: whether to
+declare role separation at all, what cadence to run, what to anchor and how often. Inside a declaration the
+consequences are determined. That is why declaring is cheap to reason about and expensive to change — and why
+`optional` at ceremony time is never a neutral default but a permanent decision taken by omission.
+
+**Binding: none — definitional.** It states a discipline for normative text, not a property of a document, so no artifact verifies or falsifies it; the obligation it creates is on the text's authors and is discharged by the sections that resolve rather than defer.
+
 ## F.8 What this model does NOT claim
 
 - It does not claim `M = Y` (truth); only that `M` is fixed and attributable (§F.2).
