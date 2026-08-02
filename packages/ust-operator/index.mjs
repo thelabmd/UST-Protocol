@@ -228,7 +228,19 @@ export async function recoverHead(store, { lastPublished = null } = {}) {
     // written as a direct store write, which is exactly what that gate exists for.
     // `unseeded` здесь честно: пустой указатель принимается не по умолчанию, а ПРОТИВ опубликованного
     // документа — решение обеспечено уликой, а не отсутствием возражений (F.5r-h).
-    await advanceHead(store, { expected: stored, next: h, unseeded: stored === null });
+    // HEAD RECOVERY IS THE FRAME EVENT (F.5r-d), so it goes through `recordFrame` — the SAME door an ordinary
+    // append uses — and moves the SAME GROUP: head, count, interval bound. It used to call `advanceHead`
+    // alone, which moved the head and left `span-to` naming the PREDECESSOR and the count one short.
+    //
+    // MEASURED on the reference operator 2026-08-02: the first reader of that pair — a gap backfill, which
+    // measures the hole from `span-to` — found a document sitting where the span said the next slot began and
+    // correctly refused to declare a gap over it. The document was OUR OWN, the one the head had just adopted.
+    // A stale span is not cosmetic either: §9 requires a stream checkpoint's `to` to be the LAST frame's
+    // ust_id, so an hour sealed after a recovery would claim bounds that do not bound its own set.
+    //
+    // `unseeded` stays honest here: an empty pointer is accepted not by default but AGAINST a published
+    // document — the decision is backed by evidence, not by absence of objection (F.5r-h).
+    await recordFrame(store, { expected: stored, next: h, ust_id: lastPublished?.state?.id?.ust_id, unseeded: stored === null });
     return { state: 'recovered', head: h };
   }
   throw Object.assign(new Error('E-FORK: the last published document neither is nor extends the stored head — adopting it could chain the next frame beneath another writer\'s live branch, so this disagreement is refused rather than resolved (F.5r-g)'), { code: 'E-FORK' });

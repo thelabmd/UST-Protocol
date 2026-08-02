@@ -307,6 +307,28 @@ check('Tiers:continuation-after-gap', afterGap.state.provenance.prev === P.conte
       check('#124 F.5r-g ADVERSARIAL the published document EXTENDS the stored head — `prev` is the proof, carried in the document, that this is the successor, so the head is RECOVERED',
         r2.state === 'recovered' && (await a2.st.get(S.STREAM_KEYS.head)) === P.contentHash(a2.d2));
 
+      // #115 / F.5r-d — RECOVERY IS THE FRAME EVENT, not a repair of one field. Adopting a published document
+      // moves the SAME GROUP an ordinary append moves: head, count, and the interval bound. Measured on the
+      // reference operator's canary 2026-08-02: recovery moved the head alone, so `span-to` still named the
+      // PREDECESSOR — and the first thing that read the pair (a gap backfill) concluded the next slot was held
+      // by another writer, because a document sat where the span said none should be. It was our own.
+      //
+      // The stale span is not cosmetic: §9's interval integrity requires a stream checkpoint's `to` to be the
+      // LAST frame's ust_id, so an hour sealed after a recovery would claim bounds that do not bound the set —
+      // E-PREV for the consumer. The count lags too, in the SAFE direction (under-claim, F.5r-d), unlike the span.
+      const aG = await mk();
+      const spanBefore = await aG.st.get(S.STREAM_KEYS.spanTo);
+      const countBefore = Number((await aG.st.get(S.STREAM_KEYS.count)) ?? 0);
+      await aG.st.set(S.STREAM_KEYS.head, P.contentHash(aG.d1));
+      await aG.st.set(S.STREAM_KEYS.spanTo, aG.d1.state.id.ust_id);
+      await aG.st.set(S.STREAM_KEYS.count, String(countBefore - 1));
+      const rG = await S.recoverHead(aG.st, { lastPublished: aG.d2 });
+      check('#115 F.5r-d recovery moves the WHOLE GROUP — the interval bound follows the adopted document, not only the head',
+        rG.state === 'recovered' && (await aG.st.get(S.STREAM_KEYS.spanTo)) === aG.d2.state.id.ust_id
+        && spanBefore === aG.d2.state.id.ust_id);
+      check('#115 F.5r-d recovery counts the adopted frame — a head that moved without the counter under-claims the stream by one',
+        Number(await aG.st.get(S.STREAM_KEYS.count)) === countBefore);
+
       const a3 = await mk();
       const fresh = plain();
       check('#124 F.5r-g an EMPTY pointer adopts the published head — nothing was ever recorded, so there is nothing to contradict',

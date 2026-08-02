@@ -1038,6 +1038,18 @@
       "code": "packages/ust-protocol/conformance.mjs :: the identical impersonation built in BOTH identity modes, so the verdict names which guard answered — the realization of the vacuity claim itself",
       "vector": "sa-02-impostor-eauthority",
       "test": "F.5w name-form: the SAME impostor keeps the victim name, reaches the binding guard and is refused BY IT (dom(Bound) is non-empty only here)"
+    },
+    {
+      "round": 148,
+      "math": "Corollary F.5r-g.2 (head-recovery is the FRAME EVENT, not the repair of one field)",
+      "spec": {
+        "excluded": "The wire format does not change: recovery is operator-side state, and §9's interval-integrity rule it was violating is already normative. Adding spec text would restate an existing requirement as if it were new."
+      },
+      "code": "packages/ust-operator/index.mjs :: recoverHead goes through recordFrame — the same door an ordinary append uses — instead of advanceHead alone",
+      "vector": {
+        "excluded": "Vectors pin document bytes and verdicts. This is the operator's STORE state after a recovery; no document differs, which is precisely why it was invisible until two members of the group were read together."
+      },
+      "test": "#115 F.5r-d recovery moves the WHOLE GROUP — the interval bound follows the adopted document, not only the head"
     }
   ],
   "first_accounted_round": 76,

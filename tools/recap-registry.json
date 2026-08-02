@@ -295,6 +295,10 @@
     {
       "round": 147,
       "no_recap": "Round 147 closes an upward gap in round 145 rather than opening work: it states in the model why a green battery proved nothing. No issue changes state."
+    },
+    {
+      "round": 148,
+      "no_recap": "Round 148 fixes a defect the gap-record drill produced rather than closing an issue: the engine cannot receive it until the operator package is published, and the recap belongs to the round where a live recovery is followed by a declared gap."
     }
   ]
 }

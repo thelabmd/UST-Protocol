@@ -2526,6 +2526,22 @@ a restart into an unbounded scan — and exhausting the bound is `unverified`, n
 no published document in the searched window is a GAP, and a gap is stated by a §11.1 record, not inferred
 by a reader.
 
+**Corollary F.5r-g.2 (head-recovery is the FRAME EVENT, not the repair of one field).** Adopting the published
+document `d` is not "setting the head to `h(d)`" — it is the stream ACCEPTING `d`, which by F.5r-d moves one
+GROUP: the head, the frame count, and the interval bound. Moving a proper subset leaves the stream describing
+two different documents at once. The consequences are not symmetric: an under-counted stream under-claims,
+which F.5r-d already establishes as the safe direction, while a stale interval bound is UNSAFE — §9 requires a
+stream checkpoint's `to` to be the last frame's `ust_id`, so an interval sealed after a partial head-recovery does
+not bound its own set and a consumer answers `E-PREV`.
+
+*Measured (2026-08-02, reference operator).* Head-recovery moved the head alone. The first reader of the pair — a
+gap backfill, which measures a hole FROM the interval bound — found a document occupying the slot where the
+bound said the next one began, and correctly refused to declare a gap over it. The document was the operator's
+own, the one the head had just adopted. The defect was invisible to every check that read the head, because the
+head was right; it surfaced only where two members of the group were read TOGETHER. That is the general shape:
+a group split across writers is detected by whoever reads the pair, and until someone does, each half looks
+correct.
+
 **Corollary F.5r-g.1 (the outcome set is TOTAL, and it belongs to the layer).** The four observations in
 the table above partition every input: the stored head either equals `h(d)`, equals `prev(d)`, is absent,
 or is none of these, and no document is supplied at all in the remaining case. Nothing falls outside, and
