@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.65', revision: 83 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.66', revision: 84 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -443,6 +443,12 @@ export const buildCheckpoint = buildStreamCheckpoint;
 
 export const buildGap = (id, time, prev, reason) =>                               // §11.3 C2 — a signed gap record: this slot (id.ust_id) is HONESTLY absent
   buildState({ ...id, class: 'attestation' }, time, { gap: { kind: 'computed', value: { reason: reason || 'no-frame' } } }, { prev });
+// §11.3 / F.5u — a BATCH COMMITMENT: this key committed `root` to `anchor.substrate` over the window
+// `[anchor.from, anchor.to]`. It is the third prev-only subtype and the only one that carries a root, because
+// the batch's members are NOT enumerated: membership is an §11.2 AnchorProof and nothing else. No count is
+// taken — a size claim in a commitment is refutable only against an honest publisher (F.5u.4).
+export const buildAnchorCommitment = (id, time, root, prev, anchor) =>
+  buildState({ ...id, class: 'attestation' }, time, { anchor: { kind: 'computed', value: { substrate: anchor.substrate, from: anchor.from, to: anchor.to } } }, { prev, root });
 export const buildAbsence = (id, time, name, reason, extra = {}, prev) =>         // §4.4 #39 — a NEGATIVE observation: partition `name` asserts non-occurrence/unavailability (reason unreachable|no-event|unchanged); `extra` MAY carry {from,to} (the window a no-event covers) / subject
   buildState({ ...id, class: 'observation' }, time, { [name]: { kind: 'absence', value: { reason, ...extra } } }, prev ? { prev } : undefined);
 export const buildCadenceEntry = (id, time, cadence, effectiveFrom, prev) =>      // §11.3 continuity — a signed cadence CHANGE (key-log pattern); resolved at a slot's time
@@ -474,6 +480,12 @@ const CLASSES = ['observation','attestation','derivation','genesis','key','caden
 // enforced on one side is not a partition — the class simply has two homes and its role is decided by whichever
 // caller reached it first. `cadence` sits here because the cadence log is read exactly as the key log is (§11.3).
 const AUTHORITY_CLASSES = new Set(['genesis', 'key', 'cadence']);
+// §11.3 C2 — the prev-only attestation subtypes. The subtype is the NAMED DATA PARTITION, never a shape, so
+// this list IS the vocabulary a verifier reads: `checkpoint` asserts a stream interval, `gap` asserts a
+// declared absence, `anchor` asserts a batch root committed to a substrate (rev84, F.5u). Ordered, frozen and
+// exported because a consumer that must decide "what did this signature mean" may not be answered by the
+// publisher — an open subtype field would make the meaning of a document a question for its author.
+export const PREV_ONLY_SUBTYPES = Object.freeze(['checkpoint', 'gap', 'anchor']);
 // §12.2/§17/§F.5e.1 — the key-ROLE vocabulary is FIXED at five, and split by WELL-FOUNDEDNESS, not preference:
 // a role whose keys AUTHORIZE the key log cannot be assigned BY the log (the log's authority derives from them,
 // so it would be circular), while a role whose keys merely OPERATE under it can. Hence three ceremony-set and
@@ -684,14 +696,25 @@ function verifyCore(doc, opts = {}) {
       // #69 C2 — an empty-constituents attestation used to be a bare shape (prev + no constituents), which
       // COLLIDED a checkpoint with a gap record (same shape, different meaning). The subtype is now EXPLICIT via
       // a required, named data partition (UST idiom: the partition name IS the typed content): a `set` attestation
-      // carries constituents + root; a prev-only attestation MUST be EITHER a `checkpoint` (data.checkpoint) OR a
-      // `gap` (data.gap) — never neither, never both, never with a root.
+      // carries constituents + root; a prev-only attestation MUST carry EXACTLY ONE of `checkpoint`, `gap` or
+      // `anchor` — never two, never none.
+      //
+      // rev84 (F.5u) — `root` FOLLOWS the subtype instead of deciding it. The flat prohibition that used to
+      // stand here ("a checkpoint/gap attestation MUST NOT carry a root") left an operator holding a batch
+      // root exactly two conforming moves: ENUMERATE what is under it, or say nothing. Enumeration is not an
+      // input to the §11.2 inclusion predicate — a consumer walking a path never reads a constituent list —
+      // and publishing it hands every reader a membership ORACLE over other principals' documents, which a
+      // batching operator may not do. So the honest form is a root WITHOUT constituents, and its absence is
+      // what drove the reference operator to publish its roots unsigned beside the protocol.
       const empty = pr?.constituents === undefined || pr.constituents.length === 0;
       if (empty) {
-        if (pr?.prev === undefined) return bad('E-MALFORMED', 'a no-constituents attestation MUST carry provenance.prev (checkpoint or gap, §11.3)');
-        if (pr?.root !== undefined) return bad('E-MALFORMED', 'a checkpoint/gap attestation MUST NOT carry a root');
-        const hasCp = st.data?.checkpoint !== undefined, hasGap = st.data?.gap !== undefined;
-        if (hasCp === hasGap) return bad('E-MALFORMED', 'a prev-only attestation MUST be a checkpoint (data.checkpoint) XOR a gap (data.gap) — the §11.3 subtype, never both/neither');
+        if (pr?.prev === undefined) return bad('E-MALFORMED', 'a no-constituents attestation MUST carry provenance.prev (checkpoint, gap or anchor, §11.3)');
+        const named = PREV_ONLY_SUBTYPES.filter(n => st.data?.[n] !== undefined);
+        if (named.length !== 1) return bad('E-MALFORMED', 'a prev-only attestation MUST carry EXACTLY ONE of ' + PREV_ONLY_SUBTYPES.map(n => 'data.' + n).join(' / ') + ' — the §11.3 subtype, never two, never none');
+        // The subtype decides the root, in BOTH directions — a rule enforced on one side only is not enforced.
+        const rooted = named[0] === 'anchor';
+        if (rooted && pr?.root === undefined) return bad('E-MALFORMED', 'an anchor attestation MUST carry provenance.root — a batch commitment whose root is absent commits to nothing (§11.3, F.5u)');
+        if (!rooted && pr?.root !== undefined) return bad('E-MALFORMED', 'a ' + named[0] + ' attestation MUST NOT carry a root — it asserts an interval, not a batch (§11.3 C2)');
       } else if (pr?.root === undefined) return bad('E-MALFORMED', 'a set attestation MUST carry constituents + root');
     }
     // W3 class-role: the partition, enforced in BOTH directions from the ONE set (§F.5e.4).

@@ -42,7 +42,7 @@ export function contextFor(doc?: unknown): boolean;
 export function decodeInput(raw: unknown): unknown;
 export function decryptKey(b64: unknown, pass: unknown): unknown;
 export const DERIVED_REQUIRES_PRIOR: unknown;
-export const DISCOVERY_ARTIFACTS: unknown;
+export const DISCOVERY_ARTIFACTS: readonly ['genesis', 'keylog', 'cadence', 'witness'];
 export function dohConfirmTxt(arg0?: unknown): Promise<Record<string, unknown>>;
 export function encryptKey(pkcs8: unknown, pass: unknown): string;
 export const FORKCHOICE_BOOL_FLAGS: unknown;

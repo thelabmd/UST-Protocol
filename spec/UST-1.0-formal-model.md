@@ -2629,6 +2629,63 @@ integrity rests on an append-only log and a timestamp proof, which establish TIM
 nothing about authorship. Citing them as evidence in one's own favour is therefore self-attestation with
 extra steps, and the label made it look like more.
 
+## F.5u A root is published TWICE, and only one of the two publications can enumerate (#127)
+
+Fix the hash `H` and the §7 Merkle construction over a leaf multiset `L`, with `r = root(L)`. Two DIFFERENT
+assertions about `r` occur in this protocol, and the protocol until now gave a document form to only one:
+
+- **Seal** `Σ(L)` — the claim that L is exactly this set and `r` is its root. The §9.2 `set` attestation.
+- **Commitment** `Γ(r, W, σ)` — the claim that this signer committed `r` to substrate σ during window `W`.
+  The batch root of §11, the object a timestamp proof is actually taken over.
+
+**Theorem F.5u.1 (enumeration is neither necessary nor sufficient for membership).** The §11.2 inclusion
+predicate is `Incl(d, r, π) = [ walk( H("ust:leaf", content_hash(d)), π ) = r ]`. `L` does not occur in it.
+Hence (a) a consumer establishing that `d` is under `r` never reads an enumeration — it is not an input; and
+(b) an enumeration establishes only `root(L') = r` for the list `L'` the publisher CHOSE, which is
+self-consistency; to learn `L' = L` a consumer must enumerate the world, which the list does not do. The
+enumeration therefore serves neither the inclusion use nor the audit use. ∎
+
+**Theorem F.5u.2 (enumeration is a disclosure, and for a batching operator a forced one).** A batch exists to
+amortise one substrate commitment over documents of MANY principals. Publishing `L` hands every reader a
+membership ORACLE: any party holding a candidate document `d` may test `content_hash(d) ∈ L` without
+possessing a path. Under `Γ` alone that capability belongs only to a holder of `π`. Where the members belong
+to distinct principals, the disclosure is cross-principal and is not the committing operator's to make.
+So a form that requires `Σ` in order to publish `r` is, for such an operator, not costly but UNAVAILABLE. ∎
+
+**Theorem F.5u.3 (non-self-inclusion — a commitment is never inside what it commits to).** Let `Γ` carry
+`provenance.root = r` and let `c = content_hash(Γ)`. Since `root` is inside the signed State, `c = f(r)`.
+If `c ∈ L` then `r = root(L) = g(c)`, so `c = f(g(c))` — a fixed point of a composition of `H`, which we may
+not construct. Hence `c ∉ L`. ∎
+
+*Corollary (the head of a commitment stream has no anchored time of its own).* `Γ`'s own un-backdatable time
+can come only from a STRICTLY LATER batch. A consumer reading the commitment stream at its head therefore
+holds an element whose time is not yet established, so order and completeness AT THE HEAD cannot be recovered
+from anchors and must be carried structurally — which is why `prev` is required of a commitment and not
+merely available to it.
+
+**Theorem F.5u.4 (a size claim in a commitment is refutable in the wrong direction).** Let `Γ` claim `|L| = n`
+against a true `m`. If `m > n` a party holding `n+1` distinct valid paths to `r` refutes the claim. If `m < n`
+no set of paths refutes it: showing that NO further leaf exists requires the whole tree, which no path
+conveys. The claim binds an understating publisher and never an overstating one — it is refutable exactly in
+the direction that is honest. Hence a count in a commitment carries no verification weight and MUST NOT be a
+verification input. ∎
+
+**Corollary (the same field is safe in one subtype and unsafe in another, because the safety was never in the
+field).** `frame_count` in a stream checkpoint is safe DOWNWARD (F.5r-d: under-claim is the safe side) because
+coverage is checked against an enumerable grid — the consumer can list what the interval should contain. A
+batch has no such grid, so the identical-looking field flips from safe-downward to unsafe-in-both-directions.
+The property belonged to the GRID, not to the counter; a field carried across a subtype boundary does not
+carry its guarantees with it.
+
+**Binding: realized** — *"F4b prev-only subtype vocabulary is TOTAL in the corpus — every runtime name admitted AND refused by a vector"* · *"subtype-anchor-with-root"* · *"subtype-anchor-no-root"* · *"subtype-checkpoint-with-root"* · *"subtype-pair-checkpoint-gap"*.
+
+F.5u.1/F.5u.2 are realized by admitting a prev-only `anchor` subtype whose `root` is REQUIRED and whose
+`constituents` are ABSENT (§9.2 C2, §11.3). F.5u.3 and F.5u.4 are realized as REFUSALS rather than checks, and
+the distinction is the honest one: a commitment naming itself among its own constituents is UNCONSTRUCTIBLE —
+there is no document for a verifier to reject, so a check asserting its absence would be vacuous — and a count,
+where an operator carries one, is a LABEL in the sense of §9.1 that no verifier reads, so its realization is
+the ABSENCE of a code path, which the capability roster records rather than a check.
+
 ## F.6 Composition — the event algebra
 
 An **anchored existence-and-commitment claim** is an event `A ∈ Fₜ`; an UNANCHORED signed claim is a document

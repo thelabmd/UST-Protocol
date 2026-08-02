@@ -44,6 +44,7 @@ export function axisRank(axis: unknown, v: unknown): unknown;
 export function blindedCommit(arg0: unknown): string;
 export function blindPartition(name: unknown, value: unknown, arg2?: unknown): { partition: unknown; hash: unknown };
 export function buildAbsence(id: unknown, time: unknown, name: unknown, reason: unknown, extra?: unknown, prev?: unknown): unknown;
+export function buildAnchorCommitment(id: unknown, time: unknown, root: unknown, prev: unknown, anchor: unknown): Record<string, unknown>;
 export function buildAttestation(id: unknown, time: unknown, data: unknown, constituents: unknown, prev?: unknown): Record<string, unknown>;
 export function buildAuthorityCheckpoint(arg0?: unknown): { version: unknown; purpose: unknown; domain_shard: unknown; genesis_epoch: unknown; sequence: unknown; checkpoint_authority: unknown; keylog: unknown };
 export function buildAuthorityProof(inputs?: unknown): { term: unknown; witnesses: unknown };
@@ -100,6 +101,7 @@ export function noEventBacking(claimWindow: unknown, streamResult: unknown, fram
 export function noForkClaim(arg0: unknown): { purpose: unknown; domain_shard: unknown; active_genesis: unknown };
 export function parseCadenceInt(s: unknown): unknown;
 export function partitionHash(arg0: unknown): unknown;
+export const PREV_ONLY_SUBTYPES: readonly ['checkpoint', 'gap', 'anchor'];
 export function projectTier(state: unknown): string;
 export function provePredicates(seams?: unknown): unknown;
 export function quorumTrustDomains(list: unknown, config: unknown): unknown;

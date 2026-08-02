@@ -196,6 +196,18 @@ export function declarationsFor(src, resolveModule) {
           type = 'Readonly<{ ' + pairs.map((e) => `${e[1]}: '${e[2]}'`).join('; ') + ' }>';
         }
       }
+      // A vocabulary is just as often an ORDERED list as a map — `PREV_ONLY_SUBTYPES` is the §11.3 C2 subtype
+      // set, and it shipped as `unknown` because this reader only knew object literals. Same defect, same
+      // consequence: a typed consumer cannot name a subtype without re-typing the protocol's own vocabulary,
+      // which is exactly what exporting it was meant to prevent.
+      if (!type) {
+        const arr = tail.match(/^\s*(?:Object\.freeze\(\s*)?\[([\s\S]*?)\]\s*\)?\s*;/);
+        if (arr) {
+          const items = arr[1].replace(/\/\/[^\n]*/g, '').split(',').map((x) => x.trim()).filter(Boolean);
+          const strs = items.map((x) => x.match(/^'([^']*)'$/));
+          if (items.length && strs.every(Boolean)) type = 'readonly [' + strs.map((e) => `'${e[1]}'`).join(', ') + ']';
+        }
+      }
       decls.push({ kind: 'const', name: m[1], ...(type ? { type } : {}) });
     }
   }

@@ -1000,6 +1000,14 @@
         "excluded": "Vectors pin document bytes and the verdicts they produce. This round is about artifacts that are NOT documents wearing the name, which by definition produce no verdict to pin."
       },
       "test": "#115 F.5t ADVERSARIAL a labelled NON-DOCUMENT is INDISTINGUISHABLE from a damaged one — same verdict AND same error code as a truncated document, so a benign file emits the signal of a broken transfer"
+    },
+    {
+      "round": 144,
+      "math": "A root is published TWICE, and only one of the two publications can enumerate (#127)",
+      "spec": "The batch root is published as the `anchor` subtype (§11.3): `root`",
+      "code": "packages/ust-protocol/index.mjs :: PREV_ONLY_SUBTYPES + buildAnchorCommitment — `root` FOLLOWS the subtype (required for anchor, forbidden for checkpoint/gap) instead of being flatly prohibited",
+      "vector": "subtype-anchor-with-root",
+      "test": "F4b prev-only subtype vocabulary is TOTAL in the corpus — every runtime name admitted AND refused by a vector"
     }
   ],
   "first_accounted_round": 76,

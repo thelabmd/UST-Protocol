@@ -144,6 +144,14 @@ for (const v of V.vectors) {
     case 'class-role': { const r = P.verify(v.doc, { context: v.role });
       const got = r.error === 'E-MALFORMED' ? 'E-MALFORMED' : 'admitted';
       check(v.id, got === v.expect, `role ${v.role}: got ${got} (${r.error ?? r.result}) expected ${v.expect}`); break; }
+    // §11.3 C2 / F.5u — the prev-only attestation subtype matrix, pinned as the FULL domain (3 subtypes x
+    // root present/absent, plus a missing prev, plus every pair, plus none) so a second implementation cannot
+    // pass by enforcing the cases it happened to think of. Like `class-role`, the vector asserts only the
+    // SHAPE refusal: anything but E-MALFORMED counts as admitted, because a rootless checkpoint's full verdict
+    // depends on identity and time, which this rule is not about.
+    case 'attestation-subtype': { const r = P.verify(v.doc, { context: 'data' });
+      const got = r.error === 'E-MALFORMED' ? 'E-MALFORMED' : 'admitted';
+      check(v.id, got === v.expect, `subtype vector ${v.id}: got ${got} (${r.error ?? r.result}) expected ${v.expect}`); break; }
     case 'document-negative': check(v.id, P.verify(v.doc, { context: 'data' }).result === 'INVALID'); break;
     // #75 language-neutral encoder vectors (a second implementation runs the SAME cases)
     case 'utf8-reject': check(v.id, P.verifyJson(Buffer.from(v.input_hex, 'hex')).error === v.expect_error); break;
@@ -393,6 +401,20 @@ check('G1 name-form domain_shard, no binding → INDETERMINATE (cannot confirm t
 check('F3 embedded bad proof→E-ANCHOR', (() => { const b = clone(mk()); b.proof = { root: 'sha256:' + '00'.repeat(32), path: [], anchor: { substrate: 'bitcoin-ots' } }; return P.verify(b, { context: 'data' }).error === 'E-ANCHOR'; })());
 check('F4 derivation no-provenance→E-MALFORMED', P.verify(mk({ r: { kind: 'computed', value: { x: '1' } } }, { ...ID, class: 'derivation' }), { context: 'data' }).error === 'E-MALFORMED');
 check('F4 observation w/ root→E-MALFORMED', (() => { const st = P.buildState(ID, T, { r: { kind: 'captured', value: { x: '1' } } }); st.provenance = { constituents: ['sha256:' + '11'.repeat(32)], root: 'sha256:' + '99'.repeat(32) }; return P.verify(P.seal(st, A.priv, A.pubB64), { context: 'data' }).error === 'E-MALFORMED'; })());
+// §11.3 C2 / F.5u — the subtype VOCABULARY is total, and its totality is derived from the RUNTIME export, not
+// from a list written here. Every name the verifier recognises must be exercised in BOTH directions by the
+// corpus: at least one vector where it is admitted, and at least one where it is refused. A fourth subtype
+// added to the code without vectors turns this red — the alternative (a hand-list) would have to be updated by
+// the same edit that forgets the vectors.
+check('F4b prev-only subtype vocabulary is TOTAL in the corpus — every runtime name admitted AND refused by a vector', (() => {
+  const subs = P.PREV_ONLY_SUBTYPES;
+  if (!Array.isArray(subs) || subs.length < 3) return false;
+  const rows = V.vectors.filter((x) => x.kind === 'attestation-subtype');
+  return subs.every((name) => {
+    const mine = rows.filter((x) => x.doc?.state?.data?.[name] !== undefined);
+    return mine.some((x) => x.expect === 'admitted') && mine.some((x) => x.expect === 'E-MALFORMED');
+  });
+})());
 check('F5 encrypted w/o enc→E-MALFORMED', (() => { const st = { id: ID, time: T, data: { e: { kind: 'captured', privacy: 'encrypted', commit: 'sha256:' + 'cd'.repeat(32) } }, hashes: { e: P.partitionHash({ commit: 'sha256:' + 'cd'.repeat(32) }) } }; return P.verify(P.seal(st, A.priv, A.pubB64), { context: 'data' }).error === 'E-MALFORMED'; })());
 check('F6 non-NFC member name→E-CANON', (() => { try { P.canon({ ['e' + String.fromCharCode(0x301)]: '1' }); return false; } catch (e) { return e.code === 'E-CANON'; } })());
 check('F7 raw duplicate-key→E-CANON', P.verifyJson('{"ust":"0.0","ust":"1.0","state":{},"sig":{}}').error === 'E-CANON');
@@ -2700,7 +2722,8 @@ console.log('\n═════════════════════�
     replicationAgreement: 'producer-builder (byte-agreement shape; throws on a self-declared independence coordinate, F.5o)',
     surfaceVerdict: 'producer-builder (the (declared, observed) 2x2; throws on a relocated standard surface or a third observation state, F.5p)',
     anchorRollup: 'producer-builder (the roll-up over declared substrates; throws when the quantifier has no domain to range over, F.5q)',
-    buildAbsence: 'producer-builder', buildAttestation: 'producer-builder', buildAuthorityCheckpoint: 'producer-builder',
+    buildAbsence: 'producer-builder', buildAnchorCommitment: 'producer-builder (the §11.3 batch commitment — the ONLY prev-only subtype carrying a root, because its members are proven by AnchorProof and never enumerated, F.5u)',
+    buildAttestation: 'producer-builder', buildAuthorityCheckpoint: 'producer-builder',
     buildAuthorityProof: 'producer-builder', buildCadenceEntry: 'producer-builder', buildCheckpoint: 'producer-builder', buildStreamCheckpoint: 'producer-builder',
     buildDerivation: 'producer-builder', buildEpochTransition: 'producer-builder', buildEvidenceReceipt: 'producer-builder',
     buildGap: 'producer-builder', buildGenesis: 'producer-builder', buildKeyLogEntry: 'producer-builder',

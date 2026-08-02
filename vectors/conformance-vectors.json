@@ -1,5 +1,5 @@
 {
-  "version": "UST 1.0 conformance vectors (rc.65 - REGISTRY registers and MEASURES the verdict, completeness and forkChoice result vocabularies against actual code usage; the measurement found an error code in the RESULT slot and a second vocabulary under the same field name, #111; prior rc.40: external-audit remediation: 5 P0 fixed structurally (epic UST-1o6); prior rc.33: #75 ROOT 3 (math-derived, NO manifest): forkChoice/verifyStream resolve per-frame AUTHORITY (impersonation P0-03) + grid EQUALITY (off-grid P0-04); stream-authority/stream-grid/fork-choice vectors; prior: - #75 ROOT 1 two-phase verify + anchor-time (authority-at-time vectors: retired/compromised/premature K_n(t) window judged against the PROVEN anchor); prior: - #75 ROOT 2 key-log temporal state machine (keylog-state vectors: revoked/rotated-out/retired key cannot sign later; closed key_op schema); prior: - #75 strict encoders P1-01/02/03 (utf8-reject, b64url, cadence); prior: — self-audit fix: freshness:attested now requires a VERIFIED keylogHeadAnchor (inclusion + substrate-final), a raw self-computed head hash proves nothing = overclaim closed. Prior: #41 canon arbiter, #40 identity hardening, #44 agent-safety, #45 downgrade + fork-choice)",
+  "version": "UST 1.0 conformance vectors (rc.66 - a root is published TWICE and only the SEAL enumerates: the batch commitment gets the prev-only `anchor` subtype, root REQUIRED and constituents ABSENT, because enumeration is not an input to the inclusion predicate and IS a membership oracle over other principals (#127, F.5u); prior rc.65: REGISTRY registers and MEASURES the verdict, completeness and forkChoice result vocabularies against actual code usage; the measurement found an error code in the RESULT slot and a second vocabulary under the same field name, #111; prior rc.40: external-audit remediation: 5 P0 fixed structurally (epic UST-1o6); prior rc.33: #75 ROOT 3 (math-derived, NO manifest): forkChoice/verifyStream resolve per-frame AUTHORITY (impersonation P0-03) + grid EQUALITY (off-grid P0-04); stream-authority/stream-grid/fork-choice vectors; prior: - #75 ROOT 1 two-phase verify + anchor-time (authority-at-time vectors: retired/compromised/premature K_n(t) window judged against the PROVEN anchor); prior: - #75 ROOT 2 key-log temporal state machine (keylog-state vectors: revoked/rotated-out/retired key cannot sign later; closed key_op schema); prior: - #75 strict encoders P1-01/02/03 (utf8-reject, b64url, cadence); prior: — self-audit fix: freshness:attested now requires a VERIFIED keylogHeadAnchor (inclusion + substrate-final), a raw self-computed head hash proves nothing = overclaim closed. Prior: #41 canon arbiter, #40 identity hardening, #44 agent-safety, #45 downgrade + fork-choice)",
   "note": "Deterministic + reproducible. Keypairs from fixed seeds (A=0011..eeff, B=ffee..1100). canon=JCS tightened; H(tag,x)=sha256(ascii(tag)||0x00||x); content_hash=H(\"ust:state\",canon({ust,state})); key_id=H(\"ust:keylog\",raw_pub); partition_hash=H(\"ust:shard\",canon({domain_shard,ust_id,partition,value})) — UNIFORM, every partition binds domain_shard, name is a VALUE (non-colliding), no domain-less computed. Each vector states the SPEC rule it pins. Signature-type vectors use expect: 'VALID' | 'E-SIG' for the Ed25519 PRIMITIVE check (strict, canonical-S); this is not a document verdict — a conforming verifier's document verdict is always tier-qualified (VALID:LIGHT/HIGH/TOP), never a bare VALID. Partition names inside hash/commit inputs (e.g. 'secret') are arbitrary sample names, not protocol features.",
   "seeds": {
     "A": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
@@ -5919,6 +5919,517 @@
         "aloneClean": true,
         "togetherError": "E-PREV"
       }
+    },
+    {
+      "kind": "attestation-subtype",
+      "id": "subtype-checkpoint-no-root",
+      "rule": "§11.3 C2 / F.5u — a prev-only attestation carries EXACTLY ONE of checkpoint|gap|anchor, and `root` FOLLOWS the subtype (REQUIRED for anchor, FORBIDDEN for checkpoint/gap)",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260628.15",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "attestation"
+          },
+          "time": {
+            "generated_at": "2026-06-28T15:00:30Z",
+            "valid_from": "2026-06-28T14:00:00Z",
+            "valid_to": "2026-06-28T15:00:00Z"
+          },
+          "data": {
+            "checkpoint": {
+              "kind": "computed",
+              "value": {
+                "head": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+                "frame_count": "2"
+              }
+            }
+          },
+          "hashes": {
+            "checkpoint": "sha256:f465b194178cfe886dacdf3a1298495b0e538e15f460eb744f5ded12292dad91"
+          },
+          "provenance": {
+            "prev": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "t0bv6I3GLRpnyyBBylGfYAOGOYFhNWTGDQLz3h8JVMS2ftBv-FFsWlKs8zLltovuTrKErR9FV2CHSaI9yiWOCA"
+        }
+      },
+      "expect": "admitted",
+      "note": "a stream checkpoint asserts an interval, not a batch"
+    },
+    {
+      "kind": "attestation-subtype",
+      "id": "subtype-checkpoint-with-root",
+      "rule": "§11.3 C2 / F.5u — a prev-only attestation carries EXACTLY ONE of checkpoint|gap|anchor, and `root` FOLLOWS the subtype (REQUIRED for anchor, FORBIDDEN for checkpoint/gap)",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260628.15",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "attestation"
+          },
+          "time": {
+            "generated_at": "2026-06-28T15:00:30Z",
+            "valid_from": "2026-06-28T14:00:00Z",
+            "valid_to": "2026-06-28T15:00:00Z"
+          },
+          "data": {
+            "checkpoint": {
+              "kind": "computed",
+              "value": {
+                "head": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+                "frame_count": "2"
+              }
+            }
+          },
+          "hashes": {
+            "checkpoint": "sha256:f465b194178cfe886dacdf3a1298495b0e538e15f460eb744f5ded12292dad91"
+          },
+          "provenance": {
+            "prev": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "root": "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "zvPDV2y0wg_E0ynv903JBeKpZSlHbfZy5hXQR1zzVU5RxHtGDLjXLJIdHkyJSAeBb9iFowManuh1kdqkbHYcAA"
+        }
+      },
+      "expect": "E-MALFORMED",
+      "note": "a root on an interval claim would let a batch commitment pass as coverage"
+    },
+    {
+      "kind": "attestation-subtype",
+      "id": "subtype-gap-no-root",
+      "rule": "§11.3 C2 / F.5u — a prev-only attestation carries EXACTLY ONE of checkpoint|gap|anchor, and `root` FOLLOWS the subtype (REQUIRED for anchor, FORBIDDEN for checkpoint/gap)",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260628.15",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "attestation"
+          },
+          "time": {
+            "generated_at": "2026-06-28T15:00:30Z",
+            "valid_from": "2026-06-28T14:00:00Z",
+            "valid_to": "2026-06-28T15:00:00Z"
+          },
+          "data": {
+            "gap": {
+              "kind": "computed",
+              "value": {
+                "reason": "no-frame"
+              }
+            }
+          },
+          "hashes": {
+            "gap": "sha256:50ef3d1cb7e4ba2930c72901ae87c70ba8e42e43566d5563a147cca3b841125b"
+          },
+          "provenance": {
+            "prev": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "QCk-PQdQHapaWCbRB-qW73JA7z-BVrO1_FCCfCxw-fyh1T8syak_OYfUJPsY9WVFo9YXjjqkxO2C2zl74ZkHAQ"
+        }
+      },
+      "expect": "admitted",
+      "note": "a declared absence carries no root"
+    },
+    {
+      "kind": "attestation-subtype",
+      "id": "subtype-gap-with-root",
+      "rule": "§11.3 C2 / F.5u — a prev-only attestation carries EXACTLY ONE of checkpoint|gap|anchor, and `root` FOLLOWS the subtype (REQUIRED for anchor, FORBIDDEN for checkpoint/gap)",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260628.15",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "attestation"
+          },
+          "time": {
+            "generated_at": "2026-06-28T15:00:30Z",
+            "valid_from": "2026-06-28T14:00:00Z",
+            "valid_to": "2026-06-28T15:00:00Z"
+          },
+          "data": {
+            "gap": {
+              "kind": "computed",
+              "value": {
+                "reason": "no-frame"
+              }
+            }
+          },
+          "hashes": {
+            "gap": "sha256:50ef3d1cb7e4ba2930c72901ae87c70ba8e42e43566d5563a147cca3b841125b"
+          },
+          "provenance": {
+            "prev": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "root": "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "Du0_EIUeL6HvVUcLbTdzfpRrWU5MjbGNGBi6gc9mtnf9BGc1q4xuoEb0ynwH9enbQ5ts6SKrblhBSZdOUW1CCg"
+        }
+      },
+      "expect": "E-MALFORMED",
+      "note": "the same rule, second subtype — enforced from the SET, never per case"
+    },
+    {
+      "kind": "attestation-subtype",
+      "id": "subtype-anchor-with-root",
+      "rule": "§11.3 C2 / F.5u — a prev-only attestation carries EXACTLY ONE of checkpoint|gap|anchor, and `root` FOLLOWS the subtype (REQUIRED for anchor, FORBIDDEN for checkpoint/gap)",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260628.15",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "attestation"
+          },
+          "time": {
+            "generated_at": "2026-06-28T15:00:30Z",
+            "valid_from": "2026-06-28T14:00:00Z",
+            "valid_to": "2026-06-28T15:00:00Z"
+          },
+          "data": {
+            "anchor": {
+              "kind": "computed",
+              "value": {
+                "substrate": "bitcoin-ots",
+                "from": "ust:20260628.140000",
+                "to": "ust:20260628.145930"
+              }
+            }
+          },
+          "hashes": {
+            "anchor": "sha256:ee49547a484e89252ea609417e0d3ec976acf0efab74bb83f1dbf4883e4597a5"
+          },
+          "provenance": {
+            "prev": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "root": "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "NfmuKivBMM3dBSz98zQI2trHgZdAATZiBAoSnJoql_qA45YEfuAz5Viz3-Hc81ygVW7Tf5v42FHsgeN2rzCYBw"
+        }
+      },
+      "expect": "admitted",
+      "note": "the batch commitment: root REQUIRED, constituents ABSENT — membership is an AnchorProof, never a list (F.5u.1)"
+    },
+    {
+      "kind": "attestation-subtype",
+      "id": "subtype-anchor-no-root",
+      "rule": "§11.3 C2 / F.5u — a prev-only attestation carries EXACTLY ONE of checkpoint|gap|anchor, and `root` FOLLOWS the subtype (REQUIRED for anchor, FORBIDDEN for checkpoint/gap)",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260628.15",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "attestation"
+          },
+          "time": {
+            "generated_at": "2026-06-28T15:00:30Z",
+            "valid_from": "2026-06-28T14:00:00Z",
+            "valid_to": "2026-06-28T15:00:00Z"
+          },
+          "data": {
+            "anchor": {
+              "kind": "computed",
+              "value": {
+                "substrate": "bitcoin-ots",
+                "from": "ust:20260628.140000",
+                "to": "ust:20260628.145930"
+              }
+            }
+          },
+          "hashes": {
+            "anchor": "sha256:ee49547a484e89252ea609417e0d3ec976acf0efab74bb83f1dbf4883e4597a5"
+          },
+          "provenance": {
+            "prev": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "eYsYFCSM3hYilSqORIuZbVPTT2GBL8deiDI2SP-m6RiuUwDq27iPa0Ec1l7HRSk82RRYPXBX4taoAk33w97OBg"
+        }
+      },
+      "expect": "E-MALFORMED",
+      "note": "a commitment whose root is absent commits to nothing"
+    },
+    {
+      "kind": "attestation-subtype",
+      "id": "subtype-anchor-no-prev",
+      "rule": "§11.3 C2 / F.5u — a prev-only attestation carries EXACTLY ONE of checkpoint|gap|anchor, and `root` FOLLOWS the subtype (REQUIRED for anchor, FORBIDDEN for checkpoint/gap)",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260628.15",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "attestation"
+          },
+          "time": {
+            "generated_at": "2026-06-28T15:00:30Z",
+            "valid_from": "2026-06-28T14:00:00Z",
+            "valid_to": "2026-06-28T15:00:00Z"
+          },
+          "data": {
+            "anchor": {
+              "kind": "computed",
+              "value": {
+                "substrate": "bitcoin-ots",
+                "from": "ust:20260628.140000",
+                "to": "ust:20260628.145930"
+              }
+            }
+          },
+          "hashes": {
+            "anchor": "sha256:ee49547a484e89252ea609417e0d3ec976acf0efab74bb83f1dbf4883e4597a5"
+          },
+          "provenance": {
+            "root": "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "tAxcB1VsEy2hNbE4tnPtt0-EnrbdDgI7yl5SToAevNZ-lOSagK4e-QsvaCDK75qoINcwaBPjvQ7C5NX6xf2lDA"
+        }
+      },
+      "expect": "E-MALFORMED",
+      "note": "commitments are their own stream — without `prev` a MISSING window is undetectable (F.5u.3 corollary)"
+    },
+    {
+      "kind": "attestation-subtype",
+      "id": "subtype-pair-checkpoint-gap",
+      "rule": "§11.3 C2 / F.5u — a prev-only attestation carries EXACTLY ONE of checkpoint|gap|anchor, and `root` FOLLOWS the subtype (REQUIRED for anchor, FORBIDDEN for checkpoint/gap)",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260628.15",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "attestation"
+          },
+          "time": {
+            "generated_at": "2026-06-28T15:00:30Z",
+            "valid_from": "2026-06-28T14:00:00Z",
+            "valid_to": "2026-06-28T15:00:00Z"
+          },
+          "data": {
+            "checkpoint": {
+              "kind": "computed",
+              "value": {
+                "head": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+                "frame_count": "2"
+              }
+            },
+            "gap": {
+              "kind": "computed",
+              "value": {
+                "reason": "no-frame"
+              }
+            }
+          },
+          "hashes": {
+            "checkpoint": "sha256:f465b194178cfe886dacdf3a1298495b0e538e15f460eb744f5ded12292dad91",
+            "gap": "sha256:50ef3d1cb7e4ba2930c72901ae87c70ba8e42e43566d5563a147cca3b841125b"
+          },
+          "provenance": {
+            "prev": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "HleIKLc6Am3DjA8AjzWa35_2djQftvEBk5JAqhfPijRjHeQuz6AIugGzkbOHSxfIxIkf-piPHNJZI0y7XzdHCA"
+        }
+      },
+      "expect": "E-MALFORMED",
+      "note": "two subtypes, no root — this is the ONLY case that isolates the exactly-one rule"
+    },
+    {
+      "kind": "attestation-subtype",
+      "id": "subtype-pair-checkpoint-anchor",
+      "rule": "§11.3 C2 / F.5u — a prev-only attestation carries EXACTLY ONE of checkpoint|gap|anchor, and `root` FOLLOWS the subtype (REQUIRED for anchor, FORBIDDEN for checkpoint/gap)",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260628.15",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "attestation"
+          },
+          "time": {
+            "generated_at": "2026-06-28T15:00:30Z",
+            "valid_from": "2026-06-28T14:00:00Z",
+            "valid_to": "2026-06-28T15:00:00Z"
+          },
+          "data": {
+            "checkpoint": {
+              "kind": "computed",
+              "value": {
+                "head": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+                "frame_count": "2"
+              }
+            },
+            "anchor": {
+              "kind": "computed",
+              "value": {
+                "substrate": "bitcoin-ots",
+                "from": "ust:20260628.140000",
+                "to": "ust:20260628.145930"
+              }
+            }
+          },
+          "hashes": {
+            "checkpoint": "sha256:f465b194178cfe886dacdf3a1298495b0e538e15f460eb744f5ded12292dad91",
+            "anchor": "sha256:ee49547a484e89252ea609417e0d3ec976acf0efab74bb83f1dbf4883e4597a5"
+          },
+          "provenance": {
+            "prev": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "bQiYKMrZ4a4gCr3cqrhhqY5B5fhXyx9BlegCApd0ux1RVDB5KzqgprNG1fEkDTFLpX83YfhdnEiu9ZK4Wt4KDQ"
+        }
+      },
+      "expect": "E-MALFORMED",
+      "note": "a commitment wearing a checkpoint too"
+    },
+    {
+      "kind": "attestation-subtype",
+      "id": "subtype-pair-gap-anchor",
+      "rule": "§11.3 C2 / F.5u — a prev-only attestation carries EXACTLY ONE of checkpoint|gap|anchor, and `root` FOLLOWS the subtype (REQUIRED for anchor, FORBIDDEN for checkpoint/gap)",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260628.15",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "attestation"
+          },
+          "time": {
+            "generated_at": "2026-06-28T15:00:30Z",
+            "valid_from": "2026-06-28T14:00:00Z",
+            "valid_to": "2026-06-28T15:00:00Z"
+          },
+          "data": {
+            "gap": {
+              "kind": "computed",
+              "value": {
+                "reason": "no-frame"
+              }
+            },
+            "anchor": {
+              "kind": "computed",
+              "value": {
+                "substrate": "bitcoin-ots",
+                "from": "ust:20260628.140000",
+                "to": "ust:20260628.145930"
+              }
+            }
+          },
+          "hashes": {
+            "gap": "sha256:50ef3d1cb7e4ba2930c72901ae87c70ba8e42e43566d5563a147cca3b841125b",
+            "anchor": "sha256:ee49547a484e89252ea609417e0d3ec976acf0efab74bb83f1dbf4883e4597a5"
+          },
+          "provenance": {
+            "prev": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "qHz_i59bQuuFWFeJ6_8gCowqiC7d1cUASADMEaVPUnl1TGFI3lP5hzLCrE5lhaznqWYf4EWB3hnKuwubCuENCA"
+        }
+      },
+      "expect": "E-MALFORMED",
+      "note": "an absence wearing a commitment"
+    },
+    {
+      "kind": "attestation-subtype",
+      "id": "subtype-none",
+      "rule": "§11.3 C2 / F.5u — a prev-only attestation carries EXACTLY ONE of checkpoint|gap|anchor, and `root` FOLLOWS the subtype (REQUIRED for anchor, FORBIDDEN for checkpoint/gap)",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260628.15",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "attestation"
+          },
+          "time": {
+            "generated_at": "2026-06-28T15:00:30Z",
+            "valid_from": "2026-06-28T14:00:00Z",
+            "valid_to": "2026-06-28T15:00:00Z"
+          },
+          "data": {
+            "note": {
+              "kind": "computed",
+              "value": {
+                "x": "1"
+              }
+            }
+          },
+          "hashes": {
+            "note": "sha256:359b49b56d94f3749f95d5fcc8122c9a8c077fa00ba3c32dd5e026e8e87f319d"
+          },
+          "provenance": {
+            "prev": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "plPMQAwtG4uiW__PTplHOvnJ-h4Ky25clpZAELZlYwDXrSCVgJll6qg1BlhrkUZh5w6silFze6nmBidqHs1sAg"
+        }
+      },
+      "expect": "E-MALFORMED",
+      "note": "a prev-only attestation naming no subtype — the collision C2 closed"
     }
   ]
 }

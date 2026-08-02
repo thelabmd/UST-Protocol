@@ -45,6 +45,22 @@ const PIN = {
   untraced: 3,          // versions with no CHANGELOG row: mcp rc.29, web-signer rc.3, ots-verify rc.10
 };
 
+// HELD BACK IS NOT THE SAME AS DRIFTED, and the difference has to be readable from outside. An owner may
+// deliberately accumulate rounds and publish when a consumer needs them; a stranger then genuinely installs
+// fewer capabilities, and pretending otherwise by raising PIN would do exactly what the note above forbids —
+// turn a regression into a baseline. So the gap is admissible only while the release LINE says so, in the
+// CHANGELOG, in the open. This is NOT an escape hatch: the marker is the same one `npm-drift-check.mjs`
+// verifies AGAINST THE REGISTRY, so a line cannot claim to be unpublished while its version is on npm; and the
+// moment it is published the marker must go, which puts the ratchet straight back at zero. One mechanism, read
+// by two gates — a second, independently-written notion of "unpublished" is how the two would drift apart.
+const CHANGELOG = readFileSync(join(root, 'CHANGELOG.md'), 'utf8');
+const heldBackFor = (protoVersion) => {
+  const line = (String(protoVersion).match(/rc\.(\d+)/) || [])[0];
+  if (!line) return false;
+  const m = CHANGELOG.match(new RegExp(`^## ${line.replace('.', '\\.')} line(.*)$`, 'm'));
+  return !!m && /—\s*unpublished/.test(m[1]);
+};
+
 const fail = []; const notes = []; let pass = 0;
 const check = (ok, msg) => { if (ok) pass++; else fail.push(msg); };
 
@@ -56,6 +72,8 @@ const pkgs = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).worksp
   .map((w) => { try { return { dir: w, ...JSON.parse(readFileSync(join(root, w, 'package.json'), 'utf8')) }; } catch (e) { fail.push(`${w}/package.json is unreadable or not JSON (${String(e.message).slice(0, 60)}) — a package whose manifest cannot be read is NOT checked, so this fails instead of skipping it`); return null; } })
   .filter((p) => p && p.name && p.version);
 check(pkgs.length >= 3, `only ${pkgs.length} workspace packages resolved — the gate would be near-vacuous`);
+// The release LINE covers the whole set, so being held back is one fact about the tree, not nine.
+const HELD_BACK = heldBackFor(pkgs.find((p) => p.name === 'ust-protocol')?.version);
 
 // ── A. every version traceable to a written line ────────────────────────────────────────────────────
 const CH = readFileSync(join(root, 'CHANGELOG.md'), 'utf8');
@@ -167,11 +185,15 @@ for (const p of pkgs) {
   const there = exportsOf(pub);
   const missing = [...here].filter((e) => !there.has(e));
   const pin = PIN[p.name] ?? 0;
-  check(missing.length <= pin,
+  // A gap is admissible when the repo is AHEAD and the release line declares itself unpublished — the owner is
+  // accumulating, and said so where an outsider reads it. It stays a reported residual, never a silent pass.
+  const declaredHold = HELD_BACK && gap > 0;
+  check(missing.length <= pin || declaredHold,
     `${p.name}@${latest} (what \`npm i\` gives a stranger) is missing ${missing.length} export(s), pinned at ${pin}: ` +
     `${missing.slice(0, 6).join(', ')}${missing.length > 6 ? '…' : ''} — a capability gap, not a patch gap. ` +
     `Publish, or state a policy an outsider can read.`);
-  if (missing.length) notes.push(`${p.name}: ${missing.length} export(s) absent from latest (pin ${pin})`);
+  if (missing.length && declaredHold) notes.push(`${p.name}: ${missing.length} export(s) held back with the unpublished ${p.version} line — declared, not drifted`);
+  else if (missing.length) notes.push(`${p.name}: ${missing.length} export(s) absent from latest (pin ${pin})`);
   if (missing.length < pin) notes.push(`${p.name}: gap shrank to ${missing.length} — lower its PIN`);
 }
 

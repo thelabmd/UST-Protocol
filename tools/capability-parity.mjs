@@ -54,7 +54,7 @@ const STANCE = {
 const CAPS = {
   'canon':              { core: ['canon'], mcp: 'ust_canon', cli: 'canon' },
   'content-address':    { core: ['contentHash', 'signedContent', 'partitionHash', 'seed', 'merkleRoot', 'keyId'], mcp: 'ust_key_id', cli: 'contentHash' },
-  'build-transcript':   { core: ['buildState', 'buildAttestation', 'buildDerivation', 'buildGenesis', 'buildKeyLogEntry', 'buildCheckpoint', 'buildStreamCheckpoint', 'buildGap'], mcp: 'ust_build_observation', cli: 'buildState' },
+  'build-transcript':   { core: ['buildState', 'buildAttestation', 'buildDerivation', 'buildGenesis', 'buildKeyLogEntry', 'buildCheckpoint', 'buildStreamCheckpoint', 'buildGap', 'buildAnchorCommitment'], mcp: 'ust_build_observation', cli: 'buildState' },
   'sign':               { core: ['seal'], cli: 'seal' },
   'verify':             { core: ['verify', 'verifyJson', 'verifyAsync', 'isValid', 'checkBounds', 'assertValid', 'verifyOrThrow'], mcp: 'ust_verify', cli: 'verifyRaw' },
   'resolve-authority':  { core: ['resolveAuthority', 'resolveKeys', 'resolveKeysBytes', 'resolveByDiscovery'], mcp: 'ust_resolve', cli: '--genesis' },
@@ -104,6 +104,7 @@ const CAPS = {
 // role partition. So each entry now carries its reason, and the partition is checked in BOTH directions.
 const PRIMITIVES = {
   VERSION: 'the wire/spec/revision triple a report stamps itself with — it describes the implementation, not something a consumer can DO',
+  PREV_ONLY_SUBTYPES: 'the §11.3 C2 subtype vocabulary, exported so the conformance corpus and any second implementation ENUMERATE it from source instead of re-typing three names; a vocabulary a verifier reads, not an action a consumer takes',
   STABILITY: 'per-rung stability labels the surfaces read; a property OF the capabilities rather than one of them',
   REFERENCE_CHECKER_VERSION: 'the L1 build identity a conformance report must name — an instrument label, and naming the instrument is not a capability',
   REFERENCE_CHECKER_RULES: 'the checker\'s own rule vocabulary, exported so gates ENUMERATE it from source instead of typing a copy',

@@ -3,7 +3,7 @@
 
 *This specification text is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](../LICENSE-SPEC). Reference code in this repository is licensed Apache-2.0. Use of the name **UST** / **Universal State Transcript** and the **UST-compatible** claim: see [TRADEMARK.md](../TRADEMARK.md).*
 
-> **Release candidate — `1.0.0-rc.65`.** This specification has been extensively red-teamed; an independent
+> **Release candidate — `1.0.0-rc.66`.** This specification has been extensively red-teamed; an independent
 > external cryptographic audit is pending. It is subject to change until `1.0.0` final. The wire format `ust:"1.0"`
 > is stable across all rc's — pin exact versions. Per-version history is in [`CHANGELOG.md`](../CHANGELOG.md).
 
@@ -547,6 +547,20 @@ with `root` = the RFC 6962 Merkle root over the constituent `content_hash`es **s
 inside the signed State, `root` is signed (closing the "signature binds nothing but a frame" gap): a valid
 attestation binds its root, AND the root's un-backdatable time comes from the anchor (§11).
 
+**A root is published TWICE, and only the SEAL enumerates (F.5u).** The `set` attestation above is a SEAL:
+it names its members and its root is recomputable from them. The BATCH root of §11 — the value a timestamp
+proof is taken over — is a different assertion (*"I committed this root to this substrate in this window"*)
+and it MUST NOT be required to enumerate. Enumeration is not an input to the §11.2 inclusion predicate, so it
+buys a consumer nothing it does not already have from an `AnchorProof`; and publishing it hands every reader
+a membership ORACLE over the batch, a capability that otherwise belongs only to a holder of the path. An
+operator batching for MANY principals therefore cannot enumerate at all, and a form that requires it drives
+that operator outside the protocol. The batch root is published as the `anchor` subtype (§11.3): `root`
+REQUIRED, `constituents` ABSENT, `prev` REQUIRED. A commitment asserts NO membership — membership is
+`AnchorProof` and only that — and a size, where present, is an operator LABEL in the sense of §9.1 and is
+never a verification input (F.5u.4: a count is refutable only against an honest publisher). A commitment can
+never appear among its own constituents (F.5u.3 — its `content_hash` depends on its `root`), so its own
+anchored time comes from a strictly later batch.
+
 ### 9.3 based_on — content-addressed lineage
 `based_on[i].hash` is authoritative and content-addressed. A producer **MUST NOT emit** any `url` (or other key) in a
 signed based_on entry — a signed based_on entry is **hash-only**: a URL may be swapped and can never be confirmed, so a
@@ -832,6 +846,21 @@ NEVER-EMITTED slot is a separate question — decided against the cadence grid b
 consumer requiring completeness MUST have a covering stream checkpoint whose asserted head hash-links to the frames it
 sees — a missing or contradicting stream checkpoint ⇒ E-PREV (fail closed).
 
+**Batch commitments (rev84, F.5u).** The root an operator commits to a public log (§11.1) is published as its
+own prev-only subtype: `class:"attestation"`, `provenance.root` REQUIRED, `constituents` ABSENT,
+`provenance.prev` REQUIRED, and an `anchor` data partition
+`{ substrate, from, to }`. `substrate` names a §17 registry entry and is NOT resolved by the verifier (the
+connector is consumer-injected, F.5c.1); `from`/`to` are `ust_id`s with `from ≤ to`, so the window's
+GRANULARITY IS READ and an hourly, a daily and a per-second anchorer publish the same document — a window
+baked into a field NAME (`hour_ust`) generalises to nothing. Commitments are their own declared tier and
+therefore their own `prev` stream, which makes a MISSING window detectable and not merely a wrong one.
+A commitment asserts **no membership**: what is under the root is established per document by an
+`AnchorProof` (§11.2) and by nothing else, so a `set` seal and a commitment may carry the same root only
+when the batch happens to be exactly the sealed set. Publishing the batch's members is not required
+(F.5u.1 — enumeration is not an input to the inclusion predicate) and for an operator batching on behalf of
+many principals not permitted (F.5u.2 — the list is a membership oracle over other principals' documents).
+A size, if carried, is an operator LABEL (§9.1) and MUST NOT be a verification input (F.5u.4).
+
 **Completeness scope (P5).** The range verdict is defined only for CLOSED intervals (those with a covering
 stream checkpoint). The open tail after the last stream checkpoint is provable only up to `head`; the profile declares a
 MAXIMUM stream checkpoint LAG, so the unprovable tail is bounded in time and a consumer treats post-last-stream checkpoint
@@ -916,12 +945,16 @@ resolves it), so no publisher update retroactively voids history. A stream check
 (`resolveCadence(from) ≠ resolveCadence(to)`) yields `chain-consistent`, not an error — it must be SPLIT at the
 boundary, and each side verifies `complete` under its own cadence. This is the same time-resolution that makes a
 key ROTATION leave old-key signatures valid at their anchored time (§12.2): every operator parameter is resolved
-at the data's time, never applied retroactively. **Subtype discipline (C2) — a stream checkpoint and a gap are
-DISTINCT, not a shape coincidence:** a `class:"attestation"` with empty/absent `constituents` MUST carry
-`provenance.prev`, MUST NOT carry `root`, and MUST carry EXACTLY ONE of a `checkpoint` data partition (⇒ a
-stream checkpoint) or a `gap` data partition (⇒ a gap record) — never both, never neither (⇒ E-MALFORMED). A
-constituents-bearing attestation is the `set` subtype (Merkle `root` REQUIRED). This closes the prior ambiguity
-where a stream checkpoint rode the gap exception. Because the cadence is SIGNED in the genesis and not a
+at the data's time, never applied retroactively. **Subtype discipline (C2) — the subtype is the NAMED DATA
+PARTITION, never a shape:** a `class:"attestation"` with empty/absent `constituents` MUST carry
+`provenance.prev` and MUST carry EXACTLY ONE of a `checkpoint` data partition (⇒ a stream checkpoint), a
+`gap` data partition (⇒ a gap record), or an `anchor` data partition (⇒ a batch commitment) — never two,
+never none (⇒ E-MALFORMED). A constituents-bearing attestation is the `set` subtype (Merkle `root` REQUIRED).
+**`root` follows from the subtype rather than deciding it:** REQUIRED for `set` and for `anchor`, FORBIDDEN
+for `checkpoint` and `gap` (⇒ E-MALFORMED). This closes the prior ambiguity where a stream checkpoint rode
+the gap exception, and the later one (rev84, F.5u) where a root could be published only by enumerating what
+was under it — which the §11.2 inclusion predicate never reads and a multi-principal batcher cannot do.
+Because the cadence is SIGNED in the genesis and not a
 per-stream checkpoint choice, a publisher cannot claim a coarser grid to hide an omitted slot: a coarser cadence is a
 different (forked or supersession-visible) genesis, not a free stream checkpoint field.
 
@@ -1730,7 +1763,7 @@ Independent re-implementation is expected; the vectors make "verify without trus
 ## 17. Registries
 
 - **class:** `observation`, `attestation`, `derivation`, `genesis` (name-binding root, §12.1), `key` (key-log entry, §12.2), `cadence` (cadence-log entry, §11.3 — `state.data.cadence_op.value` keys `cadence, effective_from`; prev-chained, resolved at a slot's time; not valid in a `data` context, W3). (Extensible by future 1.x; unknown ⇒ E-MALFORMED.)
-- **attestation subtype (§11.3 C2):** `set` (constituents + Merkle `root`) · `checkpoint` (prev + a `checkpoint` data partition `{head, frame_count, from?, to?}`, no constituents/root) · `gap` (prev + a `gap` data partition, no constituents/root). A prev-only attestation MUST carry EXACTLY ONE of `checkpoint`/`gap` (never both/neither ⇒ E-MALFORMED) — the subtype is the named data partition, not a shape.
+- **attestation subtype (§11.3 C2):** `set` (constituents + Merkle `root`) · `checkpoint` (prev + a `checkpoint` data partition `{head, frame_count, from?, to?}`, no constituents/root) · `gap` (prev + a `gap` data partition, no constituents/root) · `anchor` (prev + `root` + an `anchor` data partition `{substrate, from, to}`, no constituents — the batch commitment of §11.3, rev84/F.5u). A prev-only attestation MUST carry EXACTLY ONE of `checkpoint`/`gap`/`anchor` (never two, never none ⇒ E-MALFORMED) — the subtype is the named data partition, not a shape, and `root` FOLLOWS from the subtype (required for `set`/`anchor`, forbidden for `checkpoint`/`gap`) rather than deciding it.
 - **genesis value (§12.1):** `pub`, `role:"name-binding-root"`, optional `roles` (a non-empty ARRAY of operating-role names the publisher will use — its presence DECLARES role separation, §12.2), `max_partitions`, `max_transcript_bytes`, `cadence` (string integer seconds — the SIGNED stream cadence that fixes the completeness grid, §11.3; resolved, never a per-checkpoint choice), and — for the §12.3 authority-checkpoint profile — optional `checkpoint_authority:{key_id,pub}` and `recovery:{keys:{key_id:pub},threshold}` (each `key_id = H("ust:keylog", pub)`). A verifier RESOLVES the checkpoint-authority + recovery roots FROM this signed genesis (`authority_root:"genesis"`, P1-04); a root passed as a raw caller option is a consumer PIN (`authority_root:"consumer-pin"`), never silently "genesis-authorized".
 - **key role (§12.2, §F.5e.1) — a FIXED vocabulary of five; a new role is a spec change, never an operator's word.** `name-binding-root` (signs the genesis) · `checkpoint-recovery` (threshold-signs a RecoveryClaim for the authority-checkpoint chain, §12.3.2) · `authority-checkpoint` (signs authority checkpoints, §12.3) — the three AUTHORIZING roles, set at the ceremony · `data` (the publisher's stream) · `issuance` (what is handed to a named recipient) — the two OPERATING roles, assigned in the key log. The two authorizing names are QUALIFIED on purpose: bare `recovery` and bare `checkpoint` each name TWO mechanisms in this protocol, and reasoning about the bare word once widened an authority set (§F.5e.3), so a role — read by a consumer to decide what a signature meant — may never carry one. Free-form names are refused deliberately: the role is read by a CONSUMER, so an open field would make "what does this signature mean" a question addressed to the publisher rather than to the protocol. `issuance` names what the role PROTECTS — a signature over something leaving the publisher for a named recipient — so a product word (`invoice`, `licence`, `receipt`) never enters the vocabulary; each is an instance of it.
 - **key-log entry** (a `class:"key"` transcript, §12.2): `state.data.key_op.value` keys `op,pub,supersedes,role,reason,compromised_since`; `op` ∈ `add|revoke`; `role` ∈ `data|issuance` (the operating roles only — the authorizing three are ceremony-set);
