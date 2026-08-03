@@ -54,6 +54,7 @@ const MIN_REASON = 60;   // a reason shorter than this is a placeholder, not a d
 
 // Each layer's reference must RESOLVE against the artifact it names — a registry of strings nobody checks is a
 // second place to be wrong, which is the defect class this repo spends most of its gates on.
+const PKG = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 const RESOLVES = {
   math: (v) => MODEL.includes(v),
   spec: (v) => SPEC.includes(v),
@@ -69,7 +70,14 @@ const RESOLVES = {
     const f = v.split(' :: ')[0].trim();
     if (!/^tools\/[\w.-]+\.mjs$/.test(f)) return false;
     try { U(f); } catch { return false; }
-    return CI_YML.includes(f);
+    // CI may invoke a gate DIRECTLY or through an npm script, and both are "CI actually runs it" — the property this
+    // rule is about. Reading only the workflow text rejected `tools/ceremony-selfcheck-gate.mjs` because the step is
+    // `npm run test:ceremony`, so the gate was demanding a spelling rather than the fact. Resolve the indirection.
+    if (CI_YML.includes(f)) return true;
+    const scripts = PKG.scripts ?? {};
+    for (const [name, body] of Object.entries(scripts))
+      if (CI_YML.includes(`npm run ${name}`) && String(body).includes(f)) return true;
+    return false;
   },
 };
 

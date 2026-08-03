@@ -1110,6 +1110,14 @@
    "code": "packages/ust-cli/index.mjs :: runRerootCeremony emits the terminal reroot and hands the CLOSED log to the courier; askHidden hands back the unused remainder of a chunk",
    "vector": "reroot-20-courier-proves-successor",
    "test": "F.5z.5 the courier carries the WHOLE closed log, so an identity with prior entries still proves continuity"
+  },
+  {
+   "round": 156,
+   "math": "F.5y A re-rooting is a CROSSING of every genesis-rooted structure the publisher instantiated, not an event (#131)",
+   "spec": "A re-rooting is a CROSSING, and it is not one event (F.5y)",
+   "code": "packages/ust-cli/index.mjs :: ensureOutDir proves the output target writable at ENTRY, called by all five ceremonies before any passphrase",
+   "vector": "reroot-20-courier-proves-successor",
+   "test": "tools/ceremony-selfcheck-gate.mjs"
   }
  ],
  "first_accounted_round": 76,

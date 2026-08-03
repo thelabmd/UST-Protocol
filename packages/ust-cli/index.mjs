@@ -7,7 +7,7 @@
 // encryptKey) so a notary tool is TESTABLE end-to-end without a live network — the 9th-audit regression suite
 // (regression.mjs) drives them directly. cmdGenesis is only the readline/network orchestrator around them.
 import { createInterface } from 'node:readline/promises';
-import { readFileSync, writeFileSync, realpathSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, realpathSync, mkdirSync, unlinkSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createCipheriv, createDecipheriv, scryptSync, randomBytes, createHash, generateKeyPairSync, createPrivateKey, createPublicKey, sign as edsign } from 'node:crypto';
 import * as P from 'ust-protocol';
@@ -1936,6 +1936,7 @@ async function cmdGenesis() {
   // current dir; --out exists for scripted/special cases and is simply SHOWN, never asked.
   let outDir = arg('out', '.');
   if (outDir === true) { if (!tty) die('--out needs a value'); outDir = '.'; }
+  ensureOutDir(outDir, die);   // AT ENTRY, before the interview and long before the passphrase — see ensureOutDir
 
   // the road is a CHOICE, not a vendor default: by hand on YOUR infra (exact guidance) or one-click.
   let dnsMode = arg('dns', null);
@@ -2204,6 +2205,18 @@ const discoveryFetcher = (domain) => async (path) => {
   if (!r.ok) { const e = new Error(`HTTP ${r.status} at ${path}`); e.httpStatus = r.status; throw e; }
   return r.text();
 };
+// A directory named on the command line is PROVEN WRITABLE AT ENTRY, never discovered at exit. MEASURED on the
+// reference operator's live re-rooting, 2026-08-03: the whole ceremony succeeded — twelve acceptance legs green,
+// both passphrases typed, a fresh crown minted in memory — and then `writeFileSync` threw ENOENT because `--out`
+// named a directory that did not exist. `writeFileSync` does not create parents. The minted identity was discarded
+// and the operator had entered two cold-key secrets for nothing.
+//
+// The rule: a condition checkable at ENTRY must never be discovered at EXIT. Everything in between is work the
+// operator cannot get back, and on a ceremony that work is a cold key taken out of storage.
+export function ensureOutDir(dir, die_) {
+  try { mkdirSync(dir, { recursive: true }); writeFileSync(`${dir}/.ust-write-probe`, ''); unlinkSync(`${dir}/.ust-write-probe`); return dir; }
+  catch (e) { return die_(`--out ${dir} is not writable: ${e.message || e}. Checked at entry, so a ceremony never reaches its last line and throws away work you cannot redo.`); }
+}
 // §12.2/§F.5e.1 — add a key BESIDE the current one, not in place of it. This is the operation `rotate` cannot
 // express and inheritance cannot either: `supersedes` PROPAGATES a role down a lineage and never INTRODUCES one,
 // so a key for a DIFFERENT purpose has no lineage to inherit from and must state its own role. Root-signed like
@@ -2547,6 +2560,7 @@ async function cmdKey() {
   const domain = arg('domain');
   if (!domain || domain === true) die('--domain <d> required');
   const rootFile = arg('root'); if (!rootFile || rootFile === true) die('--root <encrypted root backup .b64> required (the cold crown key — every key-log mutation is root-signed, §F.5e.3)');
+  const outDir = ensureOutDir((arg('out', null) && arg('out', null) !== true) ? String(arg('out', null)) : '.', die);   // AT ENTRY: a ceremony must never mint a key and then fail to write it
   const roleArg = arg('role', null); const role = (roleArg && roleArg !== true) ? roleArg : null;
   const get = discoveryFetcher(domain);
   let genesis; try { genesis = JSON.parse(await get('/.well-known/ust-genesis')); } catch (e) { die('cannot fetch genesis for ' + domain + ': ' + (e.message || e)); }
@@ -2581,7 +2595,6 @@ async function cmdKey() {
   // ceremony broke once already.
   const gotRole = ks.roles.get(grown.newKey.key_id) ?? null;
   if (gotRole !== role) die(`self-check FAILED: the new key resolves with role ${gotRole ?? '(none)'}, not ${role ?? '(none)'}`);
-  const outDir = (arg('out', null) && arg('out', null) !== true) ? arg('out', null) : '.';
   writeFileSync(`${outDir}/ust-keylog`, JSON.stringify(grown.keylog, null, 2) + '\n');
   const pkcs8 = Buffer.from(await crypto.subtle.exportKey('pkcs8', grown.newKey.privateKey)).toString('base64');
   writeFileSync(`${outDir}/${role}-key.b64`, pkcs8 + '\n');
@@ -2593,6 +2606,7 @@ export async function cmdRotate() {
   const domain = arg('domain');
   if (!domain || domain === true) die('usage: ust rotate --domain <d> --root <encrypted-root.b64> [--key-id <key_id>] [--keylog <served array file>]\n         [--reason retired|compromised [--compromised-since <RFC3339-Z>]] [--out .]\n  APPENDS a key rotation to the served log (never re-mints). Old docs stay valid under the key active at their anchored time (§12.2).\n  --key-id NAMES the key being replaced; it is REQUIRED once more than one operational key is active, and the\n  successor INHERITS that key\'s role. To change what a key is FOR, add one beside it: `ust key add --role`.');
   const rootFile = arg('root'); if (!rootFile || rootFile === true) die('--root <encrypted root backup .b64> required (the cold crown key)');
+  const outDir = ensureOutDir((arg('out', null) && arg('out', null) !== true) ? String(arg('out', null)) : '.', die);   // AT ENTRY: a ceremony must never mint a key and then fail to write it
   // fetch the current identity (genesis + served key-log), or take the log from --keylog
   const get = discoveryFetcher(domain);   // one reader for every ceremony command — see its definition for why
   let genesis; try { genesis = JSON.parse(await get('/.well-known/ust-genesis')); } catch (e) { die('cannot fetch genesis for ' + domain + ': ' + (e.message || e)); }
@@ -2632,7 +2646,6 @@ export async function cmdRotate() {
     const bound = !ks.error && ks.active instanceof Map && ks.active.has(grown.newOp.key_id);
     if (!bound) { rl?.close(); die('self-check FAILED: the new key is NOT in the active set after the grown log (' + (active.error || 'not present') + ')'); }
   rl?.close();
-  const outDir = (arg('out', null) && arg('out', null) !== true) ? arg('out', null) : '.';
   writeFileSync(`${outDir}/ust-keylog`, JSON.stringify(grown.keylog, null, 2) + '\n');
   const newOpPkcs8 = Buffer.from(await crypto.subtle.exportKey('pkcs8', grown.newOp.privateKey)).toString('base64');
   writeFileSync(`${outDir}/operational-key.b64`, newOpPkcs8 + '\n');
@@ -2667,6 +2680,7 @@ export async function cmdCadence() {
   const seconds = String(secsRaw);
   if (!/^[1-9][0-9]*$/.test(seconds)) die('--seconds must be a canonical positive integer of seconds (§11.3): "30", never "1.5" or "030"');
   const effFrom = arg('effective-from'); if (!effFrom || effFrom === true) die('--effective-from <ust_id> required — the slot this cadence takes effect at');
+  const outDir = ensureOutDir((arg('out', null) && arg('out', null) !== true) ? String(arg('out', null)) : '.', die);   // AT ENTRY: a ceremony must never mint a key and then fail to write it
 
   const get = discoveryFetcher(domain);   // one reader for every ceremony command — see its definition for why
   let genesis; try { genesis = JSON.parse(await get('/.well-known/ust-genesis')); } catch (e) { die('cannot fetch genesis for ' + domain + ': ' + (e.message || e)); }
@@ -2710,7 +2724,6 @@ export async function cmdCadence() {
   if (after.error) die('self-check FAILED — the grown log does not resolve: ' + after.error + ' ' + (after.detail || ''));
   if (String(after.cadence) !== seconds) die(`self-check FAILED — at ${effFrom} the log resolves to ${after.cadence}, not ${seconds}`);
 
-  const outDir = (arg('out', null) && arg('out', null) !== true) ? arg('out', null) : '.';
   writeFileSync(`${outDir}/ust-cadence`, JSON.stringify(grown, null, 2) + '\n');
   console.error(`  ✓ ${grown.length} entr${grown.length === 1 ? 'y' : 'ies'} → ${outDir}/ust-cadence`);
   console.error(`    cadence ${seconds}s effective from ${effFrom} · entry ${P.contentHash(entry).slice(0, 22)}…`);
@@ -2729,7 +2742,7 @@ export async function cmdCadence() {
 export async function cmdReroot() {
   const domain = arg('domain');
   if (!domain || domain === true) die('usage: ust reroot --domain <d> --root <encrypted epoch-A root .b64> [--ca-key <epoch-A checkpoint-authority key .b64>]\n         [--roles data,issuance] [--assign <key_id>=<role>,…] [--drop <key_id>,…] [--reason planned|compromised]\n         [--out <dir>]\n  DISCONNECTED: --genesis <f> selects an OFFLINE ceremony; then every surface must be supplied (--keylog/--witness/\n         --cadence-log <f>) or DECLARED absent (--no-keylog/--no-witness/--no-cadence-log). Silence is not an assertion.\n  RE-ROOT this identity onto a NEW genesis, crossing every genesis-rooted structure you have instantiated (F.5y):\n  the key-log, the authority chain, the witness log (the NAME), and the cadence log.\n  --root is the OUTGOING crown. §12.1 P2 makes a supersession authoritative only when it is BOTH signed by the old\n  genesis key AND reflected in the name-binding root, and only that key can produce the signed half. What must cross is read from\n  your SERVED identity, never asked — an omitted flag is indistinguishable from an absent structure.\n  Writes artifacts to a directory. It PUBLISHES NOTHING: until you serve them, nothing has happened.\n  The one axis this cannot cross is your running writer — see its printed obligation.');
-  const outDir = (arg('out', null) && arg('out', null) !== true) ? String(arg('out', null)) : '.';
+  const outDir = ensureOutDir((arg('out', null) && arg('out', null) !== true) ? String(arg('out', null)) : '.', die);
   const caFile = arg('ca-key', null);
   const reason = (arg('reason', null) && arg('reason', null) !== true) ? String(arg('reason', null)) : 'planned';
   const rolesArg = arg('roles', null);

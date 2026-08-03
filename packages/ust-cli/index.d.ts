@@ -48,6 +48,7 @@ export const DERIVED_REQUIRES_PRIOR: unknown;
 export const DISCOVERY_ARTIFACTS: readonly ['genesis', 'keylog', 'cadence', 'witness'];
 export function dohConfirmTxt(arg0?: unknown): Promise<Record<string, unknown>>;
 export function encryptKey(pkcs8: unknown, pass: unknown): string;
+export function ensureOutDir(dir: unknown, die_: unknown): unknown;
 export const FORKCHOICE_BOOL_FLAGS: unknown;
 export const FORKCHOICE_VALUE_FLAGS: unknown;
 export const GOLD_REFUSAL: unknown;

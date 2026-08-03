@@ -333,6 +333,11 @@
    "round": 155,
    "issue": 133,
    "no_recap": "The command now produces both halves and its acceptance proves continuity from the consumer's position, but nothing has been RUN against the live operator yet. The recap belongs to the round where the ceremony crosses a real identity, not to the one that made it possible; sealing now would describe a rehearsal as an event."
+  },
+  {
+   "round": 156,
+   "issue": 131,
+   "no_recap": "Found DURING the live ceremony rather than after it, and that ceremony is still in progress — the operator re-ran with the directory created and has not yet published. The recap belongs to the round that closes the crossing, and this one only removed a stone from its path."
   }
  ]
 }

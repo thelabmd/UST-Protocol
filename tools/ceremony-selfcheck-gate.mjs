@@ -72,6 +72,37 @@ for (const s of sites) {
 // the pin must be able to fail
 check(WORLD.length >= 4 && sites.length >= 4, 'the vocabulary or the site set shrank — the gate would pass vacuously');
 
+// ── A CONDITION CHECKABLE AT ENTRY MUST NOT BE DISCOVERED AT EXIT ────────────────────────────────────────────────
+//
+// MEASURED on the reference operator's live re-rooting, 2026-08-03. The ceremony ran to completion: twelve
+// acceptance legs green, both cold-key passphrases typed, a fresh crown minted in memory — and then `writeFileSync`
+// threw ENOENT, because `--out` named a directory that did not exist and `writeFileSync` does not create parents.
+// The minted identity was discarded. Nothing was published, so nothing was lost but the operator's session with a
+// key out of cold storage, which is the scarcest thing a ceremony spends.
+//
+// FOUR of the five ceremonies had it, and the sweep found them rather than the incident: only the command being
+// debugged had been fixed. The domain is every command that asks for a secret — each must have proven its output
+// target writable BEFORE the question, because everything after it is work the operator cannot redo.
+{
+  const fns = [];
+  let cur = null;
+  lines.forEach((l, i) => {
+    const m = /^(?:export )?(?:async )?function (cmd\w+)/.exec(l);
+    if (m) { cur = { name: m[1], start: i, out: null, ask: null }; fns.push(cur); }
+    if (!cur) return;
+    if (/ensureOutDir\(/.test(l) && !/export function/.test(l) && cur.out === null) cur.out = i;
+    if (/askHidden\(/.test(l) && cur.ask === null) cur.ask = i;
+  });
+  const withSecret = fns.filter((f) => f.ask !== null);
+  check(withSecret.length >= 4, `only ${withSecret.length} ceremony command(s) ask for a secret — the probe has gone blind`);
+  for (const f of withSecret)
+    check(f.out !== null && f.out < f.ask,
+      `${f.name} asks for a passphrase at :${f.ask + 1} without having proven its output directory writable first (ensureOutDir at :${f.out === null ? 'nowhere' : f.out + 1}). A ceremony that mints a key and THEN cannot write it has spent a cold-key session for nothing — measured live on 2026-08-03.`);
+  check(/export function ensureOutDir/.test(SRC), 'ensureOutDir is gone — each command would grow its own copy of the check, or none');
+  check(/mkdirSync\(dir, \{ recursive: true \}\)/.test(SRC) && /write-probe/.test(SRC),
+    'ensureOutDir no longer CREATES the directory and PROBES a write — an existing but unwritable path would still fail at exit');
+}
+
 // ── askHidden must OWN stdin, and the roster is ENUMERATED rather than claimed ────────────────────────────────────
 //
 // `askHidden` reads a passphrase in raw mode so it never echoes. A readline interface opened BEFORE it takes stdin
