@@ -343,6 +343,11 @@
    "round": 157,
    "issue": 131,
    "no_recap": "Found while the operator was mid-ceremony, holding artifacts and waiting to publish. The round removed a false assurance from the path rather than completing the crossing, and the crossing is what the recap is owed for."
+  },
+  {
+   "round": 158,
+   "issue": 131,
+   "no_recap": "The round exists because a live ceremony produced an unusable crown and the operator found it in cold storage. Nothing is published, the ceremony will be re-run, and the recap belongs to the crossing rather than to the repair that made it possible."
   }
  ]
 }

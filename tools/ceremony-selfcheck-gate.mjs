@@ -111,6 +111,33 @@ check(WORLD.length >= 4 && sites.length >= 4, 'the vocabulary or the site set sh
     'ensureOutDir no longer CREATES the directory and PROBES a write — an existing but unwritable path would still fail at exit');
 }
 
+// ── A CEREMONY PROVES THE FILE IT WROTE, NOT THE VALUE IT HELD ───────────────────────────────────────────────────
+//
+// MEASURED live, 2026-08-03. Every acceptance leg a ceremony runs inspects values in MEMORY. A crown was written
+// through a path that encoded it differently from every other ceremony: the file encrypted and decrypted perfectly
+// and then would not parse. Nothing noticed, because nothing read it back — and a FILE is what the operator carries
+// to cold storage. They found out with the network on and the passphrase no longer in hand.
+//
+// The owner's rule when it happened: check it in the tool, right after the ceremony, while the client is still
+// offline. So every command that WRITES a key must READ IT BACK and prove it against what the documents say.
+{
+  const writers = [];
+  let cur = null;
+  lines.forEach((l, i) => {
+    const m = /^(?:export )?(?:async )?function (cmd\w+)/.exec(l);
+    if (m) { cur = { name: m[1], start: i, writes: [], proves: [] }; writers.push(cur); }
+    if (!cur) return;
+    if (/(write(FileSync|Secret)|secret)\(.*-?key.*\.b64|secret\(crownName|secret\(caName/.test(l)) cur.writes.push(i);
+    if (/proveWrittenKey\(/.test(l)) cur.proves.push(i);
+  });
+  const keyWriters = writers.filter((w) => w.writes.length);
+  check(keyWriters.length >= 3, `only ${keyWriters.length} command(s) found writing a key file — the probe has gone blind`);
+  for (const w of keyWriters)
+    check(w.proves.length > 0,
+      `${w.name} writes a key file at :${w.writes[0] + 1} and never reads it back — a ceremony must prove the FILE, not the value it held. Measured live: a crown that encrypts and decrypts perfectly can still be unparseable, and the operator finds out in cold storage.`);
+  check(/export function proveWrittenKey/.test(SRC), 'proveWrittenKey is gone — each command would grow its own read-back, or none');
+}
+
 // ── askHidden must OWN stdin, and the roster is ENUMERATED rather than claimed ────────────────────────────────────
 //
 // `askHidden` reads a passphrase in raw mode so it never echoes. A readline interface opened BEFORE it takes stdin

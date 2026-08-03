@@ -284,6 +284,18 @@ export const encryptKey = (pkcs8, pass) => {
   return Buffer.concat([salt, iv, c.getAuthTag(), ct]).toString('base64');
 };
 // inverse of encryptKey — throws (GCM auth) on a wrong passphrase / corrupt backup (never a silent bad key).
+// THE FAILURE MUST SAY WHICH. MEASURED 2026-08-03, live: an operator's crown would not decrypt and the message read
+// "wrong passphrase or corrupt backup" — two different worlds with two different remedies, and no way to tell them
+// apart. A ciphertext this function produced has a KNOWN SHAPE (16-byte salt, 12-byte IV, 16-byte GCM tag, then the
+// key), so "is this even one of ours" is answerable WITHOUT the passphrase, and answering it first turns one useless
+// message into two useful ones.
+export const decryptKeyShape = (b64) => {
+  const t = String(b64 ?? '').trim();
+  if (!/^[A-Za-z0-9+/]+=*$/.test(t)) return 'not base64 — this file is not a backup this tool wrote';
+  let b; try { b = Buffer.from(t, 'base64'); } catch { return 'base64 does not decode'; }
+  if (b.length <= 44) return `only ${b.length} bytes — too short to carry salt+iv+tag+key, so this is not one of our backups`;
+  return null;
+};
 export const decryptKey = (b64, pass) => {
   const buf = Buffer.from(b64, 'base64');
   const salt = buf.subarray(0, 16), iv = buf.subarray(16, 28), tag = buf.subarray(28, 44), ct = buf.subarray(44);
@@ -2050,6 +2062,9 @@ async function cmdGenesis() {
   // producer loads it non-interactively from its signing-key env. It is NOT cold-store:
   // move it into the producer's secret store, then delete this file — never commit it.
     writeSecret(`${outDir}/operational-key.b64`, opPkcs8.toString('base64'));
+    try { proveWrittenKey(`${outDir}/operational-key.b64`, op.pub, { label: 'operational key' });
+          proveWrittenKey(`${outDir}/genesis-key${pass ? '.enc' : ''}.b64`, root.pub, { pass: pass || null, label: 'crown' }); }
+    catch (e) { throw new Error(`WRITTEN-ARTIFACT CHECK FAILED: ${e.message}. The documents are correct; the files are not — nothing has been published, so re-run rather than carry this to cold storage.`); }
     // A recovery set that is signed into the genesis and NOT persisted is worse than none: the document would
     // advertise a recovery the operator cannot perform. Same for the checkpoint authority. They are written under
     // the same 0600 + refuse-overwrite discipline as the root, and the summary tells the operator to split them —
@@ -2195,10 +2210,22 @@ export async function rootSignerFrom(pkcs8, rootPubB64url) {
   // The ceremonies were not exposed by luck alone: each one verifies its output downstream (`resolveKeys` refuses a
   // key-log entry signed by a key the genesis does not name), so a wrong backup failed there instead. `ust key check`
   // has no downstream — the comparison IS its output — so it was the first caller this could actually deceive.
-  const derived = createPublicKey({ key: Buffer.from(pkcs8, 'base64'), format: 'der', type: 'pkcs8' })
+  // TWO SHAPES EXIST IN THE WORLD, and refusing the second would strand a real operator's crown. Every ceremony
+  // encrypts the DER bytes; `ust reroot` briefly encrypted the base64 TEXT of them (measured live, 2026-08-03), so a
+  // backup written by that build decrypts to ASCII rather than DER. Both are the same key. Detect by shape — DER for
+  // a PKCS#8 Ed25519 key is 48 bytes starting 0x30 — and decode the other, rather than making an operator find out
+  // that their cold storage holds something no version can read.
+  const bytes = (() => {
+    const b = Buffer.isBuffer(pkcs8) ? pkcs8 : Buffer.from(pkcs8);
+    if (b.length === 48 && b[0] === 0x30) return b;                        // DER as written by every ceremony
+    const txt = b.toString('utf8').trim();
+    if (/^[A-Za-z0-9+/]+=*$/.test(txt)) { const d = Buffer.from(txt, 'base64'); if (d.length === 48 && d[0] === 0x30) return d; }
+    return b;                                                             // unrecognised: let the import say so
+  })();
+  const derived = createPublicKey({ key: bytes, format: 'der', type: 'pkcs8' })
     .export({ format: 'der', type: 'spki' }).subarray(-32).toString('base64url');
   if (derived !== rootPubB64url) throw new Error('decrypted root key does NOT match the served genesis pub — wrong backup');
-  const priv = await crypto.subtle.importKey('pkcs8', Buffer.from(pkcs8, 'base64'), { name: 'Ed25519' }, false, ['sign']);
+  const priv = await crypto.subtle.importKey('pkcs8', bytes, { name: 'Ed25519' }, false, ['sign']);
   const pubKey = await crypto.subtle.importKey('raw', Buffer.from(derived, 'base64url'), { name: 'Ed25519' }, true, ['verify']);
   return await W.signerFromKeys(priv, pubKey);
 }
@@ -2230,6 +2257,25 @@ const discoveryFetcher = (domain) => async (path) => {
 export function ensureOutDir(dir, die_) {
   try { mkdirSync(dir, { recursive: true }); writeFileSync(`${dir}/.ust-write-probe`, ''); unlinkSync(`${dir}/.ust-write-probe`); return dir; }
   catch (e) { return die_(`--out ${dir} is not writable: ${e.message || e}. Checked at entry, so a ceremony never reaches its last line and throws away work you cannot redo.`); }
+}
+// PROVE A KEY FILE AFTER WRITING IT, while the operator is still here and the fix is still free. Every ceremony's
+// self-checks inspect values held in MEMORY; none of them touches a file, and a file is what the operator carries to
+// cold storage. MEASURED live 2026-08-03: a crown was written through a path that encoded it differently from every
+// other ceremony — it encrypted and decrypted perfectly and then would not parse — and nothing noticed, because
+// nothing read it back. The operator found out with the network on and the passphrase no longer in hand.
+//
+// The owner's rule when it happened: check it in the tool, right after the ceremony, while the client is still
+// offline. `expectedPub` is what the DOCUMENTS say this key must be; anything else means the file is not the key.
+export function proveWrittenKey(path, expectedPub, opts = {}) {
+  const { pass = null, label = 'key' } = opts;
+  const raw = readFileSync(path, 'utf8').trim();
+  const bytes = pass ? decryptKey(raw, pass) : Buffer.from(raw, 'base64');
+  const b = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes);
+  const der = (b.length === 48 && b[0] === 0x30) ? b : Buffer.from(b.toString('utf8').trim(), 'base64');
+  const got = createPublicKey({ key: der, format: 'der', type: 'pkcs8' })
+    .export({ format: 'der', type: 'spki' }).subarray(-32).toString('base64url');
+  if (got !== expectedPub) throw new Error(`the ${label} written to ${path} is NOT the key the documents name`);
+  return got;
 }
 // §12.2/§F.5e.1 — add a key BESIDE the current one, not in place of it. This is the operation `rotate` cannot
 // express and inheritance cannot either: `supersedes` PROPAGATES a role down a lineage and never INTRODUCES one,
@@ -2490,9 +2536,27 @@ async function pkFromSigner(signer) {
 // it — the gate demanded an output directory of a command that produces no output. A subcommand doing a
 // fundamentally different thing is its own function.
 export async function cmdKeyCheck() {
-    const rootFile = arg('root'); const genFile = arg('genesis');
+    const rootFile = arg('root'); const genFile = arg('genesis'); const caFile = arg('ca-key');
+    // TWO cold things come out of a ceremony and both are unproven until asked. The checkpoint-authority key is
+    // stored PLAIN (it is not a crown), so it needs no passphrase — but it needs the same question, because the
+    // round that will need it is the NEXT re-rooting, and discovering it there is discovering it too late.
+    if (caFile && caFile !== true) {
+      let genesis; try { genesis = JSON.parse(readFileSync(String(genFile), 'utf8')); } catch (e) { die('cannot read --genesis: ' + (e.message || e)); }
+      const want = genesis?.state?.data?.genesis?.value?.checkpoint_authority;
+      if (!want) die('that genesis declares NO checkpoint authority — there is nothing for this key to match');
+      let derived;
+      try { derived = createPublicKey({ key: Buffer.from(readFileSync(String(caFile), 'utf8').trim(), 'base64'), format: 'der', type: 'pkcs8' })
+        .export({ format: 'der', type: 'spki' }).subarray(-32).toString('base64url'); }
+      catch (e) { die('cannot read --ca-key as a PKCS#8 Ed25519 key: ' + (e.message || e)); }
+      if (derived !== want.pub) die('this key is NOT the checkpoint authority that genesis declares — wrong file');
+      console.log(`\n  ✅ this key IS the checkpoint authority of that genesis`);
+      console.log(`     key_id       ${want.key_id}`);
+      console.log(`     genesis      ${P.contentHash(genesis)}`);
+      console.log('\n  Nothing was written and nothing left this machine.');
+      return;
+    }
     if (!rootFile || rootFile === true || !genFile || genFile === true)
-      die('usage: ust key check --root <encrypted-root.b64> --genesis <ust-genesis file>\n  Decrypts the backup and asks ONE question: is this the key that genesis was signed with?\n  No network, no writes, and the key is never printed. Run it the day you STORE a backup, not the day you need it.');
+      die('usage: ust key check --genesis <ust-genesis file> ( --root <encrypted-root.b64> | --ca-key <ca-key.b64> )\n  Asks ONE question of a cold file: does it belong to that identity? --root is the crown (asks a passphrase);\n  --ca-key is the checkpoint authority (stored plain, no passphrase).\n  No network, no writes, and the key is never printed. Run it the day you STORE a backup, not the day you need it.');
     let genesis; try { genesis = JSON.parse(readFileSync(String(genFile), 'utf8')); } catch (e) { die('cannot read --genesis: ' + (e.message || e)); }
     const pub = genesis?.state?.data?.genesis?.value?.pub;
     if (typeof pub !== 'string') die('--genesis is not a genesis transcript (no state.data.genesis.value.pub)');
@@ -2505,7 +2569,7 @@ export async function cmdKeyCheck() {
     try { signer = await rootSignerFrom(decryptKey(readFileSync(String(rootFile), 'utf8').trim(), pass), pub); }
     catch (e) {
       if (String(e.message).includes('match')) die('the backup DECRYPTS but is a DIFFERENT key than this genesis was signed with — right passphrase, wrong file (or the wrong genesis)');
-      die('decrypt failed — wrong passphrase or corrupt backup. Nothing about the genesis is in question; this is about the file and the phrase.');
+      die(decryptKeyShape(readFileSync(String(rootFile), 'utf8')) ?? 'the file IS a backup this tool wrote, and the passphrase does not open it — so the phrase is wrong, or this is a backup of a DIFFERENT key. Two files named `genesis-key.enc.b64` exist after a re-rooting: the outgoing crown and the new one.');
     }
     console.log(`\n  ✅ this backup IS the root of that genesis`);
     console.log(`     key_id       ${signer.key_id}`);
@@ -2646,6 +2710,8 @@ async function cmdKey() {
   writeFileSync(`${outDir}/ust-keylog`, JSON.stringify(grown.keylog, null, 2) + '\n');
   const pkcs8 = Buffer.from(await crypto.subtle.exportKey('pkcs8', grown.newKey.privateKey)).toString('base64');
   writeFileSync(`${outDir}/${role}-key.b64`, pkcs8 + '\n');
+  try { proveWrittenKey(`${outDir}/${role}-key.b64`, grown.newKey.pub, { label: `new ${role} key` }); }
+  catch (e) { die(`WRITTEN-ARTIFACT CHECK FAILED: ${e.message}. Nothing was published — re-run.`); }
   console.error(`  ✓ ${grown.keylog.length} entries → ${outDir}/ust-keylog`);
   console.error(`  ✓ new ${role} key → ${outDir}/${role}-key.b64  (key_id ${grown.newKey.key_id})`);
   console.error('  ↳ serve the grown log at /.well-known/ust-keylog for a consumer to see it');
@@ -2697,6 +2763,8 @@ export async function cmdRotate() {
   writeFileSync(`${outDir}/ust-keylog`, JSON.stringify(grown.keylog, null, 2) + '\n');
   const newOpPkcs8 = Buffer.from(await crypto.subtle.exportKey('pkcs8', grown.newOp.privateKey)).toString('base64');
   writeFileSync(`${outDir}/operational-key.b64`, newOpPkcs8 + '\n');
+  try { proveWrittenKey(`${outDir}/operational-key.b64`, grown.newOp.pub, { label: 'new operational key' }); }
+  catch (e) { die(`WRITTEN-ARTIFACT CHECK FAILED: ${e.message}. Nothing was published — re-run.`); }
   console.log('\n  ══════════════════════════════════════════════');
   console.log(`  ✅ KEY ROTATED — ${domain}  (APPENDED, identity unchanged)`);
   console.log('  ══════════════════════════════════════════════');
@@ -2890,9 +2958,39 @@ export async function cmdReroot() {
   if (out.cadenceLogB) wr('ust-cadence', j(out.cadenceLogB));
   wr('ust-keylog-epoch-a-closed', j(out.keylogAClosed));   // the outgoing log with its terminal `reroot`; kept for your records and mirrors — the transcript a consumer needs travels in ust-witness
   if (out.transition) { wr('epoch-transition.json', j(out.transition)); wr('final-checkpoint-epoch-a.json', j(out.finalCheckpointA)); wr('checkpoint-0-epoch-b.json', j(out.c0B)); }
-  const rootPkcs8 = Buffer.from(await crypto.subtle.exportKey('pkcs8', out.rootB.privateKey)).toString('base64');
-  secret(`genesis-key${pass ? '.enc' : ''}.b64`, (pass ? encryptKey(rootPkcs8, pass) : rootPkcs8) + '\n');
-  if (out.caB) secret('checkpoint-authority-key.b64', Buffer.from(await crypto.subtle.exportKey('pkcs8', out.caB.privateKey)).toString('base64') + '\n');
+  // BUFFER, like every other ceremony. MEASURED live 2026-08-03: this passed `.toString('base64')` into `encryptKey`,
+  // so the ciphertext carried the TEXT of a base64 string where every reader expects DER bytes. The file encrypts and
+  // decrypts perfectly and then fails to parse — the worst shape a backup defect can take, because it looks fine
+  // until the day it is needed. The unencrypted branch is the one that wants base64, and it says so there.
+  const rootPkcs8 = Buffer.from(await crypto.subtle.exportKey('pkcs8', out.rootB.privateKey));
+  // THE NAME CARRIES THE IDENTITY IT BELONGS TO. MEASURED live, 2026-08-03: a re-rooting puts a NEW crown beside the
+  // OUTGOING one, and the ceremony gave both the same name — `genesis-key.enc.b64` in two directories on one volume.
+  // The operator files them into cold storage later, BY NAME, and the two are indistinguishable there. Sorting them
+  // out afterwards is impossible from the file alone: one is the crown of an identity, the other of its successor,
+  // and both decrypt only under their own passphrase. A short prefix of the genesis hash makes the pair self-sorting
+  // and matches what `ust key check --genesis` will ask about.
+  const crownName = `genesis-key-${out.hB.slice(7, 19)}${pass ? '.enc' : ''}.b64`;
+  secret(crownName, (pass ? encryptKey(rootPkcs8, pass) : rootPkcs8.toString('base64')) + '\n');
+  const caName = `checkpoint-authority-key-${out.hB.slice(7, 19)}.b64`;
+  if (out.caB) secret(caName, Buffer.from(await crypto.subtle.exportKey('pkcs8', out.caB.privateKey)).toString('base64') + '\n');
+
+  // READ BACK WHAT WAS WRITTEN, WHILE THE OPERATOR IS STILL HERE. Every acceptance leg above inspects values held in
+  // MEMORY; none of them touches a file. MEASURED live 2026-08-03: the crown was written through a path that encoded
+  // it differently from every other ceremony, so the file encrypted and decrypted perfectly and then would not
+  // parse — and nothing noticed, because nothing read it. The operator carried it to cold storage, came back with
+  // the network on, and found out there.
+  //
+  // The rule the owner stated when it happened: check it in the tool, right after the ceremony, while the client is
+  // still offline. So: re-read both cold files from disk and prove them USABLE against the genesis just minted. A
+  // failure here is free — the passphrase is still in hand and nothing has been published.
+  {
+    const fail = (m) => die(`WRITTEN-ARTIFACT CHECK FAILED: ${m}\n  The documents are correct; the files are not. Nothing was published, and your passphrase is still in hand — re-run rather than carry this to cold storage.`);
+    const v = out.genesisB.state.data.genesis.value;
+    try { proveWrittenKey(`${outDir}/${crownName}`, v.pub, { pass: pass || null, label: 'crown' }); }
+    catch (e) { fail(e.message); }
+    if (out.caB) { try { proveWrittenKey(`${outDir}/${caName}`, v.checkpoint_authority.pub, { label: 'checkpoint-authority key' }); } catch (e) { fail(e.message); } }
+    console.log('  ✓ both cold files re-read from disk and proven against the genesis just minted');
+  }
 
   console.log('\n  ══════════════════════════════════════════════');
   console.log(`  ✅ RE-ROOTED — ${domain}   (artifacts only; NOTHING is published)`);
@@ -2906,8 +3004,9 @@ export async function cmdReroot() {
   console.log('     ust-keylog-epoch-a-closed           → the outgoing log with its TERMINAL `reroot`; for your records and mirrors.');
   console.log('                                          The transcript a consumer needs travels inside ust-witness — that is the courier.');
   if (out.transition) console.log('     epoch-transition.json, final-checkpoint-epoch-a.json, checkpoint-0-epoch-b.json  → the authority hand-over');
-  console.log(`     genesis-key${pass ? '.enc' : ''}.b64${pass ? '' : '   ⚠️ UNENCRYPTED'}   → 🧊 COLD — the new crown; every key-log mutation needs it`);
-  if (out.caB) console.log('     checkpoint-authority-key.b64        → 🧊 COLD — signs epoch B authority checkpoints');
+  console.log(`     ${crownName}${pass ? '' : '   ⚠️ UNENCRYPTED'}   → 🧊 COLD — the NEW crown; every key-log mutation needs it.`);
+  console.log('       The name carries the genesis it belongs to, so it cannot be confused with the outgoing crown in storage.');
+  if (out.caB) console.log(`     checkpoint-authority-key-${out.hB.slice(7, 19)}.b64  → 🧊 COLD — signs epoch B authority checkpoints`);
   console.log('\n  ▶️  the axis this command CANNOT cross — your running writer:');
   console.log(`     the FIRST frame you publish after the boundary must set  prev = ${out.hB}`);
   console.log('     a writer that keeps chaining frame-to-frame is refused E-PREV by every consumer holding the new');
