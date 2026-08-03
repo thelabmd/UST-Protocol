@@ -561,7 +561,20 @@ export const ARTIFACT_ORIGIN = {
 // a call signature it happened to read once.
 export const DERIVED_REQUIRES_PRIOR = { witness: 'buildWitnessLog(genesisText, anchors, priorLog)' };
 
-export function buildWorkerScript(genesisText, keylogText = null, witnessText = null, cadenceText = null) {
+// ── The §20 PROFILE is a served surface of a DIFFERENT KIND, and it is kept out of DISCOVERY_ARTIFACTS on purpose.
+// The four above are TRANSCRIPTS: signed, content-addressed, attestable by `content_hash` against a value a
+// verifier holds independently. The profile is none of those — it is read for the DECLARATIONS it carries, and a
+// copy of it has no expected hash to be compared with. Putting it in the same array would hand every consumer of
+// that array a member it cannot process the way it processes the rest, which is the flattening F.5p.1 shows to be
+// unsound one level down. Two kinds, two sets.
+//
+// The ROUTE MUST BE EXACT. `domain/.well-known/ust*` matches `ust-genesis`, `ust-keylog` and every other
+// transcript path, so a wildcard here would not add a surface — it would SWALLOW the four that already exist and
+// answer all of them with the profile.
+export const PROFILE_PATH = '/.well-known/ust';
+export const PROFILE_ORIGIN = 'loaded (preserved from live when the caller supplies none)';
+
+export function buildWorkerScript(genesisText, keylogText = null, witnessText = null, cadenceText = null, profileText = null) {
   // STATELESS by design (live lesson, 3rd ceremony): the first template cached its response at the edge
   // for 24 h — a redeploy then kept serving the PREVIOUS genesis (Cache API survives worker versions).
   // The content is already IN the worker; a cache saved nothing (the invocation happens either way) and
@@ -577,9 +590,12 @@ const GENESIS = ${JSON.stringify(genesisText)};
 const KEYLOG = ${keylogText === null ? 'null' : JSON.stringify(keylogText)};
 const CADENCE = ${cadenceText === null ? 'null' : JSON.stringify(cadenceText)};
 const WITNESS = ${witnessText === null ? 'null' : JSON.stringify(witnessText)};
+const PROFILE = ${profileText === null ? 'null' : JSON.stringify(profileText)};
 // A TABLE, not a chain of comparisons: a new discovery artifact is a row, and an absent one stays null →
 // 404, which is the very distinction \`ust cadence\` reads to tell ABSENT (first declaration) from UNREADABLE.
-const SERVED = { '/.well-known/ust-genesis': GENESIS, '/.well-known/ust-keylog': KEYLOG, '/.well-known/ust-cadence': CADENCE, '/.well-known/ust-witness': WITNESS };
+// The profile row is EXACT (\`${PROFILE_PATH}\`, no suffix): the lookup is \`Object.hasOwn\` on the whole
+// pathname, so it can never shadow a transcript path the way a prefix route would.
+const SERVED = { '/.well-known/ust-genesis': GENESIS, '/.well-known/ust-keylog': KEYLOG, '/.well-known/ust-cadence': CADENCE, '/.well-known/ust-witness': WITNESS, '${PROFILE_PATH}': PROFILE };
 export default {
   async fetch(req) {
     const u = new URL(req.url);
@@ -605,16 +621,20 @@ export const CF_DNS_TOKEN_URL = 'https://dash.cloudflare.com/profile/api-tokens?
   encodeURIComponent(JSON.stringify([{ key: 'dns', type: 'edit' }])) + '&name=' + encodeURIComponent('ust-ceremony (DNS only — revoke after)');
 
 // wrangler project for the OAuth path: two files, the route rides the config. Pure + testable.
-export function buildWranglerProject({ domain, genesisText, keylogText = null, witnessText = null, cadenceText = null }) {
+export function buildWranglerProject({ domain, genesisText, keylogText = null, witnessText = null, cadenceText = null, profileText = null }) {
+  // The transcript routes carry a trailing `*` so a query string still routes; the PROFILE route carries none,
+  // because `.well-known/ust*` is a prefix of every transcript path and would capture all four.
+  const routes = servedArtifacts({ genesisText, keylogText, cadenceText, witnessText })
+    .map((a) => `{ pattern = "${domain}/.well-known/ust-${a}*", zone_name = "${domain}" }`);
+  if (profileText !== null && profileText !== undefined) routes.push(`{ pattern = "${domain}${PROFILE_PATH}", zone_name = "${domain}" }`);
   return {
-    'worker.mjs': buildWorkerScript(genesisText, keylogText, witnessText, cadenceText),
+    'worker.mjs': buildWorkerScript(genesisText, keylogText, witnessText, cadenceText, profileText),
     'wrangler.toml': [
       `name = "ust-genesis-${domain.replaceAll('.', '-')}"`,
       'main = "worker.mjs"',
       'compatibility_date = "2026-01-01"',
       'workers_dev = false',
-      `routes = [${servedArtifacts({ genesisText, keylogText, cadenceText, witnessText })
-        .map((a) => `{ pattern = "${domain}/.well-known/ust-${a}*", zone_name = "${domain}" }`).join(', ')}]`,
+      `routes = [${routes.join(', ')}]`,
     ].join('\n') + '\n',
   };
 }
@@ -627,7 +647,7 @@ export function buildWranglerProject({ domain, genesisText, keylogText = null, w
 // sites passed neither the cadence log nor the witness anchors, so a deploy from either NULLED /.well-known/ust-cadence
 // and DESTROYED the served Rekor/OTS anchors. That is not three bugs; it is one missing assembler, found three times.
 // Nothing here enumerates artifacts at a call site any more: they ask for the set and pass it whole.
-export async function collectServed({ domain, genesisText, genPath, keylogText = null, witnessFile = null, cadenceFile = null, fetchImpl = fetch, log = () => {} }) {
+export async function collectServed({ domain, genesisText, genPath, keylogText = null, witnessFile = null, cadenceFile = null, profileText = null, fetchImpl = fetch, log = () => {} }) {
   const genHash = P.contentHash(JSON.parse(genesisText));
   const anchorsOf = (text) => { try { const w = JSON.parse(text); const a = w?.genesis_log?.find((e) => e.content_hash === genHash)?.anchors; return Array.isArray(a) && a.length ? a : null; } catch { return null; } };
 
@@ -692,7 +712,19 @@ export async function collectServed({ domain, genesisText, genPath, keylogText =
       }
     } catch (e) { if (witnessFile) die(`could not read --witness ${wFile}: ${e.message || e}`); }
   }
-  return { genesisText, keylogText, cadenceText, witnessText: witnessText ?? buildWitnessLog(genesisText, anchors, priorLog) };
+  // PRESERVE the profile too, for the same reason the witness log is preserved and by the same measurement: a
+  // deploy that omits a surface REPLACES it with nothing. The witness case destroyed anchors; this one would
+  // silently drop the operator's declarations, and a declaration that vanishes takes its copies out of
+  // attestation with it — the exact invisibility #135 exists to close. Absent both here and live ⇒ genuinely
+  // not served, which is F.5p's honest floor and stays distinguishable from unreadable.
+  let profile = profileText;
+  if (profile === null || profile === undefined) {
+    try {
+      const r = await fetchImpl(`https://${domain}${PROFILE_PATH}`, { signal: AbortSignal.timeout(10000) });
+      if (r.ok) { profile = await r.text(); log('  ↻ carrying the live operator profile forward (none supplied)'); }
+    } catch { /* unreachable ⇒ nothing to carry; the deploy simply does not serve one */ }
+  }
+  return { genesisText, keylogText, cadenceText, witnessText: witnessText ?? buildWitnessLog(genesisText, anchors, priorLog), profileText: profile ?? null };
 }
 
 export function servedArtifacts({ genesisText, keylogText = null, cadenceText = null, witnessText = null }) {
@@ -727,9 +759,9 @@ export function validatePublishInputs({ domain, genesisText, keylogText = null }
   return { doc, genHash: P.contentHash(doc), entries };
 }
 
-export async function wranglerDeploy({ domain, genesisText, keylogText = null, witnessText = null, cadenceText = null, execImpl = null, writeImpl = null }) {
+export async function wranglerDeploy({ domain, genesisText, keylogText = null, witnessText = null, cadenceText = null, profileText = null, execImpl = null, writeImpl = null }) {
   const { genHash } = validatePublishInputs({ domain, genesisText, keylogText });
-  const files = buildWranglerProject({ domain, genesisText, keylogText, witnessText, cadenceText });
+  const files = buildWranglerProject({ domain, genesisText, keylogText, witnessText, cadenceText, profileText });
   const { mkdtempSync } = await import('node:fs');
   const { tmpdir } = await import('node:os');
   const { join } = await import('node:path');
@@ -790,7 +822,7 @@ export async function cfApexSteps({ domain, token, flipProxy = false, fetchImpl 
 // Full-token path (single credential, 3 scopes) — deploy worker + route via the API, then the apex steps.
 // Idempotent (PUT script, list→PUT/POST route), fail-closed (the genesis must VERIFY before ANY network
 // write; success is never claimed without a live attestation by the caller).
-export async function cfPublish({ domain, genesisText, keylogText = null, witnessText = null, cadenceText = null, token, flipProxy = false, fetchImpl = fetch }) {
+export async function cfPublish({ domain, genesisText, keylogText = null, witnessText = null, cadenceText = null, profileText = null, token, flipProxy = false, fetchImpl = fetch }) {
   if (!token) throw new Error('cf adapter needs CF_TOKEN (Workers Scripts:Edit + Workers Routes:Edit + DNS:Edit for this zone) — or split the scopes: `--auth wrangler` + a DNS-only token (' + CF_DNS_TOKEN_URL + ')');
   const { genHash } = validatePublishInputs({ domain, genesisText, keylogText });
   const cf = (path, init) => fetchImpl('https://api.cloudflare.com/client/v4' + path, { ...init, headers: { Authorization: 'Bearer ' + token, ...(init?.headers) } }).then((r) => r.json());
@@ -804,7 +836,7 @@ export async function cfPublish({ domain, genesisText, keylogText = null, witnes
   const script = `ust-genesis-${domain.replaceAll('.', '-')}`;
   const form = new FormData();
   form.append('metadata', new Blob([JSON.stringify({ main_module: 'worker.mjs', compatibility_date: '2026-01-01' })], { type: 'application/json' }), 'metadata');
-  form.append('worker.mjs', new Blob([buildWorkerScript(genesisText, keylogText, witnessText, cadenceText)], { type: 'application/javascript+module' }), 'worker.mjs');
+  form.append('worker.mjs', new Blob([buildWorkerScript(genesisText, keylogText, witnessText, cadenceText, profileText)], { type: 'application/javascript+module' }), 'worker.mjs');
   const up = await cf(`/accounts/${accountId}/workers/scripts/${script}`, { method: 'PUT', body: form });
   if (!up.success) throw new Error('worker upload failed: ' + (up.errors?.[0]?.message || '?'));
 
@@ -815,8 +847,12 @@ export async function cfPublish({ domain, genesisText, keylogText = null, witnes
   const pattern = `${domain}/.well-known/ust-genesis*`;
   const routes = (await cf(`/zones/${zone.id}/workers/routes`)).result || [];
   const existing = routes.find((r) => r.pattern === pattern);
-  for (const a of servedArtifacts({ genesisText, keylogText, cadenceText, witnessText })) {
-    const p = `${domain}/.well-known/ust-${a}*`;
+  // The transcript routes and, when this deploy carries one, the EXACT profile route. `${domain}/.well-known/ust*`
+  // is a prefix of every transcript path, so the profile pattern deliberately carries no `*`: a wildcard here would
+  // not add a fifth surface, it would capture the other four and answer all of them with the profile.
+  const routeSet = servedArtifacts({ genesisText, keylogText, cadenceText, witnessText }).map((a) => [a, `${domain}/.well-known/ust-${a}*`]);
+  if (profileText !== null && profileText !== undefined) routeSet.push(['profile', `${domain}${PROFILE_PATH}`]);
+  for (const [a, p] of routeSet) {
     const prior = routes.find((r) => r.pattern === p);
     const body = JSON.stringify({ pattern: p, script });
     const rt = prior
@@ -1628,7 +1664,18 @@ async function cmdPublish() {
   // archiver's byte-for-byte git sync then refused the shrink — correctly, and silently — leaving the last intact
   // copy frozen for two weeks with nobody told. So: PRESERVE the served witness. Fetch what is live, keep its
   // anchors, and synthesise only when there is nothing to preserve.
-  const served = await collectServed({ domain, genesisText, genPath, keylogText,
+  // The §20 profile rides the same assembly. Supplied ⇒ this deploy serves it; omitted ⇒ collectServed carries
+  // the LIVE one forward, because a deploy that omits a surface replaces it with nothing, and the declarations
+  // it carries are what put a named copy into attestation at all (#135).
+  const profilePath = typeof arg('profile', null) === 'string' ? arg('profile', null) : null;
+  let profileText = null;
+  if (profilePath) {
+    try { profileText = readFileSync(profilePath, 'utf8'); } catch (e) { die('--profile unreadable: ' + e.message); }
+    let d; try { d = P.parseProfile(JSON.parse(profileText)); } catch { die('--profile is not JSON'); }
+    if (d.error) die(`--profile is refused by the same reader a verifier uses: ${d.error} — ${d.detail}`);
+    console.log(`  ✓ profile declares: ${[d.serves.length ? `serves ${d.serves.join('/')}` : null, d.substrates.length ? `substrates ${d.substrates.join('/')}` : null, d.copies.length ? `${d.copies.length} copy locator(s)` : null].filter(Boolean).join(' · ') || 'nothing (the honest floor)'}`);
+  }
+  const served = await collectServed({ domain, genesisText, genPath, keylogText, profileText,
     witnessFile: typeof arg('witness', null) === 'string' ? arg('witness', null) : null,
     cadenceFile: typeof arg('cadence-log', null) === 'string' ? arg('cadence-log', null) : null, log: console.log });
 
@@ -1640,10 +1687,14 @@ async function cmdPublish() {
     const outDir = typeof arg('out', null) === 'string' ? arg('out', null) : './ust-serve';
     mkdirSync(outDir, { recursive: true });
     const files = { genesis: served.genesisText, keylog: served.keylogText, cadence: served.cadenceText, witness: served.witnessText };
-    for (const [name, text] of Object.entries(files)) {
-      if (text == null) { console.log(`  ·  ust-${name}: not available — not written, and it will not be served`); continue; }
-      writeFileSync(`${outDir}/ust-${name}`, text);
-      console.log(`  ✓ wrote ${outDir}/ust-${name}  (${Buffer.byteLength(text)} B)`);
+    // The profile's FILE NAME is `ust`, not `ust-profile`: the name here is the served path's last segment, and
+    // §20 fixes that segment as `/.well-known/ust`. Deriving it as `ust-${name}` like the transcripts would write
+    // a file onto a path no verifier fetches — served, present, and invisible.
+    const fileOf = (name) => (name === 'profile' ? 'ust' : 'ust-' + name);
+    for (const [name, text] of Object.entries({ ...files, profile: served.profileText })) {
+      if (text == null) { console.log(`  ·  ${fileOf(name)}: not available — not written, and it will not be served`); continue; }
+      writeFileSync(`${outDir}/${fileOf(name)}`, text);
+      console.log(`  ✓ wrote ${outDir}/${fileOf(name)}  (${Buffer.byteLength(text)} B)`);
     }
     for (const line of selfHostedPlan({ domain, outDir, genHash: P.contentHash(JSON.parse(served.genesisText)), artifacts: files })) console.log(line);
     return;
@@ -1870,10 +1921,17 @@ async function cmdWitness() {
   const merged = [...existing.filter((a) => (a.anchor?.substrate ?? a.substrate) !== 'rekor'), anchor];
   const witness = buildWitnessLog(genesisText, merged, priorWitness);
 
+  // The §20 profile rides this deploy too when supplied; omitted, collectServed carries the live one forward.
+  // Without this the anchor deploy would be a second point of no return for a change that belongs in the same one.
+  const wp = typeof arg('profile', null) === 'string' ? arg('profile', null) : null;
+  let witnessProfile = null;
+  if (wp) { try { witnessProfile = readFileSync(wp, 'utf8'); } catch (e) { die('--profile unreadable: ' + e.message); }
+    const d = P.parseProfile(JSON.parse(witnessProfile));
+    if (d.error) die(`--profile is refused by the same reader a verifier uses: ${d.error} — ${d.detail}`); }
   if (arg('deploy', false)) {
     console.log('  ⏳ updating the live witness endpoint (CF worker)…');
     let keylogText = null; try { keylogText = await fetch(`https://${domain}/.well-known/ust-keylog`, { signal: AbortSignal.timeout(8000) }).then((r) => r.ok ? r.text() : null); } catch { /* ok */ }
-    try { await wranglerDeploy({ domain, ...(await collectServed({ domain, genesisText, genPath: null, keylogText, log: console.log })), witnessText: witness }); } catch (e) { die('deploy failed: ' + e.message + '\n  (the anchor is logged in Rekor; re-run --deploy or update the endpoint by hand)'); }
+    try { await wranglerDeploy({ domain, ...(await collectServed({ domain, genesisText, genPath: null, keylogText, profileText: witnessProfile, log: console.log })), witnessText: witness }); } catch (e) { die('deploy failed: ' + e.message + '\n  (the anchor is logged in Rekor; re-run --deploy or update the endpoint by hand)'); }
     console.log('  ✅ witness endpoint updated — verifiers with @ust-protocol/rekor-verify now confirm no-fork automatically');
     console.log(`     re-attest:  ${invocation()} verify <slot>   (install ots-verify + rekor-verify)`);
   } else {
