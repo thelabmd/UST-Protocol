@@ -315,8 +315,9 @@
   },
   {
    "round": 152,
-   "issue": 131,
-   "no_recap": "The round shipped its math, spec, code, vectors and gates, but the work it exists for is not finished: UST-Protocol#131 stays open until the reference operator's ceremony has actually been run THROUGH the new command, which is its acceptance run and not a rehearsal of it. A recap written now would describe a tool rather than a crossing, and the diary entry that carries a recap is the owner's to call."
+   "issue": 132,
+   "content_hash": "sha256:fa02d950df13932df650e62e4667388de173d110daa8cf4318177b29f2a74c02",
+   "_note": "The round has two halves and this recap belongs to the one that CLOSED: #132, the command that could not run. The crossing half, UST-Protocol#131, stays open until the reference operator's ceremony has been run THROUGH the new command — that is its acceptance run, and it owes its own entry when it happens."
   }
  ]
 }
