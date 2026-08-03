@@ -338,6 +338,11 @@
    "round": 156,
    "issue": 131,
    "no_recap": "Found DURING the live ceremony rather than after it, and that ceremony is still in progress — the operator re-ran with the directory created and has not yet published. The recap belongs to the round that closes the crossing, and this one only removed a stone from its path."
+  },
+  {
+   "round": 157,
+   "issue": 131,
+   "no_recap": "Found while the operator was mid-ceremony, holding artifacts and waiting to publish. The round removed a false assurance from the path rather than completing the crossing, and the crossing is what the recap is owed for."
   }
  ]
 }

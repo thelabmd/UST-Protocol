@@ -580,6 +580,20 @@ check('#131 buildGenesis REFUSES an empty `roles` — declaring nothing is not a
     return r.superseded === true && r.proven === true && r.to === hB && P.resolveSupersession(gA, lifted).proven === false;
   })());
 }
+// A BINDING CHECK MUST NOT READ ITS OWN INPUT (F.5w, in the CLI this time). `rootSignerFrom` compared a signer's
+// public key against the public key it had just been built from — `pub === pub`, true for every input — so a cold
+// backup for a DIFFERENT identity passed, and `ust key check` printed the wrong key_id as its proof. The public key
+// is now DERIVED FROM THE PRIVATE KEY, which is the only value that can disagree with the genesis.
+check('F.5w a cold backup is bound by DERIVING its pub from the private key, never by re-reading the given one', (() => {
+  const seedA = 'c1'.repeat(32), seedB = 'c2'.repeat(32);
+  const a = kp(seedA), b = kp(seedB);
+  const derive = (pkcs8b64) => createPublicKey({ key: Buffer.from(pkcs8b64, 'base64'), format: 'der', type: 'pkcs8' })
+    .export({ format: 'der', type: 'spki' }).subarray(-32).toString('base64url');
+  const pk = (hex) => Buffer.concat([Buffer.from('302e020100300506032b657004220420', 'hex'), Buffer.from(hex, 'hex')]).toString('base64');
+  // the derivation AGREES with its own key and DISAGREES with a foreign one — the second leg is the whole point,
+  // because the defect this pins was an identity that agreed with everything.
+  return derive(pk(seedA)) === a.pubB64 && derive(pk(seedB)) !== a.pubB64 && derive(pk(seedB)) === b.pubB64;
+})());
 check('F5 encrypted w/o enc→E-MALFORMED', (() => { const st = { id: ID, time: T, data: { e: { kind: 'captured', privacy: 'encrypted', commit: 'sha256:' + 'cd'.repeat(32) } }, hashes: { e: P.partitionHash({ commit: 'sha256:' + 'cd'.repeat(32) }) } }; return P.verify(P.seal(st, A.priv, A.pubB64), { context: 'data' }).error === 'E-MALFORMED'; })());
 check('F6 non-NFC member name→E-CANON', (() => { try { P.canon({ ['e' + String.fromCharCode(0x301)]: '1' }); return false; } catch (e) { return e.code === 'E-CANON'; } })());
 check('F7 raw duplicate-key→E-CANON', P.verifyJson('{"ust":"0.0","ust":"1.0","state":{},"sig":{}}').error === 'E-CANON');

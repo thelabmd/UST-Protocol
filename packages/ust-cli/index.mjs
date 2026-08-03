@@ -2182,11 +2182,25 @@ async function cmdGenesis() {
 //     this is the missing half. Continuity law (§12.2): old docs stay valid under the key that was active at
 //     THEIR anchored time, so a rotation NEVER invalidates history. Testable core + CLI wrapper.
 export async function rootSignerFrom(pkcs8, rootPubB64url) {
-  const priv = await crypto.subtle.importKey('pkcs8', pkcs8, { name: 'Ed25519' }, false, ['sign']);
-  const pubKey = await crypto.subtle.importKey('raw', Buffer.from(rootPubB64url, 'base64url'), { name: 'Ed25519' }, true, ['verify']);
-  const signer = await W.signerFromKeys(priv, pubKey);
-  if (signer.pub !== rootPubB64url) throw new Error('decrypted root key does NOT match the served genesis pub — wrong backup');
-  return signer;
+  // THE COMPARISON WAS `pub === pub`. MEASURED 2026-08-03, minutes after `ust key check` was written to protect an
+  // operator from a mismatched cold backup: the check built its signer from the PRIVATE key and the SUPPLIED public
+  // key, then compared `signer.pub` — derived from that same supplied key — against the argument it came from. An
+  // identity, true for every input. A backup for a DIFFERENT identity passed, and the command printed the wrong
+  // key_id as proof.
+  //
+  // This is F.5w with a different subject: a predicate has a DOMAIN on which it is non-trivial, and a binding check
+  // that reads its own input is outside it. The public key must be DERIVED FROM THE PRIVATE KEY — that derivation is
+  // the only thing that can disagree with the genesis, and disagreeing is the entire job.
+  //
+  // The ceremonies were not exposed by luck alone: each one verifies its output downstream (`resolveKeys` refuses a
+  // key-log entry signed by a key the genesis does not name), so a wrong backup failed there instead. `ust key check`
+  // has no downstream — the comparison IS its output — so it was the first caller this could actually deceive.
+  const derived = createPublicKey({ key: Buffer.from(pkcs8, 'base64'), format: 'der', type: 'pkcs8' })
+    .export({ format: 'der', type: 'spki' }).subarray(-32).toString('base64url');
+  if (derived !== rootPubB64url) throw new Error('decrypted root key does NOT match the served genesis pub — wrong backup');
+  const priv = await crypto.subtle.importKey('pkcs8', Buffer.from(pkcs8, 'base64'), { name: 'Ed25519' }, false, ['sign']);
+  const pubKey = await crypto.subtle.importKey('raw', Buffer.from(derived, 'base64url'), { name: 'Ed25519' }, true, ['verify']);
+  return await W.signerFromKeys(priv, pubKey);
 }
 // Build the grown key-log. Signs the new op key with the ROOT (a current valid key, §12.2), prev-chained;
 // optionally revokes the superseded op key with a reason. Refuses to REWRITE (input MUST be a prefix). Pure.
@@ -2471,6 +2485,34 @@ async function pkFromSigner(signer) {
   const pkcs8 = Buffer.from(await crypto.subtle.exportKey('pkcs8', signer.privateKey));
   return createPrivateKey({ key: pkcs8, format: 'der', type: 'pkcs8' });
 }
+// READ-ONLY, and in its own function on purpose: it decrypts a cold backup to answer ONE question and writes
+// nothing. Sharing `cmdKey`'s body made it indistinguishable to the entry-check gate from the mutation beside
+// it — the gate demanded an output directory of a command that produces no output. A subcommand doing a
+// fundamentally different thing is its own function.
+export async function cmdKeyCheck() {
+    const rootFile = arg('root'); const genFile = arg('genesis');
+    if (!rootFile || rootFile === true || !genFile || genFile === true)
+      die('usage: ust key check --root <encrypted-root.b64> --genesis <ust-genesis file>\n  Decrypts the backup and asks ONE question: is this the key that genesis was signed with?\n  No network, no writes, and the key is never printed. Run it the day you STORE a backup, not the day you need it.');
+    let genesis; try { genesis = JSON.parse(readFileSync(String(genFile), 'utf8')); } catch (e) { die('cannot read --genesis: ' + (e.message || e)); }
+    const pub = genesis?.state?.data?.genesis?.value?.pub;
+    if (typeof pub !== 'string') die('--genesis is not a genesis transcript (no state.data.genesis.value.pub)');
+    let rl = null;
+    const ask = (q) => { rl ??= openReader(createInterface); return rl.question(q); };
+    rl = closeReader(rl);
+    const pass = await askHidden('  🔑 passphrase for this backup: ', ask);
+    rl = closeReader(rl);
+    let signer;
+    try { signer = await rootSignerFrom(decryptKey(readFileSync(String(rootFile), 'utf8').trim(), pass), pub); }
+    catch (e) {
+      if (String(e.message).includes('match')) die('the backup DECRYPTS but is a DIFFERENT key than this genesis was signed with — right passphrase, wrong file (or the wrong genesis)');
+      die('decrypt failed — wrong passphrase or corrupt backup. Nothing about the genesis is in question; this is about the file and the phrase.');
+    }
+    console.log(`\n  ✅ this backup IS the root of that genesis`);
+    console.log(`     key_id       ${signer.key_id}`);
+    console.log(`     genesis      ${P.contentHash(genesis)}`);
+    console.log(`     domain_shard ${genesis.state.id.domain_shard}`);
+    console.log('\n  Nothing was written and nothing left this machine. Re-run it whenever you move the backup.');
+}
 export async function rotateKeylog({ genesis, keylog, rootSigner, reason = null, compromisedSince = null, supersedesKeyId = null, time, ustId }) {
   const domain = genesis.state.id.domain_shard;
   if (!Array.isArray(keylog)) throw new Error('key-log is not a JSON array');
@@ -2556,7 +2598,13 @@ function banner() {
 // look for it read the SOURCE by name. The API is the binary plus the testable cores (`addKeylogKey` below).
 async function cmdKey() {
   const sub = process.argv[3];
-  if (sub !== 'add') die('usage: ust key add --domain <d> --root <encrypted-root.b64> [--role <data|issuance>] [--keylog <served array file>] [--out .]\n  APPENDS a key BESIDE the current one (never replaces it — that is `ust rotate`).\n  --role is REQUIRED if the served genesis DECLARES role separation and REFUSED if it does not: which one is a\n  property of that genesis, not of this command, so it is read from the genesis rather than demanded up front.');
+  // `check` — PROVE A COLD BACKUP BEFORE YOU NEED IT. An operator holds an encrypted crown and a genesis and, until
+  // now, had no way to ask whether they belong together without performing a ceremony. MEASURED on the reference
+  // operator's live re-rooting, 2026-08-03: a freshly minted crown went into a password manager and the only way to
+  // test it was to run the next mutation and find out. An untested backup is not a backup, and the moment you
+  // discover it is the moment you cannot afford to. Reads nothing from the network, writes nothing, prints no key.
+  if (sub === 'check') return await cmdKeyCheck();
+  if (sub !== 'add') die('usage: ust key add --domain <d> --root <encrypted-root.b64> [--role <data|issuance>] [--keylog <served array file>] [--out .]\n       ust key check --root <encrypted-root.b64> --genesis <ust-genesis file>   # does this backup match that identity?\n  APPENDS a key BESIDE the current one (never replaces it — that is `ust rotate`).\n  --role is REQUIRED if the served genesis DECLARES role separation and REFUSED if it does not: which one is a\n  property of that genesis, not of this command, so it is read from the genesis rather than demanded up front.');
   const domain = arg('domain');
   if (!domain || domain === true) die('--domain <d> required');
   const rootFile = arg('root'); if (!rootFile || rootFile === true) die('--root <encrypted root backup .b64> required (the cold crown key — every key-log mutation is root-signed, §F.5e.3)');

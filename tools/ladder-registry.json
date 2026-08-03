@@ -1118,6 +1118,14 @@
    "code": "packages/ust-cli/index.mjs :: ensureOutDir proves the output target writable at ENTRY, called by all five ceremonies before any passphrase",
    "vector": "reroot-20-courier-proves-successor",
    "test": "tools/ceremony-selfcheck-gate.mjs"
+  },
+  {
+   "round": 157,
+   "math": "F.5w A predicate has a DOMAIN on which it is non-trivial, and key-form is where BINDING is not one (#119, carried up from round 145)",
+   "spec": "the same theorem as un-backdatable time (formal model F.3.1), now on the NAME axis (F.5a)",
+   "code": "packages/ust-cli/index.mjs :: rootSignerFrom derives the public key FROM the private key instead of re-reading the supplied one",
+   "vector": "reroot-20-courier-proves-successor",
+   "test": "F.5w a cold backup is bound by DERIVING its pub from the private key, never by re-reading the given one"
   }
  ],
  "first_accounted_round": 76,

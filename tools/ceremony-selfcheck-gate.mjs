@@ -93,7 +93,15 @@ check(WORLD.length >= 4 && sites.length >= 4, 'the vocabulary or the site set sh
     if (/ensureOutDir\(/.test(l) && !/export function/.test(l) && cur.out === null) cur.out = i;
     if (/askHidden\(/.test(l) && cur.ask === null) cur.ask = i;
   });
-  const withSecret = fns.filter((f) => f.ask !== null);
+  // THE RULE IS ABOUT WORK THAT MUST BE SAVED, not about asking a secret. `ust key check` decrypts a cold backup to
+  // answer one question and writes nothing — demanding an output directory of it was the gate reading its own
+  // wording rather than its reason. So the domain is commands that WRITE AFTER they ask.
+  fns.forEach((f, i) => {
+    const end = i + 1 < fns.length ? fns[i + 1].start : lines.length;
+    f.writesAfterAsk = f.ask !== null && lines.slice(f.ask, end).some((l) => /write(FileSync|Secret|Public)\(/.test(l));
+  });
+  const withSecret = fns.filter((f) => f.ask !== null && f.writesAfterAsk);
+  check(fns.some((f) => f.ask !== null && !f.writesAfterAsk), 'no read-only secret command found — the write/no-write split is untested and would pass vacuously');
   check(withSecret.length >= 4, `only ${withSecret.length} ceremony command(s) ask for a secret — the probe has gone blind`);
   for (const f of withSecret)
     check(f.out !== null && f.out < f.ask,
