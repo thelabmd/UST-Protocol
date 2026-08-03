@@ -1542,13 +1542,27 @@ async function cmdDiscovery() {
 // Resolve the DNS-scope token for the COMBINED flow: env first; interactively, open the PREFILLED
 // creation page (DNS:Edit preselected — the user only picks the zone) and ask for a paste. Fail-closed
 // in non-tty (an unattended run must be given the token, never prompted).
-async function resolveDnsToken(ask) {
+// OWNS ITS OWN READER, like every other secret prompt in this tool. It used to take a caller's `ask`, which meant a
+// readline interface was already open on stdin — and `askHidden` refuses that by design, because an open interface
+// echoes the line itself. Self-contained here, so the credential cannot be read any other way.
+async function resolveDnsToken() {
   const env = process.env.CF_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
   if (env) return env;
-  if (!ask || !process.stdin.isTTY) throw new Error('no CF token: set CF_TOKEN (Zone.DNS:Edit only) — create one prefilled: ' + CF_DNS_TOKEN_URL);
+  if (!process.stdin.isTTY) throw new Error('no CF token: set CF_TOKEN (Zone.DNS:Edit only) — create one prefilled: ' + CF_DNS_TOKEN_URL);
+  let rl = null;
+  const ask = (q) => { rl ??= openReader(createInterface); return rl.question(q); };
+  rl = closeReader(rl);
   console.log('  no CF_TOKEN — create a DNS-ONLY token (smallest scope; revoke after the ceremony):');
   console.log('  ' + CF_DNS_TOKEN_URL);
-  const t = (await ask('  paste the token here: ')).trim();
+  // A CREDENTIAL IS A SECRET, and this prompt ECHOED IT. MEASURED live 2026-08-03, mid-publication: the operator
+  // pasted a Cloudflare token and watched it print — into the terminal, into the scrollback, and from there into
+  // whatever they copied next. Every other secret in this tool goes through `askHidden`; this one asked with the
+  // plain reader because it was written as "just a token" rather than as a secret, which is the whole mistake.
+  //
+  // askHidden also fixes the second half of what they saw: a long pasted value arrives as one CHUNK, and the plain
+  // reader showed a fragment and appeared to hang. askHidden reads chunks by code point and hands back the remainder.
+  const t = (await askHidden('  paste the token here (hidden): ', ask)).trim();
+  rl = closeReader(rl);
   if (!t) throw new Error('no token pasted');
   return t;
 }
@@ -1630,7 +1644,8 @@ async function cmdPublish() {
     // the name stayed bound to a hash the domain no longer served. Measured on a live supersession: the worker
     // carried the new identity while DNS still pinned the predecessor, and §20.1 discovery failed on exactly
     // that conflict. The token asked for here is DNS-scoped; writing the pin is what it is FOR.
-    const dnsToken = await resolveDnsToken((q) => rl.question(q));
+    closeReader(rl);   // hand stdin back BEFORE the credential prompt — askHidden must own it, or the token echoes
+    const dnsToken = await resolveDnsToken();
     let apex, pin;
     try {
       pin = await cfUpsert({ domain, txt: `ust-genesis=${w.genHash}`, genHash: w.genHash, token: dnsToken });
@@ -2541,7 +2556,19 @@ export function acceptReroot({ genesisA, keylogA, witnessA, cadenceLogA, out, ro
   // reported as an obligation with the exact value rather than checked. F.5y's corollary: a writer that continues
   // its chain across the boundary is refused E-PREV for every consumer holding the new genesis, while the ceremony
   // reports success — the failure is in production and visible only at the consumer.
-  add('stream crossing (YOURS to perform)', null, `the first frame after the boundary MUST set prev = ${hB}`);
+  // NAMES THE PLACE, not just the value. MEASURED on the live crossing, 2026-08-03: this printed the hash alone,
+  // and the value was read as "write this into the head pointer" — a store that holds a DIFFERENT claim, namely
+  // which document was last PUBLISHED. The engine cross-checks that pointer against its object store, saw a hash it
+  // had never published, correctly called it a fork and stopped printing for eleven minutes. Twenty-one slots are
+  // missing from the grid and cannot be declared after the fact: §11.1 records sit in the chain BETWEEN the last
+  // frame before and the first after, and the chain had already closed over the hole.
+  //
+  // The value was right and the destination was wrong, which is the failure a bare number invites. A line that
+  // hands an operator a hash owes them the place it belongs — and, here, the place it does NOT.
+  add('stream crossing (YOURS to perform)', null,
+    `the WRITER must publish a frame with prev = ${hB}; the head pointer then becomes THAT frame's hash, as a consequence. `
+    + 'Do NOT write this value into the head pointer yourself — that store says which document was last PUBLISHED, and a hash '
+    + 'the store has never seen reads as a fork and stops the stream.');
   return R;
 }
 // The authority checkpoint helpers sign with a node KeyObject, not a web-signer. One conversion, named, so the two
@@ -3031,9 +3058,12 @@ export async function cmdReroot() {
   console.log('       The name carries the genesis it belongs to, so it cannot be confused with the outgoing crown in storage.');
   if (out.caB) console.log(`     checkpoint-authority-key-${out.hB.slice(7, 19)}.b64  → 🧊 COLD — signs epoch B authority checkpoints`);
   console.log('\n  ▶️  the axis this command CANNOT cross — your running writer:');
-  console.log(`     the FIRST frame you publish after the boundary must set  prev = ${out.hB}`);
+  console.log(`     the FIRST frame your writer PUBLISHES after the boundary must set  prev = ${out.hB}`);
   console.log('     a writer that keeps chaining frame-to-frame is refused E-PREV by every consumer holding the new');
-  console.log('     genesis, while this ceremony reports success. Change the writer BEFORE you serve the new genesis.');
+  console.log('     genesis, while this ceremony reports success. This is a change in the WRITER, not a value to');
+  console.log('     paste anywhere: a head pointer or last-published record says which document you PUBLISHED, and a');
+  console.log('     hash it has never seen reads as a fork. Measured 2026-08-03 — eleven minutes of stopped stream');
+  console.log('     and twenty-one slots that can no longer be declared.');
   console.log('\n  ▶️  then publish — the ONE irreversible step:');
   console.log(`     ${invocation()} publish self --domain ${domain} --genesis ${outDir}/ust-genesis`);
   console.log('     expect the witness to read `pending` until the new genesis is anchored. That is not a failure,');

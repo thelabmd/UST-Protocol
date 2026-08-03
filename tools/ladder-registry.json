@@ -1142,6 +1142,14 @@
    "code": "packages/ust-cli/index.mjs :: collectServed prefers the ceremony's witness log over a derivation that cannot know the signed half",
    "vector": "reroot-20-courier-proves-successor",
    "test": "tools/deploy-completeness-gate.mjs"
+  },
+  {
+   "round": 160,
+   "math": "F.5y A re-rooting is a CROSSING of every genesis-rooted structure the publisher instantiated, not an event (#131)",
+   "spec": "A re-rooting is a CROSSING, and it is not one event (F.5y)",
+   "code": "packages/ust-cli/index.mjs :: the stream-crossing line names its destination and the destination to avoid",
+   "vector": "reroot-01-stream-not-crossed-refused",
+   "test": "F.5y an uncrossed frame stream is REFUSED under the successor genesis (M4)"
   }
  ],
  "first_accounted_round": 76,

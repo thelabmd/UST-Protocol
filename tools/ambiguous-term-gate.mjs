@@ -61,6 +61,15 @@ const lines = [
   ...readFileSync(new URL('../spec/UST-1.0.md', import.meta.url), 'utf8').split('\n'),
   ...readFileSync(new URL('../spec/UST-1.0-formal-model.md', import.meta.url), 'utf8').split('\n'),
 ];
+// THE QUALIFIER MAY SIT ON THE PREVIOUS LINE. Prose wraps, and "stream\ncheckpoint" is qualified in every sense
+// that matters — the reader sees the pair and only the layout separates them. Measured 2026-08-03: a correctly
+// qualified use was reported bare because the line broke between the two words.
+//
+// NAMED, so the control below exercises THIS function rather than a copy of it. The first version of that control
+// reimplemented the prefix rule inline, so reverting the real behaviour left it green — a check aimed at its own
+// paraphrase. One implementation, two callers.
+const prefixFor = (ls, i, at) => (at < 14 ? (ls[i - 1] ?? '') + ' ' : '') + ls[i].slice(0, at);
+
 let failed = false;
 
 // AUDIT #114, pass 2 — the pin is a CEILING and the gate had no FLOOR, so an EMPTY spec passed: zero bare uses is
@@ -79,7 +88,12 @@ for (const t of TERMS) {
     const re = new RegExp(`\\b${t.word}\\b`, 'gi');
     let m;
     while ((m = re.exec(l))) {
-      const pre = l.slice(0, m.index), post = l.slice(m.index + m[0].length);
+      // THE QUALIFIER MAY SIT ON THE PREVIOUS LINE. Prose wraps, and "stream\ncheckpoint" is qualified in every
+      // sense that matters — the reader sees the pair, and only the layout separates them. Measured 2026-08-03:
+      // a correctly qualified use was reported bare because the line broke between the two words. A gate that
+      // reads a WORD must read the words before it, not the characters before it on one line.
+      const pre = prefixFor(lines, i, m.index);
+      const post = l.slice(m.index + m[0].length);
       if (t.qualifiers.test(pre.slice(-14))) continue;                    // already qualified
       if (/^[-_]/.test(post) || /[-_:]$/.test(pre)) continue;             // compound identifier
       if ((pre.match(/`/g) || []).length % 2 === 1) continue;             // inside code ticks — a field name
@@ -87,6 +101,15 @@ for (const t of TERMS) {
       bare.push(`${i + 1}: ${l.trim().slice(0, 96)}`);
     }
   });
+  // CONTROL, both directions: the wrap must be forgiven and a genuinely bare use must still be caught.
+  if (t.word === 'checkpoint') {
+    const probe = (ls) => { let n = 0; ls.forEach((l, i) => { const re = new RegExp(`\\b${t.word}\\b`, 'gi'); let m;
+      while ((m = re.exec(l))) if (!t.qualifiers.test(prefixFor(ls, i, m.index).slice(-14))) n++; }); return n; };
+    // reported through the SAME flag this file already uses — a control that pushes into a variable that does not
+    // exist is silent, which is how a check stops being one. Caught by reading what the edit produced.
+    if (probe(['a stream', 'checkpoint here']) !== 0) { failed = true; console.log('  ✗ CONTROL: a qualifier on the previous line is still reported bare'); }
+    if (probe(['a lone', 'checkpoint here']) !== 1) { failed = true; console.log('  ✗ CONTROL: a genuinely bare use is no longer caught'); }
+  }
   const verb = bare.length > t.pin ? '✗' : '·';
   console.log(`  ${verb} ${t.word}: ${bare.length} bare (pin ${t.pin})`);
   if (bare.length > t.pin) {

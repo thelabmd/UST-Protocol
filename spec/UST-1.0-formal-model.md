@@ -2888,6 +2888,15 @@ or their active pointer, names it:
 Call this set `R(g)`. Its members are not a list chosen here; each is a place where a verifier already reads
 `ρ(genesis)` and compares.
 
+*Boundary case, recorded because it was mis-classified once.* A field may be genesis-rooted in the WRITER and
+still not be a member, when no verifier reads it. A stream checkpoint's `prev` chains from the genesis for the
+first entry of that chain (§9), which has the shape of a sixth member — and is not one. MEASURED: a stream
+checkpoint whose chain roots in `g_A` yields `complete` under `g_B`, and no verifier reads that `prev` at all;
+only its PRESENCE is required (§11.3). By F.5y.1's own standard — independence by EXHIBITION, which demands a
+configuration where the verifier REFUSES — a field with no refusal cannot be exhibited and is therefore not an
+axis. Whether that field SHOULD be verified is a separate question of the F.7c kind, tracked as
+UST-Protocol#134; until it is answered, the domain is five.
+
 **Theorem F.5y.1 (the crossings are INDEPENDENT, by exhibition).** For each `S ∈ R(g_A)` there is a
 configuration in which every other member is correctly re-rooted onto `g_B`, `S` alone is not, and the verifier
 REFUSES. Hence no crossing is implied by any other, and a re-rooting that performs `k < |R|` of them is

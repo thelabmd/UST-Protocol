@@ -192,7 +192,11 @@ check(WORLD.length >= 4 && sites.length >= 4, 'the vocabulary or the site set sh
   for (const m of SRC.matchAll(/askHidden\(/g)) {
     const line = SRC.slice(0, m.index).split('\n').length;
     if (/export async function askHidden/.test(lines[line - 1] || '')) continue;
-    const before = lines.slice(Math.max(0, line - 6), line).join('\n');
+    // FIVE LINES OF CODE, not of text. A comment block between the hand-back and the prompt pushed a correct call
+    // out of the window and reported a defect that was not there — measured 2026-08-03, while fixing a credential
+    // prompt that really did echo. A comment opens no reader, so it cannot be what breaks this property.
+    const codeBefore = lines.slice(0, line).filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l));
+    const before = codeBefore.slice(Math.max(0, codeBefore.length - 6)).join('\n');
     check(/rl = closeReader\(rl\);/.test(before),
       `the askHidden call at ust-cli/index.mjs:${line} does not hand stdin back first (\`rl?.close(); rl = null;\` within the five lines above it). Building the interface lazily is not enough — by this point earlier questions have opened it, and the guard will refuse one step before the ceremony writes anything.`);
     // PROXIMITY IS NOT CONTAINMENT. This read "a `while`/`for` within the eight lines above", which flagged a

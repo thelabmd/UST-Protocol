@@ -322,7 +322,7 @@
   {
    "round": 153,
    "issue": 133,
-   "no_recap": "The wire form is specified, realized and gated, but #133 is not closed: the operation exists in the reducer and in no CEREMONY — `ust reroot` still does not ask for the epoch-A root key, so no operator can yet produce one. A recap now would describe a reducer that admits an op nothing emits, which is the half-finished state this round was opened to end."
+   "content_hash": "sha256:5467268fc2f8f68f680e921085f1d01fbe127b5e740e948de8f0c92fdb5b95d5"
   },
   {
    "round": 154,
@@ -353,6 +353,11 @@
    "round": 159,
    "issue": 131,
    "no_recap": "Caught one command before publication, with the operator waiting: the round is a repair to the path rather than the crossing itself. The crossing is still unpublished and still owed its entry."
+  },
+  {
+   "round": 160,
+   "issue": 131,
+   "content_hash": "sha256:8e24f68d2d174d9262bf72fe58126192ba8e974e57da8531ab63f3057d0cbb70"
   }
  ]
 }
