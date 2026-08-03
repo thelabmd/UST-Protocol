@@ -1740,6 +1740,40 @@ Verification MUST NOT branch on `X.ust` beyond selecting the single 1.x algorith
 
 ---
 
+### 14.1 Reporting the ladder (normative where it constrains, informative where it advises)
+
+A verdict states where a document sits. An implementation MAY additionally report, for each rung the document
+has not reached, the INPUT whose presence would change the outcome. Where it does, the following hold.
+
+**The report is derived from the SAME decision relation as the verdict, and grants nothing.** Adding it MUST
+leave every verdict identical. A second implementation of "what would this need" is how a report and a verdict
+come to disagree about the same bytes, so the report is a function OF §14's relation, never an input to it.
+Reading what would raise a document MUST NOT be a step toward raising it.
+
+**Each reported input NAMES the term it belongs to.** Verification is a total function of the admitted document
+and the verifier's own faculties (§10 R2), and every missing input lives in exactly one of:
+
+| term | what would move it | who may move it |
+|---|---|---|
+| the document | author a different one — fewer partitions, a different `class` | the PUBLISHER; the result is a different subject, judged on its own bytes |
+| what the verifier derives about the publisher | publish an artifact the verifier fetches and VERIFIES — key log, witness log, an anchor | the PUBLISHER emits bytes; the input is the verifier's own check RESULT, never the publisher's intent |
+| the verifier's trust faculties | bring a trust root, an accepted issuer, a substrate connector | the CONSUMER only |
+| the verifier's resource budget | widen it | the CONSUMER only, and an input may only ever TIGHTEN it (§10 R4) |
+| — | nothing: the input is settled absent (§20, NOT OFFERED) | NOBODY, now or later |
+
+**A report MUST NOT attribute a consumer-faculty input to the publisher.** Telling a publisher that its own
+verdict would rise if it asserted no-fork confirmation is advising it to move the CONSUMER's faculties — the
+self-declaration §12.1 excludes, reached through a help message. In prose the publisher-movable rows and the
+consumer-movable rows read alike; the term is therefore named per input rather than left to the reader.
+
+**A settled-absent rung MUST be distinguishable from one whose input was merely not brought.** The first is
+finished; the second is a configuration choice the reader can make. One shape for both discards the distinction
+§20 exists to preserve, on the axis where an integrator decides whether to act at all.
+
+*Why this section exists (informative).* A verifier that reports only the NEAREST barrier makes an integrator
+learn the ladder by walking it — measured on a live publisher as three separate deploys for three barriers, all
+three decidable from the same bytes at the first.
+
 ## 15. Error taxonomy
 
 A verifier returns one of THREE OUTCOME KINDS — **availability is distinct from failure**:

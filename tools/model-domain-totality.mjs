@@ -53,7 +53,10 @@ const bounds = heads.map((h) => h.pos).concat(MODEL.length);
 // section silently LEAVE the domain — renamed to a non-`F.x` heading, it would simply stop being enumerated and this
 // gate would still pass. That is the very defect class this gate exists to close, so the count is exact and any change
 // to the section inventory must be a deliberate edit here.
-const EXPECTED_SECTIONS = 53;   // 52 → 53: F.5p.1 (rev101) — a profile BINDS and DESCRIBES, and one extension rule
+const EXPECTED_SECTIONS = 54;   // 53 → 54: F.5.1 (rev102) — the ladder is REPORTABLE, and a rung names WHO MAY
+// SUPPLY its missing input. The publisher is in NO supplier class: consumer-config inputs are the verifier's own,
+// published artifacts enter only as the RESULT of the verifier's own check, and a direct placement would make the
+// verdict measurable in what the publisher asserts. 52 → 53: F.5p.1 (rev101) — a profile BINDS and DESCRIBES, and one extension rule
 // cannot serve both: a verifier meeting an unknown key cannot evaluate `bind(k)`, because the spec version it
 // implements is precisely what does not define k. The partition must be POSITIONAL — a naming convention would let
 // the publisher choose whether its own statement binds it. 51 → 52: F.5z (rev99) — суперсессия есть ТЕРМИНАЛЬНЫЙ акт кей-лога, и носитель

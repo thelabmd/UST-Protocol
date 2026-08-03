@@ -2879,6 +2879,54 @@ property computed from the claimant's own bytes is not evidence about the claima
 
 **Binding: realized** — *"F.5w key-form: an impostor is caught by the NAME, never by the binding guard"* · *"F.5w name-form: the SAME impostor keeps the victim name, reaches the binding guard and is refused BY IT"*. The two checks are the theorem made executable: the identical attack is built in both modes and the verdict names WHICH guard answered. Beyond them the realization is the parity gate's population change: the clean-room verifiers are now driven by the CORPUS, whose stream vectors are NAME-form, so `dom(Bound)` is entered by construction rather than by someone remembering to enter it.
 
+## F.5.1 The ladder is REPORTABLE, and each rung names WHICH TERM of R2 its missing input belongs to (#137)
+
+F.5.0 makes assurance a product lattice and the tier one projection. A verdict says where a document sits; it
+does not say what stands between the document and the next rung, nor — decisively — **whether that thing is the
+publisher's to move at all**.
+
+**The measurement that forces this.** On the reference operator three barriers were crossed in three separate
+production deploys, each visible only after the previous was removed: an unearned capacity grant, then an
+unconfirmed name, then unproven time. All three were decidable from the SAME bytes and the SAME faculties at the
+first deploy. Nothing about the document changed between them; only what the verifier had been asked to attempt.
+Reasoning could not even ORDER them — a derivation correct in itself named the second barrier as the first.
+
+**This section introduces no new partition of the inputs.** R2 already fixes it: verification is a total
+function of `x̂` and the verifier's OWN faculties `(ℐ_v, ρ_v)`. Every attribution the report can make is a
+statement about WHICH of those terms a missing input lives in:
+
+| term | what moves it | who may move it |
+|---|---|---|
+| `x̂` | author a different document — fewer partitions, a different class, a declared `prev` | the PUBLISHER, and legitimately: the result is a different subject, judged on its own bytes |
+| `x̂`'s neighbourhood | publish an artifact the verifier FETCHES and verifies under its own faculties — witness log, anchor, key-log entry | the PUBLISHER emits bytes; what enters the function is the RESULT of the verifier's check, never the publisher's intent |
+| `ℐ_v` | bring a trust root, a connector, an accepted issuer | the CONSUMER only |
+| `ρ_v` | widen a budget | the CONSUMER only — and R4 admits only a policy that TIGHTENS it |
+| — | nothing: the input is settled absent (F.5p NOT OFFERED) | NOBODY, now or later |
+
+**Corollary F.5.1a (the publisher can never move `(ℐ_v, ρ_v)`, so a report may never advise it to).** This is R4
+read in the reporting direction. Telling a publisher that its own verdict would rise if it asserted
+`noForkConfirmed` is instructing it to move the consumer's faculties — the self-rooting F.5a.1 excludes, arrived
+at through a help message. The two publisher-movable rows above are *author differently* and *publish
+something*, and neither is an assertion made TO the verifier. In prose all three read as "the operator can fix
+this", which is precisely why the term is named per input rather than inferred by the reader.
+
+**Corollary F.5.1b (the report grants nothing).** The report is a function OF the decision relation, never an
+input to it. Adding it leaves every verdict identical — otherwise reading *what would make this HIGH* would
+itself be a step toward HIGH. Mechanically: it is derived from the same relation the verdict uses, because a
+second implementation is how a report and a verdict drift into disagreeing about the same bytes.
+
+**Corollary F.5.1c (settled and not-brought may not collapse).** A rung unmet because its input is settled
+absent and one unmet because an `ℐ_v` input was not brought are different facts for the reader: the first is
+finished, the second is a configuration choice they can make. One shape for both discards the distinction F.5p
+exists to preserve, on exactly the axis where an integrator decides whether to act at all.
+
+**Binding: pending — thelabmd/UST-Protocol#137.**
+
+**Conformance (math ⇒ code ⇒ green vector, once realized).**
+- the report is derived from the SAME decision relation as the verdict; no second implementation.
+- no rung attributes an `ℐ_v`/`ρ_v` input to the publisher.
+- a rung whose input is settled is reported distinguishably from one whose input was merely not brought.
+
 ## F.5x Authorization reads the DOCUMENT, so `class` is not one axis among several — it is the only one there is (#130)
 
 Round 149 stated the class-sets for `admits(k, c)` and an operator immediately asked the reasonable question:
