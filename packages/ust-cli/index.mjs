@@ -568,9 +568,15 @@ export const DERIVED_REQUIRES_PRIOR = { witness: 'buildWitnessLog(genesisText, a
 // that array a member it cannot process the way it processes the rest, which is the flattening F.5p.1 shows to be
 // unsound one level down. Two kinds, two sets.
 //
-// The ROUTE MUST BE EXACT. `domain/.well-known/ust*` matches `ust-genesis`, `ust-keylog` and every other
-// transcript path, so a wildcard here would not add a surface — it would SWALLOW the four that already exist and
-// answer all of them with the profile.
+// THE ROUTE CARRIES `*`, and the first version of this did not — a live defect, measured 2026-08-03. A CF route
+// pattern without a wildcard matches the path and NOT the same path with a query string, so `/.well-known/ust`
+// reached the worker while `/.well-known/ust?x=1` fell through to the previous origin and answered with the OLD
+// profile. One path, two documents, chosen by a query parameter: the exact §20.1 query-robustness violation this
+// tool probes other publishers for.
+//
+// The reasoning that produced it confused ROUTING with DISPATCH. A route decides which requests REACH the worker;
+// which artifact answers is decided INSIDE, by a table keyed on the whole pathname. So a wildcard cannot make the
+// profile answer for a transcript — `ust*` routes them all here, and each pathname still finds its own row.
 export const PROFILE_PATH = '/.well-known/ust';
 export const PROFILE_ORIGIN = 'loaded (preserved from live when the caller supplies none)';
 
@@ -593,8 +599,8 @@ const WITNESS = ${witnessText === null ? 'null' : JSON.stringify(witnessText)};
 const PROFILE = ${profileText === null ? 'null' : JSON.stringify(profileText)};
 // A TABLE, not a chain of comparisons: a new discovery artifact is a row, and an absent one stays null →
 // 404, which is the very distinction \`ust cadence\` reads to tell ABSENT (first declaration) from UNREADABLE.
-// The profile row is EXACT (\`${PROFILE_PATH}\`, no suffix): the lookup is \`Object.hasOwn\` on the whole
-// pathname, so it can never shadow a transcript path the way a prefix route would.
+// The profile row is keyed on the WHOLE pathname like every other row, which is why routing a WILDCARD to this
+// worker is safe: a transcript request still finds its own row, and an unknown \`ust…\` path finds none and 404s.
 const SERVED = { '/.well-known/ust-genesis': GENESIS, '/.well-known/ust-keylog': KEYLOG, '/.well-known/ust-cadence': CADENCE, '/.well-known/ust-witness': WITNESS, '${PROFILE_PATH}': PROFILE };
 export default {
   async fetch(req) {
@@ -622,11 +628,11 @@ export const CF_DNS_TOKEN_URL = 'https://dash.cloudflare.com/profile/api-tokens?
 
 // wrangler project for the OAuth path: two files, the route rides the config. Pure + testable.
 export function buildWranglerProject({ domain, genesisText, keylogText = null, witnessText = null, cadenceText = null, profileText = null }) {
-  // The transcript routes carry a trailing `*` so a query string still routes; the PROFILE route carries none,
-  // because `.well-known/ust*` is a prefix of every transcript path and would capture all four.
+  // EVERY route carries `*`, the profile's included: without it the same path with a query string does not match
+  // and falls through to whatever served it before — one path answering with two different documents.
   const routes = servedArtifacts({ genesisText, keylogText, cadenceText, witnessText })
     .map((a) => `{ pattern = "${domain}/.well-known/ust-${a}*", zone_name = "${domain}" }`);
-  if (profileText !== null && profileText !== undefined) routes.push(`{ pattern = "${domain}${PROFILE_PATH}", zone_name = "${domain}" }`);
+  if (profileText !== null && profileText !== undefined) routes.push(`{ pattern = "${domain}${PROFILE_PATH}*", zone_name = "${domain}" }`);
   return {
     'worker.mjs': buildWorkerScript(genesisText, keylogText, witnessText, cadenceText, profileText),
     'wrangler.toml': [
@@ -847,11 +853,10 @@ export async function cfPublish({ domain, genesisText, keylogText = null, witnes
   const pattern = `${domain}/.well-known/ust-genesis*`;
   const routes = (await cf(`/zones/${zone.id}/workers/routes`)).result || [];
   const existing = routes.find((r) => r.pattern === pattern);
-  // The transcript routes and, when this deploy carries one, the EXACT profile route. `${domain}/.well-known/ust*`
-  // is a prefix of every transcript path, so the profile pattern deliberately carries no `*`: a wildcard here would
-  // not add a fifth surface, it would capture the other four and answer all of them with the profile.
+  // Every pattern carries `*` — see buildWranglerProject: a pattern without one does not match the same path with
+  // a query string, and the request then falls through to the previous origin.
   const routeSet = servedArtifacts({ genesisText, keylogText, cadenceText, witnessText }).map((a) => [a, `${domain}/.well-known/ust-${a}*`]);
-  if (profileText !== null && profileText !== undefined) routeSet.push(['profile', `${domain}${PROFILE_PATH}`]);
+  if (profileText !== null && profileText !== undefined) routeSet.push(['profile', `${domain}${PROFILE_PATH}*`]);
   for (const [a, p] of routeSet) {
     const prior = routes.find((r) => r.pattern === p);
     const body = JSON.stringify({ pattern: p, script });
@@ -1005,14 +1010,32 @@ export async function attestDiscovery({ domain, mirrors = [], expectHash = null,
     checks.push({ id: 'DNS record (_ust TXT) matches', status: 'skip', detail: 'DoH unreachable: ' + e.message });
   }
 
-  // (3) query-robustness: a random unrecognized parameter MUST yield byte-identical content
-  try {
-    const rand = `q${randomBytes(6).toString('hex')}=${randomBytes(6).toString('hex')}`;
-    const probed = await get(`${url}?${rand}`).then((r) => (r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status} on ?query`))));
-    if (probed === baseline) checks.push({ id: 'query-robustness (cache identity ⊥ unknown query)', status: 'pass', detail: '?' + rand.slice(0, 12) + '… → byte-identical' });
-    else checks.push({ id: 'query-robustness (cache identity ⊥ unknown query)', status: 'fail', detail: 'response VARIES with an unknown query parameter — cache-key amplification is open (§20.1)' });
-  } catch (e) {
-    checks.push({ id: 'query-robustness (cache identity ⊥ unknown query)', status: 'fail', detail: e.message });
+  // (3) query-robustness: a random unrecognized parameter MUST yield byte-identical content — on EVERY surface
+  // this publisher serves, not on the genesis alone.
+  //
+  // MEASURED 2026-08-03, and the reason this is a loop: the probe ran on the genesis only, and the reference
+  // operator's own profile was routed with a pattern carrying no wildcard. `/.well-known/ust` reached the worker
+  // while `/.well-known/ust?x=1` did not match the route at all and fell through to the previous origin, which
+  // answered with a DIFFERENT, older document. One path, two documents, selected by a query parameter — live, on
+  // the surface that declares what the others are, and invisible to a check that named one instance where §20.1
+  // quantifies over all of them.
+  const PROBE_PATHS = [['genesis', url], ...DISCOVERY_ARTIFACTS.filter((a) => a !== 'genesis').map((a) => [a, `https://${domain}/.well-known/ust-${a}`]), ['profile', `https://${domain}${PROFILE_PATH}`]];
+  for (const [name, u] of PROBE_PATHS) {
+    const id = `query-robustness · ${name} (cache identity ⊥ unknown query)`;
+    try {
+      const base = name === 'genesis' ? baseline : await get(u).then((r) => (r.ok ? r.text() : null));
+      // A surface that is NOT SERVED has no query-robustness property to leave unchecked. By F.5p an absent
+      // undeclared surface is NOT OFFERED — settled, unattestable now and later — while PARTIAL means "attestable
+      // tomorrow". Reporting it as an unchecked property would hold every publisher that does not serve an
+      // optional surface below ATTESTED forever, which is a verdict about our probe rather than about them.
+      if (base === null) { checks.push({ id, informational: true, status: 'skip', detail: 'not served — NOT OFFERED, so there is no property here to attest' }); continue; }
+      const rand = `q${randomBytes(6).toString('hex')}=${randomBytes(6).toString('hex')}`;
+      const probed = await get(`${u}?${rand}`).then((r) => (r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status} on ?query`))));
+      if (probed === base) checks.push({ id, status: 'pass', detail: '?' + rand.slice(0, 12) + '… → byte-identical' });
+      else checks.push({ id, status: 'fail', detail: 'response VARIES with an unknown query parameter — one path is answering with two different documents (§20.1)' });
+    } catch (e) {
+      checks.push({ id, status: 'fail', detail: e.message });
+    }
   }
 
   // (0') the §20 OPERATOR PROFILE — normative since rc.1 and, until this round, fetched by nothing. It is what
