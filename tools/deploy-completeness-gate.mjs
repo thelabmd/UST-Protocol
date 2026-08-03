@@ -24,7 +24,11 @@ const fail = []; let pass = 0;
 const check = (ok, msg) => { if (ok) pass++; else fail.push(msg); };
 
 // ── 1. the assembler exists and is the ONLY place the set is built
-const builders = lines.map((l, i) => ({ l, n: i + 1 })).filter((x) => /witnessText:\s*buildWitnessLog\(/.test(x.l));
+// The property is ONE assembler of the served set, not one SPELLING of the call. `collectServed` now PREFERS the
+// ceremony's own witness log — it carries the signed supersession a derivation cannot know about (F.5z.5) — and
+// falls back to deriving, so the call reads `witnessText ?? buildWitnessLog(...)`. Matching the old literal reported
+// zero builders and would have blocked a fix that made the set MORE complete, which is the opposite of this gate's job.
+const builders = lines.map((l, i) => ({ l, n: i + 1 })).filter((x) => /witnessText:.*buildWitnessLog\(/.test(x.l));
 check(/export async function collectServed\(/.test(SRC), 'collectServed is gone — the set has no single assembler again');
 check(builders.length === 1,
   `${builders.length} sites build the served set with buildWitnessLog (expected exactly 1, inside collectServed): ` +
@@ -53,7 +57,9 @@ check(/anchors\s*=\s*anchorsOf\(await r\.text\(\)\)/.test(body) || /preserving/.
 
 // ── 4. each leg must be able to FAIL
 check(!/\.\.\.\s*(served|await collectServed)/.test('cfPublish({ domain, genesisText, keylogText })'), 'the spread probe accepts a hand-built call — leg would pass for anything');
-check(/witnessText:\s*buildWitnessLog\(/.test('  witnessText: buildWitnessLog(x)'), 'the builder probe cannot see a builder');
+check(/witnessText:.*buildWitnessLog\(/.test('  witnessText: buildWitnessLog(x)'), 'the builder probe cannot see a builder');
+check(/witnessText:.*buildWitnessLog\(/.test('  witnessText: mine ?? buildWitnessLog(x)'), 'the builder probe cannot see a builder behind a fallback');
+check(!/witnessText:.*buildWitnessLog\(/.test('  const witnessText = null;'), 'the builder probe matches a line with no builder');
 
 console.log(`\n  deploy completeness   PASS ${pass}   FAIL ${fail.length}   (1 assembler · ${sites} call sites)`);
 if (fail.length) { fail.forEach((f) => console.log('    ✗ ' + f)); process.exit(1); }

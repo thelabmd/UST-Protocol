@@ -24,7 +24,7 @@ export function askHidden(q: unknown, fallbackAsk: unknown): Promise<string>;
 export function attestDiscovery(arg0?: unknown): Promise<{ hash: unknown; checks: unknown; verdict: unknown }>;
 export function attestMirror(arg0?: unknown): Promise<{ canonHash: unknown; results: unknown; failed: unknown }>;
 export function buildCeremony(arg0?: unknown): Promise<{ genesis: unknown; keylog0: unknown; genHash: unknown; op: unknown; opPkcs8: unknown; pkcs8: unknown; warnings: unknown }>;
-export function buildWitnessLog(genesisText: unknown, anchors?: unknown, priorLogText?: unknown): unknown;
+export function buildWitnessLog(genesisText: unknown, anchors?: unknown, priorLogText?: unknown, supersession?: unknown): unknown;
 export function buildWorkerScript(genesisText: unknown, keylogText?: unknown, witnessText?: unknown, cadenceText?: unknown): string;
 export function buildWranglerProject(arg0?: unknown): Record<string, unknown>;
 export const CEREMONY_STEPS: unknown;

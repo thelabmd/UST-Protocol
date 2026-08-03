@@ -348,6 +348,11 @@
    "round": 158,
    "issue": 131,
    "no_recap": "The round exists because a live ceremony produced an unusable crown and the operator found it in cold storage. Nothing is published, the ceremony will be re-run, and the recap belongs to the crossing rather than to the repair that made it possible."
+  },
+  {
+   "round": 159,
+   "issue": 131,
+   "no_recap": "Caught one command before publication, with the operator waiting: the round is a repair to the path rather than the crossing itself. The crossing is still unpublished and still owed its entry."
   }
  ]
 }

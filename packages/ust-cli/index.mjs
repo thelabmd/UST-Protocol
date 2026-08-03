@@ -502,14 +502,14 @@ export function manualServingGuide(domain, outDir) {
 // / witnessNoShrink), so the ceremony, the deploy path and any consumer's mirror all apply one rule rather than three
 // copies of it. `priorLogText` absent ⇒ a first ceremony; present ⇒ a supersession that must survive the same
 // no-shrink test the mirror will apply on the way in.
-export function buildWitnessLog(genesisText, anchors = null, priorLogText = null) {
+export function buildWitnessLog(genesisText, anchors = null, priorLogText = null, supersession = null) {
   const g = JSON.parse(genesisText);
   let prior = null;
   if (priorLogText != null) {
     try { prior = typeof priorLogText === 'string' ? JSON.parse(priorLogText) : priorLogText; }
     catch { throw new Error('the prior witness log is unparseable — refusing to replace a history that cannot be read'); }
   }
-  const r = P.witnessSuccessor(prior, { domain_shard: g.state.id.domain_shard, content_hash: P.contentHash(g), anchors });
+  const r = P.witnessSuccessor(prior, { domain_shard: g.state.id.domain_shard, content_hash: P.contentHash(g), anchors, supersession });
   if (r.error) throw new Error('witness successor refused: ' + r.error);
   return JSON.stringify(r.log);
 }
@@ -669,7 +669,30 @@ export async function collectServed({ domain, genesisText, genPath, keylogText =
     } catch { if (cadenceFile) die('could not read --cadence-log ' + cadPath); }
   }
 
-  return { genesisText, keylogText, cadenceText, witnessText: buildWitnessLog(genesisText, anchors, priorLog) };
+  // THE CEREMONY'S OWN WITNESS LOG WINS, when it is already the successor for THIS genesis. MEASURED on the live
+  // re-rooting, 2026-08-03: `buildWitnessLog` DERIVES a successor from the served log, and a derivation only knows
+  // the fields it was written for — so the `supersession` transcript that F.5z.5 put on the superseded entry was
+  // silently dropped, and the set about to be published claimed a supersession with NO SIGNED HALF. That is exactly
+  // the half-crossing §12.1 P2 refuses, assembled by the publish path itself.
+  //
+  // Deriving is right when there is nothing better; a ceremony's output IS better, because it carries what the
+  // ceremony proved. It is not trusted blindly: it must be the successor for this genesis AND survive the same
+  // no-shrink rule against what is live, which is the test a mirror will apply on the way in.
+  let witnessText = null;
+  const wFile = witnessFile || (genPath ? genPath.replace(/[^/\\]+$/, 'ust-witness') : null);
+  if (wFile) {
+    try {
+      const mine = JSON.parse(readFileSync(wFile, 'utf8'));
+      if (mine?.active === genHash) {
+        const shrank = priorLog ? P.witnessNoShrink(JSON.parse(priorLog), mine) : null;
+        if (shrank) die(`the witness log at ${wFile} would not survive the no-shrink rule against what is live: ${shrank}`);
+        witnessText = JSON.stringify(mine);
+        const signed = mine.genesis_log?.filter((e) => e.supersession).length ?? 0;
+        log(`  ℹ️  using the ceremony's witness log — ${mine.genesis_log.length} entries, ${signed} carrying a signed supersession`);
+      }
+    } catch (e) { if (witnessFile) die(`could not read --witness ${wFile}: ${e.message || e}`); }
+  }
+  return { genesisText, keylogText, cadenceText, witnessText: witnessText ?? buildWitnessLog(genesisText, anchors, priorLog) };
 }
 
 export function servedArtifacts({ genesisText, keylogText = null, cadenceText = null, witnessText = null }) {
