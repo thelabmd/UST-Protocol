@@ -8582,6 +8582,248 @@
       },
       "expect": "admitted",
       "note": "the root keeps its function: a class:\"key\" entry is exactly what its set admits"
+    },
+    {
+      "kind": "stream-authority",
+      "id": "reroot-01-stream-not-crossed-refused",
+      "note": "F.5y — the frame stream is rooted in the genesis (M4). A writer that keeps chaining across an epoch boundary is REFUSED under the successor genesis: the crossing is a change in the WRITER, and no ceremony artifact can perform it.",
+      "frames": [
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "noosphere.md",
+              "ust_id": "ust:20260803.1100",
+              "key_id": "sha256:bc2fbd42d515fd6f8cadd57cfd40fb2493a9e4d9ac7d1d7971be903ab1b597f2",
+              "class": "observation"
+            },
+            "time": {
+              "generated_at": "2026-08-03T12:00:00Z",
+              "valid_from": "2026-08-03T12:00:00Z",
+              "valid_to": "2036-01-01T00:00:00Z"
+            },
+            "data": {
+              "r": {
+                "kind": "captured",
+                "value": {
+                  "n": "1"
+                }
+              }
+            },
+            "hashes": {
+              "r": "sha256:86ac518c8542aa935a429788c5a056058afeda8f3c2f8a87341dbaa7f4058b3e"
+            },
+            "provenance": {
+              "prev": "sha256:52eeee968a1722676cba4c55428669786912fb8d3618ca9e34b5fa135e70c385"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:bc2fbd42d515fd6f8cadd57cfd40fb2493a9e4d9ac7d1d7971be903ab1b597f2",
+            "pub": "uPydcLMwtdN3pSEEe853IUSnR8qiA8RTqROF3obhd8w",
+            "sig": "dlWuzjJH1FyjgbpaB9m-3R-zmOIVJGmi-pHgNn6cccTB2oZnJvTUzn2JiDdfJ0bV7hefRx1Kc8yD4zvkVgUHCQ"
+          }
+        }
+      ],
+      "genesis": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "noosphere.md",
+            "ust_id": "ust:20260803.10",
+            "key_id": "sha256:0861048bd227be67e22334d4cb61face82a3195b48cd91e7736dcb6fde794651",
+            "class": "genesis"
+          },
+          "time": {
+            "generated_at": "2026-08-03T12:00:00Z",
+            "valid_from": "2026-08-03T12:00:00Z",
+            "valid_to": "2036-01-01T00:00:00Z"
+          },
+          "data": {
+            "genesis": {
+              "kind": "captured",
+              "value": {
+                "pub": "cAgq6fmIYbUU1IRrxeAvsJb7NsqVPJKDCQmBbc84oKE",
+                "role": "name-binding-root",
+                "cadence": "30"
+              }
+            }
+          },
+          "hashes": {
+            "genesis": "sha256:b85f157dce42ba3e40c59fee01c7c26942292eec47be5fd4ae52d50b8940b9ca"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:0861048bd227be67e22334d4cb61face82a3195b48cd91e7736dcb6fde794651",
+          "pub": "cAgq6fmIYbUU1IRrxeAvsJb7NsqVPJKDCQmBbc84oKE",
+          "sig": "q8EDS94fIxc9OUXoTbHoPIlkEDJo3CEas6sH_3bThQiEjjV30f8enSfZV9F7gYz8laNCELwdNHAX_0h2A4-XCQ"
+        }
+      },
+      "keylog": [
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "noosphere.md",
+              "ust_id": "ust:20260803.1001",
+              "key_id": "sha256:0861048bd227be67e22334d4cb61face82a3195b48cd91e7736dcb6fde794651",
+              "class": "key"
+            },
+            "time": {
+              "generated_at": "2026-08-03T12:00:00Z",
+              "valid_from": "2026-08-03T12:00:00Z",
+              "valid_to": "2036-01-01T00:00:00Z"
+            },
+            "data": {
+              "key_op": {
+                "kind": "captured",
+                "value": {
+                  "op": "add",
+                  "pub": "uPydcLMwtdN3pSEEe853IUSnR8qiA8RTqROF3obhd8w",
+                  "new_key_id": "sha256:bc2fbd42d515fd6f8cadd57cfd40fb2493a9e4d9ac7d1d7971be903ab1b597f2"
+                }
+              }
+            },
+            "hashes": {
+              "key_op": "sha256:6828e05cccb9ab2bfcf83e9b529eae58048979b94ee3006e7b4ee84a15f8f674"
+            },
+            "provenance": {
+              "prev": "sha256:3188704ac19b79966820691647ab9d43be103b4920f31968ba48742c717ba026"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:0861048bd227be67e22334d4cb61face82a3195b48cd91e7736dcb6fde794651",
+            "pub": "cAgq6fmIYbUU1IRrxeAvsJb7NsqVPJKDCQmBbc84oKE",
+            "sig": "3QyT5M8gIWlWTEVk7o3-22Hld9Smc_mZZOK1gwtjEhabZlgw-sa3zOzZRn87ilFD2rO__yKC6yn4Fmn2e4k0Aw"
+          }
+        }
+      ],
+      "expect": {
+        "error": "E-PREV"
+      }
+    },
+    {
+      "kind": "stream-authority",
+      "id": "reroot-02-stream-crossed-accepted",
+      "note": "F.5y control — the SAME frame with prev = contentHash(new genesis) is accepted. The refusal above is the axis, not an artifact of the fixture.",
+      "frames": [
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "noosphere.md",
+              "ust_id": "ust:20260803.1100",
+              "key_id": "sha256:bc2fbd42d515fd6f8cadd57cfd40fb2493a9e4d9ac7d1d7971be903ab1b597f2",
+              "class": "observation"
+            },
+            "time": {
+              "generated_at": "2026-08-03T12:00:00Z",
+              "valid_from": "2026-08-03T12:00:00Z",
+              "valid_to": "2036-01-01T00:00:00Z"
+            },
+            "data": {
+              "r": {
+                "kind": "captured",
+                "value": {
+                  "n": "1"
+                }
+              }
+            },
+            "hashes": {
+              "r": "sha256:86ac518c8542aa935a429788c5a056058afeda8f3c2f8a87341dbaa7f4058b3e"
+            },
+            "provenance": {
+              "prev": "sha256:3188704ac19b79966820691647ab9d43be103b4920f31968ba48742c717ba026"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:bc2fbd42d515fd6f8cadd57cfd40fb2493a9e4d9ac7d1d7971be903ab1b597f2",
+            "pub": "uPydcLMwtdN3pSEEe853IUSnR8qiA8RTqROF3obhd8w",
+            "sig": "rdUQ0xgZuzimcVHadlEWzvFpMJRC86kWhQpuNke8PAkra1-f9rBQWdVDaXgJKVy9ezpD7JmXaLxrpbZg4v7VDw"
+          }
+        }
+      ],
+      "genesis": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "noosphere.md",
+            "ust_id": "ust:20260803.10",
+            "key_id": "sha256:0861048bd227be67e22334d4cb61face82a3195b48cd91e7736dcb6fde794651",
+            "class": "genesis"
+          },
+          "time": {
+            "generated_at": "2026-08-03T12:00:00Z",
+            "valid_from": "2026-08-03T12:00:00Z",
+            "valid_to": "2036-01-01T00:00:00Z"
+          },
+          "data": {
+            "genesis": {
+              "kind": "captured",
+              "value": {
+                "pub": "cAgq6fmIYbUU1IRrxeAvsJb7NsqVPJKDCQmBbc84oKE",
+                "role": "name-binding-root",
+                "cadence": "30"
+              }
+            }
+          },
+          "hashes": {
+            "genesis": "sha256:b85f157dce42ba3e40c59fee01c7c26942292eec47be5fd4ae52d50b8940b9ca"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:0861048bd227be67e22334d4cb61face82a3195b48cd91e7736dcb6fde794651",
+          "pub": "cAgq6fmIYbUU1IRrxeAvsJb7NsqVPJKDCQmBbc84oKE",
+          "sig": "q8EDS94fIxc9OUXoTbHoPIlkEDJo3CEas6sH_3bThQiEjjV30f8enSfZV9F7gYz8laNCELwdNHAX_0h2A4-XCQ"
+        }
+      },
+      "keylog": [
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "noosphere.md",
+              "ust_id": "ust:20260803.1001",
+              "key_id": "sha256:0861048bd227be67e22334d4cb61face82a3195b48cd91e7736dcb6fde794651",
+              "class": "key"
+            },
+            "time": {
+              "generated_at": "2026-08-03T12:00:00Z",
+              "valid_from": "2026-08-03T12:00:00Z",
+              "valid_to": "2036-01-01T00:00:00Z"
+            },
+            "data": {
+              "key_op": {
+                "kind": "captured",
+                "value": {
+                  "op": "add",
+                  "pub": "uPydcLMwtdN3pSEEe853IUSnR8qiA8RTqROF3obhd8w",
+                  "new_key_id": "sha256:bc2fbd42d515fd6f8cadd57cfd40fb2493a9e4d9ac7d1d7971be903ab1b597f2"
+                }
+              }
+            },
+            "hashes": {
+              "key_op": "sha256:6828e05cccb9ab2bfcf83e9b529eae58048979b94ee3006e7b4ee84a15f8f674"
+            },
+            "provenance": {
+              "prev": "sha256:3188704ac19b79966820691647ab9d43be103b4920f31968ba48742c717ba026"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:0861048bd227be67e22334d4cb61face82a3195b48cd91e7736dcb6fde794651",
+            "pub": "cAgq6fmIYbUU1IRrxeAvsJb7NsqVPJKDCQmBbc84oKE",
+            "sig": "3QyT5M8gIWlWTEVk7o3-22Hld9Smc_mZZOK1gwtjEhabZlgw-sa3zOzZRn87ilFD2rO__yKC6yn4Fmn2e4k0Aw"
+          }
+        }
+      ],
+      "expect": {
+        "complete": "provisional"
+      }
     }
   ]
 }

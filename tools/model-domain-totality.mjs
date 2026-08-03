@@ -53,7 +53,10 @@ const bounds = heads.map((h) => h.pos).concat(MODEL.length);
 // section silently LEAVE the domain — renamed to a non-`F.x` heading, it would simply stop being enumerated and this
 // gate would still pass. That is the very defect class this gate exists to close, so the count is exact and any change
 // to the section inventory must be a deliberate edit here.
-const EXPECTED_SECTIONS = 50;   // 49 → 50: F.7c (rev90) — нормативное утверждение ОПРЕДЕЛЕНО, иначе оно не
+const EXPECTED_SECTIONS = 51;   // 50 → 51: F.5y (rev98) — перекоренение есть ПЕРЕСЕЧЕНИЕ каждой укоренённой в
+// генезисе структуры, которую издатель инстанциировал, а не одно событие; пять осей перечислены из чтений
+// самого верификатора, и три из них нашлись только потому, что домен перечисляли, а не выбирали образец.
+// 49 → 50: F.7c (rev90) — нормативное утверждение ОПРЕДЕЛЕНО, иначе оно не
 //   закончено: место, где ответ зависит от того, КОГО спросили, — не свобода, а ненайденное правило.
 //    // 48 → 49: F.5x (rev90) — авторизация читает ДОКУМЕНТ, поэтому `class`
 //   не одна ось из нескольких, а единственная имеющаяся: тира в координатах состояния нет, он

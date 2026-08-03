@@ -2866,6 +2866,73 @@ reads a claim. So the discipline this needs is one of CITATION, and it is the op
 
 **Binding: realized** — *"admits-issuance-observation-refused"* · *"F.5v a stream checkpoint inside the window is not asked whether it observed"*. F.5x.1 is realized by the shape of the predicate that shipped in round 149 (it takes a class because a document offers nothing else); F.5x.3 by the measured refusal above, which is the same path `#113` tracks.
 
+## F.5y A re-rooting is a CROSSING of every genesis-rooted structure the publisher instantiated, not an event (#131)
+
+Round 152 set out to build the missing re-rooting command and began, reasonably, by asking the code which key
+signs a re-rooting. The code answered — epoch A's authority checkpoint key — and the answer was wrong by omission.
+It names the key of ONE mechanism and stops. The correct answer is not a key but a domain, and the shape of the
+mistake is the reason this section exists.
+
+**Setting.** Let `g_A` be the active name-binding genesis for domain `n`, let `g_B` succeed it, and write
+`ρ(·) = contentHash(·)`. Several structures a publisher maintains are ROOTED in `ρ(g_A)` — their first element,
+or their active pointer, names it:
+
+| structure | binding to the genesis | refusal when the binding is stale |
+|---|---|---|
+| key-log | entry 0 `prev = ρ(g)` | `E-PREV` |
+| cadence log | entry 0 `prev = ρ(g)` | `E-PREV` |
+| witness log | `active = ρ(g)` | `fork` |
+| authority-checkpoint chain | `C₀.active_genesis = ρ(g)`, `genesis_epoch = H(ρ(g))` | `E-MALFORMED` (no valid `τ`) |
+| the frame stream | frame 0 `prev = ρ(g)` (M4) | `E-PREV` |
+
+Call this set `R(g)`. Its members are not a list chosen here; each is a place where a verifier already reads
+`ρ(genesis)` and compares.
+
+**Theorem F.5y.1 (the crossings are INDEPENDENT, by exhibition).** For each `S ∈ R(g_A)` there is a
+configuration in which every other member is correctly re-rooted onto `g_B`, `S` alone is not, and the verifier
+REFUSES. Hence no crossing is implied by any other, and a re-rooting that performs `k < |R|` of them is
+incomplete no matter which `k`. The exhibits are the vectors: *"F.5y an uncrossed cadence log is REFUSED under
+the successor genesis"*, *"F.5y an uncrossed witness log makes the publisher its OWN fork"*, *"F.5y an
+uncrossed frame stream is REFUSED under the successor genesis (M4)"*. ∎
+
+The witness exhibit deserves its own sentence, because the intuitive statement of it is too weak. Leaving the
+witness log on `g_A` while serving `g_B` does not merely strand a consumer holding the old hash: §12.1's rule —
+an anchored active entry that DIFFERS from the resolved genesis is a rival — does not care that both roots
+belong to the same operator. The publisher becomes its own fork, and the ANCHORED root is the superseded one.
+
+**Theorem F.5y.2 (the obligation ranges over the INSTANTIATED set).** `S ∈ R(g_A)` imposes a crossing only if
+`S` is instantiated, and the reason is structural rather than pragmatic: each refusal above is conditioned on
+`S` being READABLE. An absent witness endpoint yields `unreachable`, not `fork`; where no authority checkpoint
+was ever published there is no prior `genesis_epoch` to reset, so no `τ` is owed. The obligation is therefore
+`R(g_A) ∩ Instantiated`, and instantiation is OBSERVABLE at the serving surface — a served log, a declared
+`checkpoint_authority`, a running writer. ∎
+
+*Corollary (why a tool must READ and never ask).* The obligation is a function of the served state, so a
+command taking the axes as flags asks the operator to restate what the system already knows — and an omitted
+flag is then indistinguishable from an absent structure, which is the difference between “nothing to cross”
+and “forgot to cross”. The correct shape is the one `ust key add --role` already has: what is REQUIRED is a
+property of the served genesis, not of the command.
+
+**Theorem F.5y.3 (an uncrossed axis is invisible to the ceremony and loud at the consumer).** Every refusal in
+`R` is produced by a VERIFIER, from inputs the ceremony does not hold. A ceremony's self-check ranges over what
+the ceremony PRODUCED; an uncrossed `S` is precisely a structure the ceremony did not touch, so no check over
+its own outputs can observe it. Acceptance must therefore be indexed by the PRE-state — the structures observed
+instantiated before the crossing — and never by the artifact set produced. ∎
+
+*Corollary (the operator instance, and the worst member of `R`).* The frame stream is instantiated by a RUNNING
+WRITER rather than by a served document, so its crossing is a change in production code: the first frame after
+the boundary must set `prev = ρ(g_B)`. A writer that continues its chain across the boundary is refused
+`E-PREV` for every consumer holding `g_B` while the ceremony reports success — the failure is in production, and
+visible only at the consumer. Old epochs are unaffected throughout: each epoch's stream is its own chain rooted
+in its own genesis, which is the design and not a casualty.
+
+**Method note (kept because the near-miss generalizes).** A rule stated over a SAMPLE — “the two mechanisms” —
+would have licensed a command that silently omits three axes, with green acceptance. Three of the five were
+found only by enumerating from the verifier's own reads instead of from the mechanism names, which is the same
+discipline a gate owes its domain: enumerate, never sample.
+
+**Binding: pending — UST-Protocol#131 (the crossing command; the per-axis refusals cited in F.5y.1 are realized and executed, the composite ceremony is not).**
+
 ## F.6 Composition — the event algebra
 
 An **anchored existence-and-commitment claim** is an event `A ∈ Fₜ`; an UNANCHORED signed claim is a document

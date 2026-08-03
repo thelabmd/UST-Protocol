@@ -182,7 +182,11 @@ for (const v of V.vectors) {
     case 'authority-at-time': { const r = atU(v.doc, v.genesis, v.keylog, v.anchor_time); const id = r.identity || {}; check(v.id, v.expect.error ? (r.result === 'INVALID' && new RegExp(v.expect.error).test(r.error || '')) : (id.strength === v.expect.strength && id.status === v.expect.status)); break; }
     // #75 ROOT 3 (math-derived, no manifest) — composition authority: forkChoice/verifyStream resolve per-frame
     // authority (impersonation) + grid equality (off-grid), all language-neutral.
-    case 'stream-authority': case 'stream-grid': { const r = P.verifyStream(v.frames, { genesis: v.genesis, checkpoint: v.checkpoint }); check(v.id, v.expect.error ? r.error === v.expect.error : r.complete === v.expect.complete); break; }
+    // `keylog` is forwarded when the vector carries one. Without it a stream vector could only ever use keys the
+    // GENESIS names directly, so no vector could express a frame signed by an ordinary operating key — which is
+    // every real stream. Absent, `verifyStream` still resolves against the genesis alone, so existing vectors are
+    // untouched (measured: the runner change alters no prior verdict).
+    case 'stream-authority': case 'stream-grid': { const r = P.verifyStream(v.frames, { genesis: v.genesis, checkpoint: v.checkpoint, ...(v.keylog ? { keylog: v.keylog } : {}) }); check(v.id, v.expect.error ? r.error === v.expect.error : r.complete === v.expect.complete); break; }
     case 'fork-choice': { const sv = (a, root) => v.anchored_roots.includes(root) ? { final: true, time: v.anchor_time ?? '2027-01-01T00:00:00Z' } : null; const r = await P.forkChoice(v.candidates, { genesis: v.genesis, ...(v.keylog ? { keylog: v.keylog } : {}), ...nfe(v.genesis), substrateVerify: sv }); check(v.id, r.result === v.expect.result); break; }
     // #95 — the REFERENCE inclusion connector, pinned language-neutrally. Now that the protocol calls the tagged walk one
     // connector among several, a second implementation needs the bytes to reproduce it; the DELEGATION seam itself cannot
@@ -430,6 +434,63 @@ check('F4b prev-only subtype vocabulary is TOTAL in the corpus — every runtime
     return mine.some((x) => x.expect === 'admitted') && mine.some((x) => x.expect === 'E-MALFORMED');
   });
 })());
+// UST#131 — an EMPTY `roles` is an expressed intent, not an absent one. Three inputs, three outcomes, and the
+// middle one is the whole point: it used to be dropped SILENTLY, so a ceremony declared nothing while believing
+// it had — on a field only a re-rooting can change. Both silent-legitimate cases are pinned alongside, because a
+// refusal that also refuses `undefined` would break every publisher that never declares separation.
+check('#131 buildGenesis REFUSES an empty `roles` — declaring nothing is not a state this protocol has', (() => {
+  const gid = { domain_shard: A.key_id, ust_id: 'ust:20260628.14', key_id: A.key_id };
+  const mkG = (roles) => { try { P.buildGenesis(gid, T, A.pubB64, undefined, undefined, 30, undefined, undefined, roles); return 'built'; } catch (e) { return e.code; } };
+  return mkG([]) === 'E-GENESIS' && mkG(undefined) === 'built' && mkG(null) === 'built' && mkG(['data']) === 'built';
+})());
+// ─── F.5y — a re-rooting is a CROSSING of every genesis-rooted structure, and the crossings are INDEPENDENT.
+// Each exhibit below re-roots EVERY other axis correctly and leaves exactly one stale, so the stale axis is the
+// only possible rejector. That discipline is the point: an exhibit whose refusal could come from a second cause
+// proves nothing about the axis it names. The three axes here are the ones a ceremony most easily forgets — the
+// key-log is the one nobody forgets, and the authority chain refuses through §12.3's own epoch checks.
+{
+  const DOM = 'noosphere.md';
+  const rA = kp('a1'.repeat(32)), dA = kp('a2'.repeat(32)), rB = kp('b1'.repeat(32)), dB = kp('b2'.repeat(32));
+  const sA = (s) => P.seal(s, rA.priv, rA.pubB64), sB = (s) => P.seal(s, rB.priv, rB.pubB64);
+  const gA = sA(P.buildGenesis({ domain_shard: DOM, ust_id: 'ust:20260628.10', key_id: rA.key_id }, T, rA.pubB64, undefined, undefined, '30'));
+  const gB = sB(P.buildGenesis({ domain_shard: DOM, ust_id: 'ust:20260629.10', key_id: rB.key_id }, T, rB.pubB64, undefined, undefined, '30', undefined, undefined, ['data', 'issuance']));
+  const hA = P.contentHash(gA), hB = P.contentHash(gB);
+  // the key-log axis, CROSSED — every exhibit below runs against this, so no refusal can come from it
+  const klB = [sB(P.buildKeyLogEntry({ domain_shard: DOM, ust_id: 'ust:20260629.1001', key_id: rB.key_id }, T, { op: 'add', pub: dB.pubB64, new_key_id: dB.key_id, role: 'data' }, hB))];
+
+  // AXIS: cadence log. Same entry, same signer, same effective_from — ONLY `prev` differs.
+  const cad = (prev) => [sB(P.buildCadenceEntry({ domain_shard: DOM, ust_id: 'ust:20260629.1002', key_id: rB.key_id }, T, '60', 'ust:20260629.12', prev))];
+  check('F.5y an uncrossed cadence log is REFUSED under the successor genesis', (() => {
+    const stale = P.resolveCadence(gB, cad(hA), 'ust:20260629.12', { keylog: klB });
+    const crossed = P.resolveCadence(gB, cad(hB), 'ust:20260629.12', { keylog: klB });
+    return stale.error === 'E-PREV' && !crossed.error && String(crossed.cadence) === '60';
+  })());
+
+  // AXIS: witness log. The intuitive reading — "a consumer loses the path forward" — is too weak: §12.1 reads an
+  // anchored active entry differing from the resolved genesis as a RIVAL, and does not care that both are ours.
+  const anch = (h) => ({ root: P.H('ust:leaf', h), path: [], anchor: { substrate: 'bitcoin-ots' } });
+  const logA = P.witnessSuccessor(null, { domain_shard: DOM, content_hash: hA, anchors: [anch(hA)] }).log;
+  const logB = P.witnessSuccessor(logA, { domain_shard: DOM, content_hash: hB, anchors: [anch(hB)] }).log;
+  const serve = (body) => async () => ({ ok: true, status: 200, text: async () => JSON.stringify(body) });
+  const sv = async () => ({ final: true, time: '2027-01-01T00:00:00Z' });
+  const stale = await P.witnessNoFork(DOM, hB, { fetchImpl: serve(logA), substrateVerify: sv });
+  const crossed = await P.witnessNoFork(DOM, hB, { fetchImpl: serve(logB), substrateVerify: sv });
+  check('F.5y an uncrossed witness log makes the publisher its OWN fork', stale.status === 'fork' && crossed.status === 'confirmed');
+  // and the crossing PRESERVES the superseded root with its anchors — a supersession adds, never removes (§12.1)
+  check('F.5y the crossing preserves the superseded root and its anchors', (() => {
+    const old = logB.genesis_log.find((e) => e.content_hash === hA);
+    return logB.genesis_log.length === 2 && old?.superseded_by === hB && (old.anchors?.length ?? 0) === 1;
+  })());
+
+  // AXIS: the frame stream. The one instantiated by a RUNNING WRITER rather than by a served document, so its
+  // crossing is a change in production code. Signed by dB — bound in klB — so E-AUTHORITY cannot stand in for E-PREV.
+  const frame = (prev) => P.seal(P.buildState({ domain_shard: DOM, ust_id: 'ust:20260629.1100', key_id: dB.key_id, class: 'observation' }, T, { r: { kind: 'captured', value: { n: '1' } } }, { prev }), dB.priv, dB.pubB64);
+  check('F.5y an uncrossed frame stream is REFUSED under the successor genesis (M4)', (() => {
+    const kept = P.verifyStream([frame(hA)], { genesis: gB, keylog: klB });
+    const rerooted = P.verifyStream([frame(hB)], { genesis: gB, keylog: klB });
+    return kept.error === 'E-PREV' && !rerooted.error;
+  })());
+}
 check('F5 encrypted w/o enc→E-MALFORMED', (() => { const st = { id: ID, time: T, data: { e: { kind: 'captured', privacy: 'encrypted', commit: 'sha256:' + 'cd'.repeat(32) } }, hashes: { e: P.partitionHash({ commit: 'sha256:' + 'cd'.repeat(32) }) } }; return P.verify(P.seal(st, A.priv, A.pubB64), { context: 'data' }).error === 'E-MALFORMED'; })());
 check('F6 non-NFC member name→E-CANON', (() => { try { P.canon({ ['e' + String.fromCharCode(0x301)]: '1' }); return false; } catch (e) { return e.code === 'E-CANON'; } })());
 check('F7 raw duplicate-key→E-CANON', P.verifyJson('{"ust":"0.0","ust":"1.0","state":{},"sig":{}}').error === 'E-CANON');

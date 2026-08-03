@@ -342,8 +342,17 @@ export const buildAttestation = (id, time, data, constituents, prev) =>         
   buildState({ ...id, class: 'attestation' }, time, data, { constituents, root: merkleRoot(constituents), ...(prev !== undefined ? { prev } : {}) });
 export const buildDerivation = (id, time, data, basedOn, prev) =>                  // §9.3/§9.4 based_on + seed
   buildState({ ...id, class: 'derivation' }, time, data, { based_on: basedOn.map((b) => ({ hash: b.hash })), seed: seed(basedOn.map(b => b.hash)), ...(prev !== undefined ? { prev } : {}) });   // round-54 (UST-0q7) — PRODUCER-FORWARD: emit HASH-ONLY based_on; a `url` in the signed provenance is a swappable location hint that lends false authority, so producers stop emitting it (location → unsigned discovery §20.1). Verifiers still IGNORE any url present, so existing docs stay valid — NOT invalidated.
-export const buildGenesis = (id, time, pub, maxPartitions, maxTranscriptBytes, cadence, checkpointAuthority, recovery, roles) =>  // §12.1 self-signed name-binding root
-  buildState({ ...id, class: 'genesis' }, time, { genesis: { kind: 'captured', value: {
+export const buildGenesis = (id, time, pub, maxPartitions, maxTranscriptBytes, cadence, checkpointAuthority, recovery, roles) => {  // §12.1 self-signed name-binding root
+  // AN EMPTY `roles` IS AN EXPRESSED INTENT, NOT AN ABSENT ONE (rev92). Dropping it, as the spread below does,
+  // is strictly better than writing it — a signed `roles: []` declares nothing per §12.1 yet `resolveKeys`
+  // refuses it as E-GENESIS, i.e. a publishable identity from which no consumer can ever resolve a key. But
+  // dropping it SILENTLY is its own defect, measured: a ceremony passing `[]` produces a genesis with no
+  // separation while the operator believes they declared it — on a field that cannot be changed without
+  // re-rooting. `undefined` means "not declaring" and stays silent; `[]` means "declaring nothing", which is
+  // not a state this protocol has. The CLI already refuses it; a direct library caller had only the silence.
+  if (roles !== undefined && roles !== null && !roles.length)
+    throw err('E-GENESIS', 'roles is present but EMPTY — omit the argument to publish without role separation; an empty array declares nothing, and this protocol has no such state (§12.1, UST#131)');
+  return buildState({ ...id, class: 'genesis' }, time, { genesis: { kind: 'captured', value: {
     pub, role: 'name-binding-root',
     ...(maxPartitions !== undefined ? { max_partitions: String(maxPartitions) } : {}),           // §13 ladder (≠ ceiling; ABS 4096)
     ...(maxTranscriptBytes !== undefined ? { max_transcript_bytes: String(maxTranscriptBytes) } : {}), // §13 ladder (≠ ceiling; ABS 64 MiB)
@@ -363,6 +372,7 @@ export const buildGenesis = (id, time, pub, maxPartitions, maxTranscriptBytes, c
     ...(checkpointAuthority ? { checkpoint_authority: { key_id: checkpointAuthority.key_id, pub: checkpointAuthority.pub } } : {}),
     ...(recovery ? { recovery: { keys: recovery.keys, threshold: String(recovery.threshold) } } : {}),
   } } });
+};
 // P1-04 — resolve the checkpoint-authority + recovery roots FROM the signed genesis value (typed, key_id = keyId(pub)
 // validated), never from a raw caller option. Returns {genesisAuthority?, recoveryKeys?, recoveryThreshold?} or null.
 export function resolveCheckpointRoots(genesis) {

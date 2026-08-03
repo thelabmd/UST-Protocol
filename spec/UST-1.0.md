@@ -1020,6 +1020,32 @@ key near/after a genesis-recovery cannot be epoch-placed and is rejected at HIGH
 boundary anchoring is EFFECTIVELY REQUIRED for HIGH validation.)** Anchor time/order is
 necessary but NOT sufficient for name authority; domain control is the arbiter.
 
+**A re-rooting is a CROSSING, and it is not one event (F.5y).** Several structures a publisher maintains are
+ROOTED in the genesis `content_hash` — their first element, or their active pointer, names it. A publisher
+re-rooting from `g_A` to `g_B` MUST cross EVERY such structure it has INSTANTIATED. The crossings are
+independent: performing one does not perform another, and each stale binding is refused on its own:
+
+| genesis-rooted structure | binding | refusal when left on `g_A` |
+|---|---|---|
+| key-log (§12.2) | entry 0 `prev = contentHash(genesis)` | `E-PREV` |
+| cadence log (§11.3) | entry 0 `prev = contentHash(genesis)` | `E-PREV` |
+| witness log (§12.1) | `active = contentHash(genesis)` | a RIVAL root ⇒ `fork` |
+| authority-checkpoint chain (§12.3) | `C₀.active_genesis`, `genesis_epoch` | `E-MALFORMED` absent a valid transition |
+| the frame stream (§11.3, M4) | frame 0 `prev = contentHash(genesis)` | `E-PREV` |
+
+A structure that is NOT instantiated imposes no crossing — an absent witness endpoint yields `unavailable`,
+not `fork`, and where no authority checkpoint was ever published there is no sequence to reset and no
+transition is owed. Instantiation is OBSERVABLE at the serving surface, so a conforming re-rooting tool MUST
+determine the required crossings by READING the served identity, never by accepting them as operator input:
+an omitted input is otherwise indistinguishable from an absent structure. **The witness crossing is the one
+whose omission is commonly understated: leaving the served witness log active on `g_A` while serving `g_B`
+does not merely strand consumers holding the old hash — the anchored active root then DIFFERS from the
+resolved genesis, which is precisely the rival condition above, so the publisher becomes its own fork.** And
+the frame-stream crossing is the one a ceremony cannot self-check: it is instantiated by a running writer
+rather than by a published document, so the first frame after the boundary MUST set
+`prev = contentHash(g_B)`. Records of the prior epoch stay valid under the genesis authoritative at their
+anchored time (above); each epoch's stream is its own chain rooted in its own genesis.
+
 ### 12.1a Witness log — the serving shape & the verifier auto-query (M2 made mechanical)
 
 §12.1 fixes the SEMANTICS (positive no-fork confirmation REQUIRED for `authoritative`; fork ⇒ E-GENESIS;

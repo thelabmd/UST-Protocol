@@ -29,13 +29,19 @@ if (!MANIFEST.source
 const EXECUTED = Array.isArray(MANIFEST.checks) ? MANIFEST.checks : [];
 const EXECUTED_SET = new Set(EXECUTED);
 
-const cites = [...model.matchAll(/\*"([^"]+)"\*/g)].map((m) => m[1]);
+// A citation NAMES a check, and a name has single spaces. Markdown wraps prose, so a citation long enough to be
+// unambiguous is exactly the one that will straddle a line break — and rev98 hit that on the first try: two real,
+// executing checks were reported MISSING because the extracted name carried a newline. Normalizing whitespace on
+// BOTH sides is the correct reading of the format rather than a leniency; the line break is layout, not the name.
+const norm = (s) => s.replace(/\s+/g, ' ').trim();
+const EXECUTED_NORM = new Map(EXECUTED.map((label) => [norm(label), label]));
+const cites = [...model.matchAll(/\*"([^"]+)"\*/g)].map((m) => norm(m[1]));
 let ok = 0; const miss = [];
 for (const c of cites) {
   // a citation may be fragmented with "..." (shared prefix elided); require its LONGEST verbatim fragment to name a
   // check that RAN AND PASSED — exact id first, then the fragment inside an executed id.
-  const frag = c.split('...').map((s) => s.trim()).filter((s) => s.length >= 12).sort((a, b) => b.length - a.length)[0] || c.trim();
-  if (EXECUTED_SET.has(c) || EXECUTED.some((label) => label.includes(frag))) ok++;
+  const frag = c.split('...').map((s) => norm(s)).filter((s) => s.length >= 12).sort((a, b) => b.length - a.length)[0] || c;
+  if (EXECUTED_SET.has(c) || EXECUTED_NORM.has(c) || [...EXECUTED_NORM.keys()].some((label) => label.includes(frag))) ok++;
   else miss.push({ c, frag, inSource: conf.includes(frag) });
 }
 
