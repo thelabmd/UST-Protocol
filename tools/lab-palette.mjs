@@ -11,8 +11,17 @@
 //
 // A NOTE ON GITHUB, stated rather than discovered later: a `%%{init}%%` block pins the diagram's own background, so
 // a reader in dark mode sees a LIGHT diagram. That is deliberate — the block is self-contained, like a figure on a
-// page, and a diagram that half-inherits a host theme is the one that reads broken. The dark tokens below are for
-// the panels INSIDE a figure (clusters, terminals, verdict cards), not for following the reader's setting.
+// page, and a diagram that half-inherits a host theme is the one that reads broken.
+//
+// AND THE LIMIT THAT MAKES IT MORE THAN A PREFERENCE: a fenced mermaid block on GitHub CANNOT follow the reader's
+// theme. The `<picture>` + `prefers-color-scheme` trick works for SVG and PNG, which are images the browser
+// selects between; a mermaid block is rendered client-side from source, and a media query has no place to live
+// inside `%%{init}%%`. Emitting two blocks would show BOTH. So on GitHub the choice is one appearance for every
+// reader, and we choose the light one — a printed figure, legible in either host theme.
+//
+// MODE is therefore for surfaces that DO follow a theme (theme-aware artifact pages, the operator site), not for
+// GitHub. Same tokens, two bindings; `light` stays the default so nothing that renders on GitHub can drift into
+// the dark set by omission.
 export const TOKENS = {
   // ── light
   paper:        '#f4f2ec',   // page background
@@ -44,32 +53,39 @@ const T = TOKENS;
 export const MONO = 'IBM Plex Mono, ui-monospace, monospace';
 export const SERIF = "'IBM Plex Serif', Georgia, serif";
 
+// The two bindings. Same token table, and every value below is a lookup — a hex typed here would defeat `--check`.
+const BIND = {
+  light: { bg: T.paper, node: T.line2, nodeBorder: T.line, text: T.ink, line: T.ink3, cluster: T.bgPanel, clusterBorder: T.borderCard, accent: T.accent, onAccent: T.paper, ok: T.validLight, plate: T.paper, plateAlt: T.line2, second: T.ink2 },
+  dark:  { bg: T.bgPanel, node: T.bgCard, nodeBorder: T.borderCard, text: T.textDark, line: T.textDark3, cluster: T.bgDeep, clusterBorder: T.borderCard, accent: T.alight, onAccent: T.bgCard, ok: T.valid, plate: T.bgPanel, plateAlt: T.bgCard, second: T.textDark2 },
+};
+const bind = (mode) => BIND[mode] ?? BIND.light;
+
 /** The init directive. Goes on the FIRST line of a mermaid block, before any diagram keyword. */
-export const mermaidInit = () => `%%{init: {'theme':'base','themeVariables':{`
-  + `'background':'${T.paper}','primaryColor':'${T.line2}','primaryTextColor':'${T.ink}',`
-  + `'primaryBorderColor':'${T.line}','secondaryColor':'${T.paper}','tertiaryColor':'${T.paper}',`
-  + `'lineColor':'${T.ink3}','textColor':'${T.ink}','mainBkg':'${T.line2}','nodeBorder':'${T.line}',`
-  + `'clusterBkg':'${T.bgPanel}','clusterBorder':'${T.borderCard}','edgeLabelBackground':'${T.paper}',`
+export const mermaidInit = (mode = 'light') => { const B = bind(mode); return `%%{init: {'theme':'base','themeVariables':{`
+  + `'background':'${B.bg}','primaryColor':'${B.node}','primaryTextColor':'${B.text}',`
+  + `'primaryBorderColor':'${B.nodeBorder}','secondaryColor':'${B.bg}','tertiaryColor':'${B.bg}',`
+  + `'lineColor':'${B.line}','textColor':'${B.text}','mainBkg':'${B.node}','nodeBorder':'${B.nodeBorder}',`
+  + `'clusterBkg':'${B.cluster}','clusterBorder':'${B.clusterBorder}','edgeLabelBackground':'${B.bg}',`
   // gantt takes NO classDef, so its colours have to arrive through themeVariables or not at all
-  + `'sectionBkgColor':'${T.paper}','altSectionBkgColor':'${T.line2}','sectionBkgColor2':'${T.line2}',`
-  + `'taskBkgColor':'${T.line2}','taskBorderColor':'${T.line}','taskTextColor':'${T.ink}',`
-  + `'taskTextOutsideColor':'${T.ink2}','taskTextDarkColor':'${T.ink}','activeTaskBkgColor':'${T.accent}',`
-  + `'activeTaskBorderColor':'${T.accent}','doneTaskBkgColor':'${T.validLight}','doneTaskBorderColor':'${T.validLight}',`
-  + `'critBkgColor':'${T.invalid}','critBorderColor':'${T.invalid}','gridColor':'${T.line}','todayLineColor':'${T.invalid}',`
-  + `'fontFamily':'${MONO}'}}}%%`;
+  + `'sectionBkgColor':'${B.plate}','altSectionBkgColor':'${B.plateAlt}','sectionBkgColor2':'${B.plateAlt}',`
+  + `'taskBkgColor':'${B.node}','taskBorderColor':'${B.nodeBorder}','taskTextColor':'${B.text}',`
+  + `'taskTextOutsideColor':'${B.second}','taskTextDarkColor':'${B.text}','activeTaskBkgColor':'${B.accent}',`
+  + `'activeTaskBorderColor':'${B.accent}','doneTaskBkgColor':'${B.ok}','doneTaskBorderColor':'${B.ok}',`
+  + `'critBkgColor':'${T.invalid}','critBorderColor':'${T.invalid}','gridColor':'${B.nodeBorder}','todayLineColor':'${T.invalid}',`
+  + `'fontFamily':'${MONO}'}}}%%`; };
 
 /** The class palette. Emit once per diagram, after the nodes; apply with `class A,B accent`. */
-export const mermaidClassDefs = () => [
-  `classDef base fill:${T.line2},stroke:${T.line},color:${T.ink};`,
-  `classDef accent fill:${T.accent},stroke:${T.accent},color:${T.paper};`,
-  `classDef muted fill:${T.paper},stroke:${T.line},color:${T.ink2},stroke-dasharray: 2 2;`,
+export const mermaidClassDefs = (mode = 'light') => { const B = bind(mode); return [
+  `classDef base fill:${B.node},stroke:${B.nodeBorder},color:${B.text};`,
+  `classDef accent fill:${mode === 'dark' ? B.node : B.accent},stroke:${B.accent},color:${mode === 'dark' ? B.accent : B.onAccent};`,
+  `classDef muted fill:${B.bg},stroke:${B.nodeBorder},color:${B.second},stroke-dasharray: 2 2;`,
   `classDef dark fill:${T.bgPanel},stroke:${T.borderCard},color:${T.textDark};`,
   `classDef darkCard fill:${T.bgCard},stroke:${T.borderCard},color:${T.textDark};`,
   `classDef darkAccent fill:${T.bgCard},stroke:${T.alight},color:${T.alight};`,
-  `classDef valid fill:${T.bgPanel},stroke:${T.valid},color:${T.valid};`,
-  `classDef invalid fill:${T.bgPanel},stroke:${T.invalid},color:${T.invalid};`,
-  `linkStyle default stroke:${T.ink3},stroke-width:1px;`,
-].join('\n');
+  `classDef valid fill:${mode === 'dark' ? T.bgCard : T.bgPanel},stroke:${T.valid},color:${T.valid};`,
+  `classDef invalid fill:${mode === 'dark' ? T.bgCard : T.bgPanel},stroke:${T.invalid},color:${T.invalid};`,
+  `linkStyle default stroke:${B.line},stroke-width:1px;`,
+].join('\n'); };
 
 // `classDef` and `linkStyle` belong to the FLOWCHART family and to no other diagram. MEASURED 2026-08-03: the first
 // version of this wrapper appended them unconditionally, and GitHub answered a gantt with
@@ -80,16 +96,19 @@ const CLASSDEF_FAMILY = /^\s*(flowchart|graph|classDiagram|stateDiagram(-v2)?|er
 export const takesClassDefs = (source) => CLASSDEF_FAMILY.test(String(source ?? ''));
 
 /** Wrap diagram source in a fenced mermaid block carrying the theme, and the classes when the family accepts them. */
-export const mermaid = (source) => {
+export const mermaid = (source, mode = 'light') => {
   const body = String(source ?? '').trim();
-  return '```mermaid\n' + mermaidInit() + '\n' + body + (takesClassDefs(body) ? '\n' + mermaidClassDefs() : '') + '\n```';
+  return '```mermaid\n' + mermaidInit(mode) + '\n' + body + (takesClassDefs(body) ? '\n' + mermaidClassDefs(mode) : '') + '\n```';
 };
 
 // ── `--check`: every colour this module EMITS must come from TOKENS. A hex typed at a call site is exactly the
 // drift this file exists to prevent, and a palette nobody checks is a second place to be wrong.
 if (process.argv[1] && process.argv[1].endsWith('lab-palette.mjs') && process.argv.includes('--check')) {
   const known = new Set(Object.values(TOKENS).map((h) => h.toLowerCase()));
-  const emitted = [...`${mermaidInit()}\n${mermaidClassDefs()}`.matchAll(/#[0-9a-fA-F]{6}\b/g)].map((m) => m[0].toLowerCase());
+  // BOTH bindings, enumerated from the map rather than named here: a mode added later and not listed would ship
+  // unchecked, which is the same shape as a gate that names one instance where the obligation quantifies.
+  const MODES = Object.keys(BIND);
+  const emitted = MODES.flatMap((m) => [...`${mermaidInit(m)}\n${mermaidClassDefs(m)}`.matchAll(/#[0-9a-fA-F]{6}\b/g)].map((x) => x[0].toLowerCase()));
   const stray = [...new Set(emitted)].filter((h) => !known.has(h));
   const controlHit = !known.has('#ff00ff');            // a colour NOT in the table must read as stray
   const controlMiss = known.has(TOKENS.accent.toLowerCase());
@@ -104,6 +123,11 @@ if (process.argv[1] && process.argv[1].endsWith('lab-palette.mjs') && process.ar
   if (!/classDef/.test(flowOut)) { console.error('✗ a flowchart received NO classDef — the palette would never apply'); bad++; }
   for (const kind of ['pie', 'sequenceDiagram', 'gitGraph', 'journey', 'timeline', 'mindmap'])
     if (/classDef|linkStyle/.test(mermaid(kind + '\n  x'))) { console.error(`✗ ${kind} received classDef/linkStyle`); bad++; }
+  // The two modes must actually DIFFER, and the default must be the light one. A `mode` argument that silently
+  // fell through to one binding would pass every check above while making the parameter a decoration.
+  if (mermaidInit('dark') === mermaidInit('light')) { console.error('✗ dark and light emit identical themes — the mode argument does nothing'); bad++; }
+  if (mermaidInit() !== mermaidInit('light')) { console.error('✗ the default mode is not light — GitHub would receive the dark binding by omission'); bad++; }
+  if (mermaidInit('nonsense') !== mermaidInit('light')) { console.error('✗ an unknown mode does not fall back to light'); bad++; }
   if (bad) process.exit(1);
-  console.log(`  ✓ lab palette: ${Object.keys(TOKENS).length} tokens, ${new Set(emitted).size} distinct colours emitted, none invented`);
+  console.log(`  ✓ lab palette: ${Object.keys(TOKENS).length} tokens, ${MODES.length} modes (${MODES.join('/')}), ${new Set(emitted).size} distinct colours emitted, none invented`);
 }

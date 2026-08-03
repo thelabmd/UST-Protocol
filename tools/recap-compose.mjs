@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // @assurance 2 canfail:yes literal-ok:every number it prints is READ from a command's output or a file in this tree; the only literals are the section headings, and the FILL markers it refuses to emit
 //
-// Compose the measured skeleton of a round's recap — so the numbers in it are measured BY CONSTRUCTION.
+// Compose the measured skeleton of a report — so the numbers in it are measured BY CONSTRUCTION.
 //
 // MEASURED, 2026-08-03: the first recap written in this shape (#132) had every number typed by hand from a warm
 // context. They were right, but right by ACCIDENT — nothing in the tree connected "5 days published", "9 of 13
@@ -9,21 +9,85 @@
 // gates on, stated in printed-command-gate's own header: text ABOUT code, authored beside the code, drifting from it
 // silently. A month later nobody can separate a measured number from a remembered one.
 //
-// THE SPLIT, and it is deliberate. A recap is two substances:
+// THE SPLIT, and it is deliberate. A report is two substances:
 //   MEASURED  — counts, dates, versions, commits, the issue list, the sealed diary block. Mechanically derivable,
 //               therefore never typed. This tool fills them.
-//   JUDGMENT  — what the incident WAS, why it was invisible, the rule worth keeping. No tool writes those.
+//   JUDGMENT  — what the defect WAS, why it was invisible, the rule worth keeping. No tool writes those.
 //               This tool marks them and REFUSES to let a skeleton with an unfilled mark be posted.
 //
 // The refusal is the load-bearing half. A generator that emits a placeholder and trusts the author to notice is the
 // same shape as the four `${invocation()}` strings that reached operators verbatim: the text was right, and nobody
 // ran the check that reads it. `--check` is that check.
+//
+// ── THREE FORMS, CUT BY THE QUESTION THEY ANSWER (2026-08-03) ─────────────────────────────────────────────────
+// A form is chosen by what the CARD MEANS, never by how much there is to write. Length is a judgement made at
+// composition time; a form selected by length tells a reader nothing, because the same card could have gone either
+// way. These three answer different questions and cannot substitute for one another:
+//
+//   incident   — a defect or a gap: what broke, what it would have cost, why the defences did not see it, what proves
+//                the fix. DEFAULT, because it is what most cards in this tracker are. Whether it reached a consumer
+//                is NOT a second form: it is the §2 line that says so, next to the negative half that says what was
+//                not affected.
+//   audit      — a claim was TESTED: which obligations were examined, what each finding is CLASSED as, and — the part
+//                only this form has — what the evidence does NOT establish and what the conclusion remains
+//                conditional on. An audit that cannot state its own boundary is marketing.
+//   delivery   — something was BUILT and handed over: what exists now, how it was verified, where its edges are.
+//                No root cause, because nothing failed. Do not reach for this to avoid writing an incident.
+//
+// ── WHO DECIDES THE FORM ─────────────────────────────────────────────────────────────────────────────────────
+// Not the author's taste, and never the length of what there is to say. THE CARD decides, through an ordered
+// procedure with no ties — the same discipline §13 applies to tiers: the rules are fixed, the card is the input.
+// Asked in this order, exactly one form is reachable:
+//
+//   1. Did something behave contrary to an obligation — the spec's, a gate's, or one we stated ourselves?
+//      → INCIDENT. Asked FIRST on purpose, and *"it never reached a consumer"* is not an escape from it: that is
+//        a LINE in §2 beside the negative half, not a different form. A defect caught before publication is still
+//        a defect, and letting it become a delivery note is how a tree stops learning from its own near misses.
+//   2. Otherwise — was the work an EXAMINATION of a claim that could have come out the other way?
+//      → AUDIT. The test is falsifiability, not effort. Reading code until satisfied is not an audit, because
+//        nothing was risked; if no finding could have come back NON-CONFORMING, this is not one.
+//   3. Otherwise — does something exist now that did not exist before?
+//      → DELIVERY.
+//   4. None of the three → the card is not finished. Do not compose a report in order to discover what it was.
+//
+// A CARD THAT WOULD TAKE TWO FORMS IS TWO CARDS. An audit that finds a non-conformance yields an audit record AND
+// a defect card: they answer different questions, and closing one does not close the other. Measured in this
+// tracker — #110 and #114 are audits, and each defect they surfaced carries its own number.
+//
+// ── WHEN A DIAGRAM IS DRAWN ──────────────────────────────────────────────────────────────────────────────────
+// A diagram is earned by a RELATION the reader would otherwise have to hold in their head — a span, a path, a
+// boundary. Never by a single value: "853 checks" is a number, and a chart of one number is decoration that costs
+// the reader a parse. The conditions are per form and each is DECLARED BY A FLAG, so the scaffold appears because
+// the author asserted the relation exists, not because the tool guessed:
+//
+//   --span      (any form)  the impact has DURATION — minutes stopped, slots missed, days a defect was published.
+//                           Owner's rule, 2026-08-03: a span is DRAWN, not only stated. "11 minutes, 21 slots" is a
+//                           number a reader must hold; a timeline is a shape they can see, and the distance between
+//                           "entered" and "closed" stops being an abstraction.
+//   --path      (any form)  the mechanism is a CHAIN — a value crossing stages, where the defect is in the crossing
+//                           and not in any one stage. The witness log dropped its signed half in a derivation, not
+//                           in a field.
+//   --findings  (audit)     three or more findings. Below three a list reads faster than a diagram; at three the
+//                           reader starts needing the CLASSES grouped rather than enumerated.
+//   --boundary  (audit)     the conclusion is bounded — something is established, something is not, something stays
+//                           conditional on an open gate. This is the one diagram an external reader will look at.
+//   --surfaces  (delivery)  the thing built spans more than one surface or artifact, and their relation is the
+//                           delivery. One command on one surface needs no picture.
+//
+// ── AND THE COLOURS ARE NOT A CHOICE ─────────────────────────────────────────────────────────────────────────
+// Every diagram is emitted through `mermaid()` from tools/lab-palette.mjs, which carries the theme directive and
+// decides classDefs from the diagram family. MEASURED on this file's own first version: the timeline scaffold was
+// hand-written with a bare ```mermaid fence and shipped UNTHEMED — the palette existed, was correct, and was simply
+// not called. So `--check` now REFUSES a report carrying a mermaid block without the theme directive: a rule that
+// only lives in a comment is a rule the next author skips, and this one was skipped by its own author on day one.
 import { readFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { mermaid, mermaidInit } from './lab-palette.mjs';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const arg = (n, d = null) => { const i = process.argv.indexOf('--' + n); return i > -1 ? (process.argv[i + 1] ?? true) : d; };
+const on = (n) => arg(n, null) !== null;   // a scaffold flag ASSERTS a relation; its value is never read
 const sh = (cmd, args, opts = {}) => { try { return execFileSync(cmd, args, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], ...opts }).trim(); } catch (e) { return opts.softFail ? null : `«unavailable: ${String(e.message).split('\n')[0].slice(0, 70)}»`; } };
 
 // ── --check: the refusal. Runs against a composed file before it is posted.
@@ -35,23 +99,104 @@ if (checkFile) {
   const CONTROL_HIT = /<<<[A-Z]+:[^>]*>>>/.test('a <<<FILL: something>>> here');
   const CONTROL_MISS = /<<<[A-Z]+:[^>]*>>>/.test('an ordinary sentence about <angle brackets> and code');
   if (!CONTROL_HIT || CONTROL_MISS) { console.error('✗ CONTROL: the placeholder detector does not discriminate — this check is blind'); process.exit(1); }
+
+  // THE PALETTE IS A GATE, NOT A CONVENTION. A mermaid block without the theme directive renders in mermaid's own
+  // colours — legible, plausible, and not ours. That is the failure mode a comment cannot prevent, measured on this
+  // very file: the rule was written and then broken by the same hand in the same change.
+  const THEMED = /^%%\{init:/;
+  const blocks = [...body.matchAll(/```mermaid\r?\n([\s\S]*?)```/g)].map((m) => m[1]);
+  const bare = blocks.filter((b) => !THEMED.test(b.trimStart()));
+  // CONTROL — the palette detector must read a themed block as themed and a bare one as bare.
+  const P_HIT = !THEMED.test('flowchart LR\n  A --> B');
+  const P_MISS = THEMED.test(mermaidInit() + '\nflowchart LR\n  A --> B');
+  if (!P_HIT || !P_MISS) { console.error('✗ CONTROL: the palette detector does not discriminate — this check is blind'); process.exit(1); }
+  if (bare.length) {
+    console.error(`\n  ✗ ${bare.length} mermaid block(s) carry NO theme directive — they will render in mermaid's default\n    palette, which is legible, plausible and not ours. Emit through \`mermaid()\` in tools/lab-palette.mjs\n    rather than writing the fence by hand:\n`);
+    for (const b of bare) console.error('    ' + b.trim().split('\n')[0].slice(0, 90));
+    process.exit(1);
+  }
+
   if (marks.length) {
-    console.error(`\n  ✗ ${marks.length} section(s) still carry a FILL marker — a skeleton is not a recap, and an unfilled\n    marker posted to an issue reads as the tool being broken at the moment a reader trusts it:\n`);
+    console.error(`\n  ✗ ${marks.length} section(s) still carry a FILL marker — a skeleton is not a report, and an unfilled\n    marker posted to an issue reads as the tool being broken at the moment a reader trusts it:\n`);
     for (const m of marks) console.error('    ' + m.slice(0, 110));
     process.exit(1);
   }
-  console.log('  ✓ no FILL marker remains — every judgment section was written by a person');
+  console.log(`  ✓ no FILL marker remains — every judgment section was written by a person`);
+  console.log(`  ✓ ${blocks.length} mermaid block(s) carry the lab theme`);
   process.exit(0);
 }
 
+const FORMS = ['incident', 'audit', 'delivery'];
+const PROCEDURE = [
+  '  the form follows the CARD, asked in this order — exactly one is reachable:',
+  '    1. did something behave contrary to an obligation?          → incident   («it never shipped» is a §2 line, not another form)',
+  '    2. else: was a claim EXAMINED, and could it have failed?     → audit      (falsifiability, not effort)',
+  '    3. else: does something exist now that did not before?       → delivery',
+  '    4. none of the three                                         → the card is not finished; do not compose',
+  '  a card that would take two forms is TWO CARDS.',
+].join('\n');
+const formGiven = arg('form', null) !== null;
+const form = String(arg('form', 'incident'));
 const round = Number(arg('round'));
 const issue = Number(arg('issue'));
-if (!Number.isInteger(round) || !Number.isInteger(issue)) {
-  console.error('usage: node tools/recap-compose.mjs --round <n> --issue <n> [--since <sha>] [--symbol <name>] [--package <npm-name>] [--gates "a,b,c"]');
-  console.error('       node tools/recap-compose.mjs --check <composed-file>     # REFUSES any remaining FILL marker');
+if (!FORMS.includes(form) || !Number.isInteger(round) || !Number.isInteger(issue)) {
+  console.error('usage: node tools/recap-compose.mjs --round <n> --issue <n> [--form incident|audit|delivery]');
+  console.error('         [--since <sha>] [--symbol <name>] [--package <npm-name>] [--gates "a,b,c"]');
+  console.error('       diagram scaffolds, each ASSERTING the relation exists:');
+  console.error('         --span       the impact has a duration        (any form)');
+  console.error('         --path       the mechanism is a chain          (any form)');
+  console.error('         --findings   three or more findings            (audit)');
+  console.error('         --boundary   the conclusion is bounded         (audit)');
+  console.error('         --surfaces   more than one surface delivered   (delivery)');
+  console.error('       node tools/recap-compose.mjs --check <composed-file>   # REFUSES a FILL marker or an unthemed diagram');
+  console.error('\n' + PROCEDURE);
+  if (!FORMS.includes(form)) console.error(`\n  unknown --form "${form}" — a form is chosen by the QUESTION the card answers, and this tool refuses to\n  invent a fourth: ${FORMS.join(' | ')}`);
   process.exit(1);
 }
+// A DEFAULT IS NOT A DECISION. `incident` is the right default because it is what most cards here are, but a form
+// that arrived by omission was never chosen — so the procedure is printed and the author has to disagree with it
+// on purpose. Printed to stderr, so it never reaches the composed report.
+if (!formGiven) console.error(`\n  --form not given; composing as \`incident\`. That is a DEFAULT, not a decision:\n\n${PROCEDURE}\n`);
 const FILL = (what) => `<<<FILL: ${what}>>>`;
+
+// ── THE SCAFFOLDS. Every one goes through `mermaid()`, so none of them can arrive hand-coloured.
+const F = (w) => `<<<FILL: ${w}>>>`;
+const ganttScaffold = () => mermaid([
+  'gantt', '  dateFormat YYYY-MM-DD HH:mm', '  axisFormat %H:%M',
+  '  section what a consumer saw', `  ${F('label')} :crit, ${F('start')}, ${F('duration')}`,
+  '  section this tree', `  ${F('label')} :done, ${F('start')}, ${F('duration')}`,
+].join('\n'));
+const pathScaffold = () => mermaid([
+  'flowchart LR', `  A[${F('origin — where the value was correct')}]`,
+  `  B[${F('the crossing — where it was rebuilt, derived or copied')}]`,
+  `  C[${F('destination — what it became')}]`,
+  '  A --> B --> C', '  class A valid', '  class B accent', '  class C invalid',
+].join('\n'));
+const findingsScaffold = () => mermaid([
+  'flowchart TB', `  S[${F('obligation set examined')}]`,
+  `  C1[CONFORMING · ${F('n')}]`, `  C2[NON-CONFORMING · ${F('n')}]`,
+  `  C3[INDETERMINATE · ${F('n')}]`, `  C4[BY-DESIGN · ${F('n')}]`,
+  '  S --> C1', '  S --> C2', '  S --> C3', '  S --> C4',
+  '  class S base', '  class C1 valid', '  class C2 invalid', '  class C3 muted', '  class C4 base',
+].join('\n'));
+const boundaryScaffold = () => mermaid([
+  'flowchart TB', `  E[establishes · ${F('the bounded conclusion')}]`,
+  `  N[does NOT establish · ${F('the bounded exclusion')}]`,
+  `  K[conditional on · ${F('the open gate')}]`,
+  '  E -.-> K', '  N -.-> K',
+  '  class E valid', '  class N invalid', '  class K muted',
+].join('\n'));
+const surfacesScaffold = () => mermaid([
+  'flowchart LR', `  O[${F('what an operator runs')}]`,
+  `  A1[${F('artifact / surface')}]`, `  A2[${F('artifact / surface')}]`,
+  `  V[${F('what proves it landed')}]`,
+  '  O --> A1 --> V', '  O --> A2 --> V',
+  '  class O accent', '  class A1 base', '  class A2 base', '  class V valid',
+].join('\n'));
+
+// A scaffold appears when its relation is ASSERTED; otherwise the section carries the question, so the author
+// decides once and visibly rather than forgetting the option exists.
+const drawn = (flag, build, prompt) => (on(flag) ? `\n${build()}\n` : `\n${FILL(prompt)}\n`);
 
 // ── MEASURED: the corpus this tree produces right now
 const conf = sh(process.execPath, ['packages/ust-protocol/conformance.mjs']);
@@ -76,6 +221,7 @@ const entered = (() => {
 // ── MEASURED: what a stranger would fetch, asked of the registry and not of the repo
 const pkg = arg('package');
 const published = pkg && pkg !== true ? sh('npm', ['view', String(pkg), 'dist-tags', '--json'], { softFail: true }) : null;
+const publishedLine = published ? `- published at the time of writing: ${Object.entries(JSON.parse(published)).map(([t, v]) => `\`${t}\` → \`${v}\``).join(', ')}\n` : '';
 
 // ── MEASURED: the commits of this round, and the gates whose summaries are quoted verbatim
 const since = arg('since');
@@ -95,57 +241,177 @@ const diary = existsSync(ROOT + 'tools/recap-render.mjs')
 // ── MEASURED: what this round leaves open
 const openIssues = sh('gh', ['issue', 'list', '--state', 'open', '--limit', '20', '--json', 'number,title', '-q', '.[] | "- #\\(.number) — \\(.title)"'], { softFail: true });
 
-const out = `## Recap
+const conformanceLine = `- ${checks ? `${checks[1]} conformance checks, ${checks[2]} failing` : '«conformance did not report»'}${vectors !== null ? `, ${vectors} vectors` : ''}`;
+const ciLine = ciSteps !== null ? `- ${ciSteps} CI steps enumerated from the workflow (\`npm run ci:local\`)\n` : '';
+const commitsBlock = `<details><summary>commits</summary>
+
+\`\`\`
+${commits}
+\`\`\`
+
+</details>`;
+const openBlock = `<details><summary>open issues at the time of writing (trim to the ones this report leaves)</summary>
+
+${openIssues ?? '«gh unavailable»'}
+
+</details>`;
+const diaryBlock = `## Diary
+
+${diary || FILL('run `node tools/recap-render.mjs --issue ' + round + '` after sealing, and paste its output below the heading — never type it')}`;
+
+const BODIES = {
+  incident: () => `## Recap
 
 ${FILL('what broke, where it was visible, and for how long — a few sentences')}
 
 ## Measured impact
 
 ${entered ? `- entered \`${entered.sha}\` on ${entered.date} — ${entered.subject}\n` : ''}- found and closed under #${issue}
-${published ? `- published at the time of writing: ${Object.entries(JSON.parse(published)).map(([t, v]) => `\`${t}\` → \`${v}\``).join(', ')}\n` : ''}- ${FILL('what was affected — and, in the same list, what was NOT: the negative half is the honest half')}
+${publishedLine}- ${FILL('what was affected — and, in the same list, what was NOT: the negative half is the honest half')}
+- ${FILL('whether it reached a consumer at all, and if it did not, WHY — the barrier that held is evidence, not luck')}
 - ${FILL('whether any published document, signature or verdict is affected')}
-
+${drawn('span', ganttScaffold, 'a TIMELINE if this impact has a span — minutes stopped, slots missed, days published. Pass --span to scaffold one, or delete this line if the impact has no duration')}
 ## Root cause
 
 ${FILL('numbered MECHANISMS, each answering "why was this invisible", never restating the symptom')}
-
+${drawn('path', pathScaffold, 'a PATH diagram if the mechanism is a chain — a value crossing stages, correct at the origin and wrong after a rebuild. Pass --path to scaffold one, or delete this line if the defect sat in one place')}
 ## Resolution
 
 - [x] ${FILL('what shipped — structural first, the patch never')}
 
 ## Verification
 
-- ${checks ? `${checks[1]} conformance checks, ${checks[2]} failing` : '«conformance did not report»'}${vectors !== null ? `, ${vectors} vectors` : ''}
-${ciSteps !== null ? `- ${ciSteps} CI steps enumerated from the workflow (\`npm run ci:local\`)\n` : ''}${gateLines.length ? gateLines.join('\n') + '\n' : ''}- ${FILL('the proof the check CAN fail — revert the fix and name exactly what goes red')}
+${conformanceLine}
+${ciLine}${gateLines.length ? gateLines.join('\n') + '\n' : ''}- ${FILL('the proof the check CAN fail — revert the fix and name exactly what goes red')}
 - ${FILL('controls: the detector fires on the real defect and stays silent on correct code')}
 
-<details><summary>commits</summary>
-
-\`\`\`
-${commits}
-\`\`\`
-
-</details>
+${commitsBlock}
 
 ## Follow-ups
 
 - ${FILL('the PROCEDURAL follow-up, if this round exposed one about how I work')}
 
-<details><summary>open issues at the time of writing (trim to the ones this round leaves)</summary>
-
-${openIssues ?? '«gh unavailable»'}
-
-</details>
+${openBlock}
 
 ## The rule worth keeping
 
 ${FILL('one sentence a future reader can apply without this issue in front of them')}
 
-## Diary
+${diaryBlock}
+`,
 
-${diary || FILL('run `node tools/recap-render.mjs --issue ' + round + '` after sealing, and paste its output below the heading — never type it')}
-`;
+  audit: () => `## Audit subject
+
+${FILL('the exact document, implementation, release or claim under audit — a version and a commit, never "the protocol"')}
+
+## Audit question
+
+${FILL('the precise question this audit answers, phrased so a NO is possible')}
+
+## Scope
+
+**Included**
+
+- ${FILL('specification sections, packages, commands, vector sets, evidence sources')}
+
+**Excluded**
+
+- ${FILL('what this record must NOT be read as proving — the exclusion is load-bearing, not a disclaimer')}
+
+## Normative basis
+
+- ${FILL('`reference` — the obligation, quoted closely enough that a reader can check it')}
+
+## Method
+
+1. ${FILL('static inspection')}
+2. ${FILL('execution or reproduction')}
+3. ${FILL('independent verification — by a DIFFERENT implementation, or say plainly that there was none')}
+4. ${FILL('negative control or mutation: break the thing and watch THIS check go red')}
+
+## Findings
+
+### F-01 · ${FILL('title')}
+
+**Class:** \`CONFORMING | NON-CONFORMING | INDETERMINATE | BY-DESIGN | DOCUMENTATION\`
+
+**Obligation** — ${FILL('what was required')}
+
+**Observation** — ${FILL('what was actually found')}
+
+**Evidence** — ${FILL('command, file, vector or artifact a reader can re-run')}
+
+**Disposition** — ${FILL('fixed, accepted, deferred, or retained by design — and under which issue')}
+${drawn('findings', findingsScaffold, 'a CLASS BREAKDOWN if there are three or more findings — below three a list reads faster. Pass --findings to scaffold one, or delete this line')}
+## Measured result
+
+${conformanceLine}
+${ciLine}${gateLines.length ? gateLines.join('\n') + '\n' : ''}- obligations examined: ${FILL('n')} · conforming ${FILL('n')} · non-conforming ${FILL('n')} · indeterminate ${FILL('n')} · by design ${FILL('n')}
+- independent implementations used: ${FILL('n — and 0 is an honest answer that changes the conclusion below')}
+
+## Resolution
+
+- [x] ${FILL('closed finding or implemented correction')}
+- [ ] ${FILL('open obligation or ship gate')}
+
+## Audit conclusion
+
+${FILL('one short paragraph stating exactly what the evidence supports — no more')}
+
+- **does establish:** ${FILL('the bounded conclusion')}
+- **does not establish:** ${FILL('the bounded exclusion')}
+- **remains conditional on:** ${FILL('the open gate or dependency')}
+${drawn('boundary', boundaryScaffold, 'a BOUNDARY diagram — the one picture an external reader will actually look at. Pass --boundary to scaffold one, or delete this line')}
+## Residual risk
+
+- ${FILL('known limitation, unreviewed surface, unsupported environment, evidence that remains unavailable')}
+
+${commitsBlock}
+
+## Follow-ups
+
+- ${FILL('the issue carrying remaining work, and the one carrying a deliberately deferred question')}
+
+${openBlock}
+
+${diaryBlock}
+`,
+
+  delivery: () => `## Delivered
+
+${FILL('one sentence: what exists now that did not exist before')}
+
+## What it is
+
+- ${FILL('the concrete resulting state — a command, an artifact, a surface, a version')}
+${publishedLine}- ${FILL('what an operator or consumer can now do that they could not')}
+${drawn('surfaces', surfacesScaffold, 'a SURFACE map if this spans more than one artifact and their relation IS the delivery. Pass --surfaces to scaffold one, or delete this line if it is one thing in one place')}
+## Scope
+
+- **Affected:** ${FILL('the surface this touches')}
+- **Not affected:** ${FILL('what a reader might reasonably fear was touched and was not — say it even when obvious')}
+
+## Verification
+
+${conformanceLine}
+${ciLine}${gateLines.length ? gateLines.join('\n') + '\n' : ''}- ${FILL('the check that would FAIL if this were built wrong — a delivery verified only by its own success proves nothing')}
+
+${commitsBlock}
+
+## Follow-ups
+
+- ${FILL('what this delivery deliberately leaves open, and where it is tracked')}
+
+${openBlock}
+
+${diaryBlock}
+`,
+};
+
+const out = BODIES[form]();
 
 console.log(out);
-console.error(`\n  composed round ${round} → #${issue}. Every number above is read from a command or a file in this tree.`);
-console.error(`  ${[...out.matchAll(/<<<FILL:/g)].length} judgment section(s) are yours. Then:  node tools/recap-compose.mjs --check <file>`);
+console.error(`\n  composed ${form} report, round ${round} → #${issue}. Every number above is read from a command or a file in this tree.`);
+const drawnCount = [...out.matchAll(/```mermaid/g)].length;
+console.error(`  ${[...out.matchAll(/<<<FILL:/g)].length} judgment section(s) are yours; ${drawnCount} diagram(s) scaffolded through the lab palette.`);
+console.error(`  Then:  node tools/recap-compose.mjs --check <file>`);
