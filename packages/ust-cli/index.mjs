@@ -204,6 +204,17 @@ export function closeReader(rl) {
   return null;
 }
 
+// WHAT A CHUNK LEAVES BEHIND. MEASURED 2026-08-03 while giving `ust reroot` its second secret — the first command
+// in this tool that needs two. On the terminator the raw loop below used to `resolve` and DISCARD the rest of the
+// chunk, so a second `askHidden` waited forever for input that had already arrived and been thrown away. Reproduced
+// under a pipe AND under a real pty (`script -q /dev/null`), so it is not a piping artifact: it is a race that an
+// interactive human hides by typing slowly, and that a paste or a script loses to every time.
+//
+// The comment inside the loop records the PREVIOUS fix at this exact spot — a pasted passphrase arriving as one
+// chunk — which taught it to iterate by code point and still left the remainder on the floor. Same line, same
+// class, one layer along: a reader that consumes a CHUNK owes back what it did not use.
+let HIDDEN_PENDING = '';
+export const __resetHiddenPending = () => { HIDDEN_PENDING = ''; };   // tests only: a leftover must not cross a case
 export async function askHidden(q, fallbackAsk) {
   // askHidden must own stdin. A readline interface created BEFORE this call takes stdin over and echoes the
   // line ITSELF — its echo wins over this raw-mode loop, so the passphrase appears in plaintext while the code
@@ -213,8 +224,20 @@ export async function askHidden(q, fallbackAsk) {
     throw new Error('askHidden: another reader owns stdin (a readline interface is open) — it would ECHO the secret. Create the interface lazily, after this call.');
   if (!process.stdin.isTTY) { console.log('  ⚠️  no tty — the passphrase WILL echo'); return fallbackAsk(q); }
   process.stdout.write(q);
+  // drain what the PREVIOUS call was handed and did not use, before touching stdin at all
+  if (HIDDEN_PENDING) {
+    const nl = HIDDEN_PENDING.search(/[\r\n]/);
+    if (nl >= 0) {
+      const line = HIDDEN_PENDING.slice(0, nl);
+      HIDDEN_PENDING = HIDDEN_PENDING.slice(nl + 1).replace(/^\n/, '');   // a CRLF terminator is one break, not two
+      process.stdout.write('*'.repeat(line.length) + '\n');
+      return line;
+    }
+  }
   return await new Promise((resolve) => {
-    const chars = [];
+    const chars = [...HIDDEN_PENDING];
+    HIDDEN_PENDING = '';
+    if (chars.length) process.stdout.write('*'.repeat(chars.length));
     const stdin = process.stdin;
     const wasRaw = stdin.isRaw;
     const wasPaused = stdin.isPaused();   // restore what we found: resuming a paused stdin and leaving it resumed
@@ -226,10 +249,24 @@ export async function askHidden(q, fallbackAsk) {
     // ceremony hung exactly there. Iterate by CODE POINT, never by UTF-16 unit, or a non-ASCII passphrase would
     // split mid-character.
     const onData = (b) => {
-      for (const c of b.toString('utf8')) {
-        if (c === '\r' || c === '\n') { stdin.setRawMode(wasRaw); stdin.removeListener('data', onData); if (wasPaused) stdin.pause(); process.stdout.write('\n'); return resolve(chars.join('')); }
+      const text = b.toString('utf8');
+      let i = 0;
+      for (const c of text) {
+        i += c.length;
+        if (c === '\r' || c === '\n') {
+          // HAND BACK THE REMAINDER. Everything after this terminator belongs to whoever asks next; dropping it is
+          // the defect this buffer exists for. A CRLF pair counts as ONE break.
+          HIDDEN_PENDING = text.slice(i).replace(/^\n/, '');
+          stdin.setRawMode(wasRaw); stdin.removeListener('data', onData); if (wasPaused) stdin.pause(); process.stdout.write('\n'); return resolve(chars.join(''));
+        }
         if (c === '\u0003') { stdin.setRawMode(wasRaw); process.stdout.write('\n'); process.exit(130); }
         if (c === '\u007f' || c === '\b') { if (chars.length) { chars.pop(); process.stdout.write('\b \b'); } continue; }
+        // A C0 CONTROL is not a character of a passphrase, and accepting one silently is worse than dropping it:
+        // the operator sees an asterisk, cannot see WHAT was accepted, and can never reproduce the secret. Measured
+        // 2026-08-03 under a pty harness that sends EOT — the first passphrase came back as "\u0004…" and would have
+        // encrypted a crown key under a string nobody could type again. Interrupt, backspace and the terminators are
+        // handled above; everything else in C0 is ignored, which is why no asterisk is printed for it.
+        if (c < ' ') continue;
         chars.push(c); process.stdout.write('*');
       }
     };
@@ -2215,7 +2252,7 @@ export async function addKeylogKey({ genesis, keylog, rootSigner, role = null, t
 //     is REPORTED as an obligation with the exact `prev` to use, rather than left to be discovered by a consumer.
 const GENESIS_CARRIED = ['max_partitions', 'max_transcript_bytes', 'cadence', 'checkpoint_authority', 'recovery'];
 const GENESIS_NOT_CARRIED = ['pub', 'role', 'roles'];   // minted anew / restated by this ceremony, deliberately
-export async function runRerootCeremony({ domain, genesisA, keylogA, witnessA = null, cadenceLogA = null, caASigner = null, roles = null, assign = {}, drop = [], reason = 'planned', time, ustId }) {
+export async function runRerootCeremony({ domain, genesisA, keylogA, witnessA = null, cadenceLogA = null, caASigner = null, rootASigner = null, roles = null, assign = {}, drop = [], reason = 'planned', time, ustId }) {
   const vA = genesisA?.state?.data?.genesis?.value;
   if (!vA || typeof vA !== 'object') throw new Error('the served genesis has no readable genesis value — refusing to re-root from an identity that cannot be read');
   const unknown = Object.keys(vA).filter((k) => !GENESIS_CARRIED.includes(k) && !GENESIS_NOT_CARRIED.includes(k));
@@ -2234,6 +2271,11 @@ export async function runRerootCeremony({ domain, genesisA, keylogA, witnessA = 
   if (reason !== 'planned' && reason !== 'compromised') throw new Error("reason must be 'planned' or 'compromised' — under `compromised` the epoch-A recovery set is NOT carried forward, so guessing it would silently re-adopt a set the operator is walking away from");
   if (reason === 'compromised' && vA.recovery) throw new Error('reason=compromised, and the served genesis carries a recovery set: this command will not re-mint a recovery quorum for you. Run the genesis ceremony to establish a fresh set, then re-root onto it — a recovery set distributed across places is custody, not a parameter.');
 
+  // §12.1 P2 / F.5z — the SIGNED half. Conjunct (a) is not optional: measured, a domain takeover produces a
+  // well-formed successor log with zero signatures from the outgoing publisher, so an unsigned supersession is
+  // exactly what a party holding the NAME can write without holding the KEY. The epoch-A ROOT is therefore
+  // required, and its absence is a refusal rather than a weaker ceremony.
+  if (!rootASigner) throw new Error('re-rooting requires the epoch-A ROOT key: §12.1 P2 makes a supersession authoritative only when it is BOTH signed by the old genesis key AND reflected in the name-binding root, and only the root can produce the signed half (a terminal `reroot` in the outgoing key log). Without it this ceremony would hand over a name it cannot prove it is entitled to hand over.');
   const rootB = await W.generateSigner({ extractable: true });
   const caB = instantiated.authority ? await W.generateSigner({ extractable: true }) : null;
   const genesisB = await W.seal(P.buildGenesis(
@@ -2250,6 +2292,7 @@ export async function runRerootCeremony({ domain, genesisA, keylogA, witnessA = 
   // INDETERMINATE(unavailable), which is exactly what a CORRECT ceremony reads as without witness evidence).
   const ksA = P.resolveKeys(genesisA, keylogA);
   if (ksA.error) throw new Error(`the served genesis + key-log do not RESOLVE (${ksA.error}: ${ksA.detail ?? ''}) — refusing to re-root from an identity a consumer cannot resolve either`);
+  if (ksA.supersededBy) throw new Error(`this identity has ALREADY been superseded — its key log ends with a reroot naming ${String(ksA.supersededBy).slice(0, 24)}…. Re-root from THAT genesis, not from this one; the log is terminal and admits no further entry.`);
   const carriedKeys = [...ksA.active.entries()].filter(([kid]) => kid !== genesisA.state.id.key_id && !drop.includes(kid));
   const declaresRoles = Array.isArray(roles) && roles.length > 0;
   // THE ONE INPUT THAT IS NOT IN THE PRE-STATE, AND WHY IT IS ASKED. Rule 1 says read rather than ask — but the
@@ -2291,12 +2334,22 @@ export async function runRerootCeremony({ domain, genesisA, keylogA, witnessA = 
     }), await pkFromSigner(caB), caB.pub);
   }
 
+  // THE SIGNED HALF, appended to the OUTGOING log and closing it. Built here because `hB` is only known now, and
+  // verified through `resolveKeys` before it leaves this function — a ceremony must never emit what it has not
+  // checked, and the check is the same one a consumer will run.
+  const prevA = keylogA.length ? P.contentHash(keylogA[keylogA.length - 1]) : hA;
+  const supersession = await W.seal(P.buildKeyLogEntry({ domain_shard: domain, ust_id: ustId, key_id: rootASigner.key_id }, time, { op: 'reroot', to_genesis: hB }, prevA), rootASigner);
+  const keylogAClosed = [...keylogA, supersession];
+  const closedCheck = P.resolveKeys(genesisA, keylogAClosed);
+  if (closedCheck.error) throw new Error(`the signed supersession does not resolve against the OLD genesis (${closedCheck.error}: ${closedCheck.detail ?? ''}) — refusing to emit a half a consumer would reject`);
+  if (closedCheck.supersededBy !== hB) throw new Error('the signed supersession does not name the new genesis — refusing to emit it');
+
   // AXIS 3 — the witness log. §12.1: supersession ADDS `superseded_by` and a successor entry, never removes. The new
   // genesis carries no anchors: it has not been anchored yet, and claiming otherwise would be the one thing a
   // witness log cannot do honestly.
   let witnessB = null;
   if (instantiated.witness) {
-    const succ = P.witnessSuccessor(witnessA, { domain_shard: domain, content_hash: hB });
+    const succ = P.witnessSuccessor(witnessA, { domain_shard: domain, content_hash: hB, supersession: keylogAClosed });   // F.5z.5 — the log is the COURIER; omission is a refusal at the consumer, never a forgery here
     if (succ.error) throw new Error('witness supersession refused: ' + succ.error);
     witnessB = succ.log;
   }
@@ -2317,7 +2370,7 @@ export async function runRerootCeremony({ domain, genesisA, keylogA, witnessA = 
     const doc = await W.seal(await W.buildState({ domain_shard: domain, ust_id: ustId, key_id: rootB.key_id, class: 'observation' }, time, { r: { kind: 'captured', value: { x: '1' } } }), rootB);
     rootProbe = P.verify(doc, { context: 'data', genesis: genesisB, keylog: keylogB });
   }
-  return { genesisB, keylogB, witnessB, cadenceLogB, transition, finalCheckpointA, c0B, rootB, caB, hA, hB, rebound, instantiated, reason, rootProbe };
+  return { genesisB, keylogB, keylogAClosed, supersession, witnessB, cadenceLogB, transition, finalCheckpointA, c0B, rootB, caB, hA, hB, rebound, instantiated, reason, rootProbe };
 }
 /**
  * F.5y.3 — acceptance INDEXED BY THE PRE-STATE. Its arguments are what was observed instantiated BEFORE the
@@ -2368,7 +2421,13 @@ export function acceptReroot({ genesisA, keylogA, witnessA, cadenceLogA, out, ro
     const old = witnessB?.genesis_log?.find((e) => e.content_hash === hA);
     add('name crosses (witness supersession)', shrank === null && old?.superseded_by === hB && witnessB.active === hB,
       shrank ?? (old ? `old root preserved with ${(old.anchors ?? []).length} anchor(s), superseded by the new active` : 'the superseded root is MISSING from the successor log'));
-  } else add('name (witness log)', true, 'not instantiated — no witness log is served, so a consumer never reads one');
+    // THE ONLY LEG THAT ASKS THE CONSUMER'S QUESTION. Everything above inspects what the ceremony produced; this
+    // one takes the position of a party holding ONLY the old genesis hash and asks whether continuity is PROVABLE
+    // from what will be served. A successor log without the signed half passes every leg above and fails this one.
+    const sup = P.resolveSupersession(genesisA, witnessB);
+    add('continuity is PROVABLE to a holder of the old genesis', sup.superseded === true && sup.proven === true && sup.to === hB,
+      sup.proven ? 'the signed `reroot` verifies against the OLD root key and names this successor' : (sup.detail ?? 'not proven'));
+  } else add('name (witness log)', null, 'no witness log is served, so nothing carries the signed half — a consumer holding the old genesis will REFUSE to follow, which is correct and is your choice to change');
 
   if (instantiated.cadenceLog) {
     const r = P.resolveCadence(genesisB, cadenceLogB, ustId, { keylog: keylogB });
@@ -2669,7 +2728,7 @@ export async function cmdCadence() {
 // checks it — tracked as UST-Protocol#133. Until it is determined, this follows what verifiers actually do.
 export async function cmdReroot() {
   const domain = arg('domain');
-  if (!domain || domain === true) die('usage: ust reroot --domain <d> --ca-key <epoch-A checkpoint-authority key .b64>\n         [--roles data,issuance] [--assign <key_id>=<role>,…] [--drop <key_id>,…] [--reason planned|compromised]\n         [--out <dir>]\n  DISCONNECTED: --genesis <f> selects an OFFLINE ceremony; then every surface must be supplied (--keylog/--witness/\n         --cadence-log <f>) or DECLARED absent (--no-keylog/--no-witness/--no-cadence-log). Silence is not an assertion.\n  RE-ROOT this identity onto a NEW genesis, crossing every genesis-rooted structure you have instantiated (F.5y):\n  the key-log, the authority chain, the witness log (the NAME), and the cadence log. What must cross is read from\n  your SERVED identity, never asked — an omitted flag is indistinguishable from an absent structure.\n  Writes artifacts to a directory. It PUBLISHES NOTHING: until you serve them, nothing has happened.\n  The one axis this cannot cross is your running writer — see its printed obligation.');
+  if (!domain || domain === true) die('usage: ust reroot --domain <d> --root <encrypted epoch-A root .b64> [--ca-key <epoch-A checkpoint-authority key .b64>]\n         [--roles data,issuance] [--assign <key_id>=<role>,…] [--drop <key_id>,…] [--reason planned|compromised]\n         [--out <dir>]\n  DISCONNECTED: --genesis <f> selects an OFFLINE ceremony; then every surface must be supplied (--keylog/--witness/\n         --cadence-log <f>) or DECLARED absent (--no-keylog/--no-witness/--no-cadence-log). Silence is not an assertion.\n  RE-ROOT this identity onto a NEW genesis, crossing every genesis-rooted structure you have instantiated (F.5y):\n  the key-log, the authority chain, the witness log (the NAME), and the cadence log.\n  --root is the OUTGOING crown. §12.1 P2 makes a supersession authoritative only when it is BOTH signed by the old\n  genesis key AND reflected in the name-binding root, and only that key can produce the signed half. What must cross is read from\n  your SERVED identity, never asked — an omitted flag is indistinguishable from an absent structure.\n  Writes artifacts to a directory. It PUBLISHES NOTHING: until you serve them, nothing has happened.\n  The one axis this cannot cross is your running writer — see its printed obligation.');
   const outDir = (arg('out', null) && arg('out', null) !== true) ? String(arg('out', null)) : '.';
   const caFile = arg('ca-key', null);
   const reason = (arg('reason', null) && arg('reason', null) !== true) ? String(arg('reason', null)) : 'planned';
@@ -2729,8 +2788,22 @@ export async function cmdReroot() {
     caASigner = { priv, pub };
   } else if (caFile && caFile !== true) die('--ca-key was given but the served genesis declares no checkpoint authority — there is no chain to hand over');
 
+  // the OUTGOING crown, read the same way every other ceremony reads it. Lazy reader, stdin handed back BEFORE the
+  // question — the property holds by CONSTRUCTION here, so a question added above later cannot reintroduce the echo
+  // guard's refusal, which is exactly how the genesis ceremony broke once.
+  const rootFile = arg('root');
+  if (!rootFile || rootFile === true) die('--root <encrypted epoch-A root backup .b64> required — only the OUTGOING root can sign the supersession (§12.1 P2). Without it this ceremony hands over a name it cannot prove it is entitled to hand over.');
+  let rl = null;
+  const ask = (q) => { rl ??= openReader(createInterface); return rl.question(q); };
+  rl = closeReader(rl);
+  const passA = await askHidden('  🔑 epoch-A root passphrase: ', ask);
+  rl = closeReader(rl);
+  let rootASigner;
+  try { rootASigner = await rootSignerFrom(decryptKey(readFileSync(String(rootFile), 'utf8').trim(), passA), genesisA.state.data.genesis.value.pub); }
+  catch (e) { die(e.message.includes('match') ? e.message : 'decrypt failed — wrong passphrase or corrupt backup'); }
+
   const { ust_id, time } = W.nowFrame();
-  let out; try { out = await runRerootCeremony({ domain, genesisA, keylogA: klParsed, witnessA, cadenceLogA, caASigner, roles, assign, drop, reason, time, ustId: ust_id }); }
+  let out; try { out = await runRerootCeremony({ domain, genesisA, keylogA: klParsed, witnessA, cadenceLogA, caASigner, rootASigner, roles, assign, drop, reason, time, ustId: ust_id }); }
   catch (e) { die(e.message); }
 
   // ACCEPTANCE BEFORE ANY FILE IS WRITTEN. A ceremony that writes what it has not accepted hands the operator an
@@ -2742,8 +2815,8 @@ export async function cmdReroot() {
   const failed = legs.filter((l) => l.ok === false);
   if (failed.length) die(`${failed.length} acceptance leg(s) FAILED — nothing was written. Re-run after fixing; no state changed.`);
 
-  let rl = null;
-  const ask = (q) => { rl ??= openReader(createInterface); return rl.question(q); };
+  // the SECOND secret of this ceremony, asked through the same lazy reader. Stdin is handed back before each
+  // question, so neither ask can leave an interface open across the other — the property the genesis ceremony broke.
   rl = closeReader(rl);
   const pass = await askHidden('  🔑 passphrase for the NEW root key (empty = store it unencrypted): ', ask);
   rl = closeReader(rl);
@@ -2754,6 +2827,7 @@ export async function cmdReroot() {
   wr('ust-keylog', j(out.keylogB));
   if (out.witnessB) wr('ust-witness', j(out.witnessB));
   if (out.cadenceLogB) wr('ust-cadence', j(out.cadenceLogB));
+  wr('ust-keylog-epoch-a-closed', j(out.keylogAClosed));   // the outgoing log with its terminal `reroot`; kept for your records and mirrors — the transcript a consumer needs travels in ust-witness
   if (out.transition) { wr('epoch-transition.json', j(out.transition)); wr('final-checkpoint-epoch-a.json', j(out.finalCheckpointA)); wr('checkpoint-0-epoch-b.json', j(out.c0B)); }
   const rootPkcs8 = Buffer.from(await crypto.subtle.exportKey('pkcs8', out.rootB.privateKey)).toString('base64');
   secret(`genesis-key${pass ? '.enc' : ''}.b64`, (pass ? encryptKey(rootPkcs8, pass) : rootPkcs8) + '\n');
@@ -2768,6 +2842,8 @@ export async function cmdReroot() {
   console.log(`  recovery  ${reason === 'compromised' ? 'NOT carried (reason=compromised)' : (genesisA.state.data.genesis.value.recovery ? 'carried forward — your existing cold shards still apply' : 'none declared')}`);
   console.log(`\n  📦 ${outDir}/`);
   console.log('     ust-genesis, ust-keylog' + (out.witnessB ? ', ust-witness' : '') + (out.cadenceLogB ? ', ust-cadence' : '') + '  → PUBLIC, serve at /.well-known/');
+  console.log('     ust-keylog-epoch-a-closed           → the outgoing log with its TERMINAL `reroot`; for your records and mirrors.');
+  console.log('                                          The transcript a consumer needs travels inside ust-witness — that is the courier.');
   if (out.transition) console.log('     epoch-transition.json, final-checkpoint-epoch-a.json, checkpoint-0-epoch-b.json  → the authority hand-over');
   console.log(`     genesis-key${pass ? '.enc' : ''}.b64${pass ? '' : '   ⚠️ UNENCRYPTED'}   → 🧊 COLD — the new crown; every key-log mutation needs it`);
   if (out.caB) console.log('     checkpoint-authority-key.b64        → 🧊 COLD — signs epoch B authority checkpoints');

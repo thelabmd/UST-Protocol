@@ -16,6 +16,7 @@
 // values and fails if a declared key is missing, so they cannot drift into being the stale kind.
 // Package: @ust-protocol/cli
 
+export function __resetHiddenPending(): unknown;
 export function acceptReroot(arg0?: unknown): unknown;
 export function addKeylogKey(arg0?: unknown): Promise<{ keylog: unknown; newKey: unknown }>;
 export const ARTIFACT_ORIGIN: Readonly<{ genesis: 'loaded'; keylog: 'loaded'; cadence: 'loaded'; witness: 'derived' }>;

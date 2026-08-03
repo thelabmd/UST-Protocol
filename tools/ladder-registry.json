@@ -1102,6 +1102,14 @@
    "code": "packages/ust-protocol/index.mjs :: witnessSuccessor carries the signed half, witnessNoShrink protects it, resolveSupersession verifies it through resolveKeys",
    "vector": "reroot-20-courier-proves-successor",
    "test": "F.5z.4 a supersession claimed with NO signed half is refused, not followed"
+  },
+  {
+   "round": 155,
+   "math": "Theorem F.5z.5 (the courier is the witness log, and it remains an index)",
+   "spec": "The SIGNED half of a supersession is a terminal key-log `reroot` (F.5z)",
+   "code": "packages/ust-cli/index.mjs :: runRerootCeremony emits the terminal reroot and hands the CLOSED log to the courier; askHidden hands back the unused remainder of a chunk",
+   "vector": "reroot-20-courier-proves-successor",
+   "test": "F.5z.5 the courier carries the WHOLE closed log, so an identity with prior entries still proves continuity"
   }
  ],
  "first_accounted_round": 76,

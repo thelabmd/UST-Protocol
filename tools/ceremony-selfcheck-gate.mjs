@@ -169,8 +169,20 @@ check(WORLD.length >= 4 && sites.length >= 4, 'the vocabulary or the site set sh
   check(/removeListener/.test(cr.slice(0, 600)), 'closeReader no longer removes the listeners readline added — close() does not on a terminal');
   check(/before\[ev\]\.includes/.test(cr.slice(0, 600)), 'closeReader no longer preserves foreign listeners — it must undo only what it added');
   const ah = SRC.slice(SRC.indexOf('export async function askHidden'));
-  check(/for \(const c of b\.toString/.test(ah.slice(0, 3000)),
+  // ANCHORED ON THE PROPERTY, NOT THE SPELLING. This read `for (const c of b.toString` and went red when the loop
+  // was refactored to keep the chunk in a named variable — the property was intact and the anchor had moved. Two
+  // independent marks now, both about what the code DOES: the chunk becomes text, and it is walked by code point.
+  const body = ah.slice(0, 4000);
+  check(/b\.toString\('utf8'\)/.test(body) && /for \(const c of \w/.test(body),
     'askHidden reads a data event as ONE character again — a pasted passphrase arrives as a chunk, matches no terminator, and the prompt never returns');
+  // THE REMAINDER. MEASURED 2026-08-03: on the terminator the loop resolved and DISCARDED the rest of the chunk, so
+  // a SECOND askHidden waited forever for input already delivered. Reproduced under a pipe and under a real pty, so
+  // it is a race an interactive human hides by typing slowly. `ust reroot` is the first command needing two secrets
+  // and it hung on the second. A reader that consumes a chunk owes back what it did not use.
+  check(/HIDDEN_PENDING = /.test(body) && /HIDDEN_PENDING/.test(body.slice(0, 1500)),
+    'askHidden no longer hands back the UNUSED remainder of a data chunk — a second secret prompt in the same command will hang');
+  check(/if \(c < ' '\) continue;/.test(body),
+    'askHidden accepts C0 control characters into a secret again — an operator sees an asterisk, cannot see what was accepted, and can never reproduce the passphrase');
 }
 
 

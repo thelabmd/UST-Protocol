@@ -3225,7 +3225,14 @@ export function resolveSupersession(genesis, witnessLog) {
     if (!isHashStr(claimed)) return { superseded: true, proven: false, detail: 'superseded_by is not a content_hash' };
     if (entry.supersession === undefined || entry.supersession === null)
       return { superseded: true, proven: false, to: claimed, detail: 'the witness log claims a supersession and carries no SIGNED half — §12.1 P2 requires both, so this claim is ignored (F.5z.4)' };
-    const r = resolveKeys(g, [entry.supersession]);
+    // The carried value is the WHOLE CLOSED KEY LOG, not the terminal entry alone. MEASURED: with only the entry,
+    // any identity whose log had prior entries fails `E-PREV — entry 0 prev not chained`, because the transcript
+    // chains from its predecessor and not from the genesis. Carrying the log is also the stronger choice on its
+    // merits: `resolveKeys` then verifies the chain, the root-signing and the TERMINALITY as well as the successor
+    // claim — one rule, fully exercised — where a lifted entry would have needed a second, weaker argument about
+    // what a signature proves out of position. A key log is bounded at 256 entries (§13), so the cost is small.
+    const carried = Array.isArray(entry.supersession) ? entry.supersession : [entry.supersession];
+    const r = resolveKeys(g, carried);
     if (r.error) return { superseded: true, proven: false, to: claimed, detail: `the signed half does not resolve against this genesis (${r.error}: ${r.detail ?? ''})` };
     if (r.supersededBy === null) return { superseded: true, proven: false, to: claimed, detail: 'the carried entry is a key-log entry but not a `reroot` — it names no successor' };
     // the corollary: the two halves must AGREE, or the log is contradictory and fails closed

@@ -565,6 +565,20 @@ check('#131 buildGenesis REFUSES an empty `roles` — declaring nothing is not a
     const r = P.resolveSupersession(gA, base);
     return r.superseded === false && r.proven === undefined;
   })());
+  // THE CASE EVERY CHECK ABOVE MISSED, and the ceremony's own acceptance leg found it on a live run: a log with a
+  // PRIOR entry. The terminal `reroot` chains from its predecessor, not from the genesis, so a courier carrying the
+  // entry ALONE fails `E-PREV — entry 0 prev not chained` for every identity that ever added a key. Every fixture
+  // here had a single-entry log, so the suite was green on the one shape that cannot occur in production.
+  check('F.5z.5 the courier carries the WHOLE closed log, so an identity with prior entries still proves continuity', (() => {
+    const opKey = kp('f3'.repeat(32));
+    const add = sR(P.buildKeyLogEntry(id('ust:20260628.1050'), T, { op: 'add', pub: opKey.pubB64, new_key_id: opKey.key_id }, hA));
+    const rr2 = sR(P.buildKeyLogEntry(id('ust:20260628.1150'), T, { op: 'reroot', to_genesis: hB }, P.contentHash(add)));
+    const log = P.witnessSuccessor(base, { domain_shard: 'noosphere.md', content_hash: hB, supersession: [add, rr2] }).log;
+    const r = P.resolveSupersession(gA, log);
+    // and the ENTRY-ONLY form of the same identity must still be refused, or this leg proves nothing about the fix
+    const lifted = P.witnessSuccessor(base, { domain_shard: 'noosphere.md', content_hash: hB, supersession: rr2 }).log;
+    return r.superseded === true && r.proven === true && r.to === hB && P.resolveSupersession(gA, lifted).proven === false;
+  })());
 }
 check('F5 encrypted w/o enc→E-MALFORMED', (() => { const st = { id: ID, time: T, data: { e: { kind: 'captured', privacy: 'encrypted', commit: 'sha256:' + 'cd'.repeat(32) } }, hashes: { e: P.partitionHash({ commit: 'sha256:' + 'cd'.repeat(32) }) } }; return P.verify(P.seal(st, A.priv, A.pubB64), { context: 'data' }).error === 'E-MALFORMED'; })());
 check('F6 non-NFC member name→E-CANON', (() => { try { P.canon({ ['e' + String.fromCharCode(0x301)]: '1' }); return false; } catch (e) { return e.code === 'E-CANON'; } })());

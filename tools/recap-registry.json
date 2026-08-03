@@ -328,6 +328,11 @@
    "round": 154,
    "issue": 133,
    "no_recap": "Both halves of §12.1 P2 now have a wire form and a courier, but #133 stays open for the same reason round 153 did: no CEREMONY emits either half. `ust reroot` still does not ask for the epoch-A root key, so the reducer admits an operation nothing produces. The recap belongs to the round that closes that gap, not to the two that specified it."
+  },
+  {
+   "round": 155,
+   "issue": 133,
+   "no_recap": "The command now produces both halves and its acceptance proves continuity from the consumer's position, but nothing has been RUN against the live operator yet. The recap belongs to the round where the ceremony crosses a real identity, not to the one that made it possible; sealing now would describe a rehearsal as an event."
   }
  ]
 }
