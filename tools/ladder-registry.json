@@ -1158,6 +1158,14 @@
       "code": "packages/ust-protocol/index.mjs :: parseProfile returns the CLOSED half and is TOTAL on a hostile object",
       "vector": "profile-unknown-in-declares-refused",
       "test": "profile-unknown-at-top-level-ignored"
+    },
+    {
+      "round": 162,
+      "math": "A profile BINDS and DESCRIBES, and one extension rule cannot serve both",
+      "spec": "Where a copy is NAMED",
+      "code": "packages/ust-cli/index.mjs :: query-robustness probes every served surface, and the profile route carries a wildcard",
+      "vector": "profile-copy-locator-accepted",
+      "test": "profile-copy-stray-field-refused"
     }
   ],
   "first_accounted_round": 76,

@@ -363,6 +363,11 @@
       "round": 161,
       "issue": 135,
       "no_recap": "A recap belongs to a CLOSED issue, and #135 is open. The round shipped the math, the specification, the parser and the vectors; what it does NOT have is the reference operator serving the partition, so realization is PARTIAL by the model’s own Binding line. Writing a recap now would report a decision as finished while the thing it decides is still unbuilt — the exact overclaim the tier vocabulary exists to prevent. The recap is owed when the profile carries a `declares` object and a copy it names is attested with no flag passed."
+    },
+    {
+      "round": 162,
+      "issue": 135,
+      "no_recap": "Same reason as round 161, and it has not changed: a recap belongs to a CLOSED issue. What DID change is the reason the issue is open. It was “the reference operator does not serve the partition”; it now serves it, and `DISCOVERY CONFORMANCE §20.1: ATTESTED` is the first time that verdict has been reached here. What remains is the rest of the sweep — `ust mirror` does not yet WRITE the declaration, `anchorRollup` still receives its substrate list from the caller rather than from the profile, and the attestation-level vectors (declared-and-stale, declared-and-agreeing, declared-and-absent) are unwritten. A recap now would report a sweep as finished on the strength of its most visible leg."
     }
   ]
 }
