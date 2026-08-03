@@ -1311,6 +1311,68 @@ export function anchorRollup({ declared = [], observed = {} } = {}) {
     : 'printing';
   return deepFreeze({ status, declared: [...declared], silent, perSubstrate: deepFreeze(perSubstrate) });
 }
+// ── §20 OPERATOR PROFILE — the CLOSED half, and only it (#135, F.5p.1) ────────────────────────────────────────
+// A profile both BINDS and DESCRIBES, and one extension rule cannot serve both: dropping an unknown BINDING key
+// turns a stated obligation into no obligation (the reason §20.1 answers E-REPLICATION rather than accepting and
+// ignoring an independence coordinate), while refusing an unknown DESCRIBING key makes the document unextendable
+// — one added line of operator prose would fail every deployed verifier. A verifier cannot choose between these
+// from the key itself: whether a key binds is fixed by the SPEC, and an unknown key is precisely one this
+// version does not define. So the boundary is POSITIONAL — `declares` is closed, everything else is prose — and
+// never a naming convention, which would put the choice of whether a statement binds into the hands of the party
+// the statement is about (F.5a.1).
+//
+// This function returns the CLOSED half and nothing else. Handing a verifier the prose alongside it is how a
+// later surface starts reading a field that binds nothing.
+const PROFILE_DECLARES = deepFreeze(['serves', 'substrates', 'copies']);              // CLOSED — extending it is a spec change
+const COPY_FIELDS = deepFreeze(['artifact', 'url']);
+const COPY_ARTIFACTS = deepFreeze(['genesis', 'keylog', 'cadence', 'witness']);
+const EMPTY_DECLARES = deepFreeze({ serves: deepFreeze([]), substrates: deepFreeze([]), copies: deepFreeze([]) });
+export function parseProfile(profile) {
+  const bad = (error, detail) => ({ error, detail });
+  // TOTAL by construction. The input is UNTRUSTED wire — a profile fetched from the very domain whose claims are
+  // in question — so an object whose traps throw must produce a REFUSAL, never an exception. A verifier mid
+  // resolution treats those as different outcomes: a refusal is a profile it cannot honour, a throw is a crash.
+  try {
+  if (typeof profile !== 'object' || profile === null || Array.isArray(profile))
+    return bad('E-DISCOVERY', 'profile must be a JSON object');
+  // ABSENT `declares` is the honest floor of F.5p, not an error: it declares nothing, every optional surface
+  // reports NOT OFFERED, and every profile published before this section existed keeps working unchanged.
+  if (!Object.hasOwn(profile, 'declares')) return EMPTY_DECLARES;
+  const d = profile.declares;
+  if (typeof d !== 'object' || d === null || Array.isArray(d))
+    return bad('E-DISCOVERY', '`declares` must be an object — the closed half of the profile');
+  for (const k of Object.keys(d))
+    if (!PROFILE_DECLARES.includes(k))
+      return bad('E-DISCOVERY', 'unknown member of `declares`: ' + k + ' — a binding key this version does not define is refused, never dropped');
+  const out = { serves: [], substrates: [], copies: [] };
+  for (const k of ['serves', 'substrates']) {
+    if (!Object.hasOwn(d, k)) continue;
+    if (!Array.isArray(d[k]) || d[k].some((x) => typeof x !== 'string'))
+      return bad('E-DISCOVERY', '`declares.' + k + '` must be an array of names');
+    out[k] = [...d[k]];
+  }
+  if (Object.hasOwn(d, 'copies')) {
+    if (!Array.isArray(d.copies)) return bad('E-DISCOVERY', '`declares.copies` must be an array');
+    for (let i = 0; i < d.copies.length; i++) {
+      const c = d.copies[i];
+      if (typeof c !== 'object' || c === null || Array.isArray(c)) return bad('E-DISCOVERY', 'copy ' + i + ' must be an object');
+      // A STRAY FIELD IS REFUSED, not dropped — §20.1 names this outcome for the independence coordinate, and the
+      // argument never depended on which field it was: a coordinate accepted and ignored is one some later
+      // surface starts reading, and a copy carries a LOCATOR and never an assurance (F.5o).
+      for (const k of Object.keys(c))
+        if (!COPY_FIELDS.includes(k))
+          return bad('E-REPLICATION', 'copy ' + i + ' carries `' + k + '` — a copy declares a locator and nothing else');
+      if (!COPY_ARTIFACTS.includes(c.artifact))
+        return bad('E-DISCOVERY', 'copy ' + i + ' names no known artifact — a locator without one leaves the FETCHED party to say what it is a copy of');
+      if (typeof c.url !== 'string' || !/^https:\/\/[^\s]+$/.test(c.url))
+        return bad('E-DISCOVERY', 'copy ' + i + ' url must be an absolute https locator');
+      out.copies.push(deepFreeze({ artifact: c.artifact, url: c.url }));
+    }
+  }
+  return deepFreeze({ serves: deepFreeze(out.serves), substrates: deepFreeze(out.substrates), copies: deepFreeze(out.copies) });
+  } catch { return bad('E-DISCOVERY', 'profile is not readable as a plain object'); }
+}
+
 // UST-0ol Phase 2 — evidence CAPABILITY as a SET (P2-02: capabilities are not a scalar rank). A predicate is
 // satisfiable ONLY by an admissible capability; strong derivation checks this before trusting a piece of evidence,
 // so a connector can never exceed its declared power (content-addressed is not temporal; unknown ⇒ no capability).

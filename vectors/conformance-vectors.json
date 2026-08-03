@@ -9311,6 +9311,124 @@
       "expect": {
         "superseded": false
       }
+    },
+    {
+      "id": "profile-unknown-in-declares-refused",
+      "kind": "profile-declares",
+      "rule": "S20/F.5p.1 an unknown member of the CLOSED half is refused — a binding key this version does not define is never dropped",
+      "input": {
+        "summary": "prose",
+        "declares": {
+          "serves": [
+            "witness"
+          ],
+          "anchor_cadence": "3600"
+        }
+      },
+      "expect_error": "E-DISCOVERY"
+    },
+    {
+      "id": "profile-unknown-at-top-level-ignored",
+      "kind": "profile-declares",
+      "rule": "S20/F.5p.1 the SAME unknown key at the top level is prose and is ignored — the pair is the theorem: position decides, never the name",
+      "input": {
+        "summary": "prose",
+        "anchor_cadence": "3600",
+        "declares": {
+          "serves": [
+            "witness"
+          ]
+        }
+      },
+      "expect": {
+        "serves": [
+          "witness"
+        ]
+      }
+    },
+    {
+      "id": "profile-absent-declares-is-the-floor",
+      "kind": "profile-declares",
+      "rule": "S20/F.5p a profile with no declares object declares NOTHING and is not an error — every profile published before this section keeps working",
+      "input": {
+        "summary": "prose",
+        "paid": "archive depth"
+      },
+      "expect": {
+        "serves": [],
+        "substrates": [],
+        "copies": 0
+      }
+    },
+    {
+      "id": "profile-copy-stray-field-refused",
+      "kind": "profile-declares",
+      "rule": "S20.1/F.5o a copy declares a LOCATOR and nothing else — an independence coordinate offered alongside it is refused, never accepted and ignored",
+      "input": {
+        "declares": {
+          "copies": [
+            {
+              "artifact": "genesis",
+              "url": "https://example.test/ust-genesis",
+              "independent": true
+            }
+          ]
+        }
+      },
+      "expect_error": "E-REPLICATION"
+    },
+    {
+      "id": "profile-copy-without-artifact-refused",
+      "kind": "profile-declares",
+      "rule": "S20.1 a locator naming no artifact leaves the FETCHED party to say what it is a copy of",
+      "input": {
+        "declares": {
+          "copies": [
+            {
+              "artifact": "ledger",
+              "url": "https://example.test/x"
+            }
+          ]
+        }
+      },
+      "expect_error": "E-DISCOVERY"
+    },
+    {
+      "id": "profile-copy-locator-accepted",
+      "kind": "profile-declares",
+      "rule": "S20.1 a well-formed copy names ONE artifact and an absolute https locator; copies of different artifacts are independent members",
+      "input": {
+        "declares": {
+          "copies": [
+            {
+              "artifact": "genesis",
+              "url": "https://mirror.test/ust-genesis"
+            },
+            {
+              "artifact": "keylog",
+              "url": "https://mirror.test/ust-keylog"
+            }
+          ]
+        }
+      },
+      "expect": {
+        "copies": 2,
+        "copy0": {
+          "artifact": "genesis",
+          "url": "https://mirror.test/ust-genesis"
+        }
+      }
+    },
+    {
+      "id": "profile-declares-must-be-an-object",
+      "kind": "profile-declares",
+      "rule": "S20 the closed half is an object; an array would make membership positional by index, which no specification fixes",
+      "input": {
+        "declares": [
+          "serves"
+        ]
+      },
+      "expect_error": "E-DISCOVERY"
     }
   ]
 }

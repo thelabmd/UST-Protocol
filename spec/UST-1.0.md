@@ -2018,7 +2018,30 @@ changelog: unanchored records near a genesis-recovery boundary fail HIGH by desi
 see why, not guess. The protocol fixes the mechanism; the profile carries the
 operator. Each operator publishes its own profile (substrates, cadence, custody, disclosure) alongside its genesis.
 
-**What the profile MUST declare, and what it MUST NOT.** A profile MUST list the optional surfaces this operator
+**The profile has TWO halves, and the boundary is POSITIONAL.** A profile document both BINDS and DESCRIBES, and
+one extension rule cannot serve both purposes: a binding key that a verifier silently drops turns a stated
+obligation into no obligation (the reason §20.1 answers `E-REPLICATION` rather than accepting and ignoring an
+independence coordinate), while a describing key that a verifier refuses makes the document unextendable — one
+added line of operator prose would fail every deployed verifier. A verifier meeting an unknown key cannot choose
+between these, because whether a key binds is fixed by the specification and an unknown key is precisely one this
+verifier's version does not define (formal model F.5p.1). So:
+
+- **`declares`** — a nested object, the CLOSED half. Its member names are fixed by this specification, every
+  member carries an obligation, and a member name this verifier does not recognise is REFUSED (`E-DISCOVERY` —
+  the domain's own code, as a key log answers `E-KEY` for an unknown `op`), not ignored. Members: `serves`
+  (optional surfaces, below), `substrates` (anchoring, below), `copies` (companion copies, §20.1) — each an
+  array, each absent meaning declares-nothing rather than declares-empty. A profile carrying an unreadable
+  `declares` is UNREADABLE, which §20.1 already separates from absent: an absent profile declares nothing and is
+  the honest floor, while one that is served and cannot be honoured is a promise a verifier must not guess at.
+- **everything else at the top level** — the OPEN half. Operator prose: summary, custody, commercial terms,
+  links, read paths. It binds nothing, no verifier checks it, and an unrecognised key here is IGNORED.
+
+The boundary is a POSITION and never a naming convention. A prefix or suffix rule would put the choice of whether
+a statement binds into the hands of the party the statement is about, which is the self-declaration §12.1 and
+§20.1 exclude everywhere else. A profile with no `declares` object declares nothing — the honest floor of F.5p,
+and the behaviour of every profile published before this section existed.
+
+**What the profile MUST declare, and what it MUST NOT.** Inside `declares`, a profile MUST list the optional surfaces this operator
 serves (`witness`, `cadence`, and any companion copies), because absence is otherwise TWO different facts wearing
 one face: *this operator does not run that surface* (settled — unattestable now and later) and *it exists and did
 not answer* (unknown — attestable tomorrow). A verifier reading both as one shrug is discarding a distinction it
@@ -2108,6 +2131,13 @@ the mechanism is the publisher's choice:**
   locators share a provider, an account or a region is invisible in what they serve. A verifier therefore
   attests the property below and never this one; independence enters only from consumer configuration or
   external evidence, exactly as on the witness axis (§12.1, formal model F.5a.1 and F.5o).
+- **Where a copy is NAMED.** `declares.copies` (§20), an array whose members are `{ "artifact": …, "url": … }`.
+  `artifact` is one of `genesis`, `keylog`, `cadence`, `witness` — the same set this section serves — and `url` is
+  an absolute `https:` locator. A copy names ONE artifact: a locator without one would leave a verifier to infer
+  which document it is a copy OF from the bytes it fetched, which is the fetched party deciding what it is a copy
+  of. Copies of DIFFERENT artifacts are independent members, so a publisher that mirrors two of four states
+  exactly that and is judged on exactly that. A member carrying any key beyond these two is REFUSED
+  (`E-REPLICATION`, below) rather than accepted with the extra key dropped.
 - **Byte-agreement across declared copies (REPLICATION — this is what is attestable).** Every copy a
   publisher names MUST serve bytes whose `content_hash` equals the expected value (pinned, from the DNS
   record, or from the well-known root). Because the genesis is content-addressed, a verifier MAY fetch from

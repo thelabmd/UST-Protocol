@@ -53,7 +53,10 @@ const bounds = heads.map((h) => h.pos).concat(MODEL.length);
 // section silently LEAVE the domain — renamed to a non-`F.x` heading, it would simply stop being enumerated and this
 // gate would still pass. That is the very defect class this gate exists to close, so the count is exact and any change
 // to the section inventory must be a deliberate edit here.
-const EXPECTED_SECTIONS = 52;   // 51 → 52: F.5z (rev99) — суперсессия есть ТЕРМИНАЛЬНЫЙ акт кей-лога, и носитель
+const EXPECTED_SECTIONS = 53;   // 52 → 53: F.5p.1 (rev101) — a profile BINDS and DESCRIBES, and one extension rule
+// cannot serve both: a verifier meeting an unknown key cannot evaluate `bind(k)`, because the spec version it
+// implements is precisely what does not define k. The partition must be POSITIONAL — a naming convention would let
+// the publisher choose whether its own statement binds it. 51 → 52: F.5z (rev99) — суперсессия есть ТЕРМИНАЛЬНЫЙ акт кей-лога, и носитель
 // ВЫНУЖДЕН, а не выбран: подписывает старый корень, а корень под объявленным режимом допускает ровно
 // {genesis, key, cadence}, из которых два исключаются по существу. 50 → 51: F.5y (rev98) — перекоренение есть ПЕРЕСЕЧЕНИЕ каждой укоренённой в
 // генезисе структуры, которую издатель инстанциировал, а не одно событие; пять осей перечислены из чтений

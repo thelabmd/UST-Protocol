@@ -984,13 +984,22 @@ export async function attestDiscovery({ domain, mirrors = [], expectHash = null,
   // that exists and did not answer (a promise not kept). Absent profile = declares nothing, which is the honest
   // floor: every optional surface then reports NOT OFFERED rather than FAILED, and a PRESENT one still attests.
   let declaredSurfaces = new Set();
+  let declaredCopies = [];
   try {
     const pr = await get(`https://${domain}/.well-known/ust`);
     if (pr.ok) {
       const prof = JSON.parse(await pr.text());
-      const list = Array.isArray(prof?.serves) ? prof.serves.filter((x) => typeof x === 'string') : [];
-      declaredSurfaces = new Set(list);
-      checks.push({ id: 'operator profile (§20)', informational: true, status: 'pass', detail: list.length ? `declares: ${list.join(', ')}` : 'served, declares no optional surface' });
+      // ONE reader of "what does this profile declare" — the core's (#135, F.5p.1). A second implementation here
+      // is how the closed half and the tool's idea of it drift, which is the defect this round exists to close.
+      const d = P.parseProfile(prof);
+      if (d.error) {
+        checks.push({ id: 'operator profile (§20)', informational: true, status: 'fail', detail: `${d.error} — ${d.detail}. A profile that is SERVED and cannot be honoured is not an absent one; a verifier must not guess which member it was meant to ignore` });
+      } else {
+      declaredSurfaces = new Set(d.serves);
+      declaredCopies = d.copies;
+      const parts = [d.serves.length ? `serves ${d.serves.join('/')}` : null, d.substrates.length ? `substrates ${d.substrates.join('/')}` : null, d.copies.length ? `${d.copies.length} copy locator(s)` : null].filter(Boolean);
+      checks.push({ id: 'operator profile (§20)', informational: true, status: 'pass', detail: parts.length ? `declares: ${parts.join(' · ')}` : 'served, declares no optional surface' });
+      }
     } else if (pr.status === 404 || pr.status === 410) {
       checks.push({ id: 'operator profile (§20)', informational: true, status: 'skip', detail: `HTTP ${pr.status} — no profile, so nothing is DECLARED and every optional surface reports NOT OFFERED rather than failing` });
     } else throw new Error(`HTTP ${pr.status} — served but UNREADABLE (an unreadable profile is not an absent one)`);
@@ -1007,9 +1016,18 @@ export async function attestDiscovery({ domain, mirrors = [], expectHash = null,
   // identical to two genuinely separate vendors. Naming the leg after the property it cannot decide would let
   // whoever supplies the list grant the property by choosing it, which is the self-declaration F.5a.1 excludes
   // on the witness axis. Independence enters from consumer configuration or external evidence, never from here.
-  if (!mirrors.length) checks.push({ id: 'byte-agreement across declared copies (≥1 copy)', status: 'skip', detail: 'no --mirror declared — property NOT ATTESTED' });
+  // A copy the PROFILE names is attested without anyone passing a flag (#135). That is the whole point of the
+  // declaration: before it, a published copy was invisible to this check and its staleness unmeasurable — the
+  // verifier was not being lax, it had nothing to compare. Genesis copies only here; the other artifacts are
+  // compared by `ust mirror`, which holds their expected hashes.
+  // Consumer-supplied locators are kept SEPARATE and are not replaced by the profile's: a consumer pinning its
+  // own copy is checking the publisher, and letting the publisher supply the comparison target would let it name
+  // a copy of itself. The union is safe because every copy is judged against `hash`, which comes from neither.
+  const profileCopies = declaredCopies.filter((c) => c.artifact === 'genesis').map((c) => c.url);
+  const allCopies = [...new Set([...mirrors, ...profileCopies])];
+  if (!allCopies.length) checks.push({ id: 'byte-agreement across declared copies (≥1 copy)', status: 'skip', detail: 'the profile names no copy and no --mirror was given — property NOT ATTESTED' });
   const fetched = [];
-  for (const m of mirrors) {
+  for (const m of allCopies) {
     try {
       const t = await get(m).then((r) => (r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`))));
       const { verdict: mv, doc: d } = verifyRaw(t);

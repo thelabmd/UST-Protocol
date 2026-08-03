@@ -109,6 +109,18 @@ for (const v of V.vectors) {
       check(v.id, P.surfaceVerdict(v.input).status === v.expect.status);
       break;
     }
+    // §20/F.5p.1 — the closed half of the profile. The load-bearing pair is two vectors carrying the SAME unknown
+    // key in two POSITIONS: refused inside `declares`, ignored at the top level. If one implementation decided by
+    // the key's name instead, exactly that pair would split.
+    case 'profile-declares': {
+      const r = P.parseProfile(v.input);
+      if (v.expect_error) { check(v.id, r.error === v.expect_error, `expected ${v.expect_error}, got ${r.error ?? 'no error'}`); break; }
+      const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+      check(v.id, !r.error && eq(r.serves, v.expect.serves ?? []) && eq(r.substrates, v.expect.substrates ?? [])
+        && r.copies.length === (v.expect.copies ?? 0)
+        && (v.expect.copy0 === undefined || eq(r.copies[0], v.expect.copy0)));
+      break;
+    }
     case 'key_id': check(v.id, P.keyId(v.pub_b64url) === v.expect); break;
     case 'commit': check(v.id, P.H('ust:shard', P.canon(v.input)) === v.expect); break;
     case 'seed': check(v.id, P.seed(v.input) === v.expect); break;
@@ -2946,6 +2958,7 @@ console.log('\n═════════════════════�
     blindedCommit: 'primitive', blindPartition: 'primitive', assuranceLE: 'surface', assuranceState: 'primitive (the assurance door — returns a reject sentinel like admitDeep, never a throw)',
     axisRank: 'primitive', joinAssurance: 'surface', meetAssurance: 'surface', projectTier: 'surface', capAssurance: 'surface',
     evidenceCaps: 'primitive', ustGrid: 'primitive', checkBounds: 'surface', compareEvidenceOrder: 'surface',
+    parseProfile: 'surface',   // #135 — reads the profile served by the domain under question; refuses, never throws
     quorumTrustDomains: 'surface', evidenceClass: 'primitive', parseCadenceInt: 'primitive', authorityCheckpointId: 'primitive',
     authorityScopeId: 'primitive', checkpointMapLeaf: 'primitive', checkpointRecoveryClaim: 'primitive',
     checkpointUniquenessClaim: 'primitive', epochTransitionClaim: 'primitive', evidenceReceiptClaim: 'primitive',
@@ -2993,7 +3006,9 @@ console.log('\n═════════════════════�
   const oStmt = () => ({ claim: {}, sig: { sig: 'a', pub: 'b' } }), oChain = () => [{ body: {}, sig: { sig: 'a', pub: 'b' } }];
   const oEv = () => ({ proof_kind: 'pow-header-chain', facts: { substrate: 'bitcoin', position: '1' } }), oList = () => [{ source_id: 'a' }];   // round-38 P1-02 — reachability fixtures for the exported evidence-algebra surfaces (now admitted, no longer exempt as 'primitive')
   const oAssur = () => ({ integrity: 'valid', identity: 'authoritative', freshness: 'attested', time: 'anchored' });   // round-39 P1-02 — a valid-shaped assurance state; the lattice surfaces (le/meet/join/projectTier/capAssurance) now RETURN (⊥/false/'NONE') on a hostile operand rather than throw, so the sweep reaches every position
+  const oProfile = () => ({ summary: 'prose', declares: { serves: ['witness'], copies: [{ artifact: 'genesis', url: 'https://m.test/g' }] } });   // #135 — a VALID profile carrying both halves, so the hostile position is reached past the shape guards rather than short-circuiting on the first type test
   const SIG = {
+    parseProfile: [oProfile],
     verify: [oDoc, oOpts], verifyAsync: [oDoc, oOpts], verifyStream: [oFrames, oConf], verifyJson: [oBytes, oOpts],
     verifyAnchor: [oHash, oProof, oOpts], verifyEvidenceReceipt: [oStmt, oConf], verifyActiveGenesisUniqueness: [oProof, oConf],
     verifyAuthorityBundle: [oConf, oConf], verifyAuthorityCheckpointChain: [oChain, oConf], verifyCheckpointMapUniqueness: [oProof, oConf],

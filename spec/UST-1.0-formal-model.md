@@ -2251,6 +2251,11 @@ operator profile is normative prose that **no tool has ever fetched** — the co
 `ust-keylog`, `ust-cadence` and `ust-witness`, and never `/.well-known/ust`. So every optional surface is judged
 on observation alone, and observation cannot tell two very different worlds apart.
 
+**State update (2026-08-03, #135), and the argument below is unaffected.** A reader now exists: the discovery
+check fetches `/.well-known/ust` and takes `D` from its `serves` array. The 2×2 is decided by the core exactly as
+stated. What the first reader turned from latent into live is a question this section did not have to ask while
+nothing read the document — what a verifier does with a profile key it does not know — and F.5p.1 answers it.
+
 **The collapse.** Let `S` be an optional surface for domain `n` (witness, cadence, a companion copy). A verifier
 fetching it observes `obs(S) ∈ {present, absent}`. Two situations produce `absent`:
 
@@ -2294,6 +2299,64 @@ and it is corrected in the same change that first gives the profile a reader.
 **Conformance (math ⇒ code ⇒ green vector, `packages/ust-protocol/conformance.mjs`).**
 - the 2×2 is decided by the core, not by each tool: declared+absent FAILS, undeclared+absent is NOT OFFERED, and both present cases attest.
 - declaring is monotone in obligation: no declaration turns an absent surface into a pass.
+
+## F.5p.1 A profile BINDS and DESCRIBES, and one extension rule cannot serve both (#135)
+
+F.5p gave the profile its separator while nothing read the document. With a reader, the document's own shape
+becomes a question, and the measurement that forced it is the reference operator's: its profile carries
+`summary`, `rights`, `paid`, `time_semantics` and `links` — prose addressed to a person, binding nothing — and
+carries no `serves`, no substrate list and no copy locator, while serving a witness log and a key log and
+anchoring into two substrates. The machine-read half was absent for months and no surface noticed, because
+nothing in the document says which half a key belongs to.
+
+**Two requirements, each independently forced, on what a verifier does with a key it does not know.**
+
+- **A BINDING key may not be silently dropped.** §20.1 already settles this for one instance: an implementation
+  asked to carry an independence coordinate MUST answer `E-REPLICATION` rather than accept and ignore it, because
+  a field silently dropped is one some later surface starts reading. The argument does not depend on which field
+  it was — dropping any member of the declaration set converts a stated obligation into no obligation, silently,
+  on the side that was supposed to be checking.
+- **A DESCRIBING key must be silently dropped.** Otherwise one added line of operator prose fails every deployed
+  verifier, and the profile becomes unextendable — which destroys the monotone-in-obligation property F.5p rests
+  on, since an operator that cannot safely add a field cannot safely add an obligation either.
+
+**Theorem F.5p.1 (no flat profile satisfies both).** Let `P` be the served profile, `K` its key set, and
+`bind: K → {0,1}` the predicate that `k` creates an obligation a verifier checks. Let `V` implement specification
+version `v`, and let `K_v` be the keys `v` defines. For `k ∉ K_v` the verifier must evaluate `bind(k)` to choose
+between refusing and ignoring. But `bind` is fixed by the specification, and `k ∉ K_v` says precisely that `v`
+does not define `k`: `bind(k)` is not in `V`'s information. So on exactly the keys where the choice matters, the
+two requirements above are jointly unsatisfiable over a flat `P`. *Proof.* Both requirements are conditions on
+`V`'s action at `k ∉ K_v`, and they demand opposite actions; a verifier that could tell them apart would be
+computing `bind(k)` from `σ(P, v)`, which does not contain it. ∎
+
+**Corollary F.5p.1a (the partition must be POSITIONAL, and a naming convention will not do).** Partition `P` into
+`P_open`, where `bind ≡ 0` by construction, and `P_closed`, where `bind ≡ 1` by construction, at positions the
+specification fixes. Then `bind(k) = [k ∈ P_closed]` is computable from POSITION, which `V` observes, without
+knowing `k` — an unknown key in `P_open` is prose and is ignored, an unknown key in `P_closed` is a declaration
+this verifier cannot honour and is refused. A partition by key NAMING — prefix, suffix, any convention — restores
+the defect and adds a worse one: the publisher chooses the name, so the publisher chooses whether its own
+statement binds it, which is the self-grant F.5a.1 excludes.
+
+**Corollary F.5p.1b (under-declaration remains safe, unchanged).** A publisher may place a fact in `P_open` and
+bind nothing by it. It gains nothing: the top row of F.5p's table does not consult `D`, so a surface that is
+PRESENT is attested whether declared or not, and moving a fact out of `P_closed` can only remove an obligation,
+never create a pass. This is why the partition needs no anti-evasion rule — F.5p's monotonicity already supplies
+one.
+
+**Corollary F.5p.1c (the closed half is nested, not a second path).** `P_closed` sits inside the profile document
+rather than at a well-known path of its own. A second path is a second surface that must be kept in byte
+agreement with the first, and a divergence between two served copies of one operator's declarations is precisely
+the failure F.5o measures for companion copies — here manufactured by the specification rather than by an
+operator. One document, one fetch, one cache identity, and `loc_std` for the profile stays a single point under
+F.5p's relocation theorem.
+
+**Binding: pending — thelabmd/UST-Protocol#135.** The 2×2 of F.5p is realized; the partition is not. Today the
+reader takes `serves` from the flat top level, which is `P_closed` of size one with no unknown-key rule at all.
+
+**Conformance (math ⇒ code ⇒ green vector, once realized).**
+- an unknown key inside the closed half is REFUSED, and the same key inside the open half is ignored — the two
+  differ only in position, so the vector pair is the theorem.
+- a declaration placed in the open half binds nothing and grants nothing: the present-surface row is unchanged.
 
 ## F.5q Darkness is a UNIVERSAL claim, so its domain must be declared (#120)
 
