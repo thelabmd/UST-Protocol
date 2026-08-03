@@ -50,6 +50,12 @@ export const mermaidInit = () => `%%{init: {'theme':'base','themeVariables':{`
   + `'primaryBorderColor':'${T.line}','secondaryColor':'${T.paper}','tertiaryColor':'${T.paper}',`
   + `'lineColor':'${T.ink3}','textColor':'${T.ink}','mainBkg':'${T.line2}','nodeBorder':'${T.line}',`
   + `'clusterBkg':'${T.bgPanel}','clusterBorder':'${T.borderCard}','edgeLabelBackground':'${T.paper}',`
+  // gantt takes NO classDef, so its colours have to arrive through themeVariables or not at all
+  + `'sectionBkgColor':'${T.paper}','altSectionBkgColor':'${T.line2}','sectionBkgColor2':'${T.line2}',`
+  + `'taskBkgColor':'${T.line2}','taskBorderColor':'${T.line}','taskTextColor':'${T.ink}',`
+  + `'taskTextOutsideColor':'${T.ink2}','taskTextDarkColor':'${T.ink}','activeTaskBkgColor':'${T.accent}',`
+  + `'activeTaskBorderColor':'${T.accent}','doneTaskBkgColor':'${T.validLight}','doneTaskBorderColor':'${T.validLight}',`
+  + `'critBkgColor':'${T.invalid}','critBorderColor':'${T.invalid}','gridColor':'${T.line}','todayLineColor':'${T.invalid}',`
   + `'fontFamily':'${MONO}'}}}%%`;
 
 /** The class palette. Emit once per diagram, after the nodes; apply with `class A,B accent`. */
@@ -65,8 +71,19 @@ export const mermaidClassDefs = () => [
   `linkStyle default stroke:${T.ink3},stroke-width:1px;`,
 ].join('\n');
 
-/** Wrap diagram source in a fenced mermaid block carrying the theme and the classes. */
-export const mermaid = (source) => '```mermaid\n' + mermaidInit() + '\n' + source.trim() + '\n' + mermaidClassDefs() + '\n```';
+// `classDef` and `linkStyle` belong to the FLOWCHART family and to no other diagram. MEASURED 2026-08-03: the first
+// version of this wrapper appended them unconditionally, and GitHub answered a gantt with
+// `Parse error … Expecting 'taskData', got ':'` — a wrapper that is wrong for a whole class of inputs, discovered by
+// the rendered page rather than by anything here. So the family is DECIDED FROM THE SOURCE, and everything outside it
+// gets the theme alone; its colours arrive through themeVariables, which is why the init above carries the gantt keys.
+const CLASSDEF_FAMILY = /^\s*(flowchart|graph|classDiagram|stateDiagram(-v2)?|erDiagram)\b/;
+export const takesClassDefs = (source) => CLASSDEF_FAMILY.test(String(source ?? ''));
+
+/** Wrap diagram source in a fenced mermaid block carrying the theme, and the classes when the family accepts them. */
+export const mermaid = (source) => {
+  const body = String(source ?? '').trim();
+  return '```mermaid\n' + mermaidInit() + '\n' + body + (takesClassDefs(body) ? '\n' + mermaidClassDefs() : '') + '\n```';
+};
 
 // ── `--check`: every colour this module EMITS must come from TOKENS. A hex typed at a call site is exactly the
 // drift this file exists to prevent, and a palette nobody checks is a second place to be wrong.
@@ -80,6 +97,13 @@ if (process.argv[1] && process.argv[1].endsWith('lab-palette.mjs') && process.ar
   if (!controlHit || !controlMiss) { console.error('✗ CONTROL: the token membership test does not discriminate'); bad++; }
   if (stray.length) { console.error(`✗ ${stray.length} colour(s) emitted that are not in TOKENS: ${stray.join(', ')}`); bad++; }
   if (!emitted.length) { console.error('✗ nothing emitted — the sweep is blind'); bad++; }
+  // the family rule, both directions — a gantt that receives classDefs does not render at all
+  const ganttOut = mermaid('gantt\n  dateFormat YYYY-MM-DD\n  section s\n  t :done, 2026-01-01, 1d');
+  const flowOut = mermaid('flowchart TB\n  A --> B');
+  if (/classDef|linkStyle/.test(ganttOut)) { console.error('✗ a gantt received classDef/linkStyle — mermaid refuses to parse it'); bad++; }
+  if (!/classDef/.test(flowOut)) { console.error('✗ a flowchart received NO classDef — the palette would never apply'); bad++; }
+  for (const kind of ['pie', 'sequenceDiagram', 'gitGraph', 'journey', 'timeline', 'mindmap'])
+    if (/classDef|linkStyle/.test(mermaid(kind + '\n  x'))) { console.error(`✗ ${kind} received classDef/linkStyle`); bad++; }
   if (bad) process.exit(1);
   console.log(`  ✓ lab palette: ${Object.keys(TOKENS).length} tokens, ${new Set(emitted).size} distinct colours emitted, none invented`);
 }
