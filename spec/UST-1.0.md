@@ -1043,6 +1043,22 @@ own hand-over. A consumer that resolved the old genesis has already fetched this
 arrives on a surface it reads anyway, and needs no discovery mechanism of its own. A supersession missing EITHER
 conjunct is ignored, exactly as stated above.
 
+**Delivery is the publisher's burden, not the protocol's (F.5z.4/.5).** §20.1 defines ONE key-log path, and
+after a re-rooting it serves the NEW epoch's log — so the closed log carrying the `reroot` is no longer
+reachable there. No choice of path repairs this: a publisher controls what it serves, so for any path
+"no supersession exists" and "it is not being handed to you" are the same observation. What the protocol
+guarantees instead is that the consumer's behaviour WITHOUT the proof is safe — the claim is ignored, so a
+consumer holding the old genesis simply does not follow, which is a refusal rather than a stranding.
+
+A publisher that WANTS its continuity recognized therefore carries the signed entry in the WITNESS LOG, on
+the `genesis_log` entry it closes, beside the `superseded_by` that entry already carries. That endpoint is
+already fetched when resolving name authority and is already keyed per genesis, and it gains no authority by
+carrying the transcript: the transcript verifies against the OLD genesis's own root key, which such a
+consumer holds by hypothesis — so the log may OMIT but can never FORGE, exactly as with an anchor proof.
+The two halves MUST agree: an entry whose `superseded_by` differs from its transcript's `to_genesis` is
+contradictory and fails closed. The signed half is set ONCE and may never be dropped — a log that loses it
+silently downgrades a proven continuity to an unproven one, which the §12.1 no-shrink rule refuses.
+
 **A re-rooting is a CROSSING, and it is not one event (F.5y).** Several structures a publisher maintains are
 ROOTED in the genesis `content_hash` — their first element, or their active pointer, names it. A publisher
 re-rooting from `g_A` to `g_B` MUST cross EVERY such structure it has INSTANTIATED. The crossings are
@@ -1082,6 +1098,7 @@ WitnessLog := { "domain_shard": string,            // MUST equal the serving nam
                 "active":       content_hash,      // the publisher's view of the current genesis
                 "genesis_log":  [ { "content_hash": content_hash,      // of a genesis transcript (§12.1)
                                     ["superseded_by": content_hash,]   // §12.1 genesis-recovery/supersession
+                                    ["supersession": <key-log `reroot` transcript>,]  // F.5z.5 — the SIGNED half
                                     "anchors": [ AnchorProof, … ] } ] }
 ```
 `AnchorProof` is EXACTLY the §11.2 shape (`{root, path, anchor}`, substrate per the §17 registry; for a

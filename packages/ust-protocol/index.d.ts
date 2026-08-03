@@ -117,6 +117,7 @@ export function resolveCadenceBytes(genesisBytes: unknown, cadenceLogBytes: unkn
 export function resolveCheckpointRoots(genesis: unknown): unknown;
 export function resolveKeys(genesis: unknown, keylog?: unknown): UstKeyResolution;
 export function resolveKeysBytes(genesisBytes: unknown, keylogBytes: unknown): unknown;
+export function resolveSupersession(genesis: unknown, witnessLog: unknown): unknown;
 export const ROLE_CLASSES: Readonly<{ 'name-binding-root': readonly ['genesis', 'key', 'cadence']; data: readonly ['observation', 'derivation', 'attestation']; issuance: readonly ['attestation'] }>;
 export const RULE_CONTRACTS: unknown;
 export function seal(state: unknown, privKeyObj: unknown, pubB64url: unknown): UstDocument;

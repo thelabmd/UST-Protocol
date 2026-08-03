@@ -3124,6 +3124,10 @@ function noShrinkInner(prior, next) {
     if (na < oa) return `entry ${String(o.content_hash).slice(0, 15)}… lost anchors (${oa}→${na})`;
     const os = o.superseded_by ?? undefined, ns = n.superseded_by ?? undefined;   // null ≡ absent
     if (os !== undefined && ns !== os) return `entry ${String(o.content_hash).slice(0, 15)}… supersession REWRITTEN — it is set once`;
+    // the SIGNED half is set once too, and may never be dropped: a log that loses it silently downgrades a proven
+    // continuity to an unproven one, which is the shrink this rule exists to refuse.
+    if (o.supersession !== undefined && n.supersession === undefined) return `entry ${String(o.content_hash).slice(0, 15)}… LOST its signed supersession — the proof of continuity may not be dropped`;
+    if (o.supersession !== undefined && n.supersession !== undefined && canon(o.supersession) !== canon(n.supersession)) return `entry ${String(o.content_hash).slice(0, 15)}… signed supersession REWRITTEN — it is set once`;
   }
   return null;
 }
@@ -3145,7 +3149,7 @@ export function witnessSuccessor(prior, next) {
 
 function successorInner(prior, next) {
   if (next === null || typeof next !== 'object' || Array.isArray(next)) return { error: 'witnessSuccessor: the successor descriptor must be an object' };
-  const { domain_shard, content_hash, anchors = null } = next;
+  const { domain_shard, content_hash, anchors = null, supersession = null } = next;
   if (typeof domain_shard !== 'string' || !domain_shard) return { error: 'witnessSuccessor: domain_shard must be a non-empty string' };
   if (typeof content_hash !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(content_hash)) return { error: 'witnessSuccessor: content_hash must be a sha256: digest' };
   const list = anchors == null ? [] : (Array.isArray(anchors) ? anchors : [anchors]);
@@ -3179,15 +3183,56 @@ function successorInner(prior, next) {
   if (actives.length > 1) return { error: `prior log has ${actives.length} active entries — a fork, not a chain; resolve it before superseding` };
   if (prior.genesis_log.some((e) => e.content_hash === content_hash)) return { error: 'the new genesis hash is ALREADY in the log — that is a rewind, not a supersession' };
 
+  // F.5z.5 — the log becomes the COURIER of the signed half. `supersession` is the root-signed `reroot` transcript
+  // from the OUTGOING epoch's key log, placed on the entry it closes. It grants this endpoint no authority: the
+  // transcript verifies against the OLD genesis's own root key, which a consumer holding that genesis already has,
+  // so the log can OMIT but never FORGE — the same standing an anchor proof has here. Omission is not a hole to
+  // plug: by F.5z.4 a consumer that cannot reach the proof correctly REFUSES to follow.
+  const closed = supersession === undefined || supersession === null ? {} : { supersession };
   const log = {
     domain_shard,
     active: content_hash,
-    genesis_log: [...prior.genesis_log.map((e) => (e === actives[0] ? { ...e, superseded_by: content_hash } : { ...e })), entry],
+    genesis_log: [...prior.genesis_log.map((e) => (e === actives[0] ? { ...e, superseded_by: content_hash, ...closed } : { ...e })), entry],
   };
   const shrank = witnessNoShrink(prior, log);            // the ceremony checks ITSELF with the rule the mirror will apply
   return shrank ? { error: `successor would not survive the no-shrink rule: ${shrank}` } : { log };
 }
 
+
+/**
+ * F.5z.5 READ side — given a genesis and the served witness log, decide whether this identity was SUPERSEDED and
+ * whether the claim is PROVEN. Returns one of:
+ *   { superseded: false }                              — no entry claims it
+ *   { superseded: true, proven: false, detail }        — `superseded_by` present, signed half missing or bad
+ *   { superseded: true, proven: true, to }             — a root-signed terminal `reroot` naming exactly that successor
+ *
+ * The verification is `resolveKeys` itself, not a second implementation: a `reroot` is valid iff the OLD genesis
+ * plus that single entry resolve, which is already where root-signing, prev-chaining, the cycle refusal and
+ * terminality live. One rule, one place — a second copy here is how the two would drift.
+ *
+ * `proven: false` is a REFUSAL, not a hole (F.5z.4): a consumer that cannot reach the proof does not follow, and
+ * that is the correct behaviour rather than a stranding to be engineered away.
+ */
+export function resolveSupersession(genesis, witnessLog) {
+  // TOTAL at the door, like every consumer surface here: a hostile log must yield a verdict, never a host throw.
+  try {
+    const g = admitDeep(genesis); if (g === ADMIT_REJECT || !g || typeof g !== 'object') return { superseded: false, detail: 'genesis is not an inert record' };
+    const w = admitDeep(witnessLog); if (w === ADMIT_REJECT || !w || typeof w !== 'object' || !Array.isArray(w.genesis_log)) return { superseded: false, detail: 'witness log unreadable — nothing is claimed about this genesis' };
+    const mine = contentHash(g);
+    const entry = w.genesis_log.find((e) => e && e.content_hash === mine);
+    if (!entry || (entry.superseded_by ?? undefined) === undefined) return { superseded: false };
+    const claimed = entry.superseded_by;
+    if (!isHashStr(claimed)) return { superseded: true, proven: false, detail: 'superseded_by is not a content_hash' };
+    if (entry.supersession === undefined || entry.supersession === null)
+      return { superseded: true, proven: false, to: claimed, detail: 'the witness log claims a supersession and carries no SIGNED half — §12.1 P2 requires both, so this claim is ignored (F.5z.4)' };
+    const r = resolveKeys(g, [entry.supersession]);
+    if (r.error) return { superseded: true, proven: false, to: claimed, detail: `the signed half does not resolve against this genesis (${r.error}: ${r.detail ?? ''})` };
+    if (r.supersededBy === null) return { superseded: true, proven: false, to: claimed, detail: 'the carried entry is a key-log entry but not a `reroot` — it names no successor' };
+    // the corollary: the two halves must AGREE, or the log is contradictory and fails closed
+    if (r.supersededBy !== claimed) return { superseded: true, proven: false, to: claimed, detail: `the signed half names ${String(r.supersededBy).slice(0, 20)}… and the index says ${String(claimed).slice(0, 20)}… — contradictory, fail closed` };
+    return { superseded: true, proven: true, to: claimed };
+  } catch { return { superseded: false, detail: 'supersession resolution refused a hostile input' }; }
+}
 
 export async function witnessNoFork(shard, genesisHash, opts) {
   // rev34 R1 (round-29 P1-01 / div1) — witnessNoFork is CONSUMER SURFACE: it is exported, takes an untrusted endpoint body,

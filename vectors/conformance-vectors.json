@@ -9106,6 +9106,211 @@
       "expect": {
         "error": "E-KEY"
       }
+    },
+    {
+      "kind": "supersession",
+      "id": "reroot-20-courier-proves-successor",
+      "rule": "F.5z.5 — the witness log CARRIES the signed half on the entry it closes; a holder of the old genesis proves the successor from its own root key",
+      "genesis": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "noosphere.md",
+            "ust_id": "ust:20260628.10",
+            "key_id": "sha256:077da5455a0a71a55edb5ae3d4f5c4b5e846b7a144e17a0cfa73104939be14f3",
+            "class": "genesis"
+          },
+          "time": {
+            "generated_at": "2026-08-03T12:00:00Z",
+            "valid_from": "2026-08-03T12:00:00Z",
+            "valid_to": "2036-01-01T00:00:00Z"
+          },
+          "data": {
+            "genesis": {
+              "kind": "captured",
+              "value": {
+                "pub": "3L5P2vQ8YUaIm4Kw5pD8iMEoZgUuo-oEKx95iLylrgg",
+                "role": "name-binding-root"
+              }
+            }
+          },
+          "hashes": {
+            "genesis": "sha256:02ba84fb637ca3133901b2379498b88ffa91dacc95569a382d40f4164e715a6c"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:077da5455a0a71a55edb5ae3d4f5c4b5e846b7a144e17a0cfa73104939be14f3",
+          "pub": "3L5P2vQ8YUaIm4Kw5pD8iMEoZgUuo-oEKx95iLylrgg",
+          "sig": "LOpk-hzlfZRwlLVLxwh-LcWzVYgYkDpYWGqFyM63VzfsYoGoTnlq7rcUiC7_3BuZdfl2HGO_tCrJksaTbudoAQ"
+        }
+      },
+      "witness": {
+        "domain_shard": "noosphere.md",
+        "active": "sha256:b67a900567f0f2313c000da679db9a11d992483587ce53f583ac7bf6f9c696fa",
+        "genesis_log": [
+          {
+            "content_hash": "sha256:6b33a9c99ad1d8cb14138375116f69a3b120c706c84558fc646ebca6aabd0b06",
+            "superseded_by": "sha256:b67a900567f0f2313c000da679db9a11d992483587ce53f583ac7bf6f9c696fa",
+            "supersession": {
+              "ust": "1.0",
+              "state": {
+                "id": {
+                  "domain_shard": "noosphere.md",
+                  "ust_id": "ust:20260628.11",
+                  "key_id": "sha256:077da5455a0a71a55edb5ae3d4f5c4b5e846b7a144e17a0cfa73104939be14f3",
+                  "class": "key"
+                },
+                "time": {
+                  "generated_at": "2026-08-03T12:00:00Z",
+                  "valid_from": "2026-08-03T12:00:00Z",
+                  "valid_to": "2036-01-01T00:00:00Z"
+                },
+                "data": {
+                  "key_op": {
+                    "kind": "captured",
+                    "value": {
+                      "op": "reroot",
+                      "to_genesis": "sha256:b67a900567f0f2313c000da679db9a11d992483587ce53f583ac7bf6f9c696fa"
+                    }
+                  }
+                },
+                "hashes": {
+                  "key_op": "sha256:78fffe106d2a841af326dc5e6140c1372ceb1efc2ad0d0a5c1ae8d887a79c503"
+                },
+                "provenance": {
+                  "prev": "sha256:6b33a9c99ad1d8cb14138375116f69a3b120c706c84558fc646ebca6aabd0b06"
+                }
+              },
+              "sig": {
+                "alg": "Ed25519",
+                "key_id": "sha256:077da5455a0a71a55edb5ae3d4f5c4b5e846b7a144e17a0cfa73104939be14f3",
+                "pub": "3L5P2vQ8YUaIm4Kw5pD8iMEoZgUuo-oEKx95iLylrgg",
+                "sig": "bU-fdFFTojNNUDHhA9PkDZmn6RCHzLuuHs02DujH0GsgmOj1kiwiTbSrEoWRxs5vXZ5lgcmPf2XQoE6LTTUQDA"
+              }
+            }
+          },
+          {
+            "content_hash": "sha256:b67a900567f0f2313c000da679db9a11d992483587ce53f583ac7bf6f9c696fa",
+            "superseded_by": null
+          }
+        ]
+      },
+      "expect": {
+        "superseded": true,
+        "proven": true,
+        "to": "sha256:b67a900567f0f2313c000da679db9a11d992483587ce53f583ac7bf6f9c696fa"
+      }
+    },
+    {
+      "kind": "supersession",
+      "id": "reroot-21-claim-without-signed-half-refused",
+      "rule": "F.5z.4 — a claim with no signed half is IGNORED, so the consumer does not follow; a refusal, never a stranding",
+      "genesis": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "noosphere.md",
+            "ust_id": "ust:20260628.10",
+            "key_id": "sha256:077da5455a0a71a55edb5ae3d4f5c4b5e846b7a144e17a0cfa73104939be14f3",
+            "class": "genesis"
+          },
+          "time": {
+            "generated_at": "2026-08-03T12:00:00Z",
+            "valid_from": "2026-08-03T12:00:00Z",
+            "valid_to": "2036-01-01T00:00:00Z"
+          },
+          "data": {
+            "genesis": {
+              "kind": "captured",
+              "value": {
+                "pub": "3L5P2vQ8YUaIm4Kw5pD8iMEoZgUuo-oEKx95iLylrgg",
+                "role": "name-binding-root"
+              }
+            }
+          },
+          "hashes": {
+            "genesis": "sha256:02ba84fb637ca3133901b2379498b88ffa91dacc95569a382d40f4164e715a6c"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:077da5455a0a71a55edb5ae3d4f5c4b5e846b7a144e17a0cfa73104939be14f3",
+          "pub": "3L5P2vQ8YUaIm4Kw5pD8iMEoZgUuo-oEKx95iLylrgg",
+          "sig": "LOpk-hzlfZRwlLVLxwh-LcWzVYgYkDpYWGqFyM63VzfsYoGoTnlq7rcUiC7_3BuZdfl2HGO_tCrJksaTbudoAQ"
+        }
+      },
+      "witness": {
+        "domain_shard": "noosphere.md",
+        "active": "sha256:b67a900567f0f2313c000da679db9a11d992483587ce53f583ac7bf6f9c696fa",
+        "genesis_log": [
+          {
+            "content_hash": "sha256:6b33a9c99ad1d8cb14138375116f69a3b120c706c84558fc646ebca6aabd0b06",
+            "superseded_by": "sha256:b67a900567f0f2313c000da679db9a11d992483587ce53f583ac7bf6f9c696fa"
+          },
+          {
+            "content_hash": "sha256:b67a900567f0f2313c000da679db9a11d992483587ce53f583ac7bf6f9c696fa",
+            "superseded_by": null
+          }
+        ]
+      },
+      "expect": {
+        "superseded": true,
+        "proven": false,
+        "to": "sha256:b67a900567f0f2313c000da679db9a11d992483587ce53f583ac7bf6f9c696fa"
+      }
+    },
+    {
+      "kind": "supersession",
+      "id": "reroot-22-never-superseded-claims-nothing",
+      "rule": "F.5z — an identity nobody superseded says so; the positive vectors prove nothing without this control",
+      "genesis": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "noosphere.md",
+            "ust_id": "ust:20260628.10",
+            "key_id": "sha256:077da5455a0a71a55edb5ae3d4f5c4b5e846b7a144e17a0cfa73104939be14f3",
+            "class": "genesis"
+          },
+          "time": {
+            "generated_at": "2026-08-03T12:00:00Z",
+            "valid_from": "2026-08-03T12:00:00Z",
+            "valid_to": "2036-01-01T00:00:00Z"
+          },
+          "data": {
+            "genesis": {
+              "kind": "captured",
+              "value": {
+                "pub": "3L5P2vQ8YUaIm4Kw5pD8iMEoZgUuo-oEKx95iLylrgg",
+                "role": "name-binding-root"
+              }
+            }
+          },
+          "hashes": {
+            "genesis": "sha256:02ba84fb637ca3133901b2379498b88ffa91dacc95569a382d40f4164e715a6c"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:077da5455a0a71a55edb5ae3d4f5c4b5e846b7a144e17a0cfa73104939be14f3",
+          "pub": "3L5P2vQ8YUaIm4Kw5pD8iMEoZgUuo-oEKx95iLylrgg",
+          "sig": "LOpk-hzlfZRwlLVLxwh-LcWzVYgYkDpYWGqFyM63VzfsYoGoTnlq7rcUiC7_3BuZdfl2HGO_tCrJksaTbudoAQ"
+        }
+      },
+      "witness": {
+        "domain_shard": "noosphere.md",
+        "active": "sha256:6b33a9c99ad1d8cb14138375116f69a3b120c706c84558fc646ebca6aabd0b06",
+        "genesis_log": [
+          {
+            "content_hash": "sha256:6b33a9c99ad1d8cb14138375116f69a3b120c706c84558fc646ebca6aabd0b06",
+            "superseded_by": null
+          }
+        ]
+      },
+      "expect": {
+        "superseded": false
+      }
     }
   ]
 }

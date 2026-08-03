@@ -175,6 +175,12 @@ for (const v of V.vectors) {
     // #75 ROOT 2 — the key-log state machine as a language-neutral vector: run resolveKeys over embedded signed docs.
     // `expect.roles` (round 79) is OPTIONAL and additive: a vector that says nothing about roles asserts nothing
     // about them, so every pre-role vector keeps its exact meaning — the same continuity the rule itself obeys.
+    // F.5z.5 — the courier, driven from bytes so any implementation can conform: given a genesis and a served
+    // witness log, is this identity superseded, and is the claim PROVEN?
+    case 'supersession': { const r = P.resolveSupersession(v.genesis, v.witness);
+      check(v.id, r.superseded === v.expect.superseded
+        && (v.expect.proven === undefined || r.proven === v.expect.proven)
+        && (v.expect.to === undefined || r.to === v.expect.to)); break; }
     case 'keylog-state': { const r = P.resolveKeys(v.genesis, v.keylog);
       const rolesOk = !v.expect.roles || Object.entries(v.expect.roles).every(([k, want]) => r.roles?.get(k) === want);
       check(v.id, v.expect.error ? r.error === v.expect.error : (!r.error && r.active.size === v.expect.active_count && r.validKeys.size === v.expect.all_count && rolesOk)); break; }
@@ -516,6 +522,49 @@ check('#131 buildGenesis REFUSES an empty `roles` — declaring nothing is not a
   check('F.5z the `reroot` field set is CLOSED — a stray field is refused', P.resolveKeys(gA, [stray]).error === 'E-MALFORMED');
   // an identity that never rerooted must report ABSENCE, or the positive leg proves nothing
   check('F.5z an identity that never rerooted reports NO successor', P.resolveKeys(gA, []).supersededBy === null);
+}
+// ─── F.5z.4/.5 — the witness log is the COURIER of the signed half, and an unproven claim is REFUSED rather than
+// followed. Six legs: the honest path, the two ways a claim can be unproven, the contradiction, the no-shrink
+// protection, and the control that an identity nobody superseded says so.
+{
+  const R = kp('f1'.repeat(32)), K = kp('f2'.repeat(32)), sR = (x) => P.seal(x, R.priv, R.pubB64);
+  const id = (u) => ({ domain_shard: 'noosphere.md', ust_id: u, key_id: R.key_id });
+  const gA = sR(P.buildGenesis(id('ust:20260628.10'), T, R.pubB64));
+  const gB = sR(P.buildGenesis({ ...id('ust:20260629.10'), key_id: K.key_id }, T, K.pubB64));
+  const hA = P.contentHash(gA), hB = P.contentHash(gB);
+  const rr = sR(P.buildKeyLogEntry(id('ust:20260628.11'), T, { op: 'reroot', to_genesis: hB }, hA));
+  const base = P.witnessSuccessor(null, { domain_shard: 'noosphere.md', content_hash: hA }).log;
+  const withSig = P.witnessSuccessor(base, { domain_shard: 'noosphere.md', content_hash: hB, supersession: rr }).log;
+  const noSig = P.witnessSuccessor(base, { domain_shard: 'noosphere.md', content_hash: hB }).log;
+
+  check('F.5z.5 the witness log CARRIES the signed half and a holder of the old genesis proves the successor', (() => {
+    const r = P.resolveSupersession(gA, withSig);
+    return r.superseded === true && r.proven === true && r.to === hB;
+  })());
+  check('F.5z.4 a supersession claimed with NO signed half is refused, not followed', (() => {
+    const r = P.resolveSupersession(gA, noSig);
+    // the DETAIL is asserted, not merely `proven === false`: without the signed half `resolveKeys` would refuse
+    // the entry anyway, so a verdict-only assertion passes whether or not this clause exists — it would aim
+    // BESIDE its own claim. Measured: inverting the clause reddened nothing until this line named it.
+    return r.superseded === true && r.proven === false && r.to === hB && String(r.detail).includes('carries no SIGNED half');
+  })());
+  check('F.5z.5 a signed half that does not resolve against THIS genesis is refused', (() => {
+    const alien = sR(P.buildKeyLogEntry(id('ust:20260628.11'), T, { op: 'reroot', to_genesis: hB }, hB));   // prev = the WRONG genesis
+    const bad = { ...withSig, genesis_log: withSig.genesis_log.map((e) => (e.content_hash === hA ? { ...e, supersession: alien } : e)) };
+    return P.resolveSupersession(gA, bad).proven === false;
+  })());
+  check('F.5z.5 the two halves must AGREE — an index naming a different successor fails closed', (() => {
+    const other = P.contentHash(sR(P.buildGenesis({ ...id('ust:20260630.10'), key_id: K.key_id }, T, K.pubB64)));
+    const bad = { ...withSig, genesis_log: withSig.genesis_log.map((e) => (e.content_hash === hA ? { ...e, superseded_by: other } : e)) };
+    const r = P.resolveSupersession(gA, bad);
+    return r.proven === false && String(r.detail).includes('contradictory');
+  })());
+  // same discipline: the DROP rule and the REWRITE rule both return a string, so only the message separates them.
+  check('F.5z.5 no-shrink refuses a log that DROPPED the signed half', String(P.witnessNoShrink(withSig, noSig)).includes('LOST its signed supersession'));
+  check('F.5z an identity nobody superseded reports so, and claims nothing', (() => {
+    const r = P.resolveSupersession(gA, base);
+    return r.superseded === false && r.proven === undefined;
+  })());
 }
 check('F5 encrypted w/o enc→E-MALFORMED', (() => { const st = { id: ID, time: T, data: { e: { kind: 'captured', privacy: 'encrypted', commit: 'sha256:' + 'cd'.repeat(32) } }, hashes: { e: P.partitionHash({ commit: 'sha256:' + 'cd'.repeat(32) }) } }; return P.verify(P.seal(st, A.priv, A.pubB64), { context: 'data' }).error === 'E-MALFORMED'; })());
 check('F6 non-NFC member name→E-CANON', (() => { try { P.canon({ ['e' + String.fromCharCode(0x301)]: '1' }); return false; } catch (e) { return e.code === 'E-CANON'; } })());
@@ -2840,7 +2889,7 @@ console.log('\n═════════════════════�
     verifyCheckpointUniqueness: 'surface', verifyEpochTransition: 'surface', verifyKeylogTerminality: 'surface',
     verifyNoForkEvidence: 'surface', resolveAuthority: 'surface', resolveByDiscovery: 'surface', resolveCadence: 'surface',
     resolveCadenceBytes: 'surface',   // round-47 rev69 — the SOUND bytes-in boundary (a pure function of immutable byte-strings; resolveCadence is its object adapter)
-    resolveCheckpointRoots: 'surface', resolveKeys: 'surface', resolveKeysBytes: 'surface', deriveAssurance: 'surface', deriveCheckpointFreshness: 'surface',
+    resolveCheckpointRoots: 'surface', resolveKeys: 'surface', resolveSupersession: 'surface', resolveKeysBytes: 'surface', deriveAssurance: 'surface', deriveCheckpointFreshness: 'surface',
     forkChoice: 'surface', noEventBacking: 'surface', verifiedGenesisContext: 'surface', checkAuthorityProof: 'surface',
     checkAuthorityProofBytes: 'surface', combineSubstrates: 'surface', combineInclusion: 'surface', witnessNoFork: 'surface',
     // ── EXEMPT (throw-by-contract): designed to throw on invalid — totality is not the contract ──
@@ -2925,7 +2974,7 @@ console.log('\n═════════════════════�
     compareEvidenceOrder: [oEv, oEv], quorumTrustDomains: [oList, oConf],   // round-38 P1-02 — the exported evidence algebra is now a consumer surface in the totality sweep (admits its operands)
     assuranceLE: [oAssur, oAssur], meetAssurance: [oAssur, oAssur], joinAssurance: [oAssur, oAssur], projectTier: [oAssur], capAssurance: [oAssur, oAssur], checkBounds: [oDoc],   // round-39 P1-02 — the assurance lattice + the exported bounds validator are consumer surfaces now that the door returns a sentinel (total-by-return, never a throw)
     resolveByDiscovery: [oDoc, oOpts, netMock], resolveCadence: [oGen, oArr, oStr, oOpts], resolveCadenceBytes: [oBytes, oBytes, oStr, oBytes], resolveCheckpointRoots: [oGen],
-    resolveKeys: [oGen, oArr], resolveKeysBytes: [oBytes, oBytes], deriveAssurance: [oGraph], deriveCheckpointFreshness: [oChain, oConf], forkChoice: [oFrames, oOpts],
+    resolveKeys: [oGen, oArr], resolveSupersession: [oGen, oConf], resolveKeysBytes: [oBytes, oBytes], deriveAssurance: [oGraph], deriveCheckpointFreshness: [oChain, oConf], forkChoice: [oFrames, oOpts],
     noEventBacking: [oConf, oConf, oFrames], verifiedGenesisContext: [oGen], checkAuthorityProof: [oConf, oConf],
     checkAuthorityProofBytes: [oBytes, oBytes], combineSubstrates: [oArr], combineInclusion: [oArr], witnessNoFork: [oStr, oHash, netMock],
   };

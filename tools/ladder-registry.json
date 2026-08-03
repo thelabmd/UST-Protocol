@@ -1094,6 +1094,14 @@
    "code": "packages/ust-protocol/index.mjs :: OP_FIELDS gains `reroot`, resolveKeys reports supersededBy, and an entry after a reroot is refused",
    "vector": "reroot-11-terminal-later-entry-refused",
    "test": "F.5z a root-signed `reroot` resolves and REPORTS the successor"
+  },
+  {
+   "round": 154,
+   "math": "Theorem F.5z.5 (the courier is the witness log, and it remains an index)",
+   "spec": "Delivery is the publisher's burden, not the protocol's (F.5z.4/.5)",
+   "code": "packages/ust-protocol/index.mjs :: witnessSuccessor carries the signed half, witnessNoShrink protects it, resolveSupersession verifies it through resolveKeys",
+   "vector": "reroot-20-courier-proves-successor",
+   "test": "F.5z.4 a supersession claimed with NO signed half is refused, not followed"
   }
  ],
  "first_accounted_round": 76,

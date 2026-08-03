@@ -2971,10 +2971,41 @@ the root admits exactly `{genesis, key, cadence}` (F.5e.1, rev91). Eliminate:
 One admissible carrier remains, so the shape is forced rather than preferred — and by F.7c a forced answer is the
 only kind this layer accepts. ∎
 
-*Corollary (discoverability stops being a separate problem).* A consumer holding `contentHash(g_A)` resolves
+*Corollary (discoverability stops being a separate problem).* ~~A consumer holding `contentHash(g_A)` resolves
 authority by fetching that genesis and its key log. The supersession therefore arrives on a surface it ALREADY
 reads: no new well-known path, no second fetch, and the stranded-consumer failure disappears without anyone
-inventing a discovery mechanism for it.
+inventing a discovery mechanism for it.~~ **WRONG, and corrected in place rather than rewritten (rev100).**
+§20.1 defines exactly ONE key-log path, and after a re-rooting it serves the NEW epoch's log. Measured: a
+consumer holding `hA` fetches it, receives a log chaining from `g_B`, and is refused `E-PREV` — the signed half
+is unreachable at precisely the moment it is needed. The reasoning was right that the key log is the CARRIER and
+wrong that carriage implies DELIVERY. F.5z.4 and F.5z.5 replace it; F.5z.1–F.5z.3 are untouched.
+
+**Theorem F.5z.4 (delivery is not the protocol's to guarantee, and the consumer's default is already correct).**
+No served endpoint can distinguish ABSENCE from WITHHOLDING: the publisher chooses what it serves, so for any
+path `p`, "no supersession exists" and "the supersession is not being handed to you" are the same observation.
+Therefore no choice of path makes delivery guaranteed, and a design that tries buys nothing. What must hold
+instead is that the consumer's behaviour WITHOUT the proof is safe — and §12.1 P2 already provides it: a
+supersession missing either conjunct is IGNORED. A consumer holding `hA` that finds `g_B` served and no signed
+supersession therefore does not follow; it observes a name serving a root that is not its own, which is a
+REFUSAL, not a stranding. Delivery is consequently an incentive on the publisher — be followed — and never an
+obligation the protocol can enforce. ∎
+
+*Corollary (the earlier framing inverted the burden).* The replaced text treated a consumer that cannot reach
+the proof as a victim of a missing mechanism. It is instead a consumer behaving correctly: continuity is a claim,
+an unreachable claim is an unproven one, and unproven claims are refused everywhere else in this protocol.
+
+**Theorem F.5z.5 (the courier is the witness log, and it remains an index).** By F.5z.4 the only open question is
+where a publisher that WANTS its continuity recognized should place the transcript so a consumer finds it without
+a new mechanism. The witness log already (i) is fetched when resolving name authority, (ii) is keyed per genesis
+by `content_hash`, and (iii) carries the UNSIGNED half — `superseded_by` — on exactly the entry that needs the
+signed one. Placing the transcript on that entry grants the endpoint no authority: the transcript verifies against
+`g_A`'s own root key, which the consumer holds by hypothesis, so the log can OMIT but never FORGE — the same
+standing an anchor proof has there. No other served surface has all three properties, so the courier is forced
+in the same way the carrier was. ∎
+
+*Corollary (the two halves must agree).* An entry whose `superseded_by` differs from its transcript's
+`to_genesis` is contradictory and fails closed — the same discipline that already refuses a `content_hash`
+listed both active and superseded.
 
 *Corollary (the log is under the genesis, and that is no objection).* Being “under” the genesis describes what
 AUTHORIZES the log, not what it may speak about. The root is the party being superseded and the only one entitled

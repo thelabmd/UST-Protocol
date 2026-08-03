@@ -323,6 +323,11 @@
    "round": 153,
    "issue": 133,
    "no_recap": "The wire form is specified, realized and gated, but #133 is not closed: the operation exists in the reducer and in no CEREMONY — `ust reroot` still does not ask for the epoch-A root key, so no operator can yet produce one. A recap now would describe a reducer that admits an op nothing emits, which is the half-finished state this round was opened to end."
+  },
+  {
+   "round": 154,
+   "issue": 133,
+   "no_recap": "Both halves of §12.1 P2 now have a wire form and a courier, but #133 stays open for the same reason round 153 did: no CEREMONY emits either half. `ust reroot` still does not ask for the epoch-A root key, so the reducer admits an operation nothing produces. The recap belongs to the round that closes that gap, not to the two that specified it."
   }
  ]
 }
