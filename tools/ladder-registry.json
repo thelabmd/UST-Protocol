@@ -1086,6 +1086,14 @@
    "code": "packages/ust-cli/index.mjs :: runRerootCeremony + acceptReroot, acceptance indexed by the PRE-STATE rather than by the artifacts produced (F.5y.3)",
    "vector": "reroot-01-stream-not-crossed-refused",
    "test": "F.5y an uncrossed witness log makes the publisher its OWN fork"
+  },
+  {
+   "round": 153,
+   "math": "F.5z A supersession is a TERMINAL KEY-LOG ACT — the carrier is forced, not chosen (#133)",
+   "spec": "The SIGNED half of a supersession is a terminal key-log `reroot` (F.5z)",
+   "code": "packages/ust-protocol/index.mjs :: OP_FIELDS gains `reroot`, resolveKeys reports supersededBy, and an entry after a reroot is refused",
+   "vector": "reroot-11-terminal-later-entry-refused",
+   "test": "F.5z a root-signed `reroot` resolves and REPORTS the successor"
   }
  ],
  "first_accounted_round": 76,

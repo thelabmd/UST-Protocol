@@ -8824,6 +8824,288 @@
       "expect": {
         "complete": "provisional"
       }
+    },
+    {
+      "kind": "keylog-state",
+      "id": "reroot-10-signed-supersession-accepted",
+      "rule": "F.5z — the SIGNED half of a §12.1 P2 supersession is a root-signed key-log `reroot`; the log resolves and the root alone stays active",
+      "genesis": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "noosphere.md",
+            "ust_id": "ust:20260628.10",
+            "key_id": "sha256:2a16b5c9f6bbea040a5f6560d627c0b6b75d8858c980462dbed23e1c0d852c38",
+            "class": "genesis"
+          },
+          "time": {
+            "generated_at": "2026-08-03T12:00:00Z",
+            "valid_from": "2026-08-03T12:00:00Z",
+            "valid_to": "2036-01-01T00:00:00Z"
+          },
+          "data": {
+            "genesis": {
+              "kind": "captured",
+              "value": {
+                "pub": "JfwyxHilpPhORVegNC4IJ4yINkG2FJvbC0qYarbCy3g",
+                "role": "name-binding-root"
+              }
+            }
+          },
+          "hashes": {
+            "genesis": "sha256:10f8989608690cce6e7a23cc4fb288fc91fa7faf436f9c7930d98e23541da0ee"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:2a16b5c9f6bbea040a5f6560d627c0b6b75d8858c980462dbed23e1c0d852c38",
+          "pub": "JfwyxHilpPhORVegNC4IJ4yINkG2FJvbC0qYarbCy3g",
+          "sig": "JZQt_0DAScf6wi-xUo88B9StUxxAktPal9qEDvYaRRpSCQz1vpRjfsS4NksuvKr6y2pnXOLIGBNbmlZk1-TzCg"
+        }
+      },
+      "keylog": [
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "noosphere.md",
+              "ust_id": "ust:20260628.11",
+              "key_id": "sha256:2a16b5c9f6bbea040a5f6560d627c0b6b75d8858c980462dbed23e1c0d852c38",
+              "class": "key"
+            },
+            "time": {
+              "generated_at": "2026-08-03T12:00:00Z",
+              "valid_from": "2026-08-03T12:00:00Z",
+              "valid_to": "2036-01-01T00:00:00Z"
+            },
+            "data": {
+              "key_op": {
+                "kind": "captured",
+                "value": {
+                  "op": "reroot",
+                  "to_genesis": "sha256:ca96a274ce0f3fff48f3816eb6f5bcb47ce9c9b945d76f8f4e613008abf16e89"
+                }
+              }
+            },
+            "hashes": {
+              "key_op": "sha256:47662a4976f1e02a4c3996eb67934f0f7e17fb461d4b6d697b10351656202689"
+            },
+            "provenance": {
+              "prev": "sha256:c76b3fffc25b281b49f350eefcf0035ba521ef345468fd746b78a6f35a9fc9c5"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:2a16b5c9f6bbea040a5f6560d627c0b6b75d8858c980462dbed23e1c0d852c38",
+            "pub": "JfwyxHilpPhORVegNC4IJ4yINkG2FJvbC0qYarbCy3g",
+            "sig": "oamTIMHmq77ffmITLd3dTraCfBcDY6e7J7h71I3qaotUILX2fxOaWUz5z-ghJ6aZ8KM1b6WAMCCqaQIRubKPCw"
+          }
+        }
+      ],
+      "expect": {
+        "active_count": 1,
+        "all_count": 1
+      }
+    },
+    {
+      "kind": "keylog-state",
+      "id": "reroot-11-terminal-later-entry-refused",
+      "rule": "F.5z.3 — a `reroot` is TERMINAL: the root has named its successor, so any later entry is authority exercised after its own hand-over",
+      "genesis": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "noosphere.md",
+            "ust_id": "ust:20260628.10",
+            "key_id": "sha256:2a16b5c9f6bbea040a5f6560d627c0b6b75d8858c980462dbed23e1c0d852c38",
+            "class": "genesis"
+          },
+          "time": {
+            "generated_at": "2026-08-03T12:00:00Z",
+            "valid_from": "2026-08-03T12:00:00Z",
+            "valid_to": "2036-01-01T00:00:00Z"
+          },
+          "data": {
+            "genesis": {
+              "kind": "captured",
+              "value": {
+                "pub": "JfwyxHilpPhORVegNC4IJ4yINkG2FJvbC0qYarbCy3g",
+                "role": "name-binding-root"
+              }
+            }
+          },
+          "hashes": {
+            "genesis": "sha256:10f8989608690cce6e7a23cc4fb288fc91fa7faf436f9c7930d98e23541da0ee"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:2a16b5c9f6bbea040a5f6560d627c0b6b75d8858c980462dbed23e1c0d852c38",
+          "pub": "JfwyxHilpPhORVegNC4IJ4yINkG2FJvbC0qYarbCy3g",
+          "sig": "JZQt_0DAScf6wi-xUo88B9StUxxAktPal9qEDvYaRRpSCQz1vpRjfsS4NksuvKr6y2pnXOLIGBNbmlZk1-TzCg"
+        }
+      },
+      "keylog": [
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "noosphere.md",
+              "ust_id": "ust:20260628.11",
+              "key_id": "sha256:2a16b5c9f6bbea040a5f6560d627c0b6b75d8858c980462dbed23e1c0d852c38",
+              "class": "key"
+            },
+            "time": {
+              "generated_at": "2026-08-03T12:00:00Z",
+              "valid_from": "2026-08-03T12:00:00Z",
+              "valid_to": "2036-01-01T00:00:00Z"
+            },
+            "data": {
+              "key_op": {
+                "kind": "captured",
+                "value": {
+                  "op": "reroot",
+                  "to_genesis": "sha256:ca96a274ce0f3fff48f3816eb6f5bcb47ce9c9b945d76f8f4e613008abf16e89"
+                }
+              }
+            },
+            "hashes": {
+              "key_op": "sha256:47662a4976f1e02a4c3996eb67934f0f7e17fb461d4b6d697b10351656202689"
+            },
+            "provenance": {
+              "prev": "sha256:c76b3fffc25b281b49f350eefcf0035ba521ef345468fd746b78a6f35a9fc9c5"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:2a16b5c9f6bbea040a5f6560d627c0b6b75d8858c980462dbed23e1c0d852c38",
+            "pub": "JfwyxHilpPhORVegNC4IJ4yINkG2FJvbC0qYarbCy3g",
+            "sig": "oamTIMHmq77ffmITLd3dTraCfBcDY6e7J7h71I3qaotUILX2fxOaWUz5z-ghJ6aZ8KM1b6WAMCCqaQIRubKPCw"
+          }
+        },
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "noosphere.md",
+              "ust_id": "ust:20260628.12",
+              "key_id": "sha256:2a16b5c9f6bbea040a5f6560d627c0b6b75d8858c980462dbed23e1c0d852c38",
+              "class": "key"
+            },
+            "time": {
+              "generated_at": "2026-08-03T12:00:00Z",
+              "valid_from": "2026-08-03T12:00:00Z",
+              "valid_to": "2036-01-01T00:00:00Z"
+            },
+            "data": {
+              "key_op": {
+                "kind": "captured",
+                "value": {
+                  "op": "add",
+                  "pub": "yRyzziuE5LqF9WLs5B7f5OJ6_FLYjVB_ZqGGON-CPp8",
+                  "new_key_id": "sha256:407f2c87da0f67044c34fa9c76cd7d2afcb29dc775c83ebb46d4aafdf3b91e7b"
+                }
+              }
+            },
+            "hashes": {
+              "key_op": "sha256:83cb34253a8cf64ff8344d5657acae67c6f9cabadc472556084b66935eb84feb"
+            },
+            "provenance": {
+              "prev": "sha256:0ca3caac06afe4452b5b34d9e383177543c00533e675ab7108faca77ac20f536"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:2a16b5c9f6bbea040a5f6560d627c0b6b75d8858c980462dbed23e1c0d852c38",
+            "pub": "JfwyxHilpPhORVegNC4IJ4yINkG2FJvbC0qYarbCy3g",
+            "sig": "Tpwo_Uj7iVdy0qRS6WejTCtJhwlDRBtHdOo6nCv501Y9XeQCE9KNEq3U-0vtI8IKJlcrXffRYTSvI0VtxT8FCQ"
+          }
+        }
+      ],
+      "expect": {
+        "error": "E-KEY"
+      }
+    },
+    {
+      "kind": "keylog-state",
+      "id": "reroot-12-self-naming-is-a-cycle",
+      "rule": "F.5z — a `reroot` naming its OWN genesis is a hash cycle, not a supersession",
+      "genesis": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "noosphere.md",
+            "ust_id": "ust:20260628.10",
+            "key_id": "sha256:2a16b5c9f6bbea040a5f6560d627c0b6b75d8858c980462dbed23e1c0d852c38",
+            "class": "genesis"
+          },
+          "time": {
+            "generated_at": "2026-08-03T12:00:00Z",
+            "valid_from": "2026-08-03T12:00:00Z",
+            "valid_to": "2036-01-01T00:00:00Z"
+          },
+          "data": {
+            "genesis": {
+              "kind": "captured",
+              "value": {
+                "pub": "JfwyxHilpPhORVegNC4IJ4yINkG2FJvbC0qYarbCy3g",
+                "role": "name-binding-root"
+              }
+            }
+          },
+          "hashes": {
+            "genesis": "sha256:10f8989608690cce6e7a23cc4fb288fc91fa7faf436f9c7930d98e23541da0ee"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:2a16b5c9f6bbea040a5f6560d627c0b6b75d8858c980462dbed23e1c0d852c38",
+          "pub": "JfwyxHilpPhORVegNC4IJ4yINkG2FJvbC0qYarbCy3g",
+          "sig": "JZQt_0DAScf6wi-xUo88B9StUxxAktPal9qEDvYaRRpSCQz1vpRjfsS4NksuvKr6y2pnXOLIGBNbmlZk1-TzCg"
+        }
+      },
+      "keylog": [
+        {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "noosphere.md",
+              "ust_id": "ust:20260628.11",
+              "key_id": "sha256:2a16b5c9f6bbea040a5f6560d627c0b6b75d8858c980462dbed23e1c0d852c38",
+              "class": "key"
+            },
+            "time": {
+              "generated_at": "2026-08-03T12:00:00Z",
+              "valid_from": "2026-08-03T12:00:00Z",
+              "valid_to": "2036-01-01T00:00:00Z"
+            },
+            "data": {
+              "key_op": {
+                "kind": "captured",
+                "value": {
+                  "op": "reroot",
+                  "to_genesis": "sha256:c76b3fffc25b281b49f350eefcf0035ba521ef345468fd746b78a6f35a9fc9c5"
+                }
+              }
+            },
+            "hashes": {
+              "key_op": "sha256:f741b1bffdaac0714a710bd69650b975f698110a3e33463beb1cca3d22d1a4e6"
+            },
+            "provenance": {
+              "prev": "sha256:c76b3fffc25b281b49f350eefcf0035ba521ef345468fd746b78a6f35a9fc9c5"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:2a16b5c9f6bbea040a5f6560d627c0b6b75d8858c980462dbed23e1c0d852c38",
+            "pub": "JfwyxHilpPhORVegNC4IJ4yINkG2FJvbC0qYarbCy3g",
+            "sig": "E0fBKRzUIzxzJwPWRnowd1MBWQKgTL_Ig8b_CPhhP-Yt8qoo5uH2_p6D9c94RYXjJCsPasHhzkC2cOlqojBIAA"
+          }
+        }
+      ],
+      "expect": {
+        "error": "E-KEY"
+      }
     }
   ]
 }

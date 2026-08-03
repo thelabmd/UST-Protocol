@@ -1040,6 +1040,7 @@ export function resolveKeysBytes(genesisBytes, keylogBytes) {
   const all = new Map([[gKid, gPub]]);
   const active = new Map([[gKid, gPub]]);
   const revoked = new Map();                                                      // key_id → {reason, compromised_since?, at}
+  let supersededBy = null;                                                        // F.5z — set by a terminal `reroot`; the root's own signed pointer to its successor
   const compromised = new Set();                                                  // MONOTONIC (round-14 P0-01): compromise is TERMINAL — a compromised key is never re-authorized, and its status can never be downgraded (compromised → retired) by a later revoke
   const history = new Map([[gKid, { pub: gPub, intervals: [{ from: genesis.state.time.generated_at, to: null, end: null }] }]]);
   // §12.2/§F.5e.1 — role separation is DECLARED per publisher. Absent, this whole block is inert and the key set
@@ -1078,7 +1079,12 @@ export function resolveKeysBytes(genesisBytes, keylogBytes) {
   // operator's served and mirrored logs), so removal costs no compatibility. `supersedes` on a ROOT-authorized
   // `add` replaces what it was for: it records succession without granting anything, and it earns its place in
   // this strict allowlist under §F.5e.2 because the verifier ACTS on it — role inheritance is derived from it.
-  const OP_FIELDS = Object.assign(Object.create(null), { add: ['op', 'pub', 'new_key_id', 'supersedes', 'role'], revoke: ['op', 'pub', 'reason', 'compromised_since'] });   // null-proto (UST-Protocol round-13 P2-01): OP_FIELDS["toString"] must be undefined, not an inherited function
+  // §12.1 P2 / F.5z — `reroot` is the SIGNED half of a supersession, and the key log is the only carrier the root
+  // may use: under a declared regime it admits {genesis, key, cadence}, and of those `genesis` would make the class
+  // mean two things while `cadence` has no relation to the name. The op is NOT called `supersede`: that word already
+  // names key-to-key succession one field over, and three earlier collisions in this project each caused a wrong
+  // edit before anyone noticed.
+  const OP_FIELDS = Object.assign(Object.create(null), { add: ['op', 'pub', 'new_key_id', 'supersedes', 'role'], revoke: ['op', 'pub', 'reason', 'compromised_since'], reroot: ['op', 'to_genesis'] });   // null-proto (UST-Protocol round-13 P2-01): OP_FIELDS["toString"] must be undefined, not an inherited function
   const derive = (i, pub, label) => {                                            // strict pub + derived key_id
     if (strictB64url(pub, 32) === null) return { error: { error: 'E-KEY', detail: 'entry ' + i + ' ' + label + ' pub not a 32-byte base64url key' } };
     return { kid: keyId(pub) };
@@ -1105,9 +1111,17 @@ export function resolveKeysBytes(genesisBytes, keylogBytes) {
     if (sKid !== gKid) return { error: 'E-KEY', detail: 'entry ' + i + ' key-log mutation requires the GENESIS ROOT (§F.5e.3) — an operational key may sign documents, not grant or destroy authority' };
     const op = e.state?.data?.key_op?.value;
     // #75 P0-02d/e + P1-07 — CLOSED exact schema per op: an unknown op or a stray field is an ERROR, never a no-op.
-    if (typeof op !== 'object' || op === null || typeof op.op !== 'string' || !Object.hasOwn(OP_FIELDS, op.op)) return { error: 'E-KEY', detail: 'entry ' + i + ' unknown or missing key_op.op (add|revoke)' };
+    if (typeof op !== 'object' || op === null || typeof op.op !== 'string' || !Object.hasOwn(OP_FIELDS, op.op)) return { error: 'E-KEY', detail: 'entry ' + i + ' unknown or missing key_op.op (add|revoke|reroot)' };
     for (const k of Object.keys(op)) if (!OP_FIELDS[op.op].includes(k)) return { error: 'E-MALFORMED', detail: 'entry ' + i + ' stray field in ' + op.op + ': ' + k };
-    if (op.op === 'add') {
+    // F.5z.3 — a `reroot` is TERMINAL. After it the root has named its successor, so any later entry is authority
+    // exercised after its own hand-over. Decidable locally, which is the point: the log's own head proves the epoch
+    // ended, with no external evidence required. Checked BEFORE the op is applied so a trailing entry cannot slip in.
+    if (supersededBy !== null) return { error: 'E-KEY', detail: 'entry ' + i + ' follows a `reroot` — the key log is TERMINAL once the root has named its successor (§12.1 P2, F.5z.3)' };
+    if (op.op === 'reroot') {
+      if (typeof op.to_genesis !== 'string' || !isHashStr(op.to_genesis)) return { error: 'E-MALFORMED', detail: 'entry ' + i + ' reroot to_genesis must be a sha256 content_hash of the successor genesis' };
+      if (op.to_genesis === contentHash(genesis)) return { error: 'E-KEY', detail: 'entry ' + i + ' reroot names its OWN genesis as successor — a cycle, not a supersession' };
+      supersededBy = op.to_genesis;
+    } else if (op.op === 'add') {
       const d = derive(i, op.pub, op.op); if (d.error) return d.error;
       if (op.new_key_id !== undefined && op.new_key_id !== d.kid) return { error: 'E-KEY', detail: 'entry ' + i + ' new_key_id != H(ust:keylog, pub)' };
       if (compromised.has(d.kid)) return { error: 'E-KEY', detail: 'entry ' + i + ' cannot re-authorize a COMPROMISED key (terminal, round-14 P0-01)' };
@@ -1155,7 +1169,7 @@ export function resolveKeysBytes(genesisBytes, keylogBytes) {
     }
     prevHash = contentHash(e);
   }
-  return { validKeys: all, active, revoked, history, roles, declaredRoles: declared, head: prevHash };            // validKeys = the all-ever BINDING map; head (§12.2a) = last entry content_hash (genesis if empty)
+  return { validKeys: all, active, revoked, history, roles, declaredRoles: declared, head: prevHash, supersededBy };   // supersededBy (F.5z) — ABSENT unless the root signed a terminal reroot; a consumer holding this genesis reads its successor from a surface it already fetched            // validKeys = the all-ever BINDING map; head (§12.2a) = last entry content_hash (genesis if empty)
 }
 // CONVENIENCE object adapter over `resolveKeysBytes` (round-47 rev70) — serialize each live argument to canonical bytes (the
 // structural keylog before the self-verifying genesis, whose own mutation fails its signature), then call the SOUND bytes-core.

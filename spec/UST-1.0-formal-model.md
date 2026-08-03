@@ -2933,6 +2933,66 @@ discipline a gate owes its domain: enumerate, never sample.
 
 **Binding: pending — UST-Protocol#131 (the crossing command; the per-axis refusals cited in F.5y.1 are realized and executed, the composite ceremony is not).**
 
+## F.5z A supersession is a TERMINAL KEY-LOG ACT — the carrier is forced, not chosen (#133)
+
+§12.1 P2 makes a supersession authoritative iff BOTH (a) it is signed by the old genesis key AND (b) it is
+reflected in the current name-binding root. (b) has a wire form — the served genesis, indexed by the witness log.
+(a) has none: supersession is expressed only as an unsigned `superseded_by` field, and measured across the
+reference implementation and the browser verifier, nothing emits or checks a signature for it.
+
+That the requirement is real was itself contested and settled by measurement. A domain takeover — a lapsed
+registration, a compromised registrar, a sold name — produces a well-formed `confirmed` supersession with ZERO
+signatures from the outgoing publisher: `witnessSuccessor` builds it, `witnessNoShrink` passes it, and
+`witnessNoFork` never applies the no-shrink rule at read time, so a consumer with no cached copy has nothing to
+compare against. The two conjuncts answer different questions — (b) *who serves this name now*, (a) *is this the
+same identity continuing, or a different one that acquired the name* — and the objection that a LOST root key
+would strand a name dissolves: what is lost is the ability to claim CONTINUITY, not the ability to publish. A
+fresh genesis under a familiar name reads as a new identity, which for a re-registered domain is the honest
+answer §12.1 P3 asks for.
+
+**Theorem F.5z.1 (the epoch transition cannot carry (a)).** The transition `τ` (F.5m) binds `to_active_genesis`
+and is signed by epoch A's authority checkpoint key. Three separate reasons disqualify it. Its signer is a
+genesis-NAMED delegate, so a `τ`-only hand-over falls to compromise of the delegate alone — strictly weaker than
+the guarantee §12.1 P2 names. By F.5y the axes are independent, and `τ` is the AUTHORITY crossing: it asserts that
+the authority process continues into `g_B`, never that the name-binding root is succeeded by it. And `τ` does not
+exist at all for a publisher that declares no authority checkpoint key, so it cannot be the general form. ∎
+
+**Theorem F.5z.2 (the carrier is DETERMINED).** The statement is signed by the root, and under a DECLARED regime
+the root admits exactly `{genesis, key, cadence}` (F.5e.1, rev91). Eliminate:
+
+- `genesis` — a genesis-class document IS the self-signed name-binding root (`key_id = sig.key_id`, `pub` in its
+  own value). A second document of that class naming a DIFFERENT root makes the class mean two things, and a
+  verifier resolving a name would have to decide which one it is looking at. Refused by the same discipline that
+  qualified two earlier collision-words after each was found to span two mechanisms.
+- `cadence` — its object is the grid and it is chained in its own log; it has no relation to the name.
+- `key` — the key log is the ROOT's authenticated act stream. It is already root-only (rev97), already chained
+  from the genesis, and already fetched by any consumer that resolved the old genesis.
+
+One admissible carrier remains, so the shape is forced rather than preferred — and by F.7c a forced answer is the
+only kind this layer accepts. ∎
+
+*Corollary (discoverability stops being a separate problem).* A consumer holding `contentHash(g_A)` resolves
+authority by fetching that genesis and its key log. The supersession therefore arrives on a surface it ALREADY
+reads: no new well-known path, no second fetch, and the stranded-consumer failure disappears without anyone
+inventing a discovery mechanism for it.
+
+*Corollary (the log is under the genesis, and that is no objection).* Being “under” the genesis describes what
+AUTHORIZES the log, not what it may speak about. The root is the party being superseded and the only one entitled
+to say so; its own act stream is where it says things.
+
+**Theorem F.5z.3 (the act is TERMINAL).** Let the operation be `reroot(to_genesis)`. After it the log admits no
+further entry: the root has named its successor, so any later act is authority exercised after its own hand-over —
+the same equivocation `superseded_by` prevents on the name axis. Terminality is decidable locally (a `reroot` may
+only be the last entry of the log), which makes the log's own head the proof that the epoch ended, with no
+external evidence required. ∎
+
+**Naming, before the ambiguity does damage.** `supersedes` ALREADY names key-to-key succession inside a key-log
+entry (F.5e.2). Calling this operation `supersede` would be the fourth time in this project that one word spanned
+two mechanisms, and the previous three each caused a wrong edit before anyone noticed. The operation is `reroot`
+and its field is `to_genesis`.
+
+**Binding: pending — UST-Protocol#133 (the operation is specified here and not yet realized, and the requirement it serves has no wire form at all)**
+
 ## F.6 Composition — the event algebra
 
 An **anchored existence-and-commitment claim** is an event `A ∈ Fₜ`; an UNANCHORED signed claim is a document

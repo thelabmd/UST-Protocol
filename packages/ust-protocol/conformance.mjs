@@ -491,6 +491,32 @@ check('#131 buildGenesis REFUSES an empty `roles` — declaring nothing is not a
     return kept.error === 'E-PREV' && !rerooted.error;
   })());
 }
+// ─── F.5z — a supersession is the SIGNED half, and it lives in the key log because that is the only carrier the
+// root may use. Four legs, each breaking exactly the clause it names: the op is accepted and reported, a later
+// entry is refused because the act is TERMINAL, a self-naming reroot is a cycle, and a non-hash destination is
+// malformed. The positive leg is first so the three refusals cannot pass by the log failing for another reason.
+{
+  const R = kp('e1'.repeat(32)), K = kp('e2'.repeat(32)), sR = (x) => P.seal(x, R.priv, R.pubB64);
+  const id = (u) => ({ domain_shard: 'noosphere.md', ust_id: u, key_id: R.key_id });
+  const gA = sR(P.buildGenesis(id('ust:20260628.10'), T, R.pubB64));
+  const gB = sR(P.buildGenesis({ ...id('ust:20260629.10'), key_id: K.key_id }, T, K.pubB64));
+  const hA = P.contentHash(gA), hB = P.contentHash(gB);
+  const entry = (u, op, prev) => sR(P.buildKeyLogEntry(id(u), T, op, prev));
+  const rr = (to, prev = hA) => entry('ust:20260628.11', { op: 'reroot', to_genesis: to }, prev);
+
+  const ok = P.resolveKeys(gA, [rr(hB)]);
+  check('F.5z a root-signed `reroot` resolves and REPORTS the successor', !ok.error && ok.supersededBy === hB);
+  // TERMINAL: an ordinary, otherwise-valid `add` after the reroot must be refused
+  const after = P.resolveKeys(gA, [rr(hB), entry('ust:20260628.12', { op: 'add', pub: K.pubB64, new_key_id: K.key_id }, P.contentHash(rr(hB)))]);
+  check('F.5z the key log is TERMINAL after a `reroot` — a later entry is refused', after.error === 'E-KEY');
+  check('F.5z a `reroot` naming its OWN genesis is a cycle, not a supersession', P.resolveKeys(gA, [rr(hA)]).error === 'E-KEY');
+  check('F.5z a `reroot` destination that is not a content_hash is E-MALFORMED', P.resolveKeys(gA, [rr('not-a-hash')]).error === 'E-MALFORMED');
+  // and the field set stays CLOSED — a stray field on the new op is refused like every other op
+  const stray = sR(P.buildKeyLogEntry(id('ust:20260628.11'), T, { op: 'reroot', to_genesis: hB, role: 'data' }, hA));
+  check('F.5z the `reroot` field set is CLOSED — a stray field is refused', P.resolveKeys(gA, [stray]).error === 'E-MALFORMED');
+  // an identity that never rerooted must report ABSENCE, or the positive leg proves nothing
+  check('F.5z an identity that never rerooted reports NO successor', P.resolveKeys(gA, []).supersededBy === null);
+}
 check('F5 encrypted w/o enc→E-MALFORMED', (() => { const st = { id: ID, time: T, data: { e: { kind: 'captured', privacy: 'encrypted', commit: 'sha256:' + 'cd'.repeat(32) } }, hashes: { e: P.partitionHash({ commit: 'sha256:' + 'cd'.repeat(32) }) } }; return P.verify(P.seal(st, A.priv, A.pubB64), { context: 'data' }).error === 'E-MALFORMED'; })());
 check('F6 non-NFC member name→E-CANON', (() => { try { P.canon({ ['e' + String.fromCharCode(0x301)]: '1' }); return false; } catch (e) { return e.code === 'E-CANON'; } })());
 check('F7 raw duplicate-key→E-CANON', P.verifyJson('{"ust":"0.0","ust":"1.0","state":{},"sig":{}}').error === 'E-CANON');

@@ -53,7 +53,9 @@ const bounds = heads.map((h) => h.pos).concat(MODEL.length);
 // section silently LEAVE the domain — renamed to a non-`F.x` heading, it would simply stop being enumerated and this
 // gate would still pass. That is the very defect class this gate exists to close, so the count is exact and any change
 // to the section inventory must be a deliberate edit here.
-const EXPECTED_SECTIONS = 51;   // 50 → 51: F.5y (rev98) — перекоренение есть ПЕРЕСЕЧЕНИЕ каждой укоренённой в
+const EXPECTED_SECTIONS = 52;   // 51 → 52: F.5z (rev99) — суперсессия есть ТЕРМИНАЛЬНЫЙ акт кей-лога, и носитель
+// ВЫНУЖДЕН, а не выбран: подписывает старый корень, а корень под объявленным режимом допускает ровно
+// {genesis, key, cadence}, из которых два исключаются по существу. 50 → 51: F.5y (rev98) — перекоренение есть ПЕРЕСЕЧЕНИЕ каждой укоренённой в
 // генезисе структуры, которую издатель инстанциировал, а не одно событие; пять осей перечислены из чтений
 // самого верификатора, и три из них нашлись только потому, что домен перечисляли, а не выбирали образец.
 // 49 → 50: F.7c (rev90) — нормативное утверждение ОПРЕДЕЛЕНО, иначе оно не

@@ -1020,6 +1020,29 @@ key near/after a genesis-recovery cannot be epoch-placed and is rejected at HIGH
 boundary anchoring is EFFECTIVELY REQUIRED for HIGH validation.)** Anchor time/order is
 necessary but NOT sufficient for name authority; domain control is the arbiter.
 
+**The SIGNED half of a supersession is a terminal key-log `reroot` (F.5z).** Conjunct (a) above — *signed by
+the old genesis key* — is normative and until now had no wire form: supersession appeared only as an UNSIGNED
+`superseded_by` in the witness log, which a party holding the NAME can write without holding the KEY. Measured:
+a domain takeover produces a well-formed, `corroborated` supersession with no signature from the outgoing
+publisher at all. The two conjuncts answer different questions — (b) who serves this name now, (a) whether this
+is the same identity CONTINUING or a different one that acquired the name — so neither substitutes for the other,
+and a publisher that has lost its root key has lost the ability to claim continuity, not the ability to publish.
+
+The carrier is FORCED rather than chosen: the statement is root-signed, and under a declared regime the root
+admits `{genesis, key, cadence}`, of which `genesis` would make that class name two different things and
+`cadence` has no relation to the name. So a supersession is the FINAL entry of the outgoing epoch's key log:
+
+```
+state.data.key_op.value = { "op":"reroot", "to_genesis":<content_hash of the successor genesis> }
+```
+
+It is root-signed like every key-log mutation (§F.5e.3); `to_genesis` MUST be a `content_hash` and MUST NOT be
+the log's own genesis (a cycle, not a supersession); and the operation is **TERMINAL** — an entry that follows a
+`reroot` is `E-KEY`, because the root has named its successor and any later act is authority exercised after its
+own hand-over. A consumer that resolved the old genesis has already fetched this log, so the successor pointer
+arrives on a surface it reads anyway, and needs no discovery mechanism of its own. A supersession missing EITHER
+conjunct is ignored, exactly as stated above.
+
 **A re-rooting is a CROSSING, and it is not one event (F.5y).** Several structures a publisher maintains are
 ROOTED in the genesis `content_hash` — their first element, or their active pointer, names it. A publisher
 re-rooting from `g_A` to `g_B` MUST cross EVERY such structure it has INSTANTIATED. The crossings are
@@ -1128,7 +1151,8 @@ established at all, the `no_fork` field is ABSENT rather than filled (§15) — 
   proof}` shape as any document (nothing changes across tier OR role, §16). Each entry is a transcript with
   `state.id.class = "key"`, carrying the operation in its data and the chain link in its provenance:
   ```
-  state.data.key_op.value = { "op":"add"|"revoke", "pub":b64url, "supersedes":key_id?,
+  state.data.key_op.value = { "op":"add"|"revoke"|"reroot", "pub":b64url, "supersedes":key_id?,
+                              ["to_genesis":content_hash — `reroot` ONLY, and its ONLY field besides `op`],
                               ["reason":"retired"|"compromised", "compromised_since":RFC3339-Z — STRICT `YYYY-MM-DDTHH:MM:SSZ`; an offset or fractional form ⇒ E-MALFORMED (lexicographic comparison is then chronologically correct)] }
   state.provenance.prev   = <content_hash of the previous entry>   // first entry's prev = genesis content_hash (§12.1)
   ```
@@ -1203,7 +1227,7 @@ existence carrying one; an entry with `op:"rotate"` MUST be rejected `E-KEY`.
   at that point AND MUST BE the genesis root** — a revoked, rotated-out, or never-authorized signer ⇒ E-KEY (this
   is what stops a revoked/superseded key from authorizing a later entry or a cadence change), and a merely-active
   non-root signer ⇒ E-KEY (§F.5e.3 — the same conjunct governs a cadence entry, §11.3). `key_op` has a CLOSED exact schema
-  per op (`add: {op, pub, new_key_id?, supersedes?, role?}`; `revoke: {op, pub, reason, compromised_since iff compromised}`);
+  per op (`add: {op, pub, new_key_id?, supersedes?, role?}`; `revoke: {op, pub, reason, compromised_since iff compromised}`; `reroot: {op, to_genesis}` — TERMINAL, §12.1 P2);
   an unknown `op`, a stray field, a `retired` carrying `compromised_since`, a revoke of a never-authorized key, or
   a re-authorization of a compromised key ⇒ E-KEY / E-MALFORMED, never a silent no-op. A compromised key can
   never return to `active`.
@@ -1823,7 +1847,7 @@ Independent re-implementation is expected; the vectors make "verify without trus
 - **attestation subtype (§11.3 C2):** `set` (constituents + Merkle `root`) · `checkpoint` (prev + a `checkpoint` data partition `{head, frame_count, from?, to?}`, no constituents/root) · `gap` (prev + a `gap` data partition, no constituents/root) · `anchor` (prev + `root` + an `anchor` data partition `{substrate, from, to}`, no constituents — the batch commitment of §11.3, rev84/F.5u). A prev-only attestation MUST carry EXACTLY ONE of `checkpoint`/`gap`/`anchor` (never two, never none ⇒ E-MALFORMED) — the subtype is the named data partition, not a shape, and `root` FOLLOWS from the subtype (required for `set`/`anchor`, forbidden for `checkpoint`/`gap`) rather than deciding it.
 - **genesis value (§12.1):** `pub`, `role:"name-binding-root"`, optional `roles` (a non-empty ARRAY of operating-role names the publisher will use — its presence DECLARES role separation, §12.2), `max_partitions`, `max_transcript_bytes`, `cadence` (string integer seconds — the SIGNED stream cadence that fixes the completeness grid, §11.3; resolved, never a per-checkpoint choice), and — for the §12.3 authority-checkpoint profile — optional `checkpoint_authority:{key_id,pub}` and `recovery:{keys:{key_id:pub},threshold}` (each `key_id = H("ust:keylog", pub)`). A verifier RESOLVES the checkpoint-authority + recovery roots FROM this signed genesis (`authority_root:"genesis"`, P1-04); a root passed as a raw caller option is a consumer PIN (`authority_root:"consumer-pin"`), never silently "genesis-authorized".
 - **key role (§12.2, §F.5e.1) — a FIXED vocabulary of five; a new role is a spec change, never an operator's word.** `name-binding-root` (signs the genesis) · `checkpoint-recovery` (threshold-signs a RecoveryClaim for the authority-checkpoint chain, §12.3.2) · `authority-checkpoint` (signs authority checkpoints, §12.3) — the three AUTHORIZING roles, set at the ceremony · `data` (the publisher's stream) · `issuance` (what is handed to a named recipient) — the two OPERATING roles, assigned in the key log. The two authorizing names are QUALIFIED on purpose: bare `recovery` and bare `checkpoint` each name TWO mechanisms in this protocol, and reasoning about the bare word once widened an authority set (§F.5e.3), so a role — read by a consumer to decide what a signature meant — may never carry one. Free-form names are refused deliberately: the role is read by a CONSUMER, so an open field would make "what does this signature mean" a question addressed to the publisher rather than to the protocol. `issuance` names what the role PROTECTS — a signature over something leaving the publisher for a named recipient — so a product word (`invoice`, `licence`, `receipt`) never enters the vocabulary; each is an instance of it.
-- **key-log entry** (a `class:"key"` transcript, §12.2): `state.data.key_op.value` keys `op,pub,supersedes,role,reason,compromised_since`; `op` ∈ `add|revoke`; `role` ∈ `data|issuance` (the operating roles only — the authorizing three are ceremony-set);
+- **key-log entry** (a `class:"key"` transcript, §12.2): `state.data.key_op.value` keys `op,pub,supersedes,role,reason,compromised_since,to_genesis`; `op` ∈ `add|revoke|reroot` (`reroot` carries `to_genesis` and nothing else); `role` ∈ `data|issuance` (the operating roles only — the authorizing three are ceremony-set);
   `reason` ∈ `retired|compromised`. `key_id` = `H("ust:keylog", pub_raw)` (raw public-key octets, domain-separated §7 — not plain SHA256(pub)).
 - **anchor substrate (operator choice, extensible):** an entry defines the substrate's `Locator` evidence
   fields, its public-append-only-log check, its finality parameter, and — since #95 — its **inclusion

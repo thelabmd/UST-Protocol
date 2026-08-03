@@ -383,7 +383,7 @@ const SHAPES_SRC = [
   '// branches below were READ from real values: the resolved branch from a corpus key-log vector, the error',
   '// branch from a rejected one. Discriminate on `error` in `res` and the compiler narrows for you.',
   'export interface UstError { error: string; detail: unknown }',
-  'export interface UstKeysResolved { validKeys: unknown; active: unknown; revoked: unknown; history: unknown; roles: unknown; declaredRoles: unknown; head: string }',
+  'export interface UstKeysResolved { validKeys: unknown; active: unknown; revoked: unknown; history: unknown; roles: unknown; declaredRoles: unknown; head: string; supersededBy: string | null }',   // supersededBy (F.5z) — the root's own signed successor pointer, null unless a terminal reroot was signed
   'export type UstKeyResolution = UstKeysResolved | UstError;',
   'export interface UstStreamComplete { complete: string; head?: unknown; detail?: unknown; interval?: unknown; reason?: unknown }',
   'export type UstStreamVerdict = UstStreamComplete | UstError;',

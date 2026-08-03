@@ -318,6 +318,11 @@
    "issue": 132,
    "content_hash": "sha256:fa02d950df13932df650e62e4667388de173d110daa8cf4318177b29f2a74c02",
    "_note": "The round has two halves and this recap belongs to the one that CLOSED: #132, the command that could not run. The crossing half, UST-Protocol#131, stays open until the reference operator's ceremony has been run THROUGH the new command — that is its acceptance run, and it owes its own entry when it happens."
+  },
+  {
+   "round": 153,
+   "issue": 133,
+   "no_recap": "The wire form is specified, realized and gated, but #133 is not closed: the operation exists in the reducer and in no CEREMONY — `ust reroot` still does not ask for the epoch-A root key, so no operator can yet produce one. A recap now would describe a reducer that admits an op nothing emits, which is the half-finished state this round was opened to end."
   }
  ]
 }
