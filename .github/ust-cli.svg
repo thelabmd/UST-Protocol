@@ -1,8 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 686" role="img" aria-labelledby="ust-cli-t ust-cli-d">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 729" role="img" aria-labelledby="ust-cli-t ust-cli-d">
 <title id="ust-cli-t">THE ust CLI — ONE ENTRYPOINT, THE WHOLE SURFACE</title>
-<desc id="ust-cli-d">The ust CLI — one entrypoint, the whole command surface (parsed from the real binary’s help). Install with npm i -g @ust-protocol/cli. The 12 subcommands: verify &lt;file|-&gt; (verify a transcript — exit 0 = VALID, 1 = not (--require-anchored demands proven time)); canon &lt;file|-&gt; (print canonical bytes + hash — diff another language&#39;s implementation against this); stream &lt;frames…&gt; (a verdict about a RANGE, not one document: chain · forks · completeness (--checkpoint is what makes completeness answerable at all)); forkchoice &lt;docs…&gt; (pick the CANONICAL document among candidates for ONE ust_id — the anchor decides, never the candidates themselves); discovery &lt;domain&gt; (probe a domain&#39;s serving surface and report an honest verdict — any infrastructure); genesis --domain &lt;d&gt; (run the HIGH genesis ceremony (add --publish cf for one-click serving)); key add --domain &lt;d&gt; --root &lt;enc&gt; --role &lt;data|issuance&gt; (ADD a key BESIDE the current one (never replaces it)); rotate --domain &lt;d&gt; --root &lt;enc&gt; (APPEND a key rotation to the served log (never re-mints — documents signed by the old key stay valid)); cadence --domain &lt;d&gt; --root &lt;enc&gt; --seconds &lt;n&gt; --effective-from &lt;slot&gt; ( DECLARE the signed grid your stream follows — what completeness is measured against); publish &lt;cf|self&gt; --domain &lt;d&gt; --genesis &lt;f&gt; (serve an existing genesis: cf deploys the adapter, self writes the four artifacts for YOUR stack (asked if omitted)); mirror &lt;domain&gt; (publish and attest a SECOND-vendor copy, so your identity does not rest on one provider); witness rekor --domain &lt;d&gt; (log the genesis in a public transparency log, so a second published history cannot go unnoticed). Exit 0 = VALID with the tier in the verdict, 1 = not; the ceremony self-verifies its outputs, fail-closed.</desc>
+<desc id="ust-cli-d">The ust CLI — one entrypoint, the whole command surface (parsed from the real binary’s help). Install with npm i -g @ust-protocol/cli. The 13 subcommands: verify &lt;file|-&gt; (verify a transcript — exit 0 = VALID, 1 = not (--require-anchored demands proven time)); canon &lt;file|-&gt; (print canonical bytes + hash — diff another language&#39;s implementation against this); stream &lt;frames…&gt; (a verdict about a RANGE, not one document: chain · forks · completeness (--checkpoint is what makes completeness answerable at all)); forkchoice &lt;docs…&gt; (pick the CANONICAL document among candidates for ONE ust_id — the anchor decides, never the candidates themselves); discovery &lt;domain&gt; (probe a domain&#39;s serving surface and report an honest verdict — any infrastructure); genesis --domain &lt;d&gt; (run the HIGH genesis ceremony (add --publish cf for one-click serving)); key add --domain &lt;d&gt; --root &lt;enc&gt; --role &lt;data|issuance&gt; (ADD a key BESIDE the current one (never replaces it)); rotate --domain &lt;d&gt; --root &lt;enc&gt; (APPEND a key rotation to the served log (never re-mints — documents signed by the old key stay valid)); cadence --domain &lt;d&gt; --root &lt;enc&gt; --seconds &lt;n&gt; --effective-from &lt;slot&gt; ( DECLARE the signed grid your stream follows — what completeness is measured against); reroot --domain &lt;d&gt; --ca-key &lt;enc&gt; (RE-ROOT onto a new genesis, crossing EVERY genesis-rooted structure you run — key-log, authority chain, witness log (the NAME), cadence. Writes artifacts; publishes nothing. Your writer must cross the last axis itself.); publish &lt;cf|self&gt; --domain &lt;d&gt; --genesis &lt;f&gt; (serve an existing genesis: cf deploys the adapter, self writes the four artifacts for YOUR stack (asked if omitted)); mirror &lt;domain&gt; (publish and attest a SECOND-vendor copy, so your identity does not rest on one provider); witness rekor --domain &lt;d&gt; (log the genesis in a public transparency log, so a second published history cannot go unnoticed). Exit 0 = VALID with the tier in the verdict, 1 = not; the ceremony self-verifies its outputs, fail-closed.</desc>
 <g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="15" xml:space="preserve">
-  <rect x="1.5" y="1.5" width="877" height="683" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1.5"/>
+  <rect x="1.5" y="1.5" width="877" height="726" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1.5"/>
   <line x1="16" y1="46" x2="864" y2="46" stroke="#30363d" stroke-width="1"/>
   <text x="28" y="34" fill="#58a6ff" font-size="13" font-weight="600" letter-spacing="2">THE ust CLI — ONE ENTRYPOINT, THE WHOLE SURFACE</text>
   <text x="36" y="74" fill="#3fb950" font-weight="600">$</text>
@@ -10,7 +10,7 @@
   <text x="300" y="74" fill="#8b949e" font-size="13"># installs the ust command</text>
   <text x="36" y="98" fill="#3fb950" font-weight="600">$</text>
   <text x="54" y="98" fill="#c9d1da" font-weight="600">ust</text>
-  <text x="300" y="98" fill="#8b949e" font-size="13"># 12 subcommands — this table is parsed from the real help</text>
+  <text x="300" y="98" fill="#8b949e" font-size="13"># 13 subcommands — this table is parsed from the real help</text>
   <text x="48" y="130" fill="#8b949e" font-size="13">ust</text>
   <text x="79.32" y="130" fill="#7ee787" font-size="13" font-weight="600">verify</text>
   <text x="134.13" y="130" fill="#79c0ff" font-size="13">&lt;file|-&gt;</text>
@@ -48,18 +48,22 @@
   <text x="141.96" y="474" fill="#79c0ff" font-size="13">--domain &lt;d&gt; --root &lt;enc&gt; --seconds &lt;n&gt; --effective-from &lt;slot&gt;</text>
   <text x="76" y="493" fill="#8b949e" font-size="12.5"> DECLARE the signed grid your stream follows — what completeness is measured against</text>
   <text x="48" y="517" fill="#8b949e" font-size="13">ust</text>
-  <text x="79.32" y="517" fill="#7ee787" font-size="13" font-weight="600">publish</text>
-  <text x="141.96" y="517" fill="#79c0ff" font-size="13">&lt;cf|self&gt; --domain &lt;d&gt; --genesis &lt;f&gt;</text>
-  <text x="76" y="536" fill="#8b949e" font-size="12.5">serve an existing genesis: cf deploys the adapter, self writes the four artifacts for YOUR stack (asked if omitted)</text>
+  <text x="79.32" y="517" fill="#7ee787" font-size="13" font-weight="600">reroot</text>
+  <text x="134.13" y="517" fill="#79c0ff" font-size="13">--domain &lt;d&gt; --ca-key &lt;enc&gt;</text>
+  <text x="76" y="536" fill="#8b949e" font-size="12.5">RE-ROOT onto a new genesis, crossing EVERY genesis-rooted structure you run — key-log, authority chain, witness log (the NAME), cadence. Writes artifacts; publishes nothing. Your writer must cross the last axis itself.</text>
   <text x="48" y="560" fill="#8b949e" font-size="13">ust</text>
-  <text x="79.32" y="560" fill="#7ee787" font-size="13" font-weight="600">mirror</text>
-  <text x="134.13" y="560" fill="#79c0ff" font-size="13">&lt;domain&gt;</text>
-  <text x="76" y="579" fill="#8b949e" font-size="12.5">publish and attest a SECOND-vendor copy, so your identity does not rest on one provider</text>
+  <text x="79.32" y="560" fill="#7ee787" font-size="13" font-weight="600">publish</text>
+  <text x="141.96" y="560" fill="#79c0ff" font-size="13">&lt;cf|self&gt; --domain &lt;d&gt; --genesis &lt;f&gt;</text>
+  <text x="76" y="579" fill="#8b949e" font-size="12.5">serve an existing genesis: cf deploys the adapter, self writes the four artifacts for YOUR stack (asked if omitted)</text>
   <text x="48" y="603" fill="#8b949e" font-size="13">ust</text>
-  <text x="79.32" y="603" fill="#7ee787" font-size="13" font-weight="600">witness</text>
-  <text x="141.96" y="603" fill="#79c0ff" font-size="13">rekor --domain &lt;d&gt;</text>
-  <text x="76" y="622" fill="#8b949e" font-size="12.5">log the genesis in a public transparency log, so a second published history cannot go unnoticed</text>
-  <line x1="16" y1="634" x2="864" y2="634" stroke="#30363d" stroke-width="1"/>
-  <text x="36" y="660" fill="#c9d1da" font-size="13">exit 0 = VALID (tier in the verdict) · 1 = not · the ceremony self-verifies its outputs — fail-closed</text>
+  <text x="79.32" y="603" fill="#7ee787" font-size="13" font-weight="600">mirror</text>
+  <text x="134.13" y="603" fill="#79c0ff" font-size="13">&lt;domain&gt;</text>
+  <text x="76" y="622" fill="#8b949e" font-size="12.5">publish and attest a SECOND-vendor copy, so your identity does not rest on one provider</text>
+  <text x="48" y="646" fill="#8b949e" font-size="13">ust</text>
+  <text x="79.32" y="646" fill="#7ee787" font-size="13" font-weight="600">witness</text>
+  <text x="141.96" y="646" fill="#79c0ff" font-size="13">rekor --domain &lt;d&gt;</text>
+  <text x="76" y="665" fill="#8b949e" font-size="12.5">log the genesis in a public transparency log, so a second published history cannot go unnoticed</text>
+  <line x1="16" y1="677" x2="864" y2="677" stroke="#30363d" stroke-width="1"/>
+  <text x="36" y="703" fill="#c9d1da" font-size="13">exit 0 = VALID (tier in the verdict) · 1 = not · the ceremony self-verifies its outputs — fail-closed</text>
 </g>
 </svg>

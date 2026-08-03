@@ -93,6 +93,7 @@ version typed into a README is a claim that goes stale in silence.
 | `ust key add --domain <d> --root <enc> --role <data\|issuance>` | ADD a key BESIDE the current one — never replaces it. The ROLE is fixed at genesis and is a partition of the active set, not a label the entry chooses |
 | `ust rotate --domain <d> --root <enc>` | APPEND a key rotation to the served log. Never re-mints: documents signed by the old key stay valid, because succession is STATED in the log rather than inferred |
 | `ust cadence --domain <d> --root <enc> --seconds <n> --effective-from <slot>` | DECLARE the signed grid your stream follows — what a completeness verdict is measured against, signed rather than assumed |
+| `ust reroot --domain <d> --ca-key <enc>` | RE-ROOT onto a new genesis. A re-rooting is a CROSSING, not an event: every structure rooted in your genesis hash — key-log, authority chain, witness log (the NAME), cadence log — must cross separately, and what must cross is READ from your served identity rather than asked. Writes artifacts to a directory and publishes nothing; the one axis it cannot cross is your running writer, which it names |
 
 ### PUBLISH — writes to the world
 

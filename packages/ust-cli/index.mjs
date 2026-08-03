@@ -9,7 +9,7 @@
 import { createInterface } from 'node:readline/promises';
 import { readFileSync, writeFileSync, realpathSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { createCipheriv, createDecipheriv, scryptSync, randomBytes, createHash, generateKeyPairSync, sign as edsign } from 'node:crypto';
+import { createCipheriv, createDecipheriv, scryptSync, randomBytes, createHash, generateKeyPairSync, createPrivateKey, createPublicKey, sign as edsign } from 'node:crypto';
 import * as P from 'ust-protocol';
 import { makeSsrfSafeFetch } from 'ust-protocol/ssrf';   // #71 — the SAME Node SSRF guard the MCP uses (resolve→classify→reject private)
 import * as W from '@ust-protocol/web-signer';
@@ -1393,7 +1393,7 @@ async function cmdVerify() {
     } else if (tier === 'LIGHT' && !genesisPath && !resolution) {
       console.log('\n  ✅ this is the EXPECTED result for a lone document — it proves the file is signed and');
       console.log('     intact under the key it carries. HIGH is a property of RESOLUTION, not of the file:');
-      console.log('     ${invocation()} verify <doc> --genesis <ust-genesis> --keylog <ust-keylog-0> --no-fork-confirmed');
+      console.log(`     ${invocation()} verify <doc> --genesis <ust-genesis> --keylog <ust-keylog-0> --no-fork-confirmed`);
     } else if (tier === 'LIGHT' && genesisPath && !noFork) {
       console.log('\n  ℹ️  resolution ran but the name is not authoritative WITHOUT the no-fork witness check.');
       console.log('     Once your witness exchange confirms no rival genesis exists, add: --no-fork-confirmed');
@@ -1770,7 +1770,7 @@ async function cmdWitness() {
     let keylogText = null; try { keylogText = await fetch(`https://${domain}/.well-known/ust-keylog`, { signal: AbortSignal.timeout(8000) }).then((r) => r.ok ? r.text() : null); } catch { /* ok */ }
     try { await wranglerDeploy({ domain, ...(await collectServed({ domain, genesisText, genPath: null, keylogText, log: console.log })), witnessText: witness }); } catch (e) { die('deploy failed: ' + e.message + '\n  (the anchor is logged in Rekor; re-run --deploy or update the endpoint by hand)'); }
     console.log('  ✅ witness endpoint updated — verifiers with @ust-protocol/rekor-verify now confirm no-fork automatically');
-    console.log('     re-attest:  ${invocation()} verify <slot>   (install ots-verify + rekor-verify)');
+    console.log(`     re-attest:  ${invocation()} verify <slot>   (install ots-verify + rekor-verify)`);
   } else {
     console.log('\n  witness-log built (NOT deployed — pass --deploy to update the CF endpoint, or publish it yourself):');
     console.log('  ' + witness);
@@ -2115,7 +2115,7 @@ async function cmdGenesis() {
     if (dnsMode !== 'cf-api') {
       const seen = await dohConfirmTxt({ domain, genHash, attempts: 2 });
       if (seen) console.log('  ✅ 🌐 the _ust TXT is visible via DoH and carries your hash');
-      else console.log('  ⚠️  🌐 the _ust TXT is not visible via DoH yet (registrar propagation) — re-attest later:  ${invocation()} discovery ' + domain);
+      else console.log(`  ⚠️  🌐 the _ust TXT is not visible via DoH yet (registrar propagation) — re-attest later:  ${invocation()} discovery ${domain}`);
     }
     // §20.1 probe (3), WARNING-level here: BINDING is fail-closed above; a serving-contract violation is
     // fixable post-hoc without redoing the ceremony. `ust discovery <domain>` re-attests all four anytime.
@@ -2125,7 +2125,7 @@ async function cmdGenesis() {
       const a = await fetch(`https://${domain}/.well-known/ust-genesis`, { signal: AbortSignal.timeout(10000) }).then((r) => r.text());
       const probed = await fetch(`https://${domain}/.well-known/ust-genesis?${rand}`, { signal: AbortSignal.timeout(10000) }).then((r) => (r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`))));
       if (probed === a) console.log('  ✅ query-robustness probe: an unknown ?query returns byte-identical bytes (§20.1)');
-      else console.log('  ⚠️  §20.1 SERVING: the response VARIES with an unknown query parameter — cache-key amplification is open; fix the cache config, then `${invocation()} discovery ' + domain + '`');
+      else console.log(`  ⚠️  §20.1 SERVING: the response VARIES with an unknown query parameter — cache-key amplification is open; fix the cache config, then \`${invocation()} discovery ${domain}\``);
     } catch (e) { console.log('  ⚠️  §20.1 SERVING: query-robustness probe inconclusive (' + e.message + ') — run `${invocation()} discovery ' + domain + '` later'); }
   } catch (e) { rl?.close(); die(e.message); }
 
@@ -2152,6 +2152,21 @@ export async function rootSignerFrom(pkcs8, rootPubB64url) {
 }
 // Build the grown key-log. Signs the new op key with the ROOT (a current valid key, §12.2), prev-chained;
 // optionally revokes the superseded op key with a reason. Refuses to REWRITE (input MUST be a prefix). Pure.
+// The `/.well-known/` reader every CEREMONY command needs. MEASURED 2026-08-03: `ust key add` called this by name
+// and NOTHING DEFINED IT — the call was written to a helper that was never created, so the command threw
+// `ReferenceError: discoveryFetcher is not defined` on its first line of work, and shipped that way in the published
+// package for five days. Nothing caught it: the printed-command gate checks that a printed command STRING dispatches,
+// never that the function it dispatches to can run. Meanwhile `rotate` and `cadence` each carried their own copy of
+// this fetcher — so the defect and the duplication were the same fact, and defining it once fixes both.
+//
+// `httpStatus` is carried on the thrown error because ABSENT (404/410) and UNREADABLE are different verdicts to a
+// caller: a missing cadence log is the first declaration, an unreadable one must never be treated as empty (that
+// would chain onto the wrong head and orphan what is served).
+const discoveryFetcher = (domain) => async (path) => {
+  const r = await fetch(`https://${domain}${path}`, { signal: AbortSignal.timeout(10000), redirect: 'error' });
+  if (!r.ok) { const e = new Error(`HTTP ${r.status} at ${path}`); e.httpStatus = r.status; throw e; }
+  return r.text();
+};
 // §12.2/§F.5e.1 — add a key BESIDE the current one, not in place of it. This is the operation `rotate` cannot
 // express and inheritance cannot either: `supersedes` PROPAGATES a role down a lineage and never INTRODUCES one,
 // so a key for a DIFFERENT purpose has no lineage to inherit from and must state its own role. Root-signed like
@@ -2175,6 +2190,214 @@ export async function addKeylogKey({ genesis, keylog, rootSigner, role = null, t
   const entry = await W.seal(P.buildKeyLogEntry({ domain_shard: domain, ust_id: ustId, key_id: rootSigner.key_id }, time,
     { op: 'add', pub: newKey.pub, new_key_id: newKey.key_id, ...(role ? { role } : {}) }, prev), rootSigner);
   return { keylog: [...keylog, entry], newKey };
+}
+// ─── §12.1/F.5y RE-ROOTING — the CROSSING, as one testable core (UST#131) ─────────────────────────────────────
+//
+// F.5y is why this is not a script. A re-rooting is not one event: several structures a publisher runs are ROOTED
+// in `contentHash(genesis)`, each must cross the boundary SEPARATELY, and each stale binding is refused on its own
+// (key-log/cadence/stream ⇒ E-PREV, witness ⇒ a RIVAL root, authority chain ⇒ E-MALFORMED). The operator ceremony
+// this replaces performed exactly one of them — the authority chain — because that is the one the code answered
+// when asked which key signs a re-rooting.
+//
+// Three rules the shape encodes, each of them a measured defect and not a preference:
+//
+//  1. THE PRE-STATE DECIDES, NOT THE CALLER. What must be crossed is a property of the SERVED identity. So the
+//     caller hands over what it READ and never what it INTENDS: an omitted argument is otherwise indistinguishable
+//     from an absent structure, which is the whole difference between "nothing to cross" and "forgot to cross".
+//     Same rule `addKeylogKey` already follows for `--role`.
+//  2. AN UNKNOWN CARRIED FIELD IS A REFUSAL, NEVER A DROP. `cadence` forgotten costs completeness; `max_partitions`
+//     forgotten costs E-BOUNDS on the first real slot — both measured on the dry run. Enumerating the fields we
+//     know how to carry and refusing the rest means a genesis field added AFTER this code cannot be silently lost
+//     by it; the failure lands on whoever adds the field, loudly, instead of on an operator years later.
+//  3. ACCEPTANCE IS INDEXED BY THE PRE-STATE (F.5y.3). A self-check over the artifacts PRODUCED cannot observe an
+//     axis the ceremony never touched — that is precisely the uncrossed one. So the checks below range over what
+//     was observed instantiated BEFORE, and the one axis this command cannot cross (the running writer's stream)
+//     is REPORTED as an obligation with the exact `prev` to use, rather than left to be discovered by a consumer.
+const GENESIS_CARRIED = ['max_partitions', 'max_transcript_bytes', 'cadence', 'checkpoint_authority', 'recovery'];
+const GENESIS_NOT_CARRIED = ['pub', 'role', 'roles'];   // minted anew / restated by this ceremony, deliberately
+export async function runRerootCeremony({ domain, genesisA, keylogA, witnessA = null, cadenceLogA = null, caASigner = null, roles = null, assign = {}, drop = [], reason = 'planned', time, ustId }) {
+  const vA = genesisA?.state?.data?.genesis?.value;
+  if (!vA || typeof vA !== 'object') throw new Error('the served genesis has no readable genesis value — refusing to re-root from an identity that cannot be read');
+  const unknown = Object.keys(vA).filter((k) => !GENESIS_CARRIED.includes(k) && !GENESIS_NOT_CARRIED.includes(k));
+  if (unknown.length) throw new Error(`the served genesis carries field(s) this command does not know how to carry forward: ${unknown.join(', ')}. Refusing rather than dropping them — a re-rooting silently loses whatever it does not restate, and a lost genesis field cannot be added back without a SECOND re-rooting (rule 2 above; §12.1/F.5y).`);
+
+  // WHAT IS INSTANTIATED — read, never asked (F.5y.2). Each entry is an axis that MUST be crossed.
+  const hA = P.contentHash(genesisA);
+  const declaresCA = !!vA.checkpoint_authority;
+  const instantiated = { keylog: true, authority: declaresCA, witness: !!witnessA, cadenceLog: Array.isArray(cadenceLogA) && cadenceLogA.length > 0 };
+  if (instantiated.authority && !caASigner) throw new Error('the served genesis DECLARES a checkpoint authority, so the authority chain must cross the boundary with a signed epoch transition — supply the epoch-A checkpoint-authority key. Beginning epoch B\'s chain from nothing IS the silent reset §12.3.2 forbids.');
+  if (!instantiated.authority && caASigner) throw new Error('a checkpoint-authority key was supplied but the served genesis declares no checkpoint authority — there is no chain to hand over, and signing a transition from an authority the genesis never named would assert a link no verifier can check.');
+  // §12.1: the recovery set is GENESIS-FIXED, so it cannot be changed later without a further re-rooting. Carrying
+  // the same cold shards forward keeps the operator's existing custody working; under `compromised` that is exactly
+  // the wrong default, because the ceremony is then being run to walk away from a key set. The reason is therefore
+  // asked, and refused rather than guessed.
+  if (reason !== 'planned' && reason !== 'compromised') throw new Error("reason must be 'planned' or 'compromised' — under `compromised` the epoch-A recovery set is NOT carried forward, so guessing it would silently re-adopt a set the operator is walking away from");
+  if (reason === 'compromised' && vA.recovery) throw new Error('reason=compromised, and the served genesis carries a recovery set: this command will not re-mint a recovery quorum for you. Run the genesis ceremony to establish a fresh set, then re-root onto it — a recovery set distributed across places is custody, not a parameter.');
+
+  const rootB = await W.generateSigner({ extractable: true });
+  const caB = instantiated.authority ? await W.generateSigner({ extractable: true }) : null;
+  const genesisB = await W.seal(P.buildGenesis(
+    { domain_shard: domain, ust_id: ustId, key_id: rootB.key_id }, time, rootB.pub,
+    vA.max_partitions, vA.max_transcript_bytes, vA.cadence,
+    caB ? { key_id: caB.key_id, pub: caB.pub } : undefined,
+    reason === 'compromised' ? undefined : (vA.recovery ? { keys: vA.recovery.keys, threshold: vA.recovery.threshold } : undefined),
+    roles ?? undefined,
+  ), rootB);
+  const hB = P.contentHash(genesisB);
+
+  // AXIS 1 — the key-log. Every key ACTIVE under epoch A must be accounted for: re-added under B or explicitly
+  // dropped. Silence here is the ceremony's single most expensive miss (measured: a forgotten engine key reads as
+  // INDETERMINATE(unavailable), which is exactly what a CORRECT ceremony reads as without witness evidence).
+  const ksA = P.resolveKeys(genesisA, keylogA);
+  if (ksA.error) throw new Error(`the served genesis + key-log do not RESOLVE (${ksA.error}: ${ksA.detail ?? ''}) — refusing to re-root from an identity a consumer cannot resolve either`);
+  const carriedKeys = [...ksA.active.entries()].filter(([kid]) => kid !== genesisA.state.id.key_id && !drop.includes(kid));
+  const declaresRoles = Array.isArray(roles) && roles.length > 0;
+  // THE ONE INPUT THAT IS NOT IN THE PRE-STATE, AND WHY IT IS ASKED. Rule 1 says read rather than ask — but the
+  // usual reason to declare roles is that epoch A had NONE, so there is nothing to read: which key is `data` and
+  // which is `issuance` is information the operator holds and the served identity does not. Inheritance cannot
+  // supply it either (§F.5e.1: `supersedes` PROPAGATES a role and never INTRODUCES one). So it is asked — and every
+  // unassigned key is named AT ONCE rather than one per run, because the operator is standing at a cold key.
+  const roleOf = (kid) => assign[kid] ?? ksA.roles?.get(kid) ?? null;
+  if (declaresRoles) {
+    const unassigned = carriedKeys.map(([kid]) => kid).filter((kid) => !roleOf(kid));
+    if (unassigned.length) throw new Error(`epoch B DECLARES role separation (${roles.join(', ')}), and ${unassigned.length} carried key(s) have no role to inherit from epoch A. State one for each, or drop the key deliberately:\n` + unassigned.map((k) => `    ${k}`).join('\n'));
+    const bad = carriedKeys.map(([kid]) => [kid, roleOf(kid)]).filter(([, r]) => !roles.includes(r));
+    if (bad.length) throw new Error(`role(s) outside what epoch B declares (${roles.join(', ')}): ` + bad.map(([k, r]) => `${k.slice(0, 20)}…=${r}`).join(', '));
+  } else if (Object.keys(assign).length) throw new Error('key roles were assigned but epoch B declares NO role separation — a `role` on a key-log entry the verifier cannot act on is E-MALFORMED (§12.2/§F.5e.2)');
+  let keylogB = [], prev = hB;
+  const rebound = [];
+  for (const [kid, pub] of carriedKeys) {
+    const role = declaresRoles ? roleOf(kid) : null;
+    const entry = await W.seal(P.buildKeyLogEntry({ domain_shard: domain, ust_id: ustId, key_id: rootB.key_id }, time,
+      { op: 'add', pub, new_key_id: kid, ...(role ? { role } : {}) }, prev), rootB);
+    keylogB = [...keylogB, entry]; prev = P.contentHash(entry); rebound.push({ key_id: kid, role });
+  }
+  if (!keylogB.length) throw new Error('epoch A has no operating key besides its root, so there is nothing to carry into epoch B — run the genesis ceremony instead of a re-rooting');
+
+  // AXIS 2 — the authority chain: epoch A's FINAL checkpoint, the transition signed by A's authority, and B's C₀.
+  let finalCheckpointA = null, transition = null, c0B = null;
+  if (instantiated.authority) {
+    const epochA = P.genesisEpoch(hA), epochB = P.genesisEpoch(hB);
+    finalCheckpointA = P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({
+      domain_shard: domain, genesis_epoch: epochA, sequence: 0, previous_checkpoint: null,
+      active_genesis: hA, current_key_id: vA.checkpoint_authority.key_id, keylog: klCommit(keylogA),
+    }), caASigner.priv, caASigner.pub);
+    const fId = P.authorityCheckpointId(finalCheckpointA);
+    transition = P.buildEpochTransition({ domain_shard: domain, from_genesis_epoch: epochA, from_final_checkpoint: fId, from_sequence: '0',
+      to_active_genesis: hB, to_genesis_epoch: epochB, to_key_id: caB.key_id, to_pub: caB.pub, to_initial_sequence: '0' }, caASigner.priv, caASigner.pub);
+    c0B = P.sealAuthorityCheckpoint(P.buildAuthorityCheckpoint({
+      domain_shard: domain, genesis_epoch: epochB, sequence: 0, previous_epoch_final_checkpoint: fId,
+      active_genesis: hB, current_key_id: caB.key_id, keylog: klCommit(keylogB),
+    }), await pkFromSigner(caB), caB.pub);
+  }
+
+  // AXIS 3 — the witness log. §12.1: supersession ADDS `superseded_by` and a successor entry, never removes. The new
+  // genesis carries no anchors: it has not been anchored yet, and claiming otherwise would be the one thing a
+  // witness log cannot do honestly.
+  let witnessB = null;
+  if (instantiated.witness) {
+    const succ = P.witnessSuccessor(witnessA, { domain_shard: domain, content_hash: hB });
+    if (succ.error) throw new Error('witness supersession refused: ' + succ.error);
+    witnessB = succ.log;
+  }
+
+  // AXIS 4 — the cadence log. Its entries are SIGNED statements about a grid that was in force; re-issuing them
+  // under epoch B would restate history the old epoch already owns. So epoch B gets a FRESH log declaring the grid
+  // currently in force, effective from this boundary, and epoch A's log keeps its own history under its own genesis.
+  let cadenceLogB = null;
+  if (instantiated.cadenceLog) {
+    const now = P.resolveCadence(genesisA, cadenceLogA, ustId, { keylog: keylogA });
+    if (now.error) throw new Error(`the served cadence log does not resolve at ${ustId} (${now.error}) — refusing to guess which grid to carry`);
+    cadenceLogB = [await W.seal(P.buildCadenceEntry({ domain_shard: domain, ust_id: ustId, key_id: rootB.key_id }, time, String(now.cadence), ustId, hB), rootB)];
+  }
+
+  // the probe is minted HERE because this is where the new root's private key lives; acceptance only reads its verdict.
+  let rootProbe = null;
+  if (declaresRoles) {
+    const doc = await W.seal(await W.buildState({ domain_shard: domain, ust_id: ustId, key_id: rootB.key_id, class: 'observation' }, time, { r: { kind: 'captured', value: { x: '1' } } }), rootB);
+    rootProbe = P.verify(doc, { context: 'data', genesis: genesisB, keylog: keylogB });
+  }
+  return { genesisB, keylogB, witnessB, cadenceLogB, transition, finalCheckpointA, c0B, rootB, caB, hA, hB, rebound, instantiated, reason, rootProbe };
+}
+/**
+ * F.5y.3 — acceptance INDEXED BY THE PRE-STATE. Its arguments are what was observed instantiated BEFORE the
+ * crossing, so an axis the ceremony never touched cannot fall outside its range; a self-check over the artifacts
+ * produced would range over exactly the wrong set. Returns a list of { axis, ok, detail } — never throws, because
+ * an operator holding a cold key needs the whole picture, not the first failure.
+ */
+export function acceptReroot({ genesisA, keylogA, witnessA, cadenceLogA, out, roles = null, ustId }) {
+  const R = [], add = (axis, ok, detail) => R.push({ axis, ok, detail });
+  const { genesisB, keylogB, witnessB, cadenceLogB, transition, finalCheckpointA, hA, hB, rebound, instantiated } = out;
+  const domain = genesisA.state.id.domain_shard;
+
+  const ks = P.resolveKeys(genesisB, keylogB);
+  add('genesis+key-log resolve', !ks.error, ks.error ? `${ks.error}: ${ks.detail ?? ''}` : `${ks.active?.size ?? 0} active key(s)`);
+  const declared = genesisB.state?.data?.genesis?.value?.roles ?? null;
+  const wanted = Array.isArray(roles) && roles.length ? [...roles].map(String) : null;
+  add('declared roles are what was asked', JSON.stringify(declared) === JSON.stringify(wanted), `document carries ${JSON.stringify(declared)}, asked ${JSON.stringify(wanted)}`);
+  const missing = rebound.filter((r) => !ks.active?.has(r.key_id));
+  add('every carried key is ACTIVE under epoch B', !ks.error && missing.length === 0,
+    missing.length ? `NOT bound: ${missing.map((m) => m.key_id.slice(0, 20) + '…').join(', ')}` : rebound.map((r) => r.key_id.slice(0, 14) + '…' + (r.role ? ` (${r.role})` : '')).join(', '));
+  const wrongRole = rebound.filter((r) => r.role && (ks.roles?.get(r.key_id) ?? null) !== r.role);
+  add('every carried key kept its role', wrongRole.length === 0, wrongRole.length ? wrongRole.map((r) => r.key_id.slice(0, 14) + '…').join(', ') : (wanted ? 'roles preserved from epoch A' : 'no role separation declared'));
+
+  // the PRE-state is untouched by construction: this ceremony writes new files and mutates nothing served, so
+  // epoch-A documents keep resolving under epoch A. Asserted rather than simulated — signing a probe would need
+  // epoch-A private keys the ceremony does not hold, and a check that cannot fail is worse than a stated invariant.
+  const kA = P.resolveKeys(genesisA, keylogA);
+  add('epoch A still resolves (its records stay valid)', !kA.error, kA.error ? `${kA.error}: ${kA.detail ?? ''}` : `${kA.active?.size ?? 0} active key(s), untouched`);
+
+  if (instantiated.authority) {
+    const v = P.verifyEpochTransition(transition, { domain_shard: domain, from_genesis_epoch: P.genesisEpoch(hA),
+      from_final_checkpoint: P.authorityCheckpointId(finalCheckpointA), from_sequence: '0',
+      fromAuthority: genesisA.state.data.genesis.value.checkpoint_authority });
+    add('authority chain crosses (epoch transition)', !!v.ok, v.ok ? 'signed by epoch A authority, binds the verified destination' : (v.detail ?? v.error ?? 'refused'));
+    // the CHAIN verifier, not a field comparison: C\u2080 must VERIFY against the new genesis with the transition as its
+    // licence to re-root. Hand-comparing `previous_epoch_final_checkpoint` asserts the one thing the chain verifier
+    // already decides, and would pass a C\u2080 whose SIGNATURE is wrong \u2014 the check would aim beside its own claim.
+    // the chain must contain BOTH ends: epoch A's final checkpoint AND epoch B's C₀, with the transition keyed by
+    // the destination epoch. Verifying C₀ alone takes the genesis-rooted-START branch, where a
+    // `previous_epoch_final_checkpoint` is refused outright — the transition is never even consulted.
+    const chain = P.verifyAuthorityCheckpointChain([finalCheckpointA, out.c0B], { genesis: genesisA, epochTransitions: { [P.genesisEpoch(hB)]: transition } });
+    add('epoch B initial authority checkpoint VERIFIES', !chain.error && chain.result !== 'INVALID',
+      chain.error ? `${chain.error}: ${chain.detail ?? ''}` : `C\u2080 sequence ${out.c0B.body?.sequence}, chain ${chain.result ?? 'accepted'}`);
+  } else add('authority chain', true, 'not instantiated — the served genesis declares no checkpoint authority, so nothing is owed');
+
+  if (instantiated.witness) {
+    const shrank = P.witnessNoShrink(witnessA, witnessB);
+    const old = witnessB?.genesis_log?.find((e) => e.content_hash === hA);
+    add('name crosses (witness supersession)', shrank === null && old?.superseded_by === hB && witnessB.active === hB,
+      shrank ?? (old ? `old root preserved with ${(old.anchors ?? []).length} anchor(s), superseded by the new active` : 'the superseded root is MISSING from the successor log'));
+  } else add('name (witness log)', true, 'not instantiated — no witness log is served, so a consumer never reads one');
+
+  if (instantiated.cadenceLog) {
+    const r = P.resolveCadence(genesisB, cadenceLogB, ustId, { keylog: keylogB });
+    const was = P.resolveCadence(genesisA, cadenceLogA, ustId, { keylog: keylogA });
+    add('grid crosses (cadence log)', !r.error && String(r.cadence) === String(was.cadence), r.error ? `${r.error} ${r.detail ?? ''}` : `${r.cadence}s, unchanged across the boundary`);
+  } else add('grid (cadence log)', true, 'not instantiated — the grid is carried in the genesis field, which this ceremony copied');
+
+  // DECLARED vs WORKING. Painbook acceptance point 5, and not a formality: it is the only leg that distinguishes
+  // “we declared roles” from “the roles act”. Signed by the NEW ROOT, whose private key this ceremony holds — under
+  // a declared regime the root is bound by its own function and must be refused an `observation` class.
+  if (out.rootProbe) add('role separation ACTS (root refused a data class)', out.rootProbe.error === 'E-KEY', out.rootProbe.error ? 'E-KEY — the root cannot sign observations' : `NOT refused — got ${out.rootProbe.result}`);
+  else add('role separation', true, 'no roles declared — the key set stays undifferentiated, as before');
+
+  // THE AXIS THIS COMMAND CANNOT CROSS. It lives in a running writer, not in a published document, so it is
+  // reported as an obligation with the exact value rather than checked. F.5y's corollary: a writer that continues
+  // its chain across the boundary is refused E-PREV for every consumer holding the new genesis, while the ceremony
+  // reports success — the failure is in production and visible only at the consumer.
+  add('stream crossing (YOURS to perform)', null, `the first frame after the boundary MUST set prev = ${hB}`);
+  return R;
+}
+// The authority checkpoint helpers sign with a node KeyObject, not a web-signer. One conversion, named, so the two
+// signing worlds meet in exactly one place instead of drifting into two shapes of the same key.
+const klCommit = (entries) => { const c = P.buildKeylogCommitment(entries.map((k) => P.contentHash(k))); return { root: c.root, length: c.length, head: c.head }; };
+// ^ the commitment builder returns MORE than the checkpoint body admits — `merkle_root`, `headProof`, and `prove`,
+// which is a FUNCTION. Handing its whole return to a signed body throws E-CANON at seal time, and every existing
+// call site projects `{root,length,head}` by hand. Named once here so this ceremony has one place to be wrong.
+async function pkFromSigner(signer) {
+  const pkcs8 = Buffer.from(await crypto.subtle.exportKey('pkcs8', signer.privateKey));
+  return createPrivateKey({ key: pkcs8, format: 'der', type: 'pkcs8' });
 }
 export async function rotateKeylog({ genesis, keylog, rootSigner, reason = null, compromisedSince = null, supersedesKeyId = null, time, ustId }) {
   const domain = genesis.state.id.domain_shard;
@@ -2312,7 +2535,7 @@ export async function cmdRotate() {
   if (!domain || domain === true) die('usage: ust rotate --domain <d> --root <encrypted-root.b64> [--key-id <key_id>] [--keylog <served array file>]\n         [--reason retired|compromised [--compromised-since <RFC3339-Z>]] [--out .]\n  APPENDS a key rotation to the served log (never re-mints). Old docs stay valid under the key active at their anchored time (§12.2).\n  --key-id NAMES the key being replaced; it is REQUIRED once more than one operational key is active, and the\n  successor INHERITS that key\'s role. To change what a key is FOR, add one beside it: `ust key add --role`.');
   const rootFile = arg('root'); if (!rootFile || rootFile === true) die('--root <encrypted root backup .b64> required (the cold crown key)');
   // fetch the current identity (genesis + served key-log), or take the log from --keylog
-  const get = async (p) => { const r = await fetch(`https://${domain}${p}`, { signal: AbortSignal.timeout(10000), redirect: 'error' }); if (!r.ok) throw new Error(`HTTP ${r.status} at ${p}`); return r.text(); };
+  const get = discoveryFetcher(domain);   // one reader for every ceremony command — see its definition for why
   let genesis; try { genesis = JSON.parse(await get('/.well-known/ust-genesis')); } catch (e) { die('cannot fetch genesis for ' + domain + ': ' + (e.message || e)); }
   if (!P.isValid(P.verify(genesis, { context: 'key' }))) die('served genesis does not VERIFY');
   const klFile = arg('keylog', null);
@@ -2386,7 +2609,7 @@ export async function cmdCadence() {
   if (!/^[1-9][0-9]*$/.test(seconds)) die('--seconds must be a canonical positive integer of seconds (§11.3): "30", never "1.5" or "030"');
   const effFrom = arg('effective-from'); if (!effFrom || effFrom === true) die('--effective-from <ust_id> required — the slot this cadence takes effect at');
 
-  const get = async (p) => { const r = await fetch(`https://${domain}${p}`, { signal: AbortSignal.timeout(10000), redirect: 'error' }); if (!r.ok) { const e = new Error(`HTTP ${r.status} at ${p}`); e.httpStatus = r.status; throw e; } return r.text(); };
+  const get = discoveryFetcher(domain);   // one reader for every ceremony command — see its definition for why
   let genesis; try { genesis = JSON.parse(await get('/.well-known/ust-genesis')); } catch (e) { die('cannot fetch genesis for ' + domain + ': ' + (e.message || e)); }
   if (!P.isValid(P.verify(genesis, { context: 'key' }))) die('served genesis does not VERIFY');
   let keylog = [];
@@ -2435,11 +2658,134 @@ export async function cmdCadence() {
   console.error('    serve it at https://' + domain + '/.well-known/ust-cadence (and mirror it, like the genesis and key-log)');
 }
 
+// ─── ust reroot — the CROSSING (§12.1/F.5y, UST#131) ──────────────────────────────────────────────────────────────
+// The command stops at ARTIFACTS IN A DIRECTORY. Publication stays a separate step, so the point of no return is one
+// place and it is explicit: nothing here is irreversible, and an operator who mistrusts the result deletes a folder.
+//
+// It does NOT ask for the epoch-A ROOT key, and that is worth saying out loud rather than leaving as an omission the
+// operator notices. The implemented protocol signs a re-rooting with epoch A's checkpoint authority (the transition)
+// and epoch B's own new root (its genesis and key-log); §12.1 P2 additionally requires the supersession to be
+// "signed by the old genesis key", but that conjunct has no wire form and nothing in any implementation emits or
+// checks it — tracked as UST-Protocol#133. Until it is determined, this follows what verifiers actually do.
+export async function cmdReroot() {
+  const domain = arg('domain');
+  if (!domain || domain === true) die('usage: ust reroot --domain <d> --ca-key <epoch-A checkpoint-authority key .b64>\n         [--roles data,issuance] [--assign <key_id>=<role>,…] [--drop <key_id>,…] [--reason planned|compromised]\n         [--out <dir>]\n  DISCONNECTED: --genesis <f> selects an OFFLINE ceremony; then every surface must be supplied (--keylog/--witness/\n         --cadence-log <f>) or DECLARED absent (--no-keylog/--no-witness/--no-cadence-log). Silence is not an assertion.\n  RE-ROOT this identity onto a NEW genesis, crossing every genesis-rooted structure you have instantiated (F.5y):\n  the key-log, the authority chain, the witness log (the NAME), and the cadence log. What must cross is read from\n  your SERVED identity, never asked — an omitted flag is indistinguishable from an absent structure.\n  Writes artifacts to a directory. It PUBLISHES NOTHING: until you serve them, nothing has happened.\n  The one axis this cannot cross is your running writer — see its printed obligation.');
+  const outDir = (arg('out', null) && arg('out', null) !== true) ? String(arg('out', null)) : '.';
+  const caFile = arg('ca-key', null);
+  const reason = (arg('reason', null) && arg('reason', null) !== true) ? String(arg('reason', null)) : 'planned';
+  const rolesArg = arg('roles', null);
+  const roles = (rolesArg && rolesArg !== true) ? String(rolesArg).split(',').map((s) => s.trim()).filter(Boolean) : null;
+  if (rolesArg && rolesArg !== true && !roles.length) die('--roles was given but parses to nothing — omit it to re-root without declaring role separation; an empty declaration is not a state this protocol has (§12.1)');
+  const assign = {};
+  const assignArg = arg('assign', null);
+  if (assignArg && assignArg !== true) for (const pair of String(assignArg).split(',')) {
+    const [k, v] = pair.split('='); if (!k || !v) die(`--assign expects <key_id>=<role> pairs, got "${pair}"`);
+    assign[k.trim()] = v.trim();
+  }
+  const dropArg = arg('drop', null);
+  const drop = (dropArg && dropArg !== true) ? String(dropArg).split(',').map((s) => s.trim()).filter(Boolean) : [];
+
+  // THE PRE-STATE. Read from the served surfaces, or from files for a disconnected ceremony — either way it is READ.
+  // ONLINE and OFFLINE are DISJOINT, and that is the point. A disconnected ceremony that still reaches for the
+  // network cannot tell "this domain serves no witness log" from "this machine has no network" — and those are the
+  // difference between an axis that needs no crossing and one silently skipped. Supplying `--genesis <f>` selects
+  // offline; every other surface must then be either SUPPLIED or DECLARED ABSENT. Silence is never an assertion:
+  // an operator who simply forgets `--witness` would otherwise skip the crossing that carries the NAME.
+  const offline = arg('genesis', null) && arg('genesis', null) !== true;
+  const get = discoveryFetcher(domain);
+  const fileOr = async (flag, path, parse) => {
+    const f = arg(flag, null);
+    if (f && f !== true) { try { return parse(readFileSync(String(f), 'utf8')); } catch (e) { die(`cannot read --${flag}: ${e.message || e}`); } }
+    if (offline) {
+      if (arg('no-' + flag, undefined) !== undefined) return null;       // absence DECLARED, not inferred from silence
+      die(`offline ceremony (--genesis is a file): the ${flag} surface is neither supplied nor declared absent. Pass --${flag} <file>, or --no-${flag} if this identity truly serves none — on a disconnected machine an unsupplied surface is indistinguishable from an unreachable one, and guessing here silently skips a crossing (F.5y.2).`);
+    }
+    try { return parse(await get(path)); }
+    catch (e) { if (e.httpStatus === 404 || e.httpStatus === 410) return null; die(`${path} is present but unreadable — refusing to re-root from an identity that cannot be read: ${e.message || e}`); }
+  };
+  // the genesis goes through the SAME reader as the rest — usage offered `--genesis <f>` for a disconnected ceremony
+  // and the first draft of this fetched it unconditionally, so the flag was documented and ignored. A flag a command
+  // prints and does not honour is the printed-command defect class one layer in: the text is right, the code is not.
+  const genesisA = await fileOr('genesis', '/.well-known/ust-genesis', JSON.parse);
+  if (!genesisA) die(`no genesis is served at https://${domain}/.well-known/ust-genesis — there is no identity here to re-root`);
+  if (!P.isValid(P.verify(genesisA, { context: 'key' }))) die('the served genesis does not VERIFY — refusing to re-root from it');
+  const klParsed = await fileOr('keylog', '/.well-known/ust-keylog', (raw) => { const p = parseKeylogRaw(raw); if (p.err) throw new Error(p.err); return p.entries; });
+  if (!klParsed) die('no key-log is served — there is nothing to carry into a new epoch; run `ust genesis` instead');
+  const witnessA = await fileOr('witness', '/.well-known/ust-witness', JSON.parse);
+  const cadenceLogA = await fileOr('cadence-log', '/.well-known/ust-cadence', JSON.parse);
+  console.error(`  ↳ instantiated: key-log ${klParsed.length} entr${klParsed.length === 1 ? 'y' : 'ies'} · witness ${witnessA ? witnessA.genesis_log?.length + ' root(s)' : 'ABSENT'} · cadence log ${cadenceLogA ? cadenceLogA.length + ' entr(ies)' : 'ABSENT'} · checkpoint authority ${genesisA.state.data.genesis.value.checkpoint_authority ? 'DECLARED' : 'none'}`);
+
+  // epoch A's checkpoint authority signs the hand-over. Its key must MATCH what the genesis declared — a key that
+  // signs a transition from an authority the genesis never named asserts a link no verifier can check.
+  let caASigner = null;
+  const declaredCA = genesisA.state.data.genesis.value.checkpoint_authority;
+  if (declaredCA) {
+    if (!caFile || caFile === true) die('the served genesis DECLARES a checkpoint authority, so the authority chain must cross with a signed epoch transition: --ca-key <the checkpoint-authority key from your genesis ceremony>');
+    let priv, pub;
+    try { priv = createPrivateKey({ key: Buffer.from(readFileSync(String(caFile), 'utf8').trim(), 'base64'), format: 'der', type: 'pkcs8' });
+          pub = createPublicKey(priv).export({ format: 'der', type: 'spki' }).subarray(-32).toString('base64url'); }
+    catch (e) { die('cannot read --ca-key as a PKCS#8 Ed25519 key: ' + (e.message || e)); }
+    if (pub !== declaredCA.pub) die(`--ca-key is NOT the checkpoint authority this genesis declared (${declaredCA.key_id.slice(0, 24)}…) — refusing to sign a hand-over from an authority the identity never named`);
+    caASigner = { priv, pub };
+  } else if (caFile && caFile !== true) die('--ca-key was given but the served genesis declares no checkpoint authority — there is no chain to hand over');
+
+  const { ust_id, time } = W.nowFrame();
+  let out; try { out = await runRerootCeremony({ domain, genesisA, keylogA: klParsed, witnessA, cadenceLogA, caASigner, roles, assign, drop, reason, time, ustId: ust_id }); }
+  catch (e) { die(e.message); }
+
+  // ACCEPTANCE BEFORE ANY FILE IS WRITTEN. A ceremony that writes what it has not accepted hands the operator an
+  // artifact set to publish that no verifier would take — and the whole point of stopping at a directory is that the
+  // directory is trustworthy. Every leg is printed, failed or not: an operator at a cold key needs the picture.
+  const legs = acceptReroot({ genesisA, keylogA: klParsed, witnessA, cadenceLogA, out, roles, ustId: ust_id });
+  console.log('\n  ── acceptance ──');
+  for (const l of legs) console.log(`  ${l.ok === null ? '▸' : l.ok ? '✓' : '✗'} ${l.axis.padEnd(46)} ${l.detail}`);
+  const failed = legs.filter((l) => l.ok === false);
+  if (failed.length) die(`${failed.length} acceptance leg(s) FAILED — nothing was written. Re-run after fixing; no state changed.`);
+
+  let rl = null;
+  const ask = (q) => { rl ??= openReader(createInterface); return rl.question(q); };
+  rl = closeReader(rl);
+  const pass = await askHidden('  🔑 passphrase for the NEW root key (empty = store it unencrypted): ', ask);
+  rl = closeReader(rl);
+  const wr = (name, data) => writeFileSync(`${outDir}/${name}`, data);
+  const secret = (name, data) => writeFileSync(`${outDir}/${name}`, data, { mode: 0o600 });
+  const j = (x) => JSON.stringify(x, null, 2) + '\n';
+  wr('ust-genesis', j(out.genesisB));
+  wr('ust-keylog', j(out.keylogB));
+  if (out.witnessB) wr('ust-witness', j(out.witnessB));
+  if (out.cadenceLogB) wr('ust-cadence', j(out.cadenceLogB));
+  if (out.transition) { wr('epoch-transition.json', j(out.transition)); wr('final-checkpoint-epoch-a.json', j(out.finalCheckpointA)); wr('checkpoint-0-epoch-b.json', j(out.c0B)); }
+  const rootPkcs8 = Buffer.from(await crypto.subtle.exportKey('pkcs8', out.rootB.privateKey)).toString('base64');
+  secret(`genesis-key${pass ? '.enc' : ''}.b64`, (pass ? encryptKey(rootPkcs8, pass) : rootPkcs8) + '\n');
+  if (out.caB) secret('checkpoint-authority-key.b64', Buffer.from(await crypto.subtle.exportKey('pkcs8', out.caB.privateKey)).toString('base64') + '\n');
+
+  console.log('\n  ══════════════════════════════════════════════');
+  console.log(`  ✅ RE-ROOTED — ${domain}   (artifacts only; NOTHING is published)`);
+  console.log('  ══════════════════════════════════════════════');
+  console.log(`  epoch A   ${out.hA}`);
+  console.log(`  epoch B   ${out.hB}`);
+  console.log(`  carried   ${out.rebound.map((r) => r.key_id.slice(0, 16) + '…' + (r.role ? ` (${r.role})` : '')).join(', ')}${drop.length ? `   · dropped ${drop.length}` : ''}`);
+  console.log(`  recovery  ${reason === 'compromised' ? 'NOT carried (reason=compromised)' : (genesisA.state.data.genesis.value.recovery ? 'carried forward — your existing cold shards still apply' : 'none declared')}`);
+  console.log(`\n  📦 ${outDir}/`);
+  console.log('     ust-genesis, ust-keylog' + (out.witnessB ? ', ust-witness' : '') + (out.cadenceLogB ? ', ust-cadence' : '') + '  → PUBLIC, serve at /.well-known/');
+  if (out.transition) console.log('     epoch-transition.json, final-checkpoint-epoch-a.json, checkpoint-0-epoch-b.json  → the authority hand-over');
+  console.log(`     genesis-key${pass ? '.enc' : ''}.b64${pass ? '' : '   ⚠️ UNENCRYPTED'}   → 🧊 COLD — the new crown; every key-log mutation needs it`);
+  if (out.caB) console.log('     checkpoint-authority-key.b64        → 🧊 COLD — signs epoch B authority checkpoints');
+  console.log('\n  ▶️  the axis this command CANNOT cross — your running writer:');
+  console.log(`     the FIRST frame you publish after the boundary must set  prev = ${out.hB}`);
+  console.log('     a writer that keeps chaining frame-to-frame is refused E-PREV by every consumer holding the new');
+  console.log('     genesis, while this ceremony reports success. Change the writer BEFORE you serve the new genesis.');
+  console.log('\n  ▶️  then publish — the ONE irreversible step:');
+  console.log(`     ${invocation()} publish self --domain ${domain} --genesis ${outDir}/ust-genesis`);
+  console.log('     expect the witness to read `pending` until the new genesis is anchored. That is not a failure,');
+  console.log('     and re-running the ceremony because of it is how a second genesis gets minted.');
+}
+
 const isMain = (() => { try { return process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url); } catch { return false; } })();
 if (isMain) {
   const cmd = process.argv[2];
 
-  const run = { verify: cmdVerify, canon: cmdCanon, genesis: cmdGenesis, key: cmdKey, rotate: cmdRotate, cadence: cmdCadence, discovery: cmdDiscovery, publish: cmdPublish, mirror: cmdMirror, stream: cmdStream, forkchoice: cmdForkChoice, witness: cmdWitness }[cmd];
-  if (!run) { const b = banner(); console.error(b + (b ? '' : 'ust — verify machine-readable state\n\n') + "\n  READ & VERDICT — safe, touches nothing\n  ✓ ust verify <file|->        verify a transcript — exit 0 = VALID, 1 = not (--require-anchored demands proven time)\n  ≡ ust canon  <file|->        print canonical bytes + hash — diff another language's implementation against this\n  … ust stream <frames…>       a verdict about a RANGE, not one document: chain · forks · completeness\n                               (--checkpoint is what makes completeness answerable at all)\n  ⑂ ust forkchoice <docs…>     pick the CANONICAL document among candidates for ONE ust_id — the anchor decides,\n                               never the candidates themselves\n  ◇ ust discovery <domain>     probe a domain's serving surface and report an honest verdict — any infrastructure\n\n  CEREMONY — touches your identity, needs the root key\n  ◉ ust genesis --domain <d>   run the HIGH genesis ceremony (add --publish cf for one-click serving)\n  + ust key add --domain <d> --root <enc> --role <data|issuance>   ADD a key BESIDE the current one (never replaces it)\n  ↻ ust rotate  --domain <d> --root <enc>   APPEND a key rotation to the served log\n                               (never re-mints — documents signed by the old key stay valid)\n  ~ ust cadence --domain <d> --root <enc> --seconds <n> --effective-from <slot>\n                               DECLARE the signed grid your stream follows — what completeness is measured against\n\n  PUBLISH — writes to the world\n  ▲ ust publish <cf|self> --domain <d> --genesis <f>   serve an existing genesis: cf deploys the adapter,\n                               self writes the four artifacts for YOUR stack (asked if omitted)\n  ▣ ust mirror <domain>        publish and attest a SECOND-vendor copy, so your identity does not rest\n                               on one provider\n  † ust witness rekor --domain <d>   log the genesis in a public transparency log, so a second published\n                               history cannot go unnoticed\n"); process.exit(cmd ? 1 : 0); }
+  const run = { verify: cmdVerify, canon: cmdCanon, genesis: cmdGenesis, key: cmdKey, rotate: cmdRotate, cadence: cmdCadence, reroot: cmdReroot, discovery: cmdDiscovery, publish: cmdPublish, mirror: cmdMirror, stream: cmdStream, forkchoice: cmdForkChoice, witness: cmdWitness }[cmd];
+  if (!run) { const b = banner(); console.error(b + (b ? '' : 'ust — verify machine-readable state\n\n') + "\n  READ & VERDICT — safe, touches nothing\n  ✓ ust verify <file|->        verify a transcript — exit 0 = VALID, 1 = not (--require-anchored demands proven time)\n  ≡ ust canon  <file|->        print canonical bytes + hash — diff another language's implementation against this\n  … ust stream <frames…>       a verdict about a RANGE, not one document: chain · forks · completeness\n                               (--checkpoint is what makes completeness answerable at all)\n  ⑂ ust forkchoice <docs…>     pick the CANONICAL document among candidates for ONE ust_id — the anchor decides,\n                               never the candidates themselves\n  ◇ ust discovery <domain>     probe a domain's serving surface and report an honest verdict — any infrastructure\n\n  CEREMONY — touches your identity, needs the root key\n  ◉ ust genesis --domain <d>   run the HIGH genesis ceremony (add --publish cf for one-click serving)\n  + ust key add --domain <d> --root <enc> --role <data|issuance>   ADD a key BESIDE the current one (never replaces it)\n  ↻ ust rotate  --domain <d> --root <enc>   APPEND a key rotation to the served log\n                               (never re-mints — documents signed by the old key stay valid)\n  ~ ust cadence --domain <d> --root <enc> --seconds <n> --effective-from <slot>\n                               DECLARE the signed grid your stream follows — what completeness is measured against\n  ⟳ ust reroot  --domain <d> --ca-key <enc>   RE-ROOT onto a new genesis, crossing EVERY genesis-rooted\n                               structure you run — key-log, authority chain, witness log (the NAME), cadence.\n                               Writes artifacts; publishes nothing. Your writer must cross the last axis itself.\n\n  PUBLISH — writes to the world\n  ▲ ust publish <cf|self> --domain <d> --genesis <f>   serve an existing genesis: cf deploys the adapter,\n                               self writes the four artifacts for YOUR stack (asked if omitted)\n  ▣ ust mirror <domain>        publish and attest a SECOND-vendor copy, so your identity does not rest\n                               on one provider\n  † ust witness rekor --domain <d>   log the genesis in a public transparency log, so a second published\n                               history cannot go unnoticed\n"); process.exit(cmd ? 1 : 0); }
   run().catch((e) => die(e.message || String(e)));
 }

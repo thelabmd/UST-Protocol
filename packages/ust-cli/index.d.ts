@@ -16,6 +16,7 @@
 // values and fails if a declared key is missing, so they cannot drift into being the stale kind.
 // Package: @ust-protocol/cli
 
+export function acceptReroot(arg0?: unknown): unknown;
 export function addKeylogKey(arg0?: unknown): Promise<{ keylog: unknown; newKey: unknown }>;
 export const ARTIFACT_ORIGIN: Readonly<{ genesis: 'loaded'; keylog: 'loaded'; cadence: 'loaded'; witness: 'derived' }>;
 export function askHidden(q: unknown, fallbackAsk: unknown): Promise<string>;
@@ -35,6 +36,7 @@ export function cfUpsert(arg0?: unknown): Promise<{ action: unknown }>;
 export function checkPublished(liveText: unknown, genHash: unknown): unknown;
 export function closeReader(rl: unknown): unknown;
 export function cmdCadence(): Promise<unknown>;
+export function cmdReroot(): Promise<string>;
 export function cmdRotate(): Promise<string>;
 export function collectServed(arg0?: unknown): Promise<{ genesisText: unknown; keylogText: unknown; cadenceText: unknown; witnessText: unknown }>;
 export function confirmLive(arg0?: unknown): Promise<unknown>;
@@ -62,6 +64,7 @@ export function remintProbe(arg0?: unknown): Promise<unknown>;
 export const RESERVED_TEST_NAME: unknown;
 export function rootSignerFrom(pkcs8: unknown, rootPubB64url: unknown): Promise<unknown>;
 export function rotateKeylog(arg0?: unknown): Promise<{ keylog: unknown; newOp: unknown; supersededKeyId: unknown; revokedPub: unknown }>;
+export function runRerootCeremony(arg0?: unknown): Promise<Record<string, unknown>>;
 export function scanDupes(text: unknown): string;
 export function selfHostedPlan(arg0: unknown): unknown[];
 export function servedArtifacts(arg0?: unknown): unknown;

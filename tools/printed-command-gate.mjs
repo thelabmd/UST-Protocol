@@ -222,6 +222,42 @@ for (const f of PKG_READMES) {
 }
 check(runnable >= 3, `only ${runnable} runnable example(s) found across the package pages — the sweep has gone blind, or the pages stopped promising anything a reader can execute`);
 
+// A TEMPLATE THAT NEVER INTERPOLATED. MEASURED 2026-08-03: three `console.log('… ${invocation()} verify …')` calls
+// used a template placeholder inside a SINGLE-QUOTED string, so the CLI printed the six characters `${` … `}` to the
+// operator instead of the command. It reads as a bug in the tool at the exact moment the operator is being told what
+// to run next, and it survived every check here because the surrounding text IS a valid instruction — the gate above
+// asks whether a printed command dispatches, never whether the printed line is the one the code meant to print.
+// The rule is mechanical and total over the source: a `${…}` inside a NON-template string literal is never intended.
+// Comments are STRIPPED first, and the match is confined to ONE line. The first draft of this swept raw source and
+// produced a flood: apostrophes in English prose inside comments pair up across lines and every `${…}` between them
+// matched. That is the harness being wrong, not the code — and a gate whose first run is mostly its own noise is the
+// one people learn to ignore.
+const noComments = (src) => src.replace(/\/\*[\s\S]*?\*\//g, ' ').split('\n').map((l) => {
+  let q = null, esc = false;
+  for (let i = 0; i < l.length; i++) {
+    const c = l[i];
+    if (esc) { esc = false; continue; }
+    if (c === '\\') { esc = true; continue; }
+    if (q) { if (c === q) q = null; continue; }
+    if (c === "'" || c === '"' || c === '`') { q = c; continue; }
+    if (c === '/' && l[i + 1] === '/') return l.slice(0, i);
+  }
+  return l;
+}).join('\n');
+// ANCHORED AT THE CALL SITE, not floating over the line. A free-floating scan cannot tell a real single-quoted
+// string from a single quote nested inside a BACKTICK template (`${n === 1 ? 'y' : 'ies'}` is correct code), and a
+// tokenizer that could is not worth its own defects here. The observed class is exact and narrow: the FIRST string
+// argument of a printing call. A template opens with a backtick, which this pattern does not accept, so correct
+// interpolation can never match — which is what the second control asserts rather than assumes.
+const PRINTED_FIRST_ARG = /(?:console\.(?:log|error)|die)\(\s*(['"])((?:\\.|(?!\1)[^\n])*?)\1/g;
+const scanPlaceholders = (src) => [...noComments(src).matchAll(PRINTED_FIRST_ARG)].filter((m) => m[2].includes('${')).map((m) => m[0]);
+for (const hit of scanPlaceholders(SRC))
+  check(false, `a printed string carries an UN-INTERPOLATED placeholder — it reaches the operator verbatim: ${hit.trim().slice(0, 100)}`);
+// CONTROL, both directions — a sweep that cannot fire is indistinguishable from a clean tree.
+check(scanPlaceholders(`console.log('run \${invocation()} verify');`).length === 1, 'CONTROL: the placeholder sweep did NOT fire on a real single-quoted template — it is blind');
+check(scanPlaceholders('console.log(`run ${invocation()} verify`);').length === 0, 'CONTROL: the placeholder sweep fired on a CORRECT template literal — it would reject working code');
+check(scanPlaceholders("// an operator's note about ${something}\nconst x = 1;").length === 0, 'CONTROL: the placeholder sweep fired inside a comment — the prose apostrophe flood is back');
+
 console.log(`\n  printed commands   PASS ${pass}   FAIL ${fail.length}   (${COMMANDS.size} subcommands · ${checked} printed instructions checked)`);
 if (fail.length) { fail.forEach((f) => console.log('    ✗ ' + f)); process.exit(1); }
 console.log('  ✓ every command the tool prints is one the tool can run');

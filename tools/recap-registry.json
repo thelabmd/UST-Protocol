@@ -1,317 +1,322 @@
 {
-  "_": "Which sealed diary entry recaps which round. THE UNIT IS THE CLOSED ISSUE (owner, 2026-07-29): one closed issue gets one recap and one diary entry. A round that closes no issue gets neither, and records why. Today by hand — closed, invoked, recorded — and the store carries no task linkage, so this file is the only place round, issue and sealed entry are joined; inventing that linkage inside the store would make the diary answer to the changelog. The recap lands in the ISSUE and nowhere else: the diary's own homes are diarium/ and diarium.md.",
-  "_first_accounted": "The rule starts where it was written. Rounds below the floor predate it and are reported, never gated: back-filling them would mean writing a diary entry today about a day I cannot remember, which is the one thing this diary is not for.",
-  "first_recapped_round": 80,
-  "records": [
-    {
-      "round": 80,
-      "content_hash": "sha256:f72cbac647c020a0b825cd00fbc94dc81082bc814638454c2ff068f21827b6bc",
-      "issue": 106,
-      "_issue": "The recap follows the CLOSED ISSUE, not the round. Round 80 closed nothing, and reading that literally I posted no block at all — the owner caught it. #106 was closed in the same session and the sealed entry is that session's moment, so it belongs at the end of #106's recap. The open question from 2026-07-27 is therefore answered: the issue closed in the session receives it."
-    },
-    {
-      "round": 81,
-      "no_recap": "Round 81 closed no issue — it built the recap machinery itself. The unit is the CLOSED ISSUE: one closed issue, one recap, one diary entry. A tooling round that closes nothing has no recipient, and a diary entry written for it would be an entry written to satisfy a gate."
-    },
-    {
-      "round": 82,
-      "content_hash": "sha256:c0543e5bc8d106a6eb8970a62d903021339af7a2f14ba7660c2b41e84a897746",
-      "issue": 108,
-      "_issue": "Round 82 closed #108, so #108 receives the recap. My first accounting recorded `no_recap` here on the grounds that the day's entry was already sealed — wrong: the unit is the closed issue, not the invocation, and #108 being closed is exactly what earns an entry."
-    },
-    {
-      "round": 83,
-      "no_recap": "Round 83 closed no issue — it moved where a recap lands and what unit earns one. The unit is the CLOSED ISSUE: a round that closes nothing has no recipient, and an entry written for it would be an entry written to satisfy a gate."
-    },
-    {
-      "round": 84,
-      "content_hash": "sha256:0eeeeeaf51ec4cdf21f2e34f3d315342796c33c0ec090c04114ef5a60c33d7db",
-      "issue": 109,
-      "_issue": "Round 84 closed #109, so #109 receives the recap — one closed issue, one recap, one entry."
-    },
-    {
-      "round": 85,
-      "no_recap": "Round 85 closed no issue — it turns #110's hand-written map into a gate, and #110 stays open on the remaining work. The unit is the CLOSED ISSUE: a round that closes nothing has no recipient."
-    },
-    {
-      "round": 86,
-      "no_recap": "Round 86 closed no issue — it FILED one (#111). The unit is the CLOSED issue: a round that opens work rather than finishing it has no recipient for a recap."
-    },
-    {
-      "round": 87,
-      "no_recap": "Round 87 closed no issue. The rule is one closed issue, one diary entry, without conditions — so a round that closes nothing gets no entry, and that is the record rather than an omission."
-    },
-    {
-      "round": 88,
-      "no_recap": "Round 88 closed no issue — it is one step of #110's quadrant work, and #110 stays open. One closed issue, one entry, without conditions."
-    },
-    {
-      "round": 89,
-      "no_recap": "Round 89 closed no issue — one step of #110's quadrant work, and #110 stays open. One closed issue, one entry, without conditions."
-    },
-    {
-      "round": 90,
-      "no_recap": "Round 90 closed no issue — one step of #110's quadrant work, and #110 stays open. One closed issue, one entry, without conditions."
-    },
-    {
-      "round": 91,
-      "no_recap": "Round 91 closed no issue — one step of #110's quadrant work, and #110 stays open. One closed issue, one entry, without conditions."
-    },
-    {
-      "round": 92,
-      "no_recap": "Round 92 closed no issue — it FILED one (#112) and is one step of #110's quadrant work. One closed issue, one entry, without conditions."
-    },
-    {
-      "round": 93,
-      "no_recap": "Round 93 closed no issue — one step of #110's quadrant work, and #110 stays open. One closed issue, one entry, without conditions."
-    },
-    {
-      "round": 94,
-      "no_recap": "Round 94 closed no issue — one step of #110's quadrant work, and #110 stays open. One closed issue, one entry, without conditions."
-    },
-    {
-      "round": 95,
-      "no_recap": "Round 95 closed no issue — one step of #110's quadrant work, and #110 stays open. One closed issue, one entry, without conditions."
-    },
-    {
-      "round": 96,
-      "no_recap": "Round 96 closed no issue — it empties #110's weakest quadrant, and #110 stays open on the domain axis and the independent regrade. One closed issue, one entry, without conditions."
-    },
-    {
-      "round": 97,
-      "no_recap": "Round 97 closed no issue — one step of #110's quadrant work on the domain axis, and #110 stays open. One closed issue, one entry, without conditions."
-    },
-    {
-      "round": 98,
-      "no_recap": "Round 98 closed no issue — one step of #110's domain axis, and #110 stays open. One closed issue, one entry, without conditions."
-    },
-    {
-      "round": 99,
-      "no_recap": "Round 99 closed no issue — one step of #110's domain axis, and #110 stays open. One closed issue, one entry, without conditions."
-    },
-    {
-      "round": 100,
-      "no_recap": "Round 100 closed no issue — one step of #110's domain axis, and #110 stays open. One closed issue, one entry, without conditions."
-    },
-    {
-      "round": 101,
-      "no_recap": "Round 101 closed no issue — one step of #110's domain axis, and #110 stays open. One closed issue, one entry, without conditions."
-    },
-    {
-      "round": 102,
-      "content_hash": "sha256:c96d708a0625f442d6a5da4c321061e95819fe2c8ae3b3325cf1ae61b9419cd6",
-      "issue": 110,
-      "_issue": "Round 102 was the last of the self-audit arc and #110 closed on it, so #110 receives the recap. The earlier `no_recap` said the round closed nothing — true when written, and the closing was the next act."
-    },
-    {
-      "round": 103,
-      "content_hash": "sha256:17d14fbb3ac972a3d2ca4323bd06bceb6229a2ccaf688667d155be4da54a974d",
-      "issue": 111,
-      "_issue": "Round 103 closed #111, so #111 receives the recap — one closed issue, one entry."
-    },
-    {
-      "round": 104,
-      "content_hash": "sha256:dbceebb4bf24ce251d55e9eb0628becca31cc707a083ae94fd1999adfcc8fce0",
-      "issue": 112,
-      "_issue": "Round 104 closed #112, so #112 receives the recap — one closed issue, one entry."
-    },
-    {
-      "round": 105,
-      "no_recap": "Round 105 closed no issue — it is the first pass of #114, which stays open until the audit finishes and its after-table is written. One closed issue, one entry, without conditions."
-    },
-    {
-      "round": 106,
-      "no_recap": "Round 106 closed no issue — the second pass of #114, which stays open until the audit finishes and its after-table is written."
-    },
-    {
-      "round": 107,
-      "no_recap": "Round 107 closed no issue — the third pass of #114, which stays open until the audit finishes and its after-table is written."
-    },
-    {
-      "round": 108,
-      "no_recap": "Round 108 closed no issue — the fourth pass of #114, which stays open until the audit finishes and its after-table is written."
-    },
-    {
-      "round": 109,
-      "no_recap": "Round 109 closed no issue — the fifth pass of #114, which stays open until the audit finishes and its after-table is written."
-    },
-    {
-      "round": 110,
-      "no_recap": "Round 110 closed no issue — the sixth pass of #114, which stays open until the audit finishes and its after-table is written."
-    },
-    {
-      "round": 111,
-      "no_recap": "Round 111 closed no issue — the audit round of #114, which stays open until the after-table is written and the delta is readable beside the before."
-    },
-    {
-      "round": 112,
-      "no_recap": "Round 112 closed no issue — it corrects round 111's own fix inside the already-closed #114, and a correction to a closed issue is a comment on it rather than a new recap."
-    },
-    {
-      "round": 113,
-      "issue": 114,
-      "content_hash": "sha256:6658d8fa58b277b18262b2488c33172512623fdf74dd0c5cc2a7f7d0b95a29f5"
-    },
-    {
-      "round": 114,
-      "no_recap": "Round 114 closed no issue — the owner asked for the package pages to be actualized directly, and the work has no ticket to receive a recap comment."
-    },
-    {
-      "round": 115,
-      "no_recap": "Round 115 closed no issue — the owner spotted the tags on the npm page directly, and the work has no ticket to receive a recap comment."
-    },
-    {
-      "round": 116,
-      "no_recap": "Round 116 closed no issue — the owner asked directly for every package page to be checked and brought up to the CLI's shape; there is no ticket to receive a recap comment."
-    },
-    {
-      "round": 117,
-      "issue": 115,
-      "content_hash": "sha256:fa5b410356f2dadd68559daa7e0a2e07040adb64951aa53b148bc4b74bee29f4"
-    },
-    {
-      "round": 118,
-      "issue": 116,
-      "content_hash": "sha256:47745d7922ba0d4543589e1ba38be92035109d6d41a19226dbd8e02f62b8ac8d"
-    },
-    {
-      "round": 119,
-      "issue": 116,
-      "content_hash": "sha256:add945526ae24e64ecf3e1008d86ff5f453bff8607ad6ddb0243097a77ad5218"
-    },
-    {
-      "round": 120,
-      "no_recap": "Round 120 closed no issue — the owner spotted scratch in the public tree directly, and there is no ticket to receive a recap comment."
-    },
-    {
-      "round": 121,
-      "no_recap": "Round 121 does not close #101 — the spec and the layer now teach the law, and the issue stays open until its own checkboxes are ticked and the example is reviewed."
-    },
-    {
-      "round": 122,
-      "issue": 118,
-      "content_hash": "sha256:2908e48b0b49d5eb553b50a5d48d5e8b86c77c8dfb6322cee527e7250ac69729"
-    },
-    {
-      "round": 123,
-      "issue": 102,
-      "content_hash": "sha256:8d2311c58ed36da748bda62393d85caf1ca3e402ae395aa3d380a6f8047dee43"
-    },
-    {
-      "round": 124,
-      "no_recap": "Round 124 closes no issue — it is the packaging gate the round-123 work exposed. Its lesson is already carried by round 123's entry: a suite that passes inside the workspace is not a suite that passed for a stranger."
-    },
-    {
-      "round": 125,
-      "no_recap": "Round 125 closes no issue — it repairs the ledger's own shape after the owner read it and asked what it was. Its lesson belongs with round 123's entry rather than in one of its own: I satisfied a gate by adding a section instead of editing the header it pointed at."
-    },
-    {
-      "round": 126,
-      "issue": 102,
-      "content_hash": "sha256:47d7bc0385c39f1130cd6ee349b9a1215668a93fb4eb839367061fa7a2e0333b"
-    },
-    {
-      "round": 127,
-      "no_recap": "Round 127 closes #117 and its entry is owed at the closing, not before — the lesson of round 126 was exactly that a recap sealed ahead of a closing describes a moment that has not happened."
-    },
-    {
-      "round": 128,
-      "no_recap": "Round 128 finishes #117; the closing entry is sealed against that closing, and one arc owes one entry rather than one per round."
-    },
-    {
-      "round": 129,
-      "issue": 117,
-      "content_hash": "sha256:ebc566957fe10c012a4c3ff11bad86940590c78b987a146a35706a85b915c1bf"
-    },
-    {
-      "round": 130,
-      "issue": 101,
-      "content_hash": "sha256:0d29346bf3bbc7142da1e6c1cbe2930dfb6a2400c6525855807883ad1c6df55f"
-    },
-    {
-      "round": 131,
-      "no_recap": "Round 131 does not close #120 — the declaration and the roll-up are in, and the issue stays open until a profile actually carries a substrate list end to end."
-    },
-    {
-      "round": 132,
-      "no_recap": "Round 132 closes no issue — it is the first downstream finding from the noosphere integration, and its lesson belongs with the #117 arc rather than in an entry of its own."
-    },
-    {
-      "round": 133,
-      "no_recap": "Round 133 does not close #122 — the store port and the refusal are in; the issue stays open until an operator actually runs on it and the checkpoint half is moved across too."
-    },
-    {
-      "round": 134,
-      "no_recap": "Round 134 does not close #122 — the discipline is reachable now; the issue closes when an operator actually runs its head through it."
-    },
-    {
-      "round": 135,
-      "no_recap": "Round 135 does not close #122 — it completes the discipline's domain; the issue closes when an operator runs its live head through it."
-    },
-    {
-      "round": 136,
-      "no_recap": "Round 136 does not close #122 — it gives the layer the doors an operator that builds its own documents needs; the issue closes when one runs its live state through them."
-    },
-    {
-      "round": 137,
-      "no_recap": "Round 137 does not close #122 — it repairs a defect round 136 introduced; the issue closes when an operator's live state runs through the layer without one."
-    },
-    {
-      "round": 138,
-      "no_recap": "Round 138 does not close #124 — the layer offers the check; the issue closes when an operator calls it before building and the reconciliation is measured on a live stream."
-    },
-    {
-      "round": 139,
-      "no_recap": "Round 139 does not close #124 — the layer can recover; the issue closes when an operator recovers from its own published set after a restart and it is measured live."
-    },
-    {
-      "round": 140,
-      "no_recap": "Round 140 does not close #124 — the vocabulary is declared; the issue closes when a restart that actually lost an advance is observed."
-    },
-    {
-      "round": 141,
-      "no_recap": "Round 141 does not close #125 — it makes the vocabularies nameable; the refined-shape mechanism for the operator package is still absent."
-    },
-    {
-      "round": 142,
-      "no_recap": "Round 142 does not close #124 — it removes the last way a lying port disarms the guard; the operator's own port fix and the live drill remain."
-    },
-    {
-      "round": 143,
-      "no_recap": "Round 143 states the rule and gates this tree; the operator work it implies — an observer that publishes signed UST rather than labelled JSON — is noosphere#115's arc."
-    },
-    {
-      "round": 144,
-      "no_recap": "Round 144 opens the form and closes nothing operator-side: #127 also owes a check an operator can point at ITS OWN tree, and the reference operator still publishes 956 unsigned anchors it will not rewrite. The recap belongs to the round that ships the commitment on a live stream."
-    },
-    {
-      "round": 145,
-      "no_recap": "Round 145 propagates three existing rules to a copy and replaces the sampling gate that hid them; it closes no issue of its own. The finding it produced — a public verifier reporting an impostor stream as complete under the victim name — belongs in the recap of the round that audits the remaining clean-room surfaces, not this one."
-    },
-    {
-      "round": 146,
-      "no_recap": "Round 146 closes a defect found while preparing #115 and does not close #115 itself: the engine still prints no gap record. The recap belongs to the round where the reference operator publishes one and a range verifies with the hole NAMED."
-    },
-    {
-      "round": 147,
-      "no_recap": "Round 147 closes an upward gap in round 145 rather than opening work: it states in the model why a green battery proved nothing. No issue changes state."
-    },
-    {
-      "round": 148,
-      "no_recap": "Round 148 fixes a defect the gap-record drill produced rather than closing an issue: the engine cannot receive it until the operator package is published, and the recap belongs to the round where a live recovery is followed by a declared gap."
-    },
-    {
-      "round": 149,
-      "no_recap": "Round 149 makes admits(k,c) real and leaves one question open in the same issue (what the ROOT admits under a declared regime). The recap belongs to the round that closes #130, not to the one that closes half of it."
-    },
-    {
-      "round": 150,
-      "no_recap": "Round 150 dissolves a question rather than closing an issue: #130's root question stays open and the reference operator's ceremony is unblocked but not run. The recap belongs to the round that runs it."
-    },
-    {
-      "round": 151,
-      "issue": 130,
-      "content_hash": "sha256:3ced01e954bc11f0325111c519f3410bc5881c78a84cafea8589eb31bbd8b8b7"
-    }
-  ]
+ "_": "Which sealed diary entry recaps which round. THE UNIT IS THE CLOSED ISSUE (owner, 2026-07-29): one closed issue gets one recap and one diary entry. A round that closes no issue gets neither, and records why. Today by hand — closed, invoked, recorded — and the store carries no task linkage, so this file is the only place round, issue and sealed entry are joined; inventing that linkage inside the store would make the diary answer to the changelog. The recap lands in the ISSUE and nowhere else: the diary's own homes are diarium/ and diarium.md.",
+ "_first_accounted": "The rule starts where it was written. Rounds below the floor predate it and are reported, never gated: back-filling them would mean writing a diary entry today about a day I cannot remember, which is the one thing this diary is not for.",
+ "first_recapped_round": 80,
+ "records": [
+  {
+   "round": 80,
+   "content_hash": "sha256:f72cbac647c020a0b825cd00fbc94dc81082bc814638454c2ff068f21827b6bc",
+   "issue": 106,
+   "_issue": "The recap follows the CLOSED ISSUE, not the round. Round 80 closed nothing, and reading that literally I posted no block at all — the owner caught it. #106 was closed in the same session and the sealed entry is that session's moment, so it belongs at the end of #106's recap. The open question from 2026-07-27 is therefore answered: the issue closed in the session receives it."
+  },
+  {
+   "round": 81,
+   "no_recap": "Round 81 closed no issue — it built the recap machinery itself. The unit is the CLOSED ISSUE: one closed issue, one recap, one diary entry. A tooling round that closes nothing has no recipient, and a diary entry written for it would be an entry written to satisfy a gate."
+  },
+  {
+   "round": 82,
+   "content_hash": "sha256:c0543e5bc8d106a6eb8970a62d903021339af7a2f14ba7660c2b41e84a897746",
+   "issue": 108,
+   "_issue": "Round 82 closed #108, so #108 receives the recap. My first accounting recorded `no_recap` here on the grounds that the day's entry was already sealed — wrong: the unit is the closed issue, not the invocation, and #108 being closed is exactly what earns an entry."
+  },
+  {
+   "round": 83,
+   "no_recap": "Round 83 closed no issue — it moved where a recap lands and what unit earns one. The unit is the CLOSED ISSUE: a round that closes nothing has no recipient, and an entry written for it would be an entry written to satisfy a gate."
+  },
+  {
+   "round": 84,
+   "content_hash": "sha256:0eeeeeaf51ec4cdf21f2e34f3d315342796c33c0ec090c04114ef5a60c33d7db",
+   "issue": 109,
+   "_issue": "Round 84 closed #109, so #109 receives the recap — one closed issue, one recap, one entry."
+  },
+  {
+   "round": 85,
+   "no_recap": "Round 85 closed no issue — it turns #110's hand-written map into a gate, and #110 stays open on the remaining work. The unit is the CLOSED ISSUE: a round that closes nothing has no recipient."
+  },
+  {
+   "round": 86,
+   "no_recap": "Round 86 closed no issue — it FILED one (#111). The unit is the CLOSED issue: a round that opens work rather than finishing it has no recipient for a recap."
+  },
+  {
+   "round": 87,
+   "no_recap": "Round 87 closed no issue. The rule is one closed issue, one diary entry, without conditions — so a round that closes nothing gets no entry, and that is the record rather than an omission."
+  },
+  {
+   "round": 88,
+   "no_recap": "Round 88 closed no issue — it is one step of #110's quadrant work, and #110 stays open. One closed issue, one entry, without conditions."
+  },
+  {
+   "round": 89,
+   "no_recap": "Round 89 closed no issue — one step of #110's quadrant work, and #110 stays open. One closed issue, one entry, without conditions."
+  },
+  {
+   "round": 90,
+   "no_recap": "Round 90 closed no issue — one step of #110's quadrant work, and #110 stays open. One closed issue, one entry, without conditions."
+  },
+  {
+   "round": 91,
+   "no_recap": "Round 91 closed no issue — one step of #110's quadrant work, and #110 stays open. One closed issue, one entry, without conditions."
+  },
+  {
+   "round": 92,
+   "no_recap": "Round 92 closed no issue — it FILED one (#112) and is one step of #110's quadrant work. One closed issue, one entry, without conditions."
+  },
+  {
+   "round": 93,
+   "no_recap": "Round 93 closed no issue — one step of #110's quadrant work, and #110 stays open. One closed issue, one entry, without conditions."
+  },
+  {
+   "round": 94,
+   "no_recap": "Round 94 closed no issue — one step of #110's quadrant work, and #110 stays open. One closed issue, one entry, without conditions."
+  },
+  {
+   "round": 95,
+   "no_recap": "Round 95 closed no issue — one step of #110's quadrant work, and #110 stays open. One closed issue, one entry, without conditions."
+  },
+  {
+   "round": 96,
+   "no_recap": "Round 96 closed no issue — it empties #110's weakest quadrant, and #110 stays open on the domain axis and the independent regrade. One closed issue, one entry, without conditions."
+  },
+  {
+   "round": 97,
+   "no_recap": "Round 97 closed no issue — one step of #110's quadrant work on the domain axis, and #110 stays open. One closed issue, one entry, without conditions."
+  },
+  {
+   "round": 98,
+   "no_recap": "Round 98 closed no issue — one step of #110's domain axis, and #110 stays open. One closed issue, one entry, without conditions."
+  },
+  {
+   "round": 99,
+   "no_recap": "Round 99 closed no issue — one step of #110's domain axis, and #110 stays open. One closed issue, one entry, without conditions."
+  },
+  {
+   "round": 100,
+   "no_recap": "Round 100 closed no issue — one step of #110's domain axis, and #110 stays open. One closed issue, one entry, without conditions."
+  },
+  {
+   "round": 101,
+   "no_recap": "Round 101 closed no issue — one step of #110's domain axis, and #110 stays open. One closed issue, one entry, without conditions."
+  },
+  {
+   "round": 102,
+   "content_hash": "sha256:c96d708a0625f442d6a5da4c321061e95819fe2c8ae3b3325cf1ae61b9419cd6",
+   "issue": 110,
+   "_issue": "Round 102 was the last of the self-audit arc and #110 closed on it, so #110 receives the recap. The earlier `no_recap` said the round closed nothing — true when written, and the closing was the next act."
+  },
+  {
+   "round": 103,
+   "content_hash": "sha256:17d14fbb3ac972a3d2ca4323bd06bceb6229a2ccaf688667d155be4da54a974d",
+   "issue": 111,
+   "_issue": "Round 103 closed #111, so #111 receives the recap — one closed issue, one entry."
+  },
+  {
+   "round": 104,
+   "content_hash": "sha256:dbceebb4bf24ce251d55e9eb0628becca31cc707a083ae94fd1999adfcc8fce0",
+   "issue": 112,
+   "_issue": "Round 104 closed #112, so #112 receives the recap — one closed issue, one entry."
+  },
+  {
+   "round": 105,
+   "no_recap": "Round 105 closed no issue — it is the first pass of #114, which stays open until the audit finishes and its after-table is written. One closed issue, one entry, without conditions."
+  },
+  {
+   "round": 106,
+   "no_recap": "Round 106 closed no issue — the second pass of #114, which stays open until the audit finishes and its after-table is written."
+  },
+  {
+   "round": 107,
+   "no_recap": "Round 107 closed no issue — the third pass of #114, which stays open until the audit finishes and its after-table is written."
+  },
+  {
+   "round": 108,
+   "no_recap": "Round 108 closed no issue — the fourth pass of #114, which stays open until the audit finishes and its after-table is written."
+  },
+  {
+   "round": 109,
+   "no_recap": "Round 109 closed no issue — the fifth pass of #114, which stays open until the audit finishes and its after-table is written."
+  },
+  {
+   "round": 110,
+   "no_recap": "Round 110 closed no issue — the sixth pass of #114, which stays open until the audit finishes and its after-table is written."
+  },
+  {
+   "round": 111,
+   "no_recap": "Round 111 closed no issue — the audit round of #114, which stays open until the after-table is written and the delta is readable beside the before."
+  },
+  {
+   "round": 112,
+   "no_recap": "Round 112 closed no issue — it corrects round 111's own fix inside the already-closed #114, and a correction to a closed issue is a comment on it rather than a new recap."
+  },
+  {
+   "round": 113,
+   "issue": 114,
+   "content_hash": "sha256:6658d8fa58b277b18262b2488c33172512623fdf74dd0c5cc2a7f7d0b95a29f5"
+  },
+  {
+   "round": 114,
+   "no_recap": "Round 114 closed no issue — the owner asked for the package pages to be actualized directly, and the work has no ticket to receive a recap comment."
+  },
+  {
+   "round": 115,
+   "no_recap": "Round 115 closed no issue — the owner spotted the tags on the npm page directly, and the work has no ticket to receive a recap comment."
+  },
+  {
+   "round": 116,
+   "no_recap": "Round 116 closed no issue — the owner asked directly for every package page to be checked and brought up to the CLI's shape; there is no ticket to receive a recap comment."
+  },
+  {
+   "round": 117,
+   "issue": 115,
+   "content_hash": "sha256:fa5b410356f2dadd68559daa7e0a2e07040adb64951aa53b148bc4b74bee29f4"
+  },
+  {
+   "round": 118,
+   "issue": 116,
+   "content_hash": "sha256:47745d7922ba0d4543589e1ba38be92035109d6d41a19226dbd8e02f62b8ac8d"
+  },
+  {
+   "round": 119,
+   "issue": 116,
+   "content_hash": "sha256:add945526ae24e64ecf3e1008d86ff5f453bff8607ad6ddb0243097a77ad5218"
+  },
+  {
+   "round": 120,
+   "no_recap": "Round 120 closed no issue — the owner spotted scratch in the public tree directly, and there is no ticket to receive a recap comment."
+  },
+  {
+   "round": 121,
+   "no_recap": "Round 121 does not close #101 — the spec and the layer now teach the law, and the issue stays open until its own checkboxes are ticked and the example is reviewed."
+  },
+  {
+   "round": 122,
+   "issue": 118,
+   "content_hash": "sha256:2908e48b0b49d5eb553b50a5d48d5e8b86c77c8dfb6322cee527e7250ac69729"
+  },
+  {
+   "round": 123,
+   "issue": 102,
+   "content_hash": "sha256:8d2311c58ed36da748bda62393d85caf1ca3e402ae395aa3d380a6f8047dee43"
+  },
+  {
+   "round": 124,
+   "no_recap": "Round 124 closes no issue — it is the packaging gate the round-123 work exposed. Its lesson is already carried by round 123's entry: a suite that passes inside the workspace is not a suite that passed for a stranger."
+  },
+  {
+   "round": 125,
+   "no_recap": "Round 125 closes no issue — it repairs the ledger's own shape after the owner read it and asked what it was. Its lesson belongs with round 123's entry rather than in one of its own: I satisfied a gate by adding a section instead of editing the header it pointed at."
+  },
+  {
+   "round": 126,
+   "issue": 102,
+   "content_hash": "sha256:47d7bc0385c39f1130cd6ee349b9a1215668a93fb4eb839367061fa7a2e0333b"
+  },
+  {
+   "round": 127,
+   "no_recap": "Round 127 closes #117 and its entry is owed at the closing, not before — the lesson of round 126 was exactly that a recap sealed ahead of a closing describes a moment that has not happened."
+  },
+  {
+   "round": 128,
+   "no_recap": "Round 128 finishes #117; the closing entry is sealed against that closing, and one arc owes one entry rather than one per round."
+  },
+  {
+   "round": 129,
+   "issue": 117,
+   "content_hash": "sha256:ebc566957fe10c012a4c3ff11bad86940590c78b987a146a35706a85b915c1bf"
+  },
+  {
+   "round": 130,
+   "issue": 101,
+   "content_hash": "sha256:0d29346bf3bbc7142da1e6c1cbe2930dfb6a2400c6525855807883ad1c6df55f"
+  },
+  {
+   "round": 131,
+   "no_recap": "Round 131 does not close #120 — the declaration and the roll-up are in, and the issue stays open until a profile actually carries a substrate list end to end."
+  },
+  {
+   "round": 132,
+   "no_recap": "Round 132 closes no issue — it is the first downstream finding from the noosphere integration, and its lesson belongs with the #117 arc rather than in an entry of its own."
+  },
+  {
+   "round": 133,
+   "no_recap": "Round 133 does not close #122 — the store port and the refusal are in; the issue stays open until an operator actually runs on it and the checkpoint half is moved across too."
+  },
+  {
+   "round": 134,
+   "no_recap": "Round 134 does not close #122 — the discipline is reachable now; the issue closes when an operator actually runs its head through it."
+  },
+  {
+   "round": 135,
+   "no_recap": "Round 135 does not close #122 — it completes the discipline's domain; the issue closes when an operator runs its live head through it."
+  },
+  {
+   "round": 136,
+   "no_recap": "Round 136 does not close #122 — it gives the layer the doors an operator that builds its own documents needs; the issue closes when one runs its live state through them."
+  },
+  {
+   "round": 137,
+   "no_recap": "Round 137 does not close #122 — it repairs a defect round 136 introduced; the issue closes when an operator's live state runs through the layer without one."
+  },
+  {
+   "round": 138,
+   "no_recap": "Round 138 does not close #124 — the layer offers the check; the issue closes when an operator calls it before building and the reconciliation is measured on a live stream."
+  },
+  {
+   "round": 139,
+   "no_recap": "Round 139 does not close #124 — the layer can recover; the issue closes when an operator recovers from its own published set after a restart and it is measured live."
+  },
+  {
+   "round": 140,
+   "no_recap": "Round 140 does not close #124 — the vocabulary is declared; the issue closes when a restart that actually lost an advance is observed."
+  },
+  {
+   "round": 141,
+   "no_recap": "Round 141 does not close #125 — it makes the vocabularies nameable; the refined-shape mechanism for the operator package is still absent."
+  },
+  {
+   "round": 142,
+   "no_recap": "Round 142 does not close #124 — it removes the last way a lying port disarms the guard; the operator's own port fix and the live drill remain."
+  },
+  {
+   "round": 143,
+   "no_recap": "Round 143 states the rule and gates this tree; the operator work it implies — an observer that publishes signed UST rather than labelled JSON — is noosphere#115's arc."
+  },
+  {
+   "round": 144,
+   "no_recap": "Round 144 opens the form and closes nothing operator-side: #127 also owes a check an operator can point at ITS OWN tree, and the reference operator still publishes 956 unsigned anchors it will not rewrite. The recap belongs to the round that ships the commitment on a live stream."
+  },
+  {
+   "round": 145,
+   "no_recap": "Round 145 propagates three existing rules to a copy and replaces the sampling gate that hid them; it closes no issue of its own. The finding it produced — a public verifier reporting an impostor stream as complete under the victim name — belongs in the recap of the round that audits the remaining clean-room surfaces, not this one."
+  },
+  {
+   "round": 146,
+   "no_recap": "Round 146 closes a defect found while preparing #115 and does not close #115 itself: the engine still prints no gap record. The recap belongs to the round where the reference operator publishes one and a range verifies with the hole NAMED."
+  },
+  {
+   "round": 147,
+   "no_recap": "Round 147 closes an upward gap in round 145 rather than opening work: it states in the model why a green battery proved nothing. No issue changes state."
+  },
+  {
+   "round": 148,
+   "no_recap": "Round 148 fixes a defect the gap-record drill produced rather than closing an issue: the engine cannot receive it until the operator package is published, and the recap belongs to the round where a live recovery is followed by a declared gap."
+  },
+  {
+   "round": 149,
+   "no_recap": "Round 149 makes admits(k,c) real and leaves one question open in the same issue (what the ROOT admits under a declared regime). The recap belongs to the round that closes #130, not to the one that closes half of it."
+  },
+  {
+   "round": 150,
+   "no_recap": "Round 150 dissolves a question rather than closing an issue: #130's root question stays open and the reference operator's ceremony is unblocked but not run. The recap belongs to the round that runs it."
+  },
+  {
+   "round": 151,
+   "issue": 130,
+   "content_hash": "sha256:3ced01e954bc11f0325111c519f3410bc5881c78a84cafea8589eb31bbd8b8b7"
+  },
+  {
+   "round": 152,
+   "issue": 131,
+   "no_recap": "The round shipped its math, spec, code, vectors and gates, but the work it exists for is not finished: UST-Protocol#131 stays open until the reference operator's ceremony has actually been run THROUGH the new command, which is its acceptance run and not a rehearsal of it. A recap written now would describe a tool rather than a crossing, and the diary entry that carries a recap is the owner's to call."
+  }
+ ]
 }

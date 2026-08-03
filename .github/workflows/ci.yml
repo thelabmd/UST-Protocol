@@ -58,6 +58,10 @@ jobs:
         run: npm run test:cli
       - name: Every command the tool prints is one the tool can run
         run: npm run test:printed
+      - name: Every command the tool dispatches is one the tool can ENTER (a body that cannot run is not a green build)
+        run: npm run test:reachable
+      - name: A typed consumer can build and verify with the declarations we ship (the only gate that sees an optional silently demoted)
+        run: npm run test:probe
       - name: the diary view matches what was signed (diarium.md is GENERATED from the store, never hand-edited)
         run: npm run test:diary
       - name: diarium store discipline (chain-derived order, refusal to extend damage, the cap, one closure one entry)

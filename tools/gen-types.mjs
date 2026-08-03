@@ -71,7 +71,18 @@ function guardedInBody(name, rawBody) {
   // COMMENTS ARE NOT USES. `buildGenesis` guards `roles` completely and stayed required, because the sentence
   // above it explains what a non-empty `roles` means — prose mentioning the name defeated a universal quantifier
   // over occurrences. Blanked rather than deleted so every index below still lines up with the real source.
-  const body = rawBody.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, (m) => ' '.repeat(m.length));
+  // STRING LITERALS ARE NOT USES EITHER, and this is the same defect one step along. MEASURED 2026-08-03: adding the
+  // refusal `throw err('E-GENESIS', 'roles is present but EMPTY — omit the argument …')` to `buildGenesis` demoted
+  // SIX optional parameters to required in the shipped declarations. The word `roles` inside the message text is an
+  // occurrence, it is not guarded, and the quantifier is universal — so the parameter looked required, and the
+  // right-to-left scan then stopped there and took the whole tail with it. A message that NAMES its parameter is
+  // exactly what a good refusal does, so the generator must read prose as prose wherever it appears.
+  // Templates are blanked only OUTSIDE `${…}`: an interpolation is real code and can carry a real use.
+  const blanked = rawBody
+    .replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, (m) => ' '.repeat(m.length))
+    .replace(/'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"/g, (m) => ' '.repeat(m.length))
+    .replace(/`(?:\\.|\$\{[^}]*\}|[^`\\])*`/g, (m) => m.replace(/\$\{[^}]*\}|[\s\S]/g, (t) => (t.startsWith('${') ? t : ' ')));
+  const body = blanked;
   // A guard protects a REGION, not a character. `...(prev !== undefined ? { prev } : {})` mentions `prev` twice and
   // both are safe, because the guard heads the whole parenthesised group. Counting guard SITES scored that 1-of-2
   // and demoted a genuinely optional parameter — measured while writing this, and it is the same mistake in the
