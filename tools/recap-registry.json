@@ -373,6 +373,11 @@
       "round": 163,
       "issue": 137,
       "no_recap": "A recap belongs to a CLOSED issue. #137 has its core, its CLI face and its vectors, and what remains is the part only an integrator can report back: whether the ladder names the barrier THEY were actually stuck on. Writing a recap now would close the loop on our own reading of a tool built to be read by someone else. It is owed when the first outside use either confirms the attribution column or corrects it."
+    },
+    {
+      "round": 164,
+      "issue": 138,
+      "no_recap": "The round STATES a contract; #138 is where it becomes behaviour, and it is open. Writing a recap now would report a promise as if it were a property — the exact gap between saying and doing that the second rule itself is about. Owed when a future minor is answered with an unattempted axis rather than E-MALFORMED."
     }
   ]
 }

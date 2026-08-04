@@ -14,6 +14,22 @@
 > exact same tests your own implementation would run. That link is what lets UST be rebuilt in **any language**:
 > you check the vectors, never our prose.
 
+**TWO RULES THIS MODEL DOES NOT TRADE AWAY**, stated at the top because several sections below are special cases
+of them.
+
+**A minor only ADDS; a meaning-change is a MAJOR.** An older verifier evaluating under older rules must still be
+RIGHT about what it evaluated — otherwise a minor leaves every deployed verifier quietly wrong rather than merely
+less informed, and wrongness indistinguishable from health is the failure this whole model exists to exclude.
+
+**A verifier never expires.** Newer material an older verifier does not implement is an UNATTEMPTED axis
+(F.5p.2), never an invalid document and never a silent pass. Sufficiency is the consumer's policy, not the
+protocol's coercion — see F.5p.1 for the same partition one level down, on the profile, where an unknown member
+of a CLOSED half is refused while an unknown member of the OPEN half is ignored. Versioning is that partition
+generalised from one document to the wire.
+
+*Status: reporting side pending, `thelabmd/UST-Protocol#138`.*
+
+
 > **Status: NON-NORMATIVE.** This appendix gives a measure-theoretic semantics for UST. It defines nothing new:
 > every object here is a restatement of a mechanism already fixed in `UST-1.0.md` (the normative text). Where this
 > appendix and the normative spec appear to differ, **the normative spec wins** — this is a lens, not a rule.

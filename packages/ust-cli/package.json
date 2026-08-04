@@ -26,10 +26,10 @@
     "node": ">=20"
   },
   "dependencies": {
-    "@ust-protocol/rekor-verify": "^1.0.0-rc.26",
-    "@ust-protocol/web-signer": "^1.0.0-rc.23",
+    "@ust-protocol/rekor-verify": "^1.0.0-rc.27",
+    "@ust-protocol/web-signer": "^1.0.0-rc.24",
     "ust-protocol": "^1.0.0-rc.67",
-    "@ust-protocol/ots-verify": "^1.0.0-rc.31"
+    "@ust-protocol/ots-verify": "^1.0.0-rc.32"
   },
   "peerDependencies": {
     "wrangler": "*"

@@ -4,6 +4,18 @@ UST verification is small and portable — the value model is deliberately narro
 cross-language canonicalization traps mostly do not exist here. This guide tells you exactly what you must
 reproduce byte-for-byte, and how to prove you did.
 
+## Two rules this protocol does not trade away
+
+**1. A minor only ADDS.** A change that alters the meaning of anything an earlier minor already defines is a **MAJOR**. There is no third option, and the reason is not taste: an older verifier evaluating under older rules must still be **right** about what it evaluated. A minor that changed a meaning would make every deployed verifier quietly wrong rather than merely less informed.
+
+**2. A verifier never expires.** An older verifier keeps producing correct verdicts about everything it understands. Material from a newer minor that it does not implement is reported as **NOT EVALUATED** — never as invalid, and never silently passed. Whether that reach is sufficient is the **consumer's** policy (the `--require-*` floors), not the protocol's coercion.
+
+**Why the second rule is load-bearing for adoption.** People run old runtimes for years because upgrading means reworking a stack that works. A protocol whose adoption depends on synchronised upgrades across every consumer has chosen a property it cannot have — and a verifier that must be current in order to verify anything is a verifier that stops being run. Refusing politely is still refusing.
+
+**And it is what makes CLOSED systems possible at all.** A consumer with no discovery surface has no way to learn that the world moved. Under a refusal design it sees only *invalid*, with nothing pointing at its own age; under this one it keeps working, keeps being honest about what it did and did not check, and can run for years without ever lying.
+
+*Status: rule 1 holds today. Rule 2's reporting side is `thelabmd/UST-Protocol#138` — a future minor is currently refused as `E-MALFORMED`, which is the defect that issue exists to close.*
+
 ## The one hard part: canonicalization (and why ours is narrow)
 
 A signature is over `S = canon({ust, state})` — a canonical UTF-8 string. Two implementations that canonicalize

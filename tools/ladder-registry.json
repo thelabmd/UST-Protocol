@@ -1174,6 +1174,18 @@
       "code": "packages/ust-protocol/index.mjs :: explainLadder reports coordinates and the inputs never supplied, each with its R2 term",
       "vector": "ladder-02-consumer-faculty-never-attributed-to-publisher",
       "test": "ladder-04-report-grants-nothing"
+    },
+    {
+      "round": 164,
+      "math": "TWO RULES THIS MODEL DOES NOT TRADE AWAY",
+      "spec": "TWO RULES THIS PROTOCOL DOES NOT TRADE AWAY",
+      "code": {
+        "excluded": "This round writes a CONTRACT into every documentation surface and bumps the four published packages whose bytes it changed. No behaviour was altered — the reporting side that would change behaviour is #138 and is deliberately not conflated with stating the rule."
+      },
+      "vector": {
+        "excluded": "Nothing new is decidable from bytes here: the round records an obligation on future changes to this specification, and the vector that would pin it belongs to #138 where the behaviour lands."
+      },
+      "test": "ladder-04-report-grants-nothing"
     }
   ],
   "first_accounted_round": 76,

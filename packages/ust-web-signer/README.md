@@ -7,6 +7,11 @@ never enters the verifier library**. This package generates an Ed25519 key with 
 full `{ ust, state, sig }` document. Its `canon`/hash/preimage code is byte-identical to `ust-protocol`, so what
 it signs verifies **VALID** there.
 
+> **Two rules this protocol does not trade away.**
+> **A minor only ADDS.** Anything that changes the meaning of what an earlier minor already defines is a MAJOR — there is no third option, because an older verifier evaluating under older rules must still be RIGHT about what it evaluated.
+> **A verifier never expires.** An older verifier keeps producing correct verdicts about everything it understands; newer material it does not implement is reported as NOT EVALUATED — never as invalid, never silently passed. Whether that reach is enough is the CONSUMER's policy, not the protocol's coercion.
+> *(Reporting side pending — see `thelabmd/UST-Protocol#138`; today an unknown minor is refused.)*
+
 Runs in browsers, Web Workers / service workers, and Node ≥ 20 (global `crypto.subtle`). Zero dependencies.
 
 ## Install

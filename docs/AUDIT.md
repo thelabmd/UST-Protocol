@@ -2,6 +2,11 @@
 
 _For an independent cryptographic-protocol reviewer._
 
+> **Two rules this protocol does not trade away.**
+> **A minor only ADDS.** Anything that changes the meaning of what an earlier minor already defines is a MAJOR — there is no third option, because an older verifier evaluating under older rules must still be RIGHT about what it evaluated.
+> **A verifier never expires.** An older verifier keeps producing correct verdicts about everything it understands; newer material it does not implement is reported as NOT EVALUATED — never as invalid, never silently passed. Whether that reach is enough is the CONSUMER's policy, not the protocol's coercion.
+> *(Reporting side pending — see `thelabmd/UST-Protocol#138`; today an unknown minor is refused.)*
+
 ## 1. What we are asking for
 
 An **independent cryptographic protocol review** of UST 1.0 — the design and its reference implementation —
@@ -146,7 +151,7 @@ residual risk, and what would you require before a `1.0.0` final tag?
   0 divergences** as of rev64. The previous wording claimed 32/32; that number came from an older harness and no
   longer corresponded to anything this tree runs, so it is replaced by what `npm run test:docs-parity` prints
   today. A count of independent agreements is the one number an auditor weighs most, and it was overstated.
-- **161 recorded rounds** in `CHANGELOG.md`, carrying the reference-checker from `rev3` to `rev91`. The adversarial
+- **162 recorded rounds** in `CHANGELOG.md`, carrying the reference-checker from `rev3` to `rev91`. The adversarial
   ones are folded in STRUCTURALLY rather than patched: each round that found something states the MECHANISM, not
   the instance, and closes it with a check that fails on the next instance of the same class. The round count and
   the revision range are both measurable from this tree; "how adversarial" is a judgement and is left to you.

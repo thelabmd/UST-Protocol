@@ -2027,6 +2027,28 @@ layering fix, REV6.)
 
 ## 19. Versioning, migration, crypto-agility
 
+**TWO RULES THIS PROTOCOL DOES NOT TRADE AWAY.** They govern every change to this document and are stated first
+because everything below is their consequence.
+
+**A minor only ADDS.** Any change that alters the meaning of something an earlier minor already defines is a
+**MAJOR**. There is no third option, and the reason is not editorial: an older verifier evaluating under older
+rules must still be RIGHT about what it evaluated. A minor that changed a meaning would leave every deployed
+verifier quietly wrong rather than merely less informed — and wrongness that looks like health is the one failure
+this specification exists to prevent.
+
+**A verifier never expires.** An older verifier MUST keep producing correct verdicts about everything it
+understands. Material from a newer minor it does not implement is reported as NOT EVALUATED — never as invalid,
+and never silently passed. Whether that reach suffices is the CONSUMER's policy, expressed through the
+`--require-*` floors, not the protocol's coercion. A protocol whose adoption depends on synchronised upgrades
+across every consumer has chosen a property it cannot have, and a verifier that must be current in order to
+verify anything is a verifier that stops being run. This is also what makes CLOSED systems possible: a consumer
+with no discovery surface has no way to learn that the world moved, so the answer must carry that information
+rather than a refusal.
+
+*Status: the first rule holds. The second rule's REPORTING side is `thelabmd/UST-Protocol#138` — today a future
+minor is refused as `E-MALFORMED`, which is byte-identical to the answer for a corrupt document and therefore
+sends the consumer to debug the wrong party. The clause below states the current behaviour, not the target.*
+
 - `ust` is the top-level scalar version marker `"MAJOR.MINOR"` (e.g. `"1.0"`, §4.1) — SIGNED (inside
   `canon({ust,state})`, no downgrade). A chain MAY mix versions (each document verifies under its own `ust`). A verifier for `1.y` MUST accept any `1.x` with `x ≤ y`
   and MUST REJECT `1.x` with `x > y` (E-MALFORMED) rather than guess an unknown future minor (M10) — additive

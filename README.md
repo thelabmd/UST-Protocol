@@ -8,6 +8,11 @@
 [![@ust-protocol/mcp](https://img.shields.io/npm/v/@ust-protocol/mcp?label=@ust-protocol/mcp)](https://www.npmjs.com/package/@ust-protocol/mcp) [![pulls](https://img.shields.io/npm/dt/@ust-protocol/mcp?label=pulls&color=informational)](https://www.npmjs.com/package/@ust-protocol/mcp)
 [![@ust-protocol/cli](https://img.shields.io/npm/v/@ust-protocol/cli?label=@ust-protocol/cli)](https://www.npmjs.com/package/@ust-protocol/cli) [![pulls](https://img.shields.io/npm/dt/@ust-protocol/cli?label=pulls&color=informational)](https://www.npmjs.com/package/@ust-protocol/cli)
 
+> **Two rules this protocol does not trade away.**
+> **A minor only ADDS.** Anything that changes the meaning of what an earlier minor already defines is a MAJOR — there is no third option, because an older verifier evaluating under older rules must still be RIGHT about what it evaluated.
+> **A verifier never expires.** An older verifier keeps producing correct verdicts about everything it understands; newer material it does not implement is reported as NOT EVALUATED — never as invalid, never silently passed. Whether that reach is enough is the CONSUMER's policy, not the protocol's coercion.
+> *(Reporting side pending — see `thelabmd/UST-Protocol#138`; today an unknown minor is refused.)*
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/status.svg">
   <source media="(prefers-color-scheme: light)" srcset=".github/status-light.svg">

@@ -5,6 +5,11 @@ UST (Universal State Transcript) is trust infrastructure for data: a signed, can
 *state* — some data about the world at a moment — that verifies the same however it reached you. TLS secures the
 pipe; **UST secures the payload**, so the guarantee travels with the data instead of with the connection.
 
+> **Two rules this protocol does not trade away.**
+> **A minor only ADDS.** Anything that changes the meaning of what an earlier minor already defines is a MAJOR — there is no third option, because an older verifier evaluating under older rules must still be RIGHT about what it evaluated.
+> **A verifier never expires.** An older verifier keeps producing correct verdicts about everything it understands; newer material it does not implement is reported as NOT EVALUATED — never as invalid, never silently passed. Whether that reach is enough is the CONSUMER's policy, not the protocol's coercion.
+> *(Reporting side pending — see `thelabmd/UST-Protocol#138`; today an unknown minor is refused.)*
+
 An **opt-in witness substrate** for [UST](https://github.com/thelabmd/UST-Protocol) — Sigstore
 [Rekor](https://docs.sigstore.dev/logging/overview/), a public append-only transparency log. A second
 substrate next to Bitcoin ([@ust-protocol/ots-verify](https://www.npmjs.com/package/@ust-protocol/ots-verify)):
