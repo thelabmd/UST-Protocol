@@ -9490,6 +9490,18 @@
         "identity_mode": "key",
         "verdict_matches_verify": true
       }
+    },
+    {
+      "id": "ladder-06-consumer-hint-is-never-an-instruction",
+      "kind": "ladder",
+      "rule": "S14.1/F.5.1a a hint on a CONSUMER-faculty input must refuse rather than instruct: telling a publisher to supply one invites it to believe a tier no consumer will see — signed-not-true arriving through a help message",
+      "input": {
+        "opts": {}
+      },
+      "expect": {
+        "consumer_hints_refuse": true,
+        "publisher_hints_actionable": true
+      }
     }
   ]
 }

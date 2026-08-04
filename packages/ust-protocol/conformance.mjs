@@ -137,6 +137,14 @@ for (const v of V.vectors) {
       if (e.absent_has_genesis !== undefined) ok = ok && hasGenesis === e.absent_has_genesis;
       if (e.identity_self_asserted !== undefined) ok = ok && (r.coordinates?.identity?.strength === 'self-asserted') === e.identity_self_asserted;
       if (e.identity_mode !== undefined) ok = ok && r.coordinates?.identity?.mode === e.identity_mode;
+      if (e.consumer_hints_refuse !== undefined) {
+        const con = (r.absent ?? []).filter((a) => !a.movable);
+        ok = ok && con.length > 0 && con.every((a) => /NOT yours/.test(a.hint)) === e.consumer_hints_refuse;
+      }
+      if (e.publisher_hints_actionable !== undefined) {
+        const pub = (r.absent ?? []).filter((a) => a.movable);
+        ok = ok && pub.length > 0 && pub.every((a) => !/NOT yours/.test(a.hint)) === e.publisher_hints_actionable;
+      }
       if (e.verdict_matches_verify !== undefined) ok = ok && r.verdict === P.verify(mk(), v.input.opts ?? {}).result;
       check(v.id, ok);
       break;

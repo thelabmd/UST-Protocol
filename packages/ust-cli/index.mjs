@@ -1475,12 +1475,13 @@ async function cmdExplain() {
     const pub = r.absent.filter((a) => a.term.startsWith('x̂'));
     const con = r.absent.filter((a) => !a.term.startsWith('x̂'));
     if (pub.length) {
-      console.log('    the PUBLISHER may supply these — by PUBLISHING an artifact this verifier then checks itself:');
-      for (const a of pub) console.log(`      · ${a.input}`);
+      console.log('    the PUBLISHER can change the WORLD here — every consumer gains the same:');
+      for (const a of pub) console.log(`      · ${a.input}\n        → ${a.hint}`);
     }
     if (con.length) {
-      console.log("    the CONSUMER only — a publisher advised to supply these is advised to self-grant (F.5.1a):");
-      for (const a of con) console.log(`      · ${a.input}`);
+      console.log("    the CONSUMER's own faculty — supplying these to your OWN verifier changes nothing for anyone");
+      console.log('    else, and invites you to believe a tier no consumer will see (F.5.1a):');
+      for (const a of con) console.log(`      · ${a.input}\n        → ${a.hint}`);
     }
   }
 

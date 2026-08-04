@@ -1329,6 +1329,27 @@ export function anchorRollup({ declared = [], observed = {} } = {}) {
 //
 // IT GRANTS NOTHING. The report is a function OF the relation, never an input to it: reading what would raise a
 // document must not be a step toward raising it. Nothing here is fed back into any verdict.
+// WHY HINTS ARE SAFE ON ONE SIDE AND NOT THE OTHER, stated because the line is easy to draw in the wrong place.
+//
+// The danger is NOT that a publisher raises its own verdict — it cannot: `noForkConfirmed` and trust roots live in
+// the CONSUMER's verifier, and a publisher passing them to its own changes nothing for anybody else. The danger is
+// that a publisher who self-verifies with a consumer override forms a FALSE BELIEF about what consumers see, and
+// then states it in good faith: *we verify HIGH*. That is `signed ≠ true` arriving through a help message.
+//
+// So the term already decides the shape of the hint:
+//   x̂ / its neighbourhood — the publisher can change the WORLD (publish a witness log, anchor a window, author
+//     fewer partitions). Every consumer sees the difference. A concrete instruction is correct here.
+//   ℐ_v / ρ_v — the consumer's own faculty. No instruction. What IS useful is the counterfactual: what a
+//     well-equipped consumer would see — which informs the publisher without inviting it to supply the thing.
+const R2_HINT = deepFreeze(Object.assign(Object.create(null), {
+  genesis:        'publish `/.well-known/ust-genesis` and let the verifier fetch and check it — every consumer gains the same',
+  keylog:         'publish `/.well-known/ust-keylog` chained from that genesis — the name resolves for everyone, not just for you',
+  noForkEvidence: 'have a witness publish no-fork evidence over your active genesis; you cannot vouch for your own',
+  trustRoots:      'NOT yours to supply. A consumer holding roots that admit your witness would resolve the name; you supplying them here would only change what YOU see',
+  substrateVerify: 'NOT yours to supply. A consumer with a substrate connector would check your anchors; without one the time axis stays unproven for THEM regardless of what you pass',
+  noForkConfirmed: 'NOT yours to supply — it is the consumer\'s own air-gap assertion. Passing it to your own verifier proves nothing to anyone and invites you to believe a tier no consumer will see',
+}));
+
 const R2_TERM = deepFreeze(Object.assign(Object.create(null), {
   // what the caller supplies about the SUBJECT and its neighbourhood — the publisher may move these by authoring
   // differently or by publishing an artifact the verifier then VERIFIES itself
@@ -1365,7 +1386,7 @@ export function explainLadder(doc, opts = {}) {
     // what the relation actually saw.
     const absent = [];
     for (const name of Object.keys(R2_TERM))
-      if (O[name] === undefined) absent.push(deepFreeze({ input: name, term: R2_TERM[name] }));
+      if (O[name] === undefined) absent.push(deepFreeze({ input: name, term: R2_TERM[name], hint: R2_HINT[name], movable: R2_TERM[name].startsWith('x̂') }));
     return deepFreeze({
       verdict: v.result,
       reason: v.reason ?? null,

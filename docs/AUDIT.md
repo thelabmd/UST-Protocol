@@ -139,7 +139,7 @@ residual risk, and what would you require before a `1.0.0` final tag?
 ## 9. What we have already done (so you go deeper, not sideways)
 
 - **Six adversarial red-team passes** on the v1.0 final form + four on the v0.29 predecessor — all self-review.
-- **189 deterministic conformance vectors** plus a behavioral conformance runner (**865 registered checks**), and the reference impl passes them (one known note: duplicate-key
+- **190 deterministic conformance vectors** plus a behavioral conformance runner (**866 registered checks**), and the reference impl passes them (one known note: duplicate-key
   rejection needs a raw-bytes JSON parser — `JSON.parse` collapses dups — a harness limitation, not an impl flaw).
 - **Two independent implementations** (`ust-protocol` node + a clean-room WebCrypto verifier in `docs/`) run
   side by side on every case of the parity suite and must agree on the verdict, including the tier: **13 cases,
