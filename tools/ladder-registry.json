@@ -1186,6 +1186,14 @@
         "excluded": "Nothing new is decidable from bytes here: the round records an obligation on future changes to this specification, and the vector that would pin it belongs to #138 where the behaviour lands."
       },
       "test": "ladder-04-report-grants-nothing"
+    },
+    {
+      "round": 165,
+      "math": "Corollary F.5.1a-bis (a version gap is a rung, and its term is the RULESET)",
+      "spec": "THE LINE THIS DRAWS, and it governs every verdict in §14",
+      "code": "packages/ust-protocol/index.mjs :: a newer minor and a foreign major answer INDETERMINATE; INVALID is reserved for rules this verifier holds and found violated",
+      "vector": "version-01-future-minor-is-indeterminate-not-invalid",
+      "test": "version-05-invalid-means-my-rules-were-violated"
     }
   ],
   "first_accounted_round": 76,

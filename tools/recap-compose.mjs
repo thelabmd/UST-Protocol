@@ -64,6 +64,9 @@
 //                           Owner's rule, 2026-08-03: a span is DRAWN, not only stated. "11 minutes, 21 slots" is a
 //                           number a reader must hold; a timeline is a shape they can see, and the distance between
 //                           "entered" and "closed" stops being an abstraction.
+//   --collapse  (any form)  several DIFFERENT situations produced ONE observation. This project's most repeated
+//                           defect shape, and the one prose cannot carry: the point is that the arrows MEET, and a
+//                           reader following sentences never sees them meet.
 //   --path      (any form)  the mechanism is a CHAIN — a value crossing stages, where the defect is in the crossing
 //                           and not in any one stage. The witness log dropped its signed half in a derivation, not
 //                           in a field.
@@ -186,6 +189,16 @@ const boundaryScaffold = () => mermaid([
   '  E -.-> K', '  N -.-> K',
   '  class E valid', '  class N invalid', '  class K muted',
 ].join('\n'));
+// THE COLLAPSE — several distinct situations producing ONE observation. This project's most repeated defect shape
+// (F.5p: absence is two facts; F.5p.2: silence is two facts; the version boundary: three situations, one verdict),
+// and the one a reader cannot hold in prose because the whole point is that the arrows MEET.
+const collapseScaffold = () => mermaid([
+  'flowchart LR', `  A[${F('situation 1')}]`, `  B[${F('situation 2')}]`, `  C[${F('situation 3, or delete')}]`,
+  `  O[${F('the ONE observation all of them produce')}]`,
+  `  R[${F('what the reader concludes — and why it is wrong for some of them')}]`,
+  '  A --> O', '  B --> O', '  C --> O', '  O --> R',
+  '  class A valid', '  class B invalid', '  class C muted', '  class O accent', '  class R invalid',
+].join('\n'));
 const surfacesScaffold = () => mermaid([
   'flowchart LR', `  O[${F('what an operator runs')}]`,
   `  A1[${F('artifact / surface')}]`, `  A2[${F('artifact / surface')}]`,
@@ -259,45 +272,124 @@ const diaryBlock = `## Diary
 
 ${diary || FILL('run `node tools/recap-render.mjs --issue ' + round + '` after sealing, and paste its output below the heading — never type it')}`;
 
+
+// ── THE LAB REPORT HEAD — the FORM, not just the sections ────────────────────────────────────────────────────
+//
+// MEASURED 2026-08-04: report R-165 came out as bare markdown headings. The sections were right and the form was
+// gone, because #132's head — the centred plate and the fielded table — was assembled BY HAND that day and the
+// generator never learned it. So every later report silently lost the identity unless someone remembered, which
+// is the same defect class this file exists to close: the thing lives in a person instead of in the tool.
+//
+// Fields that can be read ARE read (round, issue, the closing commit, the repo). The rest are FILL marks, because
+// severity and the sealed coordinate are judgements and a generator that guessed them would be inventing the part
+// that matters.
+const HEAD_KIND = { incident: 'INCIDENT REPORT', audit: 'AUDIT RECORD', delivery: 'DELIVERY NOTE' };
+const cell = (v) => `\n\n${v}\n\n`;
+const head = () => `# THE LAB<br>${HEAD_KIND[form]}
+
+<table width="100%">
+<tr><td valign="top">${cell('**REPORT**')}</td><td valign="top">${cell('`R-' + round + '`')}</td><td valign="top">${cell('**SUBJECT**')}</td><td valign="top">${cell(FILL('one line — what this report is about'))}</td></tr>
+<tr><td valign="top">${cell('**OPENED**')}</td><td valign="top">${cell(FILL('`YYYY-MM-DD HH:MMZ` — when the issue was filed'))}</td><td valign="top">${cell('**CLOSED**')}</td><td valign="top">${cell(FILL('`YYYY-MM-DD HH:MMZ` and the elapsed time, or `open`'))}</td></tr>
+<tr><td valign="top">${cell('**SEVERITY**')}</td><td valign="top">${cell(FILL('what the blast radius WAS — shipped to registry / caught before publication / latent'))}</td><td valign="top">${cell('**STATUS**')}</td><td valign="top">${cell(FILL('`🟢 CLOSED` or `🟡 OPEN`, and the CI sha it is green on'))}</td></tr>
+<tr><td valign="top">${cell('**SEALED**')}</td><td valign="top">${cell(FILL('the diary `ust:` coordinate, or `—` while unsealed'))}</td><td valign="top">${cell('**ISSUE**')}</td><td valign="top">${cell('#' + issue)}</td></tr>
+<tr><td colspan="4" valign="top">${cell('<sub>' + FILL('one sentence a stranger can read first — what happened and who was affected') + '</sub>')}</td></tr>
+</table>
+
+`;
+
+
+// ── THE FORM'S OWN ELEMENTS ──────────────────────────────────────────────────────────────────────────────────
+// Measured against R-131/132/133: SIX full-width tables, THREE alerts, TWO-to-THREE diagrams each. R-165's first
+// draft had one table, one diagram and no alerts — the sections were right and the FORM was gone, because it
+// lived in whoever wrote the previous report.
+//
+// TABLES ARE HTML AND FULL WIDTH. A markdown table shrinks to its content and reads like a draft beside the ones
+// before it; a comparison the reader must scan needs the page, not a column.
+const td = (v) => `<td valign="top">\n\n${v}\n\n</td>`;
+const tbl = (rows) => `<table width="100%">\n${rows.map((r) => '<tr>' + r.map(td).join('') + '</tr>').join('\n')}\n</table>`;
+const alert = (kind, body) => `> [!${kind}]\n> ${body}`;
+
+// ── A DIAGRAM IS DERIVED, NOT POSITIONED ─────────────────────────────────────────────────────────────────────
+// Owner's rule, 2026-08-04: *not one or two in fixed sections — wherever a USEFUL one can be drawn, never for
+// show. It is a derived part of the report: maybe every section, maybe one. If there is meaning, there is a
+// diagram.*
+//
+// So the slot stands in EVERY section, and the flag names the SECTION it belongs in: `--collapse 1 --span 2
+// --path 4`, in any combination or none. A generator that fixed the kinds to sections would be deciding, for the
+// author, where meaning is — which is the one judgement it has no way to make.
+const KINDS = { collapse: () => collapseScaffold(), span: () => ganttScaffold(), path: () => pathScaffold(), boundary: () => boundaryScaffold(), surfaces: () => surfacesScaffold(), findings: () => findingsScaffold() };
+const slot = (section) => {
+  const here = Object.keys(KINDS).filter((k) => String(arg(k, '')) === String(section));
+  if (here.length) return '\n' + here.map((k) => KINDS[k]()).join('\n\n') + '\n';
+  return `\n${FILL(`a diagram for § ${section} IF a relation here is worth drawing — collapse (several situations, one observation) · span (a duration) · path (a value crossing stages) · boundary (what is and is not established) · surfaces (more than one artifact). Scaffold with --<kind> ${section}. Delete this line if nothing here earns one`)}\n`;
+};
+
 const BODIES = {
-  incident: () => `## Recap
+  incident: () => `${alert('CAUTION', FILL('one sentence naming the blast radius and who was exposed — what a reader sees before any section'))}
+
+## § 1 &nbsp; Recap
 
 ${FILL('what broke, where it was visible, and for how long — a few sentences')}
+${slot(1)}
+## § 2 &nbsp; Measured impact
 
-## Measured impact
+${tbl([
+  ['**FOUND**', FILL('how it surfaced — a run, a gate, a report'), '**ISSUE**', '#' + issue],
+  ['**ENTERED**', entered ? `\`${entered.sha}\` on ${entered.date} — ${entered.subject}` : FILL('when the defect entered, or `unknown` with why'), '**PUBLISHED**', published ? Object.entries(JSON.parse(published)).map(([t, v]) => `\`${t}\` → \`${v}\``).join(' · ') : FILL('what a stranger would have fetched, or `not published`')],
+  ['**BLAST RADIUS**', FILL('what was affected — and in the same cell what was NOT: the negative half is the honest half'), '**REACHED A CONSUMER**', FILL('yes/no, and if NOT, WHY — the barrier that held is evidence, not luck')],
+  ['**PUBLISHED ARTIFACTS**', FILL('whether any published document, signature or verdict is affected'), '**RECOVERABLE**', FILL('what can still be undone, and what is permanent')],
+])}
+${slot(2)}
+## § 3 &nbsp; Root cause
 
-${entered ? `- entered \`${entered.sha}\` on ${entered.date} — ${entered.subject}\n` : ''}- found and closed under #${issue}
-${publishedLine}- ${FILL('what was affected — and, in the same list, what was NOT: the negative half is the honest half')}
-- ${FILL('whether it reached a consumer at all, and if it did not, WHY — the barrier that held is evidence, not luck')}
-- ${FILL('whether any published document, signature or verdict is affected')}
-${drawn('span', ganttScaffold, 'a TIMELINE if this impact has a span — minutes stopped, slots missed, days published. Pass --span to scaffold one, or delete this line if the impact has no duration')}
-## Root cause
-
-${FILL('numbered MECHANISMS, each answering "why was this invisible", never restating the symptom')}
-${drawn('path', pathScaffold, 'a PATH diagram if the mechanism is a chain — a value crossing stages, correct at the origin and wrong after a rebuild. Pass --path to scaffold one, or delete this line if the defect sat in one place')}
-## Resolution
+${tbl([
+  ['**1**', FILL('the MECHANISM — why was this invisible? never a restatement of the symptom')],
+  ['**2**', FILL('the second mechanism, or delete this row')],
+  ['**3**', FILL('the third, or delete this row')],
+])}
+${slot(3)}
+## § 4 &nbsp; Resolution
 
 - [x] ${FILL('what shipped — structural first, the patch never')}
+${slot(4)}
+## § 5 &nbsp; Verification
 
-## Verification
+${tbl([
+  ['**CONFORMANCE**', checks ? `${checks[1]} checks, ${checks[2]} failing${vectors !== null ? `, ${vectors} vectors` : ''}` : '«conformance did not report»', '**CI**', ciSteps !== null ? `${ciSteps} steps (\`npm run ci:local\`)` : FILL('CI state')],
+  ['**CAN THE CHECK FAIL**', FILL('revert the fix and name exactly what goes red — with its own message, not a neighbour\'s'), '**CONTROL**', FILL('the detector fires on the real defect and stays silent on correct code')],
+  ...(gateLines.length ? [['**GATES**', gateLines.join('<br>'), '**NOTE**', FILL('anything a gate reported that a reader should not skip')]] : []),
+])}
+${slot(5)}
+<details><summary>commits</summary>
 
-${conformanceLine}
-${ciLine}${gateLines.length ? gateLines.join('\n') + '\n' : ''}- ${FILL('the proof the check CAN fail — revert the fix and name exactly what goes red')}
-- ${FILL('controls: the detector fires on the real defect and stays silent on correct code')}
+\`\`\`
+${commits}
+\`\`\`
 
-${commitsBlock}
+</details>
 
-## Follow-ups
+## § 6 &nbsp; Follow-ups
 
-- ${FILL('the PROCEDURAL follow-up, if this round exposed one about how I work')}
+${alert('NOTE', FILL('the PROCEDURAL follow-up, if this round exposed one about how the work is done'))}
 
-${openBlock}
+${tbl([
+  ['**OPEN**', FILL('what this round leaves open, and where it is tracked')],
+  ['**BLOCKED**', FILL('what cannot proceed and on what — or `none`')],
+])}
 
-## The rule worth keeping
+<details><summary>open issues at the time of writing (trim to the ones this round leaves)</summary>
 
-${FILL('one sentence a future reader can apply without this issue in front of them')}
+${openIssues ?? '«gh unavailable»'}
 
-${diaryBlock}
+</details>
+
+## § 7 &nbsp; The rule worth keeping
+
+${alert('IMPORTANT', FILL('one sentence a future reader can apply without this issue in front of them'))}
+
+## § 8 &nbsp; Diary
+
+${tbl([['**SEALED**', diary || FILL('run `node tools/recap-render.mjs --issue ' + round + '` after sealing and paste its output — never type it; or state that the diary is the owner\'s to call')]])}
 `,
 
   audit: () => `## Audit subject
@@ -408,7 +500,7 @@ ${diaryBlock}
 `,
 };
 
-const out = BODIES[form]();
+const out = head() + BODIES[form]();
 
 console.log(out);
 console.error(`\n  composed ${form} report, round ${round} → #${issue}. Every number above is read from a command or a file in this tree.`);

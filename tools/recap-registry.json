@@ -378,6 +378,11 @@
       "round": 164,
       "issue": 138,
       "no_recap": "The round STATES a contract; #138 is where it becomes behaviour, and it is open. Writing a recap now would report a promise as if it were a property — the exact gap between saying and doing that the second rule itself is about. Owed when a future minor is answered with an unattempted axis rather than E-MALFORMED."
+    },
+    {
+      "round": 165,
+      "issue": 138,
+      "no_recap": "The REPORT is published in #138 in full lab form — header table, CAUTION/NOTE/IMPORTANT alerts, seven full-width tables and two diagrams, one of them the inverse of the other. What this field records is the DIARY half being absent: the diarium is sealed only when the owner invokes /ustrecap, and sealing one unbidden would point this registry at an entry nobody asked for. Replace this entry with a content_hash when the diary is called."
     }
   ]
 }
