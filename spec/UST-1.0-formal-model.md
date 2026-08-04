@@ -3612,6 +3612,57 @@ VERIFIES a composed tree and building one is a producer's job.
 
 **Binding: realized** — *"#101 ADVERSARIAL: a capacity grant does NOT admit an over-breadth FLAT seal — capacity is VOLUME, breadth is STRUCTURE"*. The arithmetic was always over the §13 constants; what is now an obligation is that no declaration may reach a structural bound, which a check refuses rather than a sentence asserts.
 
+### F.9.5-c The ROOT does not compose, so the ENUMERATION is what splits — and `root` becomes the completeness marker (#127)
+
+F.9.5 says a breadth bound is escapable because `4096 = 64²` and a two-level tree carries the universe. That is
+a statement about CAPACITY. It leaves open which of two compositions is meant, and the two differ in what a
+CONSUMER must do — so the choice cannot be settled by preference.
+
+**Theorem F.9.5-c.1 (the Merkle root is not compositional under this construction).** §7 sorts the WHOLE leaf
+multiset before pairing. Hence for a partition `L = A ⊎ B` there is in general no `f` with
+`root(L) = f(root(A), root(B))`.
+*Proof.* Sorting is global: an element of `B` may sort between two elements of `A`, so the pairing of `L` is not
+a refinement of the pairings of `A` and `B` taken separately. MEASURED on 120 leaves: `root(L)` and
+`root([root(A), root(B)])` differ. ∎
+
+**Corollary (recursive roots are not merely inconvenient — they break §11.2).** If each node rooted its own
+subtree and a parent's constituents were its children's `content_hash`es, the published top root would be a root
+over CHILDREN, not over leaves. `Incl(d, r, π) = [ walk(H("ust:leaf", content_hash(d)), π) = r ]` then holds for
+no leaf against that `r`, and inclusion would need a second, two-stage rule — one whose shape depends on how the
+publisher chose to CHUNK its own seal. That is the publisher deciding the consumer's verification procedure,
+which this protocol excludes everywhere else (F.5a.1).
+
+**So there is exactly ONE root, over the whole leaf multiset, and what composes is the ENUMERATION.** This is
+F.5u.1 read constructively: `L` does not occur in the inclusion predicate, so enumeration is the part that may be
+split without touching what a consumer computes.
+
+**Theorem F.9.5-c.2 (a partial enumeration cannot carry a root, and therefore `root` marks completeness).** Let
+`N` be a node enumerating `C ⊊ L`. By F.9.5-c.1 no root of `C` bears any computable relation to `root(L)`, so
+`N` has exactly two options: carry `root(L)`, which asserts *these are the constituents whose root is r* and is
+FALSE for a proper subset, or carry no root at all. Hence the presence of `root` is not decoration — it is the
+structural marker that a node's enumeration is COMPLETE. ∎
+
+**Corollary (the completeness claim is positional, not conventional).** A consumer reading one node needs no
+agreement about what a partial node "means": a node with `root` claims the whole set, a node without it claims
+membership of the constituents it lists and nothing more. This matches the rule already in §9.2 — `root` is
+REQUIRED for `set`/`anchor` and FORBIDDEN for `checkpoint`/`gap` — rather than introducing a second convention
+beside it: the field was already carrying this meaning, and the theorem names what it was carrying.
+
+**Corollary (the escape is general, and its limit is the depth law alone).** With enumeration splitting and one
+global root, a seal over `N` leaves needs `⌈log₆₄ N⌉` levels, expressible iff `≤ D_MAX = 8`. Nothing in the
+mechanism is specific to a window, a cadence, or an operator: `N = 120` (an hour at 30 s) and `N = 86 400` (a day
+at 1 s) are the same construction read at different `N`, which is the property F.9.5-b already proved for the
+whole addressing space.
+
+**Binding: pending — thelabmd/UST-Protocol#127.** Realized when a builder composes a seal over an arbitrary
+admissible `N`, a partial node carrying `root` is REFUSED, and inclusion against the single published root is
+exercised for a leaf under a composed enumeration.
+
+**Conformance (math ⇒ spec ⇒ code ⇒ green vector, once realized).**
+- a composed seal over `N > 64` verifies, and the leaf inclusion path resolves against the ONE published root;
+- a node enumerating a proper subset and carrying `root` is refused;
+- the composition is exercised at two different `N` on different levels, so nothing is fitted to one window.
+
 ### F.9.6 Calibration of the numerical constants
 
 The model derives the INEQUALITIES the constants must satisfy; it cannot make one assignment uniquely

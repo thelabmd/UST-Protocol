@@ -53,7 +53,7 @@ const bounds = heads.map((h) => h.pos).concat(MODEL.length);
 // section silently LEAVE the domain — renamed to a non-`F.x` heading, it would simply stop being enumerated and this
 // gate would still pass. That is the very defect class this gate exists to close, so the count is exact and any change
 // to the section inventory must be a deliberate edit here.
-const EXPECTED_SECTIONS = 58;   // 56 → 58: F.5q-c (the WINDOW family is an INDEX set — coverage and gaps are
+const EXPECTED_SECTIONS = 59;   // 58 → 59: F.9.5-c — the Merkle root does NOT compose (measured: root over 120 leaves differs from a root over two subtree roots), so recursive roots would break §11.2 inclusion outright; the ENUMERATION is what splits, there is exactly one root, and `root` is therefore the structural marker of a COMPLETE enumeration rather than decoration.   // 56 → 58: F.5q-c (the WINDOW family is an INDEX set — coverage and gaps are
 // measurable in the commitment chain alone, so a declared rhythm is a CAPABILITY buying exactly the present-tense
 // question and nothing below it; an event-driven publisher owes nothing because it promised nothing) and F.5p.3
 // (a declaration must be AUTHENTICATED exactly when it can EARN a pass — which classifies the two rhythms by that
