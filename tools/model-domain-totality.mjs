@@ -53,7 +53,10 @@ const bounds = heads.map((h) => h.pos).concat(MODEL.length);
 // section silently LEAVE the domain — renamed to a non-`F.x` heading, it would simply stop being enumerated and this
 // gate would still pass. That is the very defect class this gate exists to close, so the count is exact and any change
 // to the section inventory must be a deliberate edit here.
-const EXPECTED_SECTIONS = 54;   // 53 → 54: F.5.1 (rev102) — the ladder is REPORTABLE, and a rung names WHO MAY
+const EXPECTED_SECTIONS = 55;   // 54 → 55: F.5p.2 (rev103) — the absence of an ALARM is two facts. A watcher that
+// speaks only on state change makes its OWN liveness unobservable: healthy-publisher and dead-watcher produce a
+// byte-identical silence, so a liveness conclusion drawn from silence is unfounded. Separated by ONE positive
+// assertion that the watcher has read the surface at least once. 53 → 54: F.5.1 (rev102) — the ladder is REPORTABLE, and a rung names WHO MAY
 // SUPPLY its missing input. The publisher is in NO supplier class: consumer-config inputs are the verifier's own,
 // published artifacts enter only as the RESULT of the verifier's own check, and a direct placement would make the
 // verdict measurable in what the publisher asserts. 52 → 53: F.5p.1 (rev101) — a profile BINDS and DESCRIBES, and one extension rule

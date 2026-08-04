@@ -2358,6 +2358,43 @@ reader takes `serves` from the flat top level, which is `P_closed` of size one w
   differ only in position, so the vector pair is the theorem.
 - a declaration placed in the open half binds nothing and grants nothing: the present-surface row is unchanged.
 
+## F.5p.2 The absence of an ALARM is two facts, and only a positive assertion separates them (#137, operator measurement)
+
+F.5p separates two facts hiding behind one `absent` on the surface being OBSERVED. The same collapse occurs one
+level out, on the OBSERVER, and there it is easier to miss because the observer is ours.
+
+**The collapse.** Let `W` be a watcher reporting on a publisher's liveness, and let it speak only on a change of
+state — which is correct discipline, since a watcher that repeats itself every tick trains its reader to ignore
+it. A reader then observes `silence(W)`. Two situations produce it:
+
+- `healthy(P)` — the publisher is printing and there is nothing to say;
+- `¬running(W)` — the watcher is dead, mis-configured, or its own reads are failing.
+
+These are opposite conclusions, and `σ(silence)` contains neither. **A liveness conclusion drawn from silence is
+therefore unfounded** — it is the same shape as concluding validity from the absence of a refusal, which the
+tiers exist to prevent.
+
+**Measured, 2026-08-04.** A watcher was enabled on the reference operator, printed its start line, and went
+quiet. Quiet was the designed signal for health. A watcher whose fetch had broken would have produced a byte-
+identical trace. And one level further in: the flag that enables it is named `<SVC>_<ACTION>_ENABLED`; set
+without the suffix it read as absent, so the watcher **did not start, silently** — the same collapse, one turn
+of the screw down.
+
+**The separator.** A single POSITIVE assertion that the watcher has read the observed surface at least once —
+`observed(W) = true` — announced exactly once and never repeated. Silence after it is again health, and now it is
+health that was DEMONSTRATED rather than assumed. The assertion is monotone in the F.5p sense: it can only ever
+add an obligation on `W` (having claimed to observe, it must keep observing or say otherwise) and can never
+raise the publisher's verdict, because `W` supplies nothing to the publisher's inputs (F.5.1: the observer moves
+neither `x̂` nor `(ℐ_v, ρ_v)` of any verifier judging `P`).
+
+**Corollary F.5p.2a (a self-observer separates its own silence, never its own independence).** The positive
+assertion tells a reader that `W` is alive. It says nothing about whether `W` is independent of `P`, and when
+publisher and watcher are the same party it cannot: independence is not in `σ(bytes)` (F.5o), and a watcher
+announcing its own liveness is announcing exactly the property it is entitled to announce and no other.
+
+**Binding: none — definitional.** It states a discipline for observers, not a property of a UST document; no
+artifact verifies or falsifies it, and the obligation it creates falls on whoever builds the watcher.
+
 ## F.5q Darkness is a UNIVERSAL claim, so its domain must be declared (#120)
 
 F.5p separated the two facts hiding behind one `absent` on the DISCOVERY axis. The ANCHORING axis has the same
