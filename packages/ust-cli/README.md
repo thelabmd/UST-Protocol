@@ -79,6 +79,7 @@ version typed into a README is a claim that goes stale in silence.
 | command | what it does |
 |---|---|
 | `ust verify <file\|->` | verify a transcript (blob / base64 / json). exit 0 = VALID, 1 = not. Auto-resolves the publisher's discovery + witness surfaces and cross-checks witness anchors (Rekor/Bitcoin) → **VALID:HIGH out of the box** when the no-fork evidence confirms |
+| `ust explain <file\|->` | the LADDER, not the verdict: where the document sits, and for every input the verifier did not receive, **who may supply it** — the publisher (by publishing an artifact this verifier then checks itself) or the consumer only. Makes **no network call**: an absent input is reported absent, never fetched. Grants nothing — the verdict shown is the one `ust verify` returns for the same inputs |
 | `ust verify <doc> --genesis <f> --keylog <f,f…> [--no-fork-confirmed]` | the OFFLINE road: supply the trust chain yourself; `--no-fork-confirmed` is your air-gap assertion → **VALID:HIGH** |
 | `ust stream <frames…> [--genesis <f>] [--checkpoint <f>]` | a verdict about a RANGE, not one document — chain · forks · **completeness** (a stream property, never a single document's) |
 | `ust canon <file\|->` | print canonical bytes + hash — diff any other-language implementation against this |

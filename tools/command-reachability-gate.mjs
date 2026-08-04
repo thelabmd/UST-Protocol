@@ -37,6 +37,7 @@ check(COMMANDS.length >= 8, `only ${COMMANDS.length} commands found — the prob
 // packet leaves the machine, a road argument where the command requires one, and a file path that cannot be read.
 const ARGS = {
   verify: ['/nonexistent-file-for-the-gate.json'],
+  explain: ['/nonexistent-file-for-the-gate.json'],   // #137 — same first refusal as verify: the body is entered, the file is not readable
   canon: ['/nonexistent-file-for-the-gate.json'],
   stream: ['/nonexistent-file-for-the-gate.json'],
   forkchoice: ['/nonexistent-a.json', '/nonexistent-b.json'],

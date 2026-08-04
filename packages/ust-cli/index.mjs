@@ -1424,6 +1424,71 @@ export function stageSummary({ genHash, witnesses = [], profile }) {
 // ─── ust verify <file|-> [--genesis <f> --keylog <f,f…> [--no-fork-confirmed]] ────────────────────────
 // A lone document can only ever prove LIGHT; HIGH is a property of RESOLUTION (genesis→key-log), so the
 // resolution inputs are FLAGS on the same command — the tier ladder is one tool, not tribal knowledge.
+// ── `ust explain <doc>` — THE LADDER, and who may move each rung (#137, F.5.1 + F.5p.2) ───────────────────────
+//
+// `ust verify` answers *is this valid for me, now*. This answers the question an integrator actually has: what
+// stands between the document and the next rung, and — decisively — whether that thing is THEIRS to move.
+//
+// ZERO NETWORK, and this is a property rather than a default. Verification is offline (§, first page), so a tool
+// that explained the offline property by reaching out would contradict it. Absent inputs are reported as ABSENT;
+// nothing is fetched to fill them in. The cost of running this is therefore exactly one file read.
+//
+// IT GRANTS NOTHING. The verdict printed here is the verdict `verify` returns for the same inputs — pinned by a
+// vector. Reading what would raise a document is not a step toward raising it.
+async function cmdExplain() {
+  const src = process.argv[3];
+  if (!src) die('usage: ust explain <file | - for stdin> [--context data|key] [--genesis <file> --keylog <file>] [--trust-root KEYID=PUB]\n  reports the LADDER: where the document sits, and for every input the verifier did not receive, WHO may supply it\n  makes NO network call — an absent input is reported absent, never fetched (verification is offline by construction)');
+  const raw = src === '-' ? readFileSync(0) : readFileSync(src);
+  let doc; try { doc = decodeInput(raw.toString('utf8')); } catch (e) { die('not a UST blob/base64/json: ' + e.message); }
+
+  const opts = { context: arg('context', null) || contextFor(doc) };
+  for (const [flag, key] of [['genesis', 'genesis'], ['keylog', 'keylog'], ['witness', 'noForkEvidence']]) {
+    const f = arg(flag, null);
+    if (typeof f === 'string') { try { opts[key] = JSON.parse(readFileSync(f, 'utf8')); } catch (e) { die(`--${flag} unreadable: ${e.message}`); } }
+  }
+  if (arg('no-fork-confirmed', false)) opts.noForkConfirmed = true;
+  const tr = arg('trust-root', null);
+  if (typeof tr === 'string') opts.trustRoots = Object.fromEntries(tr.split(',').map((p) => p.split('=')));
+
+  const r = P.explainLadder(doc, opts);
+  if (r.error) die(`${r.error}: ${r.detail}`);
+
+  console.log(`\n  ${r.verdict}${r.reason ? ' (' + r.reason + ')' : ''}`);
+  if (r.detail) console.log(`  ${r.detail}`);
+
+  console.log('\n  WHERE IT SITS');
+  if (r.coordinates === null) {
+    // F.5p.2 — an axis the relation never reached is NOT an axis that passed. Saying so is the whole point.
+    console.log('    · coordinates NOT REACHED — the relation stopped before computing them.');
+    console.log('      This is not "fine": nothing was measured on these axes, and a blank must not read as met.');
+  } else {
+    console.log(`    · identity      ${r.coordinates.identity.strength} / ${r.coordinates.identity.status} (mode ${r.coordinates.identity.mode})`);
+    console.log(`    · time          ${r.coordinates.time.strength} / ${r.coordinates.time.status}`);
+    console.log(`    · completeness  ${r.coordinates.completeness}`);
+  }
+
+  console.log('\n  WHAT THE VERIFIER WAS GIVEN');
+  console.log(r.attempted.length ? '    ' + r.attempted.join(', ') : '    nothing — every input below was absent');
+
+  if (r.absent.length) {
+    console.log('\n  WHAT IT WAS NOT GIVEN, AND WHOSE IT IS');
+    const pub = r.absent.filter((a) => a.term.startsWith('x̂'));
+    const con = r.absent.filter((a) => !a.term.startsWith('x̂'));
+    if (pub.length) {
+      console.log('    the PUBLISHER may supply these — by PUBLISHING an artifact this verifier then checks itself:');
+      for (const a of pub) console.log(`      · ${a.input}`);
+    }
+    if (con.length) {
+      console.log("    the CONSUMER only — a publisher advised to supply these is advised to self-grant (F.5.1a):");
+      for (const a of con) console.log(`      · ${a.input}`);
+    }
+  }
+
+  console.log('\n  This report is a function OF the decision relation and never an input to it: the verdict above is');
+  console.log('  the one `ust verify` returns for the same inputs. Reading it changes nothing.');
+  process.exit(0);
+}
+
 async function cmdVerify() {
   const src = process.argv[3];
   if (!src) die('usage: ust verify <file | - for stdin> [--context data|key] [--offline] [--genesis <file> --keylog <file[,file…]> [--no-fork-confirmed | --witness <file> --trust-root KEYID=PUB[,…]]] [--require-authoritative] [--require-anchored]\n  by default the tool AUTO-RESOLVES the publisher identity from its /.well-known/ discovery pair\n  --no-fork-confirmed = YOUR air-gap assertion ⇒ consumer-override (not authoritative) · --witness <buildNoForkEvidence JSON> + --trust-root (witness pubkeys YOU trust) ⇒ INDEPENDENT authoritative\n  --require-authoritative floors at HIGH · --require-anchored floors at TOP (downgrade resistance: below-floor ⇒ reject, never a silent lower tier)\n  --require-fresh-keylog rejects a possibly-stale key-log (§12.2a) · --keylog-fresh-as-of <RFC3339-Z> supplies fresh-fetch evidence (attested needs a verified head-anchor proof, API-only)');
@@ -3173,7 +3238,7 @@ const isMain = (() => { try { return process.argv[1] && realpathSync(process.arg
 if (isMain) {
   const cmd = process.argv[2];
 
-  const run = { verify: cmdVerify, canon: cmdCanon, genesis: cmdGenesis, key: cmdKey, rotate: cmdRotate, cadence: cmdCadence, reroot: cmdReroot, discovery: cmdDiscovery, publish: cmdPublish, mirror: cmdMirror, stream: cmdStream, forkchoice: cmdForkChoice, witness: cmdWitness }[cmd];
+  const run = { verify: cmdVerify, explain: cmdExplain, canon: cmdCanon, genesis: cmdGenesis, key: cmdKey, rotate: cmdRotate, cadence: cmdCadence, reroot: cmdReroot, discovery: cmdDiscovery, publish: cmdPublish, mirror: cmdMirror, stream: cmdStream, forkchoice: cmdForkChoice, witness: cmdWitness }[cmd];
   if (!run) { const b = banner(); console.error(b + (b ? '' : 'ust — verify machine-readable state\n\n') + "\n  READ & VERDICT — safe, touches nothing\n  ✓ ust verify <file|->        verify a transcript — exit 0 = VALID, 1 = not (--require-anchored demands proven time)\n  ≡ ust canon  <file|->        print canonical bytes + hash — diff another language's implementation against this\n  … ust stream <frames…>       a verdict about a RANGE, not one document: chain · forks · completeness\n                               (--checkpoint is what makes completeness answerable at all)\n  ⑂ ust forkchoice <docs…>     pick the CANONICAL document among candidates for ONE ust_id — the anchor decides,\n                               never the candidates themselves\n  ◇ ust discovery <domain>     probe a domain's serving surface and report an honest verdict — any infrastructure\n\n  CEREMONY — touches your identity, needs the root key\n  ◉ ust genesis --domain <d>   run the HIGH genesis ceremony (add --publish cf for one-click serving)\n  + ust key add --domain <d> --root <enc> --role <data|issuance>   ADD a key BESIDE the current one (never replaces it)\n  ↻ ust rotate  --domain <d> --root <enc>   APPEND a key rotation to the served log\n                               (never re-mints — documents signed by the old key stay valid)\n  ~ ust cadence --domain <d> --root <enc> --seconds <n> --effective-from <slot>\n                               DECLARE the signed grid your stream follows — what completeness is measured against\n  ⟳ ust reroot  --domain <d> --ca-key <enc>   RE-ROOT onto a new genesis, crossing EVERY genesis-rooted\n                               structure you run — key-log, authority chain, witness log (the NAME), cadence.\n                               Writes artifacts; publishes nothing. Your writer must cross the last axis itself.\n\n  PUBLISH — writes to the world\n  ▲ ust publish <cf|self> --domain <d> --genesis <f>   serve an existing genesis: cf deploys the adapter,\n                               self writes the four artifacts for YOUR stack (asked if omitted)\n  ▣ ust mirror <domain>        publish and attest a SECOND-vendor copy, so your identity does not rest\n                               on one provider\n  † ust witness rekor --domain <d>   log the genesis in a public transparency log, so a second published\n                               history cannot go unnoticed\n"); process.exit(cmd ? 1 : 0); }
   run().catch((e) => die(e.message || String(e)));
 }

@@ -1346,7 +1346,16 @@ export function explainLadder(doc, opts = {}) {
   try {
     const O = (typeof opts === 'object' && opts !== null && !Array.isArray(opts)) ? opts : null;
     if (O === null) return bad('E-MALFORMED', 'opts must be an inert record');
-    const v = verify(doc, O);
+    // CAPACITY IS EARNED, NOT HANDED IN — and a report that stopped short of earning it would name a barrier the
+    // caller has already cleared. Measured twice, on two different surfaces: passing genesis/keylog as options
+    // leaves `no trusted capacity grant`, because the grant is minted by RESOLUTION. Doing it here is not a second
+    // implementation — it is the same relation, called one step further, and offline.
+    let O2 = O;
+    if (O.genesis !== undefined && O.capacity === undefined) {
+      const auth = resolveAuthority(doc, O);
+      if (auth && !auth.error && auth.capacity !== undefined) O2 = { ...O, capacity: auth.capacity };
+    }
+    const v = verify(doc, O2);
     // Coordinates as the relation produced them. An INDETERMINATE verdict carries none — that absence is itself
     // reportable and must not be filled in with guesses.
     const coordinates = isValid(v)
