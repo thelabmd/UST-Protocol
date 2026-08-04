@@ -121,6 +121,24 @@ for (const v of V.vectors) {
         && (v.expect.copy0 === undefined || eq(r.copies[0], v.expect.copy0)));
       break;
     }
+    // §14.1 / F.5.1 / F.5p.2 — the ladder REPORT. Exercised against a real document so the coordinates come from
+    // the relation itself; a synthetic stub would test our idea of the relation instead of the relation.
+    case 'ladder': {
+      const r = P.explainLadder(mk(), v.input.opts ?? {});
+      const consumerTerms = (r.absent ?? []).filter((a) => a.term.startsWith('ℐ_v')).length;
+      const hasNoFork = (r.absent ?? []).some((a) => a.input === 'noForkConfirmed');
+      const hasGenesis = (r.absent ?? []).some((a) => a.input === 'genesis');
+      const e = v.expect;
+      let ok = !r.error;
+      if (e.coordinates_null !== undefined) ok = ok && (r.coordinates === null) === e.coordinates_null;
+      if (e.attempted !== undefined) ok = ok && r.attempted.length === e.attempted;
+      if (e.consumer_terms !== undefined) ok = ok && consumerTerms === e.consumer_terms;
+      if (e.absent_has_nofork !== undefined) ok = ok && hasNoFork === e.absent_has_nofork;
+      if (e.absent_has_genesis !== undefined) ok = ok && hasGenesis === e.absent_has_genesis;
+      if (e.verdict_matches_verify !== undefined) ok = ok && r.verdict === P.verify(mk(), v.input.opts ?? {}).result;
+      check(v.id, ok);
+      break;
+    }
     case 'key_id': check(v.id, P.keyId(v.pub_b64url) === v.expect); break;
     case 'commit': check(v.id, P.H('ust:shard', P.canon(v.input)) === v.expect); break;
     case 'seed': check(v.id, P.seed(v.input) === v.expect); break;
@@ -2959,6 +2977,7 @@ console.log('\n═════════════════════�
     axisRank: 'primitive', joinAssurance: 'surface', meetAssurance: 'surface', projectTier: 'surface', capAssurance: 'surface',
     evidenceCaps: 'primitive', ustGrid: 'primitive', checkBounds: 'surface', compareEvidenceOrder: 'surface',
     parseProfile: 'surface',   // #135 — reads the profile served by the domain under question; refuses, never throws
+    explainLadder: 'surface',  // #137 — reads an untrusted document and the caller's opts; refuses, never throws
     quorumTrustDomains: 'surface', evidenceClass: 'primitive', parseCadenceInt: 'primitive', authorityCheckpointId: 'primitive',
     authorityScopeId: 'primitive', checkpointMapLeaf: 'primitive', checkpointRecoveryClaim: 'primitive',
     checkpointUniquenessClaim: 'primitive', epochTransitionClaim: 'primitive', evidenceReceiptClaim: 'primitive',
@@ -3007,8 +3026,10 @@ console.log('\n═════════════════════�
   const oEv = () => ({ proof_kind: 'pow-header-chain', facts: { substrate: 'bitcoin', position: '1' } }), oList = () => [{ source_id: 'a' }];   // round-38 P1-02 — reachability fixtures for the exported evidence-algebra surfaces (now admitted, no longer exempt as 'primitive')
   const oAssur = () => ({ integrity: 'valid', identity: 'authoritative', freshness: 'attested', time: 'anchored' });   // round-39 P1-02 — a valid-shaped assurance state; the lattice surfaces (le/meet/join/projectTier/capAssurance) now RETURN (⊥/false/'NONE') on a hostile operand rather than throw, so the sweep reaches every position
   const oProfile = () => ({ summary: 'prose', declares: { serves: ['witness'], copies: [{ artifact: 'genesis', url: 'https://m.test/g' }] } });   // #135 — a VALID profile carrying both halves, so the hostile position is reached past the shape guards rather than short-circuiting on the first type test
+  const oLadderOpts = () => ({ context: 'data' });
   const SIG = {
     parseProfile: [oProfile],
+    explainLadder: [oDoc, oLadderOpts],
     verify: [oDoc, oOpts], verifyAsync: [oDoc, oOpts], verifyStream: [oFrames, oConf], verifyJson: [oBytes, oOpts],
     verifyAnchor: [oHash, oProof, oOpts], verifyEvidenceReceipt: [oStmt, oConf], verifyActiveGenesisUniqueness: [oProof, oConf],
     verifyAuthorityBundle: [oConf, oConf], verifyAuthorityCheckpointChain: [oChain, oConf], verifyCheckpointMapUniqueness: [oProof, oConf],

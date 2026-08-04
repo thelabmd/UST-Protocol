@@ -48,6 +48,7 @@ const STANCE = {
   'uniqueness-attest':   ['undecided', 'part of the checkpoint/uniqueness cluster. No tool consumes it yet, and inventing a surface before a consumer exists is how unused surface becomes permanent.'],
   'verifiable-map':      ['undecided', 'the anchored name-map is the independent path to authoritative. It has no operator today because no map substrate is registered; the surface should follow the substrate, not precede it.'],
   'disclosure':          ['decided',   'private-partition disclosure is a PUBLISHER-side act on data the tool never holds — the verifier receives {nonce, value} from whoever discloses. There is nothing for a tool of ours to do.'],
+  'ladder-report':       ['decided',   'the CORE lands before the surface deliberately (#137): the vectors pin what the report may and may not say — not-attempted distinguishable from met, a consumer faculty never attributed to the publisher — BEFORE a CLI shape fixes those answers by accident. The operator-facing surface is the remaining work of that issue, not an omission here.'],
   'negative-observation':['decided',   'a negative observation is built with the ordinary transcript builders and carries no distinct operation; it is a USAGE of build-transcript, not a capability needing its own surface.'],
 };
 
@@ -70,6 +71,11 @@ const CAPS = {
   // invisible to this capability and its staleness unmeasurable; the CLI face is now the profile itself, with
   // `--mirror` remaining the CONSUMER's own locator rather than a substitute for it.
   'byte-agreement':     { core: ['replicationAgreement', 'surfaceVerdict', 'anchorRollup', 'parseProfile'], cli: '--mirror' },
+  // #137 / F.5.1 + F.5p.2 — REPORTING the ladder is its own capability, not a facet of verification. It answers a
+  // different question: not *is this valid for me*, but *what stands between it and the next rung, and whose is
+  // that to move*. It is a function OF the decision relation and never an input to it (F.5.1b), so it can never
+  // raise a verdict — which is why it is admissible as a capability at all.
+  'ladder-report':      { core: ['explainLadder'] },
   'stream-verify':      { core: ['verifyStream'], mcp: 'ust_verify_stream', cli: 'verifyStream' },
   'typed-evidence':     { core: ['verifiedEvidence', 'evidenceClass', 'evidenceCaps', 'compareEvidenceOrder', 'EVIDENCE_CAPS_UNIVERSE'] },
   // M3 (UST-6vj C2) — provenance-bearing evidence: a SIGNED connector receipt verified against consumer-admitted

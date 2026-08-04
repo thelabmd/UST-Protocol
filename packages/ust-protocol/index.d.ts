@@ -84,6 +84,7 @@ export function evidenceCaps(proof_kind: unknown): unknown;
 export function evidenceClass(proof_kind: unknown): string;
 export function evidenceReceiptClaim(arg0?: unknown): { version: unknown; purpose: unknown; domain_shard: unknown; active_genesis: unknown; genesis_epoch: unknown; proof_kind: unknown; facts: unknown; issued_at: unknown };
 export function evidenceReceiptId(r: unknown): string;
+export function explainLadder(doc: unknown, opts?: unknown): Record<string, unknown>;
 export function forkChoice(candidates: unknown, opts?: unknown): Promise<unknown>;
 export function genesisEpoch(activeGenesis: unknown): string;
 export function H(tag: unknown, strInput: unknown): unknown;

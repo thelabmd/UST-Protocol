@@ -1311,6 +1311,65 @@ export function anchorRollup({ declared = [], observed = {} } = {}) {
     : 'printing';
   return deepFreeze({ status, declared: [...declared], silent, perSubstrate: deepFreeze(perSubstrate) });
 }
+// ── THE LADDER, REPORTED (#137, F.5.1 + F.5p.2) ───────────────────────────────────────────────────────────────
+// A verdict says where a document sits. An integrator needs what stands between it and the next rung — and,
+// decisively, whether that thing is theirs to move. Measured 2026-08-03 on a live publisher: three barriers
+// crossed in three separate production deploys, each visible only after the previous was removed, all three
+// decidable from the SAME bytes and the SAME faculties at the first.
+//
+// THIS IS NOT A SECOND IMPLEMENTATION, and that constraint shapes the whole design. A table of "what would make
+// this HIGH" would be a second copy of the decision relation, and the two would drift into disagreeing about the
+// same bytes. So the report never states what is NEEDED. It states two things it can read without duplicating
+// anything: the coordinates the relation ACTUALLY produced, and which inputs were ABSENT from the call — each
+// labelled with the term of R2 it belongs to, because that is what decides who may supply it (F.5.1).
+//
+// NOT-ATTEMPTED IS NOT MET (F.5p.2). An axis nobody asked about must not read like an axis that passed. Silence
+// carries "nothing was wrong" and "nothing was asked" alike, and the reader deciding whether to act cannot tell
+// them apart — the same collapse F.5p separates on the observed surface.
+//
+// IT GRANTS NOTHING. The report is a function OF the relation, never an input to it: reading what would raise a
+// document must not be a step toward raising it. Nothing here is fed back into any verdict.
+const R2_TERM = deepFreeze(Object.assign(Object.create(null), {
+  // what the caller supplies about the SUBJECT and its neighbourhood — the publisher may move these by authoring
+  // differently or by publishing an artifact the verifier then VERIFIES itself
+  genesis:        'x̂-neighbourhood — the publisher PUBLISHES it; the input is this verifier\'s own check of it',
+  keylog:         'x̂-neighbourhood — the publisher PUBLISHES it; the input is this verifier\'s own check of it',
+  noForkEvidence: 'x̂-neighbourhood — a witness publishes it; the input is this verifier\'s own check of it',
+  // the verifier's OWN faculties — the CONSUMER only, never the publisher (R4, F.5.1a)
+  trustRoots:      'ℐ_v — the CONSUMER\'s own faculty; a publisher advised to supply this is advised to self-grant',
+  substrateVerify: 'ℐ_v — the CONSUMER\'s own faculty (a connector), never the publisher\'s',
+  noForkConfirmed: 'ℐ_v — the CONSUMER\'s own override, never the publisher\'s',
+}));
+
+export function explainLadder(doc, opts = {}) {
+  const bad = (error, detail) => ({ error, detail });
+  try {
+    const O = (typeof opts === 'object' && opts !== null && !Array.isArray(opts)) ? opts : null;
+    if (O === null) return bad('E-MALFORMED', 'opts must be an inert record');
+    const v = verify(doc, O);
+    // Coordinates as the relation produced them. An INDETERMINATE verdict carries none — that absence is itself
+    // reportable and must not be filled in with guesses.
+    const coordinates = isValid(v)
+      ? deepFreeze({ identity: v.identity, time: v.time, completeness: v.completeness })
+      : null;
+    // ABSENT inputs, classified. Read from the CALL, not from a rule table — so nothing here can disagree with
+    // what the relation actually saw.
+    const absent = [];
+    for (const name of Object.keys(R2_TERM))
+      if (O[name] === undefined) absent.push(deepFreeze({ input: name, term: R2_TERM[name] }));
+    return deepFreeze({
+      verdict: v.result,
+      reason: v.reason ?? null,
+      detail: v.detail ?? null,
+      coordinates,                                   // null ⇒ the relation did not reach them; NOT "all fine"
+      attempted: deepFreeze(Object.keys(R2_TERM).filter((n) => O[n] !== undefined)),
+      absent: deepFreeze(absent),
+    });
+  } catch (e) {
+    return bad('E-MALFORMED', 'ladder not derivable: ' + (e instanceof Error ? e.message : String(e)));
+  }
+}
+
 // ── §20 OPERATOR PROFILE — the CLOSED half, and only it (#135, F.5p.1) ────────────────────────────────────────
 // A profile both BINDS and DESCRIBES, and one extension rule cannot serve both: dropping an unknown BINDING key
 // turns a stated obligation into no obligation (the reason §20.1 answers E-REPLICATION rather than accepting and

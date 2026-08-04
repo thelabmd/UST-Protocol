@@ -1766,6 +1766,12 @@ verdict would rise if it asserted no-fork confirmation is advising it to move th
 self-declaration §12.1 excludes, reached through a help message. In prose the publisher-movable rows and the
 consumer-movable rows read alike; the term is therefore named per input rather than left to the reader.
 
+**A rung the report did NOT ATTEMPT MUST be distinguishable from one it attempted and found met.** Silence about
+a rung carries two facts — *nothing was wrong* and *nothing was asked* — and a reader deciding whether to act
+cannot separate them. This is §10 R2's own collapse applied to the report: an axis the verifier never reached
+reports as NOT ATTEMPTED, naming what was missing, and never as a blank. The same holds for network-dependent
+rungs under an offline run (formal model F.5p.2).
+
 **A settled-absent rung MUST be distinguishable from one whose input was merely not brought.** The first is
 finished; the second is a configuration choice the reader can make. One shape for both discards the distinction
 §20 exists to preserve, on the axis where an integrator decides whether to act at all.

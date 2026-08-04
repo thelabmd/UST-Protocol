@@ -9429,6 +9429,54 @@
         ]
       },
       "expect_error": "E-DISCOVERY"
+    },
+    {
+      "id": "ladder-01-not-attempted-is-not-met",
+      "kind": "ladder",
+      "rule": "S14.1/F.5p.2 a coordinate alone cannot say WHY it is low — the report pairs it with the inputs never supplied, so 'not asked' is distinguishable from 'asked and refused'",
+      "input": {
+        "opts": {}
+      },
+      "expect": {
+        "attempted": 0,
+        "absent_has_genesis": true
+      }
+    },
+    {
+      "id": "ladder-02-consumer-faculty-never-attributed-to-publisher",
+      "kind": "ladder",
+      "rule": "S14.1/F.5.1a a report may never tell a publisher its verdict would rise by supplying a CONSUMER faculty — those inputs carry the consumer term",
+      "input": {
+        "opts": {}
+      },
+      "expect": {
+        "consumer_terms": 3
+      }
+    },
+    {
+      "id": "ladder-03-supplied-input-leaves-the-absent-set",
+      "kind": "ladder",
+      "rule": "S14.1 the report reads the CALL, not a rule table: an input actually supplied is attempted, never reported absent",
+      "input": {
+        "opts": {
+          "noForkConfirmed": true
+        }
+      },
+      "expect": {
+        "attempted": 1,
+        "absent_has_nofork": false
+      }
+    },
+    {
+      "id": "ladder-04-report-grants-nothing",
+      "kind": "ladder",
+      "rule": "S14.1/F.5.1b adding the report leaves every verdict identical — reading what would raise a document is not a step toward raising it",
+      "input": {
+        "opts": {}
+      },
+      "expect": {
+        "verdict_matches_verify": true
+      }
     }
   ]
 }
