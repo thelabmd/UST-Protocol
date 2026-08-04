@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 # Universal State Transcript ➝ UST Protocol ➝ ust:
 
-[![CI](https://img.shields.io/github/actions/workflow/status/thelabmd/UST-Protocol/ci.yml?branch=main&label=CI)](https://github.com/thelabmd/UST-Protocol/actions) [![conformance](https://img.shields.io/badge/conformance-866%20checks%20%C2%B7%20141%20vectors%20%C2%B7%204007%20fuzz-brightgreen)](https://github.com/thelabmd/UST-Protocol/actions/workflows/ci.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/thelabmd/UST-Protocol/ci.yml?branch=main&label=CI)](https://github.com/thelabmd/UST-Protocol/actions) [![conformance](https://img.shields.io/badge/conformance-872%20checks%20%C2%B7%20141%20vectors%20%C2%B7%204007%20fuzz-brightgreen)](https://github.com/thelabmd/UST-Protocol/actions/workflows/ci.yml)
 [![code license](https://img.shields.io/badge/code-Apache--2.0-blue)](./LICENSE)
 [![docs license](https://img.shields.io/badge/docs-CC--BY--4.0-blue)](./LICENSE-SPEC)
 [![ust-protocol](https://img.shields.io/npm/v/ust-protocol?label=ust-protocol)](https://www.npmjs.com/package/ust-protocol) [![pulls](https://img.shields.io/npm/dt/ust-protocol?label=pulls&color=informational)](https://www.npmjs.com/package/ust-protocol)
@@ -11,7 +11,7 @@
 > **Two rules this protocol does not trade away.**
 > **A minor only ADDS.** Anything that changes the meaning of what an earlier minor already defines is a MAJOR — there is no third option, because an older verifier evaluating under older rules must still be RIGHT about what it evaluated.
 > **A verifier never expires.** An older verifier keeps producing correct verdicts about everything it understands; newer material it does not implement is reported as NOT EVALUATED — never as invalid, never silently passed. Whether that reach is enough is the CONSUMER's policy, not the protocol's coercion.
-> *(Reporting side pending — see `thelabmd/UST-Protocol#138`; today an unknown minor is refused.)*
+> *Both hold today: a newer minor answers `INDETERMINATE(unsupported_minor)` and a different major `INDETERMINATE(unsupported_major)` — never `INVALID`, which means only "I applied MY rules and they were violated".*
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/status.svg">

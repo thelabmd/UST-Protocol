@@ -1757,9 +1757,17 @@ and the verifier's own faculties (§10 R2), and every missing input lives in exa
 |---|---|---|
 | the document | author a different one — fewer partitions, a different `class` | the PUBLISHER; the result is a different subject, judged on its own bytes |
 | what the verifier derives about the publisher | publish an artifact the verifier fetches and VERIFIES — key log, witness log, an anchor | the PUBLISHER emits bytes; the input is the verifier's own check RESULT, never the publisher's intent |
+| what a THIRD PARTY attests about the publisher | no-fork evidence over the active genesis | an INDEPENDENT WITNESS — not the publisher, whose attestation about its own uniqueness carries nothing (§12.1), and not the consumer, which cannot manufacture evidence about a party it is judging |
+| the verifier's own RULESET | implement a newer minor, or a different major | NEITHER PARTY in this run: the document is well-formed and the faculties are whatever they are; what is missing is the verifier's version (§19) |
 | the verifier's trust faculties | bring a trust root, an accepted issuer, a substrate connector | the CONSUMER only |
 | the verifier's resource budget | widen it | the CONSUMER only, and an input may only ever TIGHTEN it (§10 R4) |
 | — | nothing: the input is settled absent (§20, NOT OFFERED) | NOBODY, now or later |
+
+**A report MUST NOT attribute to the publisher an input it is structurally barred from producing.** Two of the
+rows above are such inputs and they fail differently: a consumer faculty (below), and a WITNESS attestation. An
+operator told to supply no-fork evidence about itself is told to do the one thing that evidence exists to rule
+out — a column with only *publisher* and *consumer* forces exactly that misattribution by having nowhere else to
+put it.
 
 **A report MUST NOT attribute a consumer-faculty input to the publisher.** Telling a publisher that its own
 verdict would rise if it asserted no-fork confirmation is advising it to move the CONSUMER's faculties — the
@@ -2045,15 +2053,18 @@ verify anything is a verifier that stops being run. This is also what makes CLOS
 with no discovery surface has no way to learn that the world moved, so the answer must carry that information
 rather than a refusal.
 
-*Status: the first rule holds. The second rule's REPORTING side is `thelabmd/UST-Protocol#138` — today a future
-minor is refused as `E-MALFORMED`, which is byte-identical to the answer for a corrupt document and therefore
-sends the consumer to debug the wrong party. The clause below states the current behaviour, not the target.*
+**THE LINE THIS DRAWS, and it governs every verdict in §14.** `INVALID` means one thing: *I applied MY rules and
+they were violated*. A ruleset the verifier does not have, a faculty it was not given, a capacity it was not
+granted are all outside that sentence and are `INDETERMINATE`. A future MINOR is therefore
+`INDETERMINATE(unsupported_minor)` — the additive contract lets the verifier still evaluate what its own version
+defines — and a different MAJOR is `INDETERMINATE(unsupported_major)`, where it evaluates nothing at all and
+claims nothing about those bytes. **Minor and major differ in REACH, never in validity.**
 
 - `ust` is the top-level scalar version marker `"MAJOR.MINOR"` (e.g. `"1.0"`, §4.1) — SIGNED (inside
   `canon({ust,state})`, no downgrade). A chain MAY mix versions (each document verifies under its own `ust`). A verifier for `1.y` MUST accept any `1.x` with `x ≤ y`
-  and MUST REJECT `1.x` with `x > y` (E-MALFORMED) rather than guess an unknown future minor (M10) — additive
+  and MUST answer `INDETERMINATE(unsupported_minor)` for `1.x` with `x > y` rather than guess an unknown future minor (M10) — refusing would make an older verifier report a correct document exactly as it reports a corrupt one — additive
   minors mean older docs verify unchanged, but a verifier never processes rules it doesn't have. Unknown MAJOR
-  ⇒ E-MALFORMED. Verification runs ONE algorithm within a major and never weakens for an older minor (I10).
+  ⇒ `INDETERMINATE(unsupported_major)`: the verifier has no rules for those bytes and therefore no standing to call them invalid. Verification runs ONE algorithm within a major and never weakens for an older minor (I10).
 - **Crypto-agility:** hashes and signatures are algorithm-tagged (`sha256:`, `Ed25519`). On a primitive break,
   the operator RE-ANCHORS existing roots under a new algorithm, citing the OLD append-only-log commitment as
   proof of pre-break existence — a signed, dated migration event, never a silent re-hash (which would be

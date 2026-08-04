@@ -141,11 +141,38 @@ for (const v of V.vectors) {
         const con = (r.absent ?? []).filter((a) => !a.movable);
         ok = ok && con.length > 0 && con.every((a) => /NOT yours/.test(a.hint)) === e.consumer_hints_refuse;
       }
+      if (e.witness_party_exists !== undefined)
+        ok = ok && ((r.absent ?? []).some((a) => a.party === 'witness')) === e.witness_party_exists;
+      if (e.nofork_not_publisher !== undefined) {
+        const nf = (r.absent ?? []).find((a) => a.input === 'noForkEvidence');
+        ok = ok && !!nf && (nf.party !== 'publisher') === e.nofork_not_publisher;
+      }
       if (e.publisher_hints_actionable !== undefined) {
         const pub = (r.absent ?? []).filter((a) => a.movable);
         ok = ok && pub.length > 0 && pub.every((a) => !/NOT yours/.test(a.hint)) === e.publisher_hints_actionable;
       }
       if (e.verdict_matches_verify !== undefined) ok = ok && r.verdict === P.verify(mk(), v.input.opts ?? {}).result;
+      check(v.id, ok);
+      break;
+    }
+    // §19 / F.5.1a-bis — the version boundary. A REAL sealed document is re-marked, so the bytes stay well-formed
+    // and only the version marker moves: testing a synthetic stub would test our idea of the boundary, not it.
+    case 'version': {
+      const base = mk();
+      const doc = { ...base, ust: v.input.ust };
+      const r = P.verify(doc, { context: 'data' });
+      const e = v.expect;
+      let ok = true;
+      if (e.result !== undefined) ok = ok && r.result === e.result;
+      if (e.reason !== undefined) ok = ok && r.reason === e.reason;
+      if (e.error !== undefined) ok = ok && r.error === e.error;
+      if (e.differs_from_corrupt !== undefined) {
+        const corrupt = { ...base }; delete corrupt.sig;
+        const c = P.verify(corrupt, { context: 'data' });
+        // the observation a consumer acts on: result AND the machine-readable discriminator beside it
+        ok = ok && ((r.result !== c.result) || ((r.reason ?? r.error) !== (c.reason ?? c.error))) === e.differs_from_corrupt;
+      }
+      if (e.not_version_refused !== undefined) ok = ok && (r.reason !== 'unsupported_minor') === e.not_version_refused;
       check(v.id, ok);
       break;
     }
@@ -175,7 +202,18 @@ for (const v of V.vectors) {
     }
     case 'signature': { const ok = P.edVerifyStrict(v.pub_b64url, v.signed_content, v.sig); check(v.id, (ok && v.expect === 'VALID') || (!ok && v.expect === 'E-SIG')); break; }
     case 'malleability-reject': check(v.id, P.edVerifyStrict(v.pub_b64url, v.signed_content, v.sig_malleable) === false, 'strict verifier MUST reject non-canonical S'); break;
-    case 'version-reject': { const b = clone(mk()); b.ust = v.id.includes('major') ? '2.0' : '1.9'; check(v.id, P.verify(b).error === 'E-MALFORMED'); break; }
+    // A MAJOR is still refused; a future MINOR is not (rev106, #138). The two used to share one assertion, which
+    // is how one word covered two mechanisms — the major case is a different protocol, the minor case is this
+    // verifier's own ruleset.
+    case 'version-reject': {
+      const b = clone(mk());
+      const isMajor = v.id.includes('major');
+      b.ust = isMajor ? '2.0' : '1.9';
+      const r = P.verify(b);
+      check(v.id, r.result === 'INDETERMINATE'
+        && r.reason === (isMajor ? 'unsupported_major' : 'unsupported_minor'));
+      break;
+    }
     case 'bijection-reject': { const b = clone(mk()); if (v.id.includes('missing')) b.state.data.extra = { kind: 'captured', value: { x: '1' } }; else b.state.hashes.ghost = 'sha256:' + '00'.repeat(32); check(v.id, P.verify(b, { context: 'data' }).error === 'E-MALFORMED'); break; }
     // §14.5/§F.5e.4 — the class↔role PARTITION, pinned as a full 6×2 matrix so a second implementation cannot
     // pass by enforcing one direction. The vector asserts only the ROLE refusal, not the whole verdict: a class

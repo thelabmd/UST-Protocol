@@ -316,16 +316,16 @@
     {
       "id": "version-reject-major",
       "kind": "version-reject",
-      "rule": "S19 unknown MAJOR -> E-MALFORMED",
+      "rule": "S19/F.5.1a-bis (rev106) a different MAJOR is NOT a statement about bytes either: the verifier has no rules for them, so INDETERMINATE(unsupported_major). This vector pinned E-MALFORMED and reddened when the line was drawn correctly",
       "input_desc": "ust \"2.0\"",
-      "expect": "E-MALFORMED"
+      "expect": "INDETERMINATE:unsupported_major"
     },
     {
       "id": "version-reject-future-minor",
       "kind": "version-reject",
-      "rule": "S19 1.x with x>y -> E-MALFORMED",
+      "rule": "S19/F.5.1a-bis (rev106) a future MINOR is NO LONGER refused: the bytes are well-formed under a contract that only ADDS, so the answer is INDETERMINATE(unsupported_minor). This vector previously pinned E-MALFORMED and reddened when the contract changed — which is what it is for",
       "input_desc": "ust \"1.9\" to a 1.0 verifier",
-      "expect": "E-MALFORMED"
+      "expect": "INDETERMINATE:unsupported_minor"
     },
     {
       "id": "bijection-reject-missing-hash",
@@ -9501,6 +9501,77 @@
       "expect": {
         "consumer_hints_refuse": true,
         "publisher_hints_actionable": true
+      }
+    },
+    {
+      "id": "version-01-future-minor-is-indeterminate-not-invalid",
+      "kind": "version",
+      "rule": "S19/F.5.1a-bis a well-formed document from a newer MINOR is not broken — the verifier's ruleset is what is missing, so the answer is INDETERMINATE(unsupported_minor), never INVALID",
+      "input": {
+        "ust": "1.1"
+      },
+      "expect": {
+        "result": "INDETERMINATE",
+        "reason": "unsupported_minor"
+      }
+    },
+    {
+      "id": "version-02-unknown-major-is-indeterminate-not-invalid",
+      "kind": "version",
+      "rule": "S19/F.5.1a-bis a different MAJOR leaves the verifier nothing to evaluate — that is a REACH limit, not a byte defect. Minor and major differ in reach, never in validity",
+      "input": {
+        "ust": "2.0"
+      },
+      "expect": {
+        "result": "INDETERMINATE",
+        "reason": "unsupported_major"
+      }
+    },
+    {
+      "id": "version-03-future-minor-distinguishable-from-corruption",
+      "kind": "version",
+      "rule": "S19/F.5t the whole point: a correct newer document and a corrupt one must NOT produce the same observation — before this they were byte-identical INVALID/E-MALFORMED",
+      "input": {
+        "ust": "1.1",
+        "compare": "corrupt"
+      },
+      "expect": {
+        "differs_from_corrupt": true
+      }
+    },
+    {
+      "id": "version-04-older-minor-still-verifies",
+      "kind": "version",
+      "rule": "S19 a minor only ADDS, so an older document verifies unchanged on a newer verifier — the backward half of the contract",
+      "input": {
+        "ust": "1.0"
+      },
+      "expect": {
+        "not_version_refused": true
+      }
+    },
+    {
+      "id": "version-05-invalid-means-my-rules-were-violated",
+      "kind": "version",
+      "rule": "S14/F.5.1a-bis THE LINE: INVALID means 'I applied MY rules and they were violated'. A ruleset the verifier lacks is outside that sentence, so neither a future minor nor a foreign major may share a verdict with corruption",
+      "input": {
+        "ust": "1.1",
+        "compare": "corrupt"
+      },
+      "expect": {
+        "differs_from_corrupt": true
+      }
+    },
+    {
+      "id": "ladder-07-witness-is-a-party-of-its-own",
+      "kind": "ladder",
+      "rule": "S14.1/F.5.1 no-fork evidence belongs to an INDEPENDENT WITNESS, not to the publisher: self-attestation that no rival genesis exists is worth nothing, and a column with only publisher/consumer silently instructs an operator to produce what it is barred from producing",
+      "input": {
+        "opts": {}
+      },
+      "expect": {
+        "witness_party_exists": true,
+        "nofork_not_publisher": true
       }
     }
   ]

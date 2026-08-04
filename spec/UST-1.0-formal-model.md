@@ -2408,7 +2408,7 @@ assertion tells a reader that `W` is alive. It says nothing about whether `W` is
 publisher and watcher are the same party it cannot: independence is not in `σ(bytes)` (F.5o), and a watcher
 announcing its own liveness is announcing exactly the property it is entitled to announce and no other.
 
-**Binding: pending — thelabmd/UST-Protocol#137.** An earlier draft marked this `none — definitional`, which was
+**Binding: pending — thelabmd/UST-Protocol#137 (the report) and #138 (the ruleset term and the version verdict).** An earlier draft marked this `none — definitional`, which was
 wrong and closed the section's path DOWNWARD. The rule is protocol mathematics CONSUMED BY AN OPERATOR, and it
 descends: a report that lists rungs must distinguish a rung CHECKED AND MET from one NOT ATTEMPTED, which is this
 section applied to the report rather than to a watcher. Silence about a rung is the same collapse — *nothing was
@@ -2959,9 +2959,11 @@ statement about WHICH of those terms a missing input lives in:
 | term | what moves it | who may move it |
 |---|---|---|
 | `x̂` | author a different document — fewer partitions, a different class, a declared `prev` | the PUBLISHER, and legitimately: the result is a different subject, judged on its own bytes |
-| `x̂`'s neighbourhood | publish an artifact the verifier FETCHES and verifies under its own faculties — witness log, anchor, key-log entry | the PUBLISHER emits bytes; what enters the function is the RESULT of the verifier's check, never the publisher's intent |
+| `x̂`'s neighbourhood | publish an artifact the verifier FETCHES and verifies under its own faculties — key log, witness log, anchor | the PUBLISHER emits bytes; what enters the function is the RESULT of the verifier's check, never the publisher's intent |
+| `x̂`'s neighbourhood, **attested by another** | no-fork evidence over the active genesis | an INDEPENDENT WITNESS. Not the publisher — an attestation that no rival genesis exists is worth nothing when the attesting party IS the party in question (F.5o). Not the consumer — it cannot manufacture evidence about a publisher it is judging. Collapsing this into the publisher column silently instructs an operator to produce what it is structurally barred from producing |
 | `ℐ_v` | bring a trust root, a connector, an accepted issuer | the CONSUMER only |
 | `ρ_v` | widen a budget | the CONSUMER only — and R4 admits only a policy that TIGHTENS it |
+| **the verifier's RULESET** | implement a newer minor, or a different major | **NEITHER PARTY, in this run.** The document is well-formed and the faculties are whatever they are; what is missing is `v` itself |
 | — | nothing: the input is settled absent (F.5p NOT OFFERED) | NOBODY, now or later |
 
 **Corollary F.5.1a (the publisher can never move `(ℐ_v, ρ_v)`, so a report may never advise it to).** This is R4
@@ -2970,6 +2972,36 @@ read in the reporting direction. Telling a publisher that its own verdict would 
 at through a help message. The two publisher-movable rows above are *author differently* and *publish
 something*, and neither is an assertion made TO the verifier. In prose all three read as "the operator can fix
 this", which is precisely why the term is named per input rather than inferred by the reader.
+
+**Corollary F.5.1a-bis (a version gap is a rung, and its term is the RULESET).** Let `d` carry minor `m` and let
+`V` implement `v < m`. The material `m` adds is not absent from the document and not withheld by any party — it
+is present and UNREACHABLE, because `V` has no rules for it. That is a fourth term, and it belongs to neither
+side: attributing it to the publisher would advise authoring an older document, and attributing it to the
+consumer would advise an upgrade the protocol has no standing to demand.
+
+**So the verdict is neither INVALID nor a plain VALID, and this holds for a MAJOR too.** `INVALID` is a statement
+about the BYTES — and it means one thing only: *I applied MY rules and they were violated*. A ruleset the verifier
+lacks, a faculty it was not given, a capacity it was not granted are all outside that sentence. A different major
+is the extreme case: the verifier has no rules for those bytes at all, so calling them invalid is the same
+overclaim as the minor case, one step further out. Minor and major differ in REACH — the additive-only minor
+contract still lets `V` evaluate what its own version defines, while a different major leaves it nothing — and not
+in validity. Here the bytes are fine — reporting them as broken is F.5t on the time axis, an artifact correct under the protocol
+returning the observation reserved for a corrupt one, and it sends the reader to debug the publisher when the
+verifier is what is out of date. A plain `VALID` would claim a reach `V` does not have. The honest answer is the
+one this section already defines for every other unreached axis: **NOT ATTEMPTED**, naming both `m` and `v`.
+
+**Corollary F.5.1a-ter (why this is not a courtesy).** A verifier that must be current in order to verify
+anything is a verifier that stops being run — deployments outlive releases by years, because upgrading a stack
+that works is a cost with no local benefit. A protocol whose safety depends on synchronised upgrades across
+every consumer has assumed a property of the world it cannot obtain. The refusal is therefore not the strict
+choice and the report the lax one; the refusal is the choice that removes verifiers from the field, taking their
+verdicts with them. And it lands hardest on CLOSED consumers, which have no discovery surface to learn from and
+would see only `INVALID`, forever, with nothing in the answer pointing at their own age.
+
+**This is admissible only because the minor contract is strict.** An older `V` evaluating under older rules must
+be RIGHT about what it evaluated, which holds iff a minor only ADDS and never alters the meaning of what an
+earlier minor defined — a meaning-change is a MAJOR, where refusal IS correct because a different major is a
+different protocol. Without that contract this corollary would license silent wrongness.
 
 **Corollary F.5.1b (the report grants nothing).** The report is a function OF the decision relation, never an
 input to it. Adding it leaves every verdict identical — otherwise reading *what would make this HIGH* would
@@ -2981,7 +3013,7 @@ absent and one unmet because an `ℐ_v` input was not brought are different fact
 finished, the second is a configuration choice they can make. One shape for both discards the distinction F.5p
 exists to preserve, on exactly the axis where an integrator decides whether to act at all.
 
-**Binding: pending — thelabmd/UST-Protocol#137.**
+**Binding: pending — thelabmd/UST-Protocol#137 (the report) and #138 (the ruleset term and the version verdict).**
 
 **Conformance (math ⇒ code ⇒ green vector, once realized).**
 - the report is derived from the SAME decision relation as the verdict; no second implementation.

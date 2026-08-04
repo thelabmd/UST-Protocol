@@ -14,7 +14,7 @@ heavy process would be theatre.
 
 **And it is what makes CLOSED systems possible at all.** A consumer with no discovery surface has no way to learn that the world moved. Under a refusal design it sees only *invalid*, with nothing pointing at its own age; under this one it keeps working, keeps being honest about what it did and did not check, and can run for years without ever lying.
 
-*Status: rule 1 holds today. Rule 2's reporting side is `thelabmd/UST-Protocol#138` — a future minor is currently refused as `E-MALFORMED`, which is the defect that issue exists to close.*
+*Both rules hold today. A newer minor answers `INDETERMINATE(unsupported_minor)`, a different major `INDETERMINATE(unsupported_major)`; `INVALID` is reserved for its one meaning — the verifier applied ITS OWN rules and they were violated.*
 
 ## How changes are made
 

@@ -604,7 +604,42 @@ function verifyCore(doc, opts = {}) {
     // step 1 — structural admission (§14.1)
     if (typeof doc !== 'object' || doc === null) return bad('E-MALFORMED', 'not an object');
     if (doc.ust === undefined || doc.state === undefined || doc.sig === undefined) return bad('E-MALFORMED', 'missing ust/state/sig');
-    if (doc.ust !== '1.0') return bad('E-MALFORMED', 'unknown version ' + doc.ust);   // §19 (this verifier is 1.0)
+    // §19 — A VERIFIER NEVER EXPIRES, and the two halves of that rule are different verdicts (#138, F.5.1a-bis).
+    //
+    // A different MAJOR is a different protocol: refusal is correct and terminal, and `E-MALFORMED` is the right
+    // statement about bytes this verifier has no standing to read.
+    //
+    // A newer MINOR is NOT. The bytes are well-formed under a contract that only ADDS; what is missing is this
+    // verifier's RULESET — a term belonging to neither party (attributing it to the publisher would advise
+    // authoring an older document; to the consumer, an upgrade the protocol has no standing to demand). Answering
+    // `INVALID` here would return, for a correct document, the observation reserved for a corrupt one — F.5t on
+    // the time axis — and send the reader to debug the publisher while the verifier is what is out of date. It
+    // would also make every consumer that has not upgraded start reporting healthy publishers as broken, in good
+    // faith, on the day a minor ships.
+    //
+    // So the honest answer is the one already used for every other unreached axis: INDETERMINATE, naming BOTH
+    // minors so a CLOSED consumer — which has no discovery surface to learn from — can act on the answer alone.
+    {
+      const m = /^(\d+)\.(\d+)$/.exec(String(doc.ust ?? ''));
+      if (!m) return bad('E-MALFORMED', 'unknown version ' + doc.ust);
+      const [docMajor, docMinor] = [Number(m[1]), Number(m[2])];
+      const [ourMajor, ourMinor] = VERSION.wire.split('.').map(Number);
+      // A different MAJOR is ALSO not a statement about bytes. This verifier has no rules for major `docMajor`,
+      // so it cannot say those bytes are wrong — only that it cannot reach them. `INVALID` would be the same
+      // overclaim the minor case fixes, one step further out.
+      //
+      // THE LINE, stated once: `INVALID` means *I applied MY rules and they were violated*. Everything else —
+      // a ruleset I lack, a faculty I was not given, a capacity I was not granted — is INDETERMINATE.
+      //
+      // Minor and major differ in REACH, not in validity: under the additive-only minor contract this verifier
+      // still evaluates what `1.0` defines, while a different major leaves it nothing at all to evaluate.
+      if (docMajor !== ourMajor)
+        return { result: 'INDETERMINATE', reason: 'unsupported_major',
+          detail: `document declares ${doc.ust}; this verifier implements ${VERSION.wire}. A different major is a different protocol — nothing here is evaluated, and nothing about these bytes is claimed. Supply a verifier implementing ${docMajor}.x.` };
+      if (docMinor > ourMinor)
+        return { result: 'INDETERMINATE', reason: 'unsupported_minor',
+          detail: `document declares ${doc.ust}; this verifier implements ${VERSION.wire}. Its bytes are not in question — a minor only ADDS, so what it adds is UNEVALUATED here, not invalid. Supply a verifier implementing ${doc.ust} to evaluate the rest.` };
+    }
     // §4.1 top-level is EXACTLY {ust,state,sig,proof} — REJECT unknown members (fail-closed). An "ignore unknown"
     // rule would reopen the K1/F2 class: an unsigned member riding next to a VALID verdict.
     for (const k of Object.keys(doc)) if (!RESERVED.transcript.includes(k)) return bad('E-MALFORMED', 'unknown top-level member: ' + k);
@@ -1344,7 +1379,7 @@ export function anchorRollup({ declared = [], observed = {} } = {}) {
 const R2_HINT = deepFreeze(Object.assign(Object.create(null), {
   genesis:        'publish `/.well-known/ust-genesis` and let the verifier fetch and check it — every consumer gains the same',
   keylog:         'publish `/.well-known/ust-keylog` chained from that genesis — the name resolves for everyone, not just for you',
-  noForkEvidence: 'have a witness publish no-fork evidence over your active genesis; you cannot vouch for your own',
+  noForkEvidence: 'NOT yours to produce — an INDEPENDENT witness must attest that no rival genesis exists; your own attestation carries nothing here. What you CAN do is publish a witness log for one to anchor against',
   trustRoots:      'NOT yours to supply. A consumer holding roots that admit your witness would resolve the name; you supplying them here would only change what YOU see',
   substrateVerify: 'NOT yours to supply. A consumer with a substrate connector would check your anchors; without one the time axis stays unproven for THEM regardless of what you pass',
   noForkConfirmed: 'NOT yours to supply — it is the consumer\'s own air-gap assertion. Passing it to your own verifier proves nothing to anyone and invites you to believe a tier no consumer will see',
@@ -1355,7 +1390,12 @@ const R2_TERM = deepFreeze(Object.assign(Object.create(null), {
   // differently or by publishing an artifact the verifier then VERIFIES itself
   genesis:        'x̂-neighbourhood — the publisher PUBLISHES it; the input is this verifier\'s own check of it',
   keylog:         'x̂-neighbourhood — the publisher PUBLISHES it; the input is this verifier\'s own check of it',
-  noForkEvidence: 'x̂-neighbourhood — a witness publishes it; the input is this verifier\'s own check of it',
+  // A FOURTH PARTY, and lumping it with the publisher was an error. The operator CANNOT produce this: evidence
+  // that no rival genesis exists is worth nothing when the party attesting is the party in question. It is not
+  // NOBODY either — an independent witness can, and the protocol describes exactly that (§12.1, F.5o). A column
+  // with only publisher/consumer/nobody silently tells an operator to do something it is structurally barred
+  // from doing.
+  noForkEvidence: 'WITNESS — an INDEPENDENT third party publishes it; neither the publisher (self-attestation is worth nothing here) nor the consumer can produce it',
   // the verifier's OWN faculties — the CONSUMER only, never the publisher (R4, F.5.1a)
   trustRoots:      'ℐ_v — the CONSUMER\'s own faculty; a publisher advised to supply this is advised to self-grant',
   substrateVerify: 'ℐ_v — the CONSUMER\'s own faculty (a connector), never the publisher\'s',
@@ -1386,7 +1426,13 @@ export function explainLadder(doc, opts = {}) {
     // what the relation actually saw.
     const absent = [];
     for (const name of Object.keys(R2_TERM))
-      if (O[name] === undefined) absent.push(deepFreeze({ input: name, term: R2_TERM[name], hint: R2_HINT[name], movable: R2_TERM[name].startsWith('x̂') }));
+      if (O[name] === undefined) {
+        const term = R2_TERM[name];
+        // WHO may move it — three named parties and a residual, not a boolean. A boolean collapsed the witness
+        // into the publisher and told an operator to produce what it is structurally barred from producing.
+        const party = term.startsWith('x̂') ? 'publisher' : term.startsWith('WITNESS') ? 'witness' : 'consumer';
+        absent.push(deepFreeze({ input: name, term, hint: R2_HINT[name], party, movable: party === 'publisher' }));
+      }
     return deepFreeze({
       verdict: v.result,
       reason: v.reason ?? null,
@@ -2910,7 +2956,10 @@ export const REGISTRY = deepFreeze({   // round-25 P0-04 — DEEP-frozen: the ca
   errorCodes: ['E-MALFORMED', 'E-CANON', 'E-BOUNDS', 'E-CYCLE', 'E-SIG', 'E-KEY', 'E-GENESIS', 'E-ANCHOR',
     'E-COMMIT', 'E-ROOT', 'E-SEED', 'E-PREV', 'E-AUTHORITY', 'E-SEQ', 'E-EVIDENCE', 'E-ASSURANCE', 'E-BYTES', 'E-REPLICATION', 'E-DISCOVERY'],   // E-BYTES — the byte-admission door class (round-48 P0-01: snapshotBytes rejects a non-native-Uint8Array as E-BYTES-TYPE/-SHARED/-SIZE)
   // INDETERMINATE reasons — the §14 document-verifier's CLOSED set, and the §12.3.6 authority-checkpoint set (distinct).
-  indeterminateReasons: { document: ['unavailable', 'unsupported_alg', 'resource_limit', 'stale_keylog'],
+  // `unsupported_minor` (#138) is DISTINCT from `unsupported_alg`: the algorithm case is a primitive this verifier
+  // cannot compute, the minor case is a ruleset it does not have. One word for two mechanisms is the collision this
+  // registry exists to prevent.
+  indeterminateReasons: { document: ['unavailable', 'unsupported_alg', 'unsupported_minor', 'unsupported_major', 'resource_limit', 'stale_keylog'],
     checkpoint: ['authority_unresolved', 'terminality_unproven', 'order_unproven', 'evidence_unverified', 'chain_consistency_unproven'] },
   tiers: Object.keys(TIER_RANK),                                    // NONE/LIGHT/HIGH/TOP — single-sourced from TIER_RANK
   assuranceAxes: ASSURANCE_AXES,                                    // single-sourced from the #78 lattice (§F.5.0)

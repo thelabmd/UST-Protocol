@@ -5,7 +5,7 @@ _For an independent cryptographic-protocol reviewer._
 > **Two rules this protocol does not trade away.**
 > **A minor only ADDS.** Anything that changes the meaning of what an earlier minor already defines is a MAJOR — there is no third option, because an older verifier evaluating under older rules must still be RIGHT about what it evaluated.
 > **A verifier never expires.** An older verifier keeps producing correct verdicts about everything it understands; newer material it does not implement is reported as NOT EVALUATED — never as invalid, never silently passed. Whether that reach is enough is the CONSUMER's policy, not the protocol's coercion.
-> *(Reporting side pending — see `thelabmd/UST-Protocol#138`; today an unknown minor is refused.)*
+> *Both hold today: a newer minor answers `INDETERMINATE(unsupported_minor)` and a different major `INDETERMINATE(unsupported_major)` — never `INVALID`, which means only "I applied MY rules and they were violated".*
 
 ## 1. What we are asking for
 
@@ -144,7 +144,7 @@ residual risk, and what would you require before a `1.0.0` final tag?
 ## 9. What we have already done (so you go deeper, not sideways)
 
 - **Six adversarial red-team passes** on the v1.0 final form + four on the v0.29 predecessor — all self-review.
-- **190 deterministic conformance vectors** plus a behavioral conformance runner (**866 registered checks**), and the reference impl passes them (one known note: duplicate-key
+- **196 deterministic conformance vectors** plus a behavioral conformance runner (**872 registered checks**), and the reference impl passes them (one known note: duplicate-key
   rejection needs a raw-bytes JSON parser — `JSON.parse` collapses dups — a harness limitation, not an impl flaw).
 - **Two independent implementations** (`ust-protocol` node + a clean-room WebCrypto verifier in `docs/`) run
   side by side on every case of the parity suite and must agree on the verdict, including the tier: **13 cases,

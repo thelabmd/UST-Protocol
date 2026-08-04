@@ -1472,11 +1472,17 @@ async function cmdExplain() {
 
   if (r.absent.length) {
     console.log('\n  WHAT IT WAS NOT GIVEN, AND WHOSE IT IS');
-    const pub = r.absent.filter((a) => a.term.startsWith('x̂'));
-    const con = r.absent.filter((a) => !a.term.startsWith('x̂'));
+    const pub = r.absent.filter((a) => a.party === 'publisher');
+    const wit = r.absent.filter((a) => a.party === 'witness');
+    const con = r.absent.filter((a) => a.party === 'consumer');
     if (pub.length) {
       console.log('    the PUBLISHER can change the WORLD here — every consumer gains the same:');
       for (const a of pub) console.log(`      · ${a.input}\n        → ${a.hint}`);
+    }
+    if (wit.length) {
+      console.log('    an INDEPENDENT WITNESS only — neither you nor the consumer can produce this, and your own');
+      console.log('    attestation carries nothing here:');
+      for (const a of wit) console.log(`      · ${a.input}\n        → ${a.hint}`);
     }
     if (con.length) {
       console.log("    the CONSUMER's own faculty — supplying these to your OWN verifier changes nothing for anyone");
