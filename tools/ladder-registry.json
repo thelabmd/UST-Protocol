@@ -1246,6 +1246,16 @@
       },
       "vector": "depth-law-covers-whole-ustid-space",
       "test": "breadth-flat-over-law-reject"
+    },
+    {
+      "round": 172,
+      "math": "F.9.5-c.1 (the §7 root is not compositional, and compositionality is a property of the TREE, not of\nthis protocol)",
+      "spec": "given the procedure as a connector; **absent one, the REFERENCE construction applies**",
+      "code": {
+        "excluded": "The correction is to a CLAIM, not to behaviour: §11.2 has admitted a substrate tree through opts.inclusionVerify since the connector split, and every byte both trees produce is unchanged. What moved is which tree the model says the property belongs to."
+      },
+      "vector": "breadth-flat-over-law-reject",
+      "test": "depth-law-covers-whole-ustid-space"
     }
   ],
   "first_accounted_round": 76,

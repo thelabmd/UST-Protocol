@@ -3618,12 +3618,26 @@ F.9.5 says a breadth bound is escapable because `4096 = 64²` and a two-level tr
 a statement about CAPACITY. It leaves open which of two compositions is meant, and the two differ in what a
 CONSUMER must do — so the choice cannot be settled by preference.
 
-**Theorem F.9.5-c.1 (the Merkle root is not compositional under this construction).** §7 sorts the WHOLE leaf
-multiset before pairing. Hence for a partition `L = A ⊎ B` there is in general no `f` with
-`root(L) = f(root(A), root(B))`.
+**Theorem F.9.5-c.1 (the §7 root is not compositional, and compositionality is a property of the TREE, not of
+this protocol).** §7 sorts the WHOLE leaf multiset before pairing. Hence for a partition `L = A ⊎ B` there is in
+general no `f` with `root(L) = f(root(A), root(B))`.
 *Proof.* Sorting is global: an element of `B` may sort between two elements of `A`, so the pairing of `L` is not
 a refinement of the pairings of `A` and `B` taken separately. MEASURED on 120 leaves: `root(L)` and
 `root([root(A), root(B)])` differ. ∎
+
+**And the converse is REAL, which is why the theorem is stated about the tree rather than about seals.** §11.2
+inclusion is a CONNECTOR: the tagged `ust:leaf`/`ust:node` walk is the bundled reference convention, not the
+convention, and an operator running an RFC 6962 log supplies `opts.inclusionVerify` instead. That tree DOES
+compose — order-preserving, split at the largest power of two — so `root(A ‖ B) = node(root(A), root(B))`
+whenever `|A|` is a power of two. MEASURED on the same 120 leaves: the `64 ‖ 56` composition reproduces the whole
+root exactly, while a `50 ‖ 70` split does not. A statement of the form *the root does not compose* is therefore
+FALSE as a claim about this protocol, and true only of the bundled tree.
+
+**Corollary (the enumeration argument does not depend on which tree an operator runs).** What survives both
+trees is F.5u.1: `L` does not occur in the inclusion predicate. So the enumeration may be split under a
+composing tree and MUST be split under a non-composing one, and in neither case does a consumer's inclusion
+walk change. The escape below is therefore stated over the ENUMERATION — the one term both trees agree is not
+an input to inclusion — and never over the root.
 
 **Corollary (recursive roots are not merely inconvenient — they break §11.2).** If each node rooted its own
 subtree and a parent's constituents were its children's `content_hash`es, the published top root would be a root
@@ -3668,9 +3682,7 @@ and every figure above except the last is an illustration — the last is the th
 never used, because `ust_id` cannot name enough moments to reach it (F.9.5-b). A year is the FIFTH of eight
 levels, a millennium the sixth. There is no window this protocol can address whose seal does not compose.
 
-**Binding: pending — thelabmd/UST-Protocol#127.** Realized when a builder composes a seal over an arbitrary
-admissible `N`, a partial node carrying `root` is REFUSED, and inclusion against the single published root is
-exercised for a leaf under a composed enumeration.
+**Binding: pending — thelabmd/UST-Protocol#127** for the BUILDER; the tree claim itself is realized — *"F.9.5-c.1 the BUNDLED §7 tree does not compose — sorting is global, so a subtree root bears no computable relation to the whole and a partial enumeration cannot carry a root"* · *"F.9.5-c.1 ADVERSARIAL the RFC 6962 tree DOES compose at a power-of-two split — so \"the root does not compose\" is false as a claim about this protocol and true only of the bundled tree"* · *"F.9.5-c.1 and it does NOT compose at a non-power-of-two split — the composing property is conditional, so neither tree licenses a general claim"* · *"F.9.5-c.1 the two trees disagree on the SAME leaves — an operator's root is not reproducible by the bundled walk, which is why §11.2 inclusion is a connector rather than a protocol constant"*. What remains is a builder composing a seal over an arbitrary admissible `N`, a partial node carrying `root` REFUSED, and inclusion against the single published root exercised for a leaf under a composed enumeration.
 
 **Conformance (math ⇒ spec ⇒ code ⇒ green vector, once realized).**
 - a composed seal over `N > 64` verifies, and the leaf inclusion path resolves against the ONE published root;

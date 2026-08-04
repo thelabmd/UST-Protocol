@@ -408,6 +408,10 @@
     {
       "round": 171,
       "no_recap": "The round closed no issue. It corrects how the structural escape is PRESENTED — by its ceiling rather than by its smallest example — after the owner read the two-level phrasing as the protocol's limit. A recap belongs to a closed issue, and a presentation fix is not one."
+    },
+    {
+      "round": 172,
+      "no_recap": "The round closed no issue. It corrects a theorem written the same day that was true of the bundled tree and stated about the protocol, after the owner recalled that the two trees differ. A recap belongs to a closed issue; a corrected overgeneralisation is not one."
     }
   ]
 }

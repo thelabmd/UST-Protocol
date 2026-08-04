@@ -3304,6 +3304,32 @@ console.log('  ust-protocol ' + P.VERSION.spec + ' conformance vs ' + V.version)
     vF.error === 'E-CANON' && vF.error !== vL.error);
 }
 
+// ── F.9.5-c.1 — compositionality is a property of the TREE, not of this protocol. The bundled §7 tree sorts
+// globally and does NOT compose; the RFC 6962 tree the reference operator runs DOES, at a power-of-two split.
+// Both are admissible because §11.2 inclusion is a connector — so a claim about "the root" must name its tree.
+{
+  const H = Array.from({ length: 8 }, (_, i) => 'sha256:' + (i + 1).toString(16).padStart(2, '0').repeat(32));
+  const whole = P.merkleRoot(H);
+  const composed = P.merkleRoot([P.merkleRoot(H.slice(0, 4)), P.merkleRoot(H.slice(4))]);
+  check('F.9.5-c.1 the BUNDLED §7 tree does not compose — sorting is global, so a subtree root bears no computable relation to the whole and a partial enumeration cannot carry a root',
+    whole !== composed);
+
+  // RFC 6962, recomputed here rather than imported: the operator's tree is a SUBSTRATE convention, and the point
+  // is that the protocol admits it, not that we ship it.
+  const raw = (h) => Buffer.from(h.replace(/^sha256:/, ''), 'hex');
+  const sha = (b) => createHash('sha256').update(b).digest();
+  const leaf = (d) => sha(Buffer.concat([Buffer.of(0), d]));
+  const node = (l, r) => sha(Buffer.concat([Buffer.of(1), l, r]));
+  const go = (a) => { if (a.length === 1) return a[0]; let k = 1; while (k * 2 < a.length) k *= 2; return node(go(a.slice(0, k)), go(a.slice(k))); };
+  const L = H.map((h) => leaf(raw(h)));
+  check('F.9.5-c.1 ADVERSARIAL the RFC 6962 tree DOES compose at a power-of-two split — so "the root does not compose" is false as a claim about this protocol and true only of the bundled tree',
+    go(L).equals(node(go(L.slice(0, 4)), go(L.slice(4)))));
+  check('F.9.5-c.1 and it does NOT compose at a non-power-of-two split — the composing property is conditional, so neither tree licenses a general claim',
+    !go(L).equals(node(go(L.slice(0, 3)), go(L.slice(3)))));
+  check('F.9.5-c.1 the two trees disagree on the SAME leaves — an operator\'s root is not reproducible by the bundled walk, which is why §11.2 inclusion is a connector rather than a protocol constant',
+    P.merkleRoot(H) !== 'sha256:' + go(L).toString('hex'));
+}
+
 // ── F.5q-c / F.5p.3 — the DECLARATION half. A rhythm is a CAPABILITY: absent is a SETTLED floor, not a pending
 // state, because an event-driven publisher promised nothing and nothing is owed where nothing was promised.
 {
