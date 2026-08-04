@@ -50,6 +50,7 @@ const STANCE = {
   'disclosure':          ['decided',   'private-partition disclosure is a PUBLISHER-side act on data the tool never holds — the verifier receives {nonce, value} from whoever discloses. There is nothing for a tool of ours to do.'],
   'ladder-report':       ['decided',   'the CORE lands before the surface deliberately (#137): the vectors pin what the report may and may not say — not-attempted distinguishable from met, a consumer faculty never attributed to the publisher — BEFORE a CLI shape fixes those answers by accident. The operator-facing surface is the remaining work of that issue, not an omission here.'],
   'negative-observation':['decided',   'a negative observation is built with the ordinary transcript builders and carries no distinct operation; it is a USAGE of build-transcript, not a capability needing its own surface.'],
+  'commitment-windows':  ['decided',   'F.5q-c: the CORE lands before any surface, deliberately. Coverage and gaps are measurable in the commitment chain alone, and the vectors pin what that answer may and may not be — an empty chain answers `unknown` rather than `uncovered`, adjacent windows are not a gap — BEFORE a CLI shape fixes those answers by accident. The present-tense half (F.5q-d) needs a verifier-owned clock and is not built, so a surface now would expose half a question.'],
   'name-obligation':     ['decided',   'F.5t-a: the obligation quantifies over an OPERATOR\'s published set while a verifier is a function of ONE document, so the surface has to be one an operator points at its own artifacts — a consumer-side check cannot establish it at any sample size. It lands on the CLI (`ust names`) and deliberately NOT on the MCP: handing an agent a filesystem sweep of arbitrary paths is a capability about the host, not about the protocol.'],
 };
 
@@ -73,6 +74,7 @@ const CAPS = {
   // `--mirror` remaining the CONSUMER's own locator rather than a substitute for it.
   'byte-agreement':     { core: ['replicationAgreement', 'surfaceVerdict', 'anchorRollup', 'parseProfile'], cli: '--mirror' },
   'name-obligation':    { core: ['classifyNamed', 'nameSetReport'], cli: 'names' },
+  'commitment-windows': { core: ['commitmentCoverage'] },
   // #137 / F.5.1 + F.5p.2 — REPORTING the ladder is its own capability, not a facet of verification. It answers a
   // different question: not *is this valid for me*, but *what stands between it and the next rung, and whose is
   // that to move*. It is a function OF the decision relation and never an input to it (F.5.1b), so it can never

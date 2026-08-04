@@ -1220,6 +1220,14 @@
       },
       "vector": "name-set-01-labelled-non-document-in-a-set-is-reported",
       "test": "tools/protocol-name-gate.mjs"
+    },
+    {
+      "round": 169,
+      "math": "F.5q-c The WINDOW family is an index set, not a quantified one — and the chain already settles most of it",
+      "spec": "never operator-optional; name-authority (HIGH) and anchored time (TOP) are document tiers; completeness is a SEPARATE range verdict over a stream, not a document tier",
+      "code": "packages/ust-protocol/index.mjs :: commitmentCoverage reads each ust_id's half-open interval from its own precision, so coverage and gaps are computed with no declaration present",
+      "vector": "coverage-03-adjacent-windows-are-not-a-gap",
+      "test": "coverage-05-an-empty-chain-answers-unknown-not-uncovered"
     }
   ],
   "first_accounted_round": 76,

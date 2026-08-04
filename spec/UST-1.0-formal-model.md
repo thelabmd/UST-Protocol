@@ -2469,6 +2469,90 @@ is decided by that substrate's own verification, never conferred by the publishe
 - the per-substrate verdict is the SAME function as F.5p's, not a second copy.
 - the roll-up separates dark from partial, and an empty declared set yields neither.
 
+### F.5q-c The WINDOW family is an index set, not a quantified one — and the chain already settles most of it
+
+F.5q fixes a closed window `w` and quantifies over the substrate set `A`. Its proof is a statement about
+`σ(obs(s, w))` for that fixed `w`, so nothing in it determines WHICH windows are in scope. `A` is quantified
+inside a verdict; the window family `W` is the INDEX SET of a family of verdicts. Reusing F.5q here would be a
+correct argument applied one layer off, and the distinction is what keeps the following result small.
+
+**Theorem F.5q-c (coverage and omission are measurable in the commitment chain alone).** Let the commitments be
+`prev`-chained and let each carry its window as `[from, to]` in `ust_id` terms (§11.3, rev84). Then for a
+window `w` and a chain `Γ`:
+
+  `covered(w, Γ) = [ ∃ γ ∈ Γ : from(γ) ≤ w ≤ to(γ) ]`     — measurable in `σ(Γ)`
+  `gap(γ_n, γ_{n+1}) = [ from(γ_{n+1}) > to(γ_n) ]`        — measurable in `σ(Γ)`
+
+Neither expression contains a declaration. *Proof.* Both are functions of fields carried by the chain's own
+documents, and `Γ` is what an observer holds. ∎
+
+**Corollary (the motivating ambiguity dissolves without any declaration).** «no anchor for this hour» and
+«this publisher commits DAILY and the hour sits inside a covered day» differ on `covered(w, Γ)`, which the
+observer computes. The granularity is READ, exactly as the window fields were designed to allow, and a coarser
+committer is not mistaken for a silent one.
+
+**Theorem F.5q-d (exactly one question survives, and it is present-tense).** Let `T = to(head(Γ))`. The
+proposition «a commitment is OWED now» is not measurable in `σ(Γ)`.
+*Proof.* Fix `Γ`. Two publishers with identical chains differ in whether another commitment is due: one
+promised a rhythm and is late, the other promised none and is exactly where it intends to be. The chain is
+byte-identical in both worlds, so no function of it separates them. ∎ This is F.5p.2 on the anchoring axis —
+silence is `on-time ⊔ late` until one positive statement of intent separates them.
+
+**So a declared commitment cadence is a CAPABILITY buying exactly `F.5q-d`, and nothing below it.** It does not
+gate `covered`, `gap`, validity, inclusion, or any document verdict; a publisher that declares no rhythm loses
+none of them. This matters beyond tidiness: a grid-driven publisher is the exception. An event-driven one — a
+business stream, where commitments follow occurrences rather than a clock — has no rhythm to declare and must
+not be treated as deficient for it. **Nothing is owed where nothing was promised**, and the floor is therefore
+`no-rhythm-declared`: a settled state, never a pending one (F.5p's two facts, applied to the declaration
+itself rather than to what it describes).
+
+**Binding: realized (the CHAIN half)** — *"F.5q-c an hour INSIDE a daily commitment is covered — the granularity is READ from the window fields, so a coarser committer is not mistaken for a silent one, and no declaration is consulted"* · *"F.5q-c a window OUTSIDE every commitment is uncovered, and that is a different answer from the covered one — the ambiguity this dissolves is exactly these two being one observation"* · *"F.5q-c a MISSING window between two commitments is measurable in the chain alone — the discontinuity is a function of fields the documents carry, with nothing declared anywhere"* · *"F.5q-c an EMPTY chain answers `unknown`, never `uncovered` — a chain nobody supplied is not evidence that a window is unanchored"* · *"F.5q-c the coverage report is TOTAL — a chain fetched from a mirror is untrusted input, so hostile members yield a report rather than an exception"*.
+
+**The DECLARATION half is deliberately not built, and the residual is named rather than implied:** F.5q-d needs a
+clock, and a clock reached through an argument is a verdict-flip — it waits until it can be verifier-owned. The
+`no-rhythm-declared` floor and the proof that declaring changes no verdict below F.5q-d land with the profile
+member, thelabmd/UST-Protocol#127. Everything the chain settles is settled now; nothing about it waits on a
+publisher promising anything.
+
+**Conformance (math ⇒ spec ⇒ code ⇒ green vector, once realized).**
+- `covered` and `gap` are computed from the chain with NO declaration supplied, and answer;
+- a publisher declaring no rhythm is reported as `no-rhythm-declared` — settled, distinguishable from a declared
+  rhythm currently silent;
+- declaring a rhythm changes no verdict below F.5q-d.
+
+### F.5p.3 A declaration must be AUTHENTICATED exactly when it can earn a pass
+
+Two declared rhythms now exist in this protocol and they sit on opposite sides of a line that must be stated,
+or a later reader will "fix" the inconsistency by making them alike.
+
+**Theorem F.5p.3 (signature is required by pass-earning, not by subject).** Let `D` be a declaration and `V(D)`
+the verdict function it feeds. If there exists `D'` such that `V(D') ≻ V(D)` — some declaration yields a
+STRICTLY stronger verdict than another over the same artifacts — then `D` is an assurance-bearing input and
+MUST be authenticated: an unauthenticated `D` lets the party under judgement choose its own verdict, which is
+F.5a.1. If instead `V` is monotone in obligation — every declaration can only ADD checks the publisher must
+pass, and the undeclared case is the weakest — then no `D'` improves the verdict and authentication is not
+required for soundness. ∎
+
+**The two rhythms, classified by that test rather than by name.** The §11.3 stream cadence decides
+`complete` — the no-omission rung — so a publisher free to shrink its grid would declare away the slots it
+missed and EARN the top rung; it is signed, `prev`-chained and resolved at a slot's time, and must be. A
+commitment cadence buys only F.5q-d, and by F.5p's monotonicity a coarser declaration exposes the publisher to
+FEWER checks and grants nothing: an anchor that is present counts whether or not it was declared. It therefore
+needs no signature, and belongs with the substrate declaration.
+
+**Corollary (and this is the load-bearing half).** Sufficiency is not the protocol's to coerce. A consumer that
+needs a rhythm finer than one declared sets its own floor (R2/R4); the protocol's job is to make the
+declaration and its absence DISTINGUISHABLE, never to require one.
+
+**Binding: pending — thelabmd/UST-Protocol#127.** Descends with F.5q-c; realized when the classification is exercised on both rhythms:
+the signed one refuses an unsigned change, the unsigned one is admitted from the profile and cannot raise any
+verdict.
+
+**Conformance (math ⇒ spec ⇒ code ⇒ green vector, once realized).**
+- an unsigned stream-cadence change is REFUSED, and the signed one resolves;
+- a declared commitment rhythm never moves a verdict upward on any axis;
+- both are reachable from a publisher that declares only one of them.
+
 ## F.5r A producer with a PRIVATE head cannot see its own fork — and downstream detection is not guaranteed to happen (#122)
 
 The consumer side of this is already closed: `verifyStream` refuses two frames sharing a `prev`

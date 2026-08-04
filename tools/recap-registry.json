@@ -396,6 +396,10 @@
     {
       "round": 168,
       "no_recap": "The round closed no issue — it corrected a reference that rounds 166 and 167 had put into public artifacts, pointing readers at an unrelated closed card in this repository. A recap belongs to a closed issue, and cleaning up after myself is not one."
+    },
+    {
+      "round": 169,
+      "no_recap": "The round closed no issue. It ships the CHAIN half of the window question and names the present-tense half as an open residual, and the card it belongs to stays open on the declaration member. A recap belongs to a closed issue, not to a half that landed."
     }
   ]
 }

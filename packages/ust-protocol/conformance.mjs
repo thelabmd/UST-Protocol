@@ -180,6 +180,17 @@ for (const v of V.vectors) {
     // whole point: the obligation quantifies over what an operator publishes and no per-document verdict reaches
     // it. `document: true` splices in the corpus's REAL sealed transcript rather than a stub, for the same reason
     // the version case re-marks a real document — a stub would test our idea of "is a document", not the predicate.
+    // F.5q-c — the WINDOW family, at vector granularity. The chain is built from the declared windows so the
+    // corpus stays language-neutral: any implementation constructs the same commitments from the same fields.
+    case 'commitment_coverage': {
+      const chain = (v.input.windows ?? []).map((w) => ({ ust: '1.0', state: { id: { class: 'attestation' }, data: { anchor: { kind: 'computed', value: w } } } }));
+      const r = P.commitmentCoverage({ chain, window: v.input.window ?? null });
+      const e = v.expect;
+      let ok = r.status === e.status;
+      if (e.gaps !== undefined) ok = ok && r.gaps.length === e.gaps;
+      check(v.id, ok);
+      break;
+    }
     case 'name_set': {
       const entries = (v.input.entries ?? []).map((e) => (e.document ? { id: e.id, raw: JSON.stringify(mk()) } : { id: e.id, raw: e.raw }));
       const r = P.nameSetReport(entries);
@@ -3015,6 +3026,8 @@ console.log('\n═════════════════════�
     // filesystem yielded, including files that are not JSON and entries that are not objects. Untrusted by
     // construction, therefore SURFACE and total.
     classifyNamed: 'surface', nameSetReport: 'surface',
+    // F.5q-c — a commitment chain is fetched from a publisher's mirror: untrusted by construction, therefore total.
+    commitmentCoverage: 'surface',
     // ── EXEMPT (throw-by-contract): designed to throw on invalid — totality is not the contract ──
     assertValid: 'throws-by-contract', verifyOrThrow: 'throws-by-contract',
     // ── EXEMPT (producer builders): operate on the SIGNER's OWN data; a producer can only hurt themselves ──
@@ -3092,9 +3105,11 @@ console.log('\n═════════════════════�
   const oAssur = () => ({ integrity: 'valid', identity: 'authoritative', freshness: 'attested', time: 'anchored' });   // round-39 P1-02 — a valid-shaped assurance state; the lattice surfaces (le/meet/join/projectTier/capAssurance) now RETURN (⊥/false/'NONE') on a hostile operand rather than throw, so the sweep reaches every position
   const oProfile = () => ({ summary: 'prose', declares: { serves: ['witness'], copies: [{ artifact: 'genesis', url: 'https://m.test/g' }] } });   // #135 — a VALID profile carrying both halves, so the hostile position is reached past the shape guards rather than short-circuiting on the first type test
   const oLadderOpts = () => ({ context: 'data' });
-  const oRaw = () => JSON.stringify(doc), oEntries = () => [{ id: 'a', raw: JSON.stringify(doc) }];   // F.5t-a — the input is whatever a directory walk yielded: raw text, and a list of {id,raw}
+  const oRaw = () => JSON.stringify(doc), oEntries = () => [{ id: 'a', raw: JSON.stringify(doc) }];
+  const oCov = () => ({ chain: [{ ust: '1.0', state: { id: { class: 'attestation' }, data: { anchor: { kind: 'computed', value: { substrate: 'git', from: 'ust:20260802.00', to: 'ust:20260802.23' } } } } }], window: 'ust:20260802.04' });   // F.5q-c — a VALID one-commitment chain, so a hostile position is reached past the shape guards   // F.5t-a — the input is whatever a directory walk yielded: raw text, and a list of {id,raw}
   const SIG = {
     classifyNamed: [oRaw], nameSetReport: [oEntries],
+    commitmentCoverage: [oCov],
     parseProfile: [oProfile],
     explainLadder: [oDoc, oLadderOpts],
     verify: [oDoc, oOpts], verifyAsync: [oDoc, oOpts], verifyStream: [oFrames, oConf], verifyJson: [oBytes, oOpts],
@@ -3274,6 +3289,38 @@ console.log('  ust-protocol ' + P.VERSION.spec + ' conformance vs ' + V.version)
   const vF = P.verify(tampered, { context: 'data' });
   check('#115 F.5t and it IS distinguishable from FORGERY — a tampered document answers E-CANON, so the theorem is stated at the strength the measurement supports and no further',
     vF.error === 'E-CANON' && vF.error !== vL.error);
+}
+
+// ── F.5q-c — the WINDOW family. F.5q asks about substrates for a FIXED window; this asks which windows exist
+// at all, and the point is that no declaration appears in either expression.
+{
+  const mk2 = (from, to, sub) => ({ ust: '1.0', state: { id: { class: 'attestation' }, data: { anchor: { kind: 'computed', value: { substrate: sub, from, to } } } } });
+  const daily = [mk2('ust:20260802.00', 'ust:20260802.23', 'git')];
+  const cov = P.commitmentCoverage({ chain: daily, window: 'ust:20260802.04' });
+  check('F.5q-c an hour INSIDE a daily commitment is covered — the granularity is READ from the window fields, so a coarser committer is not mistaken for a silent one, and no declaration is consulted',
+    cov.status === 'covered' && cov.covers.from === 'ust:20260802.00');
+  const miss = P.commitmentCoverage({ chain: daily, window: 'ust:20260803.04' });
+  check('F.5q-c a window OUTSIDE every commitment is uncovered, and that is a different answer from the covered one — the ambiguity this dissolves is exactly these two being one observation',
+    miss.status === 'uncovered' && miss.covers === null && miss.status !== cov.status);
+
+  const broken = [mk2('ust:20260802.00', 'ust:20260802.23', 'git'), mk2('ust:20260804.00', 'ust:20260804.23', 'git')];
+  const g = P.commitmentCoverage({ chain: broken });
+  check('F.5q-c a MISSING window between two commitments is measurable in the chain alone — the discontinuity is a function of fields the documents carry, with nothing declared anywhere',
+    g.gaps.length === 1 && g.gaps[0].after === 'ust:20260802.23' && g.gaps[0].before === 'ust:20260804.00');
+  const whole = P.commitmentCoverage({ chain: [mk2('ust:20260802.00', 'ust:20260802.23', 'git'), mk2('ust:20260803.00', 'ust:20260803.23', 'git')] });
+  check('F.5q-c a CONTIGUOUS chain reports no gap — the gap probe discriminates rather than firing on every pair',
+    whole.gaps.length === 0);
+
+  // THE VACUITY LEG. An empty chain and a publisher that has committed nothing look identical, so the report
+  // refuses rather than answering `uncovered` — the same rule the name sweep applies to an empty target set.
+  const none = P.commitmentCoverage({ chain: [], window: 'ust:20260802.04' });
+  check('F.5q-c an EMPTY chain answers `unknown`, never `uncovered` — a chain nobody supplied is not evidence that a window is unanchored',
+    none.status === 'unknown' && none.status !== miss.status);
+
+  let threw = false;
+  try { P.commitmentCoverage(); P.commitmentCoverage(null); P.commitmentCoverage({ chain: [null, 7, {}, { state: null }], window: 42 }); } catch { threw = true; }
+  check('F.5q-c the coverage report is TOTAL — a chain fetched from a mirror is untrusted input, so hostile members yield a report rather than an exception',
+    threw === false);
 }
 
 // ── F.5t-a — THE OBLIGATION IS A PROPERTY OF A SET. Everything above is a function of ONE document, and

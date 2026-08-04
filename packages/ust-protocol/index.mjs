@@ -3202,6 +3202,52 @@ export function verifyJson(rawBytes, opts = {}) {
   return verify(obj, opts);
 }
 
+// ─── F.5q-c — COVERAGE AND GAPS ARE MEASURABLE IN THE COMMITMENT CHAIN ALONE. F.5q fixes a closed window and
+//     quantifies over the SUBSTRATES (`anchorRollup` above). This asks the other question: WHICH windows are
+//     covered at all. Neither expression contains a declaration — each commitment carries `{substrate, from, to}`
+//     and the sequence is prev-chained, so «no commitment for this window» and «this publisher commits DAILY and
+//     the window sits inside a covered day» differ on a value the observer computes. The granularity is READ.
+//
+//     Deliberately NOT here: whether a commitment is OWED NOW (F.5q-d). That is present-tense, needs a clock, and
+//     a clock reached through an argument is a verdict-flip waiting to happen — it stays out until it can be
+//     verifier-owned. A publisher that declared no rhythm owes nothing anyway: nothing is owed where nothing was
+//     promised, which is the ordinary case for an event-driven stream and not a deficiency.
+export function commitmentCoverage(opts) {
+  // NO DESTRUCTURING AT THE SEAM. The argument arrives from a caller that fetched a chain over the network, so
+  // reading `.chain` off it is already a hostile property access — a parameter pattern would throw before the
+  // first line of the body could refuse.
+  let chain, window;
+  try { chain = opts == null ? [] : opts.chain; } catch { chain = []; }
+  try { window = opts == null ? null : opts.window; } catch { window = null; }
+  let list; try { list = Array.isArray(chain) ? chain : []; } catch { list = []; }
+  const windows = [];
+  for (let i = 0; i < list.length; i++) {
+    let a; try { const d = list[i]; a = d?.state?.data?.anchor?.value; } catch { a = undefined; }
+    if (!a || typeof a.from !== 'string' || typeof a.to !== 'string') continue;   // not a commitment: skipped, and the count below says so
+    windows.push({ from: a.from, to: a.to, substrate: typeof a.substrate === 'string' ? a.substrate : null });
+  }
+  // INTERVAL ARITHMETIC, NOT STRING ORDER — and the difference is the whole of «the granularity is READ».
+  // MEASURED while writing this: comparing `from(next) > to(prev)` as strings reports a gap between EVERY pair of
+  // adjacent windows, because `to` names the LAST covered slot and `from` names the next one. A `ust_id` carries
+  // its own precision in its own length (§8), so each one denotes the HALF-OPEN interval [start, start + span),
+  // and both questions are asked on that scale. Nothing here needs a declared rhythm; the step comes from the
+  // coordinate itself.
+  const span = (u) => { const m = /^ust:\d{8}\.(\d{2})(\d{2})?(\d{2})?$/.exec(u || ''); return m ? (m[3] ? 1 : m[2] ? 60 : 3600) : null; };
+  const startOf = (u) => ustToEpoch(u);
+  const endOf = (u) => { const s = ustToEpoch(u), n = span(u); return s === null || n === null ? null : s + n; };
+  const sorted = [...windows].filter((x) => startOf(x.from) !== null && endOf(x.to) !== null)
+    .sort((x, z) => startOf(x.from) - startOf(z.from));
+  const gaps = [];
+  for (let i = 1; i < sorted.length; i++) if (startOf(sorted[i].from) > endOf(sorted[i - 1].to)) gaps.push({ after: sorted[i - 1].to, before: sorted[i].from });
+  const w = typeof window === 'string' && startOf(window) !== null ? window : null;
+  const by = w === null ? null : sorted.find((x) => startOf(x.from) <= startOf(w) && endOf(w) <= endOf(x.to)) ?? null;
+  // FOUR states, and the empty one is its own. A chain nobody supplied and a publisher that has committed
+  // nothing produce the same emptiness, so `unknown` refuses to answer rather than reporting `uncovered` —
+  // the same rule the name sweep applies to an empty target set.
+  const status = windows.length === 0 ? 'unknown' : w === null ? 'read' : by ? 'covered' : 'uncovered';
+  return deepFreeze({ status, covers: by ? deepFreeze({ ...by }) : null, gaps: deepFreeze(gaps), windows: deepFreeze(sorted), examined: list.length, commitments: windows.length });
+}
+
 // ─── F.5t-a — THE NAME OBLIGATION IS A PROPERTY OF A SET, and everything above this line is a function of ONE
 //     document. `∀a ∈ Pub(o). name(a) ⇒ doc(a)` quantifies over what an OPERATOR publishes; `verify` never sees
 //     that set, so no consumer-side observation establishes it. The predicate therefore has to be callable by the

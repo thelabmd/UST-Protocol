@@ -74,6 +74,7 @@ export function checkpointUniquenessClaim(arg0: unknown): { purpose: unknown; do
 export function classifyNamed(raw: unknown): unknown;
 export function combineInclusion(verifiers: unknown): unknown;
 export function combineSubstrates(verifiers: unknown): unknown;
+export function commitmentCoverage(opts: unknown): unknown;
 export function compareEvidenceOrder(a: unknown, b: unknown): string;
 export function contentHash(doc: unknown): string;
 export function deriveAssurance(graph: unknown): unknown;

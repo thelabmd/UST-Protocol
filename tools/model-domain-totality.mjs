@@ -53,7 +53,12 @@ const bounds = heads.map((h) => h.pos).concat(MODEL.length);
 // section silently LEAVE the domain — renamed to a non-`F.x` heading, it would simply stop being enumerated and this
 // gate would still pass. That is the very defect class this gate exists to close, so the count is exact and any change
 // to the section inventory must be a deliberate edit here.
-const EXPECTED_SECTIONS = 56;   // 55 → 56: F.5t-a (rev107) — the name obligation quantifies over the SET an
+const EXPECTED_SECTIONS = 58;   // 56 → 58: F.5q-c (the WINDOW family is an INDEX set — coverage and gaps are
+// measurable in the commitment chain alone, so a declared rhythm is a CAPABILITY buying exactly the present-tense
+// question and nothing below it; an event-driven publisher owes nothing because it promised nothing) and F.5p.3
+// (a declaration must be AUTHENTICATED exactly when it can EARN a pass — which classifies the two rhythms by that
+// test rather than by name: the stream cadence decides `complete` and is signed, a commitment rhythm can only add
+// obligations and need not be).   // 55 → 56: F.5t-a (rev107) — the name obligation quantifies over the SET an
 // operator publishes while a verifier is a function of ONE document, so no consumer-side observation establishes
 // it at any sample size, and a rule whose only decision procedure enumerates the RULE-MAKER's tree is unenforced
 // where it binds. Realized as the package predicate + `ust names`, with the tree gate switched to the export so

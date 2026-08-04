@@ -9678,6 +9678,103 @@
     "outcome": "NONE_WEAR_THE_NAME",
     "violations": []
    }
+  },
+  {
+   "id": "coverage-01-an-hour-inside-a-daily-commitment-is-covered",
+   "kind": "commitment_coverage",
+   "rule": "F.5q-c The granularity is READ from the window fields, so a coarser committer is not mistaken for a silent one. No declaration appears in the expression",
+   "input": {
+    "windows": [
+     {
+      "substrate": "git",
+      "from": "ust:20260802.00",
+      "to": "ust:20260802.23"
+     }
+    ],
+    "window": "ust:20260802.04"
+   },
+   "expect": {
+    "status": "covered",
+    "gaps": 0
+   }
+  },
+  {
+   "id": "coverage-02-a-window-outside-every-commitment-is-uncovered",
+   "kind": "commitment_coverage",
+   "rule": "F.5q-c The two answers a publisher's silence used to collapse into one must differ: covered-by-a-coarser-window and genuinely-uncommitted",
+   "input": {
+    "windows": [
+     {
+      "substrate": "git",
+      "from": "ust:20260802.00",
+      "to": "ust:20260802.23"
+     }
+    ],
+    "window": "ust:20260803.04"
+   },
+   "expect": {
+    "status": "uncovered",
+    "gaps": 0
+   }
+  },
+  {
+   "id": "coverage-03-adjacent-windows-are-not-a-gap",
+   "kind": "commitment_coverage",
+   "rule": "F.5q-c A ust_id denotes a HALF-OPEN interval whose span is its own precision, so the last covered slot of one window and the first of the next are contiguous. Comparing the two as strings reports a gap between every adjacent pair",
+   "input": {
+    "windows": [
+     {
+      "substrate": "git",
+      "from": "ust:20260802.00",
+      "to": "ust:20260802.23"
+     },
+     {
+      "substrate": "git",
+      "from": "ust:20260803.00",
+      "to": "ust:20260803.23"
+     }
+    ]
+   },
+   "expect": {
+    "status": "read",
+    "gaps": 0
+   }
+  },
+  {
+   "id": "coverage-04-a-missing-window-is-measurable-in-the-chain-alone",
+   "kind": "commitment_coverage",
+   "rule": "F.5q-c A discontinuity between two published windows is a function of fields the documents carry — nothing declared anywhere is consulted",
+   "input": {
+    "windows": [
+     {
+      "substrate": "git",
+      "from": "ust:20260802.00",
+      "to": "ust:20260802.23"
+     },
+     {
+      "substrate": "git",
+      "from": "ust:20260804.00",
+      "to": "ust:20260804.23"
+     }
+    ]
+   },
+   "expect": {
+    "status": "read",
+    "gaps": 1
+   }
+  },
+  {
+   "id": "coverage-05-an-empty-chain-answers-unknown-not-uncovered",
+   "kind": "commitment_coverage",
+   "rule": "F.5q-c A chain nobody supplied and a publisher that has committed nothing look identical, so the report refuses rather than reporting a window unanchored",
+   "input": {
+    "windows": [],
+    "window": "ust:20260802.04"
+   },
+   "expect": {
+    "status": "unknown",
+    "gaps": 0
+   }
   }
  ]
 }
