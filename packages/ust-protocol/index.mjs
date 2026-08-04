@@ -3202,6 +3202,66 @@ export function verifyJson(rawBytes, opts = {}) {
   return verify(obj, opts);
 }
 
+// ─── F.5t-a — THE NAME OBLIGATION IS A PROPERTY OF A SET, and everything above this line is a function of ONE
+//     document. `∀a ∈ Pub(o). name(a) ⇒ doc(a)` quantifies over what an OPERATOR publishes; `verify` never sees
+//     that set, so no consumer-side observation establishes it. The predicate therefore has to be callable by the
+//     producer, over its own artifacts — which is why it lives HERE and not in a gate. Until now the only
+//     implementation was `tools/protocol-name-gate.mjs`, enumerating this repository: the rule bound every
+//     operator and shipped its decision procedure to none of them.
+//
+//     Classification is deliberately NOT verification. An artifact that wears the name and IS a document but
+//     fails to verify is a broken document — a correct signal, a different problem, and folding the two together
+//     would rebuild the very conflation F.5t is about.
+const NAME_IN_BYTES = /"protocol"\s*:\s*"UST"|"ust"\s*:\s*"\d+\.\d+"/;
+
+export function classifyNamed(raw) {
+  let doc = null, parsed = false;
+  try { doc = JSON.parse(typeof raw === 'string' ? raw : new TextDecoder().decode(raw)); parsed = true; } catch { /* unparseable is a RESULT here, not an error */ }
+  const top = parsed && doc && typeof doc === 'object' && !Array.isArray(doc) ? doc : null;
+  // Parsed artifacts are judged from the TOP LEVEL, never from a byte window: a nested payload that merely
+  // mentions the name is not making the claim, and a 4 KB window would both miss late claims and invent early ones.
+  let wears;
+  try { wears = top ? (top.protocol === 'UST' || typeof top.ust === 'string') : NAME_IN_BYTES.test(String(raw)); }
+  catch { wears = true; }   // a value whose String() throws is unreadable AND named-by-suspicion: fail CLOSED
+  if (!wears) return { wears: false, status: 'unnamed' };
+  // FAIL CLOSED from here: the question is "is this safe to publish under the name", so an artifact that cannot
+  // be read is reported, never skipped. A consumer meeting it gets E-MALFORMED — exactly F.5t's subject.
+  if (!parsed) return { wears: true, status: 'named_non_document', why: 'wears the name and is not parseable JSON' };
+  if (!top) return { wears: true, status: 'named_non_document', why: 'wears the name and is not a JSON object' };
+  const missing = ['ust', 'state', 'sig'].filter((k) => !(k in top));
+  if (missing.length) return { wears: true, status: 'named_non_document', why: `wears the name and has no ${missing.join('/')} — a consumer applying the verifier gets E-MALFORMED, the signal of a damaged document` };
+  return { wears: true, status: 'document' };
+}
+
+// The SET roll-up, in the core for the same reason the predicate is: an operator that re-implements the tally is
+// one exception list away from the divergence F.5t's corollary describes. FOUR outcomes, because collapsing them
+// is how a wrong path reads as a clean mirror — examining nothing is not a pass (F.5p: absence is two facts).
+export function nameSetReport(entries) {
+  const rows = [];
+  let named = 0;
+  // TOTAL AT THE WALK SEAM. The caller is a directory traversal, so every access here is hostile-reachable:
+  // `Array.isArray` throws on a REVOKED proxy, `length` and `list[i]` throw on a throwing-trap array-like, and
+  // `e.id`/`e.raw` are property reads on whatever the filesystem produced. Each is its own guard rather than one
+  // outer try, so a single unreadable member costs that member and not the whole report — a sweep that aborts
+  // on entry 3 of 900 would report a set nobody enumerated, which is the failure this export exists to prevent.
+  let list; try { list = Array.isArray(entries) ? entries : []; } catch { list = []; }
+  let examined; try { examined = Number(list.length) || 0; } catch { examined = 0; }
+  for (let i = 0; i < examined; i++) {
+    let e; try { e = list[i]; } catch { e = undefined; }
+    let id; try { id = (e && typeof e === 'object' && typeof e.id === 'string') ? e.id : `#${i}`; } catch { id = `#${i}`; }
+    let payload; try { payload = e && typeof e === 'object' ? e.raw : e; } catch { payload = undefined; }
+    const c = classifyNamed(payload);
+    if (!c.wears) continue;
+    named++;
+    if (c.status === 'named_non_document') rows.push({ id, why: c.why });
+  }
+  const outcome = examined === 0 ? 'NOTHING_EXAMINED'
+    : rows.length ? 'VIOLATIONS'
+      : named === 0 ? 'NONE_WEAR_THE_NAME'
+        : 'COMPLIANT';
+  return { outcome, examined, named, documents: named - rows.length, violations: rows };
+}
+
 // ─── DISCOVERY-DRIVEN RESOLUTION (rc.13) — the SINGLE resolver every surface (web/cli/mcp) calls, so the
 // "fetch the publisher's own genesis+keylog and re-verify with the grant" flow exists in ONE place, not
 // three copies that drift. A verifier that resolves BY NAME must first decide the name is safe to reach:

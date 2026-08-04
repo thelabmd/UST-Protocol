@@ -19,7 +19,7 @@
 // So the gate pins: no command parses positionals by prefix · every usage flag is CLASSIFIED · every flag a command
 // READS is promised in its usage · and every served-log artifact is actually accepted. (rev92)
 import { readFileSync } from 'node:fs';
-import { STREAM_VALUE_FLAGS, FORKCHOICE_VALUE_FLAGS, FORKCHOICE_BOOL_FLAGS, positionals, parseLogRaw, buildCeremony } from '../packages/ust-cli/index.mjs';
+import { STREAM_VALUE_FLAGS, FORKCHOICE_VALUE_FLAGS, FORKCHOICE_BOOL_FLAGS, NAMES_VALUE_FLAGS, positionals, parseLogRaw, buildCeremony } from '../packages/ust-cli/index.mjs';
 
 const SRC = readFileSync(new URL('../packages/ust-cli/index.mjs', import.meta.url), 'utf8');
 const fail = [];
@@ -34,6 +34,7 @@ const check = (ok, msg) => { if (ok) pass++; else fail.push(msg); };
 const COMMANDS = [
   { fn: 'cmdStream', value: STREAM_VALUE_FLAGS, bool: new Set() },
   { fn: 'cmdForkChoice', value: FORKCHOICE_VALUE_FLAGS, bool: FORKCHOICE_BOOL_FLAGS },
+  { fn: 'cmdNames', value: NAMES_VALUE_FLAGS, bool: new Set() },   // F.5t-a — paths only today; classified anyway, so the first flag added cannot silently reintroduce the prefix sweep
 ];
 
 // The reader helpers whose literal argument names a flag. `arg()` is the direct reader; `rd()` is cmdStream's local
@@ -79,7 +80,12 @@ for (const { fn, value, bool } of COMMANDS) {
   //      cmdStream and appeared in no usage text — an operator could not discover the flag that makes HIGH
   //      resolution work, and nothing said so.
   const read = new Set([...body.matchAll(new RegExp(`\\b(?:${READERS.join('|')})\\('([a-z-]+)'`, 'g'))].map((m) => m[1]));
-  check(read.size > 0, `${fn}: the flag scan found no flags at all — vacuous`);
+  // A command that DECLARES flags and reads none has a stale declaration, and the scan saying so is the point.
+  // A command that declares NONE and reads none is not vacuous — it is consistent, and demanding a flag here
+  // would be surface invented to satisfy a gate. Nothing is lost: reading an undeclared flag still fails below,
+  // and declaring one that is never read still fails at the end of this loop, so both directions stay closed.
+  const declaresNothing = value.size === 0 && bool.size === 0;
+  check(read.size > 0 || declaresNothing, `${fn}: the flag scan found no flags at all while ${value.size + bool.size} are declared — vacuous`);
   const usage = body.match(/usage: [^'`]*/);
   const promised = new Set([...(usage ? usage[0] : '').matchAll(/--([a-z-]+)/g)].map((m) => m[1]));
   for (const f of read) {

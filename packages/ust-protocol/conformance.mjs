@@ -176,6 +176,19 @@ for (const v of V.vectors) {
       check(v.id, ok);
       break;
     }
+    // F.5t-a — the SET layer. Every case above judges ONE document; this one judges a target set, which is the
+    // whole point: the obligation quantifies over what an operator publishes and no per-document verdict reaches
+    // it. `document: true` splices in the corpus's REAL sealed transcript rather than a stub, for the same reason
+    // the version case re-marks a real document — a stub would test our idea of "is a document", not the predicate.
+    case 'name_set': {
+      const entries = (v.input.entries ?? []).map((e) => (e.document ? { id: e.id, raw: JSON.stringify(mk()) } : { id: e.id, raw: e.raw }));
+      const r = P.nameSetReport(entries);
+      const e = v.expect;
+      let ok = r.outcome === e.outcome;
+      if (e.violations !== undefined) ok = ok && JSON.stringify(r.violations.map((x) => x.id)) === JSON.stringify(e.violations);
+      check(v.id, ok);
+      break;
+    }
     case 'key_id': check(v.id, P.keyId(v.pub_b64url) === v.expect); break;
     case 'commit': check(v.id, P.H('ust:shard', P.canon(v.input)) === v.expect); break;
     case 'seed': check(v.id, P.seed(v.input) === v.expect); break;
@@ -2998,6 +3011,10 @@ console.log('\n═════════════════════�
     resolveCheckpointRoots: 'surface', resolveKeys: 'surface', resolveSupersession: 'surface', resolveKeysBytes: 'surface', deriveAssurance: 'surface', deriveCheckpointFreshness: 'surface',
     forkChoice: 'surface', noEventBacking: 'surface', verifiedGenesisContext: 'surface', checkAuthorityProof: 'surface',
     checkAuthorityProofBytes: 'surface', combineSubstrates: 'surface', combineInclusion: 'surface', witnessNoFork: 'surface',
+    // F.5t-a — an operator points these at its OWN mirror, so the input is a directory walk: whatever the
+    // filesystem yielded, including files that are not JSON and entries that are not objects. Untrusted by
+    // construction, therefore SURFACE and total.
+    classifyNamed: 'surface', nameSetReport: 'surface',
     // ── EXEMPT (throw-by-contract): designed to throw on invalid — totality is not the contract ──
     assertValid: 'throws-by-contract', verifyOrThrow: 'throws-by-contract',
     // ── EXEMPT (producer builders): operate on the SIGNER's OWN data; a producer can only hurt themselves ──
@@ -3075,7 +3092,9 @@ console.log('\n═════════════════════�
   const oAssur = () => ({ integrity: 'valid', identity: 'authoritative', freshness: 'attested', time: 'anchored' });   // round-39 P1-02 — a valid-shaped assurance state; the lattice surfaces (le/meet/join/projectTier/capAssurance) now RETURN (⊥/false/'NONE') on a hostile operand rather than throw, so the sweep reaches every position
   const oProfile = () => ({ summary: 'prose', declares: { serves: ['witness'], copies: [{ artifact: 'genesis', url: 'https://m.test/g' }] } });   // #135 — a VALID profile carrying both halves, so the hostile position is reached past the shape guards rather than short-circuiting on the first type test
   const oLadderOpts = () => ({ context: 'data' });
+  const oRaw = () => JSON.stringify(doc), oEntries = () => [{ id: 'a', raw: JSON.stringify(doc) }];   // F.5t-a — the input is whatever a directory walk yielded: raw text, and a list of {id,raw}
   const SIG = {
+    classifyNamed: [oRaw], nameSetReport: [oEntries],
     parseProfile: [oProfile],
     explainLadder: [oDoc, oLadderOpts],
     verify: [oDoc, oOpts], verifyAsync: [oDoc, oOpts], verifyStream: [oFrames, oConf], verifyJson: [oBytes, oOpts],
@@ -3255,6 +3274,46 @@ console.log('  ust-protocol ' + P.VERSION.spec + ' conformance vs ' + V.version)
   const vF = P.verify(tampered, { context: 'data' });
   check('#115 F.5t and it IS distinguishable from FORGERY — a tampered document answers E-CANON, so the theorem is stated at the strength the measurement supports and no further',
     vF.error === 'E-CANON' && vF.error !== vL.error);
+}
+
+// ── F.5t-a — THE OBLIGATION IS A PROPERTY OF A SET. Everything above is a function of ONE document, and
+// `∀a ∈ Pub(o). name(a) ⇒ doc(a)` quantifies over what an operator publishes. So the predicate is checked
+// HERE, at set granularity, against the export a producer can actually call over its own artifacts.
+{
+  const anchor = JSON.stringify({ protocol: 'UST', hour_ust: 'ust:20260802.04', merkle_root: 'sha256:' + '8f'.repeat(32), slot_count: 120 });
+  const realDoc = readFileSync(new URL('../../examples/ust-sample.json', import.meta.url), 'utf8');
+  const unnamed = JSON.stringify({ note: 'claims nothing' });
+
+  const dirty = P.nameSetReport([{ id: 'anchor', raw: anchor }, { id: 'doc', raw: realDoc }]);
+  check('#117 F.5t-a a labelled NON-DOCUMENT inside a target SET is REPORTED, and named BY ITS id — a tally without the offending member is a number an operator cannot act on',
+    dirty.outcome === 'VIOLATIONS' && dirty.violations.length === 1 && dirty.violations[0].id === 'anchor');
+
+  const clean = P.nameSetReport([{ id: 'doc', raw: realDoc }]);
+  check('#117 F.5t-a a set whose named artifacts ARE documents is NOT reported — the rule forbids wearing the name without being a document, never wearing it',
+    clean.outcome === 'COMPLIANT' && clean.violations.length === 0 && clean.named === 1);
+
+  // THE VACUITY LEG, and the one that decides whether this tool can lie. A wrong path yields an empty set,
+  // and an empty set satisfies a universal quantifier for free — reporting that as a pass is how a mirror
+  // nobody looked at reads as a clean one (F.5p: absence is two facts, separated by one positive assertion).
+  const nothing = P.nameSetReport([]);
+  check('#117 F.5t-a examining NOTHING is not a pass — an empty target set is its own outcome, never folded into compliance',
+    nothing.outcome === 'NOTHING_EXAMINED' && nothing.outcome !== clean.outcome);
+
+  const abstained = P.nameSetReport([{ id: 'plain', raw: unnamed }]);
+  check('#117 F.5t-a a set that examined artifacts and found NONE wearing the name is distinguishable from one that examined none — four outcomes, never three',
+    abstained.outcome === 'NONE_WEAR_THE_NAME' && new Set([dirty.outcome, clean.outcome, nothing.outcome, abstained.outcome]).size === 4);
+
+  // FAIL CLOSED: the question is "is this safe to publish under the name", so an artifact that cannot be READ
+  // is reported rather than skipped — a consumer meeting it gets E-MALFORMED, which is F.5t's whole subject.
+  const unreadable = P.nameSetReport([{ id: 'truncated', raw: '{"protocol":"UST","hour' }]);
+  check('#117 F.5t-a an artifact that wears the name and cannot be PARSED is reported, not skipped — an unreadable member is the case the rule is about, not an exemption from it',
+    unreadable.outcome === 'VIOLATIONS' && unreadable.violations.length === 1);
+
+  // TOTALITY at the seam an operator will actually hit: a directory walk hands over whatever it found.
+  let threw = false;
+  try { P.nameSetReport([null, undefined, 42, { id: 7, raw: null }, { raw: Symbol('x') }]); } catch { threw = true; }
+  check('#117 F.5t-a the SET report is TOTAL — hostile or malformed entries yield a classification, never an exception, because the caller is a directory walk and not a curated list',
+    threw === false);
 }
 
 // NO CHECK MAY STAND BELOW THIS PRINT. Measured 2026-08-02: three checks added after it RAN, reached the

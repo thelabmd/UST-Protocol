@@ -58,6 +58,7 @@ export function invocation(): unknown;
 export function logToRekor(rootHex: unknown, arg1?: unknown): Promise<{ substrate: unknown; logIndex: unknown; body: unknown; inclusionProof: unknown; integratedTime: unknown }>;
 export function manualDnsGuide(domain: unknown, txt: unknown): unknown[];
 export function manualServingGuide(domain: unknown, outDir: unknown): unknown[];
+export const NAMES_VALUE_FLAGS: unknown;
 export function offlineHandoff(arg0: unknown): unknown[];
 export function openReader(createInterface: unknown): unknown;
 export function parseKeylogRaw(raw: unknown): unknown;

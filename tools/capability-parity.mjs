@@ -50,6 +50,7 @@ const STANCE = {
   'disclosure':          ['decided',   'private-partition disclosure is a PUBLISHER-side act on data the tool never holds — the verifier receives {nonce, value} from whoever discloses. There is nothing for a tool of ours to do.'],
   'ladder-report':       ['decided',   'the CORE lands before the surface deliberately (#137): the vectors pin what the report may and may not say — not-attempted distinguishable from met, a consumer faculty never attributed to the publisher — BEFORE a CLI shape fixes those answers by accident. The operator-facing surface is the remaining work of that issue, not an omission here.'],
   'negative-observation':['decided',   'a negative observation is built with the ordinary transcript builders and carries no distinct operation; it is a USAGE of build-transcript, not a capability needing its own surface.'],
+  'name-obligation':     ['decided',   'F.5t-a: the obligation quantifies over an OPERATOR\'s published set while a verifier is a function of ONE document, so the surface has to be one an operator points at its own artifacts — a consumer-side check cannot establish it at any sample size. It lands on the CLI (`ust names`) and deliberately NOT on the MCP: handing an agent a filesystem sweep of arbitrary paths is a capability about the host, not about the protocol.'],
 };
 
 const CAPS = {
@@ -71,6 +72,7 @@ const CAPS = {
   // invisible to this capability and its staleness unmeasurable; the CLI face is now the profile itself, with
   // `--mirror` remaining the CONSUMER's own locator rather than a substitute for it.
   'byte-agreement':     { core: ['replicationAgreement', 'surfaceVerdict', 'anchorRollup', 'parseProfile'], cli: '--mirror' },
+  'name-obligation':    { core: ['classifyNamed', 'nameSetReport'], cli: 'names' },
   // #137 / F.5.1 + F.5p.2 — REPORTING the ladder is its own capability, not a facet of verification. It answers a
   // different question: not *is this valid for me*, but *what stands between it and the next rung, and whose is
   // that to move*. It is a function OF the decision relation and never an input to it (F.5.1b), so it can never
@@ -158,7 +160,7 @@ const SURFACES = {
   // ceremonies) so a human explicitly grants agent rights — NOT 'stays core+CLI forever'. NOTE: no-fork-evidence /
   // anchor-verify are marked full on the CONSUME side; a produce/consume axis split is the honest refinement (UST-<top>).
   'ust-mcp':          { probe: mcpProbe, full: ['canon', 'content-address', 'build-transcript', 'verify', 'resolve-authority', 'no-fork-evidence', 'consumer-trust-root', 'anchor-verify', 'fork-choice', 'stream-verify', 'cadence-grid', 'cadence-declare'], subset: [], naReason: 'deferred to the planned operator MCP over @ust-protocol/operator (privilege-separation: a human explicitly grants agent rights) — NOT core+CLI-forever; TOP-produce is the one agent touch still to be built for noosphere', naSpecific: { 'sign': 'the agent signs with its OWN key; build tools return signing_input, the MCP never holds a private key', 'negative-observation': 'agent-appropriate (a normal negative observation, NOT operator) — new per #39; an MCP absence verb is planned, not yet built' } },
-  'ust-cli':          { probe: cliProbe, full: ['canon', 'content-address', 'build-transcript', 'sign', 'verify', 'resolve-authority', 'no-fork-evidence', 'consumer-trust-root', 'anchor-verify', 'stream-verify', 'checkpoint-chain', 'keylog-commitment', 'discovery-shard', 'cadence-grid', 'cadence-declare', 'byte-agreement'], subset: [], naReason: 'not exposed by the reference operator CLI', naSpecific: { 'negative-observation': 'new per #39; a `ust absence` command is planned, not yet built' } },
+  'ust-cli':          { probe: cliProbe, full: ['canon', 'content-address', 'build-transcript', 'sign', 'verify', 'resolve-authority', 'no-fork-evidence', 'consumer-trust-root', 'anchor-verify', 'stream-verify', 'checkpoint-chain', 'keylog-commitment', 'discovery-shard', 'cadence-grid', 'cadence-declare', 'byte-agreement', 'name-obligation'], subset: [], naReason: 'not exposed by the reference operator CLI', naSpecific: { 'negative-observation': 'new per #39; a `ust absence` command is planned, not yet built' } },
 };
 
 const capIds = Object.keys(CAPS);

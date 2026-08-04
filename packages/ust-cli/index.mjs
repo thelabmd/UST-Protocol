@@ -7,7 +7,7 @@
 // encryptKey) so a notary tool is TESTABLE end-to-end without a live network — the 9th-audit regression suite
 // (regression.mjs) drives them directly. cmdGenesis is only the readline/network orchestrator around them.
 import { createInterface } from 'node:readline/promises';
-import { readFileSync, writeFileSync, realpathSync, mkdirSync, unlinkSync } from 'node:fs';
+import { readFileSync, writeFileSync, realpathSync, mkdirSync, unlinkSync, readdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createCipheriv, createDecipheriv, scryptSync, randomBytes, createHash, generateKeyPairSync, createPrivateKey, createPublicKey, sign as edsign } from 'node:crypto';
 import * as P from 'ust-protocol';
@@ -157,6 +157,7 @@ function readLogFiles(flag, raw) {
 export const STREAM_VALUE_FLAGS = new Set(['genesis', 'checkpoint', 'cadence-log', 'keylog']);
 export const FORKCHOICE_VALUE_FLAGS = new Set(['genesis', 'keylog']);
 export const FORKCHOICE_BOOL_FLAGS = new Set(['no-fork-confirmed', 'offline']);
+export const NAMES_VALUE_FLAGS = new Set();   // F.5t-a — `ust names` takes paths and no value-flag today; DECLARED empty rather than left unclassified, because the prefix sweep this replaces is exactly how the first value would become a path
 // Convenience parse (blob/base64 → object) for bytes this tool built ITSELF or already admitted through
 // verifyRaw/parseKeylogRaw. NEVER the entry point for untrusted verification input.
 export const decodeInput = (raw) => JSON.parse(rawTextOf(raw));
@@ -1647,6 +1648,51 @@ async function cmdCanon() {
   let canonical; try { canonical = P.canon(v); } catch (e) { die('E-CANON: ' + (e.detail || e.message) + '  (values must be NFC strings; no numbers/bools/nulls — §5)'); }
   console.log(canonical);
   console.error('# sha256 (generic canonical hash — NOT a content_hash: the input is not a {ust,state} transcript): ' + P.H('ust:state', canonical).slice(7));
+}
+
+// ─── ust names <path…> — F.5t-a: point the name rule at YOUR OWN published set ─────────────────────────
+// F.5t binds every publisher: an artifact either IS a document of this protocol or does not wear its name.
+// The obligation quantifies over `Pub(o)` — everything an operator publishes — and `verify` is a function of
+// ONE document, so no consumer can establish it. Until this command, the only implementation of the predicate
+// enumerated the protocol's own repository, which means the rule bound operators and shipped its decision
+// procedure to none of them. This is that procedure, and it is deliberately OFFLINE: whether a named document
+// also VERIFIES is a different question that needs its publisher's genesis, and answering both in one verdict
+// would rebuild the conflation F.5t exists to remove.
+function collectJson(target, out, budget) {
+  if (out.length >= budget.max) return;
+  let st; try { st = statSync(target); } catch { budget.unreadable.push(target); return; }
+  if (st.isDirectory()) {
+    let names; try { names = readdirSync(target); } catch { budget.unreadable.push(target); return; }
+    for (const n of names.sort()) collectJson(target.replace(/\/$/, '') + '/' + n, out, budget);
+    return;
+  }
+  if (!/\.json$/i.test(target)) return;
+  let raw; try { raw = readFileSync(target, 'utf8'); } catch { budget.unreadable.push(target); return; }
+  out.push({ id: target, raw });
+}
+
+async function cmdNames() {
+  const paths = positionals(process.argv.slice(3), NAMES_VALUE_FLAGS);
+  if (!paths.length) die('usage: ust names <dir|file…>   # does anything you publish wear the protocol name without being a document of it? (offline)');
+  const budget = { max: 200_000, unreadable: [] };
+  const entries = [];
+  for (const p of paths) collectJson(p, entries, budget);
+  const r = P.nameSetReport(entries);
+
+  console.log(`\n  examined ${r.examined} JSON artifact(s) under ${paths.length} path(s) — ${r.named} wear the protocol name, ${r.documents} of those are documents`);
+  if (budget.unreadable.length) console.log(`  ⚠️  ${budget.unreadable.length} path(s) could not be read and are NOT part of the count above — a set you could not enumerate is not a set you have checked`);
+  if (r.violations.length) {
+    console.log('');
+    for (const v of r.violations.slice(0, 50)) console.log(`  ❌  ${v.id}\n      ${v.why}`);
+    if (r.violations.length > 50) console.log(`  …  and ${r.violations.length - 50} more (the count above is complete; this listing is not)`);
+  }
+  console.log('');
+  // FOUR outcomes, never collapsed: examining nothing is the shape a wrong path takes, and reporting it as a
+  // pass is how a mirror nobody looked at reads as a clean one.
+  if (r.outcome === 'NOTHING_EXAMINED') die('NOTHING EXAMINED — no .json artifact was found under those paths. This is not a pass; it is a question that was never asked.');
+  if (r.outcome === 'VIOLATIONS') die(`${r.violations.length} artifact(s) wear the protocol name without being documents of it (F.5t).\n  A consumer applying the verifier gets E-MALFORMED — the same observation a TRUNCATED or CORRUPTED document produces — so a benign file emits the signal of a broken transfer.\n  Two honest options, and no third: the artifact BECOMES a document of this protocol, or it stops carrying the name. "Carry the name and document the deviation" is not available — the label is read by machines that never read the documentation.`);
+  if (r.outcome === 'NONE_WEAR_THE_NAME') console.log('  ✅  nothing under those paths claims the protocol name — no artifact instructs a machine to verify it\n');
+  else console.log('  ✅  every artifact claiming the name is shaped as a document of this protocol\n      (this is the NAME question, answered offline; whether each one VERIFIES needs its publisher\'s genesis — `ust verify`)\n');
 }
 
 // ─── ust discovery <domain> — §20.1 compliance attestation (any infra; properties, not mechanisms) ────
@@ -3245,7 +3291,7 @@ const isMain = (() => { try { return process.argv[1] && realpathSync(process.arg
 if (isMain) {
   const cmd = process.argv[2];
 
-  const run = { verify: cmdVerify, explain: cmdExplain, canon: cmdCanon, genesis: cmdGenesis, key: cmdKey, rotate: cmdRotate, cadence: cmdCadence, reroot: cmdReroot, discovery: cmdDiscovery, publish: cmdPublish, mirror: cmdMirror, stream: cmdStream, forkchoice: cmdForkChoice, witness: cmdWitness }[cmd];
-  if (!run) { const b = banner(); console.error(b + (b ? '' : 'ust — verify machine-readable state\n\n') + "\n  READ & VERDICT — safe, touches nothing\n  ✓ ust verify <file|->        verify a transcript — exit 0 = VALID, 1 = not (--require-anchored demands proven time)\n  ≡ ust canon  <file|->        print canonical bytes + hash — diff another language's implementation against this\n  … ust stream <frames…>       a verdict about a RANGE, not one document: chain · forks · completeness\n                               (--checkpoint is what makes completeness answerable at all)\n  ⑂ ust forkchoice <docs…>     pick the CANONICAL document among candidates for ONE ust_id — the anchor decides,\n                               never the candidates themselves\n  ◇ ust discovery <domain>     probe a domain's serving surface and report an honest verdict — any infrastructure\n\n  CEREMONY — touches your identity, needs the root key\n  ◉ ust genesis --domain <d>   run the HIGH genesis ceremony (add --publish cf for one-click serving)\n  + ust key add --domain <d> --root <enc> --role <data|issuance>   ADD a key BESIDE the current one (never replaces it)\n  ↻ ust rotate  --domain <d> --root <enc>   APPEND a key rotation to the served log\n                               (never re-mints — documents signed by the old key stay valid)\n  ~ ust cadence --domain <d> --root <enc> --seconds <n> --effective-from <slot>\n                               DECLARE the signed grid your stream follows — what completeness is measured against\n  ⟳ ust reroot  --domain <d> --ca-key <enc>   RE-ROOT onto a new genesis, crossing EVERY genesis-rooted\n                               structure you run — key-log, authority chain, witness log (the NAME), cadence.\n                               Writes artifacts; publishes nothing. Your writer must cross the last axis itself.\n\n  PUBLISH — writes to the world\n  ▲ ust publish <cf|self> --domain <d> --genesis <f>   serve an existing genesis: cf deploys the adapter,\n                               self writes the four artifacts for YOUR stack (asked if omitted)\n  ▣ ust mirror <domain>        publish and attest a SECOND-vendor copy, so your identity does not rest\n                               on one provider\n  † ust witness rekor --domain <d>   log the genesis in a public transparency log, so a second published\n                               history cannot go unnoticed\n"); process.exit(cmd ? 1 : 0); }
+  const run = { verify: cmdVerify, explain: cmdExplain, canon: cmdCanon, names: cmdNames, genesis: cmdGenesis, key: cmdKey, rotate: cmdRotate, cadence: cmdCadence, reroot: cmdReroot, discovery: cmdDiscovery, publish: cmdPublish, mirror: cmdMirror, stream: cmdStream, forkchoice: cmdForkChoice, witness: cmdWitness }[cmd];
+  if (!run) { const b = banner(); console.error(b + (b ? '' : 'ust — verify machine-readable state\n\n') + "\n  READ & VERDICT — safe, touches nothing\n  ✓ ust verify <file|->        verify a transcript — exit 0 = VALID, 1 = not (--require-anchored demands proven time)\n  ≡ ust canon  <file|->        print canonical bytes + hash — diff another language's implementation against this\n  … ust stream <frames…>       a verdict about a RANGE, not one document: chain · forks · completeness\n                               (--checkpoint is what makes completeness answerable at all)\n  ⑂ ust forkchoice <docs…>     pick the CANONICAL document among candidates for ONE ust_id — the anchor decides,\n                               never the candidates themselves\n  ◇ ust discovery <domain>     probe a domain's serving surface and report an honest verdict — any infrastructure\n  ⌗ ust names <dir|file…>      point the NAME rule at YOUR OWN published set: an artifact either IS a document\n                               of this protocol or does not wear its name (offline; F.5t)\n\n  CEREMONY — touches your identity, needs the root key\n  ◉ ust genesis --domain <d>   run the HIGH genesis ceremony (add --publish cf for one-click serving)\n  + ust key add --domain <d> --root <enc> --role <data|issuance>   ADD a key BESIDE the current one (never replaces it)\n  ↻ ust rotate  --domain <d> --root <enc>   APPEND a key rotation to the served log\n                               (never re-mints — documents signed by the old key stay valid)\n  ~ ust cadence --domain <d> --root <enc> --seconds <n> --effective-from <slot>\n                               DECLARE the signed grid your stream follows — what completeness is measured against\n  ⟳ ust reroot  --domain <d> --ca-key <enc>   RE-ROOT onto a new genesis, crossing EVERY genesis-rooted\n                               structure you run — key-log, authority chain, witness log (the NAME), cadence.\n                               Writes artifacts; publishes nothing. Your writer must cross the last axis itself.\n\n  PUBLISH — writes to the world\n  ▲ ust publish <cf|self> --domain <d> --genesis <f>   serve an existing genesis: cf deploys the adapter,\n                               self writes the four artifacts for YOUR stack (asked if omitted)\n  ▣ ust mirror <domain>        publish and attest a SECOND-vendor copy, so your identity does not rest\n                               on one provider\n  † ust witness rekor --domain <d>   log the genesis in a public transparency log, so a second published\n                               history cannot go unnoticed\n"); process.exit(cmd ? 1 : 0); }
   run().catch((e) => die(e.message || String(e)));
 }

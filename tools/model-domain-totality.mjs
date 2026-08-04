@@ -53,7 +53,11 @@ const bounds = heads.map((h) => h.pos).concat(MODEL.length);
 // section silently LEAVE the domain — renamed to a non-`F.x` heading, it would simply stop being enumerated and this
 // gate would still pass. That is the very defect class this gate exists to close, so the count is exact and any change
 // to the section inventory must be a deliberate edit here.
-const EXPECTED_SECTIONS = 55;   // 54 → 55: F.5p.2 (rev103) — the absence of an ALARM is two facts. A watcher that
+const EXPECTED_SECTIONS = 56;   // 55 → 56: F.5t-a (rev107) — the name obligation quantifies over the SET an
+// operator publishes while a verifier is a function of ONE document, so no consumer-side observation establishes
+// it at any sample size, and a rule whose only decision procedure enumerates the RULE-MAKER's tree is unenforced
+// where it binds. Realized as the package predicate + `ust names`, with the tree gate switched to the export so
+// an operator's sweep and this repository's decide the same question the same way. 54 → 55: F.5p.2 (rev103) — the absence of an ALARM is two facts. A watcher that
 // speaks only on state change makes its OWN liveness unobservable: healthy-publisher and dead-watcher produce a
 // byte-identical silence, so a liveness conclusion drawn from silence is unfounded. Separated by ONE positive
 // assertion that the watcher has read the surface at least once. 53 → 54: F.5.1 (rev102) — the ladder is REPORTABLE, and a rung names WHO MAY

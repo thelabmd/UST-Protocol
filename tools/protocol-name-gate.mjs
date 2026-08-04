@@ -36,7 +36,11 @@ for (const rel of files) {
   // THE SUBJECT IS THE DOCUMENT SHAPE, not a directory list — a directory list would be a sample again.
   // A corpus that DESCRIBES documents is not one; it is judged separately below, because carrying the name
   // at the top level of a non-document is its own, smaller version of the same defect.
-  const isDocument = doc && typeof doc === 'object' && !Array.isArray(doc) && 'ust' in doc && 'state' in doc && 'sig' in doc;
+  //
+  // The predicate is the PACKAGE's (F.5t-a), not this gate's. It was written here first and was the only copy
+  // in the tree, which is precisely the corollary: an operator bound by the rule held no procedure. Calling the
+  // export keeps this gate and every operator's own sweep deciding the same question the same way.
+  const isDocument = P.classifyNamed(raw).status === 'document';
   if (!isDocument) { checked--; corpora.push(rel); continue; }
 
   // A NEGATIVE sample legitimately wears the name — a TAMPERED document is a document of this protocol that

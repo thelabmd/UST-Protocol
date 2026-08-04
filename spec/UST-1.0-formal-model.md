@@ -2812,6 +2812,38 @@ integrity rests on an append-only log and a timestamp proof, which establish TIM
 nothing about authorship. Citing them as evidence in one's own favour is therefore self-attestation with
 extra steps, and the label made it look like more.
 
+### F.5t-a The obligation is a property of a SET, and a verifier is a function of ONE document
+
+F.5t binds a PUBLISHER, and the shape of that binding decides who can ever discharge it. Write the obligation
+as `∀a ∈ Pub(o). name(a) ⇒ doc(a)`, quantified over `Pub(o)` — the set of artifacts an operator `o` publishes.
+
+**Theorem F.5t-a (no consumer-side observation establishes the name obligation).** A verifier's domain is a
+single artifact: `V(x̂, ℐ_v, ρ_v) ↦ verdict` (R2), and `Pub(o)` is not among its inputs. A consumer that
+verified every artifact it has ever fetched has established the predicate on a subset it did not choose, and
+the artifacts it never fetched are precisely those that could falsify it. Enlarging the sample does not change
+the quantifier. The only party whose information contains `Pub(o)` is `o` itself. Hence the obligation is
+discharged by a PRODUCER-side enumeration over `Pub(o)`, or by nobody. ∎
+
+**Corollary (a rule whose decision procedure exists only in the rule-maker's tree is unenforced where it
+binds).** The procedure that decides `name(a) ⇒ doc(a)` may enumerate a domain. If the only implementation
+enumerates the PROTOCOL's own tree, then the party bound by the rule — every operator — holds no procedure at
+all and can comply only by inspection. Inspection over an unbounded published set is not a decision procedure,
+so the rule holds normatively and is unenforced in the one place its violations occur. This is the general
+form of the failure F.5q names for observation: quantifying over a set nobody enumerated.
+
+**Corollary (the honest options are two, and shipping the procedure is what makes the second reachable).**
+F.5t leaves an operator either not wearing the name or being a document. An operator cannot choose the second
+deliberately without being able to ask which of its artifacts already fail it. So the procedure is not a
+convenience built beside the rule; it is the term that makes the rule's own disjunction decidable by the party
+the rule is addressed to.
+
+**Binding: realized** — *"#117 F.5t-a a labelled NON-DOCUMENT inside a target SET is REPORTED, and named BY ITS id — a tally without the offending member is a number an operator cannot act on"* · *"#117 F.5t-a a set whose named artifacts ARE documents is NOT reported — the rule forbids wearing the name without being a document, never wearing it"* · *"#117 F.5t-a examining NOTHING is not a pass — an empty target set is its own outcome, never folded into compliance"* · *"#117 F.5t-a a set that examined artifacts and found NONE wearing the name is distinguishable from one that examined none — four outcomes, never three"* · *"#117 F.5t-a an artifact that wears the name and cannot be PARSED is reported, not skipped — an unreadable member is the case the rule is about, not an exemption from it"* · *"#117 F.5t-a the SET report is TOTAL — hostile or malformed entries yield a classification, never an exception, because the caller is a directory walk and not a curated list"*.
+
+And the surface, because a procedure nobody can point anywhere is the corollary again one level up: `ust names
+<paths>` walks a target set offline and reports the four outcomes. The tree gate that was formerly the only
+implementation now CALLS the export rather than holding its own copy, so an operator's sweep and this
+repository's sweep decide the same question the same way.
+
 ## F.5u A root is published TWICE, and only one of the two publications can enumerate (#127)
 
 Fix the hash `H` and the §7 Merkle construction over a leaf multiset `L`, with `r = root(L)`. Two DIFFERENT

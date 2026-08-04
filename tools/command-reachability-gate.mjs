@@ -39,6 +39,8 @@ const ARGS = {
   verify: ['/nonexistent-file-for-the-gate.json'],
   explain: ['/nonexistent-file-for-the-gate.json'],   // #137 — same first refusal as verify: the body is entered, the file is not readable
   canon: ['/nonexistent-file-for-the-gate.json'],
+  names: ['/nonexistent-directory-for-the-gate'],   // F.5t-a — the body IS entered: an unreadable path yields NOTHING EXAMINED, which the command refuses rather than passing
+
   stream: ['/nonexistent-file-for-the-gate.json'],
   forkchoice: ['/nonexistent-a.json', '/nonexistent-b.json'],
   discovery: ['probe.invalid'],

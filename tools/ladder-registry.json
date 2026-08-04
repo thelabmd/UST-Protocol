@@ -1194,6 +1194,14 @@
       "code": "packages/ust-protocol/index.mjs :: a newer minor and a foreign major answer INDETERMINATE; INVALID is reserved for rules this verifier holds and found violated",
       "vector": "version-01-future-minor-is-indeterminate-not-invalid",
       "test": "version-05-invalid-means-my-rules-were-violated"
+    },
+    {
+      "round": 166,
+      "math": "F.5t-a The obligation is a property of a SET, and a verifier is a function of ONE document",
+      "spec": "therefore MUST expose the classification as an operation a publisher can run over its own published set, not",
+      "code": "packages/ust-protocol/index.mjs :: classifyNamed + nameSetReport — four outcomes, total at the directory-walk seam; packages/ust-cli/index.mjs :: cmdNames points them at an operator's set offline; tools/protocol-name-gate.mjs now CALLS the export instead of holding its own copy",
+      "vector": "name-set-01-labelled-non-document-in-a-set-is-reported",
+      "test": "#117 F.5t-a examining NOTHING is not a pass — an empty target set is its own outcome, never folded into compliance"
     }
   ],
   "first_accounted_round": 76,

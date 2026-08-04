@@ -90,6 +90,7 @@ version typed into a README is a claim that goes stale in silence.
 | `ust canon <file\|->` | print canonical bytes + hash — diff any other-language implementation against this |
 | `ust forkchoice <docs…>` | pick the CANONICAL document among candidates for ONE `ust_id` — canonical means anchor-included, so the choice is decided outside the candidates themselves |
 | `ust discovery <domain> [--mirror url,url] [--expect sha256:…]` | probe a domain's serving surface and report an honest verdict — on ANY infrastructure |
+| `ust names <dir\|file…>` | point the NAME rule at **your own** published set: an artifact either IS a document of this protocol or does not wear its name. Offline. Reports four outcomes — examining nothing is not a pass |
 
 ### CEREMONY — touches your identity, needs the root key
 

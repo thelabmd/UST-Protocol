@@ -384,6 +384,11 @@
       "issue": 138,
       "content_hash": "sha256:5b0097b66f1416313a1bd9916b1b19de9c37a0deee5f2b89352debeb14d8894f",
       "_note": "This recap carries BOTH rounds of #138 — 164 stated the contract, 165 made it behaviour — because the recipient is the closed issue, not the round."
+    },
+    {
+      "round": 166,
+      "issue": 117,
+      "no_recap": "A recap belongs to a CLOSED issue, and this round built the INSTRUMENT #117 needs rather than closing it: the 1070 artifacts still wear the name. What the round settled is that an operator can now ask the question at all — the count in that issue is two days old and was never re-measurable. The recap is owed when the artifacts either become documents under the §11.3 anchor subtype or stop carrying the name, which is the work #117 actually describes."
     }
   ]
 }

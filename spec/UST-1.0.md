@@ -2141,6 +2141,16 @@ quarantine over an incident that never happened. There are two honest options an
 Companion files that plainly are not documents — timestamp proofs, indexes, manifests — raise no question
 because they never claim it (formal model F.5t).
 
+**And the obligation is a property of the SET a publisher publishes, so the publisher is the only party that can
+discharge it.** The rule quantifies over everything an operator emits; verification is a function of ONE
+document, and that set is not among its inputs (§14, R2). A consumer that verified every artifact it ever
+fetched has established the rule on a subset it did not choose, and the artifacts it never fetched are exactly
+the ones that could falsify it — enlarging the sample does not reach the quantifier. An implementation
+therefore MUST expose the classification as an operation a publisher can run over its own published set, not
+only as an internal check over the implementation's own tree: a rule whose decision procedure ships to nobody
+it binds is unenforced where its violations occur. The reference CLI serves it as `ust names <paths>`, offline,
+and reports FOUR outcomes rather than a boolean — examining nothing is not a pass (formal model F.5t-a, F.5p).
+
 A profile MUST NOT relocate the standard surfaces, and MUST NOT confer validity on an anchor by naming its
 substrate: a declared substrate is a place to LOOK, and what is found there is verified by that substrate's own
 rules (§12.3, anchor verification) exactly as if the profile had said nothing. `ust-genesis`, `ust-keylog`, `ust-witness` and `ust-cadence`
