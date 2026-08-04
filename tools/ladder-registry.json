@@ -1256,6 +1256,16 @@
       },
       "vector": "breadth-flat-over-law-reject",
       "test": "depth-law-covers-whole-ustid-space"
+    },
+    {
+      "round": 173,
+      "math": "F.5u.1 (enumeration is neither necessary nor sufficient for membership)",
+      "spec": "REQUIRED, `constituents` ABSENT, `prev` REQUIRED. A commitment asserts NO membership — membership is",
+      "code": {
+        "excluded": "No behaviour changed: the commitment shape, the root recomputation and every verdict are what rc.66 shipped. What this round produced is the MEASUREMENT that the composition item was already satisfied by not applying, and checks pinning where tree freedom begins and ends."
+      },
+      "vector": "breadth-flat-over-law-reject",
+      "test": "depth-law-covers-whole-ustid-space"
     }
   ],
   "first_accounted_round": 76,

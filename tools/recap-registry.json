@@ -412,6 +412,10 @@
     {
       "round": 172,
       "no_recap": "The round closed no issue. It corrects a theorem written the same day that was true of the bundled tree and stated about the protocol, after the owner recalled that the two trees differ. A recap belongs to a closed issue; a corrected overgeneralisation is not one."
+    },
+    {
+      "round": 173,
+      "no_recap": "The round closed no issue. It retired a work item by measurement rather than by building it, and pinned where an operator may bring its own tree. The card stays open on the reference operator publishing future windows in this form."
     }
   ]
 }

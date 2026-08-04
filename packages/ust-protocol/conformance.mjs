@@ -3304,6 +3304,43 @@ console.log('  ust-protocol ' + P.VERSION.spec + ' conformance vs ' + V.version)
     vF.error === 'E-CANON' && vF.error !== vL.error);
 }
 
+// ── F.5u — WHERE THE TREE IS FREE, AND WHY. `verify` recomputes merkleRoot(constituents) with the BUNDLED tree
+// and refuses E-ROOT on a mismatch, so a document that carries its own enumeration is bound to that tree. A
+// commitment carries NO enumeration, so nothing is recomputed and the root may come from the operator's own
+// tree. Delegation is available exactly where the document does not enumerate — sharper than "the tree is
+// delegable", and it is what makes an anchor migration possible with no protocol change.
+//
+// SIGNED FOR REAL, and that is not incidental: the first version of this block wrapped the states in a stub
+// signature and asserted `error !== 'E-ROOT'`. Signature admission runs BEFORE the root check, so every case
+// answered E-SIG and the assertions passed without ever reaching the claim — a test aimed beside its own
+// subject. Sealing with the corpus key is what lets the root rule speak at all.
+{
+  const many = Array.from({ length: 120 }, (_, i) => 'sha256:' + (i + 1).toString(16).padStart(2, '0').repeat(32));
+  const cid = { domain_shard: 'e.com', ust_id: 'ust:20260802.04', key_id: A.key_id };
+  const ct = { generated_at: '2026-08-02T05:00:00Z', valid_from: '2026-08-02T05:00:00Z', valid_to: '2026-08-02T05:00:00Z' };
+  const sealed = (st) => P.seal(st, A.priv, A.pubB64);
+
+  const commit = P.buildAnchorCommitment(cid, ct, P.merkleRoot(many), 'sha256:' + 'bb'.repeat(32), { substrate: 'git', from: 'ust:20260802.04', to: 'ust:20260802.04' });
+  check('F.5u a commitment over 120 leaves carries NO constituents — it does not enumerate, so the breadth law never applies to it and no composition is needed at any N',
+    commit.provenance.constituents === undefined && commit.provenance.root !== undefined);
+  const vCommit = P.verify(sealed(commit), { context: 'data' });
+  check('F.5u and a 120-leaf commitment is not refused for its SIZE — the leaf count is not an input to any check the document faces',
+    vCommit.error !== 'E-ROOT' && vCommit.error !== 'E-BOUNDS');
+
+  const foreign = P.buildAnchorCommitment(cid, ct, 'sha256:' + 'cd'.repeat(32), 'sha256:' + 'bb'.repeat(32), { substrate: 'git', from: 'ust:20260802.04', to: 'ust:20260802.04' });
+  check('F.5u a root computed by a FOREIGN tree is admitted in a commitment — there is no enumeration to recompute against, which is where an operator running RFC 6962 fits with no protocol change',
+    P.verify(sealed(foreign), { context: 'data' }).error !== 'E-ROOT');
+
+  // THE OTHER SIDE OF THE SAME LINE, adversarial: a document that DOES enumerate is bound to the bundled tree,
+  // because the verifier holds both halves and recomputes. Signed genuinely, so the root rule is what answers.
+  const seal4 = P.buildAttestation(cid, ct, { x: { kind: 'computed', value: 'y' } }, many.slice(0, 4));
+  check('F.5u a SET whose root MATCHES its constituents under the bundled tree is admitted — the control, so the refusal below is the root rule speaking and not the shape',
+    P.verify(sealed(seal4), { context: 'data' }).error !== 'E-ROOT');
+  const tampered = { ...seal4, provenance: { ...seal4.provenance, root: 'sha256:' + 'cd'.repeat(32) } };
+  check('F.5u ADVERSARIAL a SET that enumerates may NOT bring its own tree — the verifier recomputes from the constituents it was given and answers E-ROOT, so tree freedom is a property of NOT enumerating rather than a general permission',
+    P.verify(sealed(tampered), { context: 'data' }).error === 'E-ROOT');
+}
+
 // ── F.9.5-c.1 — compositionality is a property of the TREE, not of this protocol. The bundled §7 tree sorts
 // globally and does NOT compose; the RFC 6962 tree the reference operator runs DOES, at a power-of-two split.
 // Both are admissible because §11.2 inclusion is a connector — so a claim about "the root" must name its tree.
