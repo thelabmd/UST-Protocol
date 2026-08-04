@@ -1202,6 +1202,14 @@
       "code": "packages/ust-protocol/index.mjs :: classifyNamed + nameSetReport — four outcomes, total at the directory-walk seam; packages/ust-cli/index.mjs :: cmdNames points them at an operator's set offline; tools/protocol-name-gate.mjs now CALLS the export instead of holding its own copy",
       "vector": "name-set-01-labelled-non-document-in-a-set-is-reported",
       "test": "#117 F.5t-a examining NOTHING is not a pass — an empty target set is its own outcome, never folded into compliance"
+    },
+    {
+      "round": 167,
+      "math": "F.5t-a The obligation is a property of a SET, and a verifier is a function of ONE document",
+      "spec": "therefore MUST expose the classification as an operation a publisher can run over its own published set, not",
+      "code": "packages/ust-cli/index.mjs :: collectArtifacts admits every file and applies a REPORTED size bound; packages/ust-protocol/index.mjs :: classifyNamed judges a parsed artifact from its top level and reserves the byte scan for the unparseable",
+      "vector": "name-set-06-a-parsed-array-makes-no-top-level-claim",
+      "test": "tools/protocol-name-gate.mjs"
     }
   ],
   "first_accounted_round": 76,

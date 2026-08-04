@@ -9661,6 +9661,23 @@
      "truncated"
     ]
    }
+  },
+  {
+   "id": "name-set-06-a-parsed-array-makes-no-top-level-claim",
+   "kind": "name_set",
+   "rule": "F.5t-a A parsed artifact is judged from its TOP LEVEL and nothing else. A served list — a key log, an index — has no top level to make the claim with, and a marker inside one of its entries is not the list claiming it. The byte scan exists only where there IS no top level",
+   "input": {
+    "entries": [
+     {
+      "id": "served-keylog",
+      "raw": "[{\"ust\":\"1.0\",\"state\":{\"id\":{\"class\":\"key_log\"}},\"sig\":{\"alg\":\"Ed25519\"}}]"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "NONE_WEAR_THE_NAME",
+    "violations": []
+   }
   }
  ]
 }

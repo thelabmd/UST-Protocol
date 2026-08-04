@@ -21,6 +21,21 @@ const corpora = [];
 const check = (ok, msg) => { if (ok) pass++; else fail.push(msg); };
 
 const files = execFileSync('git', ['ls-files', '*.json'], { cwd: ROOT, encoding: 'utf8' }).split('\n').filter(Boolean);
+
+// F.5t-a, MEASURED on a live mirror the hour the sweep shipped — THE OPERATOR-FACING WALK MAY NOT FILTER BY FILE
+// NAME. `ust names` collected `*.json` only, and the three artifacts that ARE documents in that mirror are served
+// EXTENSIONLESS at their well-known paths: the filter walked past every conforming member and reported on the
+// rest. A filter by name is a directory list wearing a different hat, and this theorem is about not sampling the
+// set. Asserted from the CLI SOURCE, because the defect is in which files reach the predicate, not in the predicate.
+{
+  const cli = readFileSync(ROOT + 'packages/ust-cli/index.mjs', 'utf8');
+  const walk = cli.slice(cli.indexOf('function collectArtifacts'), cli.indexOf('async function cmdNames'));
+  check(walk.length > 100, 'the name sweep\'s walk was not found in the CLI source — this leg would pass vacuously');
+  check(!/\.(json|ust)\$?\/i?\.test\(target\)/.test(walk) && !/endsWith\(['"]\.json/.test(walk),
+    'the operator-facing name sweep filters candidates by FILE NAME — the artifacts that are documents are served extensionless, so a name filter reports on everything except the conforming members');
+  check(/st\.size >/.test(walk), 'the walk applies no size bound — a large binary turns an enumeration into an unbounded read');
+  check(/budget\.oversize/.test(walk), 'a size bound is applied and not RECORDED — a silently skipped file is a member the report counted as absent rather than as unexamined');
+}
 const CLAIMS = /"protocol"\s*:\s*"UST"|"ust"\s*:\s*"1\./;
 
 for (const rel of files) {

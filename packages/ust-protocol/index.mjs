@@ -3217,17 +3217,20 @@ const NAME_IN_BYTES = /"protocol"\s*:\s*"UST"|"ust"\s*:\s*"\d+\.\d+"/;
 export function classifyNamed(raw) {
   let doc = null, parsed = false;
   try { doc = JSON.parse(typeof raw === 'string' ? raw : new TextDecoder().decode(raw)); parsed = true; } catch { /* unparseable is a RESULT here, not an error */ }
-  const top = parsed && doc && typeof doc === 'object' && !Array.isArray(doc) ? doc : null;
-  // Parsed artifacts are judged from the TOP LEVEL, never from a byte window: a nested payload that merely
-  // mentions the name is not making the claim, and a 4 KB window would both miss late claims and invent early ones.
-  let wears;
-  try { wears = top ? (top.protocol === 'UST' || typeof top.ust === 'string') : NAME_IN_BYTES.test(String(raw)); }
-  catch { wears = true; }   // a value whose String() throws is unreadable AND named-by-suspicion: fail CLOSED
-  if (!wears) return { wears: false, status: 'unnamed' };
-  // FAIL CLOSED from here: the question is "is this safe to publish under the name", so an artifact that cannot
-  // be read is reported, never skipped. A consumer meeting it gets E-MALFORMED — exactly F.5t's subject.
-  if (!parsed) return { wears: true, status: 'named_non_document', why: 'wears the name and is not parseable JSON' };
-  if (!top) return { wears: true, status: 'named_non_document', why: 'wears the name and is not a JSON object' };
+  // A PARSED artifact is judged from its top level and from nothing else. The byte scan exists only for the
+  // case where there IS no top level — an artifact that cannot be parsed, where the bytes are all that can
+  // speak. Measured on a live mirror: routing parsed ARRAYS to the byte scan flagged a served key-log, whose
+  // top level is a list making no claim at all, on the strength of a marker inside one of its entries. A
+  // nested payload that merely mentions the name is not the one making the claim.
+  if (!parsed) {
+    // FAIL CLOSED: the question is "is this safe to publish under the name", so an artifact that wears it and
+    // cannot be read is reported, never skipped — a consumer meeting it gets E-MALFORMED, F.5t's whole subject.
+    let named; try { named = NAME_IN_BYTES.test(String(raw)); } catch { named = true; }   // a value whose String() throws is unreadable AND named-by-suspicion
+    return named ? { wears: true, status: 'named_non_document', why: 'wears the name and is not parseable JSON' } : { wears: false, status: 'unnamed' };
+  }
+  const top = doc && typeof doc === 'object' && !Array.isArray(doc) ? doc : null;
+  if (!top) return { wears: false, status: 'unnamed' };   // an array or a scalar has no top level to make the claim with
+  if (!(top.protocol === 'UST' || typeof top.ust === 'string')) return { wears: false, status: 'unnamed' };
   const missing = ['ust', 'state', 'sig'].filter((k) => !(k in top));
   if (missing.length) return { wears: true, status: 'named_non_document', why: `wears the name and has no ${missing.join('/')} — a consumer applying the verifier gets E-MALFORMED, the signal of a damaged document` };
   return { wears: true, status: 'document' };

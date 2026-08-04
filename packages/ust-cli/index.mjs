@@ -1658,15 +1658,25 @@ async function cmdCanon() {
 // procedure to none of them. This is that procedure, and it is deliberately OFFLINE: whether a named document
 // also VERIFIES is a different question that needs its publisher's genesis, and answering both in one verdict
 // would rebuild the conflation F.5t exists to remove.
-function collectJson(target, out, budget) {
+// EVERY FILE, NOT EVERY `*.json`. Measured on a live mirror the hour this shipped: the three artifacts that ARE
+// documents there — `ust-genesis`, `ust-keylog`, `ust-witness` — are served extensionless at their well-known
+// paths, so an extension filter walked past the only conforming members of the set and reported on the rest. A
+// filter by file name is a directory list wearing a different hat, and this whole theorem is about not sampling
+// the set. The one bound kept is a SIZE cap, because a walk must not be turned into an unbounded read by a large
+// binary — and it is REPORTED rather than applied silently, the same way §13 refuses an over-budget transport
+// input instead of quietly truncating it.
+const NAME_SWEEP_MAX_BYTES = 4 << 20;
+
+function collectArtifacts(target, out, budget) {
   if (out.length >= budget.max) return;
   let st; try { st = statSync(target); } catch { budget.unreadable.push(target); return; }
   if (st.isDirectory()) {
     let names; try { names = readdirSync(target); } catch { budget.unreadable.push(target); return; }
-    for (const n of names.sort()) collectJson(target.replace(/\/$/, '') + '/' + n, out, budget);
+    for (const n of names.sort()) collectArtifacts(target.replace(/\/$/, '') + '/' + n, out, budget);
     return;
   }
-  if (!/\.json$/i.test(target)) return;
+  if (!st.isFile()) return;
+  if (st.size > NAME_SWEEP_MAX_BYTES) { budget.oversize.push(target); return; }
   let raw; try { raw = readFileSync(target, 'utf8'); } catch { budget.unreadable.push(target); return; }
   out.push({ id: target, raw });
 }
@@ -1674,13 +1684,14 @@ function collectJson(target, out, budget) {
 async function cmdNames() {
   const paths = positionals(process.argv.slice(3), NAMES_VALUE_FLAGS);
   if (!paths.length) die('usage: ust names <dir|file…>   # does anything you publish wear the protocol name without being a document of it? (offline)');
-  const budget = { max: 200_000, unreadable: [] };
+  const budget = { max: 200_000, unreadable: [], oversize: [] };
   const entries = [];
-  for (const p of paths) collectJson(p, entries, budget);
+  for (const p of paths) collectArtifacts(p, entries, budget);
   const r = P.nameSetReport(entries);
 
-  console.log(`\n  examined ${r.examined} JSON artifact(s) under ${paths.length} path(s) — ${r.named} wear the protocol name, ${r.documents} of those are documents`);
+  console.log(`\n  examined ${r.examined} artifact(s) under ${paths.length} path(s) — ${r.named} wear the protocol name, ${r.documents} of those are documents`);
   if (budget.unreadable.length) console.log(`  ⚠️  ${budget.unreadable.length} path(s) could not be read and are NOT part of the count above — a set you could not enumerate is not a set you have checked`);
+  if (budget.oversize.length) console.log(`  ⚠️  ${budget.oversize.length} file(s) exceed ${NAME_SWEEP_MAX_BYTES >> 20} MiB and were NOT read — a resource bound, reported rather than applied silently, and therefore not part of the count above`);
   if (r.violations.length) {
     console.log('');
     for (const v of r.violations.slice(0, 50)) console.log(`  ❌  ${v.id}\n      ${v.why}`);
@@ -1689,7 +1700,7 @@ async function cmdNames() {
   console.log('');
   // FOUR outcomes, never collapsed: examining nothing is the shape a wrong path takes, and reporting it as a
   // pass is how a mirror nobody looked at reads as a clean one.
-  if (r.outcome === 'NOTHING_EXAMINED') die('NOTHING EXAMINED — no .json artifact was found under those paths. This is not a pass; it is a question that was never asked.');
+  if (r.outcome === 'NOTHING_EXAMINED') die('NOTHING EXAMINED — no readable file was found under those paths. This is not a pass; it is a question that was never asked.');
   if (r.outcome === 'VIOLATIONS') die(`${r.violations.length} artifact(s) wear the protocol name without being documents of it (F.5t).\n  A consumer applying the verifier gets E-MALFORMED — the same observation a TRUNCATED or CORRUPTED document produces — so a benign file emits the signal of a broken transfer.\n  Two honest options, and no third: the artifact BECOMES a document of this protocol, or it stops carrying the name. "Carry the name and document the deviation" is not available — the label is read by machines that never read the documentation.`);
   if (r.outcome === 'NONE_WEAR_THE_NAME') console.log('  ✅  nothing under those paths claims the protocol name — no artifact instructs a machine to verify it\n');
   else console.log('  ✅  every artifact claiming the name is shaped as a document of this protocol\n      (this is the NAME question, answered offline; whether each one VERIFIES needs its publisher\'s genesis — `ust verify`)\n');

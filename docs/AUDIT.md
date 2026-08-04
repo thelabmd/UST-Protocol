@@ -144,14 +144,14 @@ residual risk, and what would you require before a `1.0.0` final tag?
 ## 9. What we have already done (so you go deeper, not sideways)
 
 - **Six adversarial red-team passes** on the v1.0 final form + four on the v0.29 predecessor — all self-review.
-- **201 deterministic conformance vectors** plus a behavioral conformance runner (**883 registered checks**), and the reference impl passes them (one known note: duplicate-key
+- **202 deterministic conformance vectors** plus a behavioral conformance runner (**884 registered checks**), and the reference impl passes them (one known note: duplicate-key
   rejection needs a raw-bytes JSON parser — `JSON.parse` collapses dups — a harness limitation, not an impl flaw).
 - **Two independent implementations** (`ust-protocol` node + a clean-room WebCrypto verifier in `docs/`) run
   side by side on every case of the parity suite and must agree on the verdict, including the tier: **13 cases,
   0 divergences** as of rev64. The previous wording claimed 32/32; that number came from an older harness and no
   longer corresponded to anything this tree runs, so it is replaced by what `npm run test:docs-parity` prints
   today. A count of independent agreements is the one number an auditor weighs most, and it was overstated.
-- **164 recorded rounds** in `CHANGELOG.md`, carrying the reference-checker from `rev3` to `rev91`. The adversarial
+- **165 recorded rounds** in `CHANGELOG.md`, carrying the reference-checker from `rev3` to `rev91`. The adversarial
   ones are folded in STRUCTURALLY rather than patched: each round that found something states the MECHANISM, not
   the instance, and closes it with a check that fails on the next instance of the same class. The round count and
   the revision range are both measurable from this tree; "how adversarial" is a judgement and is left to you.
