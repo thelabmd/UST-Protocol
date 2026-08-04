@@ -389,7 +389,7 @@ ${alert('IMPORTANT', FILL('one sentence a future reader can apply without this i
 
 ## § 8 &nbsp; Diary
 
-${tbl([['**SEALED**', diary || FILL('run `node tools/recap-render.mjs --issue ' + round + '` after sealing and paste its output — never type it; or state that the diary is the owner\'s to call')]])}
+${diary || FILL('run `node tools/recap-render.mjs --issue ' + round + '` after sealing and paste its output — never type it; or state that the diary is the owner\'s to call')}
 `,
 
   audit: () => `## Audit subject
