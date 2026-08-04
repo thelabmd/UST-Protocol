@@ -2506,7 +2506,7 @@ not be treated as deficient for it. **Nothing is owed where nothing was promised
 `no-rhythm-declared`: a settled state, never a pending one (F.5p's two facts, applied to the declaration
 itself rather than to what it describes).
 
-**Binding: realized (the CHAIN half)** — *"F.5q-c an hour INSIDE a daily commitment is covered — the granularity is READ from the window fields, so a coarser committer is not mistaken for a silent one, and no declaration is consulted"* · *"F.5q-c a window OUTSIDE every commitment is uncovered, and that is a different answer from the covered one — the ambiguity this dissolves is exactly these two being one observation"* · *"F.5q-c a MISSING window between two commitments is measurable in the chain alone — the discontinuity is a function of fields the documents carry, with nothing declared anywhere"* · *"F.5q-c an EMPTY chain answers `unknown`, never `uncovered` — a chain nobody supplied is not evidence that a window is unanchored"* · *"F.5q-c the coverage report is TOTAL — a chain fetched from a mirror is untrusted input, so hostile members yield a report rather than an exception"*.
+**Binding: realized (the CHAIN half; the DECLARATION member landed with F.5p.3)** — *"F.5q-c an hour INSIDE a daily commitment is covered — the granularity is READ from the window fields, so a coarser committer is not mistaken for a silent one, and no declaration is consulted"* · *"F.5q-c a window OUTSIDE every commitment is uncovered, and that is a different answer from the covered one — the ambiguity this dissolves is exactly these two being one observation"* · *"F.5q-c a MISSING window between two commitments is measurable in the chain alone — the discontinuity is a function of fields the documents carry, with nothing declared anywhere"* · *"F.5q-c an EMPTY chain answers `unknown`, never `uncovered` — a chain nobody supplied is not evidence that a window is unanchored"* · *"F.5q-c the coverage report is TOTAL — a chain fetched from a mirror is untrusted input, so hostile members yield a report rather than an exception"*.
 
 **The DECLARATION half is deliberately not built, and the residual is named rather than implied:** F.5q-d needs a
 clock, and a clock reached through an argument is a verdict-flip — it waits until it can be verifier-owned. The
@@ -2544,9 +2544,12 @@ needs no signature, and belongs with the substrate declaration.
 needs a rhythm finer than one declared sets its own floor (R2/R4); the protocol's job is to make the
 declaration and its absence DISTINGUISHABLE, never to require one.
 
-**Binding: pending — thelabmd/UST-Protocol#127.** Descends with F.5q-c; realized when the classification is exercised on both rhythms:
-the signed one refuses an unsigned change, the unsigned one is admitted from the profile and cannot raise any
-verdict.
+**Binding: realized** — *"F.5p.3 declaring a rhythm moves NOTHING else in the closed half — it can only add an obligation, never earn a verdict, so every other member reads exactly as it did undeclared"* · *"F.5p.3 a member the reader does not implement is still REFUSED — a binding key silently dropped is an obligation relocated into a channel no verifier reads"* · *"F.5p.3 and the refusal NAMES the reader as the party whose reach ran out, not the publisher — a ruleset this build lacks is outside the sentence a finding against the operator makes"* · *"F.5p.3 ADVERSARIAL a MALFORMED KNOWN member is still the publisher's — the attribution splits on whether the reader lacks the rule, never on the mere fact of a refusal"*.
+
+**The attribution half was a live defect and is recorded as one.** MEASURED before this round: an unknown member
+of the closed half reported `fail` against the OPERATOR, so the first publisher to declare a newer member would
+be called broken by every older reader — round 165's finding, one surface over, on the surface whose whole
+purpose is to be extended.
 
 **Conformance (math ⇒ spec ⇒ code ⇒ green vector, once realized).**
 - an unsigned stream-cadence change is REFUSED, and the signed one resolves;

@@ -180,6 +180,19 @@ for (const v of V.vectors) {
     // whole point: the obligation quantifies over what an operator publishes and no per-document verdict reaches
     // it. `document: true` splices in the corpus's REAL sealed transcript rather than a stub, for the same reason
     // the version case re-marks a real document — a stub would test our idea of "is a document", not the predicate.
+    // F.5p.3 / F.5q-c — the DECLARATION, at vector granularity: the floor, the declared value, and WHOSE gap a
+    // refusal names. `attributed: null` in a vector asserts the field is ABSENT, i.e. the publisher's.
+    case 'profile_rhythm': {
+      const r = P.parseProfile(v.input.profile);
+      const e = v.expect;
+      let ok = true;
+      if (e.error === null) ok = ok && r.error === undefined;
+      else if (e.error !== undefined) ok = ok && r.error === e.error;
+      if (Object.hasOwn(e, 'commitment_rhythm')) ok = ok && r.commitment_rhythm === e.commitment_rhythm;
+      if (Object.hasOwn(e, 'attributed')) ok = ok && (e.attributed === null ? r.attributed === undefined : r.attributed === e.attributed);
+      check(v.id, ok);
+      break;
+    }
     // F.5q-c — the WINDOW family, at vector granularity. The chain is built from the declared windows so the
     // corpus stays language-neutral: any implementation constructs the same commitments from the same fields.
     case 'commitment_coverage': {
@@ -3289,6 +3302,33 @@ console.log('  ust-protocol ' + P.VERSION.spec + ' conformance vs ' + V.version)
   const vF = P.verify(tampered, { context: 'data' });
   check('#115 F.5t and it IS distinguishable from FORGERY — a tampered document answers E-CANON, so the theorem is stated at the strength the measurement supports and no further',
     vF.error === 'E-CANON' && vF.error !== vL.error);
+}
+
+// ── F.5q-c / F.5p.3 — the DECLARATION half. A rhythm is a CAPABILITY: absent is a SETTLED floor, not a pending
+// state, because an event-driven publisher promised nothing and nothing is owed where nothing was promised.
+{
+  const floor = P.parseProfile({ summary: 'an event-driven publisher' });
+  const declared = P.parseProfile({ declares: { commitment_rhythm: '3600' } });
+  check('F.5q-c a publisher that declares NO rhythm is a settled floor, not an error — a business stream whose commitments follow occurrences rather than a clock is not deficient for having no clock',
+    floor.error === undefined && floor.commitment_rhythm === null);
+  check('F.5q-c a declared rhythm is DISTINGUISHABLE from an undeclared one — the two facts F.5p separates, applied to the declaration itself rather than to what it describes',
+    declared.commitment_rhythm === '3600' && declared.commitment_rhythm !== floor.commitment_rhythm);
+  check('F.5p.3 declaring a rhythm moves NOTHING else in the closed half — it can only add an obligation, never earn a verdict, so every other member reads exactly as it did undeclared',
+    JSON.stringify(declared.serves) === JSON.stringify(floor.serves) && JSON.stringify(declared.copies) === JSON.stringify(floor.copies) && JSON.stringify(declared.substrates) === JSON.stringify(floor.substrates));
+  const unreadable = P.parseProfile({ declares: { commitment_rhythm: 'often' } });
+  check('F.5q-c an UNREADABLE rhythm is refused, never rounded down to the floor — the floor means the publisher promised nothing, and this one promised something a reader cannot honour',
+    unreadable.error === 'E-DISCOVERY');
+
+  // WHOSE GAP IT IS. Measured before this round: an unknown member reported `fail` on the operator, so the first
+  // publisher to declare something newer would be called broken by every older reader — round 165's defect one
+  // surface over.
+  const newer = P.parseProfile({ declares: { a_member_from_a_later_version: 'x' } });
+  check('F.5p.3 a member the reader does not implement is still REFUSED — a binding key silently dropped is an obligation relocated into a channel no verifier reads',
+    newer.error === 'E-DISCOVERY');
+  check('F.5p.3 and the refusal NAMES the reader as the party whose reach ran out, not the publisher — a ruleset this build lacks is outside the sentence a finding against the operator makes',
+    newer.attributed === 'verifier' && newer.unsupported.includes('a_member_from_a_later_version'));
+  check('F.5p.3 ADVERSARIAL a MALFORMED KNOWN member is still the publisher\'s — the attribution splits on whether the reader lacks the rule, never on the mere fact of a refusal',
+    unreadable.attributed === undefined);
 }
 
 // ── F.5q-c — the WINDOW family. F.5q asks about substrates for a FIXED window; this asks which windows exist

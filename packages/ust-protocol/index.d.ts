@@ -104,7 +104,7 @@ export function nameSetReport(entries: unknown): { outcome: unknown; examined: u
 export function noEventBacking(claimWindow: unknown, streamResult: unknown, frames: unknown): string;
 export function noForkClaim(arg0: unknown): { purpose: unknown; domain_shard: unknown; active_genesis: unknown };
 export function parseCadenceInt(s: unknown): unknown;
-export function parseProfile(profile: unknown): Record<string, unknown>;
+export function parseProfile(profile: unknown): { unsupported: unknown; attributed: unknown };
 export function partitionHash(arg0: unknown): unknown;
 export const PREV_ONLY_SUBTYPES: readonly ['checkpoint', 'gap', 'anchor'];
 export function projectTier(state: unknown): string;

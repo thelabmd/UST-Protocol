@@ -2103,11 +2103,35 @@ verifier's version does not define (formal model F.5p.1). So:
   member carries an obligation, and a member name this verifier does not recognise is REFUSED (`E-DISCOVERY` —
   the domain's own code, as a key log answers `E-KEY` for an unknown `op`), not ignored. Members: `serves`
   (optional surfaces, below), `substrates` (anchoring, below), `copies` (companion copies, §20.1) — each an
-  array, each absent meaning declares-nothing rather than declares-empty. A profile carrying an unreadable
+  array, each absent meaning declares-nothing rather than declares-empty — and `commitment_rhythm` (below).
+  **That refusal MUST name the READER as the party whose reach ran out.** `unknown` means exactly that this
+  verifier's version does not define the key, which is the RULESET term of §14/R2 — the same line §19 draws for
+  the version marker. A refusal reported as a finding against the operator would call the first publisher to
+  declare a newer member broken, and send the consumer to debug the wrong party. A MALFORMED member this
+  verifier DOES define is the publisher's, and is reported as such: the attribution splits on whether the reader
+  holds the rule, never on the mere fact of a refusal. A profile carrying an unreadable
   `declares` is UNREADABLE, which §20.1 already separates from absent: an absent profile declares nothing and is
   the honest floor, while one that is served and cannot be honoured is a promise a verifier must not guess at.
 - **everything else at the top level** — the OPEN half. Operator prose: summary, custody, commercial terms,
   links, read paths. It binds nothing, no verifier checks it, and an unrecognised key here is IGNORED.
+
+**`commitment_rhythm` — a CAPABILITY, and its absence is settled.** A publisher MAY declare, as a positive
+integer number of seconds in a §5 string, the rhythm at which it publishes anchor commitments. It buys exactly
+one thing a consumer cannot otherwise obtain: whether a commitment is OWED NOW. It buys nothing below that —
+which windows are COVERED and where the sequence has a GAP are computed from the commitments themselves, since
+each carries its window as `from`/`to` in `ust_id` terms and the sequence is `prev`-chained (§11.3, formal model
+F.5q-c). A verifier MUST NOT require it, and MUST NOT lower any verdict for its absence: **an absent rhythm is a
+publisher that promised none, and nothing is owed where nothing was promised.** An event-driven publisher — a
+business stream whose commitments follow occurrences rather than a clock — is the ordinary case, not a deficient
+one. A declared rhythm that cannot be READ is refused (`E-DISCOVERY`) rather than treated as absent: the floor
+means *promised nothing*, and such a publisher promised something.
+
+It is UNSIGNED, and that follows a rule rather than a preference (formal model F.5p.3): **a declaration must be
+authenticated exactly when it can EARN a pass.** The §11.3 stream cadence decides the `complete` rung, so a
+publisher free to shrink that grid would declare away the slots it missed — it is signed and `prev`-chained, and
+must be. A commitment rhythm is monotone in obligation: declaring a coarser one exposes the publisher to FEWER
+checks and grants no verdict, because a commitment that is present counts whether or not it was declared.
+Sufficiency is the CONSUMER's floor (§14), never the protocol's coercion.
 
 The boundary is a POSITION and never a naming convention. A prefix or suffix rule would put the choice of whether
 a statement binds into the hands of the party the statement is about, which is the self-declaration §12.1 and

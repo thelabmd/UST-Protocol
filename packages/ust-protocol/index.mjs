@@ -1458,10 +1458,18 @@ export function explainLadder(doc, opts = {}) {
 //
 // This function returns the CLOSED half and nothing else. Handing a verifier the prose alongside it is how a
 // later surface starts reading a field that binds nothing.
-const PROFILE_DECLARES = deepFreeze(['serves', 'substrates', 'copies']);              // CLOSED — extending it is a spec change
+const PROFILE_DECLARES = deepFreeze(['serves', 'substrates', 'copies', 'commitment_rhythm']);   // CLOSED — extending it is a spec change
+// `commitment_rhythm` and NOT `cadence`: the §11.3 stream cadence is a DIFFERENT mechanism under a name that
+// would have collided — signed, prev-chained, and load-bearing for `complete`, because a publisher free to shrink
+// that grid would declare away the slots it missed. This one is monotone in obligation (F.5p.3): declaring a
+// coarser rhythm exposes the publisher to FEWER checks and grants no verdict, since a commitment that is present
+// counts whether or not it was declared. So it needs no signature and lives here, beside the substrates.
+// ABSENT is the floor and it is SETTLED, never pending: an event-driven publisher — a business stream whose
+// commitments follow occurrences rather than a clock — promised no rhythm, and nothing is owed where nothing was
+// promised. It is not a deficiency and must not read as one.
 const COPY_FIELDS = deepFreeze(['artifact', 'url']);
 const COPY_ARTIFACTS = deepFreeze(['genesis', 'keylog', 'cadence', 'witness']);
-const EMPTY_DECLARES = deepFreeze({ serves: deepFreeze([]), substrates: deepFreeze([]), copies: deepFreeze([]) });
+const EMPTY_DECLARES = deepFreeze({ serves: deepFreeze([]), substrates: deepFreeze([]), copies: deepFreeze([]), commitment_rhythm: null });
 export function parseProfile(profile) {
   const bad = (error, detail) => ({ error, detail });
   // TOTAL by construction. The input is UNTRUSTED wire — a profile fetched from the very domain whose claims are
@@ -1476,15 +1484,32 @@ export function parseProfile(profile) {
   const d = profile.declares;
   if (typeof d !== 'object' || d === null || Array.isArray(d))
     return bad('E-DISCOVERY', '`declares` must be an object — the closed half of the profile');
-  for (const k of Object.keys(d))
-    if (!PROFILE_DECLARES.includes(k))
-      return bad('E-DISCOVERY', 'unknown member of `declares`: ' + k + ' — a binding key this version does not define is refused, never dropped');
-  const out = { serves: [], substrates: [], copies: [] };
+  // AN UNKNOWN BINDING MEMBER IS REFUSED — AND THE REFUSAL NAMES WHOSE GAP IT IS. Dropping it is forbidden
+  // (F.5p.1: a binding key silently ignored is an obligation relocated into a channel no verifier reads), but
+  // the refusal is NOT a finding about the publisher. `unknown` means exactly that the version this reader
+  // implements does not define the key, which is the ruleset term of R2 — the same line round 165 drew for the
+  // version marker: INVALID means MY rules were violated, and a ruleset I lack is outside that sentence.
+  // MEASURED before this: the profile check reported `fail` on the operator, so the first publisher to declare a
+  // newer member would be called broken by every older reader, and the consumer sent to debug the wrong party.
+  // `unsupported` is ADDITIVE — a consumer that ignores it refuses exactly as before.
+  const unsupported = Object.keys(d).filter((k) => !PROFILE_DECLARES.includes(k));
+  if (unsupported.length)
+    return { ...bad('E-DISCOVERY', 'member(s) of `declares` this reader does not implement: ' + unsupported.join(', ') + ' — refused rather than dropped, because a binding key ignored is an obligation relocated out of sight. This is the READER\'s reach, not a defect in the profile'), unsupported: deepFreeze([...unsupported]), attributed: 'verifier' };
+  const out = { serves: [], substrates: [], copies: [], commitment_rhythm: null };
   for (const k of ['serves', 'substrates']) {
     if (!Object.hasOwn(d, k)) continue;
     if (!Array.isArray(d[k]) || d[k].some((x) => typeof x !== 'string'))
       return bad('E-DISCOVERY', '`declares.' + k + '` must be an array of names');
     out[k] = [...d[k]];
+  }
+  if (Object.hasOwn(d, 'commitment_rhythm')) {
+    // SECONDS, as a §5 string like every other declared value. A rhythm that cannot be READ is not a weaker
+    // declaration than none — it is a served statement a verifier cannot honour, so it is refused rather than
+    // rounded down to the floor: the floor means «promised nothing», and this publisher promised something.
+    const r = d.commitment_rhythm;
+    if (typeof r !== 'string' || !/^[1-9][0-9]{0,7}$/.test(r))
+      return bad('E-DISCOVERY', '`declares.commitment_rhythm` must be a positive integer number of seconds as a string — an unreadable rhythm is not the same as an undeclared one');
+    out.commitment_rhythm = r;
   }
   if (Object.hasOwn(d, 'copies')) {
     if (!Array.isArray(d.copies)) return bad('E-DISCOVERY', '`declares.copies` must be an array');
@@ -1504,7 +1529,7 @@ export function parseProfile(profile) {
       out.copies.push(deepFreeze({ artifact: c.artifact, url: c.url }));
     }
   }
-  return deepFreeze({ serves: deepFreeze(out.serves), substrates: deepFreeze(out.substrates), copies: deepFreeze(out.copies) });
+  return deepFreeze({ serves: deepFreeze(out.serves), substrates: deepFreeze(out.substrates), copies: deepFreeze(out.copies), commitment_rhythm: out.commitment_rhythm });
   } catch { return bad('E-DISCOVERY', 'profile is not readable as a plain object'); }
 }
 

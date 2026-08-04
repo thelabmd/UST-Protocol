@@ -9775,6 +9775,83 @@
     "status": "unknown",
     "gaps": 0
    }
+  },
+  {
+   "id": "rhythm-01-undeclared-is-a-settled-floor",
+   "kind": "profile_rhythm",
+   "rule": "F.5q-c A rhythm is a CAPABILITY. A publisher that declares none promised none, and nothing is owed where nothing was promised — an event-driven stream is the ordinary case, not a deficient one",
+   "input": {
+    "profile": {
+     "summary": "an event-driven publisher"
+    }
+   },
+   "expect": {
+    "error": null,
+    "commitment_rhythm": null
+   }
+  },
+  {
+   "id": "rhythm-02-declared-is-distinguishable-from-undeclared",
+   "kind": "profile_rhythm",
+   "rule": "F.5q-c The two facts F.5p separates, applied to the declaration itself: declared-and-silent must not read like never-promised",
+   "input": {
+    "profile": {
+     "declares": {
+      "commitment_rhythm": "3600"
+     }
+    }
+   },
+   "expect": {
+    "error": null,
+    "commitment_rhythm": "3600"
+   }
+  },
+  {
+   "id": "rhythm-03-unreadable-is-refused-not-floored",
+   "kind": "profile_rhythm",
+   "rule": "F.5q-c The floor means the publisher promised NOTHING; a rhythm a reader cannot honour is a publisher that promised something, so it is refused rather than rounded down",
+   "input": {
+    "profile": {
+     "declares": {
+      "commitment_rhythm": "often"
+     }
+    }
+   },
+   "expect": {
+    "error": "E-DISCOVERY"
+   }
+  },
+  {
+   "id": "rhythm-04-an-unimplemented-member-is-the-readers-gap",
+   "kind": "profile_rhythm",
+   "rule": "F.5p.3 A member this verifier's version does not define is the RULESET term of R2: refused rather than dropped, and attributed to the READER — otherwise the first publisher to declare a newer member is called broken by every older reader",
+   "input": {
+    "profile": {
+     "declares": {
+      "a_member_from_a_later_version": "x"
+     }
+    }
+   },
+   "expect": {
+    "error": "E-DISCOVERY",
+    "attributed": "verifier"
+   }
+  },
+  {
+   "id": "rhythm-05-a-malformed-known-member-stays-the-publishers",
+   "kind": "profile_rhythm",
+   "rule": "F.5p.3 ADVERSARIAL The attribution splits on whether the reader HOLDS the rule, never on the mere fact of a refusal",
+   "input": {
+    "profile": {
+     "declares": {
+      "copies": "not-an-array"
+     }
+    }
+   },
+   "expect": {
+    "error": "E-DISCOVERY",
+    "attributed": null
+   }
   }
  ]
 }

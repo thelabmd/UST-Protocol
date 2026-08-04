@@ -1053,7 +1053,15 @@ export async function attestDiscovery({ domain, mirrors = [], expectHash = null,
       // is how the closed half and the tool's idea of it drift, which is the defect this round exists to close.
       const d = P.parseProfile(prof);
       if (d.error) {
+        // WHOSE gap is it. A member this reader does not implement is the READER's reach — reporting it as the
+        // publisher's failure is the round-165 defect one surface over: a healthy operator declaring something
+        // newer would be called broken, and the consumer sent to debug the wrong party. A MALFORMED known member
+        // is still the publisher's, and stays a failure.
+        if (d.attributed === 'verifier') {
+          checks.push({ id: 'operator profile (§20)', informational: true, status: 'skip', detail: `not evaluated: this build does not implement \`declares.${d.unsupported.join('`, `')}\`. The profile is refused rather than partly honoured — a binding member ignored is an obligation nobody checks — but nothing here is a finding about the operator. Upgrade the reader to evaluate it` });
+        } else {
         checks.push({ id: 'operator profile (§20)', informational: true, status: 'fail', detail: `${d.error} — ${d.detail}. A profile that is SERVED and cannot be honoured is not an absent one; a verifier must not guess which member it was meant to ignore` });
+        }
       } else {
       declaredSurfaces = new Set(d.serves);
       declaredCopies = d.copies;
