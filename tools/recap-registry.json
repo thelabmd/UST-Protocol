@@ -377,12 +377,13 @@
     {
       "round": 164,
       "issue": 138,
-      "no_recap": "The round STATES a contract; #138 is where it becomes behaviour, and it is open. Writing a recap now would report a promise as if it were a property — the exact gap between saying and doing that the second rule itself is about. Owed when a future minor is answered with an unattempted axis rather than E-MALFORMED."
+      "no_recap": "The condition this record named — owed when a future minor is answered with an unattempted axis rather than E-MALFORMED — was MET by round 165, which is where the stated contract became behaviour. Both rounds close one issue, and the unit is the CLOSED ISSUE: #138 receives one recap, rendered from round 165's sealed entry. A second entry here would be a second diary moment invented for one moment of work."
     },
     {
       "round": 165,
       "issue": 138,
-      "no_recap": "The REPORT is published in #138 in full lab form — header table, CAUTION/NOTE/IMPORTANT alerts, seven full-width tables and two diagrams, one of them the inverse of the other. What this field records is the DIARY half being absent: the diarium is sealed only when the owner invokes /ustrecap, and sealing one unbidden would point this registry at an entry nobody asked for. Replace this entry with a content_hash when the diary is called."
+      "content_hash": "sha256:5b0097b66f1416313a1bd9916b1b19de9c37a0deee5f2b89352debeb14d8894f",
+      "_note": "This recap carries BOTH rounds of #138 — 164 stated the contract, 165 made it behaviour — because the recipient is the closed issue, not the round."
     }
   ]
 }
