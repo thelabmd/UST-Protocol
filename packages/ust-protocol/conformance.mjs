@@ -135,6 +135,8 @@ for (const v of V.vectors) {
       if (e.consumer_terms !== undefined) ok = ok && consumerTerms === e.consumer_terms;
       if (e.absent_has_nofork !== undefined) ok = ok && hasNoFork === e.absent_has_nofork;
       if (e.absent_has_genesis !== undefined) ok = ok && hasGenesis === e.absent_has_genesis;
+      if (e.identity_self_asserted !== undefined) ok = ok && (r.coordinates?.identity?.strength === 'self-asserted') === e.identity_self_asserted;
+      if (e.identity_mode !== undefined) ok = ok && r.coordinates?.identity?.mode === e.identity_mode;
       if (e.verdict_matches_verify !== undefined) ok = ok && r.verdict === P.verify(mk(), v.input.opts ?? {}).result;
       check(v.id, ok);
       break;

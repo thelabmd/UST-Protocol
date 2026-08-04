@@ -368,6 +368,11 @@
       "round": 162,
       "issue": 135,
       "no_recap": "Same reason as round 161, and it has not changed: a recap belongs to a CLOSED issue. What DID change is the reason the issue is open. It was “the reference operator does not serve the partition”; it now serves it, and `DISCOVERY CONFORMANCE §20.1: ATTESTED` is the first time that verdict has been reached here. What remains is the rest of the sweep — `ust mirror` does not yet WRITE the declaration, `anchorRollup` still receives its substrate list from the caller rather than from the profile, and the attestation-level vectors (declared-and-stale, declared-and-agreeing, declared-and-absent) are unwritten. A recap now would report a sweep as finished on the strength of its most visible leg."
+    },
+    {
+      "round": 163,
+      "issue": 137,
+      "no_recap": "A recap belongs to a CLOSED issue. #137 has its core, its CLI face and its vectors, and what remains is the part only an integrator can report back: whether the ladder names the barrier THEY were actually stuck on. Writing a recap now would close the loop on our own reading of a tool built to be read by someone else. It is owed when the first outside use either confirms the attribution column or corrects it."
     }
   ]
 }

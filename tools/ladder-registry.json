@@ -1166,6 +1166,14 @@
       "code": "packages/ust-cli/index.mjs :: query-robustness probes every served surface, and the profile route carries a wildcard",
       "vector": "profile-copy-locator-accepted",
       "test": "profile-copy-stray-field-refused"
+    },
+    {
+      "round": 163,
+      "math": "The ladder is REPORTABLE, and each rung names WHICH TERM of R2 its missing input belongs to",
+      "spec": "A rung the report did NOT ATTEMPT MUST be distinguishable from one it attempted and found met",
+      "code": "packages/ust-protocol/index.mjs :: explainLadder reports coordinates and the inputs never supplied, each with its R2 term",
+      "vector": "ladder-02-consumer-faculty-never-attributed-to-publisher",
+      "test": "ladder-04-report-grants-nothing"
     }
   ],
   "first_accounted_round": 76,

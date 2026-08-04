@@ -9477,6 +9477,19 @@
       "expect": {
         "verdict_matches_verify": true
       }
+    },
+    {
+      "id": "ladder-05-key-form-identity-is-nobodys-to-raise",
+      "kind": "ladder",
+      "rule": "S14.1/F.5.1c a rung NOBODY can move is not a rung merely unmet: a key-form document binds its name by construction, so no input from either party raises the identity axis — the report must not list one as if it would",
+      "input": {
+        "opts": {}
+      },
+      "expect": {
+        "identity_self_asserted": true,
+        "identity_mode": "key",
+        "verdict_matches_verify": true
+      }
     }
   ]
 }
