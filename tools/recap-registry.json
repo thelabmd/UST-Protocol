@@ -387,13 +387,15 @@
     },
     {
       "round": 166,
-      "issue": 117,
-      "no_recap": "A recap belongs to a CLOSED issue, and this round built the INSTRUMENT #117 needs rather than closing it: the 1070 artifacts still wear the name. What the round settled is that an operator can now ask the question at all — the count in that issue is two days old and was never re-measurable. The recap is owed when the artifacts either become documents under the §11.3 anchor subtype or stop carrying the name, which is the work #117 actually describes."
+      "no_recap": "A recap belongs to a CLOSED issue, and this round built the INSTRUMENT the reference operator’s own artifact-naming card, which lives in that operator’s private tracker needs rather than closing it: the 1070 artifacts still wear the name. What the round settled is that an operator can now ask the question at all — the count in that issue is two days old and was never re-measurable. The recap is owed when the artifacts either become documents under the §11.3 anchor subtype or stop carrying the name, which is the work the reference operator’s own artifact-naming card, which lives in that operator’s private tracker actually describes."
     },
     {
       "round": 167,
-      "issue": 117,
-      "no_recap": "Same recipient and same reason as round 166: this corrected the instrument rather than closing #117, and the 1046 artifacts still wear the name. A recap now would mark a self-inflicted defect found and fixed within the hour as the completion of the work the issue actually describes."
+      "no_recap": "Same recipient and same reason as round 166: this corrected the instrument rather than closing the reference operator’s own artifact-naming card, which lives in that operator’s private tracker, and the 1046 artifacts still wear the name. A recap now would mark a self-inflicted defect found and fixed within the hour as the completion of the work the issue actually describes."
+    },
+    {
+      "round": 168,
+      "no_recap": "The round closed no issue — it corrected a reference that rounds 166 and 167 had put into public artifacts, pointing readers at an unrelated closed card in this repository. A recap belongs to a closed issue, and cleaning up after myself is not one."
     }
   ]
 }

@@ -3285,34 +3285,34 @@ console.log('  ust-protocol ' + P.VERSION.spec + ' conformance vs ' + V.version)
   const unnamed = JSON.stringify({ note: 'claims nothing' });
 
   const dirty = P.nameSetReport([{ id: 'anchor', raw: anchor }, { id: 'doc', raw: realDoc }]);
-  check('#117 F.5t-a a labelled NON-DOCUMENT inside a target SET is REPORTED, and named BY ITS id — a tally without the offending member is a number an operator cannot act on',
+  check('F.5t-a a labelled NON-DOCUMENT inside a target SET is REPORTED, and named BY ITS id — a tally without the offending member is a number an operator cannot act on',
     dirty.outcome === 'VIOLATIONS' && dirty.violations.length === 1 && dirty.violations[0].id === 'anchor');
 
   const clean = P.nameSetReport([{ id: 'doc', raw: realDoc }]);
-  check('#117 F.5t-a a set whose named artifacts ARE documents is NOT reported — the rule forbids wearing the name without being a document, never wearing it',
+  check('F.5t-a a set whose named artifacts ARE documents is NOT reported — the rule forbids wearing the name without being a document, never wearing it',
     clean.outcome === 'COMPLIANT' && clean.violations.length === 0 && clean.named === 1);
 
   // THE VACUITY LEG, and the one that decides whether this tool can lie. A wrong path yields an empty set,
   // and an empty set satisfies a universal quantifier for free — reporting that as a pass is how a mirror
   // nobody looked at reads as a clean one (F.5p: absence is two facts, separated by one positive assertion).
   const nothing = P.nameSetReport([]);
-  check('#117 F.5t-a examining NOTHING is not a pass — an empty target set is its own outcome, never folded into compliance',
+  check('F.5t-a examining NOTHING is not a pass — an empty target set is its own outcome, never folded into compliance',
     nothing.outcome === 'NOTHING_EXAMINED' && nothing.outcome !== clean.outcome);
 
   const abstained = P.nameSetReport([{ id: 'plain', raw: unnamed }]);
-  check('#117 F.5t-a a set that examined artifacts and found NONE wearing the name is distinguishable from one that examined none — four outcomes, never three',
+  check('F.5t-a a set that examined artifacts and found NONE wearing the name is distinguishable from one that examined none — four outcomes, never three',
     abstained.outcome === 'NONE_WEAR_THE_NAME' && new Set([dirty.outcome, clean.outcome, nothing.outcome, abstained.outcome]).size === 4);
 
   // FAIL CLOSED: the question is "is this safe to publish under the name", so an artifact that cannot be READ
   // is reported rather than skipped — a consumer meeting it gets E-MALFORMED, which is F.5t's whole subject.
   const unreadable = P.nameSetReport([{ id: 'truncated', raw: '{"protocol":"UST","hour' }]);
-  check('#117 F.5t-a an artifact that wears the name and cannot be PARSED is reported, not skipped — an unreadable member is the case the rule is about, not an exemption from it',
+  check('F.5t-a an artifact that wears the name and cannot be PARSED is reported, not skipped — an unreadable member is the case the rule is about, not an exemption from it',
     unreadable.outcome === 'VIOLATIONS' && unreadable.violations.length === 1);
 
   // TOTALITY at the seam an operator will actually hit: a directory walk hands over whatever it found.
   let threw = false;
   try { P.nameSetReport([null, undefined, 42, { id: 7, raw: null }, { raw: Symbol('x') }]); } catch { threw = true; }
-  check('#117 F.5t-a the SET report is TOTAL — hostile or malformed entries yield a classification, never an exception, because the caller is a directory walk and not a curated list',
+  check('F.5t-a the SET report is TOTAL — hostile or malformed entries yield a classification, never an exception, because the caller is a directory walk and not a curated list',
     threw === false);
 }
 
