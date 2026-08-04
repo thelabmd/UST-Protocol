@@ -2392,8 +2392,16 @@ assertion tells a reader that `W` is alive. It says nothing about whether `W` is
 publisher and watcher are the same party it cannot: independence is not in `σ(bytes)` (F.5o), and a watcher
 announcing its own liveness is announcing exactly the property it is entitled to announce and no other.
 
-**Binding: none — definitional.** It states a discipline for observers, not a property of a UST document; no
-artifact verifies or falsifies it, and the obligation it creates falls on whoever builds the watcher.
+**Binding: pending — thelabmd/UST-Protocol#137.** An earlier draft marked this `none — definitional`, which was
+wrong and closed the section's path DOWNWARD. The rule is protocol mathematics CONSUMED BY AN OPERATOR, and it
+descends: a report that lists rungs must distinguish a rung CHECKED AND MET from one NOT ATTEMPTED, which is this
+section applied to the report rather than to a watcher. Silence about a rung is the same collapse — *nothing was
+wrong* and *nothing was asked* produce one blank, and a reader deciding whether to act cannot tell them apart.
+
+**Conformance (math ⇒ spec ⇒ code ⇒ green vector, once realized).**
+- a rung the report did not attempt is reported distinguishably from one it attempted and found met;
+- a watcher-shaped surface asserts observation POSITIVELY at least once; absence of an alarm never carries health;
+- the assertion adds an obligation on the observer and never raises the observed party's verdict (F.5.1).
 
 ## F.5q Darkness is a UNIVERSAL claim, so its domain must be declared (#120)
 
