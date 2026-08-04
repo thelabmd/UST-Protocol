@@ -1628,8 +1628,13 @@ State carries state and COMMITMENTS, never blobs: content-address the payload an
 bytes — a per-partition ciphertext cap keeps one encrypted shard from consuming the whole budget) scale with a
 publisher's legitimate data and are ceremony-declarable — floor / declared / ABS; STRUCTURE bounds (nesting
 depth, array length, breadth, per-call walk depth, key-log length) protect EVERY verifier's implementation
-regardless of trust and are absolute laws — their escapes are structural: chunking, attestation TREES
-(64² = 4096 in two levels), re-genesis epochs — never declarations. The DERIVATION of this law (volume vs structure as extensive vs
+regardless of trust and are absolute laws — their escapes are structural: chunking, attestation TREES,
+re-genesis epochs — never declarations. **State a structural escape by its CEILING, not by an example:** an
+attestation tree composes `⌈log₆₄ N⌉` levels for any `N`, expressible while that is `≤ 8`, so two levels reach
+`64² = 4096` and seven reach `64⁷` — above the ENTIRE second-precision `ust_id` space of `315 537 984 000`
+moments, with a ×892 margin and one depth level never used. A year at second precision is the fifth of eight
+levels. There is no window this protocol can address whose seal fails to compose, and quoting the two-level case
+alone has been read as the limit (formal model F.9.5-b, F.9.5-c). The DERIVATION of this law (volume vs structure as extensive vs
 control-structure metrics), the capacity algebra, and the calibration doctrine for the concrete numbers live in
 the formal model (F.9): *the model derives the law; benchmarks calibrate the constants.*
 

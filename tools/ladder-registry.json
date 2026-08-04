@@ -1236,6 +1236,16 @@
       "code": "packages/ust-protocol/index.mjs :: parseProfile refuses an unimplemented member and attributes it to the verifier; commitment_rhythm parses to a settled null floor; packages/ust-cli/index.mjs :: the profile check reads skip rather than fail",
       "vector": "rhythm-04-an-unimplemented-member-is-the-readers-gap",
       "test": "rhythm-05-a-malformed-known-member-stays-the-publishers"
+    },
+    {
+      "round": 171,
+      "math": "F.9.5-c The ROOT does not compose, so the ENUMERATION is what splits",
+      "spec": "**State a structural escape by its CEILING, not by an example:**",
+      "code": {
+        "excluded": "A presentation correction changes no behaviour: the depth law, the bounds and every verdict are byte-identical to round 170. What changed is which end of the range the normative text names first."
+      },
+      "vector": "depth-law-covers-whole-ustid-space",
+      "test": "breadth-flat-over-law-reject"
     }
   ],
   "first_accounted_round": 76,

@@ -3650,9 +3650,23 @@ beside it: the field was already carrying this meaning, and the theorem names wh
 
 **Corollary (the escape is general, and its limit is the depth law alone).** With enumeration splitting and one
 global root, a seal over `N` leaves needs `⌈log₆₄ N⌉` levels, expressible iff `≤ D_MAX = 8`. Nothing in the
-mechanism is specific to a window, a cadence, or an operator: `N = 120` (an hour at 30 s) and `N = 86 400` (a day
-at 1 s) are the same construction read at different `N`, which is the property F.9.5-b already proved for the
-whole addressing space.
+mechanism is specific to a window, a cadence, or an operator — the SAME construction is read at every `N`:
+
+| window | leaves | depth |
+|---|---|---|
+| hour @ 30 s | 120 | 2 |
+| day @ 1 s | 86 400 | 3 |
+| month @ 1 s | 2 592 000 | 4 |
+| **year @ 1 s** | 31 536 000 | **5** |
+| century @ 1 s | 3 153 600 000 | 6 |
+| millennium @ 1 s | 31 536 000 000 | 6 |
+| **the WHOLE addressable space** | **315 537 984 000** | **7** |
+
+**State the range by its CEILING, never by an example.** A reader shown the small end infers a small mechanism,
+and every figure above except the last is an illustration — the last is the theorem. The ceiling is `64⁸ =
+2.815 × 10¹⁴` leaves against an addressable space of `3.155 × 10¹¹`: a margin of ×892 with one depth level
+never used, because `ust_id` cannot name enough moments to reach it (F.9.5-b). A year is the FIFTH of eight
+levels, a millennium the sixth. There is no window this protocol can address whose seal does not compose.
 
 **Binding: pending — thelabmd/UST-Protocol#127.** Realized when a builder composes a seal over an arbitrary
 admissible `N`, a partial node carrying `root` is REFUSED, and inclusion against the single published root is
