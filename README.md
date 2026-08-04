@@ -8,11 +8,6 @@
 [![@ust-protocol/mcp](https://img.shields.io/npm/v/@ust-protocol/mcp?label=@ust-protocol/mcp)](https://www.npmjs.com/package/@ust-protocol/mcp) [![pulls](https://img.shields.io/npm/dt/@ust-protocol/mcp?label=pulls&color=informational)](https://www.npmjs.com/package/@ust-protocol/mcp)
 [![@ust-protocol/cli](https://img.shields.io/npm/v/@ust-protocol/cli?label=@ust-protocol/cli)](https://www.npmjs.com/package/@ust-protocol/cli) [![pulls](https://img.shields.io/npm/dt/@ust-protocol/cli?label=pulls&color=informational)](https://www.npmjs.com/package/@ust-protocol/cli)
 
-> **Two rules this protocol does not trade away.**
-> **A minor only ADDS.** Anything that changes the meaning of what an earlier minor already defines is a MAJOR — there is no third option, because an older verifier evaluating under older rules must still be RIGHT about what it evaluated.
-> **A verifier never expires.** An older verifier keeps producing correct verdicts about everything it understands; newer material it does not implement is reported as NOT EVALUATED — never as invalid, never silently passed. Whether that reach is enough is the CONSUMER's policy, not the protocol's coercion.
-> *Both hold today: a newer minor answers `INDETERMINATE(unsupported_minor)` and a different major `INDETERMINATE(unsupported_major)` — never `INVALID`, which means only "I applied MY rules and they were violated".*
-
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/status.svg">
   <source media="(prefers-color-scheme: light)" srcset=".github/status-light.svg">
@@ -352,6 +347,11 @@ Not every rung is equally settled. The `STABILITY` export is the machine-readabl
 gates pass, `deriveCheckpointFreshness` caps a would-be `attested` result at `corroborated` and names the withheld
 rung (`attested_withheld: "experimental-gate"`); the top rung is reachable only with an explicit
 `allowExperimentalAttested: true` opt-in. This keeps the whole protocol from inheriting the youngest layer's risk.
+
+**What a future version does to the one you pinned:** nothing. A minor only ADDS, so an older verifier keeps
+producing correct verdicts about everything it understands, and reports newer material it does not implement as
+NOT EVALUATED — `INDETERMINATE(unsupported_minor)`, never `INVALID`. Whether that reach is enough for your
+purpose is your policy, not the protocol's coercion. Spec [§19](spec/UST-1.0.md) states both rules normatively.
 
 ## ●  Layout
 
