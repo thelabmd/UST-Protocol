@@ -28,6 +28,8 @@ jobs:
         run: npm run test:temporal-bmc
       - name: a record of a past defect carries its closing (an honest failure log reads as open holes without one)
         run: npm run test:record-closure
+      - name: remedy guard (F.5.1d — no verdict prescribes an input the call already supplied)
+        run: npm run test:remedy-guard
       - name: protocol-name gate (an artifact wearing the name MUST verify under it)
         run: npm run test:protocol-name
       - name: model <-> code guard (every formal theorem is a real conformance check)

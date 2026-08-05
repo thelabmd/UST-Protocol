@@ -734,7 +734,13 @@ function verifyCore(doc, opts = {}) {
       if (dk.length > BOUNDS.floorPartitions) {
         const granted = Number(cap.maxPartitions ?? NaN);
         if (!Number.isInteger(granted) || granted < 1 || granted > BOUNDS.partitions)
-          return { result: 'INDETERMINATE', reason: 'unavailable', detail: `${over} floor — no trusted capacity grant for ${st.id.domain_shard} (resolve authority, then pass opts.capacity)` };
+          // F.5.1d — this branch holds TWO cases and the literal spoke only to the first. No grant at all is a SUPPLY
+          // gap; a grant that arrived unusable is a REPLACE one, and telling that caller to pass what it just passed
+          // is the same false promise one axis over. The helper yields the supply clause exactly when the slot is
+          // empty, so the replace clause is what remains when it is not.
+          return { result: 'INDETERMINATE', reason: 'unavailable', detail: `${over} floor — no trusted capacity grant for ${st.id.domain_shard}`
+            + supplyRemedy(opts, 'capacity', ' (resolve authority, then pass opts.capacity)')
+            + (suppliedInput(opts, 'capacity') ? ` — the grant supplied carries maxPartitions ${JSON.stringify(cap.maxPartitions)}, which is not an integer in 1..${BOUNDS.partitions}; resolve authority again and pass the grant it returns` : '') };
         if (dk.length > granted) return bad('E-BOUNDS', `partitions ${dk.length} > granted ${granted}`);
       }
       if (sBytes > BOUNDS.floorSizeBytes) {
@@ -953,7 +959,11 @@ function verifyCore(doc, opts = {}) {
     // consumer pins it), and `key`/`cadence` log entries continue the key-log chain; they are name-form by nature and
     // verified via their own chain, not standalone domain claims. The rule is for STATE documents (observation/attestation/derivation).
     if (tier === 'LIGHT' && shardMode === 'name' && !AUTHORITY_CLASSES.has(st.id.class))
-      return { result: 'INDETERMINATE', reason: 'unavailable', identity: { ...identity, mode: shardMode }, detail: 'name-form domain_shard is a domain claim the verifier could not confirm (tier resolved to LIGHT — the identity axis reached no name binding): supply genesis to bind the name (→ HIGH), or use key-form domain_shard = key_id for a self-asserted key-identity document (→ VALID:LIGHT). "cannot confirm" ⇒ INDETERMINATE (UST-ybn — the unified rule)' };
+      // F.5.1d — the guard is the TIER, which does not imply genesis is absent: a call that supplied one and still
+      // resolved to LIGHT (no independent no-fork evidence) was told to supply it again, byte-identically to a call
+      // that supplied nothing. The key-form clause is NOT a supply remedy — it names other BYTES to author (the x̂
+      // term), which no call can hand in — so it survives unconditionally, and that is the discrimination.
+      return { result: 'INDETERMINATE', reason: 'unavailable', identity: { ...identity, mode: shardMode }, detail: 'name-form domain_shard is a domain claim the verifier could not confirm (tier resolved to LIGHT — the identity axis reached no name binding)' + supplyRemedy(opts, 'genesis', ': supply genesis to bind the name (→ HIGH)') + '. A key-form domain_shard = key_id yields a self-asserted key-identity document (→ VALID:LIGHT). "cannot confirm" ⇒ INDETERMINATE (UST-ybn — the unified rule); explainLadder() names the inputs THIS call did not supply' };
     // A verdict that does not say WHO judged it cannot be re-checked later. `verifier` + `registry_digest` bind this
     // result to the rules that produced it: pin the pair and the same verdict is reproducible after the protocol has
     // moved on, which is what lets the rules keep changing without redefining verdicts already handed out.
@@ -3854,3 +3864,18 @@ function err(code, detail) { const e = new Error(code); e.code = code; e.detail 
 // and has no document assurance state to rank.
 const floorTier = (v) => (v && v.result === 'INVALID' && v.tier === undefined ? { ...v, tier: 'NONE' } : v);
 function bad(code, detail, fields) { return { result: 'INVALID', error: code, detail, ...(fields || null) }; }
+// F.5.1d — a SUPPLY remedy is a PROMISE: provide `input` and the coordinate rises. A call that already HOLDS it
+// has produced the verdict it yields, so the clause is refuted by the very call that printed it. The helper is
+// given `opts` rather than trusting a branch condition, because a literal obeys the invariant only when the guard
+// happens to imply the absence its sentence asserts — correctness by coincidence, drifting silently. A branch that
+// does not imply it degrades to SILENCE here rather than to a false promise; `explainLadder` is the one place that
+// computes what a call did not supply, and F.5.1b forbids a second one.
+// REPLACE clauses (re-fetch a stale log, rotate, re-anchor) are NOT this: the slot is filled and the ARTEFACT is
+// not, so their precondition is a value the branch already computed. They do not pass through here.
+// Hostile `opts` (P1-02 — a throwing accessor) resolves to silence: on the "is it safe to print" question the
+// direction is closed, and an unprintable remedy costs a reader nothing a false one does not cost more.
+// One decision point for "did this call hand in `input`", so a branch and a sentence cannot disagree about it.
+function suppliedInput(opts, input) {
+  try { return opts != null && opts[input] != null; } catch { return true; }   // unreadable ⇒ treat as supplied ⇒ silence
+}
+function supplyRemedy(opts, input, clause) { return suppliedInput(opts, input) ? '' : clause; }

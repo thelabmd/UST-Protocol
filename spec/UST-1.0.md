@@ -1789,9 +1789,28 @@ rungs under an offline run (formal model F.5p.2).
 finished; the second is a configuration choice the reader can make. One shape for both discards the distinction
 §20 exists to preserve, on the axis where an integrator decides whether to act at all.
 
+**A diagnostic MUST NOT name, as a remedy, an input the call already supplied** (formal model F.5.1d). A remedy
+is a promise that supplying the named input raises the coordinate; a call that already holds it has produced the
+verdict it yields, so the promise is refuted by the call that printed it. This binds the plain verdict `detail`
+as much as the report, and it is the direction more easily missed: a prescriptive clause written as a fixed
+string in a verdict branch is evaluated without reference to the call, and is correct only when the branch
+condition happens to imply the absence the sentence asserts.
+
+The rule reaches **SUPPLY** remedies only — clauses promising that PROVIDING a named input raises the coordinate.
+Two neighbouring kinds are untouched, and conflating them would delete diagnostics that work:
+
+- a clause advising a DIFFERENT DOCUMENT — a key-form `domain_shard`, fewer partitions, a declared `prev` —
+  supplies nothing to this call, since it directs the caller to author other bytes;
+- a **REPLACE** clause — re-fetch a stale key log, rotate, re-anchor — names an artefact the call does NOT hold,
+  even though the input slot is filled. Its precondition is a property the verifier has already computed as a
+  value, so the branch condition implies it by construction.
+
 *Why this section exists (informative).* A verifier that reports only the NEAREST barrier makes an integrator
 learn the ladder by walking it — measured on a live publisher as three separate deploys for three barriers, all
-three decidable from the same bytes at the first.
+three decidable from the same bytes at the first. Measured again on 2026-08-05, from the other end: an
+integrator holding only a domain name resolved a live publisher's authority successfully and was still told to
+supply the artifact it had just supplied, while the input actually blocking it was one no publisher is permitted
+to produce.
 
 ## 15. Error taxonomy
 

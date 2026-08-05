@@ -436,6 +436,10 @@
     {
       "round": 178,
       "no_recap": "The round closed no issue — it emptied the backlog the gate had pinned. A recap belongs to a closed issue."
+    },
+    {
+      "round": 179,
+      "no_recap": "The round closed no issue. It answered the question #137 was left holding open — whether the ladder names the barrier an integrator is ACTUALLY stuck on — and the first live use answered both halves: the report was right, and the plain verdict beside it was wrong. #137 stays open until an outside operator, not its author, reports back; a recap written now would close the loop on our own reading of a tool built to be read by someone else."
     }
   ]
 }

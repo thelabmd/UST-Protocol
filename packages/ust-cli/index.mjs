@@ -2823,7 +2823,7 @@ export function acceptReroot({ genesisA, keylogA, witnessA, cadenceLogA, out, ro
     add('grid crosses (cadence log)', !r.error && String(r.cadence) === String(was.cadence), r.error ? `${r.error} ${r.detail ?? ''}` : `${r.cadence}s, unchanged across the boundary`);
   } else add('grid (cadence log)', true, 'not instantiated — the grid is carried in the genesis field, which this ceremony copied');
 
-  // DECLARED vs WORKING. Painbook acceptance point 5, and not a formality: it is the only leg that distinguishes
+  // DECLARED vs WORKING, and not a formality: it is the only leg that distinguishes
   // “we declared roles” from “the roles act”. Signed by the NEW ROOT, whose private key this ceremony holds — under
   // a declared regime the root is bound by its own function and must be refused an `observation` class.
   if (out.rootProbe) add('role separation ACTS (root refused a data class)', out.rootProbe.error === 'E-KEY', out.rootProbe.error ? 'E-KEY — the root cannot sign observations' : `NOT refused — got ${out.rootProbe.result}`);

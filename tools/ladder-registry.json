@@ -1338,6 +1338,14 @@
         "excluded": "No byte-vector: prose in our sources, contracted by the gate's CONTROL pair."
       },
       "test": "tools/record-closure-gate.mjs"
+    },
+    {
+      "round": 179,
+      "math": "Corollary F.5.1d (F.5.1b binds in BOTH directions, and the older copy is the VERDICT's)",
+      "spec": "A diagnostic MUST NOT name, as a remedy, an input the call already supplied",
+      "code": "packages/ust-protocol/index.mjs :: suppliedInput + supplyRemedy — one decision point for 'did this call hand in the input', so a branch and a sentence cannot disagree; both prescriptive sites routed through it",
+      "vector": "remedy-01-genesis-not-prescribed-when-supplied",
+      "test": "tools/remedy-guard-gate.mjs"
     }
   ],
   "first_accounted_round": 76,

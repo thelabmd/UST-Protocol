@@ -123,6 +123,45 @@ for (const v of V.vectors) {
     }
     // §14.1 / F.5.1 / F.5p.2 — the ladder REPORT. Exercised against a real document so the coordinates come from
     // the relation itself; a synthetic stub would test our idea of the relation instead of the relation.
+    // §14.1 / F.5.1d — a SUPPLY remedy is a PROMISE the call can refute. The theorem is a PAIR and must be run as
+    // one: asserting only that the supplied call omits the clause would pass against a verifier that prescribes
+    // nothing at all, which is a different (and worse) diagnostic. So both halves are required of every vector —
+    // present when the input is absent, gone when it is not.
+    case 'remedy': {
+      const dom = 'example.com';
+      const G = kp('cc'.repeat(32));
+      const gen = P.seal(P.buildGenesis({ domain_shard: dom, ust_id: 'ust:20260628.10', key_id: G.key_id }, T, G.pubB64), G.priv, G.pubB64);
+      // One document per input, each chosen to REACH the branch that carries the clause — a vector aimed beside the
+      // branch would go green without ever exercising the sentence it pins.
+      const wide = {}; for (let i = 0; i < 65; i++) wide['p' + i] = { kind: 'captured', value: { x: String(i) } };
+      const docs = {
+        genesis: mk({ r: { kind: 'captured', value: { x: '1' } } }, { domain_shard: dom, ust_id: 'ust:20260715.12', key_id: A.key_id, class: 'observation' }),
+        // Built through the declared-capacity door: §13 refuses a producer that silently emits past the anonymous
+        // floor, so the wide document only exists because its AUTHOR declared the capacity — which is exactly the
+        // asymmetry the consumer-side clause is about.
+        capacity: P.seal(P.buildState({ domain_shard: dom, ust_id: 'ust:20260715.13', key_id: A.key_id, class: 'observation' }, T, wide, undefined, { maxPartitions: 4096 }), A.priv, A.pubB64),
+      };
+      // The artefact must keep the branch REACHABLE while filling the slot. A grant that is present AND usable
+      // makes the whole branch unreachable, so `in_supplied_call: false` would hold against an impossible literal —
+      // green, and asserting nothing. Found by mutation: the first draft of the capacity vector did not redden when
+      // the helper was reverted to a bare literal, because it was never reaching the sentence it pinned.
+      const artefacts = { genesis: gen, capacity: { maxPartitions: 'unusable' } };
+      const key = v.input.input, doc = docs[key], phrase = v.input.phrase;
+      const without = P.verify(doc, { context: 'data' });
+      const supplied = P.verify(doc, { context: 'data', [key]: artefacts[key] });
+      const inAbsent = new RegExp(phrase, 'i').test(without.detail ?? '');
+      const inSupplied = new RegExp(phrase, 'i').test(supplied.detail ?? '');
+      const e = v.expect;
+      let ok = true;
+      if (e.in_absent_call !== undefined) ok = ok && inAbsent === e.in_absent_call;
+      if (e.in_supplied_call !== undefined) ok = ok && inSupplied === e.in_supplied_call;
+      // The REPLACE half: silence would also satisfy the line above, and silence is not the theorem. A filled slot
+      // holding the wrong artefact must still say something the caller can act on.
+      if (e.replace_phrase !== undefined)
+        ok = ok && new RegExp(e.replace_phrase, 'i').test(supplied.detail ?? '');
+      check(v.id + ' — ' + v.rule, ok, `absent=${inAbsent} supplied=${inSupplied} · ${(supplied.detail ?? '').slice(0, 110)}`);
+      break;
+    }
     case 'ladder': {
       const r = P.explainLadder(mk(), v.input.opts ?? {});
       const consumerTerms = (r.absent ?? []).filter((a) => a.term.startsWith('ℐ_v')).length;

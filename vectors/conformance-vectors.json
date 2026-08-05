@@ -9431,6 +9431,33 @@
    "expect_error": "E-DISCOVERY"
   },
   {
+   "id": "remedy-01-genesis-not-prescribed-when-supplied",
+   "kind": "remedy",
+   "rule": "S14.1/F.5.1d a SUPPLY remedy is a promise refuted by the call that printed it — the same document verified WITH and WITHOUT genesis must not carry the same clause naming it. Measured live 2026-08-05: the two details were byte-identical, and the guard was the TIER, which does not imply the absence its sentence asserts",
+   "input": {
+    "input": "genesis",
+    "phrase": "supply genesis"
+   },
+   "expect": {
+    "in_absent_call": true,
+    "in_supplied_call": false
+   }
+  },
+  {
+   "id": "remedy-02-capacity-not-prescribed-when-supplied",
+   "kind": "remedy",
+   "rule": "S14.1/F.5.1d the same invariant on the capacity axis, and the branch must stay REACHABLE for the vector to assert anything: a grant that is present AND usable removes the sentence entirely, so this vector supplies one that is present and UNUSABLE. The supply clause must vanish and the REPLACE clause must appear — silence would satisfy the first half alone and is not the theorem",
+   "input": {
+    "input": "capacity",
+    "phrase": "pass opts\\.capacity"
+   },
+   "expect": {
+    "in_absent_call": true,
+    "in_supplied_call": false,
+    "replace_phrase": "the grant supplied carries maxPartitions"
+   }
+  },
+  {
    "id": "ladder-01-not-attempted-is-not-met",
    "kind": "ladder",
    "rule": "S14.1/F.5p.2 a coordinate alone cannot say WHY it is low — the report pairs it with the inputs never supplied, so 'not asked' is distinguishable from 'asked and refused'",

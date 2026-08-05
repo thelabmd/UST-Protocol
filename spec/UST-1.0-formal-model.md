@@ -3176,12 +3176,64 @@ absent and one unmet because an `ℐ_v` input was not brought are different fact
 finished, the second is a configuration choice they can make. One shape for both discards the distinction F.5p
 exists to preserve, on exactly the axis where an integrator decides whether to act at all.
 
+**Corollary F.5.1d (F.5.1b binds in BOTH directions, and the older copy is the VERDICT's).** F.5.1b forbids the
+report from becoming a second implementation of the decision relation. The prohibition is symmetric, and when
+the report was built the violation already existed on the other side: a verdict `detail` that PRESCRIBES an
+input is a remedy relation, evaluated with no reference to the call that produced the verdict.
+
+Let `R(d, o)` be the set of inputs a diagnostic names in a **SUPPLY** remedy for document `d` under options `o` —
+a clause promising that providing `i` raises the coordinate. For that promise to be capable of being true, `i`
+must be absent from the call, because a run that already HAS `i` has produced the verdict `i` yields. Hence
+
+> **∀ d, o, i ∈ R(d, o). i ∉ dom(o)**
+
+A supply remedy naming a supplied input is not merely unhelpful; it is FALSE, and refuted by the very call that
+printed it.
+
+**SUPPLY and REPLACE are different acts, and only the first is bounded by `dom(o)`.** A clause directing the
+caller to re-fetch a stale key log, rotate a key, or re-anchor names bytes the call does NOT hold — the input is
+present, the ARTEFACT it should carry is not — so the act is outside `R(d, o)` and the invariant does not reach
+it. The discriminator is mechanical: a supply remedy's precondition is `i ∉ dom(o)`, which a branch can be made
+to establish; a replace remedy's precondition is a property the branch has ALREADY computed as a value (freshness,
+revocation, inclusion) and which its condition therefore implies by construction. Conflating the two would delete
+the useful half of the diagnostics, and a rule that deletes what works is a rule that gets switched off.
+
+**A literal satisfies this only by accident.** A remedy written as a fixed string inside a verdict branch is
+evaluated without reference to `o`. It obeys the constraint exactly when the branch CONDITION implies
+`i ∉ dom(o)` — so correctness rests on an unstated coincidence between a guard and a sentence, and drift is
+silent because nothing in the tree relates the two. This is the failure F.5.1b names, arrived at from the
+opposite end: not a report that reimplements the verdict, but a verdict that reimplements the report.
+
+**The discrimination this makes is the useful half.** `dom(o)` contains INPUTS. A clause advising a different
+DOCUMENT — a key-form `domain_shard`, fewer partitions, a declared `prev` — names the `x̂` term of R2 and is not
+an element of `R(d, o)` at all, since authoring different bytes is not supplying an input to this call. The
+invariant therefore removes exactly the clauses that CAN be false and leaves untouched the ones that cannot.
+
+**Measured, 2026-08-05, on the reference operator, by a consumer holding only the domain name.** A live
+`observation` was fetched from the operator's public mirror, its authority resolved from the standard discovery
+pair, and the document verified. With `genesis` and `keylog` supplied, `resolveAuthority` returned `ok` and
+granted capacity; the ladder correctly moved both inputs from `absent` to `attempted` and named the remaining
+barrier as `noForkEvidence`, whose party is an INDEPENDENT WITNESS and which F.5.1 marks movable by neither
+side. The verdict detail, on that same call, read `supply genesis to bind the name (→ HIGH)` — byte-identical to
+the detail produced when nothing was supplied at all. Its guard is `tier === LIGHT`, which does not imply the
+absence its sentence asserts. An operator following it would republish a genesis it had already published,
+observe no change, and conclude the protocol was broken — while the input actually blocking it is one the
+protocol bars it from producing. **CLOSED 2026-08-05.**
+
+**Realization.** `verify` no longer authors remedies naming a call input. Such clauses are produced by one core
+helper given `opts`, which yields nothing when the input it names is present — so a mis-guarded branch degrades
+to silence rather than to a promise the call refutes — and `explainLadder` remains the single place that
+computes what a call did not supply. Enumerated by `tools/remedy-guard-gate.mjs` over every verdict `detail` in
+the core, so the domain is the set of diagnostics rather than the ones a reader happened to recall.
+
 **Binding: pending — thelabmd/UST-Protocol#137 (the report) and #138 (the ruleset term and the version verdict).**
 
 **Conformance (math ⇒ code ⇒ green vector, once realized).**
 - the report is derived from the SAME decision relation as the verdict; no second implementation.
 - no rung attributes an `ℐ_v`/`ρ_v` input to the publisher.
 - a rung whose input is settled is reported distinguishably from one whose input was merely not brought.
+- **no verdict detail names a remedy the call already supplied (F.5.1d).** The vector pair is the theorem: the
+  same document verified with and without an input must not produce the same prescriptive clause naming it.
 
 ## F.5x Authorization reads the DOCUMENT, so `class` is not one axis among several — it is the only one there is (#130)
 
