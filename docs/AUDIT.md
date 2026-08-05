@@ -66,6 +66,42 @@ npm test                               # runs ust-protocol against all conforman
   make a LIGHT doc read as HIGH, a self-asserted key read as authoritative, or an unanchored doc read as anchored.
 - **Determinism.** The vectors are seeded and deterministic; re-derive them and confirm every hash/signature.
 
+### A refusal may be about YOUR INPUT, not about the protocol — we got this wrong three times in one day
+
+This is the failure mode we expect an auditor to hit first, so here is our own record of it rather than a warning
+in the abstract. All three happened on 2026-08-05, all three were reported internally as protocol findings, and
+all three were wrong.
+
+1. **"HIGH is unreachable without a third party."** Measured, stated twice, emphatically. The measurement never
+   passed `acceptConsumerOverride`, which lifts a liftable consumer-override to `authoritative`. A consumer that
+   consciously honours its own no-fork determination reaches `VALID:HIGH` — with `independently_verified: false`
+   in the verdict, which is the honesty mechanism, not a downgrade.
+2. **"TOP is unreachable even with an anchor."** The substrate connector returned `time` as epoch milliseconds.
+   The core expects RFC3339. The result was `status: unavailable`, which was read as *the protocol refuses* rather
+   than *this connector returned a shape the core cannot admit*. With a string it reaches `VALID:TOP`.
+3. **"There is no input for a publisher's served witness log — a protocol gap."** There is. It is not an option
+   because it cannot be one: only `resolveByDiscovery`, which actually performed the fetch and the anchor
+   cross-check, can mint the token that reaches `corroborated`. A plain `{confirmed: true}` from a caller is
+   `served-lookalike` and lifts nothing. *"I checked"* is deliberately not expressible as a boolean.
+
+**The single generator:** an input constructed from a mental model of the system, a refusal, and the refusal
+reported as a property of the system instead of being read. The refusals were all specific and all correct.
+
+**How to tell the difference, in order of cost:**
+
+- **Read the refusal text.** It names the axis and usually the missing input verbatim. `status: unavailable` on
+  the time axis means the substrate answer was not admitted; it does not mean anchoring is unsupported.
+- **Call `explainLadder(doc, opts)`.** It reports the inputs ABSENT FROM YOUR CALL, computed from the call itself,
+  split by which party may move each one. If an input you believe you supplied appears under `absent`, the
+  disagreement is about your input, not about the ladder.
+- **Do not enumerate the option surface by grepping `opts.<name>`.** Several options are read by DESTRUCTURING
+  and never appear in that form — `keylog`, `nameMap`, `corroborated`, `servedNoFork`, `keylogFreshAsOf`,
+  `keylogHeadAnchor`, `trust`. Our own gate made exactly this mistake and shipped blind for a round; the fix and
+  the live defect it then found are round 180 in `CHANGELOG.md`.
+
+None of this makes a refusal trustworthy. If you read a refusal, supply what it names, and it still refuses —
+that is a finding, and it is the kind we most want.
+
 ## 5. Threat model — what each tier CLAIMS (attack these)
 
 The single honest claim: **UST proves that a publisher committed to specific bytes, for a time-frame, unchanged —
