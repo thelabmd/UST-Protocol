@@ -1587,6 +1587,11 @@ console.log('\n═════════════════════�
   // the root, so NOTHING here exercised a non-root mutator and the hole shipped green. The CONTROL leg is not
   // decoration: the original probe only became trustworthy once the root was run in the same fixture — before that
   // a broken input looked exactly like a restriction.
+//
+// CLOSED 2026-07-12 — the same day, 2026-07-12: the clean-room was given the same §13 admission ceilings in the
+// very commit that added these checks, so the divergence is gone rather than merely pinned — noted here later,
+// because the correction lives in docs/ust-verify.mjs and is invisible from this file. Noted 2026-08-05,
+// appended rather than rewritten.
   {
     const OP = kp('0b'.repeat(32));                                     // an operational key the ROOT legitimately added — genuinely `active`
     const addOp = signC(P.buildKeyLogEntry({ domain_shard: dom, ust_id: 'ust:20260628.1430', key_id: C.key_id }, Tc, { op: 'add', pub: OP.pubB64, new_key_id: OP.key_id }, gH));

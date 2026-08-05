@@ -5,6 +5,12 @@
 // go GREEN, one vector at a time, as the STRUCTURAL fix lands (UST-0ol). NOT yet wired into the blocking CI — that
 // happens in the fix commit, when this reaches all-FIXED. Constructions mirror the auditor's reproduced repros
 // (rnd/audits/UST_1.0_rc33_independent_audit_bundle/audit-repros{,-extra}.mjs), independently confirmed against live.
+//
+// CLOSED 2026-07-15 by rc.34 (`58962f6`), noted 2026-08-05. Both present-tense claims above are now false and
+// are kept as the record of what this gate was BUILT against: it reads `34 FIXED   0 VULNERABLE`, and
+// `npm run test:security` is a blocking step of the pipeline (`.github/workflows/ci.yml`). The trailing
+// `— target: all FIXED before rc.34 (then wire into CI)` in the gate's own output is the same stale text one
+// layer down: the line that carries it is the line that contradicts it.
 import { createPrivateKey, createPublicKey } from 'node:crypto';
 import * as P from './index.mjs';
 
@@ -297,5 +303,8 @@ sec('r3-P0-3', 'UST-znh', 'a growth key-log rewrite (non-prefix) without a consi
 // ─── report ────────────────────────────────────────────────────────────────────────────────────
 console.log('\n  rc.33 audit — security regression (Phase 0, epic UST-1o6): SECURE-expectation gate');
 for (const [s, id, bd, d] of rows) console.log(s + '  ' + id.padEnd(8) + bd.padEnd(9) + d);
-console.log(`\n  ${green} FIXED   ${red} VULNERABLE   — target: all FIXED before rc.34 (then wire into CI)`);
+// The line states the STANDING contract, not a target already met: this gate is a blocking CI step and any
+// VULNERABLE row fails the build. The old text read `target: all FIXED before rc.34 (then wire into CI)` and
+// survived rc.34 by two weeks, printed directly beneath the counts that contradicted it.
+console.log(`\n  ${green} FIXED   ${red} VULNERABLE   — every reproduction stays FIXED; one VULNERABLE fails this build`);
 process.exit(red ? 1 : 0);

@@ -800,6 +800,26 @@ were already there. A pending-binding that outlives its own closure is the same 
 outruns the code, pointing the other way: the model under-claimed what runs, which reads to a reviewer as an open
 hole and sends them to fix something already fixed.
 
+CLOSED 2026-08-02 — *Closed in rev88 (2026-08-02), the round this corollary landed in, and noted here
+afterwards:* `recoverHead` now goes through `recordFrame` — the same door an ordinary append uses — so
+adoption moves the whole group, and the reference operator took it the same day. Noted 2026-08-05, appended
+rather than rewritten.
+
+CLOSED 2026-08-01 — *Closed in rev75 itself (2026-08-01), and this line was added afterwards:* `gap` and
+`resume` were routed through the single guard, and the check became a WRITER ROSTER derived from the source —
+every site writing the head key, resolved to its enclosing function and required to reduce to `advanceHead`.
+Noted 2026-08-05, appended rather than rewritten.
+
+CLOSED 2026-08-01 — on 2026-08-01 (rev77): `recordCheckpoint` refuses a store with no `del` (`E-STORE`) and
+clears through the port, and the reference operator's port gained `del` and a status check the same day, so a
+`400` is no longer indistinguishable from success. Written afterwards — the measurement above stands as it was
+taken. Noted 2026-08-05, appended rather than rewritten.
+
+CLOSED 2026-07-27 — on 2026-07-27, the day it was measured (rev95): the self-check now asserts what the
+ceremony determines — the new key is in the ACTIVE SET after the grown log. The transition it tested was
+itself removed in rev97 (F.5e.0), so the `rotate` bullet above no longer describes a form of this protocol;
+both notes were written afterwards. Noted 2026-08-05, appended rather than rewritten.
+
 ## F.5e The key-authority process `K_n(t)` — a state machine, not a set (MATH-04, #75)
 
 `W_n` (§F.5, §F.5a) bundled several facts; one of them — WHICH key is authorized for name `n` at time `t` — is
@@ -2644,6 +2664,11 @@ named it), `gap` — the §11.1 signed gap record, which extends the chain exact
 silently, and the check written one round earlier stayed green throughout, because it asserted a
 property of `append` while the specification quantifies over writers.
 
+**CLOSED 2026-08-01 by rev75 (`7f6a123`) — the same revision the measurement names, noted here 2026-08-05.**
+The guard moved from the METHOD to the KEY, so every writer of a head passes it rather than the one writer
+someone remembered to guard. The paragraph above is kept as the evidence the theorem rests on, not as an
+outstanding defect.
+
 **Admissibility of an EXTERNAL head claim (`resume`).** Resumption states a head from knowledge outside
 the store — an operator's assertion, not an observation. It is nonetheless a member of `W`, so it is
 admissible iff the stored head does not CONTRADICT it: `stored ∈ {⊥, H}`. A stored head differing from
@@ -2816,8 +2841,8 @@ first operator to adopt this minted `refused` for the refusal, because the layer
 RETURNS and left the one it THROWS unnamed. A vocabulary with a hole in it gets filled locally, and then
 two operators disagree about a case they both handle correctly.
 
-The layer therefore declares the COMPLETE set, refusal included, and an operator reports one of those
-words rather than one of its own. The prose around it may be in any language; the STATE is a token.
+**CLOSED 2026-08-01 by rev80 (`8a46355`), noted 2026-08-05.** The layer therefore declares the COMPLETE set,
+refusal included, and an operator reports one of those words rather than one of its own. The prose around it may be in any language; the STATE is a token.
 
 **Theorem F.5r-h (UNKNOWN is not ABSENT, and an origin frame is a CLAIM).** A frame carrying no `prev`
 does not merely omit a field. It ASSERTS that the stream begins here — that no earlier frame exists for a

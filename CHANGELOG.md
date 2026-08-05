@@ -564,14 +564,16 @@ live surface; this is the record of what a milestone has actually retired.
 | **Formal model** — assurance product-lattice | 3 | human + machine review not yet done; the §13 constants are uncalibrated |
 | **L2** — machine-checked soundness (Lean 4) | 0 | **not one issue has ever been filed here** — the milestone exists, the track does not |
 | **Chains** — state linked by provenance | 0 | nothing retired yet |
-| **Tools & surfaces** — MCP · CLI · web-signer · connectors | 4 | ships, and **drifts** — what a stranger installs is not what CI tests (#103) |
+| **Tools & surfaces** — MCP · CLI · web-signer · connectors | 4 | ships; the DRIFT that named this row is **CLOSED 2026-07-28** (#103) — `npm-drift-check` now holds and a published version is immutable. Row kept because the track is graded on more than that one defect |
 | **1.0.0 final** | 1 | the release gate |
 | **Post-1.0** — vNext design space | 0 | held out of the release scope deliberately, so 1.0 stays readable |
 | **Pre-1.0** — v0.24 → v0.26 checker references | 3 | history: what the protocol *was* |
 
 Two of those rows say something a prose list hid. **L2 has retired nothing and never held anything** —
-"machine-checked soundness" names an intention, not a track. And **Tools & surfaces is not simply
-"shipped"**: it ships, and the shipped thing is behind the tested thing.
+"machine-checked soundness" names an intention, not a track. And **Tools & surfaces was not simply
+"shipped"**: it shipped, and the shipped thing was behind the tested thing — **closed 2026-07-28 (#103)**,
+noted here 2026-08-05. The gate that closes it treats a published version as immutable, so the gap between
+what a stranger installs and what CI tests is now a build failure rather than a habit.
 
 See [milestones](https://github.com/thelabmd/UST-Protocol/milestones) for the live status.
 
