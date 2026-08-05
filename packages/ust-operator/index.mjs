@@ -209,6 +209,10 @@ export async function reconcileHead(store, { observed = null, published = null }
 // first operator to adopt this minted its own term for the refusal, because the layer named the three
 // states it RETURNS and left the one it THROWS unnamed. A vocabulary with a hole gets filled locally.
 //
+// CLOSED 2026-08-01 by `8a46355b` — protocol(rev80): F.5r-g.1 — a vocabulary with a hole in it gets filled
+// locally. In this tree a narration is written in the commit that fixes what it describes, and blame places
+// this paragraph there; noted 2026-08-05, appended rather than rewritten.
+//
 // The prose an operator logs around it may be in any language. The STATE is a token.
 export const HEAD_STATES = Object.freeze({
   consistent: 'consistent',   // the pointer already names the last published document
@@ -316,6 +320,10 @@ export class Stream {
   // own head, as this did, leaves the checkpoint chain origin-unbound: nothing ties the sequence of checkpoints to
   // the identity that issued them, so a range verdict cannot be rooted. Measured 2026-07-31 against a hardened
   // implementation that had already learned this in production and warns about it in its own logs.
+//
+// CLOSED 2026-07-31 by `2749655b` — protocol(rc.46): a worked example taught a refusable document — and the
+// fix was not the number (#101). In this tree a narration is written in the commit that fixes what it
+// describes, and blame places this paragraph there; noted 2026-08-05, appended rather than rewritten.
   //
   // And the INTERVAL is not optional in practice. Without `{from,to}` a range verdict caps at `chain-consistent`
   // forever: a consumer can be shown that nothing was DELETED and never that nothing was MISSING. The bounds are
@@ -365,6 +373,10 @@ export class KeyLog {
 // This lives HERE and not in the base on purpose: the base VERIFIES a composed tree, and building one is a
 // producer's job. Measured 2026-07-31 — until this existed, every operator wrote it themselves, and the
 // specification's own worked example showed the flat form, which is a document every verifier must refuse.
+//
+// CLOSED 2026-07-31 by `2749655b` — protocol(rc.46): a worked example taught a refusable document — and the
+// fix was not the number (#101). In this tree a narration is written in the commit that fixes what it
+// describes, and blame places this paragraph there; noted 2026-08-05, appended rather than rewritten.
 export const BREADTH = 64;
 export async function sealTree(idMeta, time, hashes, sign, { breadth = BREADTH, data = null, prev } = {}) {
   if (!Array.isArray(hashes) || hashes.length === 0) return { error: 'E-BOUNDS', detail: 'sealTree needs at least one referent' };

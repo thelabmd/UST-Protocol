@@ -211,6 +211,10 @@ export function closeReader(rl) {
 // under a pipe AND under a real pty (`script -q /dev/null`), so it is not a piping artifact: it is a race that an
 // interactive human hides by typing slowly, and that a paste or a script loses to every time.
 //
+// CLOSED 2026-08-03 by `fe0bbe42` — cli(#133, #131): `ust reroot` emits the signed half — and the live run
+// found three stoppers. In this tree a narration is written in the commit that fixes what it describes, and
+// blame places this paragraph there; noted 2026-08-05, appended rather than rewritten.
+//
 // The comment inside the loop records the PREVIOUS fix at this exact spot — a pasted passphrase arriving as one
 // chunk — which taught it to iterate by code point and still left the remainder on the floor. Same line, same
 // class, one layer along: a reader that consumes a CHUNK owes back what it did not use.
@@ -294,6 +298,10 @@ export const encryptKey = (pkcs8, pass) => {
 // apart. A ciphertext this function produced has a KNOWN SHAPE (16-byte salt, 12-byte IV, 16-byte GCM tag, then the
 // key), so "is this even one of ours" is answerable WITHOUT the passphrase, and answering it first turns one useless
 // message into two useful ones.
+//
+// CLOSED 2026-08-03 by `5c2542e3` — cli: a ceremony proves the FILE it wrote, not the value it held. In this
+// tree a narration is written in the commit that fixes what it describes, and blame places this paragraph
+// there; noted 2026-08-05, appended rather than rewritten.
 export const decryptKeyShape = (b64) => {
   const t = String(b64 ?? '').trim();
   if (!/^[A-Za-z0-9+/]+=*$/.test(t)) return 'not base64 — this file is not a backup this tool wrote';
@@ -578,6 +586,10 @@ export const DERIVED_REQUIRES_PRIOR = { witness: 'buildWitnessLog(genesisText, a
 // reached the worker while `/.well-known/ust?x=1` fell through to the previous origin and answered with the OLD
 // profile. One path, two documents, chosen by a query parameter: the exact §20.1 query-robustness violation this
 // tool probes other publishers for.
+//
+// CLOSED 2026-08-03 by `097e7829` — cli(#135): the profile route had no wildcard, and one path answered with
+// two documents. In this tree a narration is written in the commit that fixes what it describes, and blame
+// places this paragraph there; noted 2026-08-05, appended rather than rewritten.
 //
 // The reasoning that produced it confused ROUTING with DISPATCH. A route decides which requests REACH the worker;
 // which artifact answers is decided INSIDE, by a table keyed on the whole pathname. So a wildcard cannot make the
@@ -1024,6 +1036,10 @@ export async function attestDiscovery({ domain, mirrors = [], expectHash = null,
   // answered with a DIFFERENT, older document. One path, two documents, selected by a query parameter — live, on
   // the surface that declares what the others are, and invisible to a check that named one instance where §20.1
   // quantifies over all of them.
+//
+// CLOSED 2026-08-03 by `097e7829` — cli(#135): the profile route had no wildcard, and one path answered with
+// two documents. In this tree a narration is written in the commit that fixes what it describes, and blame
+// places this paragraph there; noted 2026-08-05, appended rather than rewritten.
   const PROBE_PATHS = [['genesis', url], ...DISCOVERY_ARTIFACTS.filter((a) => a !== 'genesis').map((a) => [a, `https://${domain}/.well-known/ust-${a}`]), ['profile', `https://${domain}${PROFILE_PATH}`]];
   for (const [name, u] of PROBE_PATHS) {
     const id = `query-robustness · ${name} (cache identity ⊥ unknown query)`;
@@ -1186,6 +1202,11 @@ export const RESERVED_TEST_NAME = /(\.(test|example|invalid|localhost)|^(www\.)?
 // dangerous shape for an operator who does not know the mechanics: nothing is broken, nothing warns, and the loss
 // only surfaces on the day it is needed. Measured 2026-07-28: the reference operator completed a ceremony in exactly
 // that state and had no way to know. So the summary now says, in plain words, what this identity cannot do.
+//
+// CLOSED 2026-07-28 by `bcbd2df2` — fix(ceremony): declining an optional field aborted the ceremony, and the
+// permanent consequences were stated only after they became permanent. In this tree a narration is written
+// in the commit that fixes what it describes, and blame places this paragraph there; noted 2026-08-05,
+// appended rather than rewritten.
 function ceremonyLimits({ cadence, recovery, checkpointAuthority }) {
   const out = [];
   if (!recovery) out.push(
@@ -1776,6 +1797,10 @@ async function resolveDnsToken() {
   // pasted a Cloudflare token and watched it print — into the terminal, into the scrollback, and from there into
   // whatever they copied next. Every other secret in this tool goes through `askHidden`; this one asked with the
   // plain reader because it was written as "just a token" rather than as a secret, which is the whole mistake.
+//
+// CLOSED 2026-08-03 by `c20967df` — round 160: the fifth axis crossed live — and the eleven minutes it cost
+// to learn where the value belongs. In this tree a narration is written in the commit that fixes what it
+// describes, and blame places this paragraph there; noted 2026-08-05, appended rather than rewritten.
   //
   // askHidden also fixes the second half of what they saw: a long pasted value arrives as one CHUNK, and the plain
   // reader showed a fragment and appeared to hang. askHidden reads chunks by code point and hands back the remainder.
@@ -2480,6 +2505,10 @@ export async function rootSignerFrom(pkcs8, rootPubB64url) {
   // key, then compared `signer.pub` — derived from that same supplied key — against the argument it came from. An
   // identity, true for every input. A backup for a DIFFERENT identity passed, and the command printed the wrong
   // key_id as proof.
+//
+// CLOSED 2026-08-03 by `274b6bfb` — cli: a binding check that read its own input — pub === pub, true for
+// every backup (F.5w). In this tree a narration is written in the commit that fixes what it describes, and
+// blame places this paragraph there; noted 2026-08-05, appended rather than rewritten.
   //
   // This is F.5w with a different subject: a predicate has a DOMAIN on which it is non-trivial, and a binding check
   // that reads its own input is outside it. The public key must be DERIVED FROM THE PRIVATE KEY — that derivation is
@@ -2493,6 +2522,10 @@ export async function rootSignerFrom(pkcs8, rootPubB64url) {
   // backup written by that build decrypts to ASCII rather than DER. Both are the same key. Detect by shape — DER for
   // a PKCS#8 Ed25519 key is 48 bytes starting 0x30 — and decode the other, rather than making an operator find out
   // that their cold storage holds something no version can read.
+//
+// CLOSED 2026-08-03 by `5c2542e3` — cli: a ceremony proves the FILE it wrote, not the value it held. In this
+// tree a narration is written in the commit that fixes what it describes, and blame places this paragraph
+// there; noted 2026-08-05, appended rather than rewritten.
   const bytes = (() => {
     const b = Buffer.isBuffer(pkcs8) ? pkcs8 : Buffer.from(pkcs8);
     if (b.length === 48 && b[0] === 0x30) return b;                        // DER as written by every ceremony
@@ -2541,6 +2574,10 @@ export function ensureOutDir(dir, die_) {
 // cold storage. MEASURED live 2026-08-03: a crown was written through a path that encoded it differently from every
 // other ceremony — it encrypted and decrypted perfectly and then would not parse — and nothing noticed, because
 // nothing read it back. The operator found out with the network on and the passphrase no longer in hand.
+//
+// CLOSED 2026-08-03 by `5c2542e3` — cli: a ceremony proves the FILE it wrote, not the value it held. In this
+// tree a narration is written in the commit that fixes what it describes, and blame places this paragraph
+// there; noted 2026-08-05, appended rather than rewritten.
 //
 // The owner's rule when it happened: check it in the tool, right after the ceremony, while the client is still
 // offline. `expectedPub` is what the DOCUMENTS say this key must be; anything else means the file is not the key.
@@ -3252,6 +3289,10 @@ export async function cmdReroot() {
   // so the ciphertext carried the TEXT of a base64 string where every reader expects DER bytes. The file encrypts and
   // decrypts perfectly and then fails to parse — the worst shape a backup defect can take, because it looks fine
   // until the day it is needed. The unencrypted branch is the one that wants base64, and it says so there.
+//
+// CLOSED 2026-08-03 by `5c2542e3` — cli: a ceremony proves the FILE it wrote, not the value it held. In this
+// tree a narration is written in the commit that fixes what it describes, and blame places this paragraph
+// there; noted 2026-08-05, appended rather than rewritten.
   const rootPkcs8 = Buffer.from(await crypto.subtle.exportKey('pkcs8', out.rootB.privateKey));
   // THE NAME CARRIES THE IDENTITY IT BELONGS TO. MEASURED live, 2026-08-03: a re-rooting puts a NEW crown beside the
   // OUTGOING one, and the ceremony gave both the same name — `genesis-key.enc.b64` in two directories on one volume.
@@ -3269,6 +3310,10 @@ export async function cmdReroot() {
   // it differently from every other ceremony, so the file encrypted and decrypted perfectly and then would not
   // parse — and nothing noticed, because nothing read it. The operator carried it to cold storage, came back with
   // the network on, and found out there.
+//
+// CLOSED 2026-08-03 by `5c2542e3` — cli: a ceremony proves the FILE it wrote, not the value it held. In this
+// tree a narration is written in the commit that fixes what it describes, and blame places this paragraph
+// there; noted 2026-08-05, appended rather than rewritten.
   //
   // The rule the owner stated when it happened: check it in the tool, right after the ceremony, while the client is
   // still offline. So: re-read both cold files from disk and prove them USABLE against the genesis just minted. A
@@ -3309,6 +3354,10 @@ export async function cmdReroot() {
   console.log('     expect the witness to read `pending` until the new genesis is anchored. That is not a failure,');
   console.log('     and re-running the ceremony because of it is how a second genesis gets minted.');
 }
+
+// CLOSED 2026-08-03 by `c20967df` — round 160: the fifth axis crossed live — and the eleven minutes it cost
+// to learn where the value belongs. In this tree a narration is written in the commit that fixes what it
+// describes, and blame places this paragraph there; noted 2026-08-05, appended rather than rewritten.
 
 const isMain = (() => { try { return process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url); } catch { return false; } })();
 if (isMain) {

@@ -41,7 +41,9 @@ const ROOT = fileURLToPath(new URL('../', import.meta.url));
 
 // The RATCHET. Lower it when records are closed; it may never rise. STANDING — this is the pin itself, a
 // live count rather than a defect narration.
-const PINNED_UNMARKED = 44;
+// 2026-08-05: the backlog reached ZERO, so this pin now asserts a PROPERTY rather than tolerating a debt —
+// every dated narration in the tree carries its disposition, and any new one without must fail immediately.
+const PINNED_UNMARKED = 0;
 
 // The narration form, derived from the tree rather than chosen: `Measured 2026-08-04`, `MEASURED, 2026-07-28`,
 // `measured live 2026-08-03`. What makes it a DEFECT narration rather than a fact is the date — a dated

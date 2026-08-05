@@ -207,6 +207,10 @@ check(WORLD.length >= 4 && sites.length >= 4, 'the vocabulary or the site set sh
     // FIVE LINES OF CODE, not of text. A comment block between the hand-back and the prompt pushed a correct call
     // out of the window and reported a defect that was not there — measured 2026-08-03, while fixing a credential
     // prompt that really did echo. A comment opens no reader, so it cannot be what breaks this property.
+//
+// CLOSED 2026-08-03 by `c20967df` — round 160: the fifth axis crossed live — and the eleven minutes it cost
+// to learn where the value belongs. In this tree a narration is written in the commit that fixes what it
+// describes, and blame places this paragraph there; noted 2026-08-05, appended rather than rewritten.
     const codeBefore = lines.slice(0, line).filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l));
     const before = codeBefore.slice(Math.max(0, codeBefore.length - 6)).join('\n');
     check(/rl = closeReader\(rl\);/.test(before),
@@ -261,6 +265,10 @@ check(WORLD.length >= 4 && sites.length >= 4, 'the vocabulary or the site set sh
   // a SECOND askHidden waited forever for input already delivered. Reproduced under a pipe and under a real pty, so
   // it is a race an interactive human hides by typing slowly. `ust reroot` is the first command needing two secrets
   // and it hung on the second. A reader that consumes a chunk owes back what it did not use.
+//
+// CLOSED 2026-08-03 by `fe0bbe42` — cli(#133, #131): `ust reroot` emits the signed half — and the live run
+// found three stoppers. In this tree a narration is written in the commit that fixes what it describes, and
+// blame places this paragraph there; noted 2026-08-05, appended rather than rewritten.
   check(/HIDDEN_PENDING = /.test(body) && /HIDDEN_PENDING/.test(body.slice(0, 1500)),
     'askHidden no longer hands back the UNUSED remainder of a data chunk — a second secret prompt in the same command will hang');
   check(/if \(c < ' '\) continue;/.test(body),

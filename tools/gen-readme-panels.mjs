@@ -222,6 +222,10 @@ panel('ust-map', 'REPOSITORY MAP',
   // shape changed — measured 2026-07-30, the restructure into blocks broke this parser and the git-diff gate caught
   // it. So: a row STARTS at a glyphed `ust …` line, and a deeply-indented line with no command of its own is that
   // row's description continuing, never a row of its own and never dropped.
+//
+// CLOSED 2026-07-30 by `6fdb5781` — surfaces(rc.74/rc.32): the package pages are the first thing anyone
+// reads, and nothing checked them. In this tree a narration is written in the commit that fixes what it
+// describes, and blame places this paragraph there; noted 2026-08-05, appended rather than rewritten.
   const rows = [];
   for (const l of out.stderr.split('\n')) {
     const isCmd = /^\s+(?:\S\s+)?ust /.test(l);

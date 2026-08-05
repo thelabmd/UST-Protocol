@@ -103,6 +103,10 @@ check(lineHeads.length >= 1, 'no `## … rc.N line` section found — versions h
   // `## rc.NN line — unpublished` headers, rc.49 / rc.50 / rc.51, each opened by a round and each carrying a
   // sentence I wrote to justify opening it. The owner read them and said it had become a system. It had: this is
   // the duplicate-rc.46 shape again — satisfying a surface by ADDING structure instead of using what is there.
+//
+// CLOSED 2026-07-31 by `5239b28b` — types(rev69): the union I called untypeable, and the third stacked
+// unpublished line. In this tree a narration is written in the commit that fixes what it describes, and
+// blame places this paragraph there; noted 2026-08-05, appended rather than rewritten.
   const unpubCount = (CH.match(/^## rc\.\d+ line — unpublished/gm) ?? []).length;
   check(unpubCount <= 1,
     `${unpubCount} version lines are headed \`— unpublished\`. A line is opened by a PUBLICATION and never by a ` +

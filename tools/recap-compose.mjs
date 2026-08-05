@@ -9,6 +9,10 @@
 // gates on, stated in printed-command-gate's own header: text ABOUT code, authored beside the code, drifting from it
 // silently. A month later nobody can separate a measured number from a remembered one.
 //
+// CLOSED 2026-08-03 by `701e2632` — tools: compose a recap's measured skeleton instead of remembering it. In
+// this tree a narration is written in the commit that fixes what it describes, and blame places this
+// paragraph there; noted 2026-08-05, appended rather than rewritten.
+//
 // THE SPLIT, and it is deliberate. A report is two substances:
 //   MEASURED  — counts, dates, versions, commits, the issue list, the sealed diary block. Mechanically derivable,
 //               therefore never typed. This tool fills them.

@@ -74,6 +74,10 @@ for (const [name, st] of pubState) {
   // A package that is not on npm has no dist-tags, and that is the honest "repo is ahead" state this gate already
   // knows how to report — not an unreadable pointer. Measured 2026-07-31 on the first genuinely unpublished package
   // in the tree: the fetch ran BEFORE the published check and failed closed on a package that simply is not there.
+//
+// CLOSED 2026-07-31 by `2749655b` — protocol(rc.46): a worked example taught a refusable document — and the
+// fix was not the number (#101). In this tree a narration is written in the commit that fixes what it
+// describes, and blame places this paragraph there; noted 2026-08-05, appended rather than rewritten.
   if (!st.published) { console.log(`  → ${name}: not on npm — no dist-tags to check`); continue; }
   let tags, deprecated = {};
   try { tags = JSON.parse(execSync(`npm view ${name} dist-tags --json`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })); }

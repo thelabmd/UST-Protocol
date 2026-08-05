@@ -432,6 +432,10 @@
     {
       "round": 177,
       "no_recap": "The round closed no issue — it worked the backlog the previous round pinned. A recap belongs to a closed issue."
+    },
+    {
+      "round": 178,
+      "no_recap": "The round closed no issue — it emptied the backlog the gate had pinned. A recap belongs to a closed issue."
     }
   ]
 }

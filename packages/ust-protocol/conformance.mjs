@@ -3475,6 +3475,10 @@ console.log('  ust-protocol ' + P.VERSION.spec + ' conformance vs ' + V.version)
 // executed manifest, and were absent from PASS — and before that a ReferenceError in the same block killed
 // the process AFTER the print, so a reader grepping for `PASS` saw a green suite that had crashed.
 //
+// CLOSED 2026-08-02 by `8a2d980e` — protocol(rev83): F.5t — the NAME is a claim, and an unverifiable one is
+// worse than none. In this tree a narration is written in the commit that fixes what it describes, and blame
+// places this paragraph there; noted 2026-08-05, appended rather than rewritten.
+//
 // The operator suite asserts declared == counted; that invariant does not hold here, where checks run in
 // LOOPS over vectors and one call site produces many. The property that does hold is POSITIONAL, and it is
 // the one that actually failed: nothing that counts may appear after the count is printed. The needle is

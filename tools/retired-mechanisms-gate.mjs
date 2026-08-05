@@ -47,6 +47,10 @@ const RETIRED = [
   // OP FORM, not the bare word: `ust rotate` is a live CLI command and `rotateKeylog` a live export, so /rotate/
   // would churn on every unrelated edit and teach a reader to ignore this gate. Code surfaces are covered by
   // tools/keyop-contract-gate.mjs, which enumerates the domain from the reducer instead of matching text.
+//
+// CLOSED 2026-07-29 by `f21e7db4` — round 84: whether a key needs a role is a property of the GENESIS, not
+// of the command (#109). In this tree a narration is written in the commit that fixes what it describes, and
+// blame places this paragraph there; noted 2026-08-05, appended rather than rewritten.
   { id: 'key-log `rotate` op',            rx: /op:\s*.?rotate/g,               retiredIn: 'rev97 (self-authorized succession named its own successor)', spec: 1, model: 2 },
   { id: 'depth-64 cap in admitDeep',      rx: /depth[- ]64/g,                   retiredIn: 'rev30 (falsely rejected a valid deep document)',   spec: 0, model: 1 },
 ];

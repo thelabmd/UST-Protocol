@@ -3654,6 +3654,10 @@ cadence a live publisher declares — returns `INVALID E-BOUNDS`; the same 120 a
 verifies. The transformation is realized in the operator layer (`packages/ust-operator`), never in the base: the base
 VERIFIES a composed tree and building one is a producer's job.
 
+CLOSED 2026-07-31 by `2749655b` — protocol(rc.46): a worked example taught a refusable document — and the
+fix was not the number (#101). In this tree a narration is written in the commit that fixes what it
+describes, and blame places this paragraph there; noted 2026-08-05, appended rather than rewritten.
+
 **Binding: realized** — *"#101 ADVERSARIAL: a capacity grant does NOT admit an over-breadth FLAT seal — capacity is VOLUME, breadth is STRUCTURE"*. The arithmetic was always over the §13 constants; what is now an obligation is that no declaration may reach a structural bound, which a check refuses rather than a sentence asserts.
 
 ### F.9.5-c The ROOT does not compose, so the ENUMERATION is what splits — and `root` becomes the completeness marker (#127)

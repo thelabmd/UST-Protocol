@@ -65,6 +65,10 @@ const lines = [
 // that matters — the reader sees the pair and only the layout separates them. Measured 2026-08-03: a correctly
 // qualified use was reported bare because the line broke between the two words.
 //
+// CLOSED 2026-08-03 by `c20967df` — round 160: the fifth axis crossed live — and the eleven minutes it cost
+// to learn where the value belongs. In this tree a narration is written in the commit that fixes what it
+// describes, and blame places this paragraph there; noted 2026-08-05, appended rather than rewritten.
+//
 // NAMED, so the control below exercises THIS function rather than a copy of it. The first version of that control
 // reimplemented the prefix rule inline, so reverting the real behaviour left it green — a check aimed at its own
 // paraphrase. One implementation, two callers.
@@ -190,5 +194,9 @@ for (const t of TERMS) {
 // the same collision, MEASURED 2026-07-30: `buildCheckpoint` builds a STREAM checkpoint while `buildAuthorityCheckpoint`
 // sits beside it, so one export names its chain and the other does not. Renaming a public export is a breaking change,
 // so it is a decision rather than a defect this gate can fix: thelabmd/UST-Protocol#112.
+//
+// CLOSED 2026-07-30 by `b4f7398c` — round 92: ambiguous-term gets controls, and the collision turns out to
+// be alive in the export names (#112). In this tree a narration is written in the commit that fixes what it
+// describes, and blame places this paragraph there; noted 2026-08-05, appended rather than rewritten.
 if (failed) { console.log('\n✗ ambiguous-term gate'); process.exit(1); }
 console.log(`✓ ambiguous-term gate: ${TERMS.length} known collisions, every bare use within its pin`);

@@ -63,6 +63,10 @@ const tracked = all.filter((p) => !p.includes('/'));
 // — scratch this repository's own gates create while they run — was committed and PUSHED to the public repo, and
 // this gate passed, because `.ex-tmp/probe.ts` is not a top-level FILE. The domain was one level deep and the
 // defect was one level down. Same lesson as everywhere else: enumerate the level you actually mean.
+//
+// CLOSED 2026-07-31 by `7aef1757` — tooling: I pushed scratch into the public repo, and the gate for exactly
+// that was never wired into CI. In this tree a narration is written in the commit that fixes what it
+// describes, and blame places this paragraph there; noted 2026-08-05, appended rather than rewritten.
 const DIRS = new Set(all.filter((p) => p.includes('/')).map((p) => p.split('/')[0]));
 
 check(tracked.length >= 10, `only ${tracked.length} top-level files listed — the probe has gone blind and this gate would pass vacuously`);

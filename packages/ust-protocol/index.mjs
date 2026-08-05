@@ -1096,6 +1096,10 @@ export function resolveKeysBytes(genesisBytes, keylogBytes) {
   // `compromised` — terminal, irrecoverable. The operational key is the one living in a running service's
   // environment, so this handed the most exposed key the power to destroy the name binding permanently, which
   // nullifies the separation an offline root is kept for.
+//
+// CLOSED 2026-07-29 by `ac9d1d1f` — wip(rev97): key-log mutation restricted to the genesis root — code,
+// vectors, BMC. In this tree a narration is written in the commit that fixes what it describes, and blame
+// places this paragraph there; noted 2026-08-05, appended rather than rewritten.
   //
   // Roles are not normative yet (#106), but the genesis ALREADY names the party this needs: the root it self-signs
   // with. So the restriction lands now on what the genesis carries rather than waiting for the vocabulary — and
@@ -1119,6 +1123,10 @@ export function resolveKeysBytes(genesisBytes, keylogBytes) {
   // mean two things while `cadence` has no relation to the name. The op is NOT called `supersede`: that word already
   // names key-to-key succession one field over, and three earlier collisions in this project each caused a wrong
   // edit before anyone noticed.
+//
+// CLOSED 2026-07-29 by `780a17d3` — protocol(rev97): remove `rotate` — a self-authorized succession let a
+// compromised key name its own successor. In this tree a narration is written in the commit that fixes what
+// it describes, and blame places this paragraph there; noted 2026-08-05, appended rather than rewritten.
   const OP_FIELDS = Object.assign(Object.create(null), { add: ['op', 'pub', 'new_key_id', 'supersedes', 'role'], revoke: ['op', 'pub', 'reason', 'compromised_since'], reroot: ['op', 'to_genesis'] });   // null-proto (UST-Protocol round-13 P2-01): OP_FIELDS["toString"] must be undefined, not an inherited function
   const derive = (i, pub, label) => {                                            // strict pub + derived key_id
     if (strictB64url(pub, 32) === null) return { error: { error: 'E-KEY', detail: 'entry ' + i + ' ' + label + ' pub not a 32-byte base64url key' } };
@@ -1351,6 +1359,11 @@ export function anchorRollup({ declared = [], observed = {} } = {}) {
 // decisively, whether that thing is theirs to move. Measured 2026-08-03 on a live publisher: three barriers
 // crossed in three separate production deploys, each visible only after the previous was removed, all three
 // decidable from the SAME bytes and the SAME faculties at the first.
+//
+// CLOSED 2026-08-04 by `d46fd26e` — protocol(rev104): the ladder REPORT lands in core — coordinates plus the
+// inputs never supplied (F.5.1, F.5p.2, #137). In this tree a narration is written in the commit that fixes
+// what it describes, and blame places this paragraph there; noted 2026-08-05, appended rather than
+// rewritten.
 //
 // THIS IS NOT A SECOND IMPLEMENTATION, and that constraint shapes the whole design. A table of "what would make
 // this HIGH" would be a second copy of the decision relation, and the two would drift into disagreeing about the

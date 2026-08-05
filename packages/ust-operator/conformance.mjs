@@ -447,6 +447,10 @@ console.log(fail ? '' : '  ✓ @ust-protocol/operator PRODUCES exactly what ust-
 // print did run — and reached neither the count nor the exit code: the suite stayed green even though they
 // could have failed. That is exactly the shape the file above calls the worst. A disagreement between
 // declared and counted now fails the suite by itself.
+//
+// CLOSED 2026-07-31 by `2749655b` — protocol(rc.46): a worked example taught a refusable document — and the
+// fix was not the number (#101). In this tree a narration is written in the commit that fixes what it
+// describes, and blame places this paragraph there; noted 2026-08-05, appended rather than rewritten.
 {
   const declared = (readFileSync(new URL(import.meta.url), 'utf8').match(/^\s*check\(\s*'/gm) ?? []).length;
   if (declared !== pass + fail) {

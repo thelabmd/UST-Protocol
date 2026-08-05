@@ -46,6 +46,11 @@ const fields = new Set();
 // refinement: presence of ..." produced a phantom field `refinement` and the gate demanded a ceremony flag for it.
 // A gate that can be fooled by a comment reports work that does not exist, which costs exactly what a missed field
 // costs: the reader stops believing it.
+//
+// CLOSED 2026-07-29 by `c0cbf9f3` — protocol(round 79): key roles — the reason for putting them in the
+// genesis had been removed by round 76 (#106). In this tree a narration is written in the commit that fixes
+// what it describes, and blame places this paragraph there; noted 2026-08-05, appended rather than
+// rewritten.
 const codeOnly = valueBlock.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
 for (const m of codeOnly.matchAll(/(?:^|[{,\s])([a-z_]+)\s*:/gm)) fields.add(m[1]);
 for (const m of valueBlock.matchAll(/^\s*(pub|role),/gm)) fields.add(m[1]);

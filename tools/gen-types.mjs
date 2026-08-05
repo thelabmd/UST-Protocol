@@ -78,6 +78,10 @@ function guardedInBody(name, rawBody) {
   // right-to-left scan then stopped there and took the whole tail with it. A message that NAMES its parameter is
   // exactly what a good refusal does, so the generator must read prose as prose wherever it appears.
   // Templates are blanked only OUTSIDE `${…}`: an interpolation is real code and can carry a real use.
+//
+// CLOSED 2026-08-03 by `d954db63` — cli(#131, #132): `ust reroot`, and the command that could not run at
+// all. In this tree a narration is written in the commit that fixes what it describes, and blame places this
+// paragraph there; noted 2026-08-05, appended rather than rewritten.
   const blanked = rawBody
     .replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, (m) => ' '.repeat(m.length))
     .replace(/'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"/g, (m) => ' '.repeat(m.length))
@@ -140,6 +144,10 @@ export function declarationsFor(src, resolveModule) {
   // runtime with no declaration at all (measured 2026-07-30: 108 declared against 117 exported). A consumer who
   // deletes their hand-written types loses them silently. The names are followed into the module they come from
   // and declared from ITS source, so a re-export is typed like anything else rather than dropped.
+//
+// CLOSED 2026-07-31 by `869ae0c8` — protocol(rc.44): we shipped a .d.ts that does not compile, and nothing
+// here had a compiler to notice. In this tree a narration is written in the commit that fixes what it
+// describes, and blame places this paragraph there; noted 2026-08-05, appended rather than rewritten.
   for (const m of src.matchAll(/^export \{([^}]+)\} from '([^']+)';/gm)) {
     const names = m[1].split(',').map((x) => x.trim().split(/\s+as\s+/).pop().trim()).filter(Boolean);
     const from = resolveModule?.(m[2]);
@@ -291,6 +299,10 @@ function returnTypeOf(rawBody, isAsync) {
     // fields. Measured 2026-08-01 by the first typed consumer of `reconcileHead`: the declaration shipped
     // `Promise<unknown>`, and reading `r.state` did not compile — the same wall #117 was about, reached by a
     // different road. Key sets decide; disagreeing key sets still collapse to `unknown`.
+//
+// CLOSED 2026-08-01 by `cb69e1e5` — protocol(rev79): F.5r-g — the stored head is a CACHE; the published set
+// is the fact. In this tree a narration is written in the commit that fixes what it describes, and blame
+// places this paragraph there; noted 2026-08-05, appended rather than rewritten.
     const keysOfLiteral = (lit) => {
       const out = []; let depth = 0, buf = '';
       for (const ch of lit + ',') {
@@ -431,6 +443,10 @@ const render = (pkg, decls) => {
     // and `skipLibCheck` does not help because it skips CHECKING, not PARSING.
     // The grammar decides the fix, not preference: optionality is contagious to the right. A caller passing every
     // argument still type-checks, so nothing true becomes unexpressible.
+//
+// CLOSED 2026-07-31 by `869ae0c8` — protocol(rc.44): we shipped a .d.ts that does not compile, and nothing
+// here had a compiler to notice. In this tree a narration is written in the commit that fixes what it
+// describes, and blame places this paragraph there; noted 2026-08-05, appended rather than rewritten.
     let seenOptional = false;
     for (const p of d.params) { if (p.optional && !p.rest) seenOptional = true; else if (seenOptional && !p.rest) p.optional = true; }
     const ps = d.params.map((p) => `${p.rest ? '...' : ''}${p.name}${p.optional && !p.rest ? '?' : ''}: ${p.rest ? 'unknown[]' : 'unknown'}`).join(', ');

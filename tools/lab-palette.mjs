@@ -92,6 +92,10 @@ export const mermaidClassDefs = (mode = 'light') => { const B = bind(mode); retu
 // `Parse error … Expecting 'taskData', got ':'` — a wrapper that is wrong for a whole class of inputs, discovered by
 // the rendered page rather than by anything here. So the family is DECIDED FROM THE SOURCE, and everything outside it
 // gets the theme alone; its colours arrive through themeVariables, which is why the init above carries the gantt keys.
+//
+// CLOSED 2026-08-03 by `f09c6f86` — tools(palette): classDef belongs to the flowchart family and to no other
+// diagram. In this tree a narration is written in the commit that fixes what it describes, and blame places
+// this paragraph there; noted 2026-08-05, appended rather than rewritten.
 const CLASSDEF_FAMILY = /^\s*(flowchart|graph|classDiagram|stateDiagram(-v2)?|erDiagram)\b/;
 export const takesClassDefs = (source) => CLASSDEF_FAMILY.test(String(source ?? ''));
 

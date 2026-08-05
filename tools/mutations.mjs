@@ -322,6 +322,10 @@ export const MUTATIONS = [
     // `connector receipts (OTS + Rekor)` carries a comment between `- name:` and `run:`, and the old parser required
     // them adjacent. It vanished, and the gate reported the remaining 57 as "every CI step". Nothing in the corpus
     // held that class, so this mutant does: a step whose command the gate cannot read must FAIL, never disappear.
+//
+// CLOSED 2026-07-30 by `2e89945f` — audit(#114): the roster held 57 of 58 steps in silence, and the missing
+// one was the anchor. In this tree a narration is written in the commit that fixes what it describes, and
+// blame places this paragraph there; noted 2026-08-05, appended rather than rewritten.
     id: 'unreadable-ci-step', observe: [],
     why: 'a CI step the assurance roster cannot parse — the shape that used to leave the domain in silence.',
     file: '.github/workflows/ci.yml',

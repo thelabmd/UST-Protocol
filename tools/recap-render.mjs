@@ -12,6 +12,10 @@
 // was right; prose does not hash into it. So the text comes from `diarium read --json`, the same one implementation
 // of "what follows what" that renders the diary page, and typing it is not possible rather than not allowed.
 //
+// CLOSED 2026-07-29 by `da40742f` — round 83: the recap lands in the ISSUE, and the unit is one CLOSED ISSUE
+// (owner). In this tree a narration is written in the commit that fixes what it describes, and blame places
+// this paragraph there; noted 2026-08-05, appended rather than rewritten.
+//
 // IT DOES NOT WRITE INTO CHANGELOG.md, and that is a decision rather than an omission (round 83, owner's call). Round
 // 81 put the block there on the strength of a 27 July proposal; seeing it, the owner ruled that diary entries do not
 // belong in the changelog. He is right for a reason the design itself states: three authors must write DIFFERENT
@@ -75,6 +79,10 @@ for (const rec of REG.records) {
   // WHICH ISSUE receives it must be DECIDED, never left to the moment. Measured 2026-07-29: reading the rule as
   // round-bound rather than issue-bound, I recorded `issue: null` with a reason and posted nothing, and the owner
   // had to ask where the recap was.
+//
+// CLOSED 2026-07-29 by `da40742f` — round 83: the recap lands in the ISSUE, and the unit is one CLOSED ISSUE
+// (owner). In this tree a narration is written in the commit that fixes what it describes, and blame places
+// this paragraph there; noted 2026-08-05, appended rather than rewritten.
   const issued = Number.isInteger(rec.issue) || String(rec._issue ?? '').trim().length >= MIN_REASON;
   check(issued, `round ${rec.round}: neither an issue number nor a reason of ${MIN_REASON}+ chars for receiving none — a recap nobody receives is a view rendered into a terminal and stopped there`);
   const d = byHash.get(rec.content_hash);

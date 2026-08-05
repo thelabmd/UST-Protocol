@@ -340,6 +340,11 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
   // one that just ran — today's reads a cadence declared in the genesis and the published one does not, so the hint
   // would have contradicted the screen above it. `invocation()` keeps the intent (runnable without assuming a global
   // install) and drops the cost. The assertion follows the intent, not the mechanism.
+//
+// CLOSED 2026-07-28 by `f4d68241` — fix(regression): the re-attest hint asserted a MECHANISM, and the
+// mechanism had become the defect — plus I pushed red. In this tree a narration is written in the commit
+// that fixes what it describes, and blame places this paragraph there; noted 2026-08-05, appended rather
+// than rewritten.
   check('confirm_live_exhaustion_names_reattest', /discovery/.test(exhausted) && exhausted.includes('NOT granted'));
 
   // the closing summary: custody classes + tier ladder + NO operator-specific env name (the protocol

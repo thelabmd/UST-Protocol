@@ -1324,6 +1324,20 @@
         "excluded": "No byte-vector: the subject is prose. The gate's CONTROL pair is the contract — a marked narration must be recognised, an unmarked one must not."
       },
       "test": "tools/record-closure-gate.mjs"
+    },
+    {
+      "round": 178,
+      "math": {
+        "excluded": "Our own commentary, not the protocol — the same exclusion rounds 174-177 carry."
+      },
+      "spec": {
+        "excluded": "Same reason: the specification governs what a stranger reads off a document."
+      },
+      "code": "tools/record-closure-gate.mjs :: PINNED_UNMARKED is 0, so the count asserts a property instead of tolerating a backlog; 44 narrations across 21 files carry a blame-established CLOSED",
+      "vector": {
+        "excluded": "No byte-vector: prose in our sources, contracted by the gate's CONTROL pair."
+      },
+      "test": "tools/record-closure-gate.mjs"
     }
   ],
   "first_accounted_round": 76,

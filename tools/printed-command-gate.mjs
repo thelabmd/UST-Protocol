@@ -42,6 +42,10 @@ for (const [n, line] of lines.entries()) {
   // stranger meets before anything else — is printed through it. The gate that exists because a printed instruction
   // drifted from the command was blind to the biggest printed surface. Measured 2026-07-30 while restructuring that
   // screen into blocks: 21 instructions were checked and the help block was not among them.
+//
+// CLOSED 2026-07-30 by `6fdb5781` — surfaces(rc.74/rc.32): the package pages are the first thing anyone
+// reads, and nothing checked them. In this tree a narration is written in the commit that fixes what it
+// describes, and blame places this paragraph there; noted 2026-08-05, appended rather than rewritten.
   if (!/console\.(?:log|error)|^\s*['"`]|^\s*\$\{?T\}?/.test(line) && !/^\s{4}['"`]/.test(line)) continue;
   for (const m of line.matchAll(/(?:^|[\s'"`])(?:npx @ust-protocol\/cli|\$\{invocation\(\)\}|ust) ([a-z]+)(?: ([a-z-]+))?/g)) {
     const [, sub, next] = m;
@@ -206,6 +210,10 @@ check(examplesChecked >= 10, `only ${examplesChecked} example imports resolved �
 // `genesis`, `key_id`), which is a fair documentation idiom and not a defect. So the rule is not "every block runs"
 // — it is that a block PROMISING to run does. The first end-to-end example I wrote for the core called
 // `signer.seal(state)`, which does not exist; running it is what said so, and reading it would not have.
+//
+// CLOSED 2026-07-30 by `85c9799d` — surfaces: every package page measured, not read — titles, install, and
+// examples that actually run. In this tree a narration is written in the commit that fixes what it
+// describes, and blame places this paragraph there; noted 2026-08-05, appended rather than rewritten.
 import { execFileSync as runFile } from 'node:child_process';
 import { fileURLToPath as toPath } from 'node:url';
 const ROOT = toPath(new URL('../', import.meta.url));
@@ -240,6 +248,10 @@ check(runnable >= 3, `only ${runnable} runnable example(s) found across the pack
 // produced a flood: apostrophes in English prose inside comments pair up across lines and every `${…}` between them
 // matched. That is the harness being wrong, not the code — and a gate whose first run is mostly its own noise is the
 // one people learn to ignore.
+//
+// CLOSED 2026-08-03 by `d954db63` — cli(#131, #132): `ust reroot`, and the command that could not run at
+// all. In this tree a narration is written in the commit that fixes what it describes, and blame places this
+// paragraph there; noted 2026-08-05, appended rather than rewritten.
 const noComments = (src) => src.replace(/\/\*[\s\S]*?\*\//g, ' ').split('\n').map((l) => {
   let q = null, esc = false;
   for (let i = 0; i < l.length; i++) {
