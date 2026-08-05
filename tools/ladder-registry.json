@@ -1296,6 +1296,20 @@
         "excluded": "No byte-vector: the subject is a build-time instrument, not a document. Its contract is enforced by the CONTROL leg each gate already carries — which is what detected the defect."
       },
       "test": "tools/consumer-probe-gate.mjs"
+    },
+    {
+      "round": 176,
+      "math": {
+        "excluded": "The subject is how this repository narrates its own history, not what a transcript means. A theorem about our record-keeping would be a theorem about us — the same exclusion rounds 174 and 175 carry."
+      },
+      "spec": {
+        "excluded": "Same reason: the specification governs what a stranger reads off a document, and these narrations are commentary in our own sources."
+      },
+      "code": "tools/record-closure-gate.mjs :: enumerates every dated narration and ratchets the unmarked count; tools/protocol-name-gate.mjs and spec/UST-1.0-formal-model.md :: the four live records now carry CLOSED IN PART with dates and the note that the note came later",
+      "vector": {
+        "excluded": "No byte-vector: the subject is prose in our sources, and its contract is enforced by the gate's own CONTROL pair — a marked narration must be recognised, an unmarked one must not."
+      },
+      "test": "tools/record-closure-gate.mjs"
     }
   ],
   "first_accounted_round": 76,

@@ -276,6 +276,8 @@ ${diary || FILL('run `node tools/recap-render.mjs --issue ' + round + '` after s
 // ── THE LAB REPORT HEAD — the FORM, not just the sections ────────────────────────────────────────────────────
 //
 // MEASURED 2026-08-04: report R-165 came out as bare markdown headings. The sections were right and the form was
+// CLOSED 2026-08-04, in this same file: the head, the full-width tables, the alerts and the per-section
+// diagram slots are emitted by the generator now, so the form no longer lives in whoever writes the report.
 // gone, because #132's head — the centred plate and the fielded table — was assembled BY HAND that day and the
 // generator never learned it. So every later report silently lost the identity unless someone remembered, which
 // is the same defect class this file exists to close: the thing lives in a person instead of in the tool.

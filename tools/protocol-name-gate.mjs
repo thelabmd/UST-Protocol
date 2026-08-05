@@ -9,6 +9,14 @@
 // Measured 2026-08-02: the reference operator's own outage records carried `"protocol": "UST"` with no
 // version, no state and NO SIGNATURE. Nobody noticed for as long as they existed, because nothing looked.
 // This looks — at every artifact in this tree that wears the name.
+//
+// CLOSED IN PART, 2026-08-04 (rev107, rounds 166-168) — noted here 2026-08-05, after an extraction agent read
+// the paragraph above and reported it as a LIVE defect. The MECHANISM is closed: `classifyNamed` and
+// `nameSetReport` moved into the package and `ust names <paths>` points them at an operator's OWN published
+// set, so the rule no longer binds a party that holds no procedure (F.5t-a). This gate now calls the export
+// rather than keeping a second copy of the predicate. What is NOT closed is the operator's own remediation:
+// measured 2026-08-04 on its public mirror, 1046 artifacts wear the name and exactly one is a document. That
+// is the operator's work, tracked on its side, and it is not a gap in this tree.
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';

@@ -81,7 +81,8 @@
     "test:floors": "node tools/dependency-floor-gate.mjs",
     "test:probe": "node tools/consumer-probe-gate.mjs",
     "test:examples": "node tools/worked-example-gate.mjs",
-    "test:protocol-name": "node tools/protocol-name-gate.mjs"
+    "test:protocol-name": "node tools/protocol-name-gate.mjs",
+    "test:record-closure": "node tools/record-closure-gate.mjs"
   },
   "devDependencies": {
     "typescript": "~7.0.2"

@@ -36,6 +36,8 @@ const compile = (file) => {
   // so escape sequences sat between `error` and the code, /error TS/ matched nothing, and every compile here
   // returned an empty list — which this gate reads as "compiled clean". Both compile gates in this tree were
   // vacuous simultaneously, and only their CONTROL legs noticed. The exit code is the fact; the text describes it.
+  // CLOSED 2026-08-05, in this same edit, in both gates. Proven by mutation: a required parameter after an
+  // optional one in a shipped .d.ts now names the file, the line and TS1016.
   try { execFileSync(TSC, ['--noEmit', '--pretty', 'false', file], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }); return []; }
   catch (e) {
     const lines = String(e.stdout || e.message).split('\n').filter((l) => /error TS/.test(l));

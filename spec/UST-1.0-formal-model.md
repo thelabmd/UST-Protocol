@@ -2322,7 +2322,11 @@ F.5p gave the profile its separator while nothing read the document. With a read
 becomes a question, and the measurement that forced it is the reference operator's: its profile carries
 `summary`, `rights`, `paid`, `time_semantics` and `links` — prose addressed to a person, binding nothing — and
 carries no `serves`, no substrate list and no copy locator, while serving a witness log and a key log and
-anchoring into two substrates. The machine-read half was absent for months and no surface noticed, because
+anchoring into two substrates. **CLOSED IN PART, and measured by a read-only fetch on 2026-08-05:** the served
+profile now carries `declares` with `serves: ["witness"]` and three `copies` locators for genesis, keylog and
+witness. `substrates` is still absent — which under F.5p's monotonicity is the honest floor rather than a
+residual defect: declaring can only add an obligation, so an undeclared substrate is not-offered, never a
+failure. This note was added later; the paragraph below is the measurement the theorem rests on. The machine-read half was absent for months and no surface noticed, because
 nothing in the document says which half a key belongs to.
 
 **Two requirements, each independently forced, on what a verifier does with a key it does not know.**
@@ -2390,7 +2394,11 @@ These are opposite conclusions, and `σ(silence)` contains neither. **A liveness
 therefore unfounded** — it is the same shape as concluding validity from the absence of a refusal, which the
 tiers exist to prevent.
 
-**Measured, 2026-08-04.** A watcher was enabled on the reference operator, printed its start line, and went
+**Measured, 2026-08-04. CLOSED 2026-08-04 on the operator; noted here 2026-08-05.** The flag was corrected to
+carry the `_ENABLED` suffix `actionEnabled` actually builds, and the watcher now announces its FIRST successful
+observation once, with the `ust_id` of the slot it read — so silence is no longer the only signal it emits. The
+paragraph below is kept in the present tense of the measurement because it is the evidence for the theorem, not
+a report of an outstanding defect. A watcher was enabled on the reference operator, printed its start line, and went
 quiet. Quiet was the designed signal for health. A watcher whose fetch had broken would have produced a byte-
 identical trace. And one level further in: the flag that enables it is named `<SVC>_<ACTION>_ENABLED`; set
 without the suffix it read as absent, so the watcher **did not start, silently** — the same collapse, one turn
@@ -2892,6 +2900,13 @@ own `class` demands; a negative sample's expectation is read from its recipe rat
 the gate, since a gate carrying its own exceptions is the private knowledge this theorem is about. A floor
 on the examined count keeps the roster from going blind, and a planted unsigned artifact proves the gate
 can fail.
+
+**Measured (rev83). The MECHANISM closed 2026-08-04 (rev107, F.5t-a); the operator's own set has not.** Noted
+2026-08-05, after an extraction agent read the paragraph below and reported it as a live defect in this tree.
+What closed: the obligation quantifies over the set an operator PUBLISHES, so the predicate moved into the
+package and ships as an operation a publisher runs over its own artifacts — the rule no longer binds a party
+that holds no procedure. What has not: measured on the reference operator's public mirror the same day, 1046
+artifacts wear the name and exactly one is a document. That is the operator's remediation, tracked on its side.
 
 **Measured (rev83).** The reference operator's outage records — the independent evidence its own gap
 records were about to cite — carry `"protocol": "UST"`, no version, no `state`, no signature. Their

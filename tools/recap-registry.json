@@ -424,6 +424,10 @@
     {
       "round": 175,
       "no_recap": "The round closed no issue. It repaired two gates that were passing over an unread compiler — found by their own control legs while finishing an unrelated round. A recap belongs to a closed issue; an instrument repair is not one."
+    },
+    {
+      "round": 176,
+      "no_recap": "The round closed no issue. It gave four historical records their closings and built the gate that stops new ones landing without a disposition — found because an agent read this tree and mistook its history for its present. A recap belongs to a closed issue."
     }
   ]
 }

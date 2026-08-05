@@ -23,6 +23,9 @@ const TSC = ROOT + 'node_modules/.bin/tsc';
 // every compile returned an empty error list, which this gate reads as "compiled clean". The whole probe passed
 // for free, and only the CONTROL leg noticed. A filter over rendered TEXT is a dependency on a renderer nobody
 // pinned; the exit code is the fact, and the text is a description of it.
+// CLOSED 2026-08-05, in this same edit: `--pretty false` removes the rendering and the catch clause returns a
+// synthetic diagnostic on a non-zero exit matching no pattern, so a renderer cannot empty this gate again.
+// Proven by mutation — declare `verify` as `any` and the CONTROL leg reddens.
 const ARGS = ['--noEmit', '--strict', '--pretty', 'false', '--module', 'nodenext', '--moduleResolution', 'nodenext', '--target', 'es2022'];
 
 const fail = [];
