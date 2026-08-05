@@ -10,6 +10,11 @@
 // figure was true under an older harness and had become an unbacked claim about INDEPENDENT verification, sitting
 // in the document whose entire purpose is to be weighed by someone independent.
 //
+// CLOSED 2026-07-30 — The document was corrected in the same commit that added this gate, 2026-07-30:
+// `docs/AUDIT.md` now prints what `npm run test:docs-parity` produces — 13 cases, 0 divergences — and states the
+// retraction of `32/32` in its own text. Written in here afterwards. Noted 2026-08-05, appended rather than
+// rewritten.
+//
 // A stale count in a README costs a reader a minute. A stale count HERE misrepresents how much scrutiny the thing
 // has had, to the exact audience whose judgement depends on knowing. So every number claimed in the "what we have
 // already done" section is recomputed here from the artifact it describes.

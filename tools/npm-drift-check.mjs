@@ -61,6 +61,10 @@ for (const ws of workspaces) {
 // printed in that package's own README, and `rc` pointed at rc.22, nineteen versions and every key-handling round
 // behind. Five more packages carried the same shape.
 //
+// CLOSED 2026-07-30 — // The tags were repointed on 2026-07-30 — registry metadata only, no republish — and each
+// was verified by installing and importing it; this note was added afterwards, since the paragraph above records
+// the measurement that produced the rule and not the repair. Noted 2026-08-05, appended rather than rewritten.
+//
 // The byte-diff above proves the ARTIFACT under a version label is immutable. It says nothing about which label a
 // stranger actually resolves, and a tag is the only thing most people ever type. So: every tag of every package is
 // enumerated from the registry and must point at the CURRENT published version, and never at a version we have

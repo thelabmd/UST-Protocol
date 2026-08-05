@@ -1310,6 +1310,20 @@
         "excluded": "No byte-vector: the subject is prose in our sources, and its contract is enforced by the gate's own CONTROL pair — a marked narration must be recognised, an unmarked one must not."
       },
       "test": "tools/record-closure-gate.mjs"
+    },
+    {
+      "round": 177,
+      "math": {
+        "excluded": "The subject is our own commentary, not the protocol. Same exclusion rounds 174-176 carry: a theorem about how we annotate ourselves would be a theorem about us."
+      },
+      "spec": {
+        "excluded": "Same reason — the specification governs what a stranger reads off a document, and these are notes in our sources."
+      },
+      "code": "tools/record-closure-gate.mjs :: the pin fell 75 to 60; seventeen gate headers in tools/ now carry CLOSED with a verified commit and date",
+      "vector": {
+        "excluded": "No byte-vector: the subject is prose. The gate's CONTROL pair is the contract — a marked narration must be recognised, an unmarked one must not."
+      },
+      "test": "tools/record-closure-gate.mjs"
     }
   ],
   "first_accounted_round": 76,

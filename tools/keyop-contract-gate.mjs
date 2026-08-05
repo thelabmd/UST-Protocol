@@ -9,6 +9,10 @@
 // had gained. An agent building from that description produces an entry that fails E-KEY, and agents are
 // first-class publishers here.
 //
+// CLOSED 2026-07-29 — in the same round that added this gate, 2026-07-29 (round 84): `ust_build_key_log` now
+// advertises `add|revoke|reroot` with `supersedes` and `role`, and the comparison below is what keeps it true.
+// Noted 2026-08-05, appended rather than rewritten.
+//
 // WHY NOTHING CAUGHT IT. `retired-mechanisms-gate` exists for exactly this class and reads the SPEC and the FORMAL
 // MODEL only — by design, it guards documents. `spec-code-sync` binds the canonical string sets in REGISTRY, and
 // `OP_FIELDS` is not one of them: it is a function-local const in the reducer, so no gate had a reason to look at

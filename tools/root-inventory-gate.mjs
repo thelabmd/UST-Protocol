@@ -8,6 +8,10 @@
 // anything — the genesis was byte-identical to the endpoint that serves it publicly — but a reader of the root sees
 // the shape of the project, and junk in it is a claim about care that is not true.
 //
+// CLOSED 2026-07-31 — // `.ex-tmp/` was removed from the repository and gitignored on 2026-07-31, in the same
+// commit that wired this gate into CI and deepened it by one level — added here later, because the note above
+// records only the measurement. Noted 2026-08-05, appended rather than rewritten.
+//
 // The habit fix is to write measurements to a scratch path. This is the backstop for the times the habit fails: a
 // new top-level file must be DECLARED here, with what it is for. Same discipline as the package roster and the
 // artifact-origin table — a domain enumerated in both directions rather than a pattern that resembles it.

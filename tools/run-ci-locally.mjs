@@ -7,6 +7,10 @@
 // scripts; it was wrong about the DOMAIN, which is "what CI executes", not "what matches my pattern". That is the same
 // failure this repository spends most of its gates preventing, committed in the tool used to check the gates.
 //
+// CLOSED 2026-07-28 — The bump was made in the commit that added this file — `ust-protocol` rc.36 → rc.37, all
+// four version sites moved together, 2026-07-28. Recorded afterwards, because the sentence above stops at what
+// the sweep missed. Noted 2026-08-05, appended rather than rewritten.
+//
 // So: parse the workflow, take every `run:` line in order, execute it, and report by step name. A step CI runs and
 // this does not is now impossible without editing this file.
 import { readFileSync } from 'node:fs';

@@ -8,6 +8,11 @@
 // unreachable from the only tool that performs a ceremony. The live reference operator's genesis carries three
 // fields — `pub`, `role`, `max_partitions` — so both are absent there.
 //
+// CLOSED 2026-07-28 — // Both halves closed on 2026-07-28, in the round that wrote this gate: the ceremony now
+// seals THROUGH `buildGenesis`, and a full silver run produced a genesis carrying all six optional fields
+// [measured]. The reference operator superseded the three-field genesis quoted above on 2026-08-03 (`ust
+// reroot`) — noted here after the fact. Noted 2026-08-05, appended rather than rewritten.
+//
 // WHY THAT IS WORSE THAN AN ORDINARY GAP. Those two fields can be set at ceremony time ONLY. Changing either means a
 // NEW genesis, i.e. a supersession of the name-binding root. A publisher who completes a ceremony without them is
 // locked out of §12.3 authority checkpoints and of §12.1 P2 recovery-through-domain-control until it supersedes —

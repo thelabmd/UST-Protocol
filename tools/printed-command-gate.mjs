@@ -93,6 +93,10 @@ check(REQUIRES_ROAD.publish?.length > 0, 'the road table is empty — every prin
 // it was INCOMPLETE, which is the quieter failure: a reader cannot tell a surface that does not exist from one
 // nobody wrote down. npm and GitHub both render this file as the package's front page, so it is the first and often
 // only description a stranger reads. Both directions, same as the dispatcher check above.
+//
+// CLOSED 2026-07-30 — // The README was completed on 2026-07-30, in the same round that wrote this leg, and the
+// both-directions check below has held it complete since — noted here afterwards, because the measurement above
+// says only what was found. Noted 2026-08-05, appended rather than rewritten.
 const README = readFileSync(new URL('../packages/ust-cli/README.md', import.meta.url), 'utf8');
 const INREADME = new Set([...README.matchAll(/\bust ([a-z][a-z-]{2,})\b/g)].map((m) => m[1]).filter((c) => COMMANDS.has(c) || !/^[a-z-]+$/.test(c)));
 for (const c of COMMANDS) check(INREADME.has(c),

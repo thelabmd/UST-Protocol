@@ -8,6 +8,10 @@
 // floor against the REGISTRY, gets whatever satisfies rc.23, and the mirror leg dies on
 // `P.replicationAgreement is not a function`. Green here, broken there, and nothing in between noticed.
 //
+// CLOSED 2026-07-31 — in the same commit that added this gate, 2026-07-31 (round 124): all seven floors were
+// raised to their sibling's current version and the `--write` path is what keeps them there — the tree measures
+// clean today. Noted 2026-08-05, appended rather than rewritten.
+//
 // It was not one stale floor. It was ALL SEVEN cross-package floors in the tree — mcp, cli×4, diarium, operator —
 // drifting for as long as versions have moved, because a floor is written once and never revisited while the
 // number beside it climbs. That is the whole class: a manifest claim nobody re-derives.

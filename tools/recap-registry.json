@@ -428,6 +428,10 @@
     {
       "round": 176,
       "no_recap": "The round closed no issue. It gave four historical records their closings and built the gate that stops new ones landing without a disposition — found because an agent read this tree and mistook its history for its present. A recap belongs to a closed issue."
+    },
+    {
+      "round": 177,
+      "no_recap": "The round closed no issue — it worked the backlog the previous round pinned. A recap belongs to a closed issue."
     }
   ]
 }

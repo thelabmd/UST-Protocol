@@ -10,6 +10,15 @@
 // decided that flag may not confer, and it died on its own check EVERY time. Rotation is the only recovery from
 // key compromise, so the recovery path was unavailable and nothing said so.
 //
+// CLOSED 2026-08-03 — the same day by that sweep, 2026-08-03 (round 156): `ensureOutDir` is one exported helper
+// and all five ceremonies call it at entry, which is what the legs below hold shut. Written here afterwards —
+// the paragraph records only what was measured. Noted 2026-08-05, appended rather than rewritten.
+//
+// CLOSED 2026-07-27 — in the same commit that added this gate, 2026-07-27 (rev95, round 61): the rotation
+// self-check now asserts F.5e membership — the new key is ACTIVE in the grown log — instead of asking
+// `resolveAuthority`, so the recovery path runs. Noted 2026-08-05, appended rather
+// than rewritten.
+//
 // The other two ceremonies asked correctly — and that was LUCK. Nothing stated the rule and nothing stopped a
 // fourth from copying the wrong one. This gate is what turns three lucky cases into one invariant.
 //

@@ -51,6 +51,11 @@ const LEGAL = new Set([...LADDER, ...Object.keys(NON_RUNG)]);
 // implementation that starts emitting one would simply not be looked at, which is the same finding round 90 made
 // about the display surfaces. The roster is every `.mjs` a package's own manifest SHIPS, plus the clean-room
 // verifier and the extension's copy of it — the files that can put a rung in front of a consumer.
+//
+// CLOSED 2026-07-27 — // All three were closed on 2026-07-27, in the round that wrote this gate: the invented
+// word was replaced by ABSENCE, the `pinned` rung and `opts.pinnedKeys` were removed from both clean-room
+// verifiers, and the divergence went with them — recorded here afterwards, since the bullets above are the
+// evidence for the gate, not its status. Noted 2026-08-05, appended rather than rewritten.
 const STRENGTH = /\bstrength\s*[:=]\s*'([a-z-]+)'/g;
 const candidates = readdirSync(new URL('../packages/', import.meta.url)).flatMap((p) => {
   try { return (JSON.parse(readFileSync(new URL(`../packages/${p}/package.json`, import.meta.url), 'utf8')).files ?? [])

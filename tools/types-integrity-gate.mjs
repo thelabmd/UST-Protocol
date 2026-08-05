@@ -7,6 +7,11 @@
 // writes `buildAbsence(id, time, name, reason, extra = {}, prev)`, legal JS, and the generator transcribed it
 // literally into an illegal declaration.
 //
+// CLOSED 2026-07-31 — Both legs were closed in the same commit that added this gate, 2026-07-31 —
+// `tools/gen-types.mjs` learned that optionality is contagious to the right and reads its export set from the
+// imported module — and every shipped declaration has compiled since. Added here afterwards. Noted 2026-08-05,
+// appended rather than rewritten.
+//
 // The consequence is why this gate exists rather than a lint rule. A parse error TRUNCATES a declaration file:
 // everything after it is invisible. `resolveKeys` sits three lines past the second error and read as "does not
 // exist" to a consumer who had done nothing wrong. `skipLibCheck` does not save anyone — it skips CHECKING, not

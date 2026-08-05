@@ -10,6 +10,10 @@
 // checks a printed command STRING against the dispatch table and never asks whether the function behind the table
 // can run at all. A name that is only ever CALLED, never defined, is invisible to every check that reads source.
 //
+// CLOSED 2026-08-03 — The helper was defined on 2026-08-03 in the commit that added this gate — one
+// `/.well-known/` reader shared by every ceremony command, in place of two private copies — and ships in `cli
+// rc.100`. Noted 2026-08-05, appended rather than rewritten.
+//
 // So this gate does the one thing none of the others did: it RUNS each command, far enough to reach its first
 // refusal, and asserts the refusal is a NAMED one. A domain refusal ("--domain <d> required", "cannot fetch genesis
 // for …") means the body was entered and did its own work. A JS runtime error means the body could not run.

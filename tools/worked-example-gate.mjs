@@ -22,6 +22,11 @@
 // MEASURED 2026-07-31: 6 fenced json blocks, all skeletons, zero worked examples. So the verify leg has an empty
 // domain today and a control below proves it can still fail — a gate whose domain is empty is exactly the shape
 // that passes for free.
+//
+// CLOSED 2026-07-31 — // §21.2 itself was corrected in rc.46 on 2026-07-31 — it now shows the ROOT of a depth-2
+// seal and states the `E-BOUNDS` refusal in prose; this note was added afterwards, because the paragraph above
+// records the incident that motivated the class check and not its repair. Noted 2026-08-05, appended rather than
+// rewritten.
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 // judged by THIS TREE's checker, not by whatever `npm` happened to resolve: a gate about our specification must

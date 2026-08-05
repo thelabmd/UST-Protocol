@@ -8,6 +8,11 @@
 // The anchors are the only evidence that an hour was ever notarised; nothing warned, and the loss is silent because a
 // deploy that serves a VALID but emptier document looks exactly like a healthy one.
 //
+// CLOSED 2026-07-27 — // The DATA half closed with the mechanism, on 2026-07-27: `collectServed()` also RESTORES
+// anchors from a local log when the domain is unreachable, so a loss already suffered is repaired and not merely
+// prevented — 2 witness anchors were recovered from the live domain [measured]. Noted here afterwards. Noted
+// 2026-08-05, appended rather than rewritten.
+//
 // That is not three bugs. It is one missing assembler, found three times: every call site enumerated the artifacts
 // itself, so every call site could forget one. The structural close is `collectServed()` — the single place that
 // knows what a complete set IS, preserving live anchors before synthesising and loading the cadence log beside the

@@ -26,6 +26,10 @@ const TSC = ROOT + 'node_modules/.bin/tsc';
 // CLOSED 2026-08-05, in this same edit: `--pretty false` removes the rendering and the catch clause returns a
 // synthetic diagnostic on a non-zero exit matching no pattern, so a renderer cannot empty this gate again.
 // Proven by mutation — declare `verify` as `any` and the CONTROL leg reddens.
+//
+// CLOSED 2026-07-31 — The six shapes were repaired in the same commit that added this gate, 2026-07-31 — ten
+// unsound optionals removed and two confidently wrong return types corrected — and the probe has compiled clean
+// under `--strict` ever since. Noted 2026-08-05, appended rather than rewritten.
 const ARGS = ['--noEmit', '--strict', '--pretty', 'false', '--module', 'nodenext', '--moduleResolution', 'nodenext', '--target', 'es2022'];
 
 const fail = [];

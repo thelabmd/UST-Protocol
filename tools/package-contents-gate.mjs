@@ -7,6 +7,11 @@
 // and neither was listed in `files`, so `npm i ust-protocol` gave a package that threw ERR_MODULE_NOT_FOUND on the
 // first import. Not degraded — unusable. The reference checker, the whole L1 kernel, was absent from every install.
 //
+// CLOSED 2026-07-29 — the same day by rc.40 (round 80, 2026-07-29): `files` gained both entries, and
+// rc.36/rc.38/rc.39 were `deprecated` on npm naming the defect and the remedy — a deprecation warns a NEW
+// install and cannot repair a tree already standing. Noted 2026-08-05, appended
+// rather than rewritten.
+//
 // EVERY OTHER GATE PASSED, and the reason is worth keeping: `npm-drift` byte-compares the PACKED files against the
 // repo, so a file that is not packed has nothing to compare and is invisible to it; `version-truth` compares the
 // EXPORT list, which it reads from the SOURCE, not from the artifact. Between them they checked that what ships is
