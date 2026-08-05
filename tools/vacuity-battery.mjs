@@ -21,7 +21,9 @@
 // silently — adding a registered check without extending the battery raises the count and fails here.
 //
 // KNOWN LIMITS of this battery, named so they are not mistaken for coverage:
-//   (a) the registry-observed residual is large: 13 of 66 registered checks are proven, 53 are not yet reached. The
+//   (a) the registry-observed residual is large: 37 of 92 registered checks are proven, 55 are not yet reached (the
+//       numbers move as checks are added; the PIN below is the claim, and this line is a reading of it — measured
+//       2026-08-05, after an extraction agent reported the stale 13/66/53 as if it were current). The
 //       normative TCB IS now reached (rev87, `tcb-stops-refusing`, observed through the byte-vector channel), and that
 //       mutant taught the gate something: breaking the reference checker left `conformance.mjs` entirely GREEN while 12
 //       byte-vectors caught it. Per-channel silence is therefore a coverage BOUNDARY, not a defect.

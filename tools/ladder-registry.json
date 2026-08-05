@@ -1266,6 +1266,36 @@
       },
       "vector": "breadth-flat-over-law-reject",
       "test": "depth-law-covers-whole-ustid-space"
+    },
+    {
+      "round": 174,
+      "math": {
+        "excluded": "The report shape is a RECORDING convention, not a protocol claim: it changes no verdict, no byte and no invariant. The formal model is silent on it deliberately — a theorem about how we write reports would be a theorem about us."
+      },
+      "spec": {
+        "excluded": "Same reason: the specification governs what a transcript means to a stranger, and a report is our own artifact about our own work."
+      },
+      "code": "tools/recap-compose.mjs :: § 6 carries four fates (DONE/MOVED/OPEN/BLOCKED) and the header carries RECORDED/DIARY, so a retro closing declares itself and refuses a retroactive diary",
+      "vector": {
+        "excluded": "No byte-vector: the subject is a generated skeleton, and its contract is enforced by --check refusing an unfilled marker rather than by a corpus entry."
+      },
+      "test": {
+        "excluded": "MEASURED while writing this record: tools/recap-compose.mjs is invoked by NEITHER the workflow nor any package script — grep finds it in neither. So its --check, the refusal that makes the shape binding, runs only when an author chooses to type it. The ladder gate refused a test reference to it and was RIGHT: pointing the layer at an unrun command would have been the exact defect this repository spends its gates on. Recorded as an exclusion rather than papered over; wiring the generator's own check into the pipeline is the next round, not this one."
+      }
+    },
+    {
+      "round": 175,
+      "math": {
+        "excluded": "Gate integrity is not a protocol claim: no verdict, byte or invariant of UST changes. The formal model is silent on how this repository checks itself, deliberately — a theorem about our instruments would be a theorem about us."
+      },
+      "spec": {
+        "excluded": "Same reason. The specification governs what a transcript means to a stranger; the compile gates guard the declarations we ship, which is a packaging concern."
+      },
+      "code": "tools/consumer-probe-gate.mjs :: --pretty false plus an exit-code fallback so a non-zero exit matching no pattern still counts as failure; tools/types-integrity-gate.mjs :: the same repair",
+      "vector": {
+        "excluded": "No byte-vector: the subject is a build-time instrument, not a document. Its contract is enforced by the CONTROL leg each gate already carries — which is what detected the defect."
+      },
+      "test": "tools/consumer-probe-gate.mjs"
     }
   ],
   "first_accounted_round": 76,

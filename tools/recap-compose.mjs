@@ -292,6 +292,7 @@ const head = () => `# THE LAB<br>${HEAD_KIND[form]}
 <tr><td valign="top">${cell('**OPENED**')}</td><td valign="top">${cell(FILL('`YYYY-MM-DD HH:MMZ` — when the issue was filed'))}</td><td valign="top">${cell('**CLOSED**')}</td><td valign="top">${cell(FILL('`YYYY-MM-DD HH:MMZ` and the elapsed time, or `open`'))}</td></tr>
 <tr><td valign="top">${cell('**SEVERITY**')}</td><td valign="top">${cell(FILL('what the blast radius WAS — shipped to registry / caught before publication / latent'))}</td><td valign="top">${cell('**STATUS**')}</td><td valign="top">${cell(FILL('`🟢 CLOSED` or `🟡 OPEN`, and the CI sha it is green on'))}</td></tr>
 <tr><td valign="top">${cell('**SEALED**')}</td><td valign="top">${cell(FILL('the diary `ust:` coordinate, or `—` while unsealed'))}</td><td valign="top">${cell('**ISSUE**')}</td><td valign="top">${cell('#' + issue)}</td></tr>
+<tr><td valign="top">${cell('**RECORDED**')}</td><td valign="top">${cell(FILL('`contemporaneous`, or `retro — written YYYY-MM-DD about an event closed YYYY-MM-DD`'))}</td><td valign="top">${cell('**DIARY**')}</td><td valign="top">${cell(FILL('the sealed entry, or `none — retro closings carry no diary` (a diary written afterwards is a retelling, not a conclusion)'))}</td></tr>
 <tr><td colspan="4" valign="top">${cell('<sub>' + FILL('one sentence a stranger can read first — what happened and who was affected') + '</sub>')}</td></tr>
 </table>
 
@@ -373,6 +374,11 @@ ${commits}
 ${alert('NOTE', FILL('the PROCEDURAL follow-up, if this round exposed one about how the work is done'))}
 
 ${tbl([
+  // FOUR fates, not two. A round disposes of things in four ways and the two that were missing are the two a
+  // reader silently misreads: work that LANDED reads as still pending when nothing says otherwise, and work
+  // that MOVED reads as abandoned. `none` is a legitimate value for any row; an absent row is not.
+  ['**DONE**', FILL('what this round actually closed — the disposition, not a repeat of § 4')],
+  ['**MOVED**', FILL('what left this round for another issue, and WHICH — a pointer, never a promise')],
   ['**OPEN**', FILL('what this round leaves open, and where it is tracked')],
   ['**BLOCKED**', FILL('what cannot proceed and on what — or `none`')],
 ])}

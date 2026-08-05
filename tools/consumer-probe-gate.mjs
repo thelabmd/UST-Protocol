@@ -18,7 +18,12 @@ import { fileURLToPath } from 'node:url';
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const PROBE = 'tools/consumer-probe.ts';
 const TSC = ROOT + 'node_modules/.bin/tsc';
-const ARGS = ['--noEmit', '--strict', '--module', 'nodenext', '--moduleResolution', 'nodenext', '--target', 'es2022'];
+// `--pretty false` is LOAD-BEARING, not cosmetic. MEASURED 2026-08-05: tsc coloured its diagnostics, so the
+// bytes between `error` and `TS2322` were escape sequences and the /error TS/ filter below matched NOTHING —
+// every compile returned an empty error list, which this gate reads as "compiled clean". The whole probe passed
+// for free, and only the CONTROL leg noticed. A filter over rendered TEXT is a dependency on a renderer nobody
+// pinned; the exit code is the fact, and the text is a description of it.
+const ARGS = ['--noEmit', '--strict', '--pretty', 'false', '--module', 'nodenext', '--moduleResolution', 'nodenext', '--target', 'es2022'];
 
 const fail = [];
 let pass = 0;
@@ -26,7 +31,12 @@ const check = (ok, msg) => { if (ok) pass++; else fail.push(msg); };
 
 const compile = (file) => {
   try { execFileSync(TSC, [...ARGS, file], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }); return []; }
-  catch (e) { return String(e.stdout || e.message).split('\n').filter((l) => /error TS/.test(l)); }
+  catch (e) {
+    // The EXIT CODE decided that this failed; the lines are only how we report it. A non-zero exit whose output
+    // matches no pattern must still count as a failure, or a renderer change silently empties this gate again.
+    const lines = String(e.stdout || e.message).split('\n').filter((l) => /error TS/.test(l));
+    return lines.length ? lines : ['error TS????: tsc exited non-zero and no diagnostic line was recognised — ' + String(e.stdout || e.message).slice(0, 200)];
+  }
 };
 
 // ── leg 1: the probe compiles. This is the whole promise, and `tsc` is the only thing that can judge it.

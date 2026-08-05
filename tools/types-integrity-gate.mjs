@@ -32,8 +32,15 @@ const TSC = ROOT + 'node_modules/.bin/tsc';
 check(existsSync(TSC), 'typescript is not installed — this gate cannot compile anything and would pass vacuously. It is a devDependency for exactly this reason: a claim that we ship types is worth what a compiler says about them.');
 
 const compile = (file) => {
-  try { execFileSync(TSC, ['--noEmit', file], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }); return []; }
-  catch (e) { return String(e.stdout || e.message).split('\n').filter((l) => /error TS/.test(l)); }
+  // `--pretty false` and the exit-code fallback are LOAD-BEARING. MEASURED 2026-08-05: tsc coloured its output,
+  // so escape sequences sat between `error` and the code, /error TS/ matched nothing, and every compile here
+  // returned an empty list — which this gate reads as "compiled clean". Both compile gates in this tree were
+  // vacuous simultaneously, and only their CONTROL legs noticed. The exit code is the fact; the text describes it.
+  try { execFileSync(TSC, ['--noEmit', '--pretty', 'false', file], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }); return []; }
+  catch (e) {
+    const lines = String(e.stdout || e.message).split('\n').filter((l) => /error TS/.test(l));
+    return lines.length ? lines : ['error TS????: tsc exited non-zero and no diagnostic line was recognised — ' + String(e.stdout || e.message).slice(0, 200)];
+  }
 };
 
 const WORKSPACES = JSON.parse(readFileSync(ROOT + 'package.json', 'utf8')).workspaces;

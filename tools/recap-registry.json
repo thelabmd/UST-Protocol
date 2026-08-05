@@ -416,6 +416,14 @@
     {
       "round": 173,
       "no_recap": "The round closed no issue. It retired a work item by measurement rather than by building it, and pinned where an operator may bring its own tree. The card stays open on the reference operator publishing future windows in this form."
+    },
+    {
+      "round": 174,
+      "no_recap": "The round closed no issue — it widened the report shape so that a retro closing can declare itself, ahead of the sweep that will produce them. A recap belongs to a closed issue, and a change to the shape of recaps is not one."
+    },
+    {
+      "round": 175,
+      "no_recap": "The round closed no issue. It repaired two gates that were passing over an unread compiler — found by their own control legs while finishing an unrelated round. A recap belongs to a closed issue; an instrument repair is not one."
     }
   ]
 }
