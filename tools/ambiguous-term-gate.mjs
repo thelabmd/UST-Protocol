@@ -119,6 +119,10 @@ for (const t of TERMS) {
     console.log(`    unreachable say so in the row — do not raise it to make the gate quiet.`);
   }
 }
+//
+// CLOSED 2026-08-03 by `c20967d` — round 160: the fifth axis crossed live — and the eleven minutes it cost to
+// learn where the value belongs. The guard this paragraph explains landed with it; noted 2026-08-05, appended
+// rather than rewritten.
 
 // ── CONTROLS. A count-pin gate has exactly two ways to be worthless: the counter never counts, or the qualifier
 // swallows everything. Both are checked against a SYNTHETIC line rather than against the documents, so the controls

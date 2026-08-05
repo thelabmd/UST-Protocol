@@ -274,6 +274,10 @@ export async function askHidden(q, fallbackAsk) {
     stdin.on('data', onData);
   });
 }
+//
+// CLOSED 2026-07-27 by `1171a08` — fix(cli): the root passphrase ECHOED — a readline interface was opened
+// before the hidden prompt. The guard this paragraph explains landed with it; noted 2026-08-05, appended
+// rather than rewritten.
 
 // gold IS the hardware tier — one refusal text, used by the core AND the interview (single source).
 export const GOLD_REFUSAL = 'gold is a HARDWARE ceremony (pkcs11 / air-gapped signer). This CLI cannot drive one yet and will not pretend — run --profile silver (software root, encrypted backup), then re-root to hardware via a §12.1 supersession when ready.';

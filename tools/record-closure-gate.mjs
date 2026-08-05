@@ -14,6 +14,9 @@
 // closed weeks earlier, recorded exactly as the discipline demands. The agent was not careless. The records say
 // `Measured 2026-07-28: it was like this` and never say what closed them, so the reader supplies the tense.
 //
+// CLOSED 2026-08-05 by `9890e43` — round(176): an honest record of a fixed defect reads as an open hole. The
+// guard this paragraph explains landed with it; noted 2026-08-05, appended rather than rewritten.
+//
 // To anyone who was not there, an honest record of a fixed defect is indistinguishable from an open hole. For a
 // client-facing engagement that is a liability — the document proving rigour proves negligence. So:
 //
@@ -38,7 +41,7 @@ const ROOT = fileURLToPath(new URL('../', import.meta.url));
 
 // The RATCHET. Lower it when records are closed; it may never rise. STANDING — this is the pin itself, a
 // live count rather than a defect narration.
-const PINNED_UNMARKED = 57;
+const PINNED_UNMARKED = 44;
 
 // The narration form, derived from the tree rather than chosen: `Measured 2026-08-04`, `MEASURED, 2026-07-28`,
 // `measured live 2026-08-03`. What makes it a DEFECT narration rather than a fact is the date — a dated
@@ -103,6 +106,9 @@ check(unmarked.length >= PINNED_UNMARKED,
   check(seen(marked), 'CONTROL: a narration WITH a dated closing was not recognised — the marker probe does not fire');
   check(!seen(bare), 'CONTROL: a narration with NO disposition was accepted — the gate cannot tell the two apart and proves nothing');
 }
+//
+// CLOSED 2026-08-05 by `9890e43` — round(176): an honest record of a fixed defect reads as an open hole. The
+// guard this paragraph explains landed with it; noted 2026-08-05, appended rather than rewritten.
 
 console.log(`\n  record closure   PASS ${pass}   FAIL ${fail.length}   (${narrations} dated narration(s) · ${unmarked.length} unmarked, pin ${PINNED_UNMARKED})`);
 for (const f of fail) console.log('    ✗ ' + f);

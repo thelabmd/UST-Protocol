@@ -62,6 +62,9 @@ check(unguarded.length === 0,
 // `closeReader` and `askHidden` run inside the air gap and nothing was scanning them — the same shape as the
 // `buildCeremony` miss recorded above, which is what this list was created for in the first place.
 //
+// CLOSED 2026-07-30 by `2d48b1c` — round 99: the air-gapped half was scanning four functions out of thirteen.
+// The guard this paragraph explains landed with it; noted 2026-08-05, appended rather than rewritten.
+//
 // Two distinctions the derivation has to make, and both were found by getting them wrong first:
 //   · LOCAL vs TOP-LEVEL. `writeSecret`, `askOr` and sixty others are declared INSIDE cmdGenesis, so the positional
 //     cut already governs them; scanning them as separate functions made the extractor run to the end of the file and

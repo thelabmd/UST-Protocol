@@ -85,6 +85,9 @@ check(lineHeads.length >= 1, 'no `## … rc.N line` section found — versions h
 // published myself — with rounds 121 and 122 filed under the section that called itself unpublished, in the
 // opposite order to every other section in the file. The reader could not tell which rounds actually shipped.
 //
+// CLOSED 2026-07-31 by `c14d8dd` — release: rc.47 published — and the ledger carried two sections for one
+// version. The guard this paragraph explains landed with it; noted 2026-08-05, appended rather than rewritten.
+//
 // This gate PRINTED the duplicate in its own failure text (`it has: rc.46, rc.46, rc.45, …`) and passed on it. A
 // value a gate is willing to display and unwilling to check is the quietest way for a defect to be inside the
 // evidence and outside the enforcement — so the shape is checked here, where the domain is already enumerated.

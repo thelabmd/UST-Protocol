@@ -1142,6 +1142,10 @@ log — accepted it as a log entry. No verdict was wrong: the reducers still ref
 the door that reported having VERIFIED the entry was not the door that refused it, and a fail-closed reader whose
 refusal lives elsewhere is only accidentally closed.
 
+CLOSED 2026-07-29 by `6488eb0` — protocol(round 78): the verification ROLE is a partition, and it was
+enforced on one side only (#97/tlx). The guard this paragraph explains landed with it; noted 2026-08-05,
+appended rather than rewritten.
+
 The correction is one enumeration read in BOTH directions rather than two lists that happen to agree today:
 `key` admits exactly `{genesis, key, cadence}` and `data` admits exactly the complement. A class added to the
 registry then belongs to a role by construction, instead of silently belonging to both.

@@ -31,6 +31,10 @@ const walk = (d) => readdirSync(ROOT + d, { withFileTypes: true }).flatMap((e) =
 const renderers = ['docs', 'extension'].flatMap(walk).filter((f) => DOM_WRITE.test(readFileSync(ROOT + f, 'utf8')));
 const SURFACES = renderers.filter((f) => !Object.hasOwn(EXEMPT, f));
 const MARK = '// #73 display safety';
+//
+// CLOSED 2026-07-30 by `f59616e` — round 90: display-safety's domain is enumerated from the tree, and its
+// scope premise is asserted not argued. The guard this paragraph explains landed with it; noted 2026-08-05,
+// appended rather than rewritten.
 
 let pass = 0; const fail = [];
 const ok = (name, cond) => { if (cond) pass++; else fail.push(name); };

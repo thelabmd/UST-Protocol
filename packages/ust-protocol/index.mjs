@@ -2268,6 +2268,10 @@ export function resolveCadence(genesis, cadenceLog = [], atTime, opts) {
   } catch { return { error: 'E-MALFORMED', detail: 'genesis/cadenceLog/keylog is not an inert record' }; }
   return resolveCadenceBytes(gEnc, cEnc, atTime, kEnc);
 }
+//
+// CLOSED 2026-07-29 by `4bca4e0` — protocol(rev98): cadence mutation is ROOT-ONLY — the second half of
+// `mutating(c)` (#107). The guard this paragraph explains landed with it; noted 2026-08-05, appended rather
+// than rewritten.
 
 // ─── #76/#77 AUTHORITY CHECKPOINT — the latest-head authority object (distinct from the STREAM `buildCheckpoint`).
 //     THREE LAYERS (a signer cannot sign its own signature): unsigned CheckpointBody → preimage

@@ -127,6 +127,9 @@ check(WORLD.length >= 4 && sites.length >= 4, 'the vocabulary or the site set sh
 // and then would not parse. Nothing noticed, because nothing read it back — and a FILE is what the operator carries
 // to cold storage. They found out with the network on and the passphrase no longer in hand.
 //
+// CLOSED 2026-08-03 by `5c2542e` — cli: a ceremony proves the FILE it wrote, not the value it held. The guard
+// this paragraph explains landed with it; noted 2026-08-05, appended rather than rewritten.
+//
 // The owner's rule when it happened: check it in the tool, right after the ceremony, while the client is still
 // offline. So every command that WRITES a key must READ IT BACK and prove it against what the documents say.
 {

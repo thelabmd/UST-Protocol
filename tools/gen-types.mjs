@@ -473,3 +473,8 @@ for (const w of workspaces) {
   console.log(`  ${pkg.name.padEnd(30)} ${String(decls.length).padStart(3)} declarations`);
 }
 console.log(`\n  ✓ ${total} declarations across ${wrote} packages — generated, never hand-written`);
+
+
+// CLOSED 2026-07-31 by `869ae0c` — protocol(rc.44): we shipped a .d.ts that does not compile, and nothing here
+// had a compiler to notice. The guard this paragraph explains landed with it; noted 2026-08-05, appended
+// rather than rewritten.

@@ -7,6 +7,10 @@
 // its help screen and nothing happened. He had just finished a ceremony on a disconnected machine, carried the files
 // out, and the next instruction was wrong.
 //
+// CLOSED 2026-07-28 by `bc86bf6` — fix(cli): the handoff printed a command the tool cannot run — `publish`
+// takes a road argument, and I wrote it from memory. The guard this paragraph explains landed with it; noted
+// 2026-08-05, appended rather than rewritten.
+//
 // The handoff was written from my memory of the command rather than from the command. That is the whole defect class:
 // text ABOUT code, authored beside the code, drifting from it silently — the same shape as a spec example the
 // reference implementation rejects, and as a version stamped in four places where only three moved.

@@ -39,6 +39,9 @@ for (const l of lines) {
   if (run) { steps.push({ name: pendingName ?? run[1], cmd: run[1] }); pendingName = null; }
 }
 
+// CLOSED 2026-07-31 by `df20308` — fix(ci): the workflow was unloadable and the local mirror reported it
+// green. The guard this paragraph explains landed with it; noted 2026-08-05, appended rather than rewritten.
+
 // `npm install` is the environment, not a gate; skip it locally where node_modules already exists.
 const gates = steps.filter((s) => !/^npm (install|ci)\b/.test(s.cmd));
 if (gates.length < 20) { console.error(`✗ only ${gates.length} steps parsed from ci.yml — the parser has gone blind, refusing to report a pass`); process.exit(1); }
