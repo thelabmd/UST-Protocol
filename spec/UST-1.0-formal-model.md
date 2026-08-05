@@ -3223,8 +3223,16 @@ protocol bars it from producing. **CLOSED 2026-08-05.**
 **Realization.** `verify` no longer authors remedies naming a call input. Such clauses are produced by one core
 helper given `opts`, which yields nothing when the input it names is present — so a mis-guarded branch degrades
 to silence rather than to a promise the call refutes — and `explainLadder` remains the single place that
-computes what a call did not supply. Enumerated by `tools/remedy-guard-gate.mjs` over every verdict `detail` in
-the core, so the domain is the set of diagnostics rather than the ones a reader happened to recall.
+computes what a call did not supply. Enumerated by `tools/remedy-guard-gate.mjs` over TWO rosters, both read
+from source and both required: every verdict `detail` in the core, and every OPTION NAME the core reads.
+
+**The option roster is where this first shipped incomplete, and the failure is the theorem's own shape.** A
+name reaches the core by two access forms — `opts.<name>` and DESTRUCTURING — and reading only the first hid
+seven options, among them `keylogHeadAnchor`. A supply clause naming that option was already in the tree,
+unexamined, while the gate printed PASS; its guard is `freshness === 'unverified'`, which holds equally for an
+anchor supplied and not verified. So the gate built to refuse correctness-by-coincidence was itself correct by
+coincidence: the two clauses it happened to see use the dotted form. A roster that enumerates one access shape
+of two is a sample wearing the word *enumerated*.
 
 **Binding: pending — thelabmd/UST-Protocol#137 (the report) and #138 (the ruleset term and the version verdict).**
 

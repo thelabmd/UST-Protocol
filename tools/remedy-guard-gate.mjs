@@ -33,9 +33,21 @@ const SRC = resolve(ROOT, 'packages/ust-protocol/index.mjs');
 const text = readFileSync(SRC, 'utf8');
 const lines = text.split('\n');
 
-// Roster 1 — the option vocabulary the core actually reads.
+// Roster 1 — the option vocabulary the core actually reads. TWO access shapes, and reading only the first is how
+// this gate shipped blind: `resolveAuthority` DESTRUCTURES its options in a single statement, so seven names —
+// keylog, nameMap, corroborated, servedNoFork, keylogFreshAsOf, keylogHeadAnchor, trust — never appear as
+// `opts.<name>` anywhere. A supply clause naming one of them was already in the tree, unexamined, while the gate
+// printed PASS. The gate that exists to refuse correctness-by-coincidence was itself correct by coincidence: the
+// two clauses it did check happen to use the dotted form.
 const OPTIONS = new Set();
 for (const m of text.matchAll(/\bopts\.([A-Za-z_$][\w$]*)/g)) OPTIONS.add(m[1]);
+// `= opts` and `= O` — the admitted-options snapshot is bound to a short name at several doors, and a destructured
+// option is no less an option for having been renamed on the way in.
+for (const m of text.matchAll(/(?:const|let)\s*\{([^}]{5,600})\}\s*=\s*(?:opts|O)\b/g))
+  for (const raw of m[1].split(',')) {
+    const name = raw.trim().split(/[:=]/)[0].trim();
+    if (/^[A-Za-z_$][\w$]*$/.test(name)) OPTIONS.add(name);
+  }
 
 // Roster 2 — every STRING LITERAL in the core, with comments excluded by scanning rather than by pattern.
 //

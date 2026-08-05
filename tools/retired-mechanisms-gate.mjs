@@ -35,7 +35,7 @@ const RETIRED = [
   { id: 'injectable-child-verdict tier',  rx: /injectable/g,                    retiredIn: 'rev73 (architecturally VOID)',                    spec: 0, model: 3 },
   { id: 'byte-transparent mirror GOAL',   rx: /byte-transparent/g,              retiredIn: 'rev32 (impossible for a stateful Proxy)',          spec: 0, model: 3 },
   { id: 'pinned / TOFU identity rung',    rx: /\bTOFU\b/g,                      retiredIn: 'rev83 (does not survive rotation or takeover)',    spec: 1, model: 0 },
-  { id: 'keylogHeadAnchor → attested',    rx: /keylogHeadAnchor/g,              retiredIn: 'rev40 (anchored head ≠ latest head)',              spec: 3, model: 0 },
+  { id: 'keylogHeadAnchor → attested',    rx: /keylogHeadAnchor/g,              retiredIn: 'rev40 (anchored head ≠ latest head)',              spec: 3, model: 1 },   // round 180: the model gained ONE mention, in F.5.1d's realization note — a history entry naming the option a blind gate roster could not see. It describes a DEFECT in a checker, not a live inference to `attested`, and the two conformance checks named in CODE_EXEMPT still hold the retirement itself.
   { id: 'positioned H(index) SMT',        rx: /positioned[- ]SMT|positioned\s+sparse-Merkle/g, retiredIn: 'P0-02 external audit (says nothing about length+1)', spec: 4, model: 1 },
   { id: 'public opts.__nowMs clock',      rx: /__nowMs/g,                       retiredIn: 'rev33 (caller clock flipped the verdict)',         spec: 0, model: 3 },
   { id: 'valid_as_of in a signed claim',  rx: /valid_as_of/g,                   retiredIn: 'rev44 (signer self-declared time)',                spec: 0, model: 0 },

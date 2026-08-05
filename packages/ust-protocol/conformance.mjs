@@ -145,10 +145,21 @@ for (const v of V.vectors) {
       // makes the whole branch unreachable, so `in_supplied_call: false` would hold against an impossible literal —
       // green, and asserting nothing. Found by mutation: the first draft of the capacity vector did not redden when
       // the helper was reverted to a bare literal, because it was never reaching the sentence it pinned.
-      const artefacts = { genesis: gen, capacity: { maxPartitions: 'unusable' } };
+      const artefacts = { genesis: gen, capacity: { maxPartitions: 'unusable' }, keylogHeadAnchor: { head: 'sha256:' + '0'.repeat(64) } };
+      docs.keylogHeadAnchor = docs.genesis;
+      // Some sites are only REACHABLE under a consumer policy. The stale-keylog diagnostic needs a consumer that
+      // asked for a current key log; without the flag the branch never runs and the vector would assert against an
+      // impossible literal — the same vacuity the capacity half was first written with.
+      // The freshness axis only carries a value once the AUTHORITY resolved, which needs the document's signing key
+      // authorized by the key log. Without that the resolver returns early as self-asserted, `freshness` is absent
+      // rather than `unverified`, and the branch this vector pins is never entered.
+      const addA = P.seal(P.buildKeyLogEntry({ domain_shard: dom, ust_id: 'ust:20260628.1001', key_id: G.key_id }, T,
+        { op: 'add', pub: A.pubB64, new_key_id: A.key_id }, P.contentHash(gen)), G.priv, G.pubB64);
+      const BASE = { keylogHeadAnchor: { genesis: gen, keylog: [addA], noForkConfirmed: true, requireFreshKeylog: true } };
       const key = v.input.input, doc = docs[key], phrase = v.input.phrase;
-      const without = P.verify(doc, { context: 'data' });
-      const supplied = P.verify(doc, { context: 'data', [key]: artefacts[key] });
+      const extra = BASE[key] ?? {};
+      const without = P.verify(doc, { context: 'data', ...extra });
+      const supplied = P.verify(doc, { context: 'data', ...extra, [key]: artefacts[key] });
       const inAbsent = new RegExp(phrase, 'i').test(without.detail ?? '');
       const inSupplied = new RegExp(phrase, 'i').test(supplied.detail ?? '');
       const e = v.expect;

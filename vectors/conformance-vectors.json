@@ -9458,6 +9458,20 @@
    }
   },
   {
+   "id": "remedy-03-keyloghead-not-prescribed-when-supplied",
+   "kind": "remedy",
+   "rule": "S14.1/F.5.1d third site, and the one the gate could not SEE: keylogHeadAnchor reaches the core only by DESTRUCTURING, so an option roster built from opts.<name> missed it and an unguarded supply clause sat in the tree while the gate printed PASS. The guard here is freshness === unverified, which holds equally for an anchor supplied and not verified",
+   "input": {
+    "input": "keylogHeadAnchor",
+    "phrase": "supply a verified keylogHeadAnchor"
+   },
+   "expect": {
+    "in_absent_call": true,
+    "in_supplied_call": false,
+    "replace_phrase": "did not establish freshness"
+   }
+  },
+  {
    "id": "ladder-01-not-attempted-is-not-met",
    "kind": "ladder",
    "rule": "S14.1/F.5p.2 a coordinate alone cannot say WHY it is low — the report pairs it with the inputs never supplied, so 'not asked' is distinguishable from 'asked and refused'",

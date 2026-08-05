@@ -1346,6 +1346,16 @@
       "code": "packages/ust-protocol/index.mjs :: suppliedInput + supplyRemedy — one decision point for 'did this call hand in the input', so a branch and a sentence cannot disagree; both prescriptive sites routed through it",
       "vector": "remedy-01-genesis-not-prescribed-when-supplied",
       "test": "tools/remedy-guard-gate.mjs"
+    },
+    {
+      "round": 180,
+      "math": "The option roster is where this first shipped incomplete, and the failure is the theorem's own shape",
+      "spec": {
+        "excluded": "No normative change: F.5.1d already binds every supply remedy. This round closes an instance the GATE could not see, which is a realization defect, not a rule change."
+      },
+      "code": "packages/ust-protocol/index.mjs :: the stale-keylog diagnostic splits SUPPLY from REPLACE — its guard freshness === 'unverified' holds equally for an anchor supplied and not verified",
+      "vector": "remedy-03-keyloghead-not-prescribed-when-supplied",
+      "test": "tools/remedy-guard-gate.mjs"
     }
   ],
   "first_accounted_round": 76,

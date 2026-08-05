@@ -851,7 +851,13 @@ function verifyCore(doc, opts = {}) {
     // an `unverified` freshness (a possibly-stale cache) ⇒ INDETERMINATE (retry: re-fetch the key-log from the
     // authoritative discovery surface or supply a VERIFIED keylogHeadAnchor), NEVER a silent accept on a stale view.
     if (reqFresh && identity.freshness === 'unverified')
-      return { result: 'INDETERMINATE', reason: 'stale_keylog', identity, detail: 'key-log freshness unverified (possibly-stale cache); re-fetch from authoritative discovery or supply a verified keylogHeadAnchor (§12.2a)' };
+      // F.5.1d, second instance — found only after the gate's option roster stopped missing DESTRUCTURED names.
+      // The guard is `freshness === 'unverified'`, which does NOT imply the anchor is absent: it also holds for an
+      // anchor that was supplied and did not verify, and telling that caller to supply one is the promise their own
+      // call refutes. Re-fetching is a REPLACE act and stays unconditional — it names bytes no call holds.
+      return { result: 'INDETERMINATE', reason: 'stale_keylog', identity, detail: 'key-log freshness unverified (possibly-stale cache); re-fetch from authoritative discovery'
+        + supplyRemedy(opts, 'keylogHeadAnchor', ' or supply a verified keylogHeadAnchor (§12.2a)')
+        + (suppliedInput(opts, 'keylogHeadAnchor') ? ' — the keylogHeadAnchor supplied did not establish freshness (§12.2a)' : '') };
     // step 8 — privacy (§14.8/§10): if the caller discloses {nonce,value}, REPRODUCE the commit; for
     // `encrypted`, AEAD-decrypt must reproduce the SAME committed plaintext (E-COMMIT on mismatch). Never brute-force.
     const disclosed = [];
