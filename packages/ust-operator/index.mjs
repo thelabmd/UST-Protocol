@@ -3,7 +3,8 @@
 // `ust-protocol` VERIFIES (Stream↔verifyStream, KeyLog↔resolveAuthority, AnchorBatch↔verifyAnchor,
 // walkChain↔depth-k). First cut: streams, key-log, anchor-batching, chain-walk. (Substrate adapter, layer
 // assembly, cross-tier resumption — next.)
-import * as P from 'ust-protocol';   // by PACKAGE NAME, not a relative path: a relative import across packages works
+import * as P from 'ust-protocol';
+import { createHash } from 'node:crypto';   // rfc6962AuditPath — the OTHER tree hashes raw digests, not tagged strings   // by PACKAGE NAME, not a relative path: a relative import across packages works
 // in this monorepo and breaks the moment the tarball is installed anywhere else — measured the hour this layer
 // entered the gated set, by the gate whose whole subject is that what ships must LOAD.
 
@@ -395,6 +396,79 @@ export async function sealTree(idMeta, time, hashes, sign, { breadth = BREADTH, 
   }
   const root = await seal(level, hashes.length, depth);
   return { root, nodes, depth: depth + 1, leaves: hashes.length };
+}
+
+// ─── rfc6962AuditPath (producer, F.9.5-c.3): the CONSTRUCTIVE DUAL of the §11.2 inclusion predicate.
+//
+// `Incl(d, r, π)` decides a triple, and until this existed nothing in the tree could PRODUCE `π`. An operator
+// could hold a correct tree, publish its leaves, anchor its root — and still hand a consumer nothing usable,
+// while the consumer, holding every byte required, could not assemble it either. Measured on the reference
+// operator 2026-08-06: the hour index carries all 120 leaves and the root recomputes from them exactly.
+//
+// It lives HERE and not in the base for the same reason `sealTree` does: F.9.5-c.1 makes §11.2 inclusion a
+// CONNECTOR — the bundled `ust:leaf`/`ust:node` walk is the bundled convention, not the convention — so a base
+// shipping a construction would re-assert the normativity it deliberately dropped. Building is a producer act.
+//
+// THIS IS THE OTHER TREE, and the two must be impossible to confuse. `sealTree` composes the §9.2/§7 tree
+// (global sort, `ust:leaf`/`ust:node`, breadth 64). This builds RFC 6962 (order-preserving, `0x00`/`0x01` over
+// RAW digests, split at the largest power of two BELOW n) — what Certificate Transparency, Sigstore Rekor and
+// the reference operator's hour tree all run. A path built under one and checked under the other fails with no
+// statement of why, which is the worst available failure, so the returned proof NAMES its scheme.
+//
+// INDICES ARE NATURALS. RFC 6962 §2.1.1 defines the path over naturals and the wire form is uint64; the
+// verifier in this tree already met a live defect where `>>` coerced to signed 32 bits and went negative above
+// 2^31, correct for every tree small enough to test by hand. Nothing below uses a bitwise operator: `k` is
+// found by doubling, and the recursion carries plain naturals.
+export function rfc6962AuditPath(contentHashes, index) {
+  const H = (b) => createHash('sha256').update(b).digest();
+  const raw = (h) => Buffer.from(String(h).slice(7), 'hex');
+  const HASH = /^sha256:[0-9a-f]{64}$/;
+
+  // Untrusted input at a producer door is still untrusted: a hostile array member must be a structured refusal,
+  // never a throw, and never a path that happens to verify against a root nobody meant.
+  let n;
+  try { n = Array.isArray(contentHashes) ? contentHashes.length : -1; } catch { return { error: 'E-BOUNDS', detail: 'leaf list is not readable' }; }
+  if (n < 1) return { error: 'E-BOUNDS', detail: 'an audit path needs at least one leaf' };
+  for (let j = 0; j < n; j++) {
+    let v; try { v = contentHashes[j]; } catch { return { error: 'E-MALFORMED', detail: `leaf ${j} is not readable` }; }
+    if (typeof v !== 'string' || !HASH.test(v)) return { error: 'E-MALFORMED', detail: `leaf ${j} is not a sha256: content hash` };
+  }
+  const i = Number(index);
+  if (!Number.isInteger(i) || i < 0 || i >= n) return { error: 'E-BOUNDS', detail: `index ${index} is outside 0..${n - 1}` };
+
+  const leaves = [];
+  for (let j = 0; j < n; j++) leaves.push(H(Buffer.concat([Buffer.from([0x00]), raw(contentHashes[j])])));
+
+  // MTH over a slice, and the split point: the largest power of two STRICTLY BELOW the slice length. Found by
+  // doubling rather than by bit tricks — the arithmetic stays exact past 2^31 where a shift does not.
+  const split = (len) => { let k = 1; while (k * 2 < len) k *= 2; return k; };
+  const mth = (lo, hi) => {
+    const len = hi - lo;
+    if (len === 1) return leaves[lo];
+    const k = split(len);
+    return H(Buffer.concat([Buffer.from([0x01]), mth(lo, lo + k), mth(lo + k, hi)]));
+  };
+  // The path is the sibling of every node on the climb, innermost first — the order `verifyInclusion` folds in.
+  const path = [];
+  const walk = (lo, hi, m) => {
+    const len = hi - lo;
+    if (len === 1) return;
+    const k = split(len);
+    if (m < k) { walk(lo, lo + k, m); path.push(mth(lo + k, hi)); }
+    else       { walk(lo + k, hi, m - k); path.push(mth(lo, lo + k)); }
+  };
+  walk(0, n, i);
+
+  return {
+    leafHash: leaves[i],
+    index: i,
+    treeSize: n,
+    hashes: path.map((b) => b.toString('hex')),
+    rootHash: mth(0, n).toString('hex'),
+    // The scheme travels WITH the proof so a connector claims only what it implements — `rfc6962-raw` is the
+    // string @ust-protocol/rekor-verify already keys its inclusionVerify on, not a new vocabulary.
+    anchor: { inclusion: { scheme: 'rfc6962-raw' } },
+  };
 }
 
 // ─── walkChain (consumer §9.5): walk based_on/constituents referents via `fetch`, verify each, bounded + acyclic.

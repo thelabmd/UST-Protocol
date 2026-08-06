@@ -1356,6 +1356,18 @@
       "code": "packages/ust-protocol/index.mjs :: the stale-keylog diagnostic splits SUPPLY from REPLACE — its guard freshness === 'unverified' holds equally for an anchor supplied and not verified",
       "vector": "remedy-03-keyloghead-not-prescribed-when-supplied",
       "test": "tools/remedy-guard-gate.mjs"
+    },
+    {
+      "round": 181,
+      "math": "Theorem F.9.5-c.3 (the inclusion predicate has a constructive DUAL, and it belongs to the producer)",
+      "spec": {
+        "excluded": "No normative change: F.9.5-c.1 already made §11.2 inclusion a CONNECTOR, and this adds a PRODUCER for one connector's tree. A spec line would be the base naming a construction, which is the normativity that corollary dropped."
+      },
+      "code": "packages/ust-operator/index.mjs :: rfc6962AuditPath — the dual, in the operator layer beside sealTree, naming its scheme so a connector claims only what it implements",
+      "vector": {
+        "excluded": "No byte-vector: the assertion is a PAIR (build then verify) over a generated leaf list, contracted by the operator suite's own checks including the full mutation battery and a live 120-leaf tree."
+      },
+      "test": "F.9.5-c.3 EVERY single-step mutation breaks the proof (the load-bearing half)"
     }
   ],
   "first_accounted_round": 76,

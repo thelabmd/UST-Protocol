@@ -175,9 +175,33 @@ for (const p of pkgs) {
   catch { online = false; notes.push(`${p.name}: registry unreachable`); continue; }
   const latest = tags?.latest;
   if (!latest) { notes.push(`${p.name}: never published`); continue; }
-  const n = (v) => Number(String(v).match(/rc\.(\d+)/)?.[1] ?? -1);
-  const gap = n(p.version) - n(latest);
-  if (gap > 0) notes.push(`${p.name}: repo ${p.version} is ${gap} candidate(s) ahead of latest ${latest}`);
+  // Two numbering schemes live in this tree — `1.0.0-rc.N` and plain semver — and reading only the first made
+  // `gap` ZERO for every semver package. The declared-hold branch below is `HELD_BACK && gap > 0`, so it was
+  // UNREACHABLE for them: a 0.x package accumulating behind an unpublished release line had no way to say so and
+  // could pass only by having no missing export at all. Measured 2026-08-06: n('0.10.4') and n('0.10.2') both
+  // returned -1. The policy existed; the arithmetic could not reach it, which is the same shape as a roster that
+  // enumerates one form of several. CLOSED 2026-08-06 in this same commit — `ahead()` compares both schemes, and
+  // the branch is controlled in both directions: disabling the declared hold reddens the gate, and reversing the
+  // comparison so the repo reads as BEHIND reddens it too.
+  const parts = (v) => {
+    const rc = /rc\.(\d+)/.exec(String(v));
+    if (rc) return [Number(rc[1])];
+    return String(v).split('.').map((x) => { const k = Number(x); return Number.isFinite(k) ? k : 0; });
+  };
+  // Ahead-ness, not a distance: for `rc.N` the difference IS the candidate count and stays the number the note
+  // has always printed; for semver a lexicographic compare answers the only question the branch asks.
+  const n = (v) => parts(v);
+  const ahead = (a, b) => {
+    const A = n(a), B = n(b);
+    if (A.length === 1 && B.length === 1) return A[0] - B[0];
+    for (let i = 0; i < Math.max(A.length, B.length); i++) {
+      const d = (A[i] ?? 0) - (B[i] ?? 0);
+      if (d !== 0) return d > 0 ? 1 : -1;
+    }
+    return 0;
+  };
+  const gap = ahead(p.version, latest);
+  if (gap > 0) notes.push(`${p.name}: repo ${p.version} is ahead of latest ${latest}` + (n(p.version).length === 1 ? ` by ${gap} candidate(s)` : ''));
 
   // capability, not version: an export here that `latest` does not have is a promise it cannot keep
   let pub;

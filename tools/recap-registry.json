@@ -445,6 +445,10 @@
       "round": 180,
       "issue": 137,
       "content_hash": "sha256:3883c434f645b805f0becce5361b2e5c3736b3d39c5f8dce378027bd52105ac0"
+    },
+    {
+      "round": 181,
+      "no_recap": "#139 is not closed by this round. The dual now exists and is measured against the live tree, but that tree commits the 0.29 stream rather than the 1.0 documents, so the capability it unblocks cannot yet be demonstrated end to end on a real document. A recap belongs to a closed issue."
     }
   ]
 }

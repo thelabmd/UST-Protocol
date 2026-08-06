@@ -3790,6 +3790,33 @@ and every figure above except the last is an illustration — the last is the th
 never used, because `ust_id` cannot name enough moments to reach it (F.9.5-b). A year is the FIFTH of eight
 levels, a millennium the sixth. There is no window this protocol can address whose seal does not compose.
 
+**Theorem F.9.5-c.3 (the inclusion predicate has a constructive DUAL, and it belongs to the producer).**
+`Incl(d, r, π)` decides a triple. For the predicate to be reachable at all, some party must PRODUCE `π`, and
+nothing in the protocol did. Let `T` be a tree, `L` an ordered leaf list and `i < |L|`. Define `path_T(L, i)`.
+The obligation is
+
+> **∀ L, ∀ i < |L|.  Incl(L[i], root_T(L), path_T(L, i)) = true**
+
+and — because a predicate satisfied by construction says nothing about the predicate —
+
+> **∀ L, i, ∀ single-step mutation π′ of path_T(L, i).  Incl(L[i], root_T(L), π′) = false**
+
+The second half is the load-bearing one. The first alone is satisfied by a builder and a verifier that share a
+bug, which is the ordinary way a homemade tree walk passes its own tests for years.
+
+**Where the dual may NOT live.** Not in the base. F.9.5-c.1 makes §11.2 inclusion a CONNECTOR — the bundled
+`ust:leaf`/`ust:node` walk is *the bundled convention, not the convention* — so a base that shipped a
+construction would re-assert exactly the normativity it dropped. Building is a producer act, as `sealTree`
+already is on the other tree, and the two must be impossible to confuse: a path built under one tree and
+checked under another fails with no statement of why, which is the worst available failure. Hence the produced
+proof NAMES its scheme, and a connector claims a proof only under a scheme it implements.
+
+**Corollary (an index is a natural, and narrowing it is a silent verdict flip).** RFC 6962 §2.1.1 defines the
+path over naturals; the wire form is `uint64`. A builder using bitwise arithmetic coerces to signed 32 bits and
+goes negative above `2³¹`, producing a path that is correct for every tree small enough to test by hand. The
+verifier in this tree already met that defect on a live log. The dual must be written under the same discipline,
+or the pair agrees — wrongly — on exactly the trees nobody checks.
+
 **Binding: pending — thelabmd/UST-Protocol#127** for the BUILDER; the tree claim itself is realized — *"F.9.5-c.1 the BUNDLED §7 tree does not compose — sorting is global, so a subtree root bears no computable relation to the whole and a partial enumeration cannot carry a root"* · *"F.9.5-c.1 ADVERSARIAL the RFC 6962 tree DOES compose at a power-of-two split — so \"the root does not compose\" is false as a claim about this protocol and true only of the bundled tree"* · *"F.9.5-c.1 and it does NOT compose at a non-power-of-two split — the composing property is conditional, so neither tree licenses a general claim"* · *"F.9.5-c.1 the two trees disagree on the SAME leaves — an operator's root is not reproducible by the bundled walk, which is why §11.2 inclusion is a connector rather than a protocol constant"*. What remains is a builder composing a seal over an arbitrary admissible `N`, a partial node carrying `root` REFUSED, and inclusion against the single published root exercised for a leaf under a composed enumeration.
 
 **Conformance (math ⇒ spec ⇒ code ⇒ green vector, once realized).**

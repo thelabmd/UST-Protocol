@@ -29,6 +29,7 @@ export function reconcileHead(store: unknown, arg1?: unknown): Promise<{ state: 
 export function recordCheckpoint(store: unknown, arg1: unknown): Promise<unknown>;
 export function recordFrame(store: unknown, arg1?: unknown): Promise<{ guarantee: unknown; count: unknown }>;
 export function recoverHead(store: unknown, arg1?: unknown): Promise<{ state: unknown; head: unknown }>;
+export function rfc6962AuditPath(contentHashes: unknown, index: unknown): unknown;
 export function sealLayerChain(outerState: unknown, subordinateDocs: unknown, sign: unknown): unknown;
 export function sealTree(idMeta: unknown, time: unknown, hashes: unknown, sign: unknown, arg4?: unknown): Promise<unknown>;
 export class Stream { constructor(verdict?: unknown); }

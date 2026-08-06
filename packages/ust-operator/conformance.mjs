@@ -431,6 +431,63 @@ check('Tiers:continuation-after-gap', afterGap.state.provenance.prev === P.conte
   check('#122 with store.cas the layer reports prevented — the stronger guarantee, and only when it holds it',
     new S.Stream({ sign, store: cas }).guarantee === 'prevented');
 }
+// ─── F.9.5-c.3 — the constructive DUAL of §11.2 inclusion, and its NEGATIVE half ────────────────────────
+// `Incl` decides a triple; until rfc6962AuditPath existed nothing here could PRODUCE the third member. The
+// positive leg alone would pass for a builder and a verifier that share a bug, so the mutation battery below
+// is the load-bearing one: EVERY single-step change must break the proof.
+//
+// Verified by the connector that already ships — @ust-protocol/rekor-verify's verifyInclusion — rather than by
+// a second walk written here. Two implementations of one fold is the drift this repo keeps paying for.
+{
+  const { verifyInclusion } = await import('../ust-rekor-verify/index.mjs');
+  const h = (n) => 'sha256:' + createHash('sha256').update('leaf-' + n).digest('hex');
+
+  // 120 is the reference operator's real hour width and is NOT a power of two — the split at the largest power
+  // of two BELOW n is exactly where a hand-rolled walk goes wrong, and a power-of-two-only suite never sees it.
+  // ONE call site, ONE execution: this harness's last gate requires declared == counted, so a check inside a
+  // loop would inflate the count against its own declaration. The claim is universal anyway — *for every n in
+  // the set, and every leaf in it* — so it is one assertion, and the failing (n, i) rides in the detail.
+  let badBuild = '', badRoot = '';
+  for (const n of [1, 2, 3, 7, 8, 120]) {
+    const leaves = Array.from({ length: n }, (_, i) => h(i));
+    const root0 = S.rfc6962AuditPath(leaves, 0).rootHash;
+    for (let i = 0; i < n; i++) {
+      const pr = S.rfc6962AuditPath(leaves, i);
+      if (pr.error || !verifyInclusion(pr)) { badBuild ||= `n=${n} i=${i}${pr.error ? ' ' + pr.error : ''}`; }
+      if (!pr.error && pr.rootHash !== root0) { badRoot ||= `n=${n} i=${i}`; }
+    }
+  }
+  check('F.9.5-c.3 build-then-verify holds for EVERY leaf at n in {1,2,3,7,8,120} (the positive half)',
+    badBuild === '', badBuild);
+  check('F.9.5-c.3 every leaf reaches the SAME root — one tree, not one per query', badRoot === '', badRoot);
+
+  // The negative half, on a non-power-of-two tree so the path has both left and right siblings.
+  const leaves = Array.from({ length: 120 }, (_, i) => h(i));
+  const base = S.rfc6962AuditPath(leaves, 37);
+  const flip = (x) => x.slice(0, -1) + (x.slice(-1) === '0' ? '1' : '0');
+  let killed = 0;
+  for (let k2 = 0; k2 < base.hashes.length; k2++)
+    if (!verifyInclusion({ ...base, hashes: base.hashes.map((x, j2) => (j2 === k2 ? flip(x) : x)) })) killed++;
+  check('F.9.5-c.3 EVERY single-step mutation breaks the proof (the load-bearing half)',
+    base.hashes.length > 0 && killed === base.hashes.length, `${killed}/${base.hashes.length}`);
+  check('F.9.5-c.3 a dropped step breaks it', !verifyInclusion({ ...base, hashes: base.hashes.slice(0, -1) }));
+  check('F.9.5-c.3 a substituted index breaks it', !verifyInclusion({ ...base, index: 38 }));
+  check('F.9.5-c.3 another leaf\'s hash on this path breaks it',
+    !verifyInclusion({ ...base, leafHash: S.rfc6962AuditPath(leaves, 38).leafHash }));
+  check('F.9.5-c.3 two steps transposed break it — order is load-bearing, not decorative',
+    !verifyInclusion({ ...base, hashes: [base.hashes[1], base.hashes[0], ...base.hashes.slice(2)] }));
+
+  // The scheme travels with the proof: a connector must be able to decline what it does not implement, and a
+  // proof that does not say which tree it is under is the failure that reports nothing.
+  check('F.9.5-c.3 the proof NAMES its tree', base.anchor?.inclusion?.scheme === 'rfc6962-raw');
+
+  // Producer doors take untrusted input too.
+  check('F.9.5-c.3 an out-of-range index is a structured refusal, not a throw',
+    S.rfc6962AuditPath(leaves, 120).error === 'E-BOUNDS');
+  check('F.9.5-c.3 an empty leaf list is refused', S.rfc6962AuditPath([], 0).error === 'E-BOUNDS');
+  check('F.9.5-c.3 a non-hash leaf is refused', S.rfc6962AuditPath(['nope'], 0).error === 'E-MALFORMED');
+}
+
 
 console.log('\n════════════════════════════════════════════');
 console.log('  @ust-protocol/operator round-trip vs ust-protocol   PASS ' + pass + '   FAIL ' + fail);
@@ -452,7 +509,11 @@ console.log(fail ? '' : '  ✓ @ust-protocol/operator PRODUCES exactly what ust-
 // fix was not the number (#101). In this tree a narration is written in the commit that fixes what it
 // describes, and blame places this paragraph there; noted 2026-08-05, appended rather than rewritten.
 {
-  const declared = (readFileSync(new URL(import.meta.url), 'utf8').match(/^\s*check\(\s*'/gm) ?? []).length;
+  // The roster counted ONE quoting style. A check whose id is a template literal — the natural form the moment
+  // an id carries a variable — was invisible to it, so the suite could gain checks the gate never knew about.
+  // Measured 2026-08-06: 97 counted against 85 declared, and the twelve missing ones were all backticked. Same
+  // shape as round 180's option roster: an enumeration over one form of several is a sample wearing the word.
+  const declared = (readFileSync(new URL(import.meta.url), 'utf8').match(/^\s*check\(\s*['"`]/gm) ?? []).length;
   if (declared !== pass + fail) {
     console.log(`  ✗ ${declared} checks declared, ${pass + fail} counted — some stand BELOW the summary and reach neither the count nor the exit code`);
     process.exit(1);
@@ -460,6 +521,8 @@ console.log(fail ? '' : '  ✓ @ust-protocol/operator PRODUCES exactly what ust-
 }
 // The layer's roster is PUBLISHED, in the same shape and for the same reason as the core's: without it the
 // ladder gate can only resolve checks that live in the core, so every round whose test layer lands HERE would
+
+
 // be recorded as an exclusion — a structural blind spot dressed as a routine decision. Bound to the digests of
 // the source it came from, so a stale roster cannot answer for a suite that has since changed.
 if (!fail) {
