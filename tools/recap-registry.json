@@ -439,11 +439,12 @@
     },
     {
       "round": 179,
-      "no_recap": "The round closed no issue. It answered the question #137 was left holding open — whether the ladder names the barrier an integrator is ACTUALLY stuck on — and the first live use answered both halves: the report was right, and the plain verdict beside it was wrong. #137 stays open until an outside operator, not its author, reports back; a recap written now would close the loop on our own reading of a tool built to be read by someone else."
+      "no_recap": "The round closed no issue. It answered the question #137 was left holding open — whether the ladder names the barrier an integrator is ACTUALLY stuck on — and the first live use answered both halves: the report was right, and the plain verdict beside it was wrong. #137 stays open until an outside operator, not its author, reports back; a recap written now would close the loop on our own reading of a tool built to be read by someone else. CORRECTED 2026-08-06: #137 did close, at round 180, once its checkbox set was completed and the audit record written; the recap lives there."
     },
     {
       "round": 180,
-      "no_recap": "The round closed no issue. It is the second instance of the class round 179 named, found by repairing the gate that round shipped — a recap belongs to a closed issue, and #137 still waits on an outside operator."
+      "issue": 137,
+      "content_hash": "sha256:3883c434f645b805f0becce5361b2e5c3736b3d39c5f8dce378027bd52105ac0"
     }
   ]
 }

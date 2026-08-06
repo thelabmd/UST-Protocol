@@ -123,4 +123,7 @@ console.log(`              ${checked} supply clause(s) naming an option · ${gua
 if (process.exitCode !== 1 && checked === 0)
   fail('no supply clause naming an option was found at all — the core has them, so this detector has gone blind');
 
-if (process.exitCode !== 1) console.log('PASS  every supply remedy is produced by the helper that can see the call');
+// The summary line carries the ✓ and the counts the sibling gates use, so a report composed from this tree quotes
+// a measurement rather than «produced no summary line» — a gate that cannot be quoted is a gate a report paraphrases.
+if (process.exitCode !== 1)
+  console.log(`  ✓ every supply remedy is produced by the helper that can see the call — ${checked} clause(s) over ${OPTIONS.size} option name(s) in both access shapes`);
