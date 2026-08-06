@@ -372,7 +372,7 @@
     {
       "round": 163,
       "issue": 137,
-      "no_recap": "A recap belongs to a CLOSED issue. #137 has its core, its CLI face and its vectors, and what remains is the part only an integrator can report back: whether the ladder names the barrier THEY were actually stuck on. Writing a recap now would close the loop on our own reading of a tool built to be read by someone else. It is owed when the first outside use either confirms the attribution column or corrects it."
+      "no_recap": "A recap belongs to a CLOSED issue, and at the time of this round #137 was open. CONDITION MET 2026-08-05: the walk this note was waiting for happened — a stranger-position walk against the live reference operator confirmed the attribution column and corrected the verdict beside it (rounds 179, 180). The closing comment is posted. The recap itself is OWED and follows the close, since one closed issue takes one recap and one sealed diary entry, and the diary is written only on the owner's call."
     },
     {
       "round": 164,
