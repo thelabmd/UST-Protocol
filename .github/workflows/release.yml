@@ -1,0 +1,81 @@
+name: release
+
+# TRUSTED PUBLISHING (OIDC) — the release line goes out with no token and no second factor.
+#
+# Why this exists, and it is not convenience. npm is withdrawing 2FA-bypass tokens in two phases: sensitive
+# operations in early August 2026 (which is when the long-lived token in this estate stopped working), and
+# publishing itself around January 2027. After that a token cannot publish at all. So this is the replacement
+# for a mechanism being removed, not an improvement with no due date (#87).
+#
+# What it buys beyond that:
+#   - no long-lived publish credential exists anywhere to be stolen — the token that died was the only thing
+#     between a leaked dotfile and the registry;
+#   - npm attaches PROVENANCE automatically: the registry records which repository and which workflow built
+#     each tarball. This tree spends a great deal on "what a stranger installs is what CI tests"; provenance is
+#     that claim made checkable BY the stranger instead of asserted by us.
+#
+# SETUP, one-time and per package, on npmjs.com → package → Settings → Trusted Publisher:
+#   Organization or username : thelabmd
+#   Repository               : UST-Protocol
+#   Workflow filename        : release.yml      ← must match this file's NAME, not its `name:` above
+#   Environment              : (leave empty)
+# Nine packages: ust-protocol, @ust-protocol/{mcp,web-signer,ots-verify,rekor-verify,operator,cli},
+# ust-light, diarium.
+#
+# Deliberately NOT on push. A release is an irreversible act — a version can never be reused — so it is
+# dispatched by a person who decided to make one, and the same pre-publish reads run here as ran by hand.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'publish (rc tag only) or promote (move latest/next onto the published line)'
+        required: true
+        default: publish
+        type: choice
+        options: [publish, promote]
+      dry-run:
+        description: 'pack and read every tarball, publish nothing'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  id-token: write          # the OIDC token npm exchanges for a short-lived publish credential
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Trusted publishing needs npm >= 11.5.1 and Node >= 22.14.0. Pinned rather than floating: a release that
+      # silently changes toolchain is a release whose output nobody can reproduce.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.14.0'
+          registry-url: 'https://registry.npmjs.org'
+      - run: npm install -g npm@11.5.1
+      - run: node -v && npm -v
+
+      - run: npm ci
+
+      # The GATES run before anything is published. A release that ships a tree its own CI has not judged is the
+      # one case where "green somewhere else" is worth nothing.
+      - name: the full local mirror of CI, before anything leaves
+        run: node tools/run-ci-locally.mjs
+
+      - name: publish the line on the rc tag
+        if: inputs.mode == 'publish'
+        run: node tools/publish-line.mjs ${{ inputs.dry-run && '--dry-run' || '' }}
+
+      # Separate step and separate dispatch: a half-finished line that nothing points at is recoverable by
+      # finishing it; a `latest` moved mid-way puts consumers on a new core with old dependents and says nothing.
+      - name: promote — move latest/next onto the published line
+        if: inputs.mode == 'promote'
+        run: node tools/publish-line.mjs --promote
