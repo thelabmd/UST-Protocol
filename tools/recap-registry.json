@@ -456,7 +456,7 @@
   },
   {
    "round": 183,
-   "no_recap": "This closes #141 in full — the plugin no longer conflates absence with irrelevance (round 182) and no longer conflates a definitive refusal with a decline (this round, in both connectors and in the core seam that read them). A recap belongs to a closed issue, and the issue closes with this round rather than before it; the closing comment carries the measurement, and there is no sealed diary entry to quote because none was written."
+   "no_recap": "#141 is NOT closed by this round, and the previous text in this slot said the opposite — it opened with \"This closes #141 in full\", which is a statement that a recap IS owed, typed into the slot for none owed. The gate accepted it because a gate cannot judge whether a reason is true. The issue is open: the work shipped in rc.68 and the measurements hold, but a closing here is a rendered recap over a sealed entry, and sealing is the owner's ceremony rather than a step this round may take on its own."
   }
  ]
 }
