@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.67', revision: 91 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.68', revision: 91 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -1047,6 +1047,31 @@ const decodeSubstrate = (sub) => {
     return out;
   } catch { return null; }
 };
+// A STATED REFUSAL is not a malformed receipt, and until now both left through the same door.
+//
+// MEASURED 2026-08-07: a plugin returning `{final:false, time:'unproven', reason:'proof-attests-another-root'}` —
+// a careful, correct answer — reached the consumer as *substrate not a typed FINAL receipt (final must be an OWN
+// Boolean true…)*, byte-identical to what `{final:'yes'}` earns. The reason the plugin computed was DISCARDED, and
+// the consumer was told its connector was broken when the connector had just told it the truth. CLOSED 2026-08-07
+// by this decoder, which gives the negative answer its own door.
+//
+// `reason` IS HOSTILE INPUT and is admitted as a SLUG, never as prose: a not-ours module must not be able to write
+// sentences into a verdict a human reads. Lowercase kebab, bounded — anything else is dropped and the refusal still
+// stands, because the refusal is the fact and the reason is the courtesy.
+const REASON_SLUG = /^[a-z][a-z0-9-]{0,47}$/;
+const decodeSubstrateRefusal = (sub) => {
+  try {
+    if (sub === null || typeof sub !== 'object') return null;
+    const proto = Object.getPrototypeOf(sub);
+    if (proto !== Object.prototype && proto !== null) return null;
+    const fd = Object.getOwnPropertyDescriptor(sub, 'final');
+    if (!fd || !('value' in fd) || fd.value !== false) return null;                // OWN data `final === false` — a stated NO
+    const out = Object.create(null); out.final = false;
+    const rd = Object.getOwnPropertyDescriptor(sub, 'reason');
+    if (rd && ('value' in rd) && typeof rd.value === 'string' && REASON_SLUG.test(rd.value)) out.reason = rd.value;
+    return out;
+  } catch { return null; }
+};
 const substrateFinal = (sub) => decodeSubstrate(sub) !== null;
 // §12.2 — the SHARED key-log walk (genesis self-signed root + prev-chained entries each signed by a CURRENT
 // valid key). Returns { validKeys: Map<key_id,pub>, revoked: Map } or { error, detail }. Used by BOTH
@@ -2016,7 +2041,7 @@ function verifyAnchorCore(contentHash, proof, opts = {}) {
   // the call itself, or return a revoked/throwing-getter Proxy that host-throws when we touch `.then` / decode it.
   // The whole seam is ONE TOTAL door — any host throw becomes a structured `unavailable` reject, never propagates
   // (round-52 P1 / S1 module-seam totality). The behavioral gate drives this seam with the hostile BATTERY.
-  let dec;
+  let dec, ref = null;
   try {
     const sub = opts.substrateVerify(proof.anchor, proof.root);          // → { final, time }
     // #69 E1 — the official substrate plugins are ASYNC; a sync verify() cannot await one. Detect the thenable
@@ -2028,8 +2053,16 @@ function verifyAnchorCore(contentHash, proof, opts = {}) {
     // a final anchor MUST carry a REAL RFC3339-Z instant. A truthy non-Boolean ("yes") or a non-string/empty time
     // ({}) can no longer mint TimeStrength=anchored (and can no longer coerce past the N9 generated_at ≤ anchor check).
     dec = decodeSubstrate(sub);   // round-19 P0-02 — read the anchored instant + assurance from the INERT decoded record, never the live seam object
+    // The negative answer is decoded HERE, inside the same guarded door: reading a not-ours object outside the
+    // try would be a second, unguarded touch of the very value the door exists for.
+    if (!dec) ref = decodeSubstrateRefusal(sub);
   } catch {
     return { inclusion: true, time: 'unproven', status: 'unavailable', detail: 'substrate seam is not-ours (trust-boundary law UST-5tm): a hostile module return/throw is a structured reject, never a host throw (round-52 P1 / S1 module-seam totality)' };
+  }
+  if (!dec && ref) {
+    // The plugin was reached and answered NO. That used to share a sentence with a malformed receipt; they are
+    // two different facts, and only one of them is the consumer's problem to fix.
+    return { inclusion: true, time: 'unproven', status: 'unavailable', detail: `substrate answered NOT final${ref.reason ? ` (${ref.reason})` : ''} — a STATED refusal from the connector, not a malformed receipt and not an unreachable substrate` };
   }
   if (!dec) return { inclusion: true, time: 'unproven', status: 'unavailable', detail: 'substrate not a typed FINAL receipt (final must be an OWN Boolean true AND carry an OWN real RFC3339-Z instant on a plain record; a prototype/accessor look-alike earns nothing) — no F_t (round-17 P1-01 / round-18 P0-02 / round-19 P0-02)' };
   // #71 — carry the substrate's ASSURANCE basis so TOP names its trust model honestly (an OTS plugin that

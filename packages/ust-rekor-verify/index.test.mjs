@@ -37,14 +37,14 @@ test('#71 P1 — the root hash present only in a COMMENT (not spec.data.hash.val
   const rootHex = FIX.root.replace(/^sha256:/, '');
   const artifactHash = createHash('sha256').update(Buffer.from(rootHex, 'utf8')).digest('hex');
   a.body = Buffer.from(JSON.stringify({ kind: 'hashedrekord', spec: { data: { hash: { algorithm: 'sha256', value: '00'.repeat(32) } }, metadata: { comment: artifactHash } } })).toString('base64');
-  assert.equal(await sv(a, FIX.root), null);   // the hash is in the body, but NOT at the attested field
+  assert.equal((await sv(a, FIX.root))?.final, false);   // the hash is in the body, but NOT at the attested field
 });
 
 test('#71 P1 — wrong entry kind (not hashedrekord) → rejected', async () => {
   const a = structuredClone(FIX.anchor);
   const artifactHash = createHash('sha256').update(Buffer.from(FIX.root.replace(/^sha256:/, ''), 'utf8')).digest('hex');
   a.body = Buffer.from(JSON.stringify({ kind: 'rekord', spec: { data: { hash: { algorithm: 'sha256', value: artifactHash } } } })).toString('base64');
-  assert.equal(await sv(a, FIX.root), null);
+  assert.equal((await sv(a, FIX.root))?.final, false);
 });
 
 test('tampered checkpoint signature on the real anchor → NOT final', async () => {
@@ -66,9 +66,11 @@ test('checkpoint root ≠ inclusion-proof root → verifyCheckpoint false (signe
   assert.equal(verifyCheckpoint(ck, 'sha256:' + '00'.repeat(32), FIX.anchor.inclusionProof.treeSize, undefined) , false);
 });
 
-test('entry that does not attest our root → null (claim ≠ proof)', async () => {
+test('entry that does not attest our root → a STATED refusal (claim ≠ proof, and the anchor named us)', async () => {
+  // `null` here would send the router hunting for a plugin that cannot exist: the anchor named `rekor`, so this
+  // connector is the only one that can answer, and its answer is a definitive no with a word for it.
   const r = await sv(FIX.anchor, 'sha256:' + 'cd'.repeat(32));
-  assert.equal(r, null);
+  assert.deepEqual(r, { final: false, time: 'unproven', reason: 'entry-attests-another-root' });
 });
 
 test('verifyInclusion: single-leaf tree is self-consistent (why (3) is REQUIRED)', () => {

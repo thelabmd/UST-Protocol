@@ -128,10 +128,20 @@ export function makeSubstrateVerify({ fetchImpl = fetch, api = REKOR, rekorPubKe
     // string (utf8); Rekor stores sha256(artifact) at spec.data.hash.value with algorithm sha256.
     const rootHex = root.replace(/^sha256:/, '');
     const artifactHash = createHash('sha256').update(Buffer.from(rootHex, 'utf8')).digest('hex');
-    let entry; try { entry = JSON.parse(Buffer.from(bodyB64, 'base64').toString('utf8')); } catch { return null; }
-    if (entry?.kind !== 'hashedrekord') return null;                              // exact entry type
+    // THESE THREE ARE STATED REFUSALS, NOT DECLINES, and until 2026-08-07 all three returned `null`.
+    //
+    // By this line the anchor has already NAMED `rekor` — the guard at the top of this function let nothing else
+    // through. So no later plugin can answer for it, and `null` sends the router looking for one anyway; the
+    // consumer is then told the substrate was unreachable when this connector had just told it claim is not proof.
+    // The reason is a slug because the core admits it as one: a not-ours module may not write prose into a verdict.
+    let entry;
+    try { entry = JSON.parse(Buffer.from(bodyB64, 'base64').toString('utf8')); }
+    catch { return { final: false, time: 'unproven', reason: 'unreadable-entry' }; }
+    if (entry?.kind !== 'hashedrekord') return { final: false, time: 'unproven', reason: 'wrong-entry-kind' };
     const h = entry?.spec?.data?.hash;
-    if (!h || h.algorithm !== 'sha256' || h.value !== artifactHash) return null;  // exact field, not substring
+    if (!h || h.algorithm !== 'sha256' || h.value !== artifactHash) {
+      return { final: false, time: 'unproven', reason: 'entry-attests-another-root' };
+    }
 
     // (2) the inclusion path reaches proof.rootHash (RFC 6962).
     const leafHash = sha256(Buffer.concat([Buffer.from([0x00]), Buffer.from(bodyB64, 'base64')]));

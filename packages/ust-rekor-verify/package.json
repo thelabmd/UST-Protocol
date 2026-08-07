@@ -1,6 +1,6 @@
 {
   "name": "@ust-protocol/rekor-verify",
-  "version": "1.0.0-rc.27",
+  "version": "1.0.0-rc.28",
   "description": "Opt-in Sigstore Rekor (transparency-log) substrateVerify for UST anchors — a fast, independent witness substrate next to Bitcoin. Zero-dep (REST + RFC6962 inclusion + pinned-key checkpoint signature). #68 witness / #69 A1 / #71 schema-exact hashedrekord.",
   "type": "module",
   "main": "index.mjs",

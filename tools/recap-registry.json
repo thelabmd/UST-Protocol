@@ -453,6 +453,10 @@
   {
    "round": 182,
    "no_recap": "#141 is not closed by this round. It reported two defects and this closes one: the substrate path now carries no third-party code, so the library-absent decline can no longer occur. The other half stands — a plugin that IS the addressed substrate and cannot act must still be distinguishable from one that was never addressed, and the same conflation should be checked in the Rekor connector, which is built on the same seam. A recap belongs to the half that closed, and the half that closed is a removal whose evidence is a gate rather than an incident."
+  },
+  {
+   "round": 183,
+   "no_recap": "This closes #141 in full — the plugin no longer conflates absence with irrelevance (round 182) and no longer conflates a definitive refusal with a decline (this round, in both connectors and in the core seam that read them). A recap belongs to a closed issue, and the issue closes with this round rather than before it; the closing comment carries the measurement, and there is no sealed diary entry to quote because none was written."
   }
  ]
 }

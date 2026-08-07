@@ -1380,6 +1380,18 @@
     "excluded": "No byte-vector: the contract is a BYTE-IDENTICAL round trip over real calendar output — an equality on the artifact itself rather than a case a vector could enumerate."
    },
    "test": "tools/ots-codec-gate.mjs"
+  },
+  {
+   "round": 183,
+   "math": {
+    "excluded": "No formal-model content: the seam already has its theorem. F.5.0/C3 fixes the substrate answer as a CLOSED TYPED verdict and the module-seam law (UST-5tm) fixes its totality; what was missing was a second decoded shape for the NEGATIVE answer, which is an arity of the same contract rather than a new one. Writing a theorem to say \"and also decode false\" would be prose in the model to satisfy a column."
+   },
+   "spec": "a connector that answers NO is not a connector that could not be",
+   "code": "packages/ust-protocol/index.mjs :: decodeSubstrateRefusal — the negative answer gets its own door, decoded inside the same guarded try, with `reason` admitted as a bounded slug",
+   "vector": {
+    "excluded": "No byte-vector: the subject is the SEAM, not a document. A vector fixes bytes a verifier must judge; this fixes how a not-ours module return is decoded, which no byte can express. Contracted instead by five conformance checks driving the seam with each shape."
+   },
+   "test": "a STATED substrate refusal is distinguishable from a malformed receipt"
   }
  ],
  "first_accounted_round": 76,

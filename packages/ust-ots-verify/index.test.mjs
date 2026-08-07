@@ -105,10 +105,24 @@ test('explorer unreachable → unproven, never a false final', async () => {
   assert.equal(r.final, false);
 });
 
-test('.ots does not attest THIS root → null (claim ≠ proof)', async () => {
+test('ADDRESSED and the .ots attests another root → a STATED refusal, never a decline', async () => {
+  // A decline sends the router looking for someone else, and nobody else can answer for a named substrate — the
+  // consumer would be told the substrate was unreachable when the connector had just told it claim is not proof.
   const sv = makeSubstrateVerify({ fetchImpl: mockExplorer(), explorers: ['x'] });
   const r = await sv({ substrate: 'bitcoin-ots', ots: F.ots }, 'sha256:' + 'cd'.repeat(32));
-  assert.equal(r, null);
+  assert.deepEqual(r, { final: false, time: 'unproven', reason: 'proof-attests-another-root' });
+});
+
+test('UNADDRESSED and the .ots attests another root → null, because it may be someone else\'s', async () => {
+  // No `substrate` field: this plugin is inferring from an `ots` key. A mismatch is then not a refusal to make.
+  const sv = makeSubstrateVerify({ fetchImpl: mockExplorer(), explorers: ['x'] });
+  assert.equal(await sv({ ots: F.ots }, 'sha256:' + 'cd'.repeat(32)), null);
+});
+
+test('ADDRESSED and the proof is unreadable → a STATED refusal with its reason', async () => {
+  const sv = makeSubstrateVerify({ fetchImpl: mockExplorer(), explorers: ['x'] });
+  const r = await sv({ substrate: 'bitcoin-ots', ots: Buffer.from('garbage').toString('base64') }, F.root);
+  assert.deepEqual(r, { final: false, time: 'unproven', reason: 'unreadable-proof' });
 });
 
 test('non-bitcoin substrate → null (router delegates onward)', async () => {

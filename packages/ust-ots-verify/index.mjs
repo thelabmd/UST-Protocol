@@ -80,11 +80,21 @@ export function makeSubstrateVerify({ upgrade = false, fetchImpl = fetch, explor
     try { sub = anchor?.substrate ?? anchor?.anchor?.substrate; otsB64 = anchor?.ots ?? anchor?.anchor?.ots; } catch { return null; }
     if (sub && sub !== 'bitcoin-ots') return null;                 // not ours → router delegates onward
     if (!otsB64 || typeof root !== 'string') return null;
+    // ADDRESSED vs GUESSING, and the whole discrimination below turns on it. When the anchor NAMES this substrate,
+    // no later plugin can answer for it, so a definitive NO must be STATED — reported as a decline it would send
+    // the router looking for someone else and the consumer would be told nobody could reach the substrate. When
+    // the anchor names nothing, this plugin is inferring from the presence of an `ots` field, and a mismatch may
+    // well belong to another connector: declining is then the honest answer, not a shrug.
+    const addressed = sub === 'bitcoin-ots';
     let det;
     try { det = parseOts(Buffer.from(otsB64, 'base64')); }
-    catch { return { final: false, time: 'unproven', reason: 'unreadable-proof' }; }
-    // the .ots MUST attest THIS root — otherwise it proves nothing about our genesis
-    if (!bytesEq(det.digest, hexToBytes(root))) return null;
+    catch { return addressed ? { final: false, time: 'unproven', reason: 'unreadable-proof' } : null; }
+    // The .ots MUST attest THIS root — otherwise it proves nothing about our genesis. Addressed, that is a
+    // definitive claim-is-not-proof failure and the consumer is owed the word for it; unaddressed, the proof may
+    // simply be someone else's.
+    if (!bytesEq(det.digest, hexToBytes(root))) {
+      return addressed ? { final: false, time: 'unproven', reason: 'proof-attests-another-root' } : null;
+    }
     if (!isComplete(det) && upgrade) {
       // Opt-in only, and the result is a CANDIDATE: a well-formed reply belonging to another commitment
       // splices cleanly, and only the explorer comparison below tells the two apart.

@@ -3,7 +3,7 @@
 
 *This specification text is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](../LICENSE-SPEC). Reference code in this repository is licensed Apache-2.0. Use of the name **UST** / **Universal State Transcript** and the **UST-compatible** claim: see [TRADEMARK.md](../TRADEMARK.md).*
 
-> **Release candidate — `1.0.0-rc.67`.** This specification has been extensively red-teamed; an independent
+> **Release candidate — `1.0.0-rc.68`.** This specification has been extensively red-teamed; an independent
 > external cryptographic audit is pending. It is subject to change until `1.0.0` final. The wire format `ust:"1.0"`
 > is stable across all rc's — pin exact versions. Per-version history is in [`CHANGELOG.md`](../CHANGELOG.md).
 
@@ -2957,3 +2957,20 @@ operator profile (§20), never the protocol. The five passes converged from "the
   explorer comparison one layer up is the guard. That limitation is pinned by a test rather than described.
   CLOSED 2026-08-07 in this same revision — the codec ships, the peer declaration is gone, and
   `tools/ots-codec-gate.mjs` keeps the substrate path free of third-party code by deriving its roster from source.
+- **REV 66 (2026-08-07, `rc.68` line)** — **a connector that answers NO is not a connector that could not be
+  reached, and the substrate seam carried two words for three facts.** `null` means *not my substrate* and sends
+  `combineSubstrates` to the next plugin; a typed FINAL receipt means anchored. Everything else left through ONE
+  door: a careful `{final:false, reason:"proof-attests-another-root"}` and a hostile `{final:"yes"}` both reached
+  the consumer as *substrate not a typed FINAL receipt*, byte-identical — so the consumer was told its connector
+  was broken at the moment the connector told it the truth, and the reason the connector had computed was
+  discarded. **The negative answer now has its own decoder**, read inside the same guarded try as the positive one,
+  because touching a not-ours return outside that door would be a second unguarded read of the value the door
+  exists for. **`reason` is admitted as a SLUG, never prose** — lowercase kebab, bounded — since a not-ours module
+  must not be able to write a sentence, a control character or a verdict word into text a human reads; a
+  non-conforming reason is DROPPED and the refusal still stands, because the refusal is the fact and the reason is
+  the courtesy. **The connectors were swept together, not one at a time:** `bitcoin-ots` now discriminates on
+  whether the anchor NAMES it — addressed, a mismatch is a stated refusal, because no later plugin can answer for
+  a named substrate; unaddressed, it is inferring from an `ots` key and a decline is honest. `rekor` carried the
+  same defect three times with no ambiguity at all, its guard having already established the name.
+  CLOSED 2026-08-07 by this revision — five conformance checks fix the three sentences as mutually
+  distinguishable, and reverting either connector reddens exactly its addressed-refusal check.

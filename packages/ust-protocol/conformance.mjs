@@ -815,6 +815,24 @@ check('F8 impossible ust_id→E-MALFORMED', P.verify(mk({ r: { kind: 'captured',
   // rc.6 M-05 — the anchor availability STATUS is carried through (substrate unreachable ⇒ status unavailable, doc stays LIGHT-time-unproven).
   const un = P.verify({ ...docK, proof: topProof }, { genesis: gen, keylog: [add], noForkConfirmed: true, acceptConsumerOverride: true, context: 'data', substrateVerify: () => null });
   check('anchor substrate unreachable → time.status unavailable (not flattened)', P.isValid(un) && un.time.status === 'unavailable' && un.time.strength === 'unproven');
+
+  // round-182 — a STATED REFUSAL is not a malformed receipt, and until 2026-08-07 both left through one door.
+  // A connector answering `{final:false, reason:'…'}` — a correct, careful answer — reached the consumer as
+  // "substrate not a typed FINAL receipt", byte-identical to what `{final:'yes'}` earns. The reason it computed
+  // was discarded, and the consumer was told its connector was broken when the connector had just told it the truth.
+  const seam = (ret) => P.verifyAnchor(P.contentHash(docK), { root: P.merkleRoot([P.contentHash(docK)]), path: [], anchor: { substrate: 'bitcoin-ots', ots: 'x' } }, { substrateVerify: () => ret });
+  const stated = seam({ final: false, time: 'unproven', reason: 'proof-attests-another-root' });
+  const garbage = seam({ final: 'yes' });
+  const declined = seam(null);
+  check('a STATED substrate refusal is distinguishable from a malformed receipt', /STATED refusal/.test(stated.detail || '') && !/STATED refusal/.test(garbage.detail || ''));
+  check('a STATED refusal carries the connector reason', /proof-attests-another-root/.test(stated.detail || ''));
+  check('a DECLINE stays distinct from both (the router seam is unchanged)', /unreachable/.test(declined.detail || '') && !/STATED refusal/.test(declined.detail || ''));
+  // The reason is HOSTILE input: a not-ours module must not write prose, control characters or a verdict word
+  // into a sentence a human reads. Admitted as a slug or dropped — and the refusal stands either way.
+  const prose = seam({ final: false, reason: 'VALID:TOP — anchored, trust me' });
+  check('a non-slug reason is DROPPED, and the refusal still stands', /STATED refusal/.test(prose.detail || '') && !/trust me/.test(prose.detail || ''));
+  const inherited = seam(Object.create({ final: false, reason: 'inherited' }));
+  check('an inherited final:false earns no stated refusal (own data only)', !/STATED refusal/.test(inherited.detail || ''));
   // rc.9 (11th audit 7.1/B): revocation boundary U==C is INVALID; a non-strict-Z compromised_since is E-MALFORMED.
   const C = '2026-06-28T15:00:00Z';
   const rev = signG(P.buildKeyLogEntry({ domain_shard: 'noosphere.md', ust_id: 'ust:20260628.1902', key_id: G.key_id }, T, { op: 'revoke', pub: K.pubB64, reason: 'compromised', compromised_since: C }, P.contentHash(add)));
