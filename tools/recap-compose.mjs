@@ -118,6 +118,57 @@ if (checkFile) {
   // THE PALETTE IS A GATE, NOT A CONVENTION. A mermaid block without the theme directive renders in mermaid's own
   // colours — legible, plausible, and not ours. That is the failure mode a comment cannot prevent, measured on this
   // very file: the rule was written and then broken by the same hand in the same change.
+  // A NODE LABEL MUST BE QUOTED, and this is not style. A mermaid label is unquoted by default, so `{`, `(`
+  // and `[` inside it are SYNTAX — `{` opens a diamond and the parse dies. Measured 2026-08-07: two of three
+  // diagrams in a posted report failed to render on GitHub while this check reported all three carried the
+  // theme. The theme says how it looks; nothing said whether it PARSES. CLOSED 2026-08-07 by the rule below,
+  // which needs no mermaid dependency: quoting makes the whole label a string, so no character can be syntax.
+  const LABEL = /^\s*([A-Za-z_]\w*)\[(.+?)\]\s*$/gm;
+  const unquoted = [];
+  for (const b of [...body.matchAll(/```mermaid\r?\n([\s\S]*?)```/g)].map((m) => m[1])) {
+    for (const m of b.matchAll(LABEL)) {
+      const label = m[2];
+      if (!(label.startsWith('"') && label.endsWith('"'))) unquoted.push(`${m[1]}[${label.slice(0, 44)}`);
+    }
+  }
+  if (unquoted.length) {
+    console.error(`✗ ${unquoted.length} mermaid label(s) are UNQUOTED — a brace or bracket inside one is syntax, and the diagram will not render:`);
+    for (const u of unquoted) console.error('    ' + u);
+    process.exit(1);
+  }
+  // CONTROL — the rule must fire on the shape that actually broke, and stay silent on a quoted label.
+  const labelUnquoted = (t) => { const r = new RegExp(LABEL.source, 'gm'); const m = [...t.matchAll(r)]; return m.length > 0 && !m.every((x) => x[2].startsWith('"')); };
+  if (!labelUnquoted('  A[final: false, {reason}]') || labelUnquoted('  A["final: false, {reason}"]')) {
+    console.error('✗ CONTROL: the label rule does not discriminate — this check is blind'); process.exit(1);
+  }
+
+  // ── every SLOTTED section decides: a diagram, or a stated refusal. An absence is neither. ──────────────
+  const declared = body.match(/<!-- diagram-slots: ([\d,]*) -->/);
+  if (!declared) {
+    console.error('✗ the composed file declares no diagram-slot list — recompose it; a check cannot enumerate a domain the file does not carry');
+    process.exit(1);
+  }
+  const want = declared[1] ? declared[1].split(',').map(Number) : [];
+  const parts = body.split(/^## § /m).slice(1);
+  const bySection = new Map(parts.map((p) => [Number(p.split(/\s/)[0]), p]));
+  const undecided = [], reasons = new Map();
+  for (const n of want) {
+    const sec = bySection.get(n) ?? '';
+    const hasDiagram = sec.includes('```mermaid');
+    const refusal = sec.match(/^> \*\*no diagram\*\* — (.{25,})$/m);
+    if (hasDiagram) continue;
+    if (!refusal) { undecided.push(n); continue; }
+    reasons.set(n, refusal[1].trim());
+  }
+  if (undecided.length) {
+    console.error(`✗ § ${undecided.join(', § ')} — neither a diagram nor a stated refusal. Removing the slot is not deciding it:`);
+    console.error('    write the diagram, or  > **no diagram** — <why no collapse, no span and no path applies here>');
+    process.exit(1);
+  }
+  // A shrug repeated is a shrug. Distinct sections owe distinct reasons, or the author answered once and pasted.
+  const seen = new Map();
+  for (const [n, r] of reasons) { const k = r.toLowerCase(); if (seen.has(k)) { console.error(`✗ § ${seen.get(k)} and § ${n} give the SAME refusal — one judgement pasted twice is not two judgements`); process.exit(1); } seen.set(k, n); }
+
   const THEMED = /^%%\{init:/;
   const blocks = [...body.matchAll(/```mermaid\r?\n([\s\S]*?)```/g)].map((m) => m[1]);
   const bare = blocks.filter((b) => !THEMED.test(b.trimStart()));
@@ -333,7 +384,15 @@ const alert = (kind, body) => `> [!${kind}]\n> ${body}`;
 // --path 4`, in any combination or none. A generator that fixed the kinds to sections would be deciding, for the
 // author, where meaning is — which is the one judgement it has no way to make.
 const KINDS = { collapse: () => collapseScaffold(), span: () => ganttScaffold(), path: () => pathScaffold(), boundary: () => boundaryScaffold(), surfaces: () => surfacesScaffold(), findings: () => findingsScaffold() };
+// WHICH SECTIONS WERE OFFERED A SLOT is recorded HERE, by the generator, and written into the composed file.
+// Measured 2026-08-07: `--check` refused a marker that REMAINED and accepted one that was DELETED — and
+// deleting is the cheaper path. Five diagram slots were removed from one report with a single blanket
+// sentence, and the check reported that every judgment section had been written by a person. A gate that a
+// deletion satisfies is a gate that teaches deletion. CLOSED 2026-08-07 by this list plus the decision rule
+// in --check: a slotted section must carry a diagram or a stated refusal, and an absence is neither.
+const SLOTTED = [];
 const slot = (section) => {
+  SLOTTED.push(Number(section));
   const here = Object.keys(KINDS).filter((k) => String(arg(k, '')) === String(section));
   if (here.length) return '\n' + here.map((k) => KINDS[k]()).join('\n\n') + '\n';
   return `\n${FILL(`a diagram for § ${section} IF a relation here is worth drawing — collapse (several situations, one observation) · span (a duration) · path (a value crossing stages) · boundary (what is and is not established) · surfaces (more than one artifact). Scaffold with --<kind> ${section}. Delete this line if nothing here earns one`)}\n`;
@@ -522,7 +581,7 @@ ${diaryBlock}
 
 const out = head() + BODIES[form]();
 
-console.log(out);
+console.log(out + `\n<!-- diagram-slots: ${[...new Set(SLOTTED)].sort((a, b) => a - b).join(',')} -->\n`);
 console.error(`\n  composed ${form} report, round ${round} → #${issue}. Every number above is read from a command or a file in this tree.`);
 const drawnCount = [...out.matchAll(/```mermaid/g)].length;
 console.error(`  ${[...out.matchAll(/<<<FILL:/g)].length} judgment section(s) are yours; ${drawnCount} diagram(s) scaffolded through the lab palette.`);
