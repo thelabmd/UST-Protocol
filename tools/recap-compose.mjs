@@ -101,10 +101,18 @@ const sh = (cmd, args, opts = {}) => { try { return execFileSync(cmd, args, { cw
 const checkFile = arg('check');
 if (checkFile) {
   const body = readFileSync(String(checkFile), 'utf8');
-  const marks = [...body.matchAll(/<<<[A-Z]+:[^>]*>>>/g)].map((m) => m[0]);
-  // CONTROL — the detector must fire on a real marker and stay silent on ordinary prose, or a green run means nothing.
-  const CONTROL_HIT = /<<<[A-Z]+:[^>]*>>>/.test('a <<<FILL: something>>> here');
-  const CONTROL_MISS = /<<<[A-Z]+:[^>]*>>>/.test('an ordinary sentence about <angle brackets> and code');
+  // `[\s\S]*?` and not `[^>]*`, measured 2026-08-07: the diagram markers this same file EMITS contain an angle
+  // bracket in their own instructions (`--<kind>`), so a class excluding `>` stopped there and never reached the
+  // closing `>>>`. Five markers sat in a composed report while this check printed that none remained — the exact
+  // failure it exists to prevent, in the tool that prevents it. CLOSED 2026-08-07 in this edit.
+  const MARK = /<<<[A-Z]+:[\s\S]*?>>>/g;
+  const marks = [...body.matchAll(MARK)].map((m) => m[0]);
+  // CONTROL — the detector must fire on a REAL marker and stay silent on ordinary prose. The hit case now carries
+  // an inner `>` and a newline, because that is the shape the generator produces; a control exercising only the
+  // easy shape is how this check passed for a marker it could not see.
+  const one = (t) => new RegExp(MARK.source).test(t);
+  const CONTROL_HIT = one('a <<<FILL: pick a kind with --<kind>\n  and delete this>>> here');
+  const CONTROL_MISS = one('an ordinary sentence about <angle brackets> and code');
   if (!CONTROL_HIT || CONTROL_MISS) { console.error('✗ CONTROL: the placeholder detector does not discriminate — this check is blind'); process.exit(1); }
 
   // THE PALETTE IS A GATE, NOT A CONVENTION. A mermaid block without the theme directive renders in mermaid's own

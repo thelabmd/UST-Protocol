@@ -456,7 +456,8 @@
   },
   {
    "round": 183,
-   "no_recap": "#141 is NOT closed by this round, and the previous text in this slot said the opposite — it opened with \"This closes #141 in full\", which is a statement that a recap IS owed, typed into the slot for none owed. The gate accepted it because a gate cannot judge whether a reason is true. The issue is open: the work shipped in rc.68 and the measurements hold, but a closing here is a rendered recap over a sealed entry, and sealing is the owner's ceremony rather than a step this round may take on its own."
+   "issue": 141,
+   "content_hash": "sha256:f69de43f8d4a73eb71550d9ca154b8794f7e7943d77b42b7febd01d2a6dd08d4"
   }
  ]
 }
