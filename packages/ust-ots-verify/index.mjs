@@ -13,14 +13,21 @@
 // consensus, the explorer only mirrors it); (3) the block is buried under >= minConfirmations (default 6,
 // §17). The explorer is untrusted: a wrong answer fails the merkle match (claim ≠ proof); unreachable →
 // `unproven`, never a false `final`.
-import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
-// P1-08 — LAZY, OPTIONAL load. The abandoned `opentimestamps` (→ deprecated request/form-data with critical
-// CRLF/boundary advisories) is an OPTIONAL dependency loaded ONLY on the OTS substrate path, so importing this
-// module (parseOtsBitcoin, toVerifiedEvidence) never pulls the vulnerable network chain. Missing ⇒ substrateVerify
-// declines (null) and the router delegates onward; the operator installs it only to use the Bitcoin substrate.
-const _require = createRequire(import.meta.url);
-let _OTS; const loadOTS = () => { if (_OTS !== undefined) return _OTS; try { _OTS = _require('opentimestamps'); } catch { _OTS = null; } return _OTS; };
+// The `.ots` codec is OURS (`./ots-codec.mjs`), and that is a deliberate reversal of the previous design.
+//
+// Reading a timestamp used to require the `opentimestamps` package, loaded lazily so that merely importing
+// this module would not pull it. The laziness treated the symptom: the dependency drags `bitcore-lib`,
+// `request`/`request-promise` (deprecated since 2020) and `fs@0.0.1-security` — a placeholder under a squatted
+// name — for 12 advisories, 2 critical (measured 2026-08-07, clean install). Consumers' scanners flagged the
+// dependent package, so for some of them the "optional" peer was not installable at all.
+//
+// Worse, the decline was INVISIBLE: with the peer absent this returned `null`, which also means "not my
+// substrate". A consumer one `npm i` away from a proof received the same value as one running Rekor.
+// The format is two screens of binary. The dependency was the only heavy thing about it.
+// CLOSED 2026-08-07 — the codec is `./ots-codec.mjs`, the peer declaration is gone, and the shipped tree
+// carries no third-party code on this path. Kept as the evidence the reversal rests on, not as a live hole.
+import { parseOts, serializeOts, bitcoinAttestations, isComplete, upgradeOts } from './ots-codec.mjs';
 
 const EXPLORERS = ['https://blockstream.info/api', 'https://mempool.space/api'];
 const OTS_BTC_TAG = Buffer.from([0x05, 0x88, 0x96, 0x0d, 0x73, 0xd7, 0x19, 0x01]);
@@ -55,7 +62,17 @@ export function parseOtsBitcoin(ots) {
   return found ? { height: found.height, merkle: found.merkle, digest } : null;
 }
 
-export function makeSubstrateVerify({ upgrade = true, fetchImpl = fetch, explorers = EXPLORERS, minConfirmations = 6, quorum = 2 } = {}) {
+// `upgrade` DEFAULTS OFF, reversing the previous default, and the reason is not hygiene.
+//
+// Completing a pending proof means fetching the missing half from a calendar. That leaks which digest is
+// being checked to a party with no role in the proof, makes a verdict depend on a remote service — the same
+// bytes answering differently on different days — and, worst, performs the PUBLISHER's job invisibly: an
+// operator whose upgrade loop is broken keeps serving pending proofs forever, because every consumer patches
+// the gap on their behalf and no one ever sees a failure.
+//
+// `pending` is a true answer. Turning it into `final` by calling out is a different act, and it belongs to
+// whoever publishes the proof — `upgradeOts` is exported for exactly that, on the operator's side.
+export function makeSubstrateVerify({ upgrade = false, fetchImpl = fetch, explorers = EXPLORERS, minConfirmations = 6, quorum = 2 } = {}) {
   return async function substrateVerify(anchor, root) {
     // totality (round-46 self-audit) — the anchor is UNTRUSTED: read its fields behind a guard so a hostile getter/Proxy declines
     // (null → the router tries the next plugin), never a host throw. The integrated path passes an inert admitted proof; this covers a direct call.
@@ -63,21 +80,21 @@ export function makeSubstrateVerify({ upgrade = true, fetchImpl = fetch, explore
     try { sub = anchor?.substrate ?? anchor?.anchor?.substrate; otsB64 = anchor?.ots ?? anchor?.anchor?.ots; } catch { return null; }
     if (sub && sub !== 'bitcoin-ots') return null;                 // not ours → router delegates onward
     if (!otsB64 || typeof root !== 'string') return null;
-    const OTS = loadOTS();
-    if (!OTS) return null;                                          // P1-08: opentimestamps not installed (opt-in substrate) → decline, router delegates onward
     let det;
-    try { det = OTS.DetachedTimestampFile.deserialize(Uint8Array.from(Buffer.from(otsB64, 'base64'))); }
-    catch { return null; }
+    try { det = parseOts(Buffer.from(otsB64, 'base64')); }
+    catch { return { final: false, time: 'unproven', reason: 'unreadable-proof' }; }
     // the .ots MUST attest THIS root — otherwise it proves nothing about our genesis
-    if (!bytesEq(new Uint8Array(det.timestamp.msg), hexToBytes(root))) return null;
-    if (!det.timestamp.isTimestampComplete() && upgrade) {
-      try { await OTS.upgrade(det); } catch { /* calendar unreachable → stays pending */ }
+    if (!bytesEq(det.digest, hexToBytes(root))) return null;
+    if (!isComplete(det) && upgrade) {
+      // Opt-in only, and the result is a CANDIDATE: a well-formed reply belonging to another commitment
+      // splices cleanly, and only the explorer comparison below tells the two apart.
+      try { det = (await upgradeOts(det, { fetchImpl })).candidate; } catch { /* calendar unreachable → pending */ }
     }
-    if (!det.timestamp.isTimestampComplete()) return { final: false, time: 'unproven' };
+    if (!isComplete(det)) return { final: false, time: 'unproven', reason: 'pending' };
 
     // #69 A2 — parse to the Bitcoin attestation and PROVE it against the real chain (not just structure).
     let parsed;
-    try { parsed = parseOtsBitcoin(Buffer.from(det.serializeToBytes())); } catch { return { final: false, time: 'unproven' }; }
+    try { parsed = parseOtsBitcoin(serializeOts(det)); } catch { return { final: false, time: 'unproven' }; }
     if (!parsed || typeof parsed.height !== 'number') return { final: false, time: 'unproven' };
     const wantMerkle = Buffer.from(parsed.merkle).reverse().toString('hex');   // block header displays reversed
 

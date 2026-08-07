@@ -84,15 +84,6 @@ jobs:
         run: npm run test:security
       - name: SSRF guards (core + MCP)
         run: npm run test:ssrf
-      - name: optional peer for the REAL substrate path (installed BEFORE drift-guards, not beside its consumer)
-        # `opentimestamps` is an OPTIONAL peer, deliberately absent from devDependencies: its chain pulls the
-        # deprecated `request` and two critical advisories into every contributor's tree, and a would-be auditor's
-        # first impression should not be a red audit they cannot act on. `npm audit` runs `--omit=optional` and reads
-        # the manifest, not node_modules, so a `--no-save` install here is invisible to it at any position.
-        # It sits HERE rather than beside the connector step because drift-guards must be able to inject a mutation
-        # into the OTS connector and see that suite go red — with the install downstream, those tests SKIP, and a
-        # suite that skips cannot demonstrate it can fail. Ordering was load-bearing and nobody had noticed.
-        run: npm i --no-save opentimestamps
       - name: drift-guards (meta — every from-code gate is fail-closed; injects a fake drift, asserts the gate rejects it, restores)
         run: npm run test:drift-guards
       - name: verdict vocabulary (no surface names a verdict the reference cannot return)
@@ -119,12 +110,12 @@ jobs:
         run: npm run test:attribution
       - name: rule-lockstep (the §14 decision-relation is FROZEN — case labels == RULE_CONTRACTS keys == 15, both directions)
         run: npm run test:rule-lockstep
+      - name: the substrate path carries no third-party code (REV 65 — a removal stays removed only if gated)
+        run: npm run test:ots-codec
       - name: connector receipts (OTS + Rekor)
-        # `opentimestamps` is an OPTIONAL peer, deliberately absent from devDependencies: its chain pulls the
-        # deprecated `request` and two critical advisories into every contributor's tree, and a would-be auditor's
-        # first impression should not be a red audit they cannot act on. It is installed HERE so the real substrate
-        # path is still exercised; the test exits non-zero if CI reaches it without the library, so a green run can
-        # never mean those nine checks were skipped.
+        # Zero dependency since REV 65: the `.ots` codec is ours, so there is no optional peer to install and
+        # no step ordering to get right. The suite enumerates the package test files rather than naming them —
+        # a named list is how `ots-codec.test.mjs` would have shipped unrun.
         run: npm run test:connectors
       - name: web-signer cross-verification
         run: npm run test:web-signer

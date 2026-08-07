@@ -2935,3 +2935,25 @@ provenance and will be lifted into this ledger when the spec is published.
 instantiation (profile)?"; operator specifics (substrate, partition schema, completeness, cadence) live in the
 operator profile (§20), never the protocol. The five passes converged from "the protocol can be broken" to
 "the operator must be told how to run it" — the signature of a settled design.
+
+- **REV 65 (2026-08-07, `rc.67` line)** — **the Bitcoin substrate plugin carries its own codec, and completing a
+  proof stops being something a verifier does.** `@ust-protocol/ots-verify` read `.ots` files through the
+  `opentimestamps` package, an OPTIONAL peer: absent, the plugin returned `null`, which is also the value meaning
+  *not my substrate* — so a consumer one install away from a proof received the same answer as one running Rekor,
+  and the router delegated onward with nowhere left to go. The peer was optional for a reason (measured 2026-08-07
+  on a clean install: 12 advisories, 2 critical, a chain through `request`/`request-promise`, deprecated since
+  2020, and a placeholder published under a squatted name), which made it un-installable for consumers whose
+  scanners refuse such trees. **The format is small enough that the dependency was the only heavy thing about it:**
+  parse, serialize and calendar-completion now live in `ots-codec.mjs` with no dependency at all, and the codec's
+  contract is a BYTE-IDENTICAL round trip — a parser can drop a branch or misread a length in ways no field
+  assertion catches, and every one of those changes the message the rest of the proof is computed over.
+  **`upgrade` now defaults OFF, which is the substantive half.** Fetching the missing part of a pending proof
+  leaks which digest is being checked, makes a verdict depend on a remote service, and performs the PUBLISHER's
+  work invisibly: an operator whose upgrade loop is broken serves pending proofs forever because every consumer
+  patches the gap on their behalf. `pending` is a true answer; turning it into `final` by calling out is a
+  different act, and `upgradeOts` is exported for whoever publishes. **The splice cannot validate what it fetches
+  and now says so:** a WELL-FORMED reply belonging to another commitment splices cleanly — the codec has no way to
+  know which block a path should reach — so the return is a `candidate`, the input is left untouched, and the
+  explorer comparison one layer up is the guard. That limitation is pinned by a test rather than described.
+  CLOSED 2026-08-07 in this same revision — the codec ships, the peer declaration is gone, and
+  `tools/ots-codec-gate.mjs` keeps the substrate path free of third-party code by deriving its roster from source.

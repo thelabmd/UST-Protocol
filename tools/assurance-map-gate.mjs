@@ -59,7 +59,6 @@ const NAME = { 1: '1a external generator', 2: '1b cross-implementation', 3: '2 d
 
 // ── steps whose command runs no file of ours, so there is nowhere to put a marker. Each needs its reason HERE.
 const NO_FILE = {
-  'optional peer for the REAL substrate path': 'installs a peer and runs no file of ours, so there is nowhere to put a marker. It carries no claim of its own: what it enables is graded downstream, where drift-guards injects into the OTS connector and requires that suite to go red. A step that only makes another step possible is graded there, not here.',
   'dependency audit': '`npm audit` runs no file of ours: the domain is the public advisory database, which nobody here authored or can edit. Grade 1a by construction — there is no roster to drift.',
 };
 
