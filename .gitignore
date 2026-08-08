@@ -14,7 +14,10 @@
 # dependencies
 node_modules/
 packages/*/node_modules/
-package-lock.json
+# package-lock.json is TRACKED (#87): the release workflow installs with `npm ci`, which needs it, and
+# the whole point of trusted publishing here is that what a stranger installs is what CI tested. Without a
+# lockfile that sentence is an intention. It sat under "dependencies" next to node_modules as a habit, and
+# the release workflow had never been RUN, so nothing contradicted it — measured 2026-08-08, first dispatch.
 
 # private — personal AI-agent config + instructions (not protocol; never public)
 CLAUDE.md

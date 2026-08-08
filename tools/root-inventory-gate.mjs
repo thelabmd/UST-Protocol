@@ -52,6 +52,7 @@ const DECLARED = {
   'DONOTREADME.md': 'the owner\'s joke, kept deliberately — 42 blank lines and a punchline',
   'diarium.md': 'the diary, a generated view of the sealed store in diarium/',
   'package.json': 'the workspace root',
+  'package-lock.json': 'TRACKED for the release: `npm ci` needs it, and "what a stranger installs is what CI tested" is otherwise an intention (#87)',
 };
 
 const fail = []; let pass = 0;
