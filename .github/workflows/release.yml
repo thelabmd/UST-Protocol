@@ -57,7 +57,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # The gate mirror below reads round history from git; a shallow clone makes its domain
           # unreadable and it refuses rather than passing over an empty set. Same reason as ci.yml.
