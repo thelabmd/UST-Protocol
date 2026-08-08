@@ -12,6 +12,8 @@
 // bundled to 258 KB carrying 47 `Buffer` references. This surface therefore speaks `Uint8Array` only, and
 // `Buffer` is a `Uint8Array` subclass, so Node call sites keep working while they are converted.
 //
+// CLOSED 2026-08-08 by round 184 — the conversion finished inside the same round; no call site was left half-converted.
+//
 // WHAT THE BROWSER VARIANT DOES NOT DO, and why that is a refusal rather than a gap: SHA-256 is vendored there
 // (deterministic, vector-checkable, no secrets). Ed25519 and AES-GCM are NOT. A browser has them only through
 // `crypto.subtle`, which is ASYNCHRONOUS, and this core is synchronous by design — the alternative was

@@ -16,13 +16,13 @@
 // values and fails if a declared key is missing, so they cannot drift into being the stale kind.
 // Package: ust-light
 
-export function buildState(id: unknown, time: unknown, data: unknown, provenance: unknown): unknown;
+export function buildState(id: unknown, time: unknown, data: unknown, provenance: unknown): Promise<unknown>;
 export function canon(v: unknown): string;
 export function contentHash(doc: unknown): string;
 export function H(tag: unknown, str: unknown): unknown;
 export function keyId(pubB64url: unknown): unknown;
-export function keypair(): { privateKey: unknown; pub: unknown; key_id: unknown };
-export function seal(state: unknown, privateKey: unknown, pubB64url: unknown): { ust: unknown; state: unknown; sig: unknown };
+export function keypair(): Promise<{ privateKey: unknown; pub: unknown; key_id: unknown }>;
+export function seal(state: unknown, privateKey: unknown, pubB64url: unknown): Promise<{ ust: unknown; state: unknown; sig: unknown }>;
 export function seed(contentHashes: unknown): string;
 export function signedContent(doc: unknown): string;
-export function verify(doc: unknown): unknown;
+export function verify(doc: unknown): Promise<unknown>;

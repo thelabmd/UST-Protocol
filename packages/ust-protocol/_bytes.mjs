@@ -5,10 +5,14 @@
 // faculty substituted the core bundled green to 261 KB carrying 51 `Buffer` references, every one of which
 // throws on the first call in a page. A build that succeeds and dies at runtime is worse than one that fails,
 // because the failure has been moved from our CI to the consumer's browser.
+// CLOSED 2026-08-08 by round 184 — none of those references remain, and the gate re-derives that on every run.
 //
 // STRICTNESS IS UNCHANGED. These are encodings, not policy: the decode→re-encode→identity discipline that
 // makes `strictB64url` reject non-canonical aliases lives at the call site and still does. What changes is
 // only which primitive performs the transform. `atob`/`btoa` are globals in browsers and in Node since 16.
+//
+// CLOSED 2026-08-08 by round 184 — the core carries no `Buffer`, and `test:browser` runs it with the global deleted, so
+// the class cannot come back silently: a reintroduced global reddens the run leg by its own name.
 
 const TE = new TextEncoder();
 const TD = new TextDecoder('utf-8', { fatal: false });

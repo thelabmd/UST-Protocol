@@ -11,7 +11,9 @@ pipe; **UST secures the payload**, so the guarantee travels with the data instea
 > *Both hold today: a newer minor answers `INDETERMINATE(unsupported_minor)` and a different major `INDETERMINATE(unsupported_major)` — never `INVALID`, which means only "I applied MY rules and they were violated".*
 
 Publish and verify a **signed, canonical, addressable, string-only, bounded JSON state** with a **carried key** —
-in a minute, with zero dependencies (Node `crypto`: Ed25519 + SHA-256). No genesis, key-log, anchoring, checkpoints,
+in a minute, with zero dependencies (WebCrypto: Ed25519 + SHA-256 — so it runs in Node, in a worker and in a
+browser, unchanged). Everything that touches a hash or a signature is **async**; `canon` and `signedContent`
+are pure and stay synchronous. No genesis, key-log, anchoring, checkpoints,
 or the assurance lattice. **A `ust-light` document is a valid UST document**: it verifies `VALID:LIGHT` under the full
 `ust-protocol` verifier, and this verifier accepts any UST document at the LIGHT floor. The canon/hash/sign
 primitives are byte-identical to the reference implementation (`test.mjs` proves both directions + byte-identity).
@@ -44,14 +46,14 @@ npm i ust-light
 // runnable: node this file as-is.
 import { keypair, buildState, seal, verify } from 'ust-light';
 
-const kp = keypair();
-const doc = seal(buildState(
+const kp = await keypair();
+const doc = await seal(await buildState(
   { domain_shard: 'example.md', ust_id: 'ust:20260715.12', key_id: kp.key_id, class: 'observation' },
   { generated_at: '2026-07-15T12:00:00Z', valid_from: '2026-07-15T12:00:00Z', valid_to: '2026-07-15T13:00:00Z' },
   { reading: { kind: 'captured', value: { celsius: '21.5' } } },
 ), kp.privateKey, kp.pub);
 
-verify(doc);   // → { result: 'VALID:LIGHT', identity: 'self-asserted', content_hash, ust_id, key_id, … }
+await verify(doc);   // → { result: 'VALID:LIGHT', identity: 'self-asserted', content_hash, ust_id, key_id, … }
 ```
 
 `npm test` cross-verifies against the full reference implementation (byte-identical, both directions).

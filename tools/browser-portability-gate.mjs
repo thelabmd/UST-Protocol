@@ -7,6 +7,8 @@
 // an import, which no bundler reports and which throws on the first call in a page. A green bundle would have
 // been read as portability and shipped a runtime failure to the consumer's browser.
 //
+// CLOSED 2026-08-08 by round 184 — this gate IS that measurement, made repeatable and wired into CI as a step.
+//
 // So this gate does the two things a bundler cannot:
 //
 //   1. RESOLVES the module graph under the package's `browser` map and refuses any surviving `node:` import.
@@ -187,7 +189,44 @@ console.log('SURVIVED');
     'Buffer survived deletion — the run leg would pass a core that uses it');
 }
 
+// ─── 6. the LIGHT floor — one surface, portable by construction ─────────────────────────────────────────
+//
+// `ust-light` took the opposite decision to the core and it is the right one for a FLOOR: its synchrony was
+// incidental, so it became ASYNCHRONOUS EVERYWHERE on WebCrypto rather than growing a second build. There is
+// no `browser` map to apply here — the single file is the browser file — so the check is simply that it
+// carries no Node import and runs with the globals gone. A floor that refuses the browser is not a floor.
+{
+  const LIGHT = join(ROOT, 'packages/ust-light/index.mjs');
+  const src = readFileSync(LIGHT, 'utf8');
+  const nodeSpecs = [...src.matchAll(IMPORT_RE)].map((m) => m[1] ?? m[2] ?? m[3]).filter((x) => x && !x.startsWith('.'));
+  check(`ust-light imports nothing from a platform (${nodeSpecs.length ? nodeSpecs.join(', ') : 'none'})`,
+    nodeSpecs.length === 0, nodeSpecs.join(', '));
+
+  const lightRunner = `
+for (const g of ['Buffer', 'process', 'require', '__dirname', '__filename', 'global']) {
+  try { delete globalThis[g]; } catch {}
+  try { Object.defineProperty(globalThis, g, { get() { throw new Error('NODE GLOBAL USED: ' + g); }, configurable: true }); } catch {}
+}
+const L = await import('${LIGHT}');
+const kp = await L.keypair();
+const id = { domain_shard: kp.key_id, ust_id: 'ust:20260715.12', key_id: kp.key_id, class: 'observation' };
+const time = { generated_at: '2026-07-15T12:00:00Z', valid_from: '2026-07-15T12:00:00Z', valid_to: '2026-07-15T13:00:00Z' };
+const doc = await L.seal(await L.buildState(id, time, { t: { kind: 'captured', value: { c: '21.5' } } }), kp.privateKey, kp.pub);
+const v = await L.verify(doc);
+console.log(JSON.stringify({ result: v.result, ch: await L.contentHash(doc) }));
+`;
+  try {
+    const out = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '--eval', lightRunner],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim());
+    // The whole round trip — keypair, build, seal, verify — with no Node global in reach.
+    check('ust-light builds, seals and VERIFIES with Buffer/process/require deleted', out.result === 'VALID:LIGHT', `got ${out.result}`);
+  } catch (e) {
+    check('ust-light builds, seals and VERIFIES with Buffer/process/require deleted', false,
+      String(e.stderr || e.message).split('\n').filter((l) => /Error|NODE GLOBAL/.test(l))[0]?.slice(0, 150) ?? 'no output');
+  }
+}
+
 console.log(failures === 0
-  ? '\n  browser portability: the mapped core runs without Node globals and agrees with the Node build'
+  ? '\n  browser portability: the mapped core and the LIGHT floor both run without Node globals'
   : `\n  browser portability: ${failures} FAILURE(S)`);
 process.exit(failures === 0 ? 0 : 1);

@@ -3,9 +3,30 @@
 // string-only, bounded JSON state with a CARRIED key — no genesis, key-log, anchoring, checkpoints, or the
 // assurance lattice. A ust-light document is a valid UST document: it verifies VALID:LIGHT under the full
 // `ust-protocol` verifier, and this verifier accepts any UST document at the LIGHT floor. Zero-dependency
-// (node:crypto: Ed25519 + SHA-256). The canon/hash/sign primitives are BYTE-IDENTICAL to the reference impl;
+// (WebCrypto: Ed25519 + SHA-256). The canon/hash/sign primitives are BYTE-IDENTICAL to the reference impl;
 // the point of "lite" is the SMALL surface, readable and re-implementable in an afternoon. §-refs are UST-1.0.md.
-import { createHash, sign as edSign, verify as edVerify, createPublicKey, generateKeyPairSync } from 'node:crypto';
+//
+// #143 — ASYNCHRONOUS, AND ON PURPOSE. This floor used `node:crypto`'s synchronous primitives and therefore ran
+// in exactly one place. A browser offers Ed25519 and SHA-256 only through `crypto.subtle`, which is async, so a
+// synchronous floor is a Node floor — and a floor that refuses the browser is not a floor: the browser is where
+// a verifier meant to be re-implementable in an afternoon is wanted most.
+//
+// The reference core made the OPPOSITE call and kept its synchrony, because there it is STRUCTURAL. Here it was
+// INCIDENTAL — nothing depended on it — so the smaller answer is one async surface rather than a sync build and
+// an async build drifting apart. Everything touching a hash or a signature returns a promise; `canon` and
+// `signedContent` are pure and stay synchronous.
+//
+// Byte helpers are inlined rather than imported from the reference package. That is not duplication by neglect:
+// this file's whole value is being an INDEPENDENT second implementation that agrees, and one that borrows the
+// other's internals proves nothing by agreeing with it. The cross-implementation vectors are the guard.
+
+const te = new TextEncoder();
+const utf8 = (s) => te.encode(s);
+const cat = (parts) => { let n = 0; for (const p of parts) n += p.length; const o = new Uint8Array(n); let a = 0; for (const p of parts) { o.set(p, a); a += p.length; } return o; };
+const hex = (b) => { let s = ''; for (const x of b) s += x.toString(16).padStart(2, '0'); return s; };
+const b64uTo = (b) => { let s = ''; for (const x of b) s += String.fromCharCode(x); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+// Permissive exactly like Node's decoder was: canonicality is decided by the re-encode in strictB64url, not here.
+const b64uFrom = (s) => { if (typeof s !== 'string') return new Uint8Array(0); const c = s.replace(/[^A-Za-z0-9+/_-]/g, '').replace(/-/g, '+').replace(/_/g, '/'); let bin; try { bin = atob(c + '='.repeat((4 - (c.length % 4)) % 4)); } catch { return new Uint8Array(0); } const o = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) o[i] = bin.charCodeAt(i); return o; };
 
 const err = (code, detail) => Object.assign(new Error(code), { code, detail });
 
@@ -24,14 +45,14 @@ export function canon(v) {
 }
 
 // ─── §7 domain-separated hash: H_t(x) = "sha256:" || hex(SHA256(ascii(t) || 0x00 || x)).
-const sha = (buf) => 'sha256:' + createHash('sha256').update(buf).digest('hex');
-export const H = (tag, str) => sha(Buffer.concat([Buffer.from(tag, 'ascii'), Buffer.from([0]), Buffer.from(str, 'utf8')]));
-const Hbytes = (tag, raw) => sha(Buffer.concat([Buffer.from(tag, 'ascii'), Buffer.from([0]), raw]));
+const sha = async (bytes) => 'sha256:' + hex(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)));
+export const H = (tag, str) => sha(cat([utf8(tag), new Uint8Array([0]), utf8(str)]));
+const Hbytes = (tag, raw) => sha(cat([utf8(tag), new Uint8Array([0]), raw]));
 // §12.2/§17 key_id = H("ust:keylog", raw_pub_bytes) — raw = base64url-decode(pub), NOT SHA256(pub).
-export const keyId = (pubB64url) => Hbytes('ust:keylog', Buffer.from(pubB64url, 'base64url'));
+export const keyId = (pubB64url) => Hbytes('ust:keylog', b64uFrom(pubB64url));
 // §4.4 per-partition hash: public → over {domain_shard, ust_id, partition, value}; private → over its `commit`.
 const partitionHash = ({ domain_shard, ust_id, name, value, commit }) => commit !== undefined
-  ? Hbytes('ust:shard', Buffer.from(commit, 'utf8'))
+  ? Hbytes('ust:shard', utf8(commit))
   : H('ust:shard', canon({ domain_shard, ust_id, partition: name, value }));
 // §7 signed content + content_hash.
 export const seed = (contentHashes) => H('ust:seed', canon(contentHashes));           // pinned signed order — byte-identical to core §9.4
@@ -39,14 +60,14 @@ export const signedContent = (doc) => canon({ ust: doc.ust, state: doc.state });
 export const contentHash = (doc) => H('ust:state', signedContent(doc));
 
 // ─── strict Ed25519 (I4 raw-byte determinism / cross-language agreement): exact 32B pub, 64B canonical sig.
-const pubKeyObj = (b64) => createPublicKey({ key: Buffer.concat([Buffer.from('302a300506032b6570032100', 'hex'), Buffer.from(b64, 'base64url')]), format: 'der', type: 'spki' });
+const importPub = (b64) => crypto.subtle.importKey('raw', b64uFrom(b64), { name: 'Ed25519' }, false, ['verify']);
 const strictB64url = (s, bytes) => {
   if (typeof s !== 'string' || !/^[A-Za-z0-9_-]+$/.test(s)) return null;
-  let buf; try { buf = Buffer.from(s, 'base64url'); } catch { return null; }
-  if (buf.length !== bytes || buf.toString('base64url') !== s) return null;
+  let buf; try { buf = b64uFrom(s); } catch { return null; }
+  if (buf.length !== bytes || b64uTo(buf) !== s) return null;
   return buf;
 };
-const edVerifyStrict = (pub, msg, sig) => { try { return edVerify(null, Buffer.from(msg, 'utf8'), pubKeyObj(pub), Buffer.from(sig, 'base64url')); } catch { return false; } };
+const edVerifyStrict = async (pub, msg, sig) => { try { return await crypto.subtle.verify({ name: 'Ed25519' }, await importPub(pub), b64uFrom(sig), utf8(msg)); } catch { return false; } };
 
 // ─── registries / shape (LIGHT subset of §17) ────────────────────────────────────────────────────────
 const RESERVED = { transcript: ['ust', 'state', 'sig', 'proof'], state: ['id', 'time', 'data', 'hashes', 'provenance'],
@@ -70,20 +91,20 @@ const AEAD_ALGS = ['AES-256-GCM', 'XChaCha20-Poly1305'], B64URL = /^[A-Za-z0-9_-
 const FLOOR = { partitions: 64, sizeBytes: 1048576 };   // §13 anonymous LIGHT floor (full UST raises these via a genesis grant)
 
 // ─── producer: keypair → buildState (auto per-partition hashes) → seal (sign the carried key) ─────────
-export function keypair() {
-  const { publicKey, privateKey } = generateKeyPairSync('ed25519');
-  const pub = publicKey.export({ format: 'der', type: 'spki' }).subarray(-32).toString('base64url');
-  return { privateKey, pub, key_id: keyId(pub) };
+export async function keypair() {
+  const { publicKey, privateKey } = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+  const pub = b64uTo(new Uint8Array(await crypto.subtle.exportKey('raw', publicKey)));
+  return { privateKey, pub, key_id: await keyId(pub) };
 }
-export function buildState(id, time, data, provenance) {
+export async function buildState(id, time, data, provenance) {
   if (id.class !== undefined && id.class !== 'observation') throw err('E-MALFORMED', 'ust-light builds class:"observation" only — use ust-protocol for attestation/derivation/genesis/key/cadence');
   id = { ...id, class: 'observation' };   // round-49 P0-01 — class is REQUIRED (the verifier now rejects an absent class); ust-light always stamps observation
   const n = Object.keys(data).length;
   if (n > FLOOR.partitions) throw err('E-BOUNDS', `${n} partitions > LIGHT floor ${FLOOR.partitions} (raise via a genesis grant on full UST)`);
   const hashes = {};
   for (const [name, part] of Object.entries(data))
-    hashes[name] = part.commit !== undefined ? partitionHash({ commit: part.commit })
-      : partitionHash({ domain_shard: id.domain_shard, ust_id: id.ust_id, name, value: part.value });
+    hashes[name] = part.commit !== undefined ? await partitionHash({ commit: part.commit })
+      : await partitionHash({ domain_shard: id.domain_shard, ust_id: id.ust_id, name, value: part.value });
   const state = { id, time, data, hashes };
   // UST-jls — lite can now BUILD the chains it was already verifying. The producer refuses what its own verifier would
   // refuse: a builder that emits documents its verifier rejects is worse than one that cannot build them at all.
@@ -94,24 +115,24 @@ export function buildState(id, time, data, provenance) {
     if (provenance.based_on !== undefined) {
       if (!Array.isArray(provenance.based_on) || provenance.based_on.some((b) => !b || !HASH.test(b.hash || ''))) throw err('E-MALFORMED', 'based_on entries must carry sha256:hex `hash`');
       if (new Set(provenance.based_on.map((b) => b.hash)).size !== provenance.based_on.length) throw err('E-MALFORMED', 'duplicate hash in based_on (§9.4)');
-      if (seed(provenance.based_on.map((b) => b.hash)) !== provenance.seed) throw err('E-SEED', 'seed must be H(ust:seed, canon(based_on hashes)) — build it with the exported seed()');
+      if (await seed(provenance.based_on.map((b) => b.hash)) !== provenance.seed) throw err('E-SEED', 'seed must be H(ust:seed, canon(based_on hashes)) — build it with the exported seed()');
     }
     if (provenance.prev !== undefined && !HASH.test(provenance.prev)) throw err('E-MALFORMED', 'prev must be a sha256:hex content_hash');
     state.provenance = provenance;
   }
-  const bytes = Buffer.byteLength(signedContent({ ust: '1.0', state }), 'utf8');
+  const bytes = utf8(signedContent({ ust: '1.0', state })).length;
   if (bytes > FLOOR.sizeBytes) throw err('E-BOUNDS', `signed content ${bytes} B > LIGHT floor ${FLOOR.sizeBytes}`);
   return state;
 }
-export function seal(state, privateKey, pubB64url) {
+export async function seal(state, privateKey, pubB64url) {
   const doc = { ust: '1.0', state };
-  const sig = edSign(null, Buffer.from(signedContent(doc), 'utf8'), privateKey).toString('base64url');
+  const sig = b64uTo(new Uint8Array(await crypto.subtle.sign({ name: 'Ed25519' }, privateKey, utf8(signedContent(doc)))));
   return { ust: '1.0', state, sig: { alg: 'Ed25519', key_id: state.id.key_id, pub: pubB64url, sig } };
 }
 
 // ─── verifier — the LIGHT floor (§14 steps 1,2,4,5). VALID:LIGHT (integrity + a CLAIMED key), or a §15 error.
 //     LIGHT does NOT resolve name authority or time — those are HIGH/TOP (full UST). Identity is `self-asserted`.
-export function verify(doc) {
+export async function verify(doc) {
   const bad = (error, detail) => ({ result: 'INVALID', error, detail });
   // totality (round-46 self-audit) — snapshot the doc ONCE into an inert record BEFORE any field read: a hostile getter/Proxy
   // would otherwise throw a host exception at the first `doc.ust` access (or split a two-face payload across the reads below).
@@ -152,8 +173,8 @@ export function verify(doc) {
   if (dk.length !== hk.length || dk.some((k, i) => k !== hk[i])) return bad('E-MALFORMED', 'hashes⇄data not a bijection (G19)');
   for (const [name, part] of Object.entries(st.data)) {
     let recomputed; try {
-      recomputed = part.commit !== undefined ? partitionHash({ commit: part.commit })
-        : partitionHash({ domain_shard: st.id.domain_shard, ust_id: st.id.ust_id, name, value: part.value });
+      recomputed = part.commit !== undefined ? await partitionHash({ commit: part.commit })
+        : await partitionHash({ domain_shard: st.id.domain_shard, ust_id: st.id.ust_id, name, value: part.value });
     } catch { return bad('E-CANON', 'partition canon: ' + name); }
     if (recomputed !== st.hashes[name]) return bad('E-CANON', 'partition hash mismatch: ' + name);
   }
@@ -180,7 +201,7 @@ export function verify(doc) {
     if (new Set(pr.based_on.map((b) => b.hash)).size !== pr.based_on.length) return bad('E-MALFORMED', 'duplicate hash in based_on (citing a referent twice has no composite meaning, §9.4)');
     // The seed is the ONLY thing binding a document to the set of inputs it cites. Accepting a based_on whose seed does
     // not recompute accepts a provenance claim bound to nothing.
-    if (seed(pr.based_on.map((b) => b.hash)) !== pr.seed) return bad('E-SEED', 'derivation seed != H(ust:seed, canon(based_on hashes))');
+    if (await seed(pr.based_on.map((b) => b.hash)) !== pr.seed) return bad('E-SEED', 'derivation seed != H(ust:seed, canon(based_on hashes))');
   }
   if (pr?.prev !== undefined && !HASH.test(pr.prev)) return bad('E-MALFORMED', 'prev must be a sha256:hex content_hash');
   const shardKeyForm = /^sha256:[0-9a-f]{64}$/.test(st.id.domain_shard);
@@ -194,12 +215,12 @@ export function verify(doc) {
   for (const k of Object.keys(s)) if (!['alg', 'key_id', 'pub', 'sig'].includes(k)) return bad('E-MALFORMED', 'reserved-key: sig.' + k);
   if (strictB64url(s.pub, 32) === null) return bad('E-SIG', 'pub not canonical 32-byte b64url');
   if (strictB64url(s.sig, 64) === null) return bad('E-SIG', 'sig not canonical 64-byte b64url');
-  if (keyId(s.pub) !== s.key_id || s.key_id !== st.id.key_id) return bad('E-SIG', 'key_id ≠ H(ust:keylog, pub) or ≠ state.id.key_id');
-  if (!edVerifyStrict(s.pub, S, s.sig)) return bad('E-SIG', 'Ed25519 verify failed');
+  if (await keyId(s.pub) !== s.key_id || s.key_id !== st.id.key_id) return bad('E-SIG', 'key_id ≠ H(ust:keylog, pub) or ≠ state.id.key_id');
+  if (!(await edVerifyStrict(s.pub, S, s.sig))) return bad('E-SIG', 'Ed25519 verify failed');
   // round-53 (UST-ybn — the LIGHT ambiguity fix, unified rule): authentic, but ust-light is the LIGHT floor with NO
   // binding capability (no genesis/key-log), so it CANNOT confirm a name-form DOMAIN CLAIM ⇒ "cannot confirm ⇒
   // INDETERMINATE", never a bare VALID (the forgery-misread). A self-asserted KEY-IDENTITY uses key-form domain_shard.
-  if (!shardKeyForm) return { result: 'INDETERMINATE', reason: 'unavailable', ust_id: st.id.ust_id, key_id: st.id.key_id, content_hash: contentHash(doc), detail: 'name-form domain_shard is a domain claim ust-light cannot confirm (no binding): use key-form domain_shard = key_id for a self-asserted key-identity document (→ VALID:LIGHT), or verify with genesis+key-log via ust-protocol (→ HIGH). "cannot confirm" ⇒ INDETERMINATE (UST-ybn)' };
+  if (!shardKeyForm) return { result: 'INDETERMINATE', reason: 'unavailable', ust_id: st.id.ust_id, key_id: st.id.key_id, content_hash: await contentHash(doc), detail: 'name-form domain_shard is a domain claim ust-light cannot confirm (no binding): use key-form domain_shard = key_id for a self-asserted key-identity document (→ VALID:LIGHT), or verify with genesis+key-log via ust-protocol (→ HIGH). "cannot confirm" ⇒ INDETERMINATE (UST-ybn)' };
   return { result: 'VALID:LIGHT', tier: 'LIGHT', identity: 'self-asserted', publisher_claimed: st.id.domain_shard,
-    ust_id: st.id.ust_id, key_id: st.id.key_id, content_hash: contentHash(doc), completeness: 'not_evaluated' };
+    ust_id: st.id.ust_id, key_id: st.id.key_id, content_hash: await contentHash(doc), completeness: 'not_evaluated' };
 }
