@@ -45,6 +45,9 @@ on:
         default: false
         type: boolean
 
+# Экшены закреплены по SHA, как в ci.yml, и здесь это важнее: у этого воркфлоу есть право
+# публиковать пакеты через OIDC. Плавающий тег значит, что компрометация экшена выпустит релиз под
+# нашим именем И С ПРИЛОЖЕННЫМ ПРОВЕНАНСОМ — подпись подтвердит, что собрано этим репозиторием.
 permissions:
   contents: read
   id-token: write          # the OIDC token npm exchanges for a short-lived publish credential
@@ -57,7 +60,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # The gate mirror below reads round history from git; a shallow clone makes its domain
           # unreadable and it refuses rather than passing over an empty set. Same reason as ci.yml.
@@ -65,7 +68,7 @@ jobs:
 
       # Trusted publishing needs npm >= 11.5.1 and Node >= 22.14.0. Pinned rather than floating: a release that
       # silently changes toolchain is a release whose output nobody can reproduce.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22.14.0'
           registry-url: 'https://registry.npmjs.org'
