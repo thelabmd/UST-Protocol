@@ -86,7 +86,8 @@
     "test:remedy-guard": "node tools/remedy-guard-gate.mjs",
     "test:ots-codec": "node tools/ots-codec-gate.mjs",
     "test:browser": "node tools/browser-portability-gate.mjs",
-    "test:recap-per-issue": "node tools/recap-per-issue-gate.mjs"
+    "test:recap-per-issue": "node tools/recap-per-issue-gate.mjs",
+    "test:readme-block": "node tools/readme-block-gate.mjs"
   },
   "devDependencies": {
     "typescript": "~7.0.2"

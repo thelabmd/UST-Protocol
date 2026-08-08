@@ -1,6 +1,20 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 # UST Protocol — the browser signer
 
+```
+     ▄▀▀▀▀▀▀▀▀▀▀▀▀█▄
+    █ ▄▄      ▄▄    █              UST · Signer
+  ▄▄▀ ▀▀ ▄▄▄  ▀▀    █              WebCrypto, key never leaves
+  ▄█▀▀ ▀█▄▀▄▄▀ ▀█▀  █    █▀▄   ▄▄
+   ▀█               █▄   █▄ ██▀ █
+     █               ▀▄▄  █   ▄█
+     █                  ▀▀   █▀
+     █▄      ▄              █▀
+     ███▄    █    █       ▄█▀
+   ▄▀▀  ██▄▄▄█     ▀▄▄▄▄█▀▀
+   ▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀
+```
+
 The **browser-side signer** for [UST (Universal State Transcript)](https://github.com/thelabmd/UST-Protocol). It is the
 one piece [`ust-protocol`](https://www.npmjs.com/package/ust-protocol) deliberately leaves out: a **private key
 never enters the verifier library**. This package generates an Ed25519 key with WebCrypto, signs, and produces the

@@ -42,6 +42,8 @@ jobs:
         run: npm run test:model-lockstep
       - name: model-domain totality (every model SECTION is bound by an executed check, a registry record, or an explicit closed-set reason)
         run: npm run test:model-domain
+      - name: readme block (ten copies of one normative paragraph, and nothing watched them)
+        run: npm run test:readme-block
       - name: one issue, one diary (a round closing two cards leaves the second unaccounted)
         run: npm run test:recap-per-issue
       - name: browser portability (RUN the mapped core without Node globals — a bundle that builds proves less)

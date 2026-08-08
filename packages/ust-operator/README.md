@@ -1,12 +1,6 @@
 # UST Protocol — the operator layer
 
 ```
-
-> **Two rules this protocol does not trade away.**
-> **A minor only ADDS.** Anything that changes the meaning of what an earlier minor already defines is a MAJOR — there is no third option, because an older verifier evaluating under older rules must still be RIGHT about what it evaluated.
-> **A verifier never expires.** An older verifier keeps producing correct verdicts about everything it understands; newer material it does not implement is reported as NOT EVALUATED — never as invalid, never silently passed. Whether that reach is enough is the CONSUMER's policy, not the protocol's coercion.
-> *Both hold today: a newer minor answers `INDETERMINATE(unsupported_minor)` and a different major `INDETERMINATE(unsupported_major)` — never `INVALID`, which means only "I applied MY rules and they were violated".*
-
      ▄▀▀▀▀▀▀▀▀▀▀▀▀█▄
     █ ▄▄      ▄▄    █              UST Protocol
   ▄▄▀ ▀▀ ▄▄▄  ▀▀    █              RSS for State
@@ -21,6 +15,11 @@
 ```
 
 > `§` refers to [`spec/UST-1.0.md`](../../spec/UST-1.0.md) throughout.
+
+> **Two rules this protocol does not trade away.**
+> **A minor only ADDS.** Anything that changes the meaning of what an earlier minor already defines is a MAJOR — there is no third option, because an older verifier evaluating under older rules must still be RIGHT about what it evaluated.
+> **A verifier never expires.** An older verifier keeps producing correct verdicts about everything it understands; newer material it does not implement is reported as NOT EVALUATED — never as invalid, never silently passed. Whether that reach is enough is the CONSUMER's policy, not the protocol's coercion.
+> *Both hold today: a newer minor answers `INDETERMINATE(unsupported_minor)` and a different major `INDETERMINATE(unsupported_major)` — never `INVALID`, which means only "I applied MY rules and they were violated".*
 
 `@ust-protocol/operator` = "UST state": working with the protocol's STATE over time. Builds ON `ust-protocol` (the stateless
 base). Each piece PRODUCES exactly what `ust-protocol` VERIFIES — round-trip `conformance.mjs`: 16/16 PASS, 0 fail — and it runs in CI now, which is why the number moved.

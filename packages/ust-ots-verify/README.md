@@ -1,6 +1,20 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 # UST Protocol — the Bitcoin/OTS anchor verifier
 
+```
+     ▄▀▀▀▀▀▀▀▀▀▀▀▀█▄
+    █ ▄▄      ▄▄    █              UST · OTS
+  ▄▄▀ ▀▀ ▄▄▄  ▀▀    █              Bitcoin anchor receipts
+  ▄█▀▀ ▀█▄▀▄▄▀ ▀█▀  █    █▀▄   ▄▄
+   ▀█               █▄   █▄ ██▀ █
+     █               ▀▄▄  █   ▄█
+     █                  ▀▀   █▀
+     █▄      ▄              █▀
+     ███▄    █    █       ▄█▀
+   ▄▀▀  ██▄▄▄█     ▀▄▄▄▄█▀▀
+   ▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀
+```
+
 UST (Universal State Transcript) is trust infrastructure for data: a signed, canonical, tamper-evident record of
 *state* — some data about the world at a moment — that verifies the same however it reached you. TLS secures the
 pipe; **UST secures the payload**, so the guarantee travels with the data instead of with the connection.
