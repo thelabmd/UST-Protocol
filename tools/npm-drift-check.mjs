@@ -69,7 +69,19 @@ for (const ws of workspaces) {
 // stranger actually resolves, and a tag is the only thing most people ever type. So: every tag of every package is
 // enumerated from the registry and must point at the CURRENT published version, and never at a version we have
 // disowned. A tag that should differ must say why, here, in the file.
-const TAG_EXEMPT = {};   // `<pkg>@<tag>` → why it legitimately points elsewhere. Empty: all tags track the release.
+// TEMPORARY, and the reason is a defect this gate cannot see: the release is TWO dispatches — publish puts the
+// line on the `rc` tag, promote moves `latest` onto it, and promote REFUSES a partial line. Between them every
+// published package has latest lagging by construction. This gate's claim — every tag points at the current
+// published version — is therefore stronger than the process this same repository documents, and the two together
+// DEADLOCK: the gate runs BEFORE publish inside release.yml, so a line that stopped halfway cannot be finished
+// without an exemption. The structural answer is to compare `latest` against the last FULLY PUBLISHED line rather
+// than against each package's newest version. These entries go away with the dispatch that completes the line —
+// an exemption that outlives its window is the very thing it was meant to avoid.
+const TAG_EXEMPT = {
+  'ust-protocol@latest': 'the rc.68 line is MID-RELEASE: publish and promote are two dispatches by design, so between them latest lags the rc tag — and promote refuses a partial line, which makes this gate and that refusal a deadlock. Cleared by finishing the line.',
+  '@ust-protocol/mcp@latest': 'the rc.68 line is MID-RELEASE: publish and promote are two dispatches by design, so between them latest lags the rc tag — and promote refuses a partial line, which makes this gate and that refusal a deadlock. Cleared by finishing the line.',
+  '@ust-protocol/web-signer@latest': 'the rc.68 line is MID-RELEASE: publish and promote are two dispatches by design, so between them latest lags the rc tag — and promote refuses a partial line, which makes this gate and that refusal a deadlock. Cleared by finishing the line.',
+};   // `<pkg>@<tag>` → why it legitimately points elsewhere.
 for (const [name, st] of pubState) {
   // A package that is not on npm has no dist-tags, and that is the honest "repo is ahead" state this gate already
   // knows how to report — not an unreadable pointer. Measured 2026-07-31 on the first genuinely unpublished package

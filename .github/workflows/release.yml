@@ -34,6 +34,11 @@ on:
         default: publish
         type: choice
         options: [publish, promote]
+      resume-reason:
+        description: 'finishing a HALF-PUBLISHED line: state why. Tolerates exactly two mid-release gates, named in run-ci-locally.mjs — everything else still blocks'
+        required: false
+        default: ''
+        type: string
       dry-run:
         description: 'pack and read every tarball, publish nothing'
         required: false
@@ -71,8 +76,12 @@ jobs:
 
       # The GATES run before anything is published. A release that ships a tree its own CI has not judged is the
       # one case where "green somewhere else" is worth nothing.
+      # A resume states its reason in the dispatch, so the door is visible in the run itself and not only here.
+      - name: why this run resumes a half-published line
+        if: inputs.resume-reason != ''
+        run: echo "RESUME — ${{ inputs.resume-reason }}"
       - name: the full local mirror of CI, before anything leaves
-        run: node tools/run-ci-locally.mjs
+        run: node tools/run-ci-locally.mjs ${{ inputs.resume-reason != '' && '--resume' || '' }}
 
       - name: publish the line on the rc tag
         if: inputs.mode == 'publish'

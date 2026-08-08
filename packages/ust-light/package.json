@@ -20,5 +20,10 @@
   "scripts": {
     "test": "node test.mjs"
   },
-  "types": "index.d.ts"
+  "types": "index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thelabmd/UST-Protocol.git",
+    "directory": "packages/ust-light"
+  }
 }
