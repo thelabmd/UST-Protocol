@@ -55,7 +55,19 @@ const partitionHash = ({ domain_shard, ust_id, name, value, commit }) => commit 
   ? Hbytes('ust:shard', utf8(commit))
   : H('ust:shard', canon({ domain_shard, ust_id, partition: name, value }));
 // §7 signed content + content_hash.
-export const seed = (contentHashes) => H('ust:seed', canon(contentHashes));           // pinned signed order — byte-identical to core §9.4
+export const seed = (contentHashes) => H('ust:seed', canon(contentHashes));
+// §9.2 Merkle root over a cited SET — byte-ascending sort, ust:leaf / ust:node, odd node promoted.
+export async function merkleRoot(contentHashes) {
+  let lvl = [];
+  for (const h of contentHashes.slice().sort()) lvl.push(await Hbytes('ust:leaf', utf8(h)));
+  while (lvl.length > 1) {
+    const nx = [];
+    for (let i = 0; i < lvl.length; i += 2)
+      nx.push(i + 1 < lvl.length ? await Hbytes('ust:node', utf8(lvl[i] + lvl[i + 1])) : lvl[i]);
+    lvl = nx;
+  }
+  return lvl[0];
+}           // pinned signed order — byte-identical to core §9.4
 export const signedContent = (doc) => canon({ ust: doc.ust, state: doc.state });
 export const contentHash = (doc) => H('ust:state', signedContent(doc));
 
@@ -76,6 +88,13 @@ const RES_PARTITION = new Set([...RESERVED.transcript, ...RESERVED.state, ...RES
   'partition', 'nonce', '__proto__', 'constructor', 'prototype']);
 const KINDS = ['captured', 'computed'], PRIVACY = ['blinded', 'encrypted'];
 const CLASSES = ['observation', 'attestation', 'derivation', 'genesis', 'key', 'cadence'];
+// #142 — TWO AXES, and conflating them is the defect this replaces. `genesis`/`key`/`cadence` are the
+// AUTHORITY layer: excluding them from a floor with no key log is principled, there is nothing here that could
+// resolve them. `attestation`/`derivation` were excluded for a different reason entirely — the BUILDER does
+// not produce them — and a fact about the builder was deciding what the VERIFIER accepts. An attestation is
+// LIGHT when its key is carried and nothing resolves authority, exactly as an observation is.
+const DATA_CLASSES = ['observation', 'attestation', 'derivation'];
+const PREV_ONLY_SUBTYPES = ['checkpoint', 'gap', 'anchor'];
 const TS = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])T([01]\d|2[0-3]):[0-5]\d:[0-5]\dZ$/;
 const USTID = /^ust:\d{4}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\.([01]\d|2[0-3])(([0-5]\d)([0-5]\d)?)?$/;
 // round-49 P0-01 — the regex is a SHAPE floor only (`2026-02-31` passes it); the full verifier requires a REAL calendar date,
@@ -186,7 +205,7 @@ export async function verify(doc) {
   // §14.5 / N10 class↔provenance: ust-light handles `observation` (data) ONLY, and class is REQUIRED — the full verifier
   // rejects an absent/unknown class (round-49 P0-01: an omitted class read VALID:LIGHT here while core returned INVALID).
   // `attestation`/`derivation` are the classes lite does not build; `genesis`/`key`/`cadence` are the HIGH/TOP layer.
-  if (st.id.class !== 'observation')
+  if (!DATA_CLASSES.includes(st.id.class))
     return bad('E-MALFORMED', `ust-light verifies class:"observation" only (class is required) — "${st.id.class}" needs the HIGH/TOP layer or the full builder family; use ust-protocol`);
   // UST-jls — every §14a provenance obligation reachable at LIGHT, in CORE'S ORDER and with core's reasons, so a document
   // violating several rules gets the same code from both. lite previously carried NO provenance checks at all while
@@ -194,8 +213,28 @@ export async function verify(doc) {
   // the ceiling rejects is not a subset — it is different semantics wearing the same name.
   const pr = st.provenance;
   if (pr !== undefined && (typeof pr !== 'object' || pr === null || Array.isArray(pr))) return bad('E-MALFORMED', 'provenance must be an object');
-  // §S4/F4 — an observation may chain (`prev`) and may cite (`based_on`), but attestation provenance is not its shape.
-  if (pr?.constituents !== undefined || pr?.root !== undefined) return bad('E-MALFORMED', 'observation MUST NOT carry constituents/root');
+  // §S4/F4 — class ↔ provenance, dispatched on the class instead of assuming there is only one.
+  if (st.id.class === 'observation' && (pr?.constituents !== undefined || pr?.root !== undefined))
+    return bad('E-MALFORMED', 'observation MUST NOT carry constituents/root');
+  if (st.id.class === 'derivation' && (pr?.based_on === undefined || pr?.seed === undefined))
+    return bad('E-MALFORMED', 'derivation MUST carry based_on + seed');
+  if (st.id.class === 'attestation') {
+    // §11.3 C2 — the subtype is a NAMED DATA PARTITION, never a shape: a prev-only attestation carrying no named
+    // partition COLLIDES a checkpoint with a gap record. And the root FOLLOWS the subtype in BOTH directions,
+    // because a rule enforced on one side only is not enforced.
+    const empty = pr?.constituents === undefined || pr.constituents.length === 0;
+    if (empty) {
+      if (pr?.prev === undefined) return bad('E-MALFORMED', 'a no-constituents attestation MUST carry provenance.prev (checkpoint, gap or anchor)');
+      const named = PREV_ONLY_SUBTYPES.filter((n) => st.data?.[n] !== undefined);
+      if (named.length !== 1) return bad('E-MALFORMED', 'a prev-only attestation MUST carry EXACTLY ONE of ' + PREV_ONLY_SUBTYPES.map((n) => 'data.' + n).join(', '));
+      const rooted = named[0] === 'anchor';
+      if (rooted && pr?.root === undefined) return bad('E-MALFORMED', 'an anchor attestation MUST carry provenance.root');
+      if (!rooted && pr?.root !== undefined) return bad('E-MALFORMED', 'a ' + named[0] + ' attestation MUST NOT carry a root');
+    } else if (pr?.root === undefined) return bad('E-MALFORMED', 'a set attestation MUST carry constituents + root');
+    // The root is RECOMPUTED, never merely required to be present: a root nobody re-derives binds nothing.
+    if (pr?.root !== undefined && pr?.constituents !== undefined && await merkleRoot(pr.constituents) !== pr.root)
+      return bad('E-ROOT', 'attestation root mismatch');
+  }
   if (pr?.based_on !== undefined) {
     if (!Array.isArray(pr.based_on) || pr.based_on.some((b) => !b || !HASH.test(b.hash || ''))) return bad('E-MALFORMED', 'based_on entries must carry sha256:hex `hash`');
     if (new Set(pr.based_on.map((b) => b.hash)).size !== pr.based_on.length) return bad('E-MALFORMED', 'duplicate hash in based_on (citing a referent twice has no composite meaning, §9.4)');

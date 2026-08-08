@@ -1,7 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-web-signer — WebCrypto Ed25519 SIGNER + producer for UST 1.0. Browser + Workers + Node (global crypto.subtle).
 // The canon/hash/preimage helpers are BYTE-IDENTICAL to ust-protocol (same spec §6/§7/§4.4), so documents this
-// produces verify as VALID under ust-protocol / the clean-room verifier. The PRIVATE KEY never leaves WebCrypto:
+// produces verify as VALID under ust-protocol / the clean-room verifier.
+//
+// #119 — that sentence used to be a PROMISE a reader had to take on trust, and this repository has already paid for
+// one: three JS copies of the canonical form drifted and produced a live P0. Copies were correct when written, and
+// correctness when written is not a property that survives. Every primitive named above is now compared against the
+// reference on every CI run — `tools/primitive-parity-gate.mjs`, which also pins the SET of exports so a new
+// unchecked one cannot appear quietly. Staying a copy is deliberate: depending on `ust-light` was measured at
+// 6 142 B → 30 581 B for a browser package, five times the size, to remove six primitives that a gate can watch for
+// free. A CHECKED copy is a second independent witness; an unchecked one is the defect.
+//
+// The PRIVATE KEY never leaves WebCrypto:
 // generate it NON-EXTRACTABLE and persist the CryptoKey object (structured-cloneable) in IndexedDB.
 //
 // LIGHT-tier honesty (see the extension): sign ONLY what the signature guarantees — the exact bytes, the key, and

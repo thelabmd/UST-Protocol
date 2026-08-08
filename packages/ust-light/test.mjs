@@ -66,14 +66,59 @@ ok('unknown top-level member → INVALID', (await lite.verify({ ...liteDoc, evil
 const badId = await lite.seal(await lite.buildState({ ...id, ust_id: 'ust:BADSHAPE' }, time, data), kp.privateKey, kp.pub);
 ok('bad ust_id shape → INVALID', (await lite.verify(badId)).error === 'E-MALFORMED');
 
-// 6) class↔provenance floor (§14.5/N10) — caught via MCP dogfood: ust-light is observation-only. A class:attestation
-//    doc needs constituents+root; ust-light must REJECT it, in PARITY with full (never read VALID:LIGHT what full rejects).
+// 6) class↔provenance floor (§14.5/N10) — the BUILDER is observation-only, and that is a fact about the builder,
+//    not about what the verifier accepts (#142: those were one condition and one of them was wrong). What is
+//    asserted here is the direction that was always right: a doc lite calls VALID must never be one full rejects.
+//    An attestation with no provenance at all is malformed under BOTH — the subtype is missing, not the class.
 let liteBuildRej = false; try { await lite.buildState({ ...id, class: 'attestation' }, time, data); } catch (e) { liteBuildRej = e.code === 'E-MALFORMED'; }
 ok('lite buildState rejects class:attestation (observation-only)', liteBuildRej);
 const attState = { id: { ...id, class: 'attestation' }, time, data: liteDoc.state.data, hashes: liteDoc.state.hashes };
 const attDoc = await lite.seal(attState, kp.privateKey, kp.pub);
 ok('lite.verify rejects hand-forged class:attestation w/o provenance', (await lite.verify(attDoc)).error === 'E-MALFORMED');
 ok('full.verify rejects the same doc (PARITY — no lite-only VALID)', !full.isValid(full.verify(attDoc)));
+
+// 6b) #142 — THE SUBSET CLAIM, TESTED WHERE IT CAN FAIL.
+//
+// Everything above builds with lite and checks that full agrees. That direction cannot expose the defect this
+// section exists for: lite builds `observation` only, so every document compared was of the ONE class where the
+// two were never going to differ. Green by construction is not evidence.
+//
+// So the corpus is built by the REFERENCE, across every class the LIGHT floor can reach, and the claim under test
+// is the direction nobody was asserting: **whatever full admits at LIGHT, lite must admit too.** A floor that
+// REJECTS what the ceiling ACCEPTS, at the ceiling's own tier, is not a subset either — it is a different
+// verifier wearing the floor's name, and the package states the converse of this rule one screen above the check.
+{
+  const CITED = 'sha256:' + 'ab'.repeat(32);
+  const PREVH = 'sha256:' + 'cd'.repeat(32);
+  const fullSeal = async (state) => {
+    const d = { ust: '1.0', state };
+    d.sig = { alg: 'Ed25519', key_id: state.id.key_id, pub: kp.pub,
+      sig: Buffer.from(await crypto.subtle.sign({ name: 'Ed25519' }, kp.privateKey,
+        new TextEncoder().encode(full.signedContent(d)))).toString('base64url') };
+    return d;
+  };
+
+  const corpus = [
+    ['observation', full.buildState({ ...id, class: 'observation' }, time, data)],
+    ['attestation · set', full.buildAttestation({ ...id, class: 'attestation' }, time, data, [CITED])],
+    ['attestation · gap', full.buildGap({ ...id, class: 'attestation' }, time, PREVH, 'no-event')],
+    ['derivation', full.buildDerivation({ ...id, class: 'derivation' }, time, data, [{ hash: CITED }])],
+  ];
+
+  let admitted = 0, split = [];
+  for (const [label, state] of corpus) {
+    const d = await fullSeal(state);
+    const fr = full.verify(d, { keyForm: true, noForkConfirmed: true, context: 'data' });
+    if (!full.isValid(fr)) continue;              // only documents the CEILING admits are in scope
+    admitted++;
+    const lr = await lite.verify(d);
+    if (lr.result !== 'VALID:LIGHT') split.push(label + ' → full ' + fr.result + ' / lite ' + (lr.error ?? lr.result));
+  }
+  // The corpus must actually CONTAIN more than one class, or this section is green by construction too.
+  ok('the differential corpus spans the LIGHT classes (>1 admitted by the reference)', admitted > 1);
+  ok('whatever the reference admits at LIGHT, lite admits — the untested direction' +
+    (split.length ? ' [' + split.join('; ') + ']' : ''), split.length === 0);
+}
 
 // totality (round-46 self-audit) — lite.verify is total: a hostile Proxy / malformed doc is a structured INVALID, never a host throw.
 const mkHostile = () => new Proxy([{}], { get() { throw new Error('H'); }, ownKeys() { throw new Error('H'); }, getOwnPropertyDescriptor() { throw new Error('H'); } });

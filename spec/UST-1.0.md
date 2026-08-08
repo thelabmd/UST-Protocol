@@ -2997,3 +2997,28 @@ operator profile (§20), never the protocol. The five passes converged from "the
   RUNS it with `Buffer`/`process`/`require` deleted, and requires the two builds to agree byte-for-byte on
   `canon`, `H`, `keyId`, `contentHash` and both `strictB64url` verdicts. Restoring any Node global to the core
   reddens the run check; a `false` from either refused primitive reddens the refusal check.
+- **REV 68 (2026-08-08, `rc.68` line)** — **two copies of the canonical form claimed to agree, and both claims were
+  checked where they could not fail.** The class, not the two instances, is what this closes. `ust-light` called
+  INVALID a document the reference calls `VALID:LIGHT`: its verifier rejected every class but `observation`, and the
+  reason was that its BUILDER produces only observations — a fact about the builder deciding what the VERIFIER
+  accepts. Two unrelated justifications sat under one condition: `genesis`/`key`/`cadence` are the AUTHORITY layer
+  and excluding them from a floor with no key log is principled, while `attestation`/`derivation` are simply not
+  built here. Class and tier are different axes — an attestation is LIGHT when its key is carried and nothing
+  resolves authority, exactly as an observation is. The floor now admits every DATA class and carries the
+  obligations that come with them: the §11.3 C2 subtype discipline, and a `set` attestation's root RECOMPUTED
+  rather than merely required to be present, because a root nobody re-derives binds nothing. **The corpus was the
+  real defect.** Every differential document was built by `ust-light`, which builds one class — so the comparison
+  ran entirely inside the region where the two were never going to differ, and green was guaranteed by
+  construction. The corpus is now built by the REFERENCE across every class the floor can reach, and the property
+  under test is the direction nobody was asserting: whatever the ceiling admits at its own tier, the floor must
+  admit too. **The same shape, one package over:** `ust-web-signer` declared six canonical primitives for itself
+  under a header promising they were "BYTE-IDENTICAL to ust-protocol" — true when written, checked by nothing, and
+  this repository has already paid for that once when three JS copies drifted into a live P0. Making it DEPEND on
+  the floor was measured rather than assumed and rejected on the numbers: 6 142 B → 30 581 B for a browser package,
+  five times the size, to remove six primitives a gate can watch for free. The class is not "copies" — a checked
+  copy is a second independent witness, which is why the floor stands alone at all. The class is **copies whose
+  agreement is unchecked**.
+  CLOSED 2026-08-08 by this revision — the primitive-parity gate now pins the export SET of all three clean-room
+  implementations and compares every shared primitive; reversing key order in the signer's `canon` reddens seven
+  rows by name, and restoring the floor's old class condition reddens exactly the untested-direction check with the
+  divergence spelled out.

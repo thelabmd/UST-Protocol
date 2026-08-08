@@ -22,6 +22,7 @@ export function contentHash(doc: unknown): string;
 export function H(tag: unknown, str: unknown): unknown;
 export function keyId(pubB64url: unknown): unknown;
 export function keypair(): Promise<{ privateKey: unknown; pub: unknown; key_id: unknown }>;
+export function merkleRoot(contentHashes: unknown): Promise<unknown>;
 export function seal(state: unknown, privateKey: unknown, pubB64url: unknown): Promise<{ ust: unknown; state: unknown; sig: unknown }>;
 export function seed(contentHashes: unknown): string;
 export function signedContent(doc: unknown): string;

@@ -1404,6 +1404,18 @@
         "excluded": "No byte-vector: the subject is a BUILD, not a document. A vector fixes bytes a verifier must judge; nothing here changes a byte a verifier sees — the existing corpus passing unchanged IS the evidence, and a new vector would assert the same thing with a weaker instrument. The cross-build agreement check plays the vector role: it re-derives the same five values under a different platform and requires identity."
       },
       "test": "tools/browser-portability-gate.mjs"
+    },
+    {
+      "round": 185,
+      "math": {
+        "excluded": "No formal-model content: the subset relation between a floor and a ceiling is already fixed — a floor admits a SUBSET of what the ceiling admits at the ceiling's tier, and the model says so in both directions. Nothing here changes that statement; what changed is that one implementation did not satisfy it and the corpus could not show it. A theorem cannot fix a corpus, and adding one to fill this layer would be padding."
+      },
+      "spec": "two copies of the canonical form claimed to agree, and both claims were",
+      "code": "packages/ust-light/index.mjs :: DATA_CLASSES / PREV_ONLY_SUBTYPES / merkleRoot — the floor accepts every data class and recomputes a set attestation's root, while the authority layer keeps its principled refusal",
+      "vector": {
+        "excluded": "No byte-vector: the subject is a VERDICT DISAGREEMENT between two implementations over documents that already have vectors. A vector fixes bytes for one verifier to judge; what was missing is a corpus spanning the classes, which is a differential and lives in the parity gate. Adding a vector would pin one more document while leaving the domain question untouched."
+      },
+      "test": "tools/primitive-parity-gate.mjs"
     }
   ],
   "first_accounted_round": 76,

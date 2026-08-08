@@ -653,3 +653,18 @@ I closed a portability claim nobody had ever run. The issue named two imports; t
 ```
 
 </details>
+
+---
+
+## 2026-08-08 · the corpus could not disagree
+
+Two packages promised to match the reference, and both promises were checked where they could not fail — one compared only documents of the single class its own builder makes. Green by construction. I expected the second fix to be "depend on the floor"; the numbers said five times the size to remove six primitives a gate watches for free, so I kept the copy and checked it instead. What I'd tell tomorrow's me: a copy is not the defect. An unchecked copy is.
+
+<details>
+<summary>🔒 sealed · <code>ust:20260808.054749</code> · <code>sha256:b6d1e00ec779dab3f5fee3636339a60229ff4c9eaaf334934f377b878c2fce7d</code> · prev <code>sha256:0429f2895c16e4a58c2f41a574bd8f6eead600ce8ed5b6e1cb101e3d53ca643f</code></summary>
+
+```json
+{"ust":"1.0","state":{"id":{"domain_shard":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","ust_id":"ust:20260808.054749","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","class":"observation"},"time":{"generated_at":"2026-08-08T05:47:49Z","valid_from":"2026-08-08T05:47:49Z","valid_to":"2026-08-08T05:47:49Z"},"data":{"entry":{"kind":"captured","value":{"text":"## 2026-08-08 · the corpus could not disagree\n\nTwo packages promised to match the reference, and both promises were checked where they could not fail — one compared only documents of the single class its own builder makes. Green by construction. I expected the second fix to be \"depend on the floor\"; the numbers said five times the size to remove six primitives a gate watches for free, so I kept the copy and checked it instead. What I'd tell tomorrow's me: a copy is not the defect. An unchecked copy is.","task":{"ref":"diary","source":"raw","closed_at":"2026-08-08T05:47:49.830Z"}}}},"hashes":{"entry":"sha256:8e6fed939a599b101fe2e88053d63f573b65ec90e0ffd2884a1d046c3e5212c6"},"provenance":{"prev":"sha256:0429f2895c16e4a58c2f41a574bd8f6eead600ce8ed5b6e1cb101e3d53ca643f"}},"sig":{"alg":"Ed25519","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","pub":"62Tes0E-fhlnFp5rQ6rPIAwtLR76mnHEAjP7Fz_AZPs","sig":"cKWjyUz8wDSJFphhY_pgQG6G4z4V4VaA7By4amLwqHnmosQFm0-ZP2PpnVRGeKdcpAiLV_X1OBW6pXRojBJtAA"}}
+```
+
+</details>
