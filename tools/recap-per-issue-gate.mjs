@@ -33,6 +33,18 @@ const ok = (n, c, d) => { if (c) pass++; else fail.push(n + (d ? ` — ${d}` : '
 
 const sh = (args) => { try { return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }); } catch { return ''; } };
 
+// THE DOMAIN MUST EXIST BEFORE IT CAN BE JUDGED. Measured 2026-08-08: the first CI run of this gate went red on
+// its PIN while the rule itself passed — because a shallow checkout carries almost no history, so `closedBy` was
+// nearly empty and "every round closes at most one issue" was true of nothing. A rule quantified over an empty
+// set is not satisfied, it is unasked; the pin noticed only by accident. So the gate refuses a truncated history
+// instead of reporting green over it, and CI fetches full depth. A gate that cannot see its domain must say so.
+// CLOSED 2026-08-08 — the refusal below is that fix, and a real `--depth 1` clone of this tree exercises it.
+if (sh(['rev-parse', '--is-shallow-repository']).trim() === 'true') {
+  console.log('\n  recap per issue   PASS 0   FAIL 1   (one issue, one diary — owner 2026-08-08)');
+  console.log('    ✗ the repository is SHALLOW — the closed-issue domain is unreadable, so this gate would pass over an empty set. Check out with fetch-depth: 0.');
+  process.exit(1);
+}
+
 // The DOMAIN is the rounds git actually carries, not the registry's own list: a round that closed two issues and
 // recorded one row would otherwise be judged against its own understatement.
 const log = sh(['log', '--format=%H%x00%B%x01']);
