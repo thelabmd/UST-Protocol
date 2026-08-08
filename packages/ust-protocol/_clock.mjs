@@ -17,8 +17,10 @@
 //
 // The conformance harness (and only it) imports this module directly to drive time deterministically with a MONOTONIC test
 // clock, then restores the default — a code-level test capability, not a data-path surface.
-import { performance } from 'node:perf_hooks';
-
+//
+// #143: `performance` is read from the GLOBAL, not imported from `node:perf_hooks`. It is a global in every browser, in Node
+// since 16, and in every worker runtime — the import bought nothing and was one of the two reasons the core did not bundle
+// for a browser. The clock's guarantee is unchanged: still `performance.now()`, still monotonic, still never `Date.now()`.
 const monotonic = () => performance.now();
 let _now = monotonic;
 

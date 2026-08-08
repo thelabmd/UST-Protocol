@@ -6,7 +6,10 @@ export const VERSION = { wire: '1.0', spec: '1.0.0-rc.68', revision: 91 };   // 
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
 // browsers/Workers; same rules.
-import { createHash, sign as edSign, verify as edVerify, createPublicKey, createPrivateKey, createDecipheriv } from 'node:crypto';
+// #143: the platform's cryptographic faculty comes from ONE internal module, chosen at BUILD time. It is not
+// an option and not reachable from the data path — see `_crypto.mjs` for why that distinction is load-bearing.
+import { sha256Hex, ed25519Verify, ed25519Sign, aesGcmDecrypt } from './_crypto.mjs';
+import { utf8, utf8Len, decodeUtf8, concatBytes, toHex, fromHex, toB64url, fromB64url } from './_bytes.mjs';
 import { witnessNow } from './_clock.mjs';   // rev33 R4 — the witness-budget clock is a VERIFIER-OWNED faculty in an INTERNAL module, never a caller-supplied opts field (round-29 P0-02)
 
 // ─── §6 Canonicalization (JCS tightened) ────────────────────────────────────────────────────────────
@@ -26,12 +29,12 @@ export function canon(v) {
 }
 
 // ─── §7 Domain-separated hash: H_t(x) = "sha256:" || hex(SHA256(ascii(t) || 0x00 || x)) ──────────────
-function sha(buf) { return 'sha256:' + createHash('sha256').update(buf).digest('hex'); }
-export const H = (tag, strInput) => sha(Buffer.concat([Buffer.from(tag, 'ascii'), Buffer.from([0]), Buffer.from(strInput, 'utf8')])); // x = utf8 string
-export const Hbytes = (tag, rawBuf) => sha(Buffer.concat([Buffer.from(tag, 'ascii'), Buffer.from([0]), rawBuf]));                     // x = raw bytes
+function sha(buf) { return 'sha256:' + sha256Hex(buf); }
+export const H = (tag, strInput) => sha(concatBytes([utf8(tag), new Uint8Array([0]), utf8(strInput)])); // x = utf8 string
+export const Hbytes = (tag, rawBuf) => sha(concatBytes([utf8(tag), new Uint8Array([0]), rawBuf]));                     // x = raw bytes
 
 // ─── §12.2/§17 key_id = H("ust:keylog", raw_pub_bytes) — raw = base64url-decode(pub), NOT plain SHA256(pub)
-export const keyId = (pubB64url) => Hbytes('ust:keylog', Buffer.from(pubB64url, 'base64url'));
+export const keyId = (pubB64url) => Hbytes('ust:keylog', fromB64url(pubB64url));
 
 // ─── §4.4 per-partition hash — UNIFORM: EVERY partition binds its publisher (domain_shard). The partition NAME
 //     is carried as a VALUE (`partition:`), never as a key, so it can never overwrite a protocol field (closes the
@@ -39,7 +42,7 @@ export const keyId = (pubB64url) => Hbytes('ust:keylog', Buffer.from(pubB64url, 
 //     was forgeable (anyone copies a domain-less hash to fake agreement) — real corroboration compares two
 //     publisher-BOUND values a layer up. `kind` is now descriptive metadata only and does NOT affect the hash.
 export function partitionHash({ domain_shard, ust_id, name, value, commit }) {
-  if (commit !== undefined) return Hbytes('ust:shard', Buffer.from(commit, 'utf8')); // §4.4 private: hash over its commit
+  if (commit !== undefined) return Hbytes('ust:shard', utf8(commit)); // §4.4 private: hash over its commit
   return H('ust:shard', canon({ domain_shard, ust_id, partition: name, value }));
 }
 
@@ -50,11 +53,11 @@ export const contentHash = (doc) => H('ust:state', signedContent(doc));
 // ─── §9.4 seed / §9.2 Merkle root ───────────────────────────────────────────────────────────────────
 export const seed = (contentHashes) => H('ust:seed', canon(contentHashes));           // pinned signed order
 export function merkleRoot(contentHashes) {                                            // byte-ascending sort, ust:leaf/ust:node
-  let lvl = contentHashes.slice().sort().map(h => Hbytes('ust:leaf', Buffer.from(h, 'utf8')));
+  let lvl = contentHashes.slice().sort().map(h => Hbytes('ust:leaf', utf8(h)));
   while (lvl.length > 1) {
     const nx = [];
     for (let i = 0; i < lvl.length; i += 2)
-      nx.push(i + 1 < lvl.length ? Hbytes('ust:node', Buffer.from(lvl[i] + lvl[i + 1], 'utf8')) : lvl[i]);
+      nx.push(i + 1 < lvl.length ? Hbytes('ust:node', utf8(lvl[i] + lvl[i + 1])) : lvl[i]);
     lvl = nx;
   }
   return lvl[0];
@@ -76,18 +79,21 @@ export function blindPartition(name, value, { domain_shard, ust_id, nonce, kind 
 function aeadDecrypt(enc, keyRawB64url) {
   if (enc.alg !== 'AES-256-GCM') return 'unsupported';                  // optional alg not implemented here (§17 MTI)
   try {
-    const raw = Buffer.from(enc.ct, 'base64url'), key = Buffer.from(keyRawB64url, 'base64url');
+    const raw = fromB64url(enc.ct), key = fromB64url(keyRawB64url);
     const iv = raw.subarray(0, 12), tag = raw.subarray(raw.length - 16), body = raw.subarray(12, raw.length - 16);
-    const d = createDecipheriv('aes-256-gcm', key, iv); d.setAuthTag(tag);
-    return Buffer.concat([d.update(body), d.final()]).toString('utf8'); // the committed plaintext (utf8 canon)
+    const plain = aesGcmDecrypt(key, iv, tag, body);
+    // #143: decoded with TextDecoder, not `Buffer.from(plain)`. Two reasons, and both are the point of the
+    // round: TextDecoder is portable, and `Buffer.from(<identifier>)` is a raw-byte DOOR the byte-door lint
+    // must account for. Sidestepping the door beats allowlisting it — `plain` is ours, but the next such line
+    // might not be, and an allowlist entry is where that distinction goes quietly missing.
+    return plain === null ? null : new TextDecoder().decode(plain);     // the committed plaintext (utf8 canon)
   } catch { return null; }                                             // auth-tag failure ⇒ null ⇒ E-COMMIT
 }
 
-// ─── crypto helpers (strict Ed25519 via node:crypto/OpenSSL) ─────────────────────────────────────────
-const pubKeyObj = (b64url) => createPublicKey({ key: Buffer.concat([Buffer.from('302a300506032b6570032100', 'hex'), Buffer.from(b64url, 'base64url')]), format: 'der', type: 'spki' });
+// ─── crypto helpers (strict Ed25519 via the build's faculty — see `_crypto.mjs`) ─────────────────────
 export function edVerifyStrict(pubB64url, msgUtf8, sigB64url) {
   if (strictB64url(pubB64url, 32) === null || strictB64url(sigB64url, 64) === null) return false;   // round-36 P1-02 — canonical Pub32/Sig64 wire encoding IS part of "strict": Node's base64url decoder is permissive (a trailing-bit alias maps to the same bytes), so a non-canonical pub/sig would verify identically and split cross-language. Enforcing it at the crypto LEAF makes EVERY caller (incl. the provenance src_sig path) canonical-safe with no per-site guard.
-  try { return edVerify(null, Buffer.from(msgUtf8, 'utf8'), pubKeyObj(pubB64url), Buffer.from(sigB64url, 'base64url')); }
+  try { return ed25519Verify(utf8(msgUtf8), fromB64url(pubB64url), fromB64url(sigB64url)); }
   catch { return false; }
 }
 
@@ -98,9 +104,9 @@ export function edVerifyStrict(pubB64url, msgUtf8, sigB64url) {
 // or a non-canonical trailing-bit encoding all fail: decode → re-encode → require identity).
 export function strictB64url(s, bytes) {
   if (typeof s !== 'string' || !/^[A-Za-z0-9_-]+$/.test(s)) return null;   // unpadded base64url alphabet only ('=' rejected)
-  let buf; try { buf = Buffer.from(s, 'base64url'); } catch { return null; }
+  let buf; try { buf = fromB64url(s); } catch { return null; }
   if (buf.length !== bytes) return null;                                   // exact length (Ed25519 pub=32, sig=64)
-  if (buf.toString('base64url') !== s) return null;                        // canonical: no non-zero trailing bits, no alias
+  if (toB64url(buf) !== s) return null;                                    // canonical: no non-zero trailing bits, no alias
   return buf;
 }
 // round-34 P0-01 — Pub32: a canonical unpadded base64url of EXACTLY 32 bytes (strictB64url already rejects a non-canonical
@@ -304,11 +310,11 @@ export function seal(state, privKeyObj, pubB64url) {
   // final protocol-law check (rc.12): a sealed transcript may NEVER exceed the ABS — fail closed
   // at the producer, not only at verifiers.
   {
-    const sBytes = Buffer.byteLength(canon({ ust: '1.0', state }), 'utf8');
+    const sBytes = utf8Len(canon({ ust: '1.0', state }));
     if (sBytes > BOUNDS.sizeBytes) throw Object.assign(new Error(`E-BOUNDS: canonical transcript ${sBytes} B > ABS ${BOUNDS.sizeBytes}`), { code: 'E-BOUNDS' });
   }
   const doc = { ust: '1.0', state };
-  const sig = edSign(null, Buffer.from(signedContent(doc), 'utf8'), privKeyObj).toString('base64url');
+  const sig = toB64url(ed25519Sign(utf8(signedContent(doc)), privKeyObj));
   return { ust: '1.0', state, sig: { alg: 'Ed25519', key_id: state.id.key_id, pub: pubB64url, sig } };
 }
 
@@ -331,7 +337,7 @@ export function buildState(id, time, data, provenance, opts) {
   // #69 E2 — the EXACT normative metric: UTF-8 bytes of the signed content canon({ust, state}). The sig is
   // NOT signed content, so no envelope pad (the old +300 over-counted → false rejects near the limit). This
   // is byte-identical to what seal()'s final ABS guard and the verifier's checkBounds measure — one metric.
-  const stBytes = Buffer.byteLength(signedContent({ ust: '1.0', state }), 'utf8');
+  const stBytes = utf8Len(signedContent({ ust: '1.0', state }));
   const capB = Math.min(Number(opts?.maxTranscriptBytes ?? BOUNDS.floorSizeBytes), BOUNDS.sizeBytes);
   if (stBytes > capB) throw Object.assign(
     new Error(`E-BOUNDS: signed content ${stBytes} B > ${capB} — declare {maxTranscriptBytes} matching your genesis max_transcript_bytes (§12.1; ABS ${BOUNDS.sizeBytes})`),
@@ -564,7 +570,7 @@ function boundsOf(doc) {
   // #69 E3 — the normative VOLUME metric is the signed content canon({ust, state}), NOT the transport object:
   // sig/proof are bounded by transport admission (verifyJson maxInputBytes), never by the signed-content ABS.
   // Counting a large anchor proof here would falsely reject a valid signed content near 64 MiB.
-  let signedBytes; try { signedBytes = Buffer.byteLength(signedContent(doc), 'utf8'); } catch { signedBytes = Buffer.byteLength(JSON.stringify(doc), 'utf8'); }
+  let signedBytes; try { signedBytes = utf8Len(signedContent(doc)); } catch { signedBytes = utf8Len(JSON.stringify(doc)); }
   if (signedBytes > BOUNDS.sizeBytes) return 'signed content > 64 MiB';
   if (doc.state?.data && Object.keys(doc.state.data).length > BOUNDS.partitions) return 'partitions > 4096';
   let bad = null;
@@ -716,7 +722,7 @@ function verifyCore(doc, opts = {}) {
     // never INVALID (violation unprovable) and never VALID (floor unpassable) — the honest tier ladder.
     // §13 NORMATIVE size metric (rc.12): UTF-8 bytes of the SIGNED CONTENT canon({ust,state}) — the
     // string S already computed for the hash. Transport formatting can never flip a verdict (P0-3).
-    const sBytes = Buffer.byteLength(S, 'utf8');
+    const sBytes = utf8Len(S);
     if (sBytes > BOUNDS.sizeBytes) return bad('E-BOUNDS', `canonical transcript ${sBytes} B > 64 MiB ABS`);
     // verifier CAPABILITY ceiling (rc.12): protocol-valid but beyond THIS verifier ⇒ honest refusal.
     const maxSupported = admitBudget(opts.maxSupportedBytes, BOUNDS.sizeBytes);   // round-39 P1-01 (R4) — a caller CAPABILITY ceiling may only TIGHTEN the 64 MiB reference, never disable it: 0/NaN (falsy-bypass) and Infinity (disable) are now REFUSED, not honored — a sibling of the maxInputBytes/refBudget escapes
@@ -1093,8 +1099,8 @@ export function resolveKeysBytes(genesisBytes, keylogBytes) {
   }
   let genesis, keylog;
   try {
-    genesis = JSON.parse(Buffer.from(gS.bytes).toString('utf8'));                  // gS.bytes/kCopy are immutable copies — Buffer.from here runs no getters
-    keylog = kCopy === null ? [] : JSON.parse(Buffer.from(kCopy).toString('utf8'));
+    genesis = JSON.parse(decodeUtf8(gS.bytes));                  // gS.bytes/kCopy are immutable copies — Buffer.from here runs no getters
+    keylog = kCopy === null ? [] : JSON.parse(decodeUtf8(kCopy));
   } catch { return { error: 'E-GENESIS', detail: 'resolveKeys arguments must be canonical UTF-8 JSON byte-strings' }; }
   if (!genesis || typeof genesis !== 'object') return { error: 'E-GENESIS', detail: 'no genesis' };
   if (!Array.isArray(keylog)) return { error: 'E-MALFORMED', detail: 'key-log must be an array' };
@@ -1262,7 +1268,7 @@ export function resolveKeysBytes(genesisBytes, keylogBytes) {
 export function resolveKeys(genesis, keylog = []) {
   const _kl = admitArray(keylog);   // round-19 P1-02 — a native array snapshot; a Proxy length/index trap is a structured reject, never a host throw
   if (_kl === null) return { error: 'E-MALFORMED', detail: 'key-log must be a native array (round-17 P1-02 / round-19 P1-02 — the reducer is TOTAL: a hostile accessor/Proxy is a structured reject)' };
-  const enc = (s) => new Uint8Array(Buffer.from(s, 'utf8'));
+  const enc = (s) => new Uint8Array(utf8(s));
   let kEnc, gEnc;
   try { kEnc = enc(canon(_kl)); gEnc = enc(canon(admitDeep(genesis))); } catch { return { error: 'E-GENESIS', detail: 'genesis/keylog is not an inert record (round-47 — reduced to canonical bytes at the door)' }; }
   return resolveKeysBytes(gEnc, kEnc);
@@ -1284,7 +1290,7 @@ export function noForkClaim({ domain_shard, active_genesis, map_checkpoint, map_
 }
 export function buildNoForkEvidence(fields, privKeyObj, issuerPubB64url) {
   const claim = noForkClaim(fields);
-  const sig = edSign(null, Buffer.from(canon(claim), 'utf8'), privKeyObj).toString('base64url');
+  const sig = toB64url(ed25519Sign(utf8(canon(claim)), privKeyObj));
   return { claim, issuer_id: keyId(issuerPubB64url), sig: { alg: 'Ed25519', key_id: keyId(issuerPubB64url), pub: issuerPubB64url, sig } };
 }
 // Verify an envelope { claim, issuer_id, sig } against the target domain + active genesis and consumer trustRoots.
@@ -1620,7 +1626,7 @@ export function evidenceReceiptClaim({ domain_shard, active_genesis, genesis_epo
 }
 export function buildEvidenceReceipt(fields, privKeyObj, issuerPubB64url) {
   const claim = evidenceReceiptClaim(fields);
-  const sig = edSign(null, Buffer.from(canon({ purpose: 'ust:evidence-receipt-signature', claim }), 'utf8'), privKeyObj).toString('base64url');
+  const sig = toB64url(ed25519Sign(utf8(canon({ purpose: 'ust:evidence-receipt-signature', claim })), privKeyObj));
   return { claim, issuer_id: keyId(issuerPubB64url), sig: { alg: 'Ed25519', key_id: keyId(issuerPubB64url), pub: issuerPubB64url, sig } };
 }
 export const evidenceReceiptId = (r) => H('ust:evidence-receipt', canon({ claim: r.claim, sig: r.sig }));
@@ -2002,8 +2008,8 @@ function verifyAnchorCore(contentHash, proof, opts = {}) {
   // router that declined every plugin. Two copies of one hash walk is precisely the drift class this repo keeps paying for.
   const bundledWalk = () => {
     for (const p of proof.path) if (!p || (p.dir !== 'L' && p.dir !== 'R') || !HASH.test(p.hash || '')) return { shapeError: true };
-    let node = Hbytes('ust:leaf', Buffer.from(contentHash, 'utf8'));
-    for (const p of proof.path) node = Hbytes('ust:node', Buffer.from(p.dir === 'L' ? p.hash + node : node + p.hash, 'utf8'));
+    let node = Hbytes('ust:leaf', utf8(contentHash));
+    for (const p of proof.path) node = Hbytes('ust:node', utf8(p.dir === 'L' ? p.hash + node : node + p.hash));
     return { ok: node === proof.root };
   };
   let inclusion;
@@ -2260,9 +2266,9 @@ export function resolveCadenceBytes(genesisBytes, cadenceLogBytes, atTime, keylo
   }
   let genesis, cadenceLog, keylog;
   try {
-    genesis = JSON.parse(Buffer.from(gS.bytes).toString('utf8'));
-    cadenceLog = JSON.parse(Buffer.from(cS.bytes).toString('utf8'));
-    keylog = kCopy === null ? undefined : JSON.parse(Buffer.from(kCopy).toString('utf8'));
+    genesis = JSON.parse(decodeUtf8(gS.bytes));
+    cadenceLog = JSON.parse(decodeUtf8(cS.bytes));
+    keylog = kCopy === null ? undefined : JSON.parse(decodeUtf8(kCopy));
   } catch { return { error: 'E-MALFORMED', detail: 'resolveCadence arguments must be canonical UTF-8 JSON byte-strings' }; }
   if (cadenceLog !== undefined && cadenceLog !== null && !Array.isArray(cadenceLog)) return { error: 'E-MALFORMED', detail: 'cadenceLog must be an array' };
   cadenceLog = cadenceLog ?? [];   // round-43 — ONLY an absent (undefined/null) cadence-log defaults to empty; a present non-array already returned E-MALFORMED above (never the `Array.isArray(X)?X:[]` coalesce that hides a malformed selector)
@@ -2321,7 +2327,7 @@ export function resolveCadenceBytes(genesisBytes, cadenceLogBytes, atTime, keylo
 // here (mutation-vulnerable cadenceLog captured before the self-verifying genesis) closes the common object-caller case.
 export function resolveCadence(genesis, cadenceLog = [], atTime, opts) {
   const _o = admitOpts(opts); if (_o === null) return { error: 'E-MALFORMED', detail: 'opts is not an inert record (round-29 P1-01 totality — a hostile 4th arg cannot throw at this door)' };
-  const enc = (s) => new Uint8Array(Buffer.from(s, 'utf8'));
+  const enc = (s) => new Uint8Array(utf8(s));
   let gEnc, cEnc, kEnc;
   try {
     cEnc = enc(canon(admitDeep(cadenceLog)));            // structural arg first
@@ -2354,7 +2360,7 @@ export function buildAuthorityCheckpoint({ domain_shard, genesis_epoch, sequence
     active_genesis, checkpoint_authority: ca, keylog };
 }
 export function sealAuthorityCheckpoint(body, privKeyObj, pubB64url) {
-  const sig = edSign(null, Buffer.from(canon({ purpose: 'ust:authority-checkpoint-signature', body }), 'utf8'), privKeyObj).toString('base64url');
+  const sig = toB64url(ed25519Sign(utf8(canon({ purpose: 'ust:authority-checkpoint-signature', body })), privKeyObj));
   return { body, sig: { alg: 'Ed25519', key_id: keyId(pubB64url), pub: pubB64url, sig } };
 }
 export const authorityCheckpointId = (cp) => H('ust:authority-checkpoint', canon({ body: cp.body, sig: cp.sig }));   // ONLY body+sig — external evidence excluded
@@ -2378,7 +2384,7 @@ export function checkpointRecoveryClaim({ domain_shard, genesis_epoch, last_acce
 }
 export function buildRecoveryStatement(fields, privKeyObj, issuerPubB64url) {
   const claim = checkpointRecoveryClaim(fields);
-  const sig = edSign(null, Buffer.from(canon(claim), 'utf8'), privKeyObj).toString('base64url');
+  const sig = toB64url(ed25519Sign(utf8(canon(claim)), privKeyObj));
   return { claim, issuer_id: keyId(issuerPubB64url), sig: { alg: 'Ed25519', key_id: keyId(issuerPubB64url), pub: issuerPubB64url, sig } };
 }
 export function verifyCheckpointRecovery(statements, config) {
@@ -2424,7 +2430,7 @@ export function epochTransitionClaim({ domain_shard, from_genesis_epoch, from_fi
 }
 export function buildEpochTransition(fields, privKeyObj, issuerPubB64url) {
   const claim = epochTransitionClaim(fields);
-  const sig = edSign(null, Buffer.from(canon(claim), 'utf8'), privKeyObj).toString('base64url');
+  const sig = toB64url(ed25519Sign(utf8(canon(claim)), privKeyObj));
   return { claim, issuer_id: keyId(issuerPubB64url), sig: { alg: 'Ed25519', key_id: keyId(issuerPubB64url), pub: issuerPubB64url, sig } };
 }
 export function verifyEpochTransition(statement, config) {
@@ -2638,7 +2644,7 @@ export function checkpointUniquenessClaim({ domain_shard, genesis_epoch, sequenc
 }
 export function buildUniquenessAttestation(fields, privKeyObj, issuerPubB64url) {
   const claim = checkpointUniquenessClaim(fields);
-  const sig = edSign(null, Buffer.from(canon(claim), 'utf8'), privKeyObj).toString('base64url');
+  const sig = toB64url(ed25519Sign(utf8(canon(claim)), privKeyObj));
   return { claim, issuer_id: keyId(issuerPubB64url), sig: { alg: 'Ed25519', key_id: keyId(issuerPubB64url), pub: issuerPubB64url, sig } };
 }
 // ─── M5 (UST-6vj) — ONE QUORUM ALGEBRA: admit (authenticate FIRST, total) → group by canon(claim) AFTER admission →
@@ -3277,7 +3283,7 @@ export function verifyJson(rawBytes, opts = {}) {
   // decode the immutable snapshot, never a caller-overridable property (a subclass forged byteLength:1 to bypass maxInputBytes).
   const snap = isStr ? null : snapshotBinary(rawBytes);
   if (!isStr && snap === null) return bad('E-MALFORMED', 'raw input must be a UTF-8 string or a genuine ArrayBuffer/TypedArray/Buffer/DataView (a Proxy/array-like/non-binary returns structured, never a host throw — round-50 P1-02)');
-  const byteLen = isStr ? Buffer.byteLength(rawBytes, 'utf8') : snap.length;
+  const byteLen = isStr ? utf8Len(rawBytes) : snap.length;
   const inputBudget = admitBudget(opts.maxInputBytes, BOUNDS.sizeBytes); if (inputBudget === null) return bad('E-MALFORMED', 'maxInputBytes must be a finite positive integer of bytes (round-38 P1-03/R4 — a caller resource scalar may only TIGHTEN the 64 MiB ceiling, never expand or disable it via Infinity/NaN)');
   if (byteLen > inputBudget)
     return { result: 'INDETERMINATE', reason: 'resource_limit', detail: `raw input ${byteLen} B > input budget ${inputBudget} B — transport admission refused, verification not started` };
@@ -3481,15 +3487,15 @@ const readBounded = async (r, cap = DISCOVERY_MAX_BYTES) => {
   if (r.body && typeof r.body.getReader === 'function') {
     const reader = r.body.getReader(); let total = 0; const chunks = [];
     for (;;) { const { done, value } = await reader.read(); if (done) break; total += value.length; if (total > cap) { try { await reader.cancel(); } catch { /* already closed */ } throw new Error(`discovery body exceeds the ${cap} B ceiling (§13)`); } chunks.push(value); }
-    return strictUtf8OrThrow(Buffer.concat(chunks));
+    return strictUtf8OrThrow(concatBytes(chunks));
   }
   if (typeof r.arrayBuffer === 'function') {                      // real fetch without a stream: strict-decode the raw bytes (never Response.text()'s replacement decode)
-    const buf = Buffer.from(await r.arrayBuffer());
+    const buf = new Uint8Array(await r.arrayBuffer());
     if (buf.byteLength > cap) throw new Error(`discovery body ${buf.byteLength} B exceeds the ${cap} B ceiling (§13)`);
     return strictUtf8OrThrow(buf);
   }
   const body = await r.text();                                   // test-mock path: text() returns an already-decoded JS string (no raw bytes to mis-decode)
-  if (Buffer.byteLength(body, 'utf8') > cap) throw new Error(`discovery body exceeds the ${cap} B ceiling (§13)`);
+  if (utf8Len(body) > cap) throw new Error(`discovery body exceeds the ${cap} B ceiling (§13)`);
   return body;
 };
 // ── §12.1 supersession, the WRITE side ───────────────────────────────────────────────────────────────────────────

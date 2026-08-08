@@ -38,6 +38,8 @@ jobs:
         run: npm run test:model-lockstep
       - name: model-domain totality (every model SECTION is bound by an executed check, a registry record, or an explicit closed-set reason)
         run: npm run test:model-domain
+      - name: browser portability (RUN the mapped core without Node globals — a bundle that builds proves less)
+        run: npm run test:browser
       - name: vacuity battery (break the verifier on purpose — a registered check that still passes proves nothing)
         run: npm run test:vacuity
       - name: retired mechanisms (an abandoned path cannot walk back into the spec or the model)

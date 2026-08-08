@@ -2974,3 +2974,26 @@ operator profile (§20), never the protocol. The five passes converged from "the
   same defect three times with no ambiguity at all, its guard having already established the name.
   CLOSED 2026-08-07 by this revision — five conformance checks fix the three sentences as mutually
   distinguishable, and reverting either connector reddens exactly its addressed-refusal check.
+- **REV 67 (2026-08-08, `rc.68` line)** — **"browser-portable" had never been run, and the check that would
+  have been run answers a narrower question than the claim.** REV 33 recorded the core as
+  zero-dep/browser-portable. Measured: it did not bundle at all (`node:perf_hooks`, `node:crypto`), and — the
+  half nobody would have caught — with those two fixed it bundles GREEN while carrying 47 references to
+  `Buffer`. `Buffer` is a Node GLOBAL, not an import, so no bundler reports it and the failure lands in the
+  consumer's page, not in our CI. **A bundle that is never executed proves the same amount as the sentence
+  did.** Three changes, and the ordering among them is the content. `performance` is read from the global
+  (one in every browser, in Node since 16). The cryptographic faculty moved behind ONE internal module chosen
+  at BUILD time — never a runtime option, because a supplied `verify` that returns true forges everything, and
+  the same shape as a public field is what turned the witness clock into a verdict-flipping P0 (round-29
+  P0-02). `Buffer` is gone from the core in favour of `Uint8Array`/`TextEncoder`, and the replacement decoder
+  reproduces Node's PERMISSIVE base64url byte-for-byte on purpose: strictness lives one level up in
+  `strictB64url` (#75), and tightening the primitive would have been a semantic change smuggled inside a
+  portability fix. **What the browser build does NOT do is the load-bearing half.** SHA-256 is vendored there
+  (deterministic, keyless, vector-checkable). Ed25519 verification and AES-GCM are REFUSED BY NAME: a browser
+  offers them only through the asynchronous `crypto.subtle` while this core is synchronous, and hand-rolling
+  Ed25519 verification fails silently in the one direction that matters — accepting forged signatures. A
+  refusal that names itself beats an approximation that verifies, and returning `false` would have been worse
+  than either: that reads as *the signature did not verify*, a verdict this build has no right to.
+  CLOSED 2026-08-08 by this revision — the portability gate RESOLVES the graph under the `browser` map,
+  RUNS it with `Buffer`/`process`/`require` deleted, and requires the two builds to agree byte-for-byte on
+  `canon`, `H`, `keyId`, `contentHash` and both `strictB64url` verdicts. Restoring any Node global to the core
+  reddens the run check; a `false` from either refused primitive reddens the refusal check.

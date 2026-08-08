@@ -17,6 +17,9 @@
     "index.mjs",
     "reference-checker.mjs",
     "_clock.mjs",
+    "_crypto.browser.mjs",
+    "_crypto.mjs",
+    "_bytes.mjs",
     "ssrf.mjs",
     "LICENSE",
     "README.md",
@@ -49,5 +52,8 @@
   },
   "homepage": "https://github.com/thelabmd/UST-Protocol/tree/main/packages/ust-protocol#readme",
   "bugs": "https://github.com/thelabmd/UST-Protocol/issues",
-  "types": "./index.d.ts"
+  "types": "./index.d.ts",
+  "browser": {
+    "./_crypto.mjs": "./_crypto.browser.mjs"
+  }
 }

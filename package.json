@@ -84,7 +84,8 @@
     "test:protocol-name": "node tools/protocol-name-gate.mjs",
     "test:record-closure": "node tools/record-closure-gate.mjs",
     "test:remedy-guard": "node tools/remedy-guard-gate.mjs",
-    "test:ots-codec": "node tools/ots-codec-gate.mjs"
+    "test:ots-codec": "node tools/ots-codec-gate.mjs",
+    "test:browser": "node tools/browser-portability-gate.mjs"
   },
   "devDependencies": {
     "typescript": "~7.0.2"
