@@ -53,6 +53,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The gate mirror below reads round history from git; a shallow clone makes its domain
+          # unreadable and it refuses rather than passing over an empty set. Same reason as ci.yml.
+          fetch-depth: 0
 
       # Trusted publishing needs npm >= 11.5.1 and Node >= 22.14.0. Pinned rather than floating: a release that
       # silently changes toolchain is a release whose output nobody can reproduce.
