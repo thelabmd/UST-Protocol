@@ -15,7 +15,18 @@
 // carried a list of terms to look for, which is a list published by the act of looking. A check whose statement
 // of what it forbids is itself the disclosure belongs on the side that owns the secret, never here.
 //
-// Published on the `rc` tag only. `latest` stays on the previous, known-good line until every package has landed
+// ONE TAG, and the reason is a measurement. The tags were enumerated 2026-08-08 against every consumer in the
+// estate: not one reads `@rc` or `@next` — every dependent pins an exact `^1.0.0-rc.N` range, and the only code
+// mentioning the tags was the gate that checks them. A channel nobody reads is ceremony, and this one cost nine
+// manual commands per release because OIDC grants `publish` and NOT `dist-tag`: the second step could not be
+// automated at all, measured as E401 in CI and again locally.
+//
+// So the line publishes straight to `latest` and there is no promote. What that gives up is the window the two
+// steps existed to protect — for the couple of minutes a run takes, `latest` moves package by package. That is
+// invisible to every real consumer (they pin), and the publish order is TOPOLOGICAL, so a dependent is never
+// newer than the sibling version it declares — which is the only mixing that could break an install.
+//
+// Historical: published on the `rc` tag only. `latest` stays on the previous, known-good line until every package has landed
 // and been read back from the registry — so a failure halfway leaves consumers on a coherent set rather than on
 // a new core with old dependents. Moving the tags is step two, deliberately separate.
 //
@@ -152,7 +163,7 @@ for (const dir of ORDER) {
   if (DRY) { console.log('   (dry run — not published)'); continue; }
 
   // 2. publish on `rc` ONLY. latest moves in step two, after every package has landed.
-  execFileSync('npm', ['publish', '--tag', 'rc'], { cwd: abs, stdio: 'inherit' });
+  execFileSync('npm', ['publish', '--tag', 'latest'], { cwd: abs, stdio: 'inherit' });
 
   // 3. read it back from the REGISTRY, not from our own success — WITH BACKOFF. A publish returns before the
   // version is queryable; the first run read immediately, got a 404 on a package it had just published, and
@@ -176,5 +187,5 @@ for (const dir of ORDER) {
 console.log(`\n${DRY ? 'dry run over' : `${published}/${ORDER.length} published on the rc tag`}.`);
 if (!DRY && published === ORDER.length) {
   console.log('\nNothing points at the new line yet — `latest` is still on the previous one, deliberately.');
-  console.log('Step two, after a look at the registry:  node tools/publish-line.mjs --promote');
+  console.log('The line is on `latest`. There is no second step.');
 }

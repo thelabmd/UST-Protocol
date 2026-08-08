@@ -29,11 +29,11 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'publish (rc tag only) or promote (move latest/next onto the published line)'
+        description: 'publish the line straight to `latest` — there is no second step'
         required: true
         default: publish
         type: choice
-        options: [publish, promote]
+        options: [publish]
       resume-reason:
         description: 'finishing a HALF-PUBLISHED line: state why. Tolerates exactly two mid-release gates, named in run-ci-locally.mjs — everything else still blocks'
         required: false
@@ -83,12 +83,7 @@ jobs:
       - name: the full local mirror of CI, before anything leaves
         run: node tools/run-ci-locally.mjs ${{ inputs.resume-reason != '' && '--resume' || '' }}
 
-      - name: publish the line on the rc tag
+      - name: publish the line on `latest`
         if: inputs.mode == 'publish'
         run: node tools/publish-line.mjs ${{ inputs.dry-run && '--dry-run' || '' }}
 
-      # Separate step and separate dispatch: a half-finished line that nothing points at is recoverable by
-      # finishing it; a `latest` moved mid-way puts consumers on a new core with old dependents and says nothing.
-      - name: promote — move latest/next onto the published line
-        if: inputs.mode == 'promote'
-        run: node tools/publish-line.mjs --promote

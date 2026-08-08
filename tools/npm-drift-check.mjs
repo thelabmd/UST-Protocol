@@ -69,19 +69,18 @@ for (const ws of workspaces) {
 // stranger actually resolves, and a tag is the only thing most people ever type. So: every tag of every package is
 // enumerated from the registry and must point at the CURRENT published version, and never at a version we have
 // disowned. A tag that should differ must say why, here, in the file.
-// TEMPORARY, and the reason is a defect this gate cannot see: the release is TWO dispatches — publish puts the
-// line on the `rc` tag, promote moves `latest` onto it, and promote REFUSES a partial line. Between them every
-// published package has latest lagging by construction. This gate's claim — every tag points at the current
-// published version — is therefore stronger than the process this same repository documents, and the two together
-// DEADLOCK: the gate runs BEFORE publish inside release.yml, so a line that stopped halfway cannot be finished
-// without an exemption. The structural answer is to compare `latest` against the last FULLY PUBLISHED line rather
-// than against each package's newest version. These entries go away with the dispatch that completes the line —
-// an exemption that outlives its window is the very thing it was meant to avoid.
-const TAG_EXEMPT = {
-  'ust-protocol@latest': 'the rc.68 line is MID-RELEASE: publish and promote are two dispatches by design, so between them latest lags the rc tag — and promote refuses a partial line, which makes this gate and that refusal a deadlock. Cleared by finishing the line.',
-  '@ust-protocol/mcp@latest': 'the rc.68 line is MID-RELEASE: publish and promote are two dispatches by design, so between them latest lags the rc tag — and promote refuses a partial line, which makes this gate and that refusal a deadlock. Cleared by finishing the line.',
-  '@ust-protocol/web-signer@latest': 'the rc.68 line is MID-RELEASE: publish and promote are two dispatches by design, so between them latest lags the rc tag — and promote refuses a partial line, which makes this gate and that refusal a deadlock. Cleared by finishing the line.',
-};   // `<pkg>@<tag>` → why it legitimately points elsewhere.
+// `latest` IS THE ONLY MAINTAINED TAG — 2026-08-08, and this is a measurement rather than a preference.
+// The tags were enumerated against every consumer in the estate: not one reads `@rc` or `@next`, every
+// dependent pins an exact `^1.0.0-rc.N` range, and the only code that mentioned them was this gate. A channel
+// nobody reads is ceremony — and this ceremony cost NINE manual commands per release, because OIDC authorises
+// `publish` and not `dist-tag`: measured as E401 in CI and again locally, so the second step of the two-step
+// release could not be automated at all.
+//
+// The abandoned tags are left where they last pointed rather than deleted, since deleting them is the same
+// manual operation that made them a burden. They are ABANDONED BY POLICY, and this gate says so on every run
+// instead of failing the release over a channel with no reader. A tag that IS maintained still has to be right.
+const MAINTAINED = 'latest';
+const TAG_EXEMPT = {};   // `<pkg>@<tag>` → why it legitimately points elsewhere.
 for (const [name, st] of pubState) {
   // A package that is not on npm has no dist-tags, and that is the honest "repo is ahead" state this gate already
   // knows how to report — not an unreadable pointer. Measured 2026-07-31 on the first genuinely unpublished package
@@ -102,6 +101,7 @@ for (const [name, st] of pubState) {
     let dep = '';
     try { dep = execSync(`npm view ${name}@${ver} deprecated`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(); } catch { /* absent ⇒ not deprecated */ }
     if (dep) { drift++; console.error(`  ✗ ${key} → ${ver}, which is DEPRECATED: "${dep.slice(0, 90)}…" — anyone typing this tag installs a version we disowned`); continue; }
+    if (tag !== MAINTAINED) { console.log(`  ℹ  ${key} → ${ver} (abandoned channel — only \`${MAINTAINED}\` is maintained)`); continue; }
     if (!st.published) { console.log(`  ℹ  ${key} → ${ver} (repo is ahead; the tag still points at a live version)`); continue; }
     if (ver === st.version) { console.log(`  ✓ ${key} → ${ver}`); continue; }
     const why = (TAG_EXEMPT[key] ?? '').trim();
