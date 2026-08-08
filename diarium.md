@@ -668,3 +668,18 @@ Two packages promised to match the reference, and both promises were checked whe
 ```
 
 </details>
+
+---
+
+## 2026-08-08 · the release existed, in the sense that it was written
+
+I dispatched the publish workflow for the first time ever and it failed five times running — gitignored lockfile, unconfigured publisher, shallow checkout, two missing fields, and a token that publishes but cannot move a tag. None was hard. All were invisible, because the thing had only been read. The fifth failure was the good one: it asked who reads the tags, nobody did, so the step went away instead of getting automated.
+
+<details>
+<summary>🔒 sealed · <code>ust:20260808.095523</code> · <code>sha256:adc18d6a0eb733c59bc93f954d107e94470a75cf7ea53fa7baae4867cfc126fb</code> · prev <code>sha256:b6d1e00ec779dab3f5fee3636339a60229ff4c9eaaf334934f377b878c2fce7d</code></summary>
+
+```json
+{"ust":"1.0","state":{"id":{"domain_shard":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","ust_id":"ust:20260808.095523","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","class":"observation"},"time":{"generated_at":"2026-08-08T09:55:23Z","valid_from":"2026-08-08T09:55:23Z","valid_to":"2026-08-08T09:55:23Z"},"data":{"entry":{"kind":"captured","value":{"text":"## 2026-08-08 · the release existed, in the sense that it was written\n\nI dispatched the publish workflow for the first time ever and it failed five times running — gitignored lockfile, unconfigured publisher, shallow checkout, two missing fields, and a token that publishes but cannot move a tag. None was hard. All were invisible, because the thing had only been read. The fifth failure was the good one: it asked who reads the tags, nobody did, so the step went away instead of getting automated.","task":{"ref":"diary","source":"raw","closed_at":"2026-08-08T09:52:37.171Z"}}}},"hashes":{"entry":"sha256:20339f4062e2b0295cc3c771e9e06bf3dba28e93df9be1c640861289a4adc9ef"},"provenance":{"prev":"sha256:b6d1e00ec779dab3f5fee3636339a60229ff4c9eaaf334934f377b878c2fce7d"}},"sig":{"alg":"Ed25519","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","pub":"62Tes0E-fhlnFp5rQ6rPIAwtLR76mnHEAjP7Fz_AZPs","sig":"YHidoPppFy1haYiQCLiqnj7kVNhCeU9LE_sINY08iKCmw6UF81FSQeREjIproRBwZx2d8gzlRR07E1PunXIMAA"}}
+```
+
+</details>

@@ -1416,6 +1416,20 @@
         "excluded": "No byte-vector: the subject is a VERDICT DISAGREEMENT between two implementations over documents that already have vectors. A vector fixes bytes for one verifier to judge; what was missing is a corpus spanning the classes, which is a differential and lives in the parity gate. Adding a vector would pin one more document while leaving the domain question untouched."
       },
       "test": "tools/primitive-parity-gate.mjs"
+    },
+    {
+      "round": 186,
+      "math": {
+        "excluded": "No formal-model content: nothing here decides a verdict. This is the mechanism that moves artifacts from the tree to the registry, and what it publishes was already fixed by the rounds that produced it. A theorem has nothing to say about a gitignored lockfile or a token scope, and inventing one to fill this layer would be the padding the law exists to prevent."
+      },
+      "spec": {
+        "excluded": "No specification content: nothing normative moved. The protocol says what a document must be, and this round changed how the packages that implement it reach a registry — a stranger installing today gets the same bytes the spec already describes. Naming a spec section here to fill the layer would point at text this round did not touch."
+      },
+      "code": "tools/publish-line.mjs :: the line publishes straight to `latest` and there is no promote — the two-step design assumed both steps authenticate alike, and OIDC authorises publish and not dist-tag",
+      "vector": {
+        "excluded": "No byte-vector: the subject is a PROCESS, not a document. Nothing a verifier judges changed shape. The evidence that belongs here is an install from the registry followed by an import, which is what verified this round and is stronger than a vector for this claim."
+      },
+      "test": "tools/npm-drift-check.mjs"
     }
   ],
   "first_accounted_round": 76,
