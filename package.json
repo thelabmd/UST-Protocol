@@ -87,7 +87,8 @@
     "test:ots-codec": "node tools/ots-codec-gate.mjs",
     "test:browser": "node tools/browser-portability-gate.mjs",
     "test:recap-per-issue": "node tools/recap-per-issue-gate.mjs",
-    "test:readme-block": "node tools/readme-block-gate.mjs"
+    "test:readme-block": "node tools/readme-block-gate.mjs",
+    "test:browser-build": "node --test packages/ust-protocol/browser-build.test.mjs"
   },
   "devDependencies": {
     "typescript": "~7.0.2"

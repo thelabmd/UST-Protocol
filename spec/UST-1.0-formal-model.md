@@ -266,7 +266,18 @@ predicate.
    outcome also covers a verifier that HOLDS the inputs but does not evaluate the function (an optional
    algorithm it does not implement, a resource budget): formally the information is present and the verifier
    declines to compute — the honest report is still `INDETERMINATE(reason)`, never a guessed verdict. Distinct
-   from `INVALID` in both cases. Authority is **denied, never forged**
+   from `INVALID` in both cases.
+   **Realization (rev92 — the refusal must survive every consumer, not just the one that raises it).** Measured
+   2026-08-09 (#144): the clause above was already normative and the code contradicted it, because a refusal is
+   raised at a leaf and READ many layers away. Two shapes destroyed it in transit. A leaf whose codomain is
+   two-valued has nowhere to put the third outcome, so a `catch` that was written for malformed input silently
+   converted "I cannot check" into `false`; and a boundary that maps every exception to a refusal is right about
+   a defect in the DOCUMENT and wrong about a defect in its own faculty. The corollary is stronger than either
+   fix: **an inability that is not carried as a typed condition through EVERY consumer of a verdict becomes a
+   verdict.** Enumeration is therefore part of the obligation — of sixteen consumers, seven turned inability into
+   an accusation and one, testing only for an error field that `INDETERMINATE` does not carry, turned it into a
+   silent confirmation, which is the worse direction: an accusation is visible to a careful reader, a
+   confirmation is what a forgery would want. Authority is **denied, never forged**
    (`W1`): an adversary who suppresses the witness removes `𝒩` from *everyone's* `ℐ`, which can only *lower* a
    tier, never fabricate one.
 

@@ -12,7 +12,7 @@ const withWitnessClock = async (clock, body) => { __setWitnessClockForConformanc
 // runtime-namespace totality net. Define it ONCE here (used by R47) and cross-check it below against CLASS — MAY_THROW(n) ⟺
 // CLASS[n] !== 'surface', so the two can no longer diverge. (Totality itself is already guaranteed by R34's surface×BATTERY.)
 const MAY_THROW_TOTALITY = (n) => /^(build|seal|make)/.test(n) || /(Claim|Leaf|Id|Epoch)$/.test(n) || /^Ust[A-Z]/.test(n)
-  || ['canon', 'H', 'Hbytes', 'keyId', 'merkleRoot', 'partitionHash', 'contentHash', 'signedContent', 'admitUtf8', 'anyLoneSurrogate', 'ustGrid', 'blindPartition', 'blindedCommit', 'seed', 'axisRank', 'evidenceCaps', 'admitDeep', 'isValid', 'verifiedEvidence', 'replicationAgreement', 'surfaceVerdict', 'anchorRollup'].includes(n)
+  || ['canon', 'H', 'Hbytes', 'keyId', 'merkleRoot', 'partitionHash', 'contentHash', 'signedContent', 'admitUtf8', 'anyLoneSurrogate', 'ustGrid', 'blindPartition', 'blindedCommit', 'seed', 'axisRank', 'evidenceCaps', 'admitDeep', 'isValid', 'cannotDecide', 'verifiedEvidence', 'replicationAgreement', 'surfaceVerdict', 'anchorRollup'].includes(n)
   || ['verifyOrThrow', 'assertValid'].includes(n);
 
 const V = JSON.parse(readFileSync(new URL('../../vectors/conformance-vectors.json', import.meta.url)));
@@ -333,6 +333,11 @@ for (const v of V.vectors) {
       const got = r.error === 'E-KEY' ? 'E-KEY' : 'admitted';
       check(v.id, got === v.expect, `admits(k,c) ${v.id}: got ${got} (${r.error ?? r.result}) expected ${v.expect}`); break; }
     case 'document-negative': check(v.id, P.verify(v.doc, { context: 'data' }).result === 'INVALID'); break;
+    // #144 — a TWO-SIDED vector: the same document under a build that HAS the primitive and one that does not.
+    // This runner is the build that has it, so it executes the with-faculty half; the without-faculty half is
+    // executed by `browser-build.test.mjs`, which loads the build whose crypto refuses. Both halves are normative
+    // for a port: an implementation lacking Ed25519 must answer INDETERMINATE(unsupported_alg), never INVALID.
+    case 'faculty-absent': check(v.id + ' (with faculty)', P.verify(v.doc).result === v.expect_with_faculty); break;
     // #75 language-neutral encoder vectors (a second implementation runs the SAME cases)
     case 'utf8-reject': check(v.id, P.verifyJson(Buffer.from(v.input_hex, 'hex')).error === v.expect_error); break;
     case 'b64url': check(v.id, (P.strictB64url(v.value, v.bytes) !== null) === v.expect); break;
@@ -3147,7 +3152,7 @@ console.log('\n═════════════════════�
     checkpointUniquenessClaim: 'primitive', epochTransitionClaim: 'primitive', evidenceReceiptClaim: 'primitive',
     evidenceReceiptId: 'primitive', genesisEpoch: 'primitive', keylogLeaf: 'primitive', nameMapLeaf: 'primitive', noForkClaim: 'primitive',
     // ── EXEMPT (pure predicate/accessor) ──
-    isValid: 'predicate', isVerifiedHandle: 'predicate', isPublicDnsShard: 'predicate',
+    isValid: 'predicate', cannotDecide: 'predicate', isVerifiedHandle: 'predicate', isPublicDnsShard: 'predicate',
     registryDigest: 'accessor',   // zero-arg over a deep-frozen constant — there is no untrusted input to be hostile with
     // ── EXEMPT (result class) ──
     UstInvalid: 'result-class', UstIndeterminate: 'result-class',

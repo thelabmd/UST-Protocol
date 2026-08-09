@@ -32,7 +32,10 @@ check('hashDomains', [...src.matchAll(/H(?:bytes)?\(\s*['"`](ust:[a-z0-9-]+)['"`
 // signed purposes — purpose: 'ust:…'
 check('purposes', [...src.matchAll(/purpose:\s*['"`](ust:[a-z-]+)['"`]/g)].map((m) => m[1]), REGISTRY.purposes);
 // INVALID error codes — 'E-…' in any emit context (error:/code:/new Error)
-check('errorCodes', [...src.matchAll(/['"`](E-[A-Z]+)/g)].map((m) => m[1]), REGISTRY.errorCodes);
+// #144 — the union, because the two sets differ in MEANING, not in drift-risk: `errorCodes` are §14 verdicts about
+// a document, `resolverErrorCodes` report that this build could not decide. This check exists to stop string drift,
+// so it must see every emitted literal; the split lives in the REGISTRY (and in the spec) where the meaning does.
+check('errorCodes', [...src.matchAll(/['"`](E-[A-Z]+)/g)].map((m) => m[1]), [...REGISTRY.errorCodes, ...REGISTRY.resolverErrorCodes]);
 // compareEvidenceOrder returns — 2026-07-14 near-miss #2
 const ceo = (src.match(/export function compareEvidenceOrder[\s\S]*?\n}/) || [''])[0];
 check('evidenceOrder', [...ceo.matchAll(/return\s+['"`]([a-z-]+)['"`]/g)].map((m) => m[1]), REGISTRY.evidenceOrder);

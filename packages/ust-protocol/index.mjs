@@ -94,7 +94,13 @@ function aeadDecrypt(enc, keyRawB64url) {
 export function edVerifyStrict(pubB64url, msgUtf8, sigB64url) {
   if (strictB64url(pubB64url, 32) === null || strictB64url(sigB64url, 64) === null) return false;   // round-36 P1-02 — canonical Pub32/Sig64 wire encoding IS part of "strict": Node's base64url decoder is permissive (a trailing-bit alias maps to the same bytes), so a non-canonical pub/sig would verify identically and split cross-language. Enforcing it at the crypto LEAF makes EVERY caller (incl. the provenance src_sig path) canonical-safe with no per-site guard.
   try { return ed25519Verify(utf8(msgUtf8), fromB64url(pubB64url), fromB64url(sigB64url)); }
-  catch { return false; }
+  // #144 — THE THIRD OUTCOME IS NOT `false`. This `catch` predates the browser build's refusal and is right for
+  // what it was written for: a malformed key or signature is not an exception, it is a `false`. It could not tell
+  // "this input is bad" from "I am NOT ABLE to check", so a build without the Ed25519 faculty had its refusal
+  // converted into `INVALID:E-SIG` — a verdict accusing an honest document, which is worse than overclaiming:
+  // an overclaim leaves a careful reader something to audit, an accusation leaves nothing to notice.
+  // The channel for the third outcome already existed — the primitive THROWS — and this line was closing it.
+  catch (e) { if (e?.code === 'E-UNSUPPORTED') throw e; return false; }
 }
 
 // ─── #75 STRICT ENCODERS — Node's permissive decoders make DISTINCT byte-strings verify identically, breaking
@@ -488,6 +494,21 @@ const AEAD_ALGS = ['AES-256-GCM', 'XChaCha20-Poly1305'], B64URL = /^[A-Za-z0-9_-
 // the verdict is tier-scoped (`VALID:LIGHT|HIGH|TOP`); this is the ONE place code should test "did it verify" —
 // a bare `r.result === 'VALID'` is intentionally no longer valid (it forces callers to face the tier).
 export const isValid = (r) => typeof r?.result === 'string' && r.result.slice(0, 6) === 'VALID:';
+/**
+ * #144 — "I could not run the check" is a THIRD reading of a verdict, and every consumer of one must face it.
+ *
+ * `isValid(v)` answers "did it verify"; its negation lumps together two things that must never be lumped:
+ * a document that FAILED and a verifier that could not decide. Measured 2026-08-09 across the 16 internal
+ * consumers of `verify()`: seven turned inability into an accusation (`E-GENESIS`, `E-KEY`, `E-SIG`, `null`),
+ * and one — the stream's per-frame integrity step — tested `v.error`, which `INDETERMINATE` does not carry, so
+ * a build that checked NO signature had its frames counted as intact. That direction is the worse one: an
+ * accusation is at least visible, a silent confirmation is what a forgery would want.
+ *
+ * NOT every `INDETERMINATE` is this. `unavailable` means the network could not bind a name while the signature
+ * WAS checked — integrity holds, only the tier is denied. This predicate names the narrow case where the
+ * verifier lacked the faculty itself.
+ */
+export const cannotDecide = (r) => r?.result === 'INDETERMINATE' && r?.reason === 'unsupported_alg';
 const CLASSES = ['observation','attestation','derivation','genesis','key','cadence'];
 // §14.5 / §F.5e.4 — the verification ROLE is a PARTITION of CLASSES: the trust layer's OWN documents on one side,
 // a publisher's claims about the world on the other. Both refusals read this ONE set, so they cannot drift apart.
@@ -984,6 +1005,13 @@ function verifyCore(doc, opts = {}) {
       ust_id: st.id.ust_id, class: st.id.class, content_hash: ch, time: timeField, provenance: provenanceReport,
       completeness: 'not_evaluated', verifier: VERSION, registry_digest: registryDigest() };
   } catch (e) {
+    // #144 — FAIL-CLOSED IS THE RIGHT DIRECTION FOR A DEFECT IN THE DOCUMENT, AND THE WRONG ONE FOR A DEFECT IN
+    // MY OWN FACULTY. Both arrive here as exceptions, and until 2026-08-09 both left as `INVALID`. But the two
+    // answer different questions: a malformed document IS refused (§14/I10), while a verifier that cannot run the
+    // check has no verdict to give at all — F-theorem clause 5, "declines to compute … the honest report is still
+    // INDETERMINATE(reason), never a guessed verdict". Availability is not failure; inability is not guilt.
+    if (e?.code === 'E-UNSUPPORTED')
+      return { result: 'INDETERMINATE', reason: 'unsupported_alg', detail: e.detail || String(e), verifier: VERSION };
     return bad(e.code || 'E-MALFORMED', e.detail || String(e));         // fail-closed (§14/I10)
   }
 }
@@ -1009,6 +1037,7 @@ function walkReferents(st, opts, depth, visited, budget) {
     if (refDoc === ADMIT_REJECT) { sawUnresolved = true; continue; }     // a non-inert referent is unresolved (availability ≠ failure), never a host throw
     if (--budget.left < 0) return { error: 'E-BOUNDS', detail: 'referent walk exceeds the verified-node budget (§13 P4 — default 256, opts.refBudget)' };
     const rv = verify(refDoc, { ...opts, provenanceDepth: 0 });          // verify the ADMITTED referent (one level)
+    if (cannotDecide(rv)) return { error: 'E-UNSUPPORTED', detail: 'referent ' + h + ' not decidable by this build: ' + rv.detail };   // #144
     if (!isValid(rv)) return { error: rv.error || 'E-SIG', detail: 'referent ' + h + ' invalid: ' + (rv.detail || rv.error) };
     if (rv.content_hash !== h) return { error: 'E-MALFORMED', detail: 'resolver returned a different document for ' + h };
     if (depth > 1) {
@@ -1107,6 +1136,7 @@ export function resolveKeysBytes(genesisBytes, keylogBytes) {
   // rev35 R3 (round-30 P0-01) — the reducer reads ONE inert snapshot; every emitted quantity is a projection over it, nothing
   // re-reads a raw live object (the byte-in form makes this hold a fortiori — there is no live object to re-read).
   const gv = verify(genesis);                                                     // genesis is inert (parsed from immutable bytes) — verify re-admits it idempotently; every read below is of this snapshot
+  if (cannotDecide(gv)) return { error: 'E-UNSUPPORTED', detail: 'genesis not decidable by this build: ' + gv.detail };   // #144 — inability, not a bad genesis
   if (!isValid(gv)) return { error: 'E-GENESIS', detail: 'genesis invalid: ' + gv.error };
   if (genesis.state.id.class !== 'genesis') return { error: 'E-GENESIS', detail: 'not class:genesis' };
   if (genesis.sig.key_id !== genesis.state.id.key_id) return { error: 'E-GENESIS', detail: 'genesis not self-signed' };
@@ -1181,6 +1211,7 @@ export function resolveKeysBytes(genesisBytes, keylogBytes) {
   };
   for (const [i, e] of keylog.entries()) {                                        // §12.2 walk: prev-chained, signed by a CURRENTLY-ACTIVE key
     const ev = verify(e, { context: 'key' });
+    if (cannotDecide(ev)) return { error: 'E-UNSUPPORTED', detail: 'key-log entry ' + i + ' not decidable by this build: ' + ev.detail };   // #144
     if (!isValid(ev)) return { error: 'E-KEY', detail: 'key-log entry ' + i + ' invalid: ' + ev.error };
     if (e.state.id.class !== 'key') return { error: 'E-KEY', detail: 'entry ' + i + ' not class:key' };
     if (e.state.id.domain_shard !== gDomain) return { error: 'E-KEY', detail: 'entry ' + i + ' domain_shard ≠ genesis domain (round-15 P0-03: the single-domain key-log invariant lives IN the reducer, not only in the NameBound caller — the reducer is a TCB unit and must be sound in isolation, since resolveAuthority consumes it directly)' };
@@ -2303,6 +2334,7 @@ export function resolveCadenceBytes(genesisBytes, cadenceLogBytes, atTime, keylo
   let prev = contentHash(genesis), lastEff = null;
   for (const [i, e] of cadenceLog.entries()) {
     const ev = verify(e, { context: 'key' });
+    if (cannotDecide(ev)) return { error: 'E-UNSUPPORTED', detail: 'cadence entry ' + i + ' not decidable by this build: ' + ev.detail };   // #144
     if (!isValid(ev)) return { error: 'E-KEY', detail: 'cadence entry ' + i + ' invalid: ' + (ev.error || ev.result) };
     if (e.state.id.class !== 'cadence') return { error: 'E-MALFORMED', detail: 'cadence-log entry ' + i + ' not class:cadence' };
     if (e.state.id.domain_shard !== genesis.state.id.domain_shard) return { error: 'E-AUTHORITY', detail: 'cadence entry ' + i + ' domain mismatch' };
@@ -3052,6 +3084,14 @@ export const REGISTRY = deepFreeze({   // round-25 P0-04 — DEEP-frozen: the ca
   // INVALID error codes (§15) — every code the verifier/API can emit. Ordered as §15 lists them.
   errorCodes: ['E-MALFORMED', 'E-CANON', 'E-BOUNDS', 'E-CYCLE', 'E-SIG', 'E-KEY', 'E-GENESIS', 'E-ANCHOR',
     'E-COMMIT', 'E-ROOT', 'E-SEED', 'E-PREV', 'E-AUTHORITY', 'E-SEQ', 'E-EVIDENCE', 'E-ASSURANCE', 'E-BYTES', 'E-REPLICATION', 'E-DISCOVERY'],   // E-BYTES — the byte-admission door class (round-48 P0-01: snapshotBytes rejects a non-native-Uint8Array as E-BYTES-TYPE/-SHARED/-SIZE)
+  // RESOLVER-LEVEL codes — NOT verdicts about a document, and kept in their OWN set for exactly that reason (#144).
+  // A resolver (`resolveKeys`, `resolveCadence`, the referent walk) returns a record, not a §14 verdict, so it has
+  // no INDETERMINATE to return; when THIS BUILD lacks the faculty to decide, it must still fail CLOSED — a caller
+  // that reads `.error` stops, whereas a silent empty result would read as "no keys" and pass. Listing these
+  // beside the INVALID codes would state the opposite of what the code does: the document-verifier answers the
+  // very same condition with `INDETERMINATE(unsupported_alg)`, never with an E-code. Inability is not guilt
+  // (F-theorem clause 5); it is also not silence.
+  resolverErrorCodes: ['E-UNSUPPORTED'],
   // INDETERMINATE reasons — the §14 document-verifier's CLOSED set, and the §12.3.6 authority-checkpoint set (distinct).
   // `unsupported_minor` (#138) is DISTINCT from `unsupported_alg`: the algorithm case is a primitive this verifier
   // cannot compute, the minor case is a ruleset it does not have. One word for two mechanisms is the collision this
@@ -3131,7 +3171,19 @@ export function verifyStream(frames, config) {
   const seenUstId = new Set(), seenPrev = new Set();
   let lastE = null;
   for (const [i, f] of frames.entries()) {
-    if (rpfv) { const v = verify(f, { context: 'data' }); if (v.error) return { error: 'E-SIG', detail: 'frame ' + i + ' invalid: ' + v.error }; } // X2 — per-frame INTEGRITY (signature). round-53 (UST-ybn): a name-form frame with a VALID signature is INDETERMINATE (identity unconfirmed at bare LIGHT), NOT an error — the stream's identity/completeness is a SEPARATE axis, so accept INDETERMINATE, fail only on a real integrity error (round-43 — the ADMITTED boolean, never the coerced opts field)
+    // X2 — per-frame INTEGRITY (signature). #144: `v.error` is present on INVALID and ABSENT on INDETERMINATE, so a
+    // verdict of "I could not check this signature" read as a passing frame — a build that verified NOTHING
+    // reported the same `provisional` stream as one that verified everything. X2 is an assertion ABOUT the
+    // signature; a verifier that did not evaluate it cannot make that assertion, and must say so instead.
+    if (rpfv) {
+      const v = verify(f, { context: 'data' });
+      if (cannotDecide(v)) return { complete: 'none', reason: 'unsupported_alg', detail: 'frame ' + i + ': ' + v.detail };
+      // round-53 (UST-ybn): a name-form frame with a VALID signature is INDETERMINATE (identity unconfirmed at
+      // bare LIGHT), NOT an error — the stream's identity/completeness is a SEPARATE axis, so accept
+      // INDETERMINATE here. That acceptance is right and stays; #144 only removes the ONE reading of
+      // INDETERMINATE it was never meant to cover, where the signature was not evaluated at all.
+      if (v.error) return { error: 'E-SIG', detail: 'frame ' + i + ' invalid: ' + v.error };
+    }   // …so X2 fails only on a real integrity error (round-43 — the ADMITTED boolean, never the coerced opts field)
     if (f.state.id.domain_shard !== authority) return { error: 'E-AUTHORITY', detail: 'frame ' + i + ' domain_shard != stream authority (' + authority + ') — mixed-authority stream' };
     if (boundKeys && boundKeys.get(f.state.id.key_id) !== f.sig.pub) return { error: 'E-AUTHORITY', detail: 'frame ' + i + ' key not bound to the authority key-log — impersonation (key ∉ K_A, §12.2)' };
     if (seenUstId.has(f.state.id.ust_id)) return { error: 'E-PREV', detail: 'duplicate ust_id (fork, Y1): ' + f.state.id.ust_id };
@@ -3812,6 +3864,7 @@ export async function resolveByDiscovery(doc, opts = {}, transport = {}) {
   // verifyJson and the key-log's raw bytes go through the SAME scanner (scanDuplicateKeys, which descends into
   // every entry) BEFORE parse. A dup-key authority surface is E-CANON — never a silent downgrade to LIGHT.
   const gv = verifyJson(gRaw, {});
+  if (cannotDecide(gv)) return { verdict: base, resolution: { error: 'E-UNSUPPORTED: published genesis not decidable by this build — ' + gv.detail } };   // #144
   if (!isValid(gv)) return { verdict: base, resolution: { error: 'published genesis does not VERIFY: ' + (gv.error || gv.result) } };
   genesis = JSON.parse(gRaw); genesisHash = contentHash(genesis);
   if (kRaw !== undefined) {

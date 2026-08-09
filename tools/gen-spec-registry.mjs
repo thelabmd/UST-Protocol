@@ -11,6 +11,7 @@ import { REGISTRY } from '../packages/ust-protocol/index.mjs';
 const tick = (a) => a.map((x) => '`' + x + '`');
 const blocks = {
   'error-codes': tick(REGISTRY.errorCodes).join(', '),
+  'resolver-error-codes': tick(REGISTRY.resolverErrorCodes).join(', '),
   'purposes': tick(REGISTRY.purposes).join(' | '),
   'evidence-order': tick(REGISTRY.evidenceOrder).join(' | '),
   'verified-evidence-fields': 'required ' + tick(REGISTRY.verifiedEvidenceFields.required).join(', ')

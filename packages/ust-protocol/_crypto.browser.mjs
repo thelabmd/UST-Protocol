@@ -84,6 +84,24 @@ export function sha256Hex(bytes) {
 }
 
 /**
+ * A refusal that names itself MACHINE-READABLY, not one that names itself in prose.
+ *
+ * The refusal carried its meaning only in the message text until 2026-08-09 (#144), and prose is not a channel a
+ * verifier can branch on: every layer above had to either guess from a substring or collapse the refusal into a
+ * verdict — and one of them did, turning a VALID signature into `INVALID:E-SIG`.
+ *
+ * `code` is the channel the rest of the core already uses (`err(code, detail)`), so a refusal now travels the
+ * same way every other typed failure does, and the public boundary can tell "this document is bad" from
+ * "I am not able to check" without reading English.
+ */
+const unsupported = (detail) => {
+  const e = new Error('E-UNSUPPORTED: ' + detail);
+  e.code = 'E-UNSUPPORTED';                       // ⇒ INDETERMINATE(unsupported_alg) at the boundary, never INVALID
+  e.detail = detail;
+  return e;
+};
+
+/**
  * A refusal that names itself, not a stub that returns false.
  *
  * Returning `false` would read as "the signature did not verify" — a VERDICT about the document. This build
@@ -91,13 +109,13 @@ export function sha256Hex(bytes) {
  * cannot check" is the same defect the tier vocabulary exists to prevent, so it throws.
  */
 export function ed25519Verify() {
-  throw new Error('E-UNSUPPORTED: Ed25519 verification is not available in the browser build — the browser offers it only through the asynchronous crypto.subtle, and this core is synchronous. Verify the signature at the call site with crypto.subtle.verify.');
+  throw unsupported('Ed25519 verification is not available in the browser build — the browser offers it only through the asynchronous crypto.subtle, and this core is synchronous. Verify the signature at the call site with crypto.subtle.verify.');
 }
 
 export function ed25519Sign() {
-  throw new Error('E-UNSUPPORTED: signing is not available in the browser build — a signing key does not belong in a page.');
+  throw unsupported('signing is not available in the browser build — a signing key does not belong in a page.');
 }
 
 export function aesGcmDecrypt() {
-  throw new Error('E-UNSUPPORTED: AES-256-GCM decryption is not available in the browser build — the browser offers it only through the asynchronous crypto.subtle. Encrypted partitions cannot be opened here.');
+  throw unsupported('AES-256-GCM decryption is not available in the browser build — the browser offers it only through the asynchronous crypto.subtle. Encrypted partitions cannot be opened here.');
 }

@@ -88,6 +88,11 @@ jobs:
         run: npm run test:assurance-map
       - name: ust-light is a valid UST subset (byte-identical to the reference impl, both directions)
         run: npm run test:light
+      # #144 — the browser build was loaded by NO gate until 2026-08-09, and it shipped calling a VALID signature
+      # INVALID. This step executes it and asserts a VERDICT over a real document, not canon/keyId parity: the
+      # pure parts agreed all along, which is exactly why their agreement stayed green over an accusation.
+      - name: the browser build refuses, and a refusal never becomes a verdict (#144)
+        run: npm run test:browser-build
       - name: light README panels are DERIVED from the dark originals, never hand-edited
         run: npm run test:artwork
       - name: security regression (external-audit P0/P1 reproductions must stay closed — epic UST-1o6)

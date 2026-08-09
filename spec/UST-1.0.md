@@ -1894,6 +1894,16 @@ not edit by hand; the `spec-code-sync` gate keeps it == the codes the implementa
 `E-MALFORMED`, `E-CANON`, `E-BOUNDS`, `E-CYCLE`, `E-SIG`, `E-KEY`, `E-GENESIS`, `E-ANCHOR`, `E-COMMIT`, `E-ROOT`, `E-SEED`, `E-PREV`, `E-AUTHORITY`, `E-SEQ`, `E-EVIDENCE`, `E-ASSURANCE`, `E-BYTES`, `E-REPLICATION`, `E-DISCOVERY`
 <!-- END spec-sync:error-codes -->
 
+**Resolver-level codes — NOT verdicts about a document.** A resolver (`resolveKeys`, `resolveCadence`, the
+referent walk) returns a record rather than a §14 verdict, so it has no `INDETERMINATE` to give. When a build
+lacks the faculty to decide — an algorithm it cannot compute — it MUST still fail closed with one of these,
+because a caller reading `.error` stops while a silently empty result would read as "no keys" and pass. A verifier
+answering the SAME condition at §14 MUST answer `INDETERMINATE` (`reason: "unsupported_alg"`) and MUST NOT emit an
+error code: **inability is not guilt, and it is not silence either.**
+<!-- BEGIN spec-sync:resolver-error-codes -->
+`E-UNSUPPORTED`
+<!-- END spec-sync:resolver-error-codes -->
+
 ---
 
 ## 16. Conformance

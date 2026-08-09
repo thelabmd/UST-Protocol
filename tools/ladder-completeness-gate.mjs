@@ -68,7 +68,13 @@ const RESOLVES = {
   test: (v) => {
     if (EXECUTED.has(v)) return true;
     const f = v.split(' :: ')[0].trim();
-    if (!/^tools\/[\w.-]+\.mjs$/.test(f)) return false;
+    // The path shape was `tools/` only because every gate happened to live there. #144's evidence is a test file
+    // beside the package it executes (`packages/ust-protocol/browser-build.test.mjs`) — it loads the BROWSER build,
+    // which no gate could do from `tools/` without duplicating the substitution. The two things this rule actually
+    // checks are unchanged and both still enforced below: the file EXISTS, and CI genuinely invokes it. Widening
+    // the accepted location does not weaken either; refusing it would have pushed a round that added a gate into
+    // an exclusion, which is precisely how a gate goes unrecorded.
+    if (!/^(tools|packages)\/[\w./-]+\.mjs$/.test(f)) return false;
     try { U(f); } catch { return false; }
     // CI may invoke a gate DIRECTLY or through an npm script, and both are "CI actually runs it" — the property this
     // rule is about. Reading only the workflow text rejected `tools/ceremony-selfcheck-gate.mjs` because the step is
