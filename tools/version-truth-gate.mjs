@@ -42,7 +42,7 @@ const root = new URL('..', import.meta.url).pathname;
 // artifact for the first time since the drift began. Any future entry here is a REGRESSION, not a
 // baseline — if a gap reappears, publish or state the policy, do not raise the number.
 const PIN = {
-  untraced: 3,          // versions with no CHANGELOG row: mcp rc.29, web-signer rc.3, ots-verify rc.10
+  untraced: 0,          // lowered 2026-08-09 — every version now traces to a written line; the ratchet may only shrink
 };
 
 // HELD BACK IS NOT THE SAME AS DRIFTED, and the difference has to be readable from outside. An owner may
