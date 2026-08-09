@@ -31,6 +31,7 @@ export interface UstStreamComplete { complete: string; head?: unknown; detail?: 
 export type UstStreamVerdict = UstStreamComplete | UstError;
 
 export function admitDeep(v: unknown, seen?: unknown): unknown;
+export function admitEd25519Point(p32: unknown): unknown;
 export function admitUtf8(bytes: unknown): { err: unknown };
 export function anchorRollup(arg0?: unknown): unknown;
 export function anyLoneSurrogate(root: unknown): unknown;

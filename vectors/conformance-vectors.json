@@ -409,7 +409,8 @@
    "valid_sig": "zXlW3WdwvfTGERK1ink5aeZyTucjU7X_J7AAbogi2q_K4ESFstl3v78XRVisUsoJmqKdrAG04yhliCaz1wGZBQ",
    "pub_b64url": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
    "expect": "E-SIG",
-   "note": "S+L non-canonical; a STRICT verifier MUST reject. node/OpenSSL strict? true"
+   "note": "S+L non-canonical; a STRICT verifier MUST reject. node/OpenSSL strict? true — TWO-SIDED since #144: a build WITHOUT the Ed25519 faculty must still answer false here, because S>=L is decided by ARITHMETIC over the wire bytes, not by the primitive. If it answers `cannot check` instead, the strictness is being inherited from a library rather than enforced by the implementation, and two conforming verifiers may then disagree (I4).",
+   "expect_without_faculty": false
   },
   {
    "kind": "utf8-reject",
@@ -9938,6 +9939,198 @@
     "reason": "unsupported_alg"
    },
    "expect_with_faculty": "VALID:LIGHT"
+  },
+  {
+   "id": "ed25519-edge-00",
+   "kind": "ed25519-point-admission",
+   "rule": "§7/N6 — a strict verifier rejects small-order and non-canonical A/R encodings. This half of the acceptance rule is decided on the WIRE BYTES and belongs to the implementation, not to its crypto library: measured 2026-08-09 on node:crypto, WebCrypto and Go crypto/ed25519, NONE of the three rejects small order, and one non-canonical A is accepted by all three.",
+   "source": "edge cases from Chalkias, Garillot, Nikolaenko, \"Taming the many EdDSAs\" (eprint 2020/1244), corpus github.com/novifinancial/ed25519-speccheck",
+   "a_hex": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa",
+   "r_hex": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a",
+   "expect_admit_a": false,
+   "expect_admit_r": false,
+   "measured_libraries_2026_08_09": {
+    "node_crypto": true,
+    "webcrypto": true,
+    "go_crypto_ed25519": true
+   },
+   "note": "A and R both small-order"
+  },
+  {
+   "id": "ed25519-edge-01",
+   "kind": "ed25519-point-admission",
+   "rule": "§7/N6 — a strict verifier rejects small-order and non-canonical A/R encodings. This half of the acceptance rule is decided on the WIRE BYTES and belongs to the implementation, not to its crypto library: measured 2026-08-09 on node:crypto, WebCrypto and Go crypto/ed25519, NONE of the three rejects small order, and one non-canonical A is accepted by all three.",
+   "source": "edge cases from Chalkias, Garillot, Nikolaenko, \"Taming the many EdDSAs\" (eprint 2020/1244), corpus github.com/novifinancial/ed25519-speccheck",
+   "a_hex": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa",
+   "r_hex": "f7badec5b8abeaf699583992219b7b223f1df3fbbea919844e3f7c554a43dd43",
+   "expect_admit_a": false,
+   "expect_admit_r": true,
+   "measured_libraries_2026_08_09": {
+    "node_crypto": true,
+    "webcrypto": true,
+    "go_crypto_ed25519": true
+   },
+   "note": "A small-order"
+  },
+  {
+   "id": "ed25519-edge-02",
+   "kind": "ed25519-point-admission",
+   "rule": "§7/N6 — a strict verifier rejects small-order and non-canonical A/R encodings. This half of the acceptance rule is decided on the WIRE BYTES and belongs to the implementation, not to its crypto library: measured 2026-08-09 on node:crypto, WebCrypto and Go crypto/ed25519, NONE of the three rejects small order, and one non-canonical A is accepted by all three.",
+   "source": "edge cases from Chalkias, Garillot, Nikolaenko, \"Taming the many EdDSAs\" (eprint 2020/1244), corpus github.com/novifinancial/ed25519-speccheck",
+   "a_hex": "f7badec5b8abeaf699583992219b7b223f1df3fbbea919844e3f7c554a43dd43",
+   "r_hex": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa",
+   "expect_admit_a": true,
+   "expect_admit_r": false,
+   "measured_libraries_2026_08_09": {
+    "node_crypto": true,
+    "webcrypto": true,
+    "go_crypto_ed25519": true
+   },
+   "note": "R small-order"
+  },
+  {
+   "id": "ed25519-edge-03",
+   "kind": "ed25519-point-admission",
+   "rule": "§7/N6 — a strict verifier rejects small-order and non-canonical A/R encodings. This half of the acceptance rule is decided on the WIRE BYTES and belongs to the implementation, not to its crypto library: measured 2026-08-09 on node:crypto, WebCrypto and Go crypto/ed25519, NONE of the three rejects small order, and one non-canonical A is accepted by all three.",
+   "source": "edge cases from Chalkias, Garillot, Nikolaenko, \"Taming the many EdDSAs\" (eprint 2020/1244), corpus github.com/novifinancial/ed25519-speccheck",
+   "a_hex": "cdb267ce40c5cd45306fa5d2f29731459387dbf9eb933b7bd5aed9a765b88d4d",
+   "r_hex": "9046a64750444938de19f227bb80485e92b83fdb4b6506c160484c016cc1852f",
+   "expect_admit_a": true,
+   "expect_admit_r": true,
+   "measured_libraries_2026_08_09": {
+    "node_crypto": true,
+    "webcrypto": true,
+    "go_crypto_ed25519": true
+   },
+   "note": "A and R mixed-order (accepted by both equations)"
+  },
+  {
+   "id": "ed25519-edge-04",
+   "kind": "ed25519-point-admission",
+   "rule": "§7/N6 — a strict verifier rejects small-order and non-canonical A/R encodings. This half of the acceptance rule is decided on the WIRE BYTES and belongs to the implementation, not to its crypto library: measured 2026-08-09 on node:crypto, WebCrypto and Go crypto/ed25519, NONE of the three rejects small order, and one non-canonical A is accepted by all three.",
+   "source": "edge cases from Chalkias, Garillot, Nikolaenko, \"Taming the many EdDSAs\" (eprint 2020/1244), corpus github.com/novifinancial/ed25519-speccheck",
+   "a_hex": "cdb267ce40c5cd45306fa5d2f29731459387dbf9eb933b7bd5aed9a765b88d4d",
+   "r_hex": "160a1cb0dc9c0258cd0a7d23e94d8fa878bcb1925f2c64246b2dee1796bed512",
+   "expect_admit_a": true,
+   "expect_admit_r": true,
+   "measured_libraries_2026_08_09": {
+    "node_crypto": false,
+    "webcrypto": false,
+    "go_crypto_ed25519": false
+   },
+   "note": "A and R mixed-order — cofactored accepts, cofactorless does not"
+  },
+  {
+   "id": "ed25519-edge-05",
+   "kind": "ed25519-point-admission",
+   "rule": "§7/N6 — a strict verifier rejects small-order and non-canonical A/R encodings. This half of the acceptance rule is decided on the WIRE BYTES and belongs to the implementation, not to its crypto library: measured 2026-08-09 on node:crypto, WebCrypto and Go crypto/ed25519, NONE of the three rejects small order, and one non-canonical A is accepted by all three.",
+   "source": "edge cases from Chalkias, Garillot, Nikolaenko, \"Taming the many EdDSAs\" (eprint 2020/1244), corpus github.com/novifinancial/ed25519-speccheck",
+   "a_hex": "cdb267ce40c5cd45306fa5d2f29731459387dbf9eb933b7bd5aed9a765b88d4d",
+   "r_hex": "21122a84e0b5fca4052f5b1235c80a537878b38f3142356b2c2384ebad4668b7",
+   "expect_admit_a": true,
+   "expect_admit_r": true,
+   "measured_libraries_2026_08_09": {
+    "node_crypto": false,
+    "webcrypto": false,
+    "go_crypto_ed25519": false
+   },
+   "note": "S > L"
+  },
+  {
+   "id": "ed25519-edge-06",
+   "kind": "ed25519-point-admission",
+   "rule": "§7/N6 — a strict verifier rejects small-order and non-canonical A/R encodings. This half of the acceptance rule is decided on the WIRE BYTES and belongs to the implementation, not to its crypto library: measured 2026-08-09 on node:crypto, WebCrypto and Go crypto/ed25519, NONE of the three rejects small order, and one non-canonical A is accepted by all three.",
+   "source": "edge cases from Chalkias, Garillot, Nikolaenko, \"Taming the many EdDSAs\" (eprint 2020/1244), corpus github.com/novifinancial/ed25519-speccheck",
+   "a_hex": "442aad9f089ad9e14647b1ef9099a1ff4798d78589e66f28eca69c11f582a623",
+   "r_hex": "e96f66be976d82e60150baecff9906684aebb1ef181f67a7189ac78ea23b6c0e",
+   "expect_admit_a": true,
+   "expect_admit_r": true,
+   "measured_libraries_2026_08_09": {
+    "node_crypto": false,
+    "webcrypto": false,
+    "go_crypto_ed25519": false
+   },
+   "note": "S >> L"
+  },
+  {
+   "id": "ed25519-edge-07",
+   "kind": "ed25519-point-admission",
+   "rule": "§7/N6 — a strict verifier rejects small-order and non-canonical A/R encodings. This half of the acceptance rule is decided on the WIRE BYTES and belongs to the implementation, not to its crypto library: measured 2026-08-09 on node:crypto, WebCrypto and Go crypto/ed25519, NONE of the three rejects small order, and one non-canonical A is accepted by all three.",
+   "source": "edge cases from Chalkias, Garillot, Nikolaenko, \"Taming the many EdDSAs\" (eprint 2020/1244), corpus github.com/novifinancial/ed25519-speccheck",
+   "a_hex": "442aad9f089ad9e14647b1ef9099a1ff4798d78589e66f28eca69c11f582a623",
+   "r_hex": "8ce5b96c8f26d0ab6c47958c9e68b937104cd36e13c33566acd2fe8d38aa1942",
+   "expect_admit_a": true,
+   "expect_admit_r": true,
+   "measured_libraries_2026_08_09": {
+    "node_crypto": false,
+    "webcrypto": false,
+    "go_crypto_ed25519": false
+   },
+   "note": "S > L, cofactored"
+  },
+  {
+   "id": "ed25519-edge-08",
+   "kind": "ed25519-point-admission",
+   "rule": "§7/N6 — a strict verifier rejects small-order and non-canonical A/R encodings. This half of the acceptance rule is decided on the WIRE BYTES and belongs to the implementation, not to its crypto library: measured 2026-08-09 on node:crypto, WebCrypto and Go crypto/ed25519, NONE of the three rejects small order, and one non-canonical A is accepted by all three.",
+   "source": "edge cases from Chalkias, Garillot, Nikolaenko, \"Taming the many EdDSAs\" (eprint 2020/1244), corpus github.com/novifinancial/ed25519-speccheck",
+   "a_hex": "f7badec5b8abeaf699583992219b7b223f1df3fbbea919844e3f7c554a43dd43",
+   "r_hex": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+   "expect_admit_a": true,
+   "expect_admit_r": false,
+   "measured_libraries_2026_08_09": {
+    "node_crypto": false,
+    "webcrypto": false,
+    "go_crypto_ed25519": false
+   },
+   "note": "R non-canonical"
+  },
+  {
+   "id": "ed25519-edge-09",
+   "kind": "ed25519-point-admission",
+   "rule": "§7/N6 — a strict verifier rejects small-order and non-canonical A/R encodings. This half of the acceptance rule is decided on the WIRE BYTES and belongs to the implementation, not to its crypto library: measured 2026-08-09 on node:crypto, WebCrypto and Go crypto/ed25519, NONE of the three rejects small order, and one non-canonical A is accepted by all three.",
+   "source": "edge cases from Chalkias, Garillot, Nikolaenko, \"Taming the many EdDSAs\" (eprint 2020/1244), corpus github.com/novifinancial/ed25519-speccheck",
+   "a_hex": "f7badec5b8abeaf699583992219b7b223f1df3fbbea919844e3f7c554a43dd43",
+   "r_hex": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+   "expect_admit_a": true,
+   "expect_admit_r": false,
+   "measured_libraries_2026_08_09": {
+    "node_crypto": false,
+    "webcrypto": false,
+    "go_crypto_ed25519": false
+   },
+   "note": "R non-canonical (2)"
+  },
+  {
+   "id": "ed25519-edge-10",
+   "kind": "ed25519-point-admission",
+   "rule": "§7/N6 — a strict verifier rejects small-order and non-canonical A/R encodings. This half of the acceptance rule is decided on the WIRE BYTES and belongs to the implementation, not to its crypto library: measured 2026-08-09 on node:crypto, WebCrypto and Go crypto/ed25519, NONE of the three rejects small order, and one non-canonical A is accepted by all three.",
+   "source": "edge cases from Chalkias, Garillot, Nikolaenko, \"Taming the many EdDSAs\" (eprint 2020/1244), corpus github.com/novifinancial/ed25519-speccheck",
+   "a_hex": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+   "r_hex": "a9d55260f765261eb9b84e106f665e00b867287a761990d7135963ee0a7d59dc",
+   "expect_admit_a": false,
+   "expect_admit_r": true,
+   "measured_libraries_2026_08_09": {
+    "node_crypto": false,
+    "webcrypto": false,
+    "go_crypto_ed25519": false
+   },
+   "note": "A non-canonical"
+  },
+  {
+   "id": "ed25519-edge-11",
+   "kind": "ed25519-point-admission",
+   "rule": "§7/N6 — a strict verifier rejects small-order and non-canonical A/R encodings. This half of the acceptance rule is decided on the WIRE BYTES and belongs to the implementation, not to its crypto library: measured 2026-08-09 on node:crypto, WebCrypto and Go crypto/ed25519, NONE of the three rejects small order, and one non-canonical A is accepted by all three.",
+   "source": "edge cases from Chalkias, Garillot, Nikolaenko, \"Taming the many EdDSAs\" (eprint 2020/1244), corpus github.com/novifinancial/ed25519-speccheck",
+   "a_hex": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+   "r_hex": "a9d55260f765261eb9b84e106f665e00b867287a761990d7135963ee0a7d59dc",
+   "expect_admit_a": false,
+   "expect_admit_r": true,
+   "measured_libraries_2026_08_09": {
+    "node_crypto": true,
+    "webcrypto": true,
+    "go_crypto_ed25519": true
+   },
+   "note": "A non-canonical (2)"
   }
  ]
 }

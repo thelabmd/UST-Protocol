@@ -485,6 +485,10 @@
   {
    "round": 189,
    "no_recap": "The round closes no issue — #144 stays open on its main decision, the asynchronous surface. This round removes the CLASS (a refusal can no longer become a verdict) while the async work removes the CAUSE of this particular refusal, and the recap unit here is one CLOSED issue."
+  },
+  {
+   "round": 190,
+   "no_recap": "The round closes no issue — #144 stays open on the asynchronous surface, and the recap unit here is one CLOSED issue. It also opens a named residual (small-order A/R, cofactorlessness), which belongs in the changelog next to the claim it qualifies, not in a separate record a reader would have to find."
   }
  ]
 }

@@ -91,8 +91,104 @@ function aeadDecrypt(enc, keyRawB64url) {
 }
 
 // ─── crypto helpers (strict Ed25519 via the build's faculty — see `_crypto.mjs`) ─────────────────────
+/**
+ * The Ed25519 group order L. Present here as ARITHMETIC, not as cryptography: comparing a 32-byte little-endian
+ * scalar against a constant is the same kind of work as comparing lengths, and it is the one strictness we must
+ * not borrow.
+ *
+ * WHY WE STOPPED BORROWING IT (#144, measured 2026-08-09). `S >= L` is a non-canonical signature and a strict
+ * verifier MUST reject it (S7/N6). Until now nothing here checked that — the rejection came from whichever
+ * library the build's faculty wrapped, and the conformance vector `malleability-nonCanonicalS` was therefore
+ * testing OpenSSL, not us. That is tolerable while one implementation answers; it stops being tolerable the
+ * moment a second one does. Implementations of Ed25519 disagree exactly here — non-canonical S, small-order
+ * points, the RFC-8032/ZIP-215 split — and I4 says two conforming verifiers compute the SAME value. A verdict
+ * that depends on which platform's library ran is not that value.
+ *
+ * Measured on the border, both APIs of one platform agreeing (S=L, S=L+1, S=0, zero pub, zero sig): node:crypto
+ * and WebCrypto answered identically. That measurement is honest about its reach — it compares two APIs that
+ * likely share one OpenSSL underneath, NOT Node against a real browser, which is where the split is documented.
+ * Checking it ourselves removes the question instead of re-asking it per platform.
+ */
+/**
+ * §7/N6 asks for four things: reject `S >= L`, reject small-order `A`/`R`, reject non-canonical `A`/`R` encodings,
+ * and verify cofactorlessly. MEASURED 2026-08-09 against the reference edge-case corpus (Chalkias et al., 12
+ * vectors) on three implementations — node:crypto, WebCrypto and Go's crypto/ed25519:
+ *
+ *   · all three AGREE on all 12 — the divergence this project feared between platforms did not appear;
+ *   · all three are cofactorless (the cofactored-only vector is rejected by each), so that requirement holds;
+ *   · `S >= L` is rejected by each, so that one holds too — through them, not through us;
+ *   · and all three ACCEPT small-order `A`/`R` (vectors 0,1,2) and one non-canonical `A` (vector 11).
+ *
+ * So the gap was not "libraries disagree". It was that OUR OWN SPEC demands two rejections that NO library
+ * performs, and nothing here performed them either — the requirement was written and never executed. Both are
+ * decidable from the wire bytes, which is why they belong here rather than in a cryptographic routine:
+ *
+ *   · small order — the eight encodings below, a finite set, compared byte-for-byte;
+ *   · canonicality — `y < p`, plus the "negative zero" case: `x == 0` (which is exactly `y ∈ {1, p-1}`) with the
+ *     sign bit set. Measured: vectors 8-11 are non-canonical in the SECOND sense, not the first — `y` there is
+ *     `p-1`, comfortably inside the field, and a `y >= p` check alone would have missed all four.
+ *
+ * Applying both changes exactly four verdicts (0,1,2,11 accept → reject) and touches nothing else; the mixed-order
+ * vector 3 stays accepted, which is correct — §7/N6 does not forbid mixed order, and forbidding it would need a
+ * subgroup check, i.e. scalar multiplication, i.e. cryptography this build deliberately does not carry.
+ *
+ * CLOSED 2026-08-09 (round 190) for the two rejections above: both are performed here and the reference corpus
+ * runs in the suite as `ed25519-point-admission`. STANDING: cofactorlessness and `S >= L` are satisfied by every
+ * library measured, and the check kept here for `S >= L` changes no verdict today — it exists so the rule does
+ * not depend on which build runs. OPEN and named: a subgroup check is not performed, so mixed-order points are
+ * admitted; that is what §7/N6 asks for, and if it ever must change, it needs cryptography, not more bytes.
+ */
+const ED25519_L = 7237005577332262213973186563042994240857116359379907606001950938285454250989n;
+const ED25519_P = 2n ** 255n - 19n;
+/** The eight small-order encodings, derived from the 8-torsion y-coordinates and verified against the corpus. */
+const SMALL_ORDER = new Set([
+  '0000000000000000000000000000000000000000000000000000000000000000',
+  '0000000000000000000000000000000000000000000000000000000000000080',
+  '0100000000000000000000000000000000000000000000000000000000000000',
+  '26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05',
+  '26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc85',
+  'c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a',
+  'c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa',
+  'ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f',
+]);
+const yCoord = (p32) => { let v = 0n; for (let i = 31; i >= 0; i--) v = (v << 8n) | BigInt(i === 31 ? p32[i] & 0x7f : p32[i]); return v; };
+/**
+ * A point encoding this verifier admits: in-field `y`, no negative zero, not small order. §7/N6, decided on bytes.
+ *
+ * EXPORTED because it is a normative rule, not an implementation detail: a port must reject the same encodings,
+ * and no library will do it for them — measured on three (node:crypto, WebCrypto, Go), none rejects small order.
+ * Taking bytes rather than a document is deliberate: the reference edge-case corpus is byte-level, and a
+ * string-shaped entry point cannot express it, which is precisely why that corpus had never been run here.
+ */
+export function admitEd25519Point(p32) {
+  // Through THE byte door, not around it: `snapshotBytes` is the one admission that runs no caller getter and
+  // rejects a lying Proxy on the intrinsic slots. Doing the copy here by hand would have been a second door, and
+  // a second door is how the two drift. Non-bytes are not an error at this surface — they are a refusal.
+  const snap = snapshotBytes(p32, 32, 'E-BYTES-SIZE');
+  if (snap.error || snap.bytes.length !== 32) return false;
+  return admitPoint(snap.bytes);
+}
+function admitPoint(p32) {
+  if (SMALL_ORDER.has(toHex(p32))) return false;
+  const y = yCoord(p32);
+  if (y >= ED25519_P) return false;
+  return !((y === 1n || y === ED25519_P - 1n) && (p32[31] & 0x80) !== 0);
+}
+const canonicalS = (sig64) => {                       // sig = R(32) ‖ S(32), S little-endian
+  let s = 0n;
+  for (let i = 63; i >= 32; i--) s = (s << 8n) | BigInt(sig64[i]);
+  return s < ED25519_L;
+};
+
 export function edVerifyStrict(pubB64url, msgUtf8, sigB64url) {
   if (strictB64url(pubB64url, 32) === null || strictB64url(sigB64url, 64) === null) return false;   // round-36 P1-02 — canonical Pub32/Sig64 wire encoding IS part of "strict": Node's base64url decoder is permissive (a trailing-bit alias maps to the same bytes), so a non-canonical pub/sig would verify identically and split cross-language. Enforcing it at the crypto LEAF makes EVERY caller (incl. the provenance src_sig path) canonical-safe with no per-site guard.
+  // §7/N6 enforced HERE, on the wire bytes, because measurement showed no library performs these two: A and R of
+  // small order, and non-canonical point encodings (including the negative-zero case). `S >= L` is checked too —
+  // every library rejects it today, so this line changes no verdict, and it is kept so the rule is ours rather
+  // than borrowed from whichever build we happen to run on.
+  const sigBytes = fromB64url(sigB64url);
+  if (!canonicalS(sigBytes)) return false;
+  if (!admitPoint(fromB64url(pubB64url)) || !admitPoint(sigBytes.subarray(0, 32))) return false;
   try { return ed25519Verify(utf8(msgUtf8), fromB64url(pubB64url), fromB64url(sigB64url)); }
   // #144 — THE THIRD OUTCOME IS NOT `false`. This `catch` predates the browser build's refusal and is right for
   // what it was written for: a malformed key or signature is not an exception, it is a `false`. It could not tell

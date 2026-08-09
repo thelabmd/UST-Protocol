@@ -255,6 +255,25 @@ predicate.
    assumption but because they evaluate the same total function. (This is not circular: the CONTENT of the claim
    is the totality and determinism of §14/§14a; a verifier that secretly consults information outside `𝒮_τ`, or
    skips an obligation, is non-conforming — the theorem is exactly what conformance testing checks.)
+   **Realization (rev94 — a rule that no library performs is not enforced by delegating it, #144).**
+   §7/N6 states one acceptance rule: reject `S ≥ L`, reject small-order or non-canonical `A`/`R`, verify
+   cofactorlessly. This implementation performed NONE of the four itself; each answer came from whichever library
+   the build's faculty wrapped.
+   *A first version of this note argued that the danger was DIVERGENCE — that a borrowed rule makes the verdict a
+   function of the platform, because Ed25519 implementations are known to disagree. That argument is kept here
+   and marked WRONG, because measurement refuted it and the refutation is the useful part:* the reference
+   edge-case corpus (Chalkias et al., 12 vectors) was run against three implementations — node:crypto, WebCrypto
+   and Go's `crypto/ed25519`, the last an independent codebase rather than a second API over one library — and
+   **all three agreed on all twelve**, cofactorless in each case. The predicted split did not appear.
+   What the same measurement DID show is worse and quieter: **all three ACCEPT small-order `A`/`R` and one
+   non-canonical `A`** — the cases §7/N6 says to reject. So the requirement was not being enforced weakly or
+   inconsistently; it was not being enforced at all, by anyone, and could not have been noticed by comparing
+   implementations to each other, because they are unanimous. Clause 4 is about two verifiers computing the same
+   value; it says nothing about that value being the one the spec demands. **A rule delegated to a component that
+   does not implement it is a rule with no realization — and a conformance suite that only compares the
+   implementations against each other will never say so.** Both rejections are decidable from the wire bytes (a
+   finite eight-element set of encodings; `y < p` plus the negative-zero case), which is why they now sit in the
+   verifier rather than in a cryptographic routine, and why the corpus that exposed them is now part of the suite.
    **Realization (rev93 — an ASYNCHRONOUS surface does not weaken I4; it changes how I4 is observed, #144).**
    `Validτ` is a function of bytes, and awaiting does not make it a function of anything else — the predicate is
    untouched. What changes is the shape of the two properties in a realization, in two ways that are not

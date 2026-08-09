@@ -1462,6 +1462,14 @@
    "code": "packages/ust-protocol/index.mjs :: cannotDecide + the enumerated 16 consumers of a verdict; _crypto.browser.mjs :: the refusal carries code E-UNSUPPORTED instead of naming itself in prose. Seven consumers turned inability into an accusation; verifyStream tested v.error, which INDETERMINATE does not carry, so a build that checked NO signature had its frames counted as intact — the first fix created that silent confirmation, and it is the worse direction.",
    "vector": "faculty-absent-ed25519",
    "test": "packages/ust-protocol/browser-build.test.mjs :: the browser build is EXECUTED and must answer INDETERMINATE over a real VALID document"
+  },
+  {
+   "round": 190,
+   "math": "does not implement it is a rule with no realization",
+   "spec": "reject a non-canonical scalar `S ≥ L`, reject small-order / non-canonical `A` and `R` encodings, and use",
+   "code": "packages/ust-protocol/index.mjs :: admitEd25519Point / SMALL_ORDER — the two rejections §7/N6 demands and no library performs, decided on the wire bytes: a finite eight-element set of encodings, and y < p plus the negative-zero case (measured: vectors 8-11 are non-canonical in the SECOND sense only, so a y >= p check alone misses all four)",
+   "vector": "ed25519-edge-00",
+   "test": "packages/ust-protocol/conformance.mjs :: ed25519-edge-00 A — the reference edge-case corpus, executable here for the first time because the admission predicate takes bytes rather than a string"
   }
  ],
  "first_accounted_round": 76,

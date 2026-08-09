@@ -93,4 +93,30 @@ test('the without-faculty half of the vector holds EXACTLY, reason included', ()
   );
 });
 
+// ── #144 — WHOSE STRICTNESS IS IT. `S >= L` is a non-canonical signature a strict verifier MUST reject, and until
+// this round nothing here checked it: the rejection came from whichever library the faculty wrapped, so the
+// conformance vector was testing OpenSSL. That is invisible on the node build, where the library answers anyway —
+// a test there would be vacuous, green whether or not we check. The build WITHOUT the faculty makes it
+// observable: if the rejection is ours, a malleable signature still answers `false`; if it was borrowed, the same
+// call refuses instead, because there is no library to borrow from.
+const MALLEABLE = JSON.parse(readFileSync(new URL('../../vectors/conformance-vectors.json', import.meta.url), 'utf8'))
+  .vectors.find((v) => v.kind === 'malleability-reject');
+
+test('a valid signature is UNDECIDABLE without the faculty — the control for the two below', () => {
+  assert.throws(() => BROWSER_BUILD.edVerifyStrict(MALLEABLE.pub_b64url, MALLEABLE.signed_content, MALLEABLE.valid_sig), /E-UNSUPPORTED/);
+});
+
+test('non-canonical S is rejected by ARITHMETIC, not by a borrowed library', () => {
+  assert.equal(
+    BROWSER_BUILD.edVerifyStrict(MALLEABLE.pub_b64url, MALLEABLE.signed_content, MALLEABLE.sig_malleable),
+    MALLEABLE.expect_without_faculty,
+    'a build with no Ed25519 faculty must still answer false on S >= L — otherwise the strictness is the library\'s, and two conforming verifiers may disagree where implementations are known to (I4)',
+  );
+});
+
+test('the node build agrees on both halves — the strictness did not MOVE, it was ADDED', () => {
+  assert.equal(NODE_BUILD.edVerifyStrict(MALLEABLE.pub_b64url, MALLEABLE.signed_content, MALLEABLE.valid_sig), true);
+  assert.equal(NODE_BUILD.edVerifyStrict(MALLEABLE.pub_b64url, MALLEABLE.signed_content, MALLEABLE.sig_malleable), false);
+});
+
 process.on('exit', () => rmSync(dir, { recursive: true, force: true }));

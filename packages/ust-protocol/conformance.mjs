@@ -338,6 +338,15 @@ for (const v of V.vectors) {
     // executed by `browser-build.test.mjs`, which loads the build whose crypto refuses. Both halves are normative
     // for a port: an implementation lacking Ed25519 must answer INDETERMINATE(unsupported_alg), never INVALID.
     case 'faculty-absent': check(v.id + ' (with faculty)', P.verify(v.doc).result === v.expect_with_faculty); break;
+    // §7/N6 point admission — the half of the acceptance rule that is OURS. Runs on bytes, so the reference
+    // edge-case corpus is finally executable here: a string-shaped entry point could not express it, which is
+    // why these twelve had never been run against this implementation.
+    case 'ed25519-point-admission': {
+      const hx = (h) => Uint8Array.from(Buffer.from(h, 'hex'));
+      check(v.id + ' A', P.admitEd25519Point(hx(v.a_hex)) === v.expect_admit_a);
+      check(v.id + ' R', P.admitEd25519Point(hx(v.r_hex)) === v.expect_admit_r);
+      break;
+    }
     // #75 language-neutral encoder vectors (a second implementation runs the SAME cases)
     case 'utf8-reject': check(v.id, P.verifyJson(Buffer.from(v.input_hex, 'hex')).error === v.expect_error); break;
     case 'b64url': check(v.id, (P.strictB64url(v.value, v.bytes) !== null) === v.expect); break;
@@ -3117,6 +3126,8 @@ console.log('\n═════════════════════�
     // filesystem yielded, including files that are not JSON and entries that are not objects. Untrusted by
     // construction, therefore SURFACE and total.
     classifyNamed: 'surface', nameSetReport: 'surface',
+    // §7/N6 point admission: takes untrusted wire bytes, total on anything that is not an exact Uint8Array(32).
+    admitEd25519Point: 'surface',
     // F.5q-c — a commitment chain is fetched from a publisher's mirror: untrusted by construction, therefore total.
     commitmentCoverage: 'surface',
     // ── EXEMPT (throw-by-contract): designed to throw on invalid — totality is not the contract ──
@@ -3204,6 +3215,7 @@ console.log('\n═════════════════════�
     parseProfile: [oProfile],
     explainLadder: [oDoc, oLadderOpts],
     verify: [oDoc, oOpts], verifyAsync: [oDoc, oOpts], verifyStream: [oFrames, oConf], verifyJson: [oBytes, oOpts],
+    admitEd25519Point: [oBytes],   // §7/N6 point admission — one positional argument, raw 32-byte encoding
     verifyAnchor: [oHash, oProof, oOpts], verifyEvidenceReceipt: [oStmt, oConf], verifyActiveGenesisUniqueness: [oProof, oConf],
     verifyAuthorityBundle: [oConf, oConf], verifyAuthorityCheckpointChain: [oChain, oConf], verifyCheckpointMapUniqueness: [oProof, oConf],
     verifyCheckpointRecovery: [oChain, oConf], verifyCheckpointUniqueness: [oChain, oConf], verifyEpochTransition: [oStmt, oConf],
