@@ -9,6 +9,7 @@
 // `_crypto.browser.mjs` was named in exactly two places — the `browser` map in `package.json` and a comment —
 // and the cross-implementation test that looks like it covers this (`ust-web-signer/test.mjs`) imports the NODE
 // build of the core. So the build shipped in rc.68 had never been executed by anything before a human ran it.
+// CLOSED 2026-08-09 by this file: the build is now loaded and executed in CI (`npm run test:browser-build`).
 //
 // WHAT IT ASSERTS. Not `canon`/`keyId` parity — those are the pure parts, they agree by construction and their
 // agreement is exactly what stayed green while a valid signature was being called INVALID. This asserts a

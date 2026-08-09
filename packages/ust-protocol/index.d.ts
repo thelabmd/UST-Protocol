@@ -63,6 +63,7 @@ export function buildState(id: unknown, time: unknown, data: unknown, provenance
 export function buildStreamCheckpoint(id: unknown, time: unknown, head: unknown, frameCount: unknown, prev: unknown, interval?: unknown): Record<string, unknown>;
 export function buildUniquenessAttestation(fields: unknown, privKeyObj: unknown, issuerPubB64url: unknown): { claim: unknown; issuer_id: unknown; sig: unknown };
 export function buildVerifiableMap(leaves: unknown): unknown;
+export function cannotDecide(r?: unknown): boolean;
 export function canon(v: unknown): string;
 export function capAssurance(state: unknown, ceiling: unknown): Record<string, unknown>;
 export function checkAuthorityProof(obj: unknown, config: unknown): { result: unknown; reason: unknown };

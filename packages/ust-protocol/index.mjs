@@ -503,6 +503,8 @@ export const isValid = (r) => typeof r?.result === 'string' && r.result.slice(0,
  * and one — the stream's per-frame integrity step — tested `v.error`, which `INDETERMINATE` does not carry, so
  * a build that checked NO signature had its frames counted as intact. That direction is the worse one: an
  * accusation is at least visible, a silent confirmation is what a forgery would want.
+ * CLOSED 2026-08-09 (round 189): all sixteen consumers route inability through this predicate, and the vector
+ * `faculty-absent-ed25519` pins both halves — with the faculty and without it.
  *
  * NOT every `INDETERMINATE` is this. `unavailable` means the network could not bind a name while the signature
  * WAS checked — integrity holds, only the tier is denied. This predicate names the narrow case where the
