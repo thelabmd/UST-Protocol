@@ -506,20 +506,38 @@ check('Tiers:continuation-after-gap', afterGap.state.provenance.prev === P.conte
     return { leaves, built: b.build({ substrate: 'bitcoin-ots', status: 'pending' }) };
   };
 
-  // 120 is the reference operator's real hour width and is not a power of two; 3 and 7 exercise the ODD
-  // promotion, where the last unpaired node rises with NO step in the path — the reference tree's own edge,
-  // distinct from RFC 6962's split and not covered by the battery above.
+  // THE SIZES ARE THE PROTOCOL'S, NOT AN OPERATOR'S. The first version of this battery ran {1,2,3,7,8,120} and
+  // called 120 the interesting size. 120 is the reference operator's HOUR WIDTH — a fact about one deployment.
+  // §13 fixes the numbers that belong to the protocol: `constituents` breadth per node is 64, array length is
+  // 4096, and 4096 = 64² is exactly where `sealTree`'s two-level composition lands. Those are the edges a
+  // conforming implementation meets; an hour width is a number one publisher happens to emit.
+  //   1,2,3,7,8  small structure — 3 and 7 exercise the ODD promotion, where the unpaired node rises with NO
+  //              step in the path: the reference tree's own edge, which RFC 6962's split never produces
+  //   64         §13 breadth per node — the last size that fits one node
+  //   65         the first size that does NOT — composition begins here
+  //   120        kept, and demoted to what it is: one live deployment's hour, no longer the headline
+  //   4096       §13 array length, and 64² — the two-level ceiling
+  //
+  // AT 4096 THE LEAF SET IS SAMPLED, AND THE SAMPLE IS NAMED. Measured: every leaf at 4096 costs 38 s because
+  // the builder recomputes the tree per query — O(n) per path, O(n²) for the sweep — and a 38-second step runs
+  // in every CI. The sampled indices are the structural ones: both ends, their neighbours, and the pair
+  // straddling the top-level split. Stated here rather than left as a silent cap, because a suite that quietly
+  // stops enumerating still reads as if it did.
+  const SWEEP_CAP = 1024;
+  const indices = (n) => (n <= SWEEP_CAP
+    ? Array.from({ length: n }, (_, i) => i)
+    : [0, 1, n / 2 - 1, n / 2, n - 2, n - 1].map(Math.floor));
   let badBuild = '', badRoot = '';
-  for (const n of [1, 2, 3, 7, 8, 120]) {
+  for (const n of [1, 2, 3, 7, 8, 64, 65, 120, 4096]) {
     const { leaves, built } = buildAt(n);
-    for (let i = 0; i < n; i++) {
+    for (const i of indices(n)) {
       const pr = built.proofFor(leaves[i]);
       if (!pr || P.verifyAnchor(leaves[i], pr).inclusion !== true) { badBuild ||= `n=${n} i=${i}`; }
       if (pr && pr.root !== built.root) { badRoot ||= `n=${n} i=${i}`; }
     }
     if (built.root !== P.merkleRoot(leaves)) badRoot ||= `n=${n} root≠merkleRoot`;
   }
-  check('F.9.5-c.3 REFERENCE tree: build-then-verify holds for EVERY leaf at n in {1,2,3,7,8,120} (the positive half)',
+  check('F.9.5-c.3 REFERENCE tree: build-then-verify holds at the PROTOCOL sizes — 1,2,3,7,8, breadth 64, 65 where composition begins, and the 4096 ceiling (the positive half)',
     badBuild === '', badBuild);
   check('F.9.5-c.3 REFERENCE tree: every leaf reaches the SAME root, and that root is the core\'s merkleRoot — one tree, not one per query',
     badRoot === '', badRoot);
@@ -528,7 +546,7 @@ check('Tiers:continuation-after-gap', afterGap.state.provenance.prev === P.conte
   // itself, and then flipping `dir` concatenates the same two strings — the mutation is a no-op and the battery
   // scores its own blind spot as a pass. Measured while writing this: a generator with a 16-value period made
   // 92 of 120 mutations survive, and the first reading of that was "the builder is broken".
-  const { leaves, built } = buildAt(120);
+  const { leaves, built } = buildAt(65);
   const target = leaves[37];
   const base = built.proofFor(target);
   const flip = (x) => x.slice(0, -1) + (x.slice(-1) === '0' ? '1' : '0');

@@ -1442,6 +1442,18 @@
         "excluded": "No byte-vector: nothing about the WIRE changed. The subject is a producer/verifier PAIR over the reference tree, and its evidence is a mutation battery that must be executed to mean anything — a frozen byte artifact would record one path and could not express the universal negative leg, which is the half the theorem calls load-bearing."
       },
       "test": "F.9.5-c.3 REFERENCE tree: EVERY flipped direction breaks the proof (the load-bearing half)"
+    },
+    {
+      "round": 188,
+      "math": "The sizes are the PROTOCOL's, and the first version of this battery got that wrong",
+      "spec": {
+        "excluded": "No normative change: §13 already fixes breadth 64, array length 4096 and the depth ceiling. The round stops substituting one operator's hour width for those numbers — it reads the bounds the spec already states rather than adding any. Writing new spec text to fill this layer would duplicate §13 in a second place, which is how two ceilings come to disagree."
+      },
+      "code": "packages/ust-operator/conformance.mjs :: indices/SWEEP_CAP — the leaf sweep is exhaustive to 1024 and sampled at named structural indices above it, because the builder recomputes the tree per query and the full sweep at the 4096 ceiling costs 38 s in every CI run",
+      "vector": {
+        "excluded": "No byte-vector: nothing about the wire changed. The subject is which SIZES a producer/verifier pair is exercised at, and a frozen artifact records one tree — it cannot express a set of sizes, which is the whole content of this round."
+      },
+      "test": "F.9.5-c.3 REFERENCE tree: build-then-verify holds at the PROTOCOL sizes — 1,2,3,7,8, breadth 64, 65 where composition begins, and the 4096 ceiling (the positive half)"
     }
   ],
   "first_accounted_round": 76,
