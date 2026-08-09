@@ -255,6 +255,33 @@ predicate.
    assumption but because they evaluate the same total function. (This is not circular: the CONTENT of the claim
    is the totality and determinism of §14/§14a; a verifier that secretly consults information outside `𝒮_τ`, or
    skips an obligation, is non-conforming — the theorem is exactly what conformance testing checks.)
+   **Realization (rev93 — an ASYNCHRONOUS surface does not weaken I4; it changes how I4 is observed, #144).**
+   `Validτ` is a function of bytes, and awaiting does not make it a function of anything else — the predicate is
+   untouched. What changes is the shape of the two properties in a realization, in two ways that are not
+   symmetric. **Totality becomes SETTLING, not returning:** a rejected promise is a second way to fail to be
+   total, and it is worse than a throw because it is invisible to a caller's `try`/`catch` when the `await` is
+   forgotten. This obligation already exists and is enumerated over the RUNTIME namespace rather than a source
+   list (*"R47 P1-03 (roster completeness — RUNTIME namespace) — EVERY function-typed export of the module (100,
+   incl. re-exports + arrow-consts + the byte kernel checkAuthorityProofBytes) is TOTAL on a hostile Proxy UNLESS
+   explicitly classified MAY-THROW"*), so widening the async surface widens the obligation automatically rather
+   than requiring a new rule — a newly-async export is covered the moment it exists. **Determinism becomes a claim about the WINDOW:** between two suspension points a live
+   input can be substituted, and the predicate would no longer be a function of the bytes it was called on. The
+   obligation exists (snapshot before the await), but it was written around the ONE suspension point a substrate
+   check introduced; an asynchronous cryptographic faculty creates as many suspension points as there are
+   signatures in the walk. The count is therefore not an implementation detail: **it is the size of the window in
+   which the predicate can stop being a function of its own input**, and freezing the input at the public door
+   before the first suspension is what keeps the window empty.
+   **Corollary (the window is REMOVABLE, not merely guardable).** Keeping a window empty is a discipline, and a
+   discipline is a thing one can forget. It can instead be made non-existent: an asynchronous surface admitted
+   over IMMUTABLE BYTE-STRINGS has no window at all, because there is no live object to substitute and no caller
+   code runs on the path — the argument is copied into a fresh buffer before it is parsed, so the count of
+   suspension points becomes irrelevant rather than bounded. This is STRICTLY STRONGER than the synchronous
+   object path, which is sound only while its snapshot discipline is remembered; the byte boundary is sound
+   because nothing else is reachable. The same asymmetry was measured once already, when an indexed getter in one
+   argument mutated a sibling's not-yet-captured bytes and flipped a verdict — the fix was not a more careful
+   read but a domain the caller cannot participate in. Asynchrony is therefore an OCCASION to close the class:
+   the property "every asynchronous entry takes bytes" is structural and can be enumerated over the runtime
+   namespace exactly as totality is, so an object-shaped asynchronous entry cannot be introduced by accident.
    **Realization (rev24 — totality includes malformed non-null on EVERY argument, not just null config):** the public
    boundary returns a structured verdict for a null/hostile TRAILING argument, not only a null config record — the
    round-24 grid was extended past `arg1`/`null-only` (*"round-26 L5 malformed non-null on trailing args: resolveCadence and verifyJson accept a null trailing arg and return structured (no host throw)"*).
