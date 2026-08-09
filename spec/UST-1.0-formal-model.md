@@ -3819,6 +3819,21 @@ or the pair agrees — wrongly — on exactly the trees nobody checks.
 
 **Binding: pending — thelabmd/UST-Protocol#127** for the BUILDER; the tree claim itself is realized — *"F.9.5-c.1 the BUNDLED §7 tree does not compose — sorting is global, so a subtree root bears no computable relation to the whole and a partial enumeration cannot carry a root"* · *"F.9.5-c.1 ADVERSARIAL the RFC 6962 tree DOES compose at a power-of-two split — so \"the root does not compose\" is false as a claim about this protocol and true only of the bundled tree"* · *"F.9.5-c.1 and it does NOT compose at a non-power-of-two split — the composing property is conditional, so neither tree licenses a general claim"* · *"F.9.5-c.1 the two trees disagree on the SAME leaves — an operator's root is not reproducible by the bundled walk, which is why §11.2 inclusion is a connector rather than a protocol constant"*. What remains is a builder composing a seal over an arbitrary admissible `N`, a partial node carrying `root` REFUSED, and inclusion against the single published root exercised for a leaf under a composed enumeration.
 
+**The obligation is universal over trees, and was realized on one (#139).** `path_T` is quantified over `T`; the
+battery above instantiates it at RFC 6962 alone. The REFERENCE `ust:leaf`/`ust:node` walk — the construction a
+verifier applies when NO connector claims the proof, and therefore the one with the widest reach — carried a
+POSITIVE leg only: one leaf, one tree size. That is precisely the configuration the theorem names as worthless,
+since a builder and a verifier sharing a bug satisfy it. The producer side of that tree already existed
+(`AnchorBatch.build().proofFor`) and its root is the core's `merkleRoot` by construction; what did not exist was
+the negative half. Now instantiated at both trees — *"F.9.5-c.3 REFERENCE tree: build-then-verify holds for EVERY leaf at n in {1,2,3,7,8,120} (the positive half)"* · *"F.9.5-c.3 REFERENCE tree: every leaf reaches the SAME root, and that root is the core's merkleRoot — one tree, not one per query"* · *"F.9.5-c.3 REFERENCE tree: EVERY flipped direction breaks the proof (the load-bearing half)"* · *"F.9.5-c.3 REFERENCE tree: EVERY altered sibling hash breaks the proof"* · *"F.9.5-c.3 REFERENCE tree: a dropped step breaks it"* · *"F.9.5-c.3 REFERENCE tree: two steps transposed break it — order is load-bearing, not decorative"*. The odd-promotion sizes (3, 7) are in the set deliberately: the reference tree lifts an unpaired node with NO step in the path, an edge the RFC 6962 split never produces.
+
+**Corollary (a duplicated leaf makes the negative half vacuous, and the vacuity looks like a defect).** Where two
+leaves are equal, a sibling can equal the node itself, and flipping `dir` concatenates the same pair — the
+mutation is a no-op and the battery passes without testing anything. Measured while instantiating the above: a
+leaf generator with a 16-value period left 92 of 120 mutations alive, and the first reading of that number was
+*the builder is broken* rather than *the corpus cannot refute*. A mutation battery therefore states its leaf
+distinctness as a precondition, exactly as [F.9.5-c.1] states its ordering.
+
 **Conformance (math ⇒ spec ⇒ code ⇒ green vector, once realized).**
 - a composed seal over `N > 64` verifies, and the leaf inclusion path resolves against the ONE published root;
 - a node enumerating a proper subset and carrying `root` is refused;

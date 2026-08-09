@@ -18,15 +18,29 @@ const conf = readFileSync(new URL('./conformance.mjs', import.meta.url), 'utf8')
 // recomputed digests so a stale manifest cannot restore the weaker behaviour. Measured at introduction: all 208
 // citations already resolved against the manifest (173 exact + 35 by fragment), so this costs nothing today and closes
 // the class permanently — the same shape the lockstep gate already applies to its registry records.
-const MANIFEST = JSON.parse(readFileSync(new URL('../../vectors/conformance-checks.json', import.meta.url), 'utf8'));
+//
+// THE ROSTER SPANS BOTH SUITES, for the reason `ladder-completeness-gate` already records about itself: a theorem
+// is quantified over the protocol, not over one package, and its realization lands wherever the mechanism lives.
+// F.9.5-c.3 is the worked example — the inclusion dual is a PRODUCER act (F.9.5-c.1 makes the walk a connector, so
+// a base shipping a construction re-asserts the normativity it dropped), therefore both its trees are exercised in
+// the operator suite and NEITHER could be cited here. Measured 2026-08-09: citing the reference-tree battery
+// reported six executing, passing checks as MISSING. A gate whose domain is narrower than the claim it guards
+// pushes the work into the exclusion column and calls the result green.
+// CLOSED 2026-08-09 by round(187) — the roster below spans both suites, and the six citations resolve.
 const srcHash = (rel) => createHash('sha256').update(readFileSync(new URL(rel, import.meta.url))).digest('hex');
-if (!MANIFEST.source
-  || MANIFEST.source.conformance !== srcHash('./conformance.mjs')
-  || MANIFEST.source.index !== srcHash('./index.mjs')) {
-  console.log('  ✗ the executed manifest is STALE — regenerate it; a citation must resolve against checks that RAN, not against source text');
+const roster = (rel, sources) => {
+  let m; try { m = JSON.parse(readFileSync(new URL(rel, import.meta.url), 'utf8')); } catch { return { checks: [], stale: `${rel} is missing` }; }
+  for (const [k, f] of Object.entries(sources))
+    if (m.source?.[k] !== srcHash(f)) return { checks: [], stale: `${rel} was generated from a different ${f}` };
+  return { checks: Array.isArray(m.checks) ? m.checks : [], stale: null };
+};
+const CORE_R = roster('../../vectors/conformance-checks.json', { conformance: './conformance.mjs', index: './index.mjs' });
+const OP_R = roster('../../vectors/operator-checks.json', { conformance: '../ust-operator/conformance.mjs', index: '../ust-operator/index.mjs' });
+for (const [who, r] of [['core', CORE_R], ['operator', OP_R]]) if (r.stale) {
+  console.log(`  ✗ the ${who} executed manifest is STALE (${r.stale}) — regenerate it; a citation must resolve against checks that RAN, not against source text`);
   process.exit(1);
 }
-const EXECUTED = Array.isArray(MANIFEST.checks) ? MANIFEST.checks : [];
+const EXECUTED = [...CORE_R.checks, ...OP_R.checks];
 const EXECUTED_SET = new Set(EXECUTED);
 
 // A citation NAMES a check, and a name has single spaces. Markdown wraps prose, so a citation long enough to be

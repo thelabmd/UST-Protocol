@@ -488,6 +488,69 @@ check('Tiers:continuation-after-gap', afterGap.state.provenance.prev === P.conte
   check('F.9.5-c.3 a non-hash leaf is refused', S.rfc6962AuditPath(['nope'], 0).error === 'E-MALFORMED');
 }
 
+// ─── F.9.5-c.3 on the OTHER tree — the REFERENCE construction (#139)
+//
+// The obligation is stated over a tree T, universally: `∀ L, ∀ i. Incl(L[i], root_T(L), path_T(L, i))` and its
+// load-bearing negative. It was realized above on RFC 6962 only. The reference `ust:leaf`/`ust:node` walk is the
+// one a verifier applies when NO connector claims the proof — that is, the walk with the widest reach and the
+// one whose builder had a positive leg and nothing else: `AnchorBatch→verifyAnchor-inclusion` above proves a
+// single leaf under a single tree size. A builder and a verifier that share a bug pass exactly that.
+//
+// Verified through P.verifyAnchor — the shipping predicate — rather than by a second fold written here.
+{
+  const h = (n) => 'sha256:' + createHash('sha256').update('ref-leaf-' + n).digest('hex');
+  const buildAt = (n) => {
+    const b = new S.AnchorBatch();
+    const leaves = Array.from({ length: n }, (_, i) => h(i));
+    leaves.forEach((x) => b.add(x));
+    return { leaves, built: b.build({ substrate: 'bitcoin-ots', status: 'pending' }) };
+  };
+
+  // 120 is the reference operator's real hour width and is not a power of two; 3 and 7 exercise the ODD
+  // promotion, where the last unpaired node rises with NO step in the path — the reference tree's own edge,
+  // distinct from RFC 6962's split and not covered by the battery above.
+  let badBuild = '', badRoot = '';
+  for (const n of [1, 2, 3, 7, 8, 120]) {
+    const { leaves, built } = buildAt(n);
+    for (let i = 0; i < n; i++) {
+      const pr = built.proofFor(leaves[i]);
+      if (!pr || P.verifyAnchor(leaves[i], pr).inclusion !== true) { badBuild ||= `n=${n} i=${i}`; }
+      if (pr && pr.root !== built.root) { badRoot ||= `n=${n} i=${i}`; }
+    }
+    if (built.root !== P.merkleRoot(leaves)) badRoot ||= `n=${n} root≠merkleRoot`;
+  }
+  check('F.9.5-c.3 REFERENCE tree: build-then-verify holds for EVERY leaf at n in {1,2,3,7,8,120} (the positive half)',
+    badBuild === '', badBuild);
+  check('F.9.5-c.3 REFERENCE tree: every leaf reaches the SAME root, and that root is the core\'s merkleRoot — one tree, not one per query',
+    badRoot === '', badRoot);
+
+  // The negative half. Leaves are DISTINCT on purpose: with a duplicated leaf the sibling can equal the node
+  // itself, and then flipping `dir` concatenates the same two strings — the mutation is a no-op and the battery
+  // scores its own blind spot as a pass. Measured while writing this: a generator with a 16-value period made
+  // 92 of 120 mutations survive, and the first reading of that was "the builder is broken".
+  const { leaves, built } = buildAt(120);
+  const target = leaves[37];
+  const base = built.proofFor(target);
+  const flip = (x) => x.slice(0, -1) + (x.slice(-1) === '0' ? '1' : '0');
+  const dead = (p) => P.verifyAnchor(target, p).inclusion !== true;
+  const step = (k, patch) => ({ ...base, path: base.path.map((s, j) => (j === k ? { ...s, ...patch } : s)) });
+
+  let killedDir = 0, killedHash = 0;
+  for (let k = 0; k < base.path.length; k++) {
+    if (dead(step(k, { dir: base.path[k].dir === 'L' ? 'R' : 'L' }))) killedDir++;
+    if (dead(step(k, { hash: flip(base.path[k].hash) }))) killedHash++;
+  }
+  check('F.9.5-c.3 REFERENCE tree: EVERY flipped direction breaks the proof (the load-bearing half)',
+    base.path.length > 0 && killedDir === base.path.length, `${killedDir}/${base.path.length}`);
+  check('F.9.5-c.3 REFERENCE tree: EVERY altered sibling hash breaks the proof',
+    base.path.length > 0 && killedHash === base.path.length, `${killedHash}/${base.path.length}`);
+  check('F.9.5-c.3 REFERENCE tree: a dropped step breaks it', dead({ ...base, path: base.path.slice(0, -1) }));
+  check('F.9.5-c.3 REFERENCE tree: two steps transposed break it — order is load-bearing, not decorative',
+    dead({ ...base, path: [base.path[1], base.path[0], ...base.path.slice(2)] }));
+  check('F.9.5-c.3 REFERENCE tree: another leaf\'s path does not carry this leaf',
+    dead(built.proofFor(leaves[38])));
+}
+
 
 console.log('\n════════════════════════════════════════════');
 console.log('  @ust-protocol/operator round-trip vs ust-protocol   PASS ' + pass + '   FAIL ' + fail);

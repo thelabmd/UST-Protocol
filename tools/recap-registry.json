@@ -473,6 +473,10 @@
       "round": 186,
       "issue": 87,
       "content_hash": "sha256:adc18d6a0eb733c59bc93f954d107e94470a75cf7ea53fa7baae4867cfc126fb"
+    },
+    {
+      "round": 187,
+      "no_recap": "The round closes no issue: #139 stays open on its second item — whether an RFC 6962 connector ships as a maintained package — and the recap unit in this tree is one CLOSED issue, not one round. Posting a recap to a live issue would put a closing record on work still in flight, which is the confusion the per-issue rule exists to prevent. The round's own account is the changelog row."
     }
   ]
 }

@@ -4,46 +4,6 @@
   "_pin": "Rows in the ladder with no record here. May only ever SHRINK. 94 rows existed when the gate landed; the three most recent are accounted.",
   "records": [
     {
-      "round": 79,
-      "math": "So role separation is a DECLARED refinement, the same shape as every other strength here",
-      "spec": "Key ROLES — a DECLARED refinement, never a floor change",
-      "code": "packages/ust-protocol/index.mjs :: resolveKeysBytes declared-role regime",
-      "vector": "role-06-two-active-keys-distinct-roles",
-      "test": "#106 under a DECLARED genesis an add with NO role → E-KEY (a missing field is never the strongest claim)"
-    },
-    {
-      "round": 78,
-      "math": "The correction is one enumeration read in BOTH directions rather than two lists that happen to agree today",
-      "spec": "The role is a PARTITION of the class\n   registry, enforced in BOTH directions",
-      "code": "packages/ust-protocol/index.mjs :: AUTHORITY_CLASSES role partition",
-      "vector": "role-observation-in-key",
-      "test": "#97/tlx a data class in the KEY role → E-MALFORMED (the partition is two-sided)"
-    },
-    {
-      "round": 77,
-      "math": {
-        "excluded": "This round changes where a round is RECORDED and how that record is enforced — repo bookkeeping, not the verifier. The formal model describes what a verifier may conclude from bytes; a table's closure is not a property of any document, and writing model prose to satisfy a gate is the patch this repo rejects."
-      },
-      "spec": {
-        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, and no conformance obligation changed. A spec sentence here would describe our changelog to an implementer who will never read it."
-      },
-      "code": "tools/changelog-rev-gate.mjs :: LADDER_CLOSED_AT ceiling",
-      "vector": {
-        "excluded": "Vectors pin document bytes and the verdicts they must produce, so a second implementation can check itself. This round touches no document and no verdict; a vector could only restate a gate that already runs from the file it guards."
-      },
-      "test": {
-        "excluded": "The test layer here is the gates' own negative controls — the closed-ladder ceiling reproduced against round 76's exact mistake, the live-coverage leg proven able to fail, and the line-marker checked against a deliberately wrong heading. They run under npm run test:changelog / test:ladder / the npm-drift gate, and are not conformance checks, which cover the verifier only."
-      }
-    },
-    {
-      "round": 76,
-      "math": "round 76 completes `mutating(c)`: both classes, same conjunct, same shape",
-      "spec": "Cadence mutation is ROOT-ONLY",
-      "code": "packages/ust-protocol/index.mjs :: resolveCadenceBytes root conjunct",
-      "vector": "cadr-09-nonroot-signer-rejected",
-      "test": "#107 an OPERATIONAL key may NOT move the cadence grid — `active` is NECESSARY, not SUFFICIENT"
-    },
-    {
       "rev": "rev95",
       "math": "the property it tests must be one the ceremony itself",
       "spec": "A tool that performs a CEREMONY",
@@ -84,6 +44,46 @@
         "excluded": "the defect is in a CLI's argument handling and a log reader's shape routing — neither is expressible as protocol vectors, which pin documents and verdicts. Pinned instead by stream-consumption-gate, which enumerates the flag sets and the served shapes."
       },
       "test": "rev92 completeness ⊥ tier: an undeclared grid bounds the RANGE and subtracts nothing from Π"
+    },
+    {
+      "round": 76,
+      "math": "round 76 completes `mutating(c)`: both classes, same conjunct, same shape",
+      "spec": "Cadence mutation is ROOT-ONLY",
+      "code": "packages/ust-protocol/index.mjs :: resolveCadenceBytes root conjunct",
+      "vector": "cadr-09-nonroot-signer-rejected",
+      "test": "#107 an OPERATIONAL key may NOT move the cadence grid — `active` is NECESSARY, not SUFFICIENT"
+    },
+    {
+      "round": 77,
+      "math": {
+        "excluded": "This round changes where a round is RECORDED and how that record is enforced — repo bookkeeping, not the verifier. The formal model describes what a verifier may conclude from bytes; a table's closure is not a property of any document, and writing model prose to satisfy a gate is the patch this repo rejects."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts or refuses differently, and no conformance obligation changed. A spec sentence here would describe our changelog to an implementer who will never read it."
+      },
+      "code": "tools/changelog-rev-gate.mjs :: LADDER_CLOSED_AT ceiling",
+      "vector": {
+        "excluded": "Vectors pin document bytes and the verdicts they must produce, so a second implementation can check itself. This round touches no document and no verdict; a vector could only restate a gate that already runs from the file it guards."
+      },
+      "test": {
+        "excluded": "The test layer here is the gates' own negative controls — the closed-ladder ceiling reproduced against round 76's exact mistake, the live-coverage leg proven able to fail, and the line-marker checked against a deliberately wrong heading. They run under npm run test:changelog / test:ladder / the npm-drift gate, and are not conformance checks, which cover the verifier only."
+      }
+    },
+    {
+      "round": 78,
+      "math": "The correction is one enumeration read in BOTH directions rather than two lists that happen to agree today",
+      "spec": "The role is a PARTITION of the class\n   registry, enforced in BOTH directions",
+      "code": "packages/ust-protocol/index.mjs :: AUTHORITY_CLASSES role partition",
+      "vector": "role-observation-in-key",
+      "test": "#97/tlx a data class in the KEY role → E-MALFORMED (the partition is two-sided)"
+    },
+    {
+      "round": 79,
+      "math": "So role separation is a DECLARED refinement, the same shape as every other strength here",
+      "spec": "Key ROLES — a DECLARED refinement, never a floor change",
+      "code": "packages/ust-protocol/index.mjs :: resolveKeysBytes declared-role regime",
+      "vector": "role-06-two-active-keys-distinct-roles",
+      "test": "#106 under a DECLARED genesis an add with NO role → E-KEY (a missing field is never the strongest claim)"
     },
     {
       "round": 80,
@@ -1430,6 +1430,18 @@
         "excluded": "No byte-vector: the subject is a PROCESS, not a document. Nothing a verifier judges changed shape. The evidence that belongs here is an install from the registry followed by an import, which is what verified this round and is stronger than a vector for this claim."
       },
       "test": "tools/npm-drift-check.mjs"
+    },
+    {
+      "round": 187,
+      "math": "The obligation is universal over trees, and was realized on one (#139).",
+      "spec": {
+        "excluded": "No normative change: §11.2 already fixes the proof SHAPE and delegates the walk to a connector, with the reference construction applying absent one. This round asserts nothing new about the wire or about what a verifier must accept — it instantiates an existing obligation on the second tree. Adding spec text to fill this layer would restate §11.2 in weaker words."
+      },
+      "code": "packages/ust-protocol/model-correspondence.mjs :: roster — the citation domain spans BOTH executed rosters, because a theorem is quantified over the protocol and its realization lands wherever the mechanism lives; digest-bound exactly as ladder-completeness-gate binds the same two files",
+      "vector": {
+        "excluded": "No byte-vector: nothing about the WIRE changed. The subject is a producer/verifier PAIR over the reference tree, and its evidence is a mutation battery that must be executed to mean anything — a frozen byte artifact would record one path and could not express the universal negative leg, which is the half the theorem calls load-bearing."
+      },
+      "test": "F.9.5-c.3 REFERENCE tree: EVERY flipped direction breaks the proof (the load-bearing half)"
     }
   ],
   "first_accounted_round": 76,
