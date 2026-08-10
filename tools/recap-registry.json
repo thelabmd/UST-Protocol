@@ -509,6 +509,10 @@
   {
    "round": 195,
    "no_recap": "The round closes no issue — #147 stays open with two of three surfaces to go (the registry sweep continues, the gate comes last). It closes one ROUND's empty layer, R-174, which is not the recap unit; the unit is a closed issue."
+  },
+  {
+   "round": 196,
+   "no_recap": "The round closes no issue — #147 stays open; this is step 0 of its second surface, found by the sweep before any exclusion was rewritten. The recap unit is a closed issue."
   }
  ]
 }

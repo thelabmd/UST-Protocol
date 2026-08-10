@@ -3011,6 +3011,8 @@ console.log('\n═════════════════════�
     const missing = cited.filter((k) => !kinds.has(k));
     check('UST#147 every kind the definition cites EXISTS — a definition may not illustrate itself with a vector that is gone',
       missing.length === 0, missing.join(', '));
+    check('UST#147 the definition\'s form count matches the forms it lists', m.forms === (D.forms ?? []).length,
+      `states ${m.forms}, lists ${(D.forms ?? []).length}`);
     // Вакуумность: определение, не перечисляющее ни одной формы без документа, вернуло бы старую узость.
     const nonDoc = (D.forms ?? []).filter((x) => !/document/i.test(String(x.input)));
     check('UST#147 the definition names at least three input forms that are NOT a document (the narrowness it replaces)',

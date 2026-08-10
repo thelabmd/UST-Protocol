@@ -24,7 +24,8 @@
    "input_is_a_document": 40,
    "input_is_a_value_or_string": 75,
    "input_is_a_genesis_plus_log": 59,
-   "input_is_raw_bytes": 27
+   "input_is_raw_bytes": 27,
+   "forms": 8
   },
   "forms": [
    {
@@ -86,10 +87,19 @@
      "faculty-absent",
      "malleability-reject"
     ]
+   },
+   {
+    "input": "a scenario the vector NAMES and the runner BUILDS — deterministically, from fixed seeds",
+    "result": "the declared outcome of that scenario",
+    "examples": [
+     "fork-visibility",
+     "remedy"
+    ],
+    "note": "fork-visibility carries ONLY `expect`: the runner seals a root and two conflicting children from fixed keypairs and asserts how the stream verdict changes. The input is fixed — it is just not serialisable as a literal."
    }
   ],
-  "when_the_layer_may_be_excluded": "Only when the subject has NO fixed input — a live network, a registry read, wall-clock time, a published state that changes. NOT because \"there is no document\": three of the forms above have none. An exclusion asserting impossibility must name which of these forms it fails, and a kind that already exists refutes it.",
-  "history": "The formula \"Vectors pin document bytes and the verdicts they must produce\" was used 46 times in tools/ladder-registry.json as a reason the layer could not exist. Measured against this corpus it describes 40 of 228. The two entries that widened the definition — faculty-absent-ed25519 (round 189) and ed25519-point-admission (round 190) — landed after all 46 were written. See UST#147."
+  "when_the_layer_may_be_excluded": "Only when the subject is NOT DETERMINISTIC — a live network, a registry read, wall-clock time, a published state that changes under you. It is NOT enough that the input is awkward to write down as JSON: a vector may NAME a scenario and let the runner build it from fixed seeds (form 8, see fork-visibility, which carries no input field at all). \"There is no document to pin\" is not a reason either — four of the forms above have none. An exclusion asserting impossibility must name WHICH of these forms the subject fails, and an existing kind that covers it refutes the exclusion.",
+  "history": "The formula \"Vectors pin document bytes and the verdicts they must produce\" was used 46 times in tools/ladder-registry.json as a reason the layer could not exist. Measured against this corpus it describes 40 of 228. The two entries that widened the definition — faculty-absent-ed25519 (round 189) and ed25519-point-admission (round 190) — landed after all 46 were written. See UST#147. Round 196 added form 8 after the registry sweep found that several exclusions read \"no fixed input\" where the truth was \"input not serialisable\" — a distinction that decides whether a layer is closable."
  },
  "vectors": [
   {
