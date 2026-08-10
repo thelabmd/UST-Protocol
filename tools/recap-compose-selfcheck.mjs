@@ -10,7 +10,8 @@
 // Round 174 recorded that as an exclusion rather than pointing the `test` layer at an unrun command, and was
 // right to: a layer citing a command nobody runs is the defect this repository spends its gates on. It also
 // said what should happen next, in as many words: *"wiring the generator's own check into the pipeline is the
-// next round, not this one."* This is that round.
+// next round, not this one."* This is that round. CLOSED 2026-08-10 (round 195): the wiring exists and CI calls
+// it as `test:recap-selfcheck`.
 //
 // WHY BOTH DIRECTIONS. A checker that only ever sees correct input proves nothing — it would pass while broken.
 // So the skeleton is generated, `--check` must REFUSE it (markers present), the markers are then filled and
@@ -40,7 +41,8 @@ const run = (args) => {
 // audit 12, delivery 6 — so the check counts sections instead of naming them. Naming them was the first
 // version of this file and it failed on its own first run: it hard-coded the incident headings and ran the
 // audit form. A roster of headings would also freeze the shape, and the shape is allowed to change; what may
-// not change is that a form HAS one and that its judgment sections are left to a person.
+// not change is that a form HAS one and that its judgment sections are left to a person. CLOSED 2026-08-10 in
+// this same file: the heading roster is gone and sections are counted instead.
 let markers = 0;
 for (const form of ['incident', 'audit', 'delivery']) {
   const g = run(['--round', '999', '--issue', '999', '--form', form]);
