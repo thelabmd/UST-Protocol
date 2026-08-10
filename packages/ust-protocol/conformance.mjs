@@ -59,6 +59,10 @@ for (const v of V.vectors) {
       check(v.id, threw, 'expected E-CANON'); break;
     }
     case 'hash': check(v.id, P.H(v.tag, P.canon(v.input)) === v.expect); break;
+    // round 200 — `content_hash` had no vector. It is the address `prev`, `based_on`, `constituents` and every anchor
+    // leaf denote, so an implementation that composes `H ∘ canon` differently misses every reference silently while
+    // agreeing with itself. The document travels in `doc`, the corpus convention for a document-shaped input.
+    case 'content-hash': check(v.id, P.contentHash(v.doc) === v.expect, `got ${P.contentHash(v.doc)}`); break;
     // #102 / F.5o — byte-agreement across declared copies. A port must reproduce BOTH the verdict and the REFUSAL:
     // an independence coordinate offered by the caller is an error, never a field that is quietly dropped.
     case 'replication': {

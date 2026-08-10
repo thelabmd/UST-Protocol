@@ -19,9 +19,9 @@
   "_": "WHAT A VECTOR MAY PIN — read this before excluding the `vector` layer of a round, and before deciding a case \"cannot be a vector\". Derived from THIS corpus on 2026-08-10, not declared: 228 vectors across 43 kinds.",
   "the_rule": "A vector is a FIXED INPUT and a DECLARED RESULT that a runner must reproduce. The input being a DOCUMENT is one case among several; the result being a VERDICT is one case among several.",
   "measured_2026_08_10": {
-   "total": 232,
-   "kinds": 43,
-   "input_is_a_document": 40,
+   "total": 234,
+   "kinds": 44,
+   "input_is_a_document": 41,
    "input_is_a_value_or_string": 75,
    "input_is_a_genesis_plus_log": 63,
    "input_is_raw_bytes": 27,
@@ -337,6 +337,32 @@
    },
    "expect": "sha256:a72d9e0140f169ce043a2e18471b90bfe5f6ddf0aa01c0a17f919f88e17636b9",
    "note": "MUST differ from domainsep-shard"
+  },
+  {
+   "id": "domainsep-leaf",
+   "kind": "hash",
+   "rule": "S7 domain separation — the `ust:leaf` tag, the one a Merkle walk hashes a leaf under",
+   "tag": "ust:leaf",
+   "input": {
+    "x": "1"
+   },
+   "expect": "sha256:348a06e6d58da247ab8d0fa79c37099d7f44e5a0f96cce7a86ce1e6757311878",
+   "note": "Round 200. The corpus pinned `ust:shard` and `ust:state` and NOT `ust:leaf`, while `browser-portability-gate` compared the two builds on exactly this tag using a literal of its own. Same input as its two siblings so the vector isolates the TAG: three entries differing in one argument are a domain-separation claim, one entry is an example. A build that dropped the tag from the hash would agree with itself and pass a build-to-build check."
+  },
+  {
+   "id": "content-hash-minimal-document",
+   "kind": "content-hash",
+   "rule": "S9 content_hash = H(\"ust:state\", canon({ust, state})) — the address every reference in this protocol resolves by",
+   "doc": {
+    "ust": "1.0",
+    "state": {
+     "id": {
+      "domain_shard": "example.test"
+     }
+    }
+   },
+   "expect": "sha256:8f392c997fcd85122b4acc0db94d0bd840ced2008e80e7b216b6e5328f6fed9b",
+   "note": "Round 200, and a NEW kind for a primitive that had none. `content_hash` is what `prev`, `based_on`, `constituents` and every anchor leaf denote, and no vector fixed it: the corpus pinned the hash of a PARTITION (`hash-partition-*`) and of a canonical string (`domainsep-*`), never of a whole document. Deliberately the SMALLEST admissible document — the point is the composition `H ∘ canon` over the two top-level members, not the richness of the state. A second implementation that canonicalised the document differently, or hashed `state` without `ust`, produces a different address for the same bytes and every reference silently misses."
   },
   {
    "id": "keyid-rule",

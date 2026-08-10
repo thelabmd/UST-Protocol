@@ -525,6 +525,10 @@
   {
    "round": 199,
    "no_recap": "The round closes no issue — it closes BOTH empty layers of one ROUND (R-103) in the #147 registry sweep, and states the output-field criterion whose input-side twin was used to excuse the math layer. #147 stays open; the recap unit is a closed issue, not a closed layer."
+  },
+  {
+   "round": 200,
+   "no_recap": "The round closes no issue — it closes the empty vector layer of one ROUND (R-184) in the #147 registry sweep and moves one gate off its private copy of the corpus. #147 stays open; the recap unit is a closed issue, not a closed layer."
   }
  ]
 }

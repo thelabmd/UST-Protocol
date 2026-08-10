@@ -1395,10 +1395,9 @@
    },
    "spec": "The cryptographic faculty moved behind ONE internal module chosen",
    "code": "packages/ust-protocol/_crypto.mjs :: sha256Hex / ed25519Verify / aesGcmDecrypt — the platform faculty behind one internal module, selected at BUILD time and unreachable from the data path",
-   "vector": {
-    "excluded": "No byte-vector: the subject is a BUILD, not a document. A vector fixes bytes a verifier must judge; nothing here changes a byte a verifier sees — the existing corpus passing unchanged IS the evidence, and a new vector would assert the same thing with a weaker instrument. The cross-build agreement check plays the vector role: it re-derives the same five values under a different platform and requires identity."
-   },
-   "test": "tools/browser-portability-gate.mjs"
+   "vector": "content-hash-minimal-document",
+   "test": "tools/browser-portability-gate.mjs",
+   "_vector_was": "No byte-vector: the subject is a BUILD, not a document. A vector fixes bytes a verifier must judge; nothing here changes a byte a verifier sees — the existing corpus passing unchanged IS the evidence, and a new vector would assert the same thing with a weaker instrument. The cross-build agreement check plays the vector role: it re-derives the same five values under a different platform and requires identity."
   },
   {
    "round": 185,
@@ -1542,6 +1541,16 @@
    "code": "packages/ust-protocol/conformance.mjs :: the fifth UST#147 check, asserting the stated form count equals the forms listed",
    "vector": "stream-fork-visible-only-with-both-branches",
    "test": "packages/ust-protocol/conformance.mjs :: UST#147 the definition's form count matches the forms it lists — mutation-controlled (stating 3 while listing 8 reddens that check alone)"
+  },
+  {
+   "round": 200,
+   "math": {
+    "excluded": "No formal-model content, and the reason is the same one round 184 gave for its own math layer: a build decides WHERE code runs, never WHAT it concludes. What this round changes is which INPUTS the agreement is measured over — an evidence question, not a decision one. The model already states that two implementations agree by reproducing the corpus; nothing here adds to that, it makes one gate obey it."
+   },
+   "spec": "The cryptographic faculty moved behind ONE internal module chosen",
+   "code": "tools/browser-portability-gate.mjs :: CASES/EXEC_SRC — the inputs come from the corpus and ONE executor text is evaluated on both sides, so the gate cannot compare two executors while claiming to compare two builds",
+   "vector": "domainsep-leaf",
+   "test": "tools/browser-portability-gate.mjs"
   },
   {
    "round": 199,

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
-// @assurance 2 canfail:yes — the graph is WALKED from source and the mapped core is EXECUTED with the Node globals deleted; both builds recompute the same vectors, so a divergence is measured rather than asserted
+// @assurance 2 canfail:yes literal-ok:the two rosters CLASSIFY a domain that is read, they do not stand in for it — `PURE_KINDS` names which corpus kinds a build with no Ed25519/AES can run, and the counts beside it are measured; the domain itself is `vectors/conformance-vectors.json`, whose kind total and not-run complement are both pinned above, so a kind added to the corpus reddens this gate instead of slipping past a hand-written list
+//   — the graph is WALKED from source, the mapped core is EXECUTED with the Node globals deleted, and both builds run the CORPUS (round 200; until then this gate carried five values of its own and compared the builds only to each other)
 // #143 — "the core is browser-portable" is a claim about RUNNING, and this runs it.
 //
 // WHY NOT A BUNDLER. Bundling answers "do the imports resolve". Measured 2026-08-08: with the crypto faculty
@@ -75,7 +76,95 @@ for (const [from, to] of Object.entries(BROWSER_MAP)) {
   cpSync(join(PKG_DIR, to.replace(/^\.\//, '')), join(dir, from.replace(/^\.\//, '')));
 }
 
-const VECTORS = { canonInput: { b: '2', a: '1' }, hashInput: 'ust:leaf', keyPub: 'D1UnrRs1r3Dkl5Objd5RicXH-gq-mCzImFoSWI4UOc4' };
+// ─── the input corpus is THE CORPUS (round 200) ─────────────────────────────────────────────────────────
+//
+// Until round 200 this gate carried five values of its own — `{canonInput, hashInput, keyPub}` plus two inline
+// literals — and compared the two builds against EACH OTHER. That answers "do the builds agree", which is a real
+// question and the one this gate is named for, but it is not the question anyone reading a green line assumes:
+// two builds sharing a wrong `canon` agree perfectly. Round 184's registry entry went further and claimed *"the
+// existing corpus passing unchanged IS the evidence"* — measured 2026-08-10 and false: the browser build touched
+// exactly two vectors of 232 (`faculty-absent-ed25519`, `malleability-reject`, in `browser-build.test.mjs`).
+//
+// So the inputs come from the corpus, both builds are compared against its DECLARED expectations, and the
+// build-to-build comparison stays on top of that. The domain is ENUMERATED and its size asserted below — a
+// corpus-driven check that silently selects nothing is the failure mode this repository meets most often.
+// CLOSED 2026-08-10 (round 200): the inputs are the corpus, both builds are judged against its declared
+// expectations, and the private five-value roster is gone.
+//
+// WHICH KINDS, and why not all of them: the browser build has no Ed25519 and no AES (#144 — it REFUSES rather
+// than answering), so only kinds decidable by pure primitives can run here. Those are the five below plus the
+// simple half of `canon-reject`. The three `canon-reject` entries whose runner needs `verify`/`verifyJson`
+// (`ts-fractional`, `ts-offset`, `dupkey`) are named, counted and skipped — not silently dropped.
+const CORPUS = JSON.parse(readFileSync(join(ROOT, 'vectors/conformance-vectors.json'), 'utf8')).vectors;
+const PURE_KINDS = ['canon', 'hash', 'key_id', 'b64url', 'content-hash'];
+const CR_NEEDS_VERIFY = (id) => /ts-|dupkey/.test(id);
+const CASES = CORPUS.filter((v) => PURE_KINDS.includes(v.kind)
+  || (v.kind === 'canon-reject' && !CR_NEEDS_VERIFY(v.id)));
+const SKIPPED = CORPUS.filter((v) => v.kind === 'canon-reject' && CR_NEEDS_VERIFY(v.id)).map((v) => v.id);
+
+// The count is asserted, per kind, so a kind that disappears from the corpus (or never matched) reddens here
+// instead of shrinking the domain quietly. These are MEASURED 2026-08-10, not chosen; a pin is a tripwire, so it is
+// STANDING by design and moves only when someone deliberately changes the domain.
+const EXPECTED_CASES = { canon: 11, 'canon-reject': 4, hash: 5, key_id: 1, b64url: 6, 'content-hash': 1 };
+// …and the COMPLEMENT is pinned too, which is what keeps `PURE_KINDS` from being this gate's real domain. A kind
+// added to the corpus lands in the not-run set and reddens the count below, so the author must decide whether it
+// belongs here — instead of it passing unnoticed because a hand-written list did not mention it.
+const EXPECTED_KINDS_TOTAL = 44, EXPECTED_KINDS_NOT_RUN = 38;   // measured 2026-08-10
+{
+  const kinds = new Set(CORPUS.map((v) => v.kind));
+  const notRun = [...kinds].filter((k) => !PURE_KINDS.includes(k) && k !== 'canon-reject').sort();
+  check(`the corpus domain is accounted: ${kinds.size} kinds, ${PURE_KINDS.length + 1} runnable by pure primitives, ${notRun.length} needing a faculty or a document`,
+    kinds.size === EXPECTED_KINDS_TOTAL && notRun.length === EXPECTED_KINDS_NOT_RUN,
+    `kinds ${kinds.size} (pin ${EXPECTED_KINDS_TOTAL}), not-run ${notRun.length} (pin ${EXPECTED_KINDS_NOT_RUN}) — a new kind must be classified here, not ignored`);
+}
+{
+  const got = {};
+  for (const v of CASES) got[v.kind] = (got[v.kind] ?? 0) + 1;
+  const diff = Object.entries(EXPECTED_CASES).filter(([k, n]) => got[k] !== n).map(([k, n]) => `${k}: expected ${n}, found ${got[k] ?? 0}`);
+  check(`the corpus supplies ${CASES.length} cases both builds must reproduce (${Object.entries(EXPECTED_CASES).map(([k, n]) => k + ' ' + n).join(', ')}; ${SKIPPED.length} canon-reject need verify and are skipped: ${SKIPPED.join(', ')})`,
+    diff.length === 0, diff.join('; '));
+}
+// ONE executor, used by BOTH builds. Written once as source text and evaluated on each side rather than typed
+// twice: two copies of the runner would make this gate compare two executors as much as two builds, which is the
+// defect it was just fixed for. The text is deliberately dependency-free — no Buffer, no Node builtins — so it
+// survives the global deletion below.
+const EXEC_SRC = `
+  const out = [];
+  for (const v of cases) {
+    let got;
+    try {
+      switch (v.kind) {
+        case 'canon': got = P.canon(v.input); break;
+        case 'canon-reject': {
+          // the corpus expresses one entry by DESCRIPTION rather than by an input literal: a non-NFC string
+          // cannot survive a JSON round trip as itself, so the runner rebuilds it, exactly as conformance.mjs does.
+          const input = v.input !== undefined ? v.input : { note: 'e' + String.fromCharCode(0x301) };
+          let threw = false;
+          try { P.canon(input); } catch (e) { threw = e && e.code === 'E-CANON'; }
+          got = threw ? 'E-CANON' : 'NO-THROW';
+          break;
+        }
+        case 'hash': got = P.H(v.tag, P.canon(v.input)); break;
+        case 'key_id': got = P.keyId(v.pub_b64url); break;
+        case 'b64url': got = String(P.strictB64url(v.value, v.bytes) !== null); break;
+        case 'content-hash': got = P.contentHash(v.doc); break;
+        default: got = 'UNRUN:' + v.kind;
+      }
+    } catch (e) { got = 'THREW:' + ((e && e.message) ? String(e.message).slice(0, 60) : String(e)); }
+    out.push([v.id, String(got)]);
+  }
+  return out;
+`;
+// What the CORPUS says each case must produce — also one function, for the same reason.
+const expectationOf = (v) => {
+  switch (v.kind) {
+    case 'canon': return v.expect_canon;
+    case 'canon-reject': return 'E-CANON';
+    case 'b64url': return String(v.expect);
+    default: return v.expect;                     // hash · key_id · content-hash
+  }
+};
+
 const runner = `
 // Delete the Node globals BEFORE the core is loaded. The import is dynamic for exactly that reason: a static
 // import is hoisted above the deletions and would be evaluated while they still exist.
@@ -84,14 +173,11 @@ for (const g of ['Buffer', 'process', 'require', '__dirname', '__filename', 'glo
   try { Object.defineProperty(globalThis, g, { get() { throw new Error('NODE GLOBAL USED: ' + g); }, configurable: true }); } catch {}
 }
 const P = await import('${join(dir, 'index.mjs')}');
+const cases = ${JSON.stringify(CASES)};
+const exec = (P, cases) => { ${EXEC_SRC} };
 const out = {
   build: (await import('${join(dir, '_crypto.mjs')}')).CRYPTO_BUILD,
-  canon: P.canon(${JSON.stringify(VECTORS.canonInput)}),
-  h: P.H('ust:leaf', 'x'),
-  keyId: P.keyId('${VECTORS.keyPub}'),
-  contentHash: P.contentHash({ ust: '1.0', state: { id: { domain_shard: 'example.test' } } }),
-  strictOk: P.strictB64url('${VECTORS.keyPub}', 32) !== null,
-  strictAlias: P.strictB64url('${VECTORS.keyPub.slice(0, -1)}5', 32) === null,
+  results: exec(P, cases),
 };
 console.log(JSON.stringify(out));
 `;
@@ -108,21 +194,29 @@ try {
 
 check('the browser build is the one that ran', browserOut?.build === 'browser', `got ${browserOut?.build}`);
 
-// ─── 3. the two builds must AGREE ───────────────────────────────────────────────────────────────────────
+// ─── 3. BOTH builds must match the CORPUS, and each other ───────────────────────────────────────────────
+// The order matters. "The builds agree" is checked LAST, because on its own it is satisfied by two builds that
+// are wrong together — the reading a green line invites and the one this gate could not support until now.
 if (browserOut) {
   const N = await import(join(PKG_DIR, 'index.mjs'));
-  const nodeOut = {
-    canon: N.canon(VECTORS.canonInput),
-    h: N.H('ust:leaf', 'x'),
-    keyId: N.keyId(VECTORS.keyPub),
-    contentHash: N.contentHash({ ust: '1.0', state: { id: { domain_shard: 'example.test' } } }),
-    strictOk: N.strictB64url(VECTORS.keyPub, 32) !== null,
-    strictAlias: N.strictB64url(VECTORS.keyPub.slice(0, -1) + '5', 32) === null,
-  };
-  for (const k of Object.keys(nodeOut)) {
-    check(`node and browser agree on ${k}`, String(nodeOut[k]) === String(browserOut[k]),
-      `node=${String(nodeOut[k]).slice(0, 40)} browser=${String(browserOut[k]).slice(0, 40)}`);
+  const nodeResults = new Function('P', 'cases', EXEC_SRC)(N, CASES);
+  const browserResults = new Map(browserOut.results ?? []);
+  const nodeMap = new Map(nodeResults);
+
+  const wrongNode = [], wrongBrowser = [], disagree = [];
+  for (const v of CASES) {
+    const want = String(expectationOf(v));
+    const n = nodeMap.get(v.id), b = browserResults.get(v.id);
+    if (n !== want) wrongNode.push(`${v.id}: got ${String(n).slice(0, 24)} want ${want.slice(0, 24)}`);
+    if (b !== want) wrongBrowser.push(`${v.id}: got ${String(b).slice(0, 24)} want ${want.slice(0, 24)}`);
+    if (n !== b) disagree.push(`${v.id}: node ${String(n).slice(0, 20)} browser ${String(b).slice(0, 20)}`);
   }
+  check(`the NODE build reproduces all ${CASES.length} corpus cases`, wrongNode.length === 0, wrongNode.slice(0, 3).join('; '));
+  check(`the BROWSER build reproduces all ${CASES.length} corpus cases`, wrongBrowser.length === 0, wrongBrowser.slice(0, 3).join('; '));
+  check('the two builds agree case for case', disagree.length === 0, disagree.slice(0, 3).join('; '));
+  check('every corpus case actually RAN in the browser build — a missing id would make the two checks above vacuous',
+    CASES.every((v) => browserResults.has(v.id)) && browserResults.size === CASES.length,
+    `ran ${browserResults.size} of ${CASES.length}`);
 }
 
 // ─── 4. the refusals are refusals, not false verdicts ───────────────────────────────────────────────────
