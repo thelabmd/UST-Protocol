@@ -140,7 +140,19 @@ const PRIMITIVES = {
 };
 
 // A connector exposes the substrate seam (verifyAnchor delegate + typed evidence emit), not core names.
-const connector = (X) => (cap) => ['anchor-verify', 'typed-evidence', 'substrate-registry'].includes(cap) && typeof X.substrateVerify !== 'undefined' && typeof X.toVerifiedEvidence === 'function';
+// round-193 (measured 2026-08-10) — `substrate-registry` is TWO halves, and this probe accepted one as both.
+// Its core set is `combineSubstrates` (finality) AND `combineInclusion` (membership); the comment beside it says so:
+// "finality AND membership route by substrate name". The probe asked only for `substrateVerify`, so `ust-ots-verify`
+// — which has no `inclusionVerify` at all — was certified `full` on a capability it implements half of. Green with
+// nothing behind the other half, which is the shape round-51 introduced this predicate to stop ("`full` ⇒ every").
+// CLOSED 2026-08-10 (round 194): the probe splits the halves and ots-verify declares the membership half `na` with a
+// physical reason — an OTS proof shows a root existed by a time, never that a leaf is in it.
+const connector = (X) => (cap) => {
+  if (!['anchor-verify', 'typed-evidence', 'substrate-registry'].includes(cap)) return false;
+  const finality = typeof X.substrateVerify !== 'undefined' && typeof X.toVerifiedEvidence === 'function';
+  if (cap !== 'substrate-registry') return finality;
+  return finality && typeof X.inclusionVerify === 'function';   // membership half — absent in a finality-only connector
+};
 // round-51 P1-03 (owner: set-COMPLETE predicate, not `some`) — a `full` stance means EVERY core export of the capability is
 // exposed; `some`-intersection wrongly certified a surface as full when it had ONE of many (GPT round-51: lite declared full for
 // build-transcript with only buildState, missing buildAttestation/…). `full` ⇒ every; a genuine reduced surface declares `subset`.
@@ -154,7 +166,7 @@ const cliProbe = (cap) => { const tok = CAPS[cap].cli; return !!tok && cliSrc.in
 const SURFACES = {
   'ust-light':         { probe: exportIntersect(LITE), full: ['canon', 'sign'], subset: ['content-address', 'build-transcript', 'verify'], naReason: 'outside the standalone zero-dependency LIGHT floor — lite is a documented SUBSET (round-51 P1-03: build-transcript = buildState/seal for class:observation, WITH provenance (prev/based_on+seed) since UST-jls, but not the full builder family; verify = the WHOLE LIGHT floor including every §14a provenance obligation — UST-jls closed 14 lite-VALID/core-INVALID shapes — but not the HIGH/TOP verifiers; content-address = the partition/content/seed hashes it needs)' },
   'ust-web-signer':   { probe: exportIntersect(WEB), full: ['canon', 'sign'], subset: ['content-address', 'build-transcript'], naReason: 'producer-only surface — a documented SUBSET (round-51 P1-03: browser signer builds+signs a state, not the full builder family)', naSpecific: { 'verify': 'by design: the private key never enters a verifier — verification is ust-protocol / ust-light (README)' } },
-  'ust-ots-verify':   { probe: connector(OTS), full: ['anchor-verify', 'typed-evidence', 'substrate-registry'], subset: [], naReason: 'a Bitcoin/OTS substrate connector (plugs into verifyAnchor via substrateVerify), not a general surface', naSpecific: { 'evidence-receipt': 'THE connector job per M3 — emit signed receipts (buildEvidenceReceipt with its own key) instead of raw verifiedEvidence facts; planned follow-up, tracked under UST-6vj C4/legacy' } },
+  'ust-ots-verify':   { probe: connector(OTS), full: ['anchor-verify', 'typed-evidence'], subset: [], naReason: 'CLOSED 2026-08-10 (round 194). substrate-registry is NA here, not subset: its core set is combineSubstrates (finality) AND combineInclusion (membership), and this connector implements finality only — it has no inclusionVerify, because an OTS timestamp proves a root existed by a time, never that a leaf is in that root. Rekor carries the membership half. Measured 2026-08-10, round 193. Originally: a Bitcoin/OTS substrate connector (plugs into verifyAnchor via substrateVerify), not a general surface', naSpecific: { 'evidence-receipt': 'THE connector job per M3 — emit signed receipts (buildEvidenceReceipt with its own key) instead of raw verifiedEvidence facts; planned follow-up, tracked under UST-6vj C4/legacy' } },
   'ust-rekor-verify': { probe: connector(REKOR), full: ['anchor-verify', 'typed-evidence', 'substrate-registry'], subset: [], naReason: 'a Rekor transparency-log substrate connector, not a general surface', naSpecific: { 'evidence-receipt': 'THE connector job per M3 — emit signed receipts instead of raw verifiedEvidence facts; planned follow-up, tracked under UST-6vj C4/legacy' } },
   // Agent MCP TARGET (owner, 2026-07-15) = full for EVERY non-operator capability + the single conditionally-operator
   // touch: reaching TOP (mint/attach an anchor), planned for noosphere, not yet built. `na` here means the capability

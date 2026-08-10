@@ -501,6 +501,10 @@
   {
    "round": 193,
    "no_recap": "The round closes no issue — #147 is the card it serves and it stays open with three surfaces to sweep (corpus, registry, gate). This round delivers only the first: the definition. A recap belongs to a closed issue."
+  },
+  {
+   "round": 194,
+   "no_recap": "The round closes no issue — #148 stays open on browser-portability of both connectors, which this round does not touch. It removes one vacuous green found while mapping the road to TOP; the recap unit is a closed issue."
   }
  ]
 }

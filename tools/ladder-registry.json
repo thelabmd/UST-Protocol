@@ -1508,6 +1508,20 @@
     "excluded": "The subject has no fixed input FOR AN IMPLEMENTATION — it is the agreement between a header and the data beside it, not behaviour of a verifier on an input. This is the criterion the round itself introduces, applied to itself: a vector pins input to result, and there is no input here to give a port. Note the shape deliberately: the exclusion names WHICH of the six input forms it fails, which is exactly what the new rule demands of every future exclusion."
    },
    "test": "packages/ust-protocol/conformance.mjs :: UST#147 the definition's vector count matches the corpus it describes — mutation-controlled (stating 999 reddens that check alone), and the citation check caught a real error on its first run (vector IDs used where kinds were meant)"
+  },
+  {
+   "round": 194,
+   "math": {
+    "excluded": "No mathematical content: the subject is whether OUR parity table describes OUR packages truthfully. The protocol property behind it — that finality and membership are different claims about a substrate — is already carried by §11.2 and by the combineSubstrates/combineInclusion split; restating it as theory would duplicate a rule that already has a home."
+   },
+   "spec": {
+    "excluded": "Nothing normative moved. §11.2 already separates finality from membership, and no producer emits differently and no verifier accepts differently after this round. What changed is that our own capability table stopped claiming a connector implements a half it does not."
+   },
+   "code": "tools/capability-parity.mjs :: the connector probe now splits substrate-registry into finality AND membership, and ust-ots-verify declares that capability na with a physical reason rather than full",
+   "vector": {
+    "excluded": "No fixed input for an implementation — the subject is agreement between a declaration table and the exports beside it, which is a property of this repository rather than behaviour of a verifier on an input. Named against the criterion introduced in round 193: of the six input forms a vector may take, this subject provides none, because there is nothing to hand a port."
+   },
+   "test": "tools/capability-parity.mjs :: REALITY: ust-ots-verify declares substrate-registry — mutation-controlled in both directions (restoring full reddens by name; declaring subset for an absent half also reddens, which is how the na was found)"
   }
  ],
  "first_accounted_round": 76,
