@@ -2929,6 +2929,26 @@ VALID document that belongs to no chain: nothing references it and it references
 indistinguishable, to every consumer, from a legitimate stream-genesis — so the stream now appears to have
 two beginnings, and the earlier one cannot be reached from the later. ∎
 
+**Corollary F.5r-h.1 (a stream verifier DOES distinguish — and why this guard stands alone).** The theorem's
+"indistinguishable, to every consumer" is a claim about the DOCUMENT, and as such it holds: an origin frame carries
+nothing that separates it from a legitimate stream-genesis. What a consumer verifying a SEQUENCE distinguishes is not
+the document but its POSITION. Within a set of frames offered as one stream, a frame after the first that carries no
+`prev` contradicts a head the set has already established, and MUST be refused (`E-PREV`). The harm of an origin frame
+emitted from ignorance is therefore BOUNDED to consumers reading documents in isolation; to anyone verifying the stream
+it is not a second beginning but a refusal.
+
+*Why this guard has no backstop, and why that is structural rather than an oversight.* Every other linearity guard
+compares VALUES — `prev` against the running head, `prev` against the prevs already seen, `ust_id` against the previous
+slot. An absent `prev` offers no value to compare, so a guard written over values cannot reach it. Measured 2026-08-10
+against the reference implementation by removing guards one at a time: a same-slot sibling is refused by FOUR
+independent guards and a stale-head repeat by TWO, but a mid-stream origin frame by exactly ONE — the shared-prev guard
+reads `if (p && …)` and skips a frame with no `prev` entirely. The presence check is thus not derivable from the value
+checks and not redundant with them; an implementation that omits it ADMITS the frame this theorem is about.
+The single guard is **STANDING by construction**, not an open hole: a presence test is the only shape that reaches
+an input carrying no value, so adding a redundant guard beside it would add no coverage. What WAS missing is
+CLOSED (2026-08-10, round 198) — a vector making the omission visible to any implementation, since before it the
+corpus would have accepted a build with this branch removed. ∎
+
 **Corollary (the direction of the refusal).** Reading the head answers whether it is SAFE TO EXTEND, and by
 the fail-direction rule such a question fails CLOSED: not knowing the head authorizes nothing — neither
 extending a head one cannot confirm, nor claiming there is none. The interval is then unpublished, which

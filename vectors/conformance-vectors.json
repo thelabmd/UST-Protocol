@@ -19,13 +19,14 @@
   "_": "WHAT A VECTOR MAY PIN — read this before excluding the `vector` layer of a round, and before deciding a case \"cannot be a vector\". Derived from THIS corpus on 2026-08-10, not declared: 228 vectors across 43 kinds.",
   "the_rule": "A vector is a FIXED INPUT and a DECLARED RESULT that a runner must reproduce. The input being a DOCUMENT is one case among several; the result being a VERDICT is one case among several.",
   "measured_2026_08_10": {
-   "total": 228,
+   "total": 232,
    "kinds": 43,
    "input_is_a_document": 40,
    "input_is_a_value_or_string": 75,
-   "input_is_a_genesis_plus_log": 59,
+   "input_is_a_genesis_plus_log": 63,
    "input_is_raw_bytes": 27,
-   "forms": 8
+   "forms": 8,
+   "_how_these_were_counted": "THREE of these are re-derived on every run by the UST#147 checks (total, kinds, forms) and cannot drift. `input_is_a_document` counts vectors carrying a `doc` field and `input_is_a_genesis_plus_log` counts those carrying a `genesis` field — both reproduced on 2026-08-10 while adding the round-138/139/142 vectors, which is how the second one moved from 59 to 63. `input_is_a_value_or_string` and `input_is_raw_bytes` are the counts recorded when this definition was first derived, and THEIR FORMULA WAS NEVER WRITTEN DOWN: neither a field scan nor a kind roster reproduces 75 or 27. They were left untouched here rather than quietly re-fitted, because a number adjusted to survive a gate is worse than a number that admits it cannot be re-derived. Note also that a count keyed to a FIELD is not a count keyed to MEANING — the four stream vectors added in round 198 take documents as input and do not appear under `input_is_a_document`, because their documents arrive in `frames`. Making every one of these derivable (a kind → form roster, so a new kind cannot exist outside the definition) is tracked as its own round."
   },
   "forms": [
    {
@@ -2471,6 +2472,619 @@
    },
    "expect": {
     "error": "E-AUTHORITY"
+   }
+  },
+  {
+   "kind": "stream-authority",
+   "id": "sa-03-self-fork-sibling-refused",
+   "rule": "round 139 — a document that neither IS nor EXTENDS the head is refused (self-fork: a sibling in an already-published slot)",
+   "note": "CONSUMER FACE. Rounds 138/139/142 state a PRODUCER duty — what an operator must not emit. A vector cannot pin a duty, only bytes and the verdict they must produce, so what is pinned here is the duty's consumer face: the artifact the producer is forbidden to emit is REFUSED by any conforming verifier. The producer-side obligation stays in the operator suite (#124 F.5r-f/g/h), which is why the `test` layer of those rounds does not move. Frame 2 is a TWIN of frame 1, not a copy: same slot, same `prev`, DIFFERENT bytes — a producer that lost its head pointer and re-derived the interval from fresh input. A byte-identical re-publication would assert \"the same document twice\", which IS the head and is a different claim; the first draft of this fixture made exactly that mistake. HISTORY, kept because it is why this vector exists: before it, no vector in this corpus fed a same-slot twin to `verifyStream` at all — the whole input shape was unexercised. WHAT THIS VECTOR PINS IS THE REFUSAL, NOT THE ROUTE. Measured 2026-08-10 by removing the guards one at a time: this corpus's three refused stream inputs are caught at DIFFERENT depths — the sibling by four independent guards (duplicate `ust_id` → chronology → dangling prev → shared prev), the stale-head repeat by two (dangling prev → shared prev), and the headless frame by exactly ONE. A second implementation may refuse along any of them; requiring a particular one would pin OUR control flow instead of the protocol. The consequence for mutation testing is stated because it is not obvious: disabling any SINGLE guard leaves this vector green, so the honest control is directional — make refusal impossible and all three redden, make it unavoidable and the accepting control reddens instead.",
+   "frames": [
+    {
+     "ust": "1.0",
+     "state": {
+      "id": {
+       "domain_shard": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+       "ust_id": "ust:20260726.09",
+       "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+       "class": "observation"
+      },
+      "time": {
+       "generated_at": "2026-07-26T09:00:00Z",
+       "valid_from": "2026-07-26T09:00:00Z",
+       "valid_to": "2026-07-26T10:00:00Z"
+      },
+      "data": {
+       "r": {
+        "kind": "captured",
+        "value": {
+         "n": "ust:20260726.09"
+        }
+       }
+      },
+      "hashes": {
+       "r": "sha256:52ffca0c4fbedf6a607a30920032b9b9af6ea8f60b3de6b7c25420649b59ceb2"
+      },
+      "provenance": {
+       "prev": "sha256:f26da381e4bc0bd9c9267daaed5ffd8b6b76b45105f99f25d0cd73a350fb2b5f"
+      }
+     },
+     "sig": {
+      "alg": "Ed25519",
+      "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+      "pub": "vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+      "sig": "eW3vkc0RGUQNxoSmmBhBMYWVENYyW_ERvKhMiLvUil16u-L726Uj0sESQbcZkAb9fxMJI5OobdY-VD4C7TbAAg"
+     }
+    },
+    {
+     "ust": "1.0",
+     "state": {
+      "id": {
+       "domain_shard": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+       "ust_id": "ust:20260726.10",
+       "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+       "class": "observation"
+      },
+      "time": {
+       "generated_at": "2026-07-26T10:00:00Z",
+       "valid_from": "2026-07-26T10:00:00Z",
+       "valid_to": "2026-07-26T11:00:00Z"
+      },
+      "data": {
+       "r": {
+        "kind": "captured",
+        "value": {
+         "n": "ust:20260726.10"
+        }
+       }
+      },
+      "hashes": {
+       "r": "sha256:4802e6bc3558789a59e58866bf55f0c6ad730072d8b065187d4135fc40e425ce"
+      },
+      "provenance": {
+       "prev": "sha256:d91d0680de4804defde31a2544a39b85ac8319691a7f961d3ef8c8cbf4cfba16"
+      }
+     },
+     "sig": {
+      "alg": "Ed25519",
+      "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+      "pub": "vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+      "sig": "wi_Aai2nZ172-8f0Y-Z7Kjv1SVBvV46VMOyRSO-J3Swy1epdzZ1mjuBM4J6WJwsSmJApK3amLoWeN6W6e5KuAg"
+     }
+    },
+    {
+     "ust": "1.0",
+     "state": {
+      "id": {
+       "domain_shard": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+       "ust_id": "ust:20260726.10",
+       "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+       "class": "observation"
+      },
+      "time": {
+       "generated_at": "2026-07-26T10:00:00Z",
+       "valid_from": "2026-07-26T10:00:00Z",
+       "valid_to": "2026-07-26T11:00:00Z"
+      },
+      "data": {
+       "r": {
+        "kind": "captured",
+        "value": {
+         "n": "ust:20260726.10#sibling"
+        }
+       }
+      },
+      "hashes": {
+       "r": "sha256:d8be272bbff7ca040527a8334c31260542145a2ad84acfb702a97df2f7cace83"
+      },
+      "provenance": {
+       "prev": "sha256:d91d0680de4804defde31a2544a39b85ac8319691a7f961d3ef8c8cbf4cfba16"
+      }
+     },
+     "sig": {
+      "alg": "Ed25519",
+      "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+      "pub": "vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+      "sig": "KnTBMQ2yfbQiI8Exxy1goHJCW_S2KMIjn24um7CTl2-JhJ2kn-mLx2RIYaGSLqLDmh2pkhVg2uZPglJrvtYeCg"
+     }
+    }
+   ],
+   "genesis": {
+    "ust": "1.0",
+    "state": {
+     "id": {
+      "domain_shard": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+      "ust_id": "ust:20260726.08",
+      "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+      "class": "genesis"
+     },
+     "time": {
+      "generated_at": "2026-07-26T08:00:00Z",
+      "valid_from": "2026-07-26T08:00:00Z",
+      "valid_to": "2026-07-26T09:00:00Z"
+     },
+     "data": {
+      "genesis": {
+       "kind": "captured",
+       "value": {
+        "pub": "vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+        "role": "name-binding-root",
+        "cadence": "3600"
+       }
+      }
+     },
+     "hashes": {
+      "genesis": "sha256:cc02f22f95425773b08958369417915d21e88a3ac20e470b6b833e7ce1cec06e"
+     }
+    },
+    "sig": {
+     "alg": "Ed25519",
+     "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+     "pub": "vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+     "sig": "a1KFOpAaA7dcx3XKYlsy4atD1VHATLE6gKIrAVUzc9GJy243QclO1Z1HC_kt54lWWB-kuog6K8Rk-Bx2HYPPAg"
+    }
+   },
+   "expect": {
+    "error": "E-PREV"
+   }
+  },
+  {
+   "kind": "stream-authority",
+   "id": "sa-04-stale-head-repeat-refused",
+   "rule": "round 138 — a lost advance is REPAIRED, not REPEATED: a frame chained to a superseded head is refused",
+   "note": "CONSUMER FACE. Rounds 138/139/142 state a PRODUCER duty — what an operator must not emit. A vector cannot pin a duty, only bytes and the verdict they must produce, so what is pinned here is the duty's consumer face: the artifact the producer is forbidden to emit is REFUSED by any conforming verifier. The producer-side obligation stays in the operator suite (#124 F.5r-f/g/h), which is why the `test` layer of those rounds does not move. The publish succeeded and the head write did not, so the producer advances again from what it still believes is the head. `prev` names frame 0 while frame 1 is already published: the chain forks at a point the stream has passed. Chronology is deliberately CORRECT here (slot 11 follows slot 10) so the refusal cannot come from the ordering guard beside it — measured, the ordering guard is never reached by this input. WHAT THIS VECTOR PINS IS THE REFUSAL, NOT THE ROUTE. Measured 2026-08-10 by removing the guards one at a time: this corpus's three refused stream inputs are caught at DIFFERENT depths — the sibling by four independent guards (duplicate `ust_id` → chronology → dangling prev → shared prev), the stale-head repeat by two (dangling prev → shared prev), and the headless frame by exactly ONE. A second implementation may refuse along any of them; requiring a particular one would pin OUR control flow instead of the protocol. The consequence for mutation testing is stated because it is not obvious: disabling any SINGLE guard leaves this vector green, so the honest control is directional — make refusal impossible and all three redden, make it unavoidable and the accepting control reddens instead.",
+   "frames": [
+    {
+     "ust": "1.0",
+     "state": {
+      "id": {
+       "domain_shard": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+       "ust_id": "ust:20260726.09",
+       "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+       "class": "observation"
+      },
+      "time": {
+       "generated_at": "2026-07-26T09:00:00Z",
+       "valid_from": "2026-07-26T09:00:00Z",
+       "valid_to": "2026-07-26T10:00:00Z"
+      },
+      "data": {
+       "r": {
+        "kind": "captured",
+        "value": {
+         "n": "ust:20260726.09"
+        }
+       }
+      },
+      "hashes": {
+       "r": "sha256:52ffca0c4fbedf6a607a30920032b9b9af6ea8f60b3de6b7c25420649b59ceb2"
+      },
+      "provenance": {
+       "prev": "sha256:f26da381e4bc0bd9c9267daaed5ffd8b6b76b45105f99f25d0cd73a350fb2b5f"
+      }
+     },
+     "sig": {
+      "alg": "Ed25519",
+      "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+      "pub": "vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+      "sig": "eW3vkc0RGUQNxoSmmBhBMYWVENYyW_ERvKhMiLvUil16u-L726Uj0sESQbcZkAb9fxMJI5OobdY-VD4C7TbAAg"
+     }
+    },
+    {
+     "ust": "1.0",
+     "state": {
+      "id": {
+       "domain_shard": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+       "ust_id": "ust:20260726.10",
+       "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+       "class": "observation"
+      },
+      "time": {
+       "generated_at": "2026-07-26T10:00:00Z",
+       "valid_from": "2026-07-26T10:00:00Z",
+       "valid_to": "2026-07-26T11:00:00Z"
+      },
+      "data": {
+       "r": {
+        "kind": "captured",
+        "value": {
+         "n": "ust:20260726.10"
+        }
+       }
+      },
+      "hashes": {
+       "r": "sha256:4802e6bc3558789a59e58866bf55f0c6ad730072d8b065187d4135fc40e425ce"
+      },
+      "provenance": {
+       "prev": "sha256:d91d0680de4804defde31a2544a39b85ac8319691a7f961d3ef8c8cbf4cfba16"
+      }
+     },
+     "sig": {
+      "alg": "Ed25519",
+      "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+      "pub": "vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+      "sig": "wi_Aai2nZ172-8f0Y-Z7Kjv1SVBvV46VMOyRSO-J3Swy1epdzZ1mjuBM4J6WJwsSmJApK3amLoWeN6W6e5KuAg"
+     }
+    },
+    {
+     "ust": "1.0",
+     "state": {
+      "id": {
+       "domain_shard": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+       "ust_id": "ust:20260726.11",
+       "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+       "class": "observation"
+      },
+      "time": {
+       "generated_at": "2026-07-26T11:00:00Z",
+       "valid_from": "2026-07-26T11:00:00Z",
+       "valid_to": "2026-07-26T12:00:00Z"
+      },
+      "data": {
+       "r": {
+        "kind": "captured",
+        "value": {
+         "n": "ust:20260726.11"
+        }
+       }
+      },
+      "hashes": {
+       "r": "sha256:3c9658b82cea057677cf21d7ea44a52e3f4f24e22abe426d88f981537c680698"
+      },
+      "provenance": {
+       "prev": "sha256:d91d0680de4804defde31a2544a39b85ac8319691a7f961d3ef8c8cbf4cfba16"
+      }
+     },
+     "sig": {
+      "alg": "Ed25519",
+      "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+      "pub": "vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+      "sig": "9pRk6VOfj-eREoWGzM56l0t9Uuh2fiYKMcoaTKNDJ07AaTP7tbeSaO5y-bXI0AFQIiEBunjbP6PH9_wf9IM_DQ"
+     }
+    }
+   ],
+   "genesis": {
+    "ust": "1.0",
+    "state": {
+     "id": {
+      "domain_shard": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+      "ust_id": "ust:20260726.08",
+      "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+      "class": "genesis"
+     },
+     "time": {
+      "generated_at": "2026-07-26T08:00:00Z",
+      "valid_from": "2026-07-26T08:00:00Z",
+      "valid_to": "2026-07-26T09:00:00Z"
+     },
+     "data": {
+      "genesis": {
+       "kind": "captured",
+       "value": {
+        "pub": "vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+        "role": "name-binding-root",
+        "cadence": "3600"
+       }
+      }
+     },
+     "hashes": {
+      "genesis": "sha256:cc02f22f95425773b08958369417915d21e88a3ac20e470b6b833e7ce1cec06e"
+     }
+    },
+    "sig": {
+     "alg": "Ed25519",
+     "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+     "pub": "vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+     "sig": "a1KFOpAaA7dcx3XKYlsy4atD1VHATLE6gKIrAVUzc9GJy243QclO1Z1HC_kt54lWWB-kuog6K8Rk-Bx2HYPPAg"
+    }
+   },
+   "expect": {
+    "error": "E-PREV"
+   }
+  },
+  {
+   "kind": "stream-authority",
+   "id": "sa-05-midstream-origin-frame-refused",
+   "rule": "round 142 — a frame carrying no `prev` ASSERTS an origin; mid-stream that assertion is refused",
+   "note": "CONSUMER FACE. Rounds 138/139/142 state a PRODUCER duty — what an operator must not emit. A vector cannot pin a duty, only bytes and the verdict they must produce, so what is pinned here is the duty's consumer face: the artifact the producer is forbidden to emit is REFUSED by any conforming verifier. The producer-side obligation stays in the operator suite (#124 F.5r-f/g/h), which is why the `test` layer of those rounds does not move. An absent `prev` is not a missing field, it is a claim: the stream begins here. Arriving after two published frames the claim is false, and a verifier that read it as \"nothing to check\" would let a producer silently re-origin its own stream. THIS INPUT IS THE ONE WITH NO SECOND LINE. Measured 2026-08-10: the sibling is caught by four guards and the stale-head repeat by two, but the headless frame is caught by the dangling-prev test ALONE — with that one branch removed the document is ADMITTED and the stream reads `provisional`, because the shared-prev guard is written `if (p && …)` and an absent `prev` is not a value it can compare. A guard with no backstop is exactly the one a second implementation is most likely to omit, and until this vector existed nothing in the corpus would have noticed. WHAT THIS VECTOR PINS IS THE REFUSAL, NOT THE ROUTE. Measured 2026-08-10 by removing the guards one at a time: this corpus's three refused stream inputs are caught at DIFFERENT depths — the sibling by four independent guards (duplicate `ust_id` → chronology → dangling prev → shared prev), the stale-head repeat by two (dangling prev → shared prev), and the headless frame by exactly ONE. A second implementation may refuse along any of them; requiring a particular one would pin OUR control flow instead of the protocol. The consequence for mutation testing is stated because it is not obvious: disabling any SINGLE guard leaves this vector green, so the honest control is directional — make refusal impossible and all three redden, make it unavoidable and the accepting control reddens instead.",
+   "frames": [
+    {
+     "ust": "1.0",
+     "state": {
+      "id": {
+       "domain_shard": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+       "ust_id": "ust:20260726.09",
+       "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+       "class": "observation"
+      },
+      "time": {
+       "generated_at": "2026-07-26T09:00:00Z",
+       "valid_from": "2026-07-26T09:00:00Z",
+       "valid_to": "2026-07-26T10:00:00Z"
+      },
+      "data": {
+       "r": {
+        "kind": "captured",
+        "value": {
+         "n": "ust:20260726.09"
+        }
+       }
+      },
+      "hashes": {
+       "r": "sha256:52ffca0c4fbedf6a607a30920032b9b9af6ea8f60b3de6b7c25420649b59ceb2"
+      },
+      "provenance": {
+       "prev": "sha256:f26da381e4bc0bd9c9267daaed5ffd8b6b76b45105f99f25d0cd73a350fb2b5f"
+      }
+     },
+     "sig": {
+      "alg": "Ed25519",
+      "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+      "pub": "vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+      "sig": "eW3vkc0RGUQNxoSmmBhBMYWVENYyW_ERvKhMiLvUil16u-L726Uj0sESQbcZkAb9fxMJI5OobdY-VD4C7TbAAg"
+     }
+    },
+    {
+     "ust": "1.0",
+     "state": {
+      "id": {
+       "domain_shard": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+       "ust_id": "ust:20260726.10",
+       "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+       "class": "observation"
+      },
+      "time": {
+       "generated_at": "2026-07-26T10:00:00Z",
+       "valid_from": "2026-07-26T10:00:00Z",
+       "valid_to": "2026-07-26T11:00:00Z"
+      },
+      "data": {
+       "r": {
+        "kind": "captured",
+        "value": {
+         "n": "ust:20260726.10"
+        }
+       }
+      },
+      "hashes": {
+       "r": "sha256:4802e6bc3558789a59e58866bf55f0c6ad730072d8b065187d4135fc40e425ce"
+      },
+      "provenance": {
+       "prev": "sha256:d91d0680de4804defde31a2544a39b85ac8319691a7f961d3ef8c8cbf4cfba16"
+      }
+     },
+     "sig": {
+      "alg": "Ed25519",
+      "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+      "pub": "vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+      "sig": "wi_Aai2nZ172-8f0Y-Z7Kjv1SVBvV46VMOyRSO-J3Swy1epdzZ1mjuBM4J6WJwsSmJApK3amLoWeN6W6e5KuAg"
+     }
+    },
+    {
+     "ust": "1.0",
+     "state": {
+      "id": {
+       "domain_shard": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+       "ust_id": "ust:20260726.11",
+       "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+       "class": "observation"
+      },
+      "time": {
+       "generated_at": "2026-07-26T11:00:00Z",
+       "valid_from": "2026-07-26T11:00:00Z",
+       "valid_to": "2026-07-26T12:00:00Z"
+      },
+      "data": {
+       "r": {
+        "kind": "captured",
+        "value": {
+         "n": "ust:20260726.11"
+        }
+       }
+      },
+      "hashes": {
+       "r": "sha256:3c9658b82cea057677cf21d7ea44a52e3f4f24e22abe426d88f981537c680698"
+      }
+     },
+     "sig": {
+      "alg": "Ed25519",
+      "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+      "pub": "vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+      "sig": "GyjNYRPMhKYiLr543u2hOItvt7J2y9xO23czwJXdeMZLMsVv4QKe0CxYetjBxAJboQ9E45OFPGeC7mdH4bNFCg"
+     }
+    }
+   ],
+   "genesis": {
+    "ust": "1.0",
+    "state": {
+     "id": {
+      "domain_shard": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+      "ust_id": "ust:20260726.08",
+      "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+      "class": "genesis"
+     },
+     "time": {
+      "generated_at": "2026-07-26T08:00:00Z",
+      "valid_from": "2026-07-26T08:00:00Z",
+      "valid_to": "2026-07-26T09:00:00Z"
+     },
+     "data": {
+      "genesis": {
+       "kind": "captured",
+       "value": {
+        "pub": "vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+        "role": "name-binding-root",
+        "cadence": "3600"
+       }
+      }
+     },
+     "hashes": {
+      "genesis": "sha256:cc02f22f95425773b08958369417915d21e88a3ac20e470b6b833e7ce1cec06e"
+     }
+    },
+    "sig": {
+     "alg": "Ed25519",
+     "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+     "pub": "vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+     "sig": "a1KFOpAaA7dcx3XKYlsy4atD1VHATLE6gKIrAVUzc9GJy243QclO1Z1HC_kt54lWWB-kuog6K8Rk-Bx2HYPPAg"
+    }
+   },
+   "expect": {
+    "error": "E-PREV"
+   }
+  },
+  {
+   "kind": "stream-authority",
+   "id": "sa-06-repaired-advance-accepted",
+   "rule": "control for 138/139/142 — the SAME fixture, advanced from what was PUBLISHED, is accepted",
+   "note": "Three refusals over one fixture prove nothing if the fixture itself cannot be accepted — they would be equally green against a verifier that refuses everything. Frame 2 here chains to frame 1, the repair the producer duty actually demands. `provisional` and not `complete`: no checkpoint is supplied, so the tail is open (P5). The corpus already carries this paired shape at `reroot-01`/`reroot-02`. Measured 2026-08-10, both directions: with every stream refusal removed the three negative vectors redden and this one stays green; with refusal made unavoidable this one reddens and the three stay green.",
+   "frames": [
+    {
+     "ust": "1.0",
+     "state": {
+      "id": {
+       "domain_shard": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+       "ust_id": "ust:20260726.09",
+       "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+       "class": "observation"
+      },
+      "time": {
+       "generated_at": "2026-07-26T09:00:00Z",
+       "valid_from": "2026-07-26T09:00:00Z",
+       "valid_to": "2026-07-26T10:00:00Z"
+      },
+      "data": {
+       "r": {
+        "kind": "captured",
+        "value": {
+         "n": "ust:20260726.09"
+        }
+       }
+      },
+      "hashes": {
+       "r": "sha256:52ffca0c4fbedf6a607a30920032b9b9af6ea8f60b3de6b7c25420649b59ceb2"
+      },
+      "provenance": {
+       "prev": "sha256:f26da381e4bc0bd9c9267daaed5ffd8b6b76b45105f99f25d0cd73a350fb2b5f"
+      }
+     },
+     "sig": {
+      "alg": "Ed25519",
+      "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+      "pub": "vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+      "sig": "eW3vkc0RGUQNxoSmmBhBMYWVENYyW_ERvKhMiLvUil16u-L726Uj0sESQbcZkAb9fxMJI5OobdY-VD4C7TbAAg"
+     }
+    },
+    {
+     "ust": "1.0",
+     "state": {
+      "id": {
+       "domain_shard": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+       "ust_id": "ust:20260726.10",
+       "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+       "class": "observation"
+      },
+      "time": {
+       "generated_at": "2026-07-26T10:00:00Z",
+       "valid_from": "2026-07-26T10:00:00Z",
+       "valid_to": "2026-07-26T11:00:00Z"
+      },
+      "data": {
+       "r": {
+        "kind": "captured",
+        "value": {
+         "n": "ust:20260726.10"
+        }
+       }
+      },
+      "hashes": {
+       "r": "sha256:4802e6bc3558789a59e58866bf55f0c6ad730072d8b065187d4135fc40e425ce"
+      },
+      "provenance": {
+       "prev": "sha256:d91d0680de4804defde31a2544a39b85ac8319691a7f961d3ef8c8cbf4cfba16"
+      }
+     },
+     "sig": {
+      "alg": "Ed25519",
+      "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+      "pub": "vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+      "sig": "wi_Aai2nZ172-8f0Y-Z7Kjv1SVBvV46VMOyRSO-J3Swy1epdzZ1mjuBM4J6WJwsSmJApK3amLoWeN6W6e5KuAg"
+     }
+    },
+    {
+     "ust": "1.0",
+     "state": {
+      "id": {
+       "domain_shard": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+       "ust_id": "ust:20260726.11",
+       "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+       "class": "observation"
+      },
+      "time": {
+       "generated_at": "2026-07-26T11:00:00Z",
+       "valid_from": "2026-07-26T11:00:00Z",
+       "valid_to": "2026-07-26T12:00:00Z"
+      },
+      "data": {
+       "r": {
+        "kind": "captured",
+        "value": {
+         "n": "ust:20260726.11"
+        }
+       }
+      },
+      "hashes": {
+       "r": "sha256:3c9658b82cea057677cf21d7ea44a52e3f4f24e22abe426d88f981537c680698"
+      },
+      "provenance": {
+       "prev": "sha256:d9e59a95d864518477f9b1edb07d6ef5dcbdb95cb54bb672427309eed0d7356b"
+      }
+     },
+     "sig": {
+      "alg": "Ed25519",
+      "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+      "pub": "vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+      "sig": "Um4SGkVjIAi9iwgw-ju84AnbB8kTCoq2ZrUrTYqbDBaFUZxGkuUsNGHswe-vqECAyULqL_tJsD8R7gRoOf14Bg"
+     }
+    }
+   ],
+   "genesis": {
+    "ust": "1.0",
+    "state": {
+     "id": {
+      "domain_shard": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+      "ust_id": "ust:20260726.08",
+      "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+      "class": "genesis"
+     },
+     "time": {
+      "generated_at": "2026-07-26T08:00:00Z",
+      "valid_from": "2026-07-26T08:00:00Z",
+      "valid_to": "2026-07-26T09:00:00Z"
+     },
+     "data": {
+      "genesis": {
+       "kind": "captured",
+       "value": {
+        "pub": "vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+        "role": "name-binding-root",
+        "cadence": "3600"
+       }
+      }
+     },
+     "hashes": {
+      "genesis": "sha256:cc02f22f95425773b08958369417915d21e88a3ac20e470b6b833e7ce1cec06e"
+     }
+    },
+    "sig": {
+     "alg": "Ed25519",
+     "key_id": "sha256:907a890ee1de9602ec9a9901753371b426a5a745d503bceb6f34e8ddc550b301",
+     "pub": "vHy8tWNjdfodgkNNRmck2SN39TuYBpXdSdJtDOEiBaU",
+     "sig": "a1KFOpAaA7dcx3XKYlsy4atD1VHATLE6gKIrAVUzc9GJy243QclO1Z1HC_kt54lWWB-kuog6K8Rk-Bx2HYPPAg"
+    }
+   },
+   "expect": {
+    "complete": "provisional"
    }
   },
   {

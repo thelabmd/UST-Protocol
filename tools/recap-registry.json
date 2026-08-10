@@ -517,6 +517,10 @@
   {
    "round": 197,
    "no_recap": "The round closes no issue — it closes one ROUND's empty vector layer (R-185) as part of #147's registry sweep. #147 stays open; the recap unit is a closed issue, not a closed layer."
+  },
+  {
+   "round": 198,
+   "no_recap": "The round closes no issue — it closes the empty vector layer of three ROUNDS (R-138/139/142) in #147's registry sweep, and lifts what that measurement exposed into the spec and the formal model. #147 stays open; the recap unit is a closed issue, not a closed layer."
   }
  ]
 }

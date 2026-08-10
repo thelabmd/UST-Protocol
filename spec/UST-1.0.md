@@ -772,9 +772,12 @@ stream is complete, therefore trusted."
 exists) ⇒ E-PREV. This forecloses "orphan a new stream to hide prior frames."
 
 **Frame-slot uniqueness (Y1).** Within a sequenced stream the `prev`-chain is LINEAR: exactly ONE authoritative
-document per `(domain_shard, ust_id, tier)`; a second document for an occupied slot is a fork ⇒ E-PREV
-(checkpoint-detected). This is precisely what makes a committed prediction NON-grindable (§10) — and it holds
-ONLY when the stream is verified complete (the range verdict, §11.3); one-off documents carry no slot-uniqueness.
+document per `(domain_shard, ust_id, tier)`; a second document for an occupied slot is a fork ⇒ E-PREV. This is
+precisely what makes a committed prediction NON-grindable (§10) — and it holds ONLY when the stream is verified
+complete (the range verdict, §11.3); one-off documents carry no slot-uniqueness. No stream checkpoint is required
+when both branches reach ONE verifier inside a single set of frames: the linearity of the chain settles it there.
+What the stream checkpoint extends is detection across branches DIVIDED between consumers — the harder and more
+common case, and the reason the duty below rests on the producer.
 
 **And that detection is CONDITIONAL, which places a duty on the producer.** `E-PREV` fires only for a
 verifier holding BOTH branches. Nothing compels the branches to reach one verifier: a publisher whose
@@ -1695,7 +1698,11 @@ unresolved dependency ⇒ the corresponding error (never `VALID`).
    REQUIRES anchored time this is a retry/degraded outcome, reserving E-ANCHOR for a proof that is present-but-wrong. `generated_at` MUST NOT exceed the anchor time (N9); real time is the anchor.
 7. **Sequence (N5) — completeness STRENGTH.** If the operator declares a sequenced stream and the consumer
    requires completeness: `provenance.prev` MUST link the prior frame's `content_hash`; a dangling/rewound
-   `prev` or a stream checkpoint (§11.3) contradicting the observed set ⇒ E-PREV. Otherwise this step yields a
+   `prev` or a stream checkpoint (§11.3) contradicting the observed set ⇒ E-PREV. Within a set of frames verified
+   as ONE stream, a frame after the first that carries NO `prev` is likewise E-PREV: an absent `prev` is not an
+   omitted field but the assertion that the stream begins here (§11.3), and the frames preceding it in the same set
+   contradict that assertion. A one-off State outside any stream still carries no `prev` and is untouched by this —
+   the rule applies only inside a sequence being verified as one. Otherwise this step yields a
    completeness STRENGTH (proven / provisional / none), not a gate. A one-off or completeness-not-required
    verification passes with completeness `none`/`provisional`.
 8. **Privacy.** For each PRIVATE partition (blinded/encrypted, §4.4/§10), if authorized: reproduce its `commit`
