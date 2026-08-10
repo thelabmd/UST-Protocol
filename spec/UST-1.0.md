@@ -209,6 +209,16 @@ frames + `A`-signed cadence, so it is correctly UNSIGNED — a signature would a
 choice reads only the resolved key-log + the shared anchor, so two consumers reach the SAME canonical regardless
 of local fetch order. (Stream completeness applies the same rule per frame — see §11.3 grid equality.)
 
+**The answer NAMES which question it answered.** A fork-choice record carries `kind: "fork-choice"`, on EVERY
+outcome without exception, and its `result` is drawn from its own vocabulary (`CANONICAL`, `MULTI_AUTHORITY`,
+`INDETERMINATE`, `REFUSED`) — not from the §14 verdict vocabulary (`VALID`, `INVALID`, `INDETERMINATE`). The two
+sets INTERSECT at `INDETERMINATE`, so a consumer holding a record that says so has nothing else to tell "this
+document could not be judged" from "no candidate could be shown canonical". The discriminator is ASYMMETRIC and
+deliberately so: a §14 verdict carries NO `kind`, so its PRESENCE means the record is not a verdict and its
+ABSENCE means it is. A consumer MUST NOT read a fork-choice `result` as a verdict, and an implementation MUST NOT
+emit a fork-choice outcome without the discriminator — one path that omits it is worse than never having it,
+because the consumer's test then succeeds often enough to be relied on (F.5e.2a).
+
 ---
 
 ## 4. Data model

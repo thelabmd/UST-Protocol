@@ -3364,6 +3364,7 @@
     "sha256:2621c01c25ca9a1631cfcb30f3de0cd6334d09d726069b691bc136437edbdd5e"
    ],
    "expect": {
+    "kind": "fork-choice",
     "result": "INDETERMINATE"
    }
   },
@@ -3536,6 +3537,7 @@
    ],
    "anchor_time": "2026-06-28T14:20:00Z",
    "expect": {
+    "kind": "fork-choice",
     "result": "INDETERMINATE"
    }
   },

@@ -3220,6 +3220,13 @@ export const REGISTRY = deepFreeze({   // round-25 P0-04 — DEEP-frozen: the ca
   // which vocabulary it is in, and the error codes moved to `error` beside `result: 'REFUSED'` — the same line the
   // verdict guards were brought onto. Additive: no published field changed its name or disappeared.
   forkChoiceResults: ['CANONICAL', 'MULTI_AUTHORITY', 'INDETERMINATE', 'REFUSED'],
+  // The DISCRIMINATOR itself, registered (round 199) because the sentence above claims a property no artifact was
+  // checking. `spec-code-sync` now enumerates every `return {` in `forkChoice` and fails on one that omits this
+  // exact string — a discriminator carried on ten paths and dropped on the eleventh is worse than none, since the
+  // consumer's test passes often enough to be trusted. ASYMMETRIC on purpose (F.5e.2a): the §14 verdict carries no
+  // `kind`, so PRESENT means "not a §14 verdict" and ABSENT means "it is one". A future answer that is neither must
+  // register its own kind rather than lean on absence.
+  forkChoiceKind: 'fork-choice',
   verifiedEvidenceFields: { required: ['proof_kind', 'subject', 'source_id', 'facts'], optional: ['verifier_id', 'verifier_version'] },
   // M3 — the SIGNED connector-receipt claim (§12.3.5): facts only; a capability/assurance/independence field is E-EVIDENCE.
   evidenceReceiptClaimFields: { required: ['version', 'purpose', 'domain_shard', 'active_genesis', 'genesis_epoch', 'subject', 'proof_kind', 'facts', 'issued_at'], optional: ['payload_digest'] },

@@ -1108,6 +1108,51 @@ is what admits the field: a verifier that ignored `role` would have to keep refu
 enforces (`OP_FIELDS` rejects any unnamed field); it imposes no obligation of its own beyond that enforcement.
 
 
+## F.5e.2a The criterion of §F.5e.2 governs the INPUT, and inverts on the OUTPUT (rev98)
+
+§F.5e.2 admits a field to a signed document only if **the verifier ACTS ON IT**. That criterion is sound where it
+was written — over `OP_FIELDS`, the fields a publisher may place inside a signature. Applied to the record the
+verifier RETURNS it is not merely wrong but meaningless: a verifier acts on none of its own output fields, it
+produces them. Reading it that way forbids every field of every answer.
+
+**The criterion inverts across the boundary.** For an input field the question is whether anyone downstream reads
+it; a field nobody reads is a place for two parties to disagree while both verify. For an OUTPUT field the question
+is the reader's: a field is admissible, and becomes REQUIRED, exactly when **without it two different answers are
+indistinguishable to the consumer that must act on them.**
+
+*This is not hypothetical here, and the measurement is the argument.* Two calls in this core answer different
+questions under the same field name `result`. The §14 verdict answers "is this document valid" over
+`{VALID, INVALID, INDETERMINATE}`; `forkChoice` answers "which candidate is canonical" over
+`{CANONICAL, MULTI_AUTHORITY, INDETERMINATE, REFUSED}`. Measured 2026-08-10: the two vocabularies **intersect at
+`INDETERMINATE`**, and a §14 verdict record is `{result, error, detail}` while a fork-choice record is
+`{kind, result, error, detail}`. A consumer holding a record that says `INDETERMINATE` therefore has exactly one
+thing separating "this document could not be judged" from "no candidate could be shown canonical": the presence of
+`kind`. Under the input criterion that field would be forbidden — the verifier does not act on it — and the two
+answers would be one.
+
+The COLLISION itself is **STANDING**: two questions still answer under one field name, and renaming either
+vocabulary is a breaking change tracked as thelabmd/UST-Protocol#111. What is **CLOSED** (2026-08-10, round 199)
+is the consequence — the two answers are no longer indistinguishable, because the discriminator is now stated
+normatively, registered, and enumerated over every return rather than asserted in a comment.
+
+**Corollary (the discriminator is ASYMMETRIC, deliberately).** The §14 verdict carries no `kind`, and adding one
+for symmetry would be a breaking change to every consumer already reading verdicts. The rule is therefore
+one-sided and must be stated as such: `kind` PRESENT means the record is not a §14 verdict; `kind` ABSENT means
+it is. A future answer that is neither must introduce its own `kind` rather than rely on absence.
+
+**Corollary (a discriminator is only as good as its TOTALITY).** A record shape that carries the field on ten
+paths and omits it on the eleventh is worse than one that never had it: the consumer's test succeeds often enough
+to be trusted and then silently reports a fork-choice outcome as a verdict. Measured 2026-08-10: all 11 returns of
+`forkChoice` carry it — and nothing enforced that. The property was asserted in a REGISTRY comment ("every return
+now carries `kind: 'fork-choice'`") and checked by no executed artifact, which is this repository's recurring
+defect class: a rule stated in prose beside the code it describes, with no carrier. CLOSED 2026-08-10 (round 199)
+— `spec-code-sync` now enumerates the returns of `forkChoice` and fails on any that omits the registered
+discriminator.
+
+**Binding: none — definitional.** The section states the admission criterion for output fields; the obligation it
+implies over this core is enforced by the enumeration named above, not by this section.
+
+
 ## F.5e.3 Authority to MUTATE the key log is not authority to SIGN (rev97)
 
 §F.5e's admissibility invariant asks one question of an entry's signer: `signer(e_{i+1}) ∈ active(after e_i)`. That

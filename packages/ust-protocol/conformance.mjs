@@ -372,7 +372,13 @@ for (const v of V.vectors) {
     // every real stream. Absent, `verifyStream` still resolves against the genesis alone, so existing vectors are
     // untouched (measured: the runner change alters no prior verdict).
     case 'stream-authority': case 'stream-grid': { const r = P.verifyStream(v.frames, { genesis: v.genesis, checkpoint: v.checkpoint, ...(v.keylog ? { keylog: v.keylog } : {}) }); check(v.id, v.expect.error ? r.error === v.expect.error : r.complete === v.expect.complete); break; }
-    case 'fork-choice': { const sv = (a, root) => v.anchored_roots.includes(root) ? { final: true, time: v.anchor_time ?? '2027-01-01T00:00:00Z' } : null; const r = await P.forkChoice(v.candidates, { genesis: v.genesis, ...(v.keylog ? { keylog: v.keylog } : {}), ...nfe(v.genesis), substrateVerify: sv }); check(v.id, r.result === v.expect.result); break; }
+    case 'fork-choice': { const sv = (a, root) => v.anchored_roots.includes(root) ? { final: true, time: v.anchor_time ?? '2027-01-01T00:00:00Z' } : null; const r = await P.forkChoice(v.candidates, { genesis: v.genesis, ...(v.keylog ? { keylog: v.keylog } : {}), ...nfe(v.genesis), substrateVerify: sv });
+      // round 199 — the DISCRIMINATOR is compared, unconditionally, not `expect.kind ? … : true`. Both vectors of
+      // this kind expect `result: 'INDETERMINATE'`, which is also a §14 verdict word: comparing `result` alone, a
+      // build that answered with a §14 verdict record would pass. The comparison is mandatory rather than opt-in so
+      // the requirement covers the KIND rather than the two vectors that happen to declare it — a vector added
+      // without `expect.kind` reddens here instead of quietly opting out (F.5e.2a).
+      check(v.id, r.result === v.expect.result && r.kind === v.expect.kind, `got {kind:${JSON.stringify(r.kind)}, result:${JSON.stringify(r.result)}} expected {kind:${JSON.stringify(v.expect.kind)}, result:${JSON.stringify(v.expect.result)}}`); break; }
     // #95 — the REFERENCE inclusion connector, pinned language-neutrally. Now that the protocol calls the tagged walk one
     // connector among several, a second implementation needs the bytes to reproduce it; the DELEGATION seam itself cannot
     // be a vector (JSON carries no function), which is why it lives in the checks + mutation corpus instead.

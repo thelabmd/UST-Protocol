@@ -451,15 +451,13 @@
   },
   {
    "round": 103,
-   "math": {
-    "excluded": "§14's verdict vocabulary is already stated and unchanged — this round brings two returns INTO it rather than moving it. The forkChoice discriminator is a field the verifier does not act on and could not enter a strict allowlist under §F.5e.2; it is a producer-side aid to the reader, which the model has no term for."
-   },
+   "math": "The criterion of §F.5e.2 governs the INPUT, and inverts on the OUTPUT",
    "spec": "the three OUTCOME KINDS of §15 (VALID / INVALID / INDETERMINATE)",
    "code": "packages/ust-protocol/index.mjs :: verifyAsync totality guard",
-   "vector": {
-    "excluded": "The path is reached by passing a hostile Proxy as an argument, which is not a document and cannot be expressed as a byte vector. The pin is the round-19 P1-02 conformance check, which now asserts the shape it used to merely record — and #111's request for a vector is answered by naming why one cannot exist rather than by fabricating one."
-   },
-   "test": "round-19 P1-02 hostile accessor/Proxy args (5 boundaries) → structured E-MALFORMED, never a host throw"
+   "vector": "fc-01-impostor-not-canonical",
+   "test": "round-19 P1-02 hostile accessor/Proxy args (5 boundaries) → structured E-MALFORMED, never a host throw",
+   "_math_was": "§14's verdict vocabulary is already stated and unchanged — this round brings two returns INTO it rather than moving it. The forkChoice discriminator is a field the verifier does not act on and could not enter a strict allowlist under §F.5e.2; it is a producer-side aid to the reader, which the model has no term for.",
+   "_vector_was": "The path is reached by passing a hostile Proxy as an argument, which is not a document and cannot be expressed as a byte vector. The pin is the round-19 P1-02 conformance check, which now asserts the shape it used to merely record — and #111's request for a vector is answered by naming why one cannot exist rather than by fabricating one."
   },
   {
    "round": 104,
@@ -1544,6 +1542,14 @@
    "code": "packages/ust-protocol/conformance.mjs :: the fifth UST#147 check, asserting the stated form count equals the forms listed",
    "vector": "stream-fork-visible-only-with-both-branches",
    "test": "packages/ust-protocol/conformance.mjs :: UST#147 the definition's form count matches the forms it lists — mutation-controlled (stating 3 while listing 8 reddens that check alone)"
+  },
+  {
+   "round": 199,
+   "math": "a discriminator is only as good as its TOTALITY",
+   "spec": "A fork-choice record carries `kind: \"fork-choice\"`, on EVERY",
+   "code": "packages/ust-protocol/index.mjs :: REGISTRY.forkChoiceKind — the discriminator registered rather than repeated as a string literal, so the gate compares against a declared value instead of a hand-typed one",
+   "vector": "fc-02-suspect-key-reaches-predicate-and-is-refused",
+   "test": "tools/spec-code-sync.mjs"
   },
   {
    "round": 198,

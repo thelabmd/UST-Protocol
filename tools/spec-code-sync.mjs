@@ -63,6 +63,18 @@ const fcResults = [...fcBody.matchAll(/result:\s*['"`]([A-Z][A-Z_-]*)['"`]/g)].m
 check('forkChoiceResults', fcResults, REGISTRY.forkChoiceResults);
 const verdictResults = [...bare.replace(fcBody, '').matchAll(/result:\s*['"`]([A-Z][A-Z_-]*)['"`]/g)].map((m) => m[1]);
 check('results', verdictResults, REGISTRY.results);
+// round 199 — the DISCRIMINATOR's TOTALITY, not its presence. Everything else in this file compares a SET against a
+// SET; this leg compares a COUNT against a COUNT, because the defect it exists for is one return out of eleven that
+// forgot the field. A set check cannot see that: with ten correct returns the string is present and the set matches.
+// Enumerated over the same line-bounded `fcBody` the vocabulary check uses, so the two cannot drift apart.
+{
+  const returns = fcBody.split('\n').filter((l) => /return\s*\{/.test(l));
+  const tagged = returns.filter((l) => new RegExp(`kind:\\s*['"\`]${REGISTRY.forkChoiceKind}['"\`]`).test(l));
+  const bad = returns.length - tagged.length;
+  if (bad) { fail++; report.push(`  ✗ forkChoiceKind: ${bad} of ${returns.length} \`return {\` in forkChoice omit \`kind: '${REGISTRY.forkChoiceKind}'\` — a discriminator that is absent on one path lets a fork-choice outcome be read as a §14 verdict (F.5e.2a)`); }
+  else if (!returns.length) { fail++; report.push('  ✗ forkChoiceKind: the enumeration found NO returns in forkChoice — the scanner lost its subject, so this leg would pass for anything'); }
+  else report.push(`  ✓ forkChoiceKind: ${tagged.length}/${returns.length} forkChoice returns carry the registered discriminator`);
+}
 // §11.3 completeness words, from the field the stream verdict actually sets
 check('completeness', [...src.matchAll(/\bcomplete:\s*['"`]([a-z-]+)['"`]/g)].map((m) => m[1]), REGISTRY.completeness);
 
