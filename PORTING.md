@@ -68,6 +68,24 @@ precisely this; a Go `ust canon` ships with the Go SDK (#34) so cross-SDK diffs 
   producer. `@ust-protocol/web-signer` hides this for JS; other languages call their stdlib Ed25519 over the
   returned `signing_input`.
 
+**If you DO write your own verifier: your Ed25519 library will not enforce §7/N6 for you.** Measured 2026-08-09
+on three implementations — `node:crypto`, WebCrypto and Go's `crypto/ed25519` — against the reference edge-case
+corpus (Chalkias, Garillot, Nikolaenko, *Taming the many EdDSAs*, 12 vectors). Two findings, and the second is
+the one that matters to you:
+
+- the three **agree on all twelve**, and all are cofactorless, so the classic "which EdDSA is this?" divergence
+  did not appear between them;
+- and all three **accept** small-order `A`/`R` and one non-canonical `A` — the encodings §7/N6 says to reject.
+
+So a port that simply calls its stdlib verify is **not conforming**, in the same way ours was not until that
+measurement. Both rejections are decidable on the wire bytes, no curve arithmetic required: small order is a
+finite set of **eight** encodings, and canonicality is `y < p` **plus** the negative-zero case (`x == 0`, i.e.
+`y ∈ {1, p−1}`, with the sign bit set). That second half is easy to miss — in the corpus, vectors 8–11 are
+non-canonical *only* in that sense, their `y` is `p−1` and well inside the field, so a `y >= p` test alone
+passes all four straight through. The `ed25519-point-admission` vectors in `vectors/conformance-vectors.json`
+pin exactly this, and `admitEd25519Point` in the JS core is the reference implementation of it. Mixed-order
+points stay ACCEPTED on purpose: §7/N6 does not forbid them, and rejecting them would need a subgroup check.
+
 A port that only VERIFIES needs nothing above the base. A port that PRODUCES a stream will meet the same
 state-over-time problems the JS operator layer already solves — prev-chains per tier, checkpoints with observed
 interval bounds, and composition above the breadth law. `@ust-protocol/operator` is not normative and you are
