@@ -9,7 +9,9 @@
 // WHY (measured 2026-08-09). `PORTING.md` told a stranger to "call a conforming verifier (`ust-protocol` in JS,
 // THE GO BINARY, or the MCP)", said "~90 % of consumers call … the Go binary", and called Go "the first official
 // non-JS SDK". `packages/ust-cli/README.md` said "The Go binary reproduces this same surface". There are ZERO
-// `.go` files in this repository and #34 — the card that would create one — is open.
+// `.go` files in this repository and #34 — the card that would create one — is open. CLOSED 2026-08-09 for the
+// WORDING (every mention in the tracked corpus is planned-tense and this gate holds it there); OPEN for the
+// substance — until #34 lands, this project has ONE implementation and now says so.
 //
 // This is not a typo class. A second independent implementation is the ANTI-MONOCULTURE argument: it is what
 // makes a differential test mean anything, and it is one of the reasons an outsider would trust the protocol at
@@ -18,6 +20,7 @@
 //
 // Bearing `(#34)` next to the claim does NOT make it honest: "the Go binary (#34)" reads as "it exists, here is
 // its ticket". The marker has to say the thing is not there.
+
 import { readFileSync, readdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
