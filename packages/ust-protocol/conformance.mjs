@@ -2992,6 +2992,32 @@ console.log('\n═════════════════════�
   }
 }
 
+// ─── UST#147 — THE DEFINITION MUST NOT DRIFT FROM THE CORPUS IT DESCRIBES ──────────
+// `what_a_vector_pins` at the top of the corpus states what a vector may pin, and it is DERIVED from the corpus
+// rather than declared. A derived statement that nobody re-derives becomes the thing it replaced: the formula it
+// supersedes — "vectors pin document bytes" — was true of 40 of 228 entries and was pasted 46 times as a reason
+// the vector layer could not exist. These checks re-derive it on every run, so the definition cannot quietly age.
+{
+  const D = V.what_a_vector_pins;
+  check('UST#147 the corpus carries the definition of what a vector may pin', !!D && typeof D.the_rule === 'string');
+  if (D) {
+    const m = D.measured_2026_08_10 ?? {};
+    check('UST#147 the definition\'s vector count matches the corpus it describes', m.total === V.vectors.length,
+      `states ${m.total}, corpus has ${V.vectors.length}`);
+    const kinds = new Set(V.vectors.map((v) => v.kind));
+    check('UST#147 the definition\'s kind count matches the corpus', m.kinds === kinds.size,
+      `states ${m.kinds}, corpus has ${kinds.size}`);
+    const cited = (D.forms ?? []).flatMap((x) => x.examples ?? []);
+    const missing = cited.filter((k) => !kinds.has(k));
+    check('UST#147 every kind the definition cites EXISTS — a definition may not illustrate itself with a vector that is gone',
+      missing.length === 0, missing.join(', '));
+    // Вакуумность: определение, не перечисляющее ни одной формы без документа, вернуло бы старую узость.
+    const nonDoc = (D.forms ?? []).filter((x) => !/document/i.test(String(x.input)));
+    check('UST#147 the definition names at least three input forms that are NOT a document (the narrowness it replaces)',
+      nonDoc.length >= 3, `${nonDoc.length} non-document form(s)`);
+  }
+}
+
 // ─── #39 negative / absence observation — the notary's other half ──────────────────────────────────────
 {
   const abs = P.seal(P.buildAbsence({ ...ID, ust_id: 'ust:20260628.1401' }, T, 'noaa_swpc', 'unreachable', { subject: 'GOES-18' }), A.priv, A.pubB64);

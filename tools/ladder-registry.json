@@ -1,5 +1,5 @@
 {
- "_": "Per-round accounting for the law math → spec → code → vector → test. Every layer is either a REFERENCE that must resolve, or an explicit exclusion WITH a reason. A skip is legitimate — rev92(d) has no formal-model content and forcing prose there would be the patch this repo rejects — but it must be a DECISION, not an absence. See thelabmd/UST-Protocol#99. Records are keyed by `rev` for the CLOSED reference-checker ladder (historical) or by `round` for the LIVE version-line counter. A round is accounted where the work is recorded, not where a finished audit arc used to be.",
+ "_": "Per-round accounting for the law math → spec → code → vector → test. Every layer is either a REFERENCE that must resolve, or an explicit exclusion WITH a reason. A skip is legitimate — rev92(d) has no formal-model content and forcing prose there would be the patch this repo rejects — but it must be a DECISION, not an absence. See thelabmd/UST-Protocol#99. Records are keyed by `rev` for the CLOSED reference-checker ladder (historical) or by `round` for the LIVE version-line counter. A round is accounted where the work is recorded, not where a finished audit arc used to be. BEFORE EXCLUDING THE `vector` LAYER, read `what_a_vector_pins` at the top of vectors/conformance-vectors.json. It is derived from the corpus, not declared: a vector is a FIXED INPUT and a DECLARED RESULT, and a document is only one of the input forms (measured 2026-08-10 — 40 of 228 vectors take a document; 75 take a value, 59 a genesis-plus-log, 27 raw bytes with no document at all). The layer may be excluded only when the subject has NO fixed input — a live network, a registry read, wall-clock time. \"There is no document to pin\" is NOT such a reason, and it was used 46 times here before anyone compared it with the corpus (UST#147).",
  "unaccounted_pin": 89,
  "_pin": "Rows in the ladder with no record here. May only ever SHRINK. 94 rows existed when the gate landed; the three most recent are accounted.",
  "records": [
@@ -1494,6 +1494,20 @@
    "code": "tools/platform-agreement/main.go :: the instrument, reading our own vectors rather than an upstream corpus; and the Go detector in tools/promised-artifacts-gate.mjs, which counted any .go file and was flipped to exists by the instrument itself",
    "vector": "ed25519-edge-00",
    "test": "tools/promised-artifacts-gate.mjs :: a document may not claim an artifact this tree does not contain — the detector fix is covered by the same mutation control (restoring the old CLI sentence reddens it), and the instrument itself is manual: no Go toolchain runs in CI, which is stated rather than implied"
+  },
+  {
+   "round": 193,
+   "math": {
+    "excluded": "No mathematical content. The subject is what OUR corpus pins and how a round may account for it — a property of this repository's bookkeeping, not of the protocol. Writing model text here would restate the bookkeeping as theory, which is the patch this repository rejects."
+   },
+   "spec": {
+    "excluded": "Nothing normative moved: no producer emits differently and no verifier accepts differently. The corpus gained a header describing itself; the vectors it describes are unchanged, byte for byte."
+   },
+   "code": "packages/ust-protocol/conformance.mjs :: the four UST#147 checks that re-derive the definition from the corpus on every run",
+   "vector": {
+    "excluded": "The subject has no fixed input FOR AN IMPLEMENTATION — it is the agreement between a header and the data beside it, not behaviour of a verifier on an input. This is the criterion the round itself introduces, applied to itself: a vector pins input to result, and there is no input here to give a port. Note the shape deliberately: the exclusion names WHICH of the six input forms it fails, which is exactly what the new rule demands of every future exclusion."
+   },
+   "test": "packages/ust-protocol/conformance.mjs :: UST#147 the definition's vector count matches the corpus it describes — mutation-controlled (stating 999 reddens that check alone), and the citation check caught a real error on its first run (vector IDs used where kinds were meant)"
   }
  ],
  "first_accounted_round": 76,

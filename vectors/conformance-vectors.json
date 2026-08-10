@@ -15,6 +15,82 @@
    "key_id": "sha256:eea63f9cacad592e3cdafe1cb944faae1bad01f9f4abfcd40d3383ecde93285d"
   }
  },
+ "what_a_vector_pins": {
+  "_": "WHAT A VECTOR MAY PIN — read this before excluding the `vector` layer of a round, and before deciding a case \"cannot be a vector\". Derived from THIS corpus on 2026-08-10, not declared: 228 vectors across 43 kinds.",
+  "the_rule": "A vector is a FIXED INPUT and a DECLARED RESULT that a runner must reproduce. The input being a DOCUMENT is one case among several; the result being a VERDICT is one case among several.",
+  "measured_2026_08_10": {
+   "total": 228,
+   "kinds": 43,
+   "input_is_a_document": 40,
+   "input_is_a_value_or_string": 75,
+   "input_is_a_genesis_plus_log": 59,
+   "input_is_raw_bytes": 27
+  },
+  "forms": [
+   {
+    "input": "document bytes",
+    "result": "a verdict",
+    "examples": [
+     "document-negative",
+     "class-role",
+     "attestation-subtype"
+    ]
+   },
+   {
+    "input": "a value or string",
+    "result": "a canonical value, or a refusal",
+    "examples": [
+     "canon",
+     "canon-reject",
+     "b64url",
+     "cadence"
+    ]
+   },
+   {
+    "input": "raw bytes, with NO document",
+    "result": "a predicate over those bytes",
+    "examples": [
+     "ed25519-point-admission"
+    ]
+   },
+   {
+    "input": "a genesis plus a log, and a time",
+    "result": "the resolved state at that time",
+    "examples": [
+     "keylog-state",
+     "cadence-resolve",
+     "role-admits"
+    ]
+   },
+   {
+    "input": "a hash, a path and a root",
+    "result": "inclusion or refusal",
+    "examples": [
+     "anchor-inclusion",
+     "anchor-rollup"
+    ]
+   },
+   {
+    "input": "an assurance tuple",
+    "result": "the projected tier",
+    "examples": [
+     "tier-projection",
+     "ustid-tier",
+     "ladder"
+    ]
+   },
+   {
+    "input": "a document AND a verifier CONFIGURATION",
+    "result": "ONE declared result per configuration — each half executed by the build it describes",
+    "examples": [
+     "faculty-absent",
+     "malleability-reject"
+    ]
+   }
+  ],
+  "when_the_layer_may_be_excluded": "Only when the subject has NO fixed input — a live network, a registry read, wall-clock time, a published state that changes. NOT because \"there is no document\": three of the forms above have none. An exclusion asserting impossibility must name which of these forms it fails, and a kind that already exists refutes it.",
+  "history": "The formula \"Vectors pin document bytes and the verdicts they must produce\" was used 46 times in tools/ladder-registry.json as a reason the layer could not exist. Measured against this corpus it describes 40 of 228. The two entries that widened the definition — faculty-absent-ed25519 (round 189) and ed25519-point-admission (round 190) — landed after all 46 were written. See UST#147."
+ },
  "vectors": [
   {
    "id": "canon-01-key-sort-nfc",
