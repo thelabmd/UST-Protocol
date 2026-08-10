@@ -1280,7 +1280,7 @@
     "excluded": "No byte-vector: the subject is a generated skeleton, and its contract is enforced by --check refusing an unfilled marker rather than by a corpus entry."
    },
    "test": {
-    "excluded": "MEASURED while writing this record: tools/recap-compose.mjs is invoked by NEITHER the workflow nor any package script — grep finds it in neither. So its --check, the refusal that makes the shape binding, runs only when an author chooses to type it. The ladder gate refused a test reference to it and was RIGHT: pointing the layer at an unrun command would have been the exact defect this repository spends its gates on. Recorded as an exclusion rather than papered over; wiring the generator's own check into the pipeline is the next round, not this one."
+    "excluded": "MEASURED while writing this record: tools/recap-compose.mjs is invoked by NEITHER the workflow nor any package script — grep finds it in neither. So its --check, the refusal that makes the shape binding, runs only when an author chooses to type it. The ladder gate refused a test reference to it and was RIGHT: pointing the layer at an unrun command would have been the exact defect this repository spends its gates on. Recorded as an exclusion rather than papered over; wiring the generator's own check into the pipeline is the next round, not this one. CLOSED BY ROUND 195 (2026-08-10): the wiring this exclusion promised is done — tools/recap-compose-selfcheck.mjs runs the generator and observes BOTH directions of its refusal (rejects a skeleton, accepts a written report), and CI calls it as test:recap-selfcheck. The exclusion is kept rather than replaced: it was correct when written, and the record of WHY the layer was empty is worth more than a tidy reference."
    }
   },
   {
@@ -1522,6 +1522,20 @@
     "excluded": "No fixed input for an implementation — the subject is agreement between a declaration table and the exports beside it, which is a property of this repository rather than behaviour of a verifier on an input. Named against the criterion introduced in round 193: of the six input forms a vector may take, this subject provides none, because there is nothing to hand a port."
    },
    "test": "tools/capability-parity.mjs :: REALITY: ust-ots-verify declares substrate-registry — mutation-controlled in both directions (restoring full reddens by name; declaring subset for an absent half also reddens, which is how the na was found)"
+  },
+  {
+   "round": 195,
+   "math": {
+    "excluded": "No mathematical content, and for the reason round 174 already gave about the same subject: the report shape is a RECORDING convention of ours, not a protocol claim. A theorem about how we write reports would be a theorem about us."
+   },
+   "spec": {
+    "excluded": "Nothing normative moved: the specification governs what a transcript means to a stranger, and a report generator is our own artifact about our own work. No producer emits differently, no verifier accepts differently."
+   },
+   "code": "tools/recap-compose-selfcheck.mjs :: composes all three forms, counts their sections rather than naming them, and observes both directions of the --check refusal",
+   "vector": {
+    "excluded": "No fixed input for an implementation. Measured against the criterion round 193 introduced — of the six input forms a vector may take, this subject provides none: the input is our own generator and the result is its exit code, neither of which can be handed to a port. The corpus pins what a verifier must conclude, not whether our tooling runs."
+   },
+   "test": "tools/recap-compose-selfcheck.mjs :: the check ACCEPTED a skeleton that still carries FILL markers — mutation-controlled by disabling the marker-refusal branch specifically (the first attempt flipped an unrelated exit and stayed green, which is recorded because aiming NEAR a claim is a repeating class here)"
   }
  ],
  "first_accounted_round": 76,

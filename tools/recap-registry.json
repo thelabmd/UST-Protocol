@@ -505,6 +505,10 @@
   {
    "round": 194,
    "no_recap": "The round closes no issue — #148 stays open on browser-portability of both connectors, which this round does not touch. It removes one vacuous green found while mapping the road to TOP; the recap unit is a closed issue."
+  },
+  {
+   "round": 195,
+   "no_recap": "The round closes no issue — #147 stays open with two of three surfaces to go (the registry sweep continues, the gate comes last). It closes one ROUND's empty layer, R-174, which is not the recap unit; the unit is a closed issue."
   }
  ]
 }
