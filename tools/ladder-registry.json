@@ -1482,6 +1482,18 @@
     "excluded": "No wire vector: nothing about a document, canon, hash or verdict changed. The subject is whether this repository's prose matches this repository's contents, which is not a property any byte-level vector can carry — a port reading our documents is affected, but a port's OWN documents are not ours to pin."
    },
    "test": "tools/promised-artifacts-gate.mjs :: a document may not claim an artifact this tree does not contain — mutation-checked (restoring the old CLI sentence reddens it by file and line) and vacuity-checked (a corpus mentioning nothing rostered reports VACUOUS rather than passing)"
+  },
+  {
+   "round": 192,
+   "math": {
+    "excluded": "No mathematical content. The round moves an INSTRUMENT into the tree and makes a corpus self-contained; the theorem it serves (rev94, a rule delegated to a component that does not implement it) was written in round 190 and is unchanged. Writing model text to fill this layer would restate rev94 in a second place, which is how two statements of one rule come to disagree."
+   },
+   "spec": {
+    "excluded": "No normative change. §7/N6 is untouched; what changed is whether OUR evidence for a claim about §7/N6 can be re-run by a stranger. A spec clause about the reproducibility of our own measurements would be a rule this protocol cannot impose on anyone else."
+   },
+   "code": "tools/platform-agreement/main.go :: the instrument, reading our own vectors rather than an upstream corpus; and the Go detector in tools/promised-artifacts-gate.mjs, which counted any .go file and was flipped to exists by the instrument itself",
+   "vector": "ed25519-edge-00",
+   "test": "tools/promised-artifacts-gate.mjs :: a document may not claim an artifact this tree does not contain — the detector fix is covered by the same mutation control (restoring the old CLI sentence reddens it), and the instrument itself is manual: no Go toolchain runs in CI, which is stated rather than implied"
   }
  ],
  "first_accounted_round": 76,

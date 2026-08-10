@@ -46,7 +46,12 @@ function walk(dir, hit, out = []) {
 const ARTIFACTS = [
   {
     claim: /\bGo (binary|SDK|implementation|verifier)\b/i,
-    exists: () => walk(ROOT, (n) => n.endsWith('.go')).length > 0,
+    // The detector looks in `packages/`, where SDKs live, NOT anywhere a `.go` file might appear. Measured
+    // 2026-08-10, hours after this gate shipped: adding a 39-line MEASURING INSTRUMENT under `tools/` — it calls
+    // one stdlib primitive and implements no protocol rule — flipped this to "exists in the tree" and would have
+    // re-licensed every claim the gate was written to stop. A detector that counts any file of the right
+    // extension answers "is there Go here", and the claim under test is "is there a Go IMPLEMENTATION".
+    exists: () => walk(join(ROOT, 'packages'), (n) => n.endsWith('.go')).length > 0,
     // Honest = the sentence itself denies existence, in ANY form. Planned-tense is one form; stating the count is
     // another — "claimed a Go binary in four places and contains zero Go files" is a true sentence about a past
     // false one, and a detector that only knew the word "planned" fired on it. Widening the NOTION beats adding an
@@ -56,7 +61,7 @@ const ARTIFACTS = [
   },
   {
     claim: /\bRust (binary|SDK|implementation|verifier)\b/i,
-    exists: () => walk(ROOT, (n) => n.endsWith('.rs')).length > 0,
+    exists: () => walk(join(ROOT, 'packages'), (n) => n.endsWith('.rs')).length > 0,
     honest: /\b(planned|not written|does not exist|not yet|would|follow the same pattern)\b/i,
     label: 'Rust binary / SDK',
   },

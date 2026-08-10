@@ -493,6 +493,10 @@
   {
    "round": 191,
    "no_recap": "The round closes no issue — #34 stays open, and it is the card that would make these sentences true rather than planned. The recap unit here is one CLOSED issue."
+  },
+  {
+   "round": 192,
+   "no_recap": "The round closes no issue — #144 and #34 both stay open, and the recap unit is one CLOSED issue. It also records a defect this round CAUSED (a detector one level too coarse), which belongs in the changelog beside the claim it qualifies."
   }
  ]
 }
