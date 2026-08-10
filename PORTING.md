@@ -54,12 +54,12 @@ npx @ust-protocol/cli canon your-input.json      # prints the canonical STRING +
 
 Diff your output against that, and you see the exact divergence point (a stray space, a `é` where a literal
 `é` belongs, an unsorted key) instead of a silent signature mismatch. The reference CLI's `ust canon` exists for
-precisely this; a Go `ust canon` ships with the Go SDK (#34) so cross-SDK diffs are one command.
+precisely this; a Go `ust canon` is PLANNED with the Go SDK (#34, not written yet) so cross-SDK diffs become one command.
 
 ## The crypto boundary (a design boundary, not a gap)
 
-- **Verify needs ZERO crypto from you.** Call a conforming verifier (`ust-protocol` in JS, the Go binary, or the
-  `ust_verify` MCP tool) and read a machine verdict. You do not reimplement hashing or signature checking to
+- **Verify needs ZERO crypto from you.** Call a conforming verifier (`ust-protocol` in JS or the
+  `ust_verify` MCP tool — a second, independent implementation is PLANNED, #34, and does not exist yet) and read a machine verdict. You do not reimplement hashing or signature checking to
   *consume* UST.
 - **Produce needs ONE primitive.** The build tools return `{ state, content_hash, signing_input }`. You do a
   single `Ed25519.sign(privkey, signing_input)` (RFC 8032, strict) and assemble
@@ -97,13 +97,15 @@ signing), so there is no RFC 6979 concern — the only entropy requirement is CS
 
 ## Recommended path
 
-1. **Reuse, don't rewrite.** ~90 % of consumers call `ust-protocol` (JS), the Go binary (#34), or the MCP. The
+1. **Reuse, don't rewrite.** Most consumers call `ust-protocol` (JS) or the MCP. The
    canon trap only bites someone writing their OWN implementation.
 2. If you DO write one: implement `canon`, pass every `canon` / `canon-reject` vector, then the `hash`,
    `key_id`, `commit`, `seed`, `merkle-root`, and `signature` vectors. `ust canon` is your byte-diff oracle
    throughout.
 3. Match JS byte-for-byte on the vectors ⇒ portability is proven for your language. Go (#34) is the first
-   official non-JS SDK; Rust / Python follow the same pattern.
+   PLANNED first non-JS SDK — it is not written, and until it is, this project has ONE implementation and says so
+   (a second is what makes a differential test meaningful; claiming one that does not exist is the opposite of the
+   independence it is supposed to buy). Rust / Python would follow the same pattern.
 
 ## Honest note
 

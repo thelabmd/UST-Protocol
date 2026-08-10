@@ -28,7 +28,7 @@ mirror, another agent, a file on a stick. TLS secures the pipe; **UST secures th
 travels *with* the data instead of with the connection.
 
 `ust` is the reference implementation: one command that reads those records and answers with a **verdict**, plus
-the tools to become a publisher of them yourself. The Go binary reproduces this same surface, so `ust` is one
+the tools to become a publisher of them yourself. A second, independent implementation is PLANNED and does not exist yet; it is meant to reproduce this same surface, so `ust` would be one
 static, language-agnostic tool.
 
 ## What it proves — and what it doesn't

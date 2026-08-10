@@ -88,7 +88,8 @@
     "test:browser": "node tools/browser-portability-gate.mjs",
     "test:recap-per-issue": "node tools/recap-per-issue-gate.mjs",
     "test:readme-block": "node tools/readme-block-gate.mjs",
-    "test:browser-build": "node --test packages/ust-protocol/browser-build.test.mjs"
+    "test:browser-build": "node --test packages/ust-protocol/browser-build.test.mjs",
+    "test:promised": "node tools/promised-artifacts-gate.mjs"
   },
   "devDependencies": {
     "typescript": "~7.0.2"

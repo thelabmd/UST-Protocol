@@ -274,6 +274,14 @@ predicate.
    implementations against each other will never say so.** Both rejections are decidable from the wire bytes (a
    finite eight-element set of encodings; `y < p` plus the negative-zero case), which is why they now sit in the
    verifier rather than in a cryptographic routine, and why the corpus that exposed them is now part of the suite.
+   **Corollary (the anti-monoculture argument is a statement about a CARDINALITY, #34).** Clause 4 says two
+   verifiers given the same inputs compute the same value; the practical use made of it — differential testing,
+   "a bug in one implementation cannot detect itself" — needs the number of INDEPENDENT implementations to be at
+   least two. That number is a fact about the world, not about the text: with one implementation the differential
+   argument is empty however carefully it is phrased, and a document asserting a second one that does not exist
+   inflates the cardinality the whole argument rests on. Measured 2026-08-09: this repository claimed a Go binary
+   in four places and contains zero Go files. The same shape as the paragraph above — a claim whose realization is
+   absent — one level up: there the rule had no implementer, here the implementer has no existence. CLOSED 2026-08-09 for the WORDING (every mention is planned-tense and a gate holds it there); OPEN for the substance — #34 is what would make a second implementation exist, and until it does this project has one.
    **Realization (rev93 — an ASYNCHRONOUS surface does not weaken I4; it changes how I4 is observed, #144).**
    `Validτ` is a function of bytes, and awaiting does not make it a function of anything else — the predicate is
    untouched. What changes is the shape of the two properties in a realization, in two ways that are not

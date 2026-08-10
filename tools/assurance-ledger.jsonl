@@ -36,3 +36,4 @@
 {"2":42,"3":8,"4":8,"steps":73,"1a":10,"1b":5,"canfail":59,"quadrant":["connector receipts (OTS + Rekor)"]}
 {"2":43,"3":8,"4":8,"steps":74,"1a":10,"1b":5,"canfail":60,"quadrant":["connector receipts (OTS + Rekor)"]}
 {"2":43,"3":8,"4":9,"steps":75,"1a":10,"1b":5,"canfail":60,"quadrant":["connector receipts (OTS + Rekor)","the browser build refuses, and a refusal never becomes a verdict (#144)"]}
+{"2":43,"3":9,"4":9,"steps":76,"1a":10,"1b":5,"canfail":61,"quadrant":["connector receipts (OTS + Rekor)","the browser build refuses, and a refusal never becomes a verdict (#144)"]}

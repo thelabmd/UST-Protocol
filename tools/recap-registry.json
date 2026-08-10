@@ -489,6 +489,10 @@
   {
    "round": 190,
    "no_recap": "The round closes no issue — #144 stays open on the asynchronous surface, and the recap unit here is one CLOSED issue. It also opens a named residual (small-order A/R, cofactorlessness), which belongs in the changelog next to the claim it qualifies, not in a separate record a reader would have to find."
+  },
+  {
+   "round": 191,
+   "no_recap": "The round closes no issue — #34 stays open, and it is the card that would make these sentences true rather than planned. The recap unit here is one CLOSED issue."
   }
  ]
 }

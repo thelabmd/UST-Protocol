@@ -30,6 +30,11 @@ jobs:
         run: npm run test:bmc
       - name: temporal model check — key-log state machine vs an independent abstract model + exhaustive non-active-signer soundness over every reachable interleaving
         run: npm run test:temporal-bmc
+      # #34 — PORTING.md told a stranger to call "the Go binary" and there are zero .go files here. A second
+      # independent implementation is the anti-monoculture argument; claiming one that does not exist buys the
+      # credibility it cannot back, and no code-vs-code gate can see prose.
+      - name: a document may not claim an artifact this tree does not contain
+        run: npm run test:promised
       - name: a record of a past defect carries its closing (an honest failure log reads as open holes without one)
         run: npm run test:record-closure
       - name: remedy guard (F.5.1d — no verdict prescribes an input the call already supplied)

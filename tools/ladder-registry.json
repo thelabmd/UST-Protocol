@@ -1470,6 +1470,18 @@
    "code": "packages/ust-protocol/index.mjs :: admitEd25519Point / SMALL_ORDER — the two rejections §7/N6 demands and no library performs, decided on the wire bytes: a finite eight-element set of encodings, and y < p plus the negative-zero case (measured: vectors 8-11 are non-canonical in the SECOND sense only, so a y >= p check alone misses all four)",
    "vector": "ed25519-edge-00",
    "test": "packages/ust-protocol/conformance.mjs :: ed25519-edge-00 A — the reference edge-case corpus, executable here for the first time because the admission predicate takes bytes rather than a string"
+  },
+  {
+   "round": 191,
+   "math": "verifiers given the same inputs compute the same value; the practical use made of it — differential testing,",
+   "spec": {
+    "excluded": "No normative change. §7/N6 and the verdict rules are untouched; what moved is what the PROJECT says about its own artifacts. PORTING.md is the document a port reads and it is corrected here, but a spec clause asserting \"our documents are true\" would be a rule the protocol cannot enforce on anyone else — the enforcement belongs in a gate over this repository, which is where it went."
+   },
+   "code": "tools/promised-artifacts-gate.mjs :: a roster of claimable artifacts, each with its own detector derived from the tree rather than a declaration, checked against every git-tracked document",
+   "vector": {
+    "excluded": "No wire vector: nothing about a document, canon, hash or verdict changed. The subject is whether this repository's prose matches this repository's contents, which is not a property any byte-level vector can carry — a port reading our documents is affected, but a port's OWN documents are not ours to pin."
+   },
+   "test": "tools/promised-artifacts-gate.mjs :: a document may not claim an artifact this tree does not contain — mutation-checked (restoring the old CLI sentence reddens it by file and line) and vacuity-checked (a corpus mentioning nothing rostered reports VACUOUS rather than passing)"
   }
  ],
  "first_accounted_round": 76,
