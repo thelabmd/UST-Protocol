@@ -77,6 +77,38 @@ const attDoc = await lite.seal(attState, kp.privateKey, kp.pub);
 ok('lite.verify rejects hand-forged class:attestation w/o provenance', (await lite.verify(attDoc)).error === 'E-MALFORMED');
 ok('full.verify rejects the same doc (PARITY — no lite-only VALID)', !full.isValid(full.verify(attDoc)));
 
+// 6c) ROUND 185, CLOSED FROM THE CORPUS RATHER THAN FROM A LITERAL (#147 registry sweep, 2026-08-10).
+//
+// 6b below tests the same claim over a corpus this FILE builds. That is sound as far as it goes and it cannot
+// go far enough: a locally built corpus is a sample chosen by the same author as the claim, so it drifts from
+// the shared corpus silently and proves the floor only over the classes someone remembered to list here.
+//
+// The `class-role` vectors already enumerate the class × role domain — twelve entries — and six of them (the
+// data role) now carry `expect_floor`. That is form 7 of `what_a_vector_pins`: one input, two declared
+// results, each half executed by the build it describes. The ceiling half runs in the reference conformance
+// suite; this is the floor half.
+//
+// WHY ONLY THE DATA ROLE. Measured 2026-08-10 across all twelve: on the data role the floor and the ceiling
+// agree six out of six. On the key role they differ six out of six, and that is not a subset violation — the
+// floor takes no role parameter at all, so a ceiling refusal keyed to a role is a statement the floor cannot
+// echo. Setting `expect_floor` there would pin an accident. STANDING: this is a measured property of the two
+// packages, not a defect — the floor having no role parameter is its design, and the six-of-six agreement on the
+// data role is what the subset claim asserts.
+{
+  const corpusPath = new URL('../../vectors/conformance-vectors.json', import.meta.url);
+  const CR = JSON.parse(readFileSync(corpusPath, 'utf8')).vectors
+    .filter((v) => v.kind === 'class-role' && v.expect_floor !== undefined);
+
+  // A domain check that finds nothing passes silently — the shape this repository keeps meeting. Say the size.
+  ok('round-185 corpus: six class-role vectors carry expect_floor (the data-role domain)', CR.length === 6);
+
+  for (const v of CR) {
+    const r = await lite.verify(v.doc);
+    const seen = r.error === 'E-MALFORMED' ? 'E-MALFORMED' : 'admitted';
+    ok(`round-185 floor verdict for ${v.id} (ceiling says ${v.expect})`, seen === v.expect_floor);
+  }
+}
+
 // 6b) #142 — THE SUBSET CLAIM, TESTED WHERE IT CAN FAIL.
 //
 // Everything above builds with lite and checks that full agrees. That direction cannot expose the defect this

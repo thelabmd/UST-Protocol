@@ -513,6 +513,10 @@
   {
    "round": 196,
    "no_recap": "The round closes no issue — #147 stays open; this is step 0 of its second surface, found by the sweep before any exclusion was rewritten. The recap unit is a closed issue."
+  },
+  {
+   "round": 197,
+   "no_recap": "The round closes no issue — it closes one ROUND's empty vector layer (R-185) as part of #147's registry sweep. #147 stays open; the recap unit is a closed issue, not a closed layer."
   }
  ]
 }

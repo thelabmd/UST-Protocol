@@ -4469,7 +4469,9 @@
     }
    },
    "role": "data",
-   "expect": "E-MALFORMED"
+   "expect": "E-MALFORMED",
+   "expect_floor": "E-MALFORMED",
+   "floor_note": "Two-sided (form 7): the same document is judged by the CEILING with a role and by the LIGHT FLOOR, which has no role parameter. Measured 2026-08-10 — on the data role the two agree across all six, and that agreement is the subset claim round 185 argued. NOT set on the *-in-key vectors: the floor has no key role, so the ceiling refusing a key-role document says nothing the floor could echo."
   },
   {
    "kind": "class-role",
@@ -4559,7 +4561,9 @@
     }
    },
    "role": "data",
-   "expect": "E-MALFORMED"
+   "expect": "E-MALFORMED",
+   "expect_floor": "E-MALFORMED",
+   "floor_note": "Two-sided (form 7): the same document is judged by the CEILING with a role and by the LIGHT FLOOR, which has no role parameter. Measured 2026-08-10 — on the data role the two agree across all six, and that agreement is the subset claim round 185 argued. NOT set on the *-in-key vectors: the floor has no key role, so the ceiling refusing a key-role document says nothing the floor could echo."
   },
   {
    "kind": "class-role",
@@ -4647,7 +4651,9 @@
     }
    },
    "role": "data",
-   "expect": "E-MALFORMED"
+   "expect": "E-MALFORMED",
+   "expect_floor": "E-MALFORMED",
+   "floor_note": "Two-sided (form 7): the same document is judged by the CEILING with a role and by the LIGHT FLOOR, which has no role parameter. Measured 2026-08-10 — on the data role the two agree across all six, and that agreement is the subset claim round 185 argued. NOT set on the *-in-key vectors: the floor has no key role, so the ceiling refusing a key-role document says nothing the floor could echo."
   },
   {
    "kind": "class-role",
@@ -4727,7 +4733,9 @@
     }
    },
    "role": "data",
-   "expect": "admitted"
+   "expect": "admitted",
+   "expect_floor": "admitted",
+   "floor_note": "Two-sided (form 7): the same document is judged by the CEILING with a role and by the LIGHT FLOOR, which has no role parameter. Measured 2026-08-10 — on the data role the two agree across all six, and that agreement is the subset claim round 185 argued. NOT set on the *-in-key vectors: the floor has no key role, so the ceiling refusing a key-role document says nothing the floor could echo."
   },
   {
    "kind": "class-role",
@@ -4819,7 +4827,9 @@
     }
    },
    "role": "data",
-   "expect": "admitted"
+   "expect": "admitted",
+   "expect_floor": "admitted",
+   "floor_note": "Two-sided (form 7): the same document is judged by the CEILING with a role and by the LIGHT FLOOR, which has no role parameter. Measured 2026-08-10 — on the data role the two agree across all six, and that agreement is the subset claim round 185 argued. NOT set on the *-in-key vectors: the floor has no key role, so the ceiling refusing a key-role document says nothing the floor could echo."
   },
   {
    "kind": "class-role",
@@ -4915,7 +4925,9 @@
     }
    },
    "role": "data",
-   "expect": "admitted"
+   "expect": "admitted",
+   "expect_floor": "admitted",
+   "floor_note": "Two-sided (form 7): the same document is judged by the CEILING with a role and by the LIGHT FLOOR, which has no role parameter. Measured 2026-08-10 — on the data role the two agree across all six, and that agreement is the subset claim round 185 argued. NOT set on the *-in-key vectors: the floor has no key role, so the ceiling refusing a key-role document says nothing the floor could echo."
   },
   {
    "kind": "keylog-state",

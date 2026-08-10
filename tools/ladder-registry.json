@@ -1412,10 +1412,9 @@
    },
    "spec": "two copies of the canonical form claimed to agree, and both claims were",
    "code": "packages/ust-light/index.mjs :: DATA_CLASSES / PREV_ONLY_SUBTYPES / merkleRoot — the floor accepts every data class and recomputes a set attestation's root, while the authority layer keeps its principled refusal",
-   "vector": {
-    "excluded": "No byte-vector: the subject is a VERDICT DISAGREEMENT between two implementations over documents that already have vectors. A vector fixes bytes for one verifier to judge; what was missing is a corpus spanning the classes, which is a differential and lives in the parity gate. Adding a vector would pin one more document while leaving the domain question untouched."
-   },
-   "test": "tools/primitive-parity-gate.mjs"
+   "vector": "role-attestation-in-data",
+   "test": "packages/ust-light/test.mjs :: round-185 floor verdict for role-attestation-in-data (ceiling says admitted) — expect_floor across the six data-role class-role vectors, executed BY the floor",
+   "_vector_was": "No byte-vector: the subject is a VERDICT DISAGREEMENT between two implementations over documents that already have vectors. A vector fixes bytes for one verifier to judge; what was missing is a corpus spanning the classes, which is a differential and lives in the parity gate. Adding a vector would pin one more document while leaving the domain question untouched."
   },
   {
    "round": 186,
@@ -1548,6 +1547,18 @@
    "code": "packages/ust-protocol/conformance.mjs :: the fifth UST#147 check, asserting the stated form count equals the forms listed",
    "vector": "stream-fork-visible-only-with-both-branches",
    "test": "packages/ust-protocol/conformance.mjs :: UST#147 the definition's form count matches the forms it lists — mutation-controlled (stating 3 while listing 8 reddens that check alone)"
+  },
+  {
+   "round": 197,
+   "math": {
+    "excluded": "No mathematical content. That a floor must admit whatever the ceiling admits at the floor's own tier is stated by the subset relation the packages already carry; this round moves WHERE that claim is executed, not what it says."
+   },
+   "spec": {
+    "excluded": "Nothing normative moved: no producer emits differently, no verifier accepts differently. The class × role domain is unchanged — only its floor half stopped being asserted from a locally built sample."
+   },
+   "code": "vectors/conformance-vectors.json :: expect_floor added to the six data-role class-role vectors, with the reason the six key-role ones must NOT carry it recorded beside them",
+   "vector": "role-derivation-in-data",
+   "test": "packages/ust-light/test.mjs :: round-185 floor verdict for role-derivation-in-data (ceiling says admitted) — mutation-controlled by narrowing DATA_CLASSES to ['observation'], which reddens exactly the attestation and derivation rows"
   }
  ],
  "first_accounted_round": 76,
