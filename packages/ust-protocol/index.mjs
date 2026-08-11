@@ -944,6 +944,15 @@ function verifyCore(doc, opts = {}) {
     let timeField = { strength: 'unproven', status: 'none' };
     if (doc.proof !== undefined) {
       const a = verifyAnchorCore(ch, doc.proof, opts);   // internal: doc.proof already admitted at the verify door
+      // F.9.5-c.5 (round 201) — THREE outcomes, not two. `!a.inclusion` is a LOOSE read, and a withheld answer is
+      // falsy, so before this line existed the withholding introduced one layer down was flattened right back into
+      // `INVALID/E-ANCHOR` here: the document was blamed for a construction this build cannot compute. Measured on
+      // the way in: the same input answered `VALID:LIGHT` before the round and `INVALID` after it — two wrong
+      // answers, and the second one arrived with a green conformance run, because the new checks were aimed at
+      // `verifyAnchor` and never came through `verify`. Inability is not guilt (§14, #144), and the enumeration of
+      // loose readers this rule promised is only kept if each one is actually answered.
+      if (!('inclusion' in a))
+        return { result: 'INDETERMINATE', reason: a.reason ?? 'unavailable', detail: a.detail || 'embedded proof could not be evaluated', verifier: VERSION, registry_digest: registryDigest() };
       if (!a.inclusion) return bad('E-ANCHOR', a.detail || 'embedded proof does not verify');
       // §14.6 N9 — a document cannot be generated AFTER the anchor that contains it (pinned RFC3339-Z compare as instants).
       if (a.time === 'anchored' && a.anchorTime && st.time.generated_at > a.anchorTime)
@@ -2162,6 +2171,42 @@ function verifyAnchorCore(contentHash, proof, opts = {}) {
     }
   }
   if (inclusion === undefined) {
+    // F.9.5-c.4/c.5 (round 201) — BEFORE walking, read WHICH construction the proof declares. F.9.5-c.3 already
+    // required a produced proof to NAME its tree; nothing read the name, so naming constrained nobody. Measured
+    // 2026-08-11 on the tree as it stood: a proof declaring ANY construction — `acme-tree-v9`, `42`, `null`, `{}` —
+    // whose path satisfied the reference walk was answered `inclusion: true`. The core confirmed membership under a
+    // name it never examined, and answered `false` — blaming the proof — for an honest foreign tree it could not
+    // walk. Worse than either: a consumer holding a connector and a consumer holding none returned DIFFERENT
+    // verdicts on the same document, while §11.2 rests agreement on determinism.
+    //
+    // `name` is TOTAL (F.9.5-c.4): a proof that declares nothing declares the reference construction, so every
+    // proof ever issued is decided exactly as before. That is the compatibility clause — it lives in the definition,
+    // not in a grandfather branch here.
+    //
+    // The answer for a construction this build cannot compute OMITS `inclusion` rather than carrying a third value.
+    // Measured over this tree, consumers read the member two ways: `x.inclusion === true` and `!x.inclusion`. A third
+    // VALUE is minted as inclusion by the loose form when truthy; omission makes the strict form structurally unable
+    // to mint it — the dangerous direction — and leaves every loose reader an enumerated site answered by name.
+    // ONE rule — "a declared construction binds the reader" — with TWO carriers today, and the second one is the
+    // reason this is not merely forward-looking. The normative carrier is `proof.inclusion.construction`: §11.2
+    // holds membership and substrate to be TWO INDEPENDENT proofs that must not be conflated, and `anchor` is the
+    // substrate's Locator, so a tree name does not belong inside it. But the shipped `@ust-protocol/rekor-verify`
+    // connector already routes on `proof.anchor.inclusion.scheme`, and the operator's producer already emits it.
+    // Leaving that carrier unread would leave the measured defect exactly where it lives: a consumer holding the
+    // rekor connector and a consumer holding none would still return different verdicts on that very shape. It is
+    // read here ONLY to withhold — never to confirm — so a legacy declaration can lower the answer and never lift
+    // it. Moving the carrier and deleting this branch is thelabmd/UST-Protocol#149, not this round.
+    // PRESENCE of the carrier is the declaration, and the extraction is total. A first cut read
+    // `carrier.scheme ?? carrier.construction`, which let `{scheme: null}` fall through to the reference walk —
+    // `??` skips null — so a proof carrying an inclusion object with no readable name was still confirmed. Nothing
+    // about "I brought a construction object" says "walk it with yours", whatever the member holds.
+    const carrier = proof.inclusion !== undefined ? proof.inclusion : proof.anchor?.inclusion;
+    const declared = carrier !== null && typeof carrier === 'object' && !Array.isArray(carrier)
+      ? (carrier.construction !== undefined ? carrier.construction : carrier.scheme)
+      : carrier;
+    if (carrier !== undefined && declared !== REGISTRY.referenceConstruction)
+      return { time: 'unproven', status: 'unavailable', reason: 'unsupported_construction',
+        detail: `anchor proof declares inclusion construction ${typeof declared === 'string' ? `'${declared.slice(0, 40)}'` : `of type ${typeof declared}`} — this build implements '${REGISTRY.referenceConstruction}' and no installed connector claimed it; the answer is WITHHELD, never the reference walk applied to another tree (F.9.5-c.5)` };
     // No connector, or a router that claimed nothing. MEASURED before this existed: an empty router killed a VALID proof
     // with 'inclusion path does not reach root' — blaming the proof for the caller having no plugin installed. The shape
     // error names the BUNDLED connector, not the protocol, and points at where another tree plugs in.
@@ -3194,7 +3239,11 @@ export const REGISTRY = deepFreeze({   // round-25 P0-04 — DEEP-frozen: the ca
   // `unsupported_minor` (#138) is DISTINCT from `unsupported_alg`: the algorithm case is a primitive this verifier
   // cannot compute, the minor case is a ruleset it does not have. One word for two mechanisms is the collision this
   // registry exists to prevent.
-  indeterminateReasons: { document: ['unavailable', 'unsupported_alg', 'unsupported_minor', 'unsupported_major', 'resource_limit', 'stale_keylog'],
+  // `unsupported_construction` (round 201) joins the `unsupported_*` row rather than starting a parallel one: it is
+  // the same statement as `unsupported_alg` — this BUILD cannot compute what the document asks for — made about the
+  // inclusion tree instead of the signature suite. A second vocabulary for one thought is the collision this
+  // registry exists to prevent.
+  indeterminateReasons: { document: ['unavailable', 'unsupported_alg', 'unsupported_construction', 'unsupported_minor', 'unsupported_major', 'resource_limit', 'stale_keylog'],
     checkpoint: ['authority_unresolved', 'terminality_unproven', 'order_unproven', 'evidence_unverified', 'chain_consistency_unproven'] },
   tiers: Object.keys(TIER_RANK),                                    // NONE/LIGHT/HIGH/TOP — single-sourced from TIER_RANK
   assuranceAxes: ASSURANCE_AXES,                                    // single-sourced from the #78 lattice (§F.5.0)
@@ -3227,6 +3276,12 @@ export const REGISTRY = deepFreeze({   // round-25 P0-04 — DEEP-frozen: the ca
   // `kind`, so PRESENT means "not a §14 verdict" and ABSENT means "it is one". A future answer that is neither must
   // register its own kind rather than lean on absence.
   forkChoiceKind: 'fork-choice',
+  // F.9.5-c.4 (round 201) — the name of the BUNDLED inclusion construction: the tagged `ust:leaf`/`ust:node` walk
+  // over ASCII `sha256:` strings (§7/§11.2). Registered, not spelled inline, because `name(π)` is total: a proof
+  // declaring nothing declares THIS, and a proof declaring anything else is withheld rather than walked with it.
+  // §11.2 keeps the construction a CONNECTOR — registering the reference one names the default, it does not make
+  // the protocol prescribe a tree.
+  referenceConstruction: 'ust-merkle-tagged',
   verifiedEvidenceFields: { required: ['proof_kind', 'subject', 'source_id', 'facts'], optional: ['verifier_id', 'verifier_version'] },
   // M3 — the SIGNED connector-receipt claim (§12.3.5): facts only; a capability/assurance/independence field is E-EVIDENCE.
   evidenceReceiptClaimFields: { required: ['version', 'purpose', 'domain_shard', 'active_genesis', 'genesis_epoch', 'subject', 'proof_kind', 'facts', 'issued_at'], optional: ['payload_digest'] },
@@ -3613,16 +3668,25 @@ const withDeadline = (p, ms = SUBSTRATE_DEADLINE_MS) => { let t; const to = new 
 // 16×8×10s ≈ 21 min of SEQUENTIAL per-leaf timeouts. `opDeadline` bounds the whole resolution; before each connector call
 // the remaining budget also caps that leaf. Exhaustion returns the string 'resource_limit' (the caller maps it to F.9).
 async function anchoredByProofs(content_hash, proofs, substrateVerify, opDeadline) {
+  // F.9.5-c.5 (round 201) — this loop's `false` means "no proof anchors this root". A proof whose construction this
+  // build cannot compute does not support that statement: it supports no statement at all. `!incl.inclusion` is a
+  // LOOSE read and a withheld answer is falsy, so without the tracking below a witness root would be reported
+  // UNANCHORED because we could not read its tree — the refusal-becomes-verdict class, on the axis that decides
+  // `authoritative` vs `consumer-override`. The third channel already exists here (`'resource_limit'`), so this
+  // reuses it rather than inventing a second shape.
+  let withheld = false;
   for (const proof of proofs) {
     if (opDeadline && witnessNow() >= opDeadline) return 'resource_limit';
     const incl = verifyAnchorCore(content_hash, proof);   // internal (witness log is JSON-parsed, getter-free); inclusion only
+    if (!('inclusion' in incl)) { withheld = true; continue; }
     if (!incl.inclusion || !substrateVerify) continue;
     const leafMs = opDeadline ? Math.max(1, Math.min(SUBSTRATE_DEADLINE_MS, opDeadline - witnessNow())) : SUBSTRATE_DEADLINE_MS;
     let sub; try { sub = await withDeadline(substrateVerify(proof.anchor, proof.root, { deadline: opDeadline }), leafMs); } catch { if (opDeadline && witnessNow() >= opDeadline) return 'resource_limit'; continue; }   // round-21 P1-01 / round-23 P1-05 — a connector throw OR a hang is UNAVAILABLE evidence; round-27 P1-01 — but a timeout that EXHAUSTED the whole-op budget is resource_limit, not a mere unavailable leaf
     if (opDeadline && witnessNow() >= opDeadline) return 'resource_limit';   // round-27 P1-01 — the budget can expire DURING the await (incl. the final leaf); check after every awaited leaf, not only before
     if (substrateFinal(sub)) return true;               // round-18 P0-02 — same closed decoder as verifyAnchor (a bare truthy `final` no longer confirms the witness genesis)
   }
-  return false;
+  // Nothing anchored it. Whether that is a FACT or an INABILITY depends on whether a proof went unread.
+  return withheld ? 'unsupported_construction' : false;
 }
 
 // round-17 P1-03 — a BYTE CEILING for authority discovery (F.9/§13). A §13 key-log is ≤256 entries and genesis/witness
@@ -3866,16 +3930,25 @@ export async function witnessNoFork(shard, genesisHash, opts) {
     return OVER(`maxWitnessOpMs must be a finite positive integer of milliseconds (got ${typeof maxWitnessOpMs === 'number' ? maxWitnessOpMs : typeof maxWitnessOpMs}); an invalid verifier budget is refused, never expanded to the reference default (round-27 P2-01)`);
   const opBudget = maxWitnessOpMs === undefined ? WITNESS_OP_DEADLINE_MS : Math.min(WITNESS_OP_DEADLINE_MS, maxWitnessOpMs);
   const opDeadline = witnessNow() + opBudget;   // round-24 P1-04 — bound the WHOLE witness resolution, not just each leaf
+  let unread = false;
   for (const a of active) {
     const r = await anchoredByProofs(a.content_hash, a.proofs, substrateVerify, opDeadline);
     if (r === 'resource_limit') return OVER(`witness anchor verification exceeded the ${opBudget} ms whole-operation budget (§F.9 — a legal fan-out cannot monopolize a verification; the verifier's ρ_v is min(reference ${WITNESS_OP_DEADLINE_MS} ms, consumer deadline); round-24 P1-04 / round-25 Div2)`);
+    // F.9.5-c.5 (round 201) — a root whose proof this build could not READ is neither anchored nor unanchored, and
+    // `if (r)` would have pushed the reason STRING as an anchor: a non-empty string is truthy, so withholding would
+    // have minted the very confirmation it exists to prevent. Written out because the first cut of this round did
+    // exactly that, one line after fixing the same shape elsewhere.
+    if (r === 'unsupported_construction') { unread = true; continue; }
     if (r) anchoredActive.push({ content_hash: a.content_hash });
   }
   if (anchoredActive.length >= 2) return { status: 'fork', detail: `${anchoredActive.length} anchored active genesis roots for ${shard} — a rival name-binding root exists` };
-  if (anchoredActive.length === 1) {
+  // A FORK is positive evidence and survives an unread sibling; NO-FORK is a claim about ABSENCE and does not. An
+  // unread proof could be the rival, so `confirmed` is withheld while `fork` still stands on what was read.
+  if (anchoredActive.length === 1 && !unread) {
     if (anchoredActive[0].content_hash !== genesisHash) return { status: 'fork', detail: `the anchored active genesis (${anchoredActive[0].content_hash.slice(0, 20)}…) differs from the one served at /.well-known/ust-genesis` };
     return { status: 'confirmed', detail: 'a single anchored active genesis, cross-checked against its substrate — no rival root' };
   }
+  if (unread) return { status: 'pending', detail: 'a witness anchor proof declares an inclusion construction this build cannot compute — no-fork is UNPROVEN rather than disproven, because the unread root could be the rival (F.9.5-c.5)' };
   return { status: 'pending', detail: active.length ? 'genesis present in the witness log but no anchor is final yet (substrate) — no-fork not yet evidence' : 'no active genesis in the witness log' };
 }
 

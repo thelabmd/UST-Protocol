@@ -3964,6 +3964,58 @@ leaf generator with a 16-value period left 92 of 120 mutations alive, and the fi
 *the builder is broken* rather than *the corpus cannot refute*. A mutation battery therefore states its leaf
 distinctness as a precondition, exactly as [F.9.5-c.1] states its ordering.
 
+**Theorem F.9.5-c.4 (a declared construction BINDS THE READER, and its absence names the reference).** F.9.5-c.3
+gives the producer a dual and requires the emitted proof to NAME its tree. Naming is only half a mechanism: a name
+nobody reads constrains nobody. Define, over an anchor proof `π`,
+
+  `name(π) = π.anchor.inclusion.construction` when that member is a registered-form token, else `σ_ref`
+
+where `σ_ref` is the bundled tagged walk (`ust:leaf`/`ust:node` over ASCII `sha256:` strings, §7/§11.2). `name` is
+**TOTAL**: every proof has a construction, and a proof that declares none declares the reference one. Compatibility
+is therefore a consequence of the definition and not a grandfather clause in code — every proof issued before this
+theorem existed has `name(π) = σ_ref` and is decided exactly as before.
+
+**Theorem F.9.5-c.5 (evaluating a construction one was not asked for is not evidence).** Let `C_V` be the
+constructions a verifier `V` can compute — those it implements natively plus those an installed connector claims.
+Write `Incl_V(π) ∈ {⊤, ⊥, ⊘}`, where `⊘` means the predicate is UNDEFINED for this verifier.
+
+  **If `name(π) ∉ C_V` then `Incl_V(π) = ⊘`.** Not `⊤`, and not `⊥`.
+
+*Both halves are load-bearing, and both are MEASURED violations today (2026-08-11).*
+
+*The `⊤` half.* A proof declaring `construction: "acme-tree-v9"` — or `42`, `null`, `{}`, `["x"]` — whose `path`
+happens to satisfy the reference walk is answered `inclusion: true` by this core, which reads no name at all
+(`grep -c "scheme" packages/ust-protocol/index.mjs` → 0). The core confirms membership under a name it never
+examined. What it proved is membership in a `σ_ref` tree; what it reported is membership, unqualified, to a
+consumer reading the declaration.
+
+*The `⊥` half.* Conversely a proof honestly built under a foreign construction is walked with `σ_ref` and answered
+`inclusion: false, "inclusion path does not reach root"` — the proof blamed for the verifier's inability, which is
+the refusal-becomes-verdict class closed in the core once already (#144).
+
+**Corollary (the determinism §11.2 requires is what actually breaks).** §11.2 rests agreement on determinism — in its own words, two consumers
+loading the same DECLARED profile reach the same verdict. Under the measured behaviour, one
+consumer holding a connector for `σ` and one holding none return **different** verdicts on the SAME document, and
+neither reports uncertainty — the first `⊤`, the second `⊥`. Disagreement between honest verifiers is a strictly
+worse failure than either wrong answer alone, because no third party can adjudicate it from the document. ∎
+
+**Corollary (why `⊘` is the ABSENCE of the member, not a third value).** `Incl` is reported in a record whose
+consumers were written when the answer was a Boolean. Measured over this tree, they read it two ways: strict
+(`x.inclusion === true`) and loose (`!x.inclusion`). A third VALUE would be read as `⊤` by the loose form when it
+is truthy and as `⊥` when it is falsy — either way a wrong answer arrives silently. Omitting the member makes the
+strict form structurally unable to mint `⊤`, which is the dangerous direction; the loose form still reads `⊘` as
+`⊥`, so every loose reader is an ENUMERATED site that must be answered individually. That enumeration is finite
+and is part of the same change — a shape that makes one direction impossible and the other visible is the best
+available, and claiming it makes both safe would be false.
+
+**Corollary (what `⊘` may NOT do to the tier).** `⊘` withholds; it never lifts. Anchored TIME still requires `⊤`
+from an evaluated construction AND the substrate seam, so an unsigned, unverified name can lower or hold the anchor
+coordinate and can never raise it. Stated over the anchor coordinate only: on the §14 verdict lattice `INVALID` and
+`INDETERMINATE` are deliberately incomparable (#144), and this corollary does not order them.
+
+**Binding: realized** — *"F.9.5-c.5 a DECLARED foreign construction is not walked with the reference tree — the answer is withheld, not minted"*, *"F.9.5-c.5 ADVERSARIAL: a declared foreign construction over a reference-satisfying path no longer reports inclusion"*, *"F.9.5-c.4 a proof declaring NO construction is decided exactly as before (the total projection, not a grandfather branch)"*.
+
+
 **Conformance (math ⇒ spec ⇒ code ⇒ green vector, once realized).**
 - a composed seal over `N > 64` verifies, and the leaf inclusion path resolves against the ONE published root;
 - a node enumerating a proper subset and carrying `root` is refused;

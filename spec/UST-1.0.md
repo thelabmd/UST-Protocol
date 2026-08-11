@@ -743,6 +743,21 @@ walk over `path` below, which every proof issued under earlier revisions still s
 Locator := { "substrate": string, ... }   // substrate ∈ the anchor-substrate registry (§17); remaining
                                           // fields are that substrate's evidence (see its registry entry)
 ```
+**A proof DECLARES the construction it was built under, and the declaration BINDS THE READER.** The optional
+member `inclusion.construction` names the membership construction; **absent, it names the reference one**
+(`ust-merkle-tagged` — the tagged `ust:leaf`/`ust:node` walk above), so every proof issued before this member
+existed declares the reference construction and is decided exactly as it always was. A verifier MUST evaluate the
+DECLARED construction and no other. If it can compute neither natively nor through an installed connector, it MUST
+answer `INDETERMINATE` with `reason: "unsupported_construction"` — **never `inclusion: false`, and never the
+reference walk applied to another tree.** Both wrong answers were measured in this implementation before the rule
+existed: a proof declaring a foreign construction, whose path happened to satisfy the reference walk, was CONFIRMED
+under a name the verifier never read; an honest foreign proof was REFUTED for the verifier's own inability. The
+second is the refusal-becomes-verdict error §14 forbids, and the first is worse than either taken alone — two
+consumers, one holding a connector and one not, returned DIFFERENT verdicts on the same document while neither
+reported uncertainty, which is precisely the determinism this section rests agreement on. The declaration is
+UNSIGNED and therefore ROUTES only: it can lower or hold the anchor coordinate and can never raise it, so a
+substituted name buys an adversary nothing a stripped proof would not already buy.
+
 **The anchor SUBSTRATE is an operator choice (like the signature scheme), NOT the protocol.** The protocol
 fixes only: (1) the proof is self-contained/in-band (the inclusion evidence travels WITH the document — no mutable
 lookup, I12); (2)
@@ -1876,8 +1891,13 @@ A verifier returns one of THREE OUTCOME KINDS — **availability is distinct fro
   and its status as a PAIR wherever either is shown, and a surface (CLI, MCP, page) MUST NOT render a strength
   without the status that qualifies it. Where a consumer's own opt-in LIFTS a seam label, the report keeps the
   seam label beside the lifted coordinate — that difference is the provenance telling a consumer the authority
-  rests on its own assertion, and it MUST NOT be collapsed. The reason set is CLOSED — {`unavailable`, `unsupported_alg`, `resource_limit`,
-  `stale_keylog`}: a fetch timeout IS `unavailable`; a verification-budget overrun is INVALID `E-BOUNDS` (§13); a
+  rests on its own assertion, and it MUST NOT be collapsed. The reason set is CLOSED, and it is the registry's:
+
+<!-- BEGIN spec-sync:indeterminate-reasons -->
+`unavailable`, `unsupported_alg`, `unsupported_construction`, `unsupported_minor`, `unsupported_major`, `resource_limit`, `stale_keylog`
+<!-- END spec-sync:indeterminate-reasons -->
+
+  Reading them: a fetch timeout IS `unavailable`; a verification-budget overrun is INVALID `E-BOUNDS` (§13); a
   fetched-but-WRONG dependency is its own definite error; an above-floor document without a TRUSTED capacity
   grant is `unavailable` (§13 ladder). **`resource_limit`** (rc.12) is the third member: the document may be
   protocol-valid but exceeds THIS verifier's declared capability, or the raw input exceeds the transport

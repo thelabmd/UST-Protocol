@@ -398,9 +398,16 @@ for (const v of V.vectors) {
       const got = r.error ? { error: r.error } : { cadence: r.cadence === null ? null : String(r.cadence) };
       check(v.id, v.expect.error ? got.error === v.expect.error : (!r.error && got.cadence === v.expect.cadence),
         `got ${JSON.stringify(got)} expected ${JSON.stringify(v.expect)}`); break; }
-    case 'anchor-inclusion': { const r = P.verifyAnchor(v.content_hash, { root: v.root, path: v.path, anchor: { substrate: 'bitcoin-ots' } });
-      check(v.id, r.inclusion === v.expect.inclusion && (v.expect.error ? r.error === v.expect.error : true),
-        `inclusion=${r.inclusion} error=${r.error || '-'} expected inclusion=${v.expect.inclusion}${v.expect.error ? ' error=' + v.expect.error : ''}`); break; }
+    // round 201 — the vector may DECLARE an inclusion construction, and may expect the answer to be WITHHELD.
+    // `withheld` is checked as the ABSENCE of the member, not as a value: that is the whole shape of the third
+    // answer (F.9.5-c.5), so a runner comparing `r.inclusion === undefined` against a declared `undefined` would
+    // pass on a build that never implemented it. `'inclusion' in r` cannot be satisfied by an omission.
+    case 'anchor-inclusion': { const r = P.verifyAnchor(v.content_hash, { root: v.root, path: v.path, ...(v.inclusion !== undefined ? { inclusion: v.inclusion } : {}), anchor: { substrate: 'bitcoin-ots' } });
+      const withheld = !('inclusion' in r);
+      check(v.id, v.expect.withheld
+        ? (withheld && r.reason === v.expect.reason)
+        : (!withheld && r.inclusion === v.expect.inclusion && (v.expect.error ? r.error === v.expect.error : true)),
+        `withheld=${withheld} reason=${r.reason || '-'} inclusion=${r.inclusion} error=${r.error || '-'} expected ${JSON.stringify(v.expect)}`); break; }
     default: noted(v.id, 'kind ' + v.kind + ' not exercised');
   }
 }
@@ -422,6 +429,71 @@ check('#3 unknown-top-level→E-MALFORMED', (() => { const b = clone(mk()); b.su
 check('#4 unknown-kind→E-MALFORMED', P.verify(mk({ r: { kind: 'observation', value: { x: '1' } } }), { context: 'data' }).error === 'E-MALFORMED');
 check('#5 anchor-bad-dir→fail-closed', (() => { const r = P.verifyAnchor('sha256:' + 'ab'.repeat(32), { root: 'sha256:' + 'cd'.repeat(32), path: [{ dir: 'BOGUS', hash: 'sha256:' + 'ef'.repeat(32) }] }); return r.inclusion === false && r.error === 'E-ANCHOR'; })());
 check('#5 anchor-missing-path→no-throw', (() => { try { P.verifyAnchor('sha256:' + 'ab'.repeat(32), { root: 'sha256:' + 'cd'.repeat(32) }); return true; } catch { return false; } })());
+// ─── F.9.5-c.4/c.5 (round 201) — the core reads WHICH construction a proof declares before computing one.
+// One fixture for all three: a path the reference walk CONFIRMS. Only the declaration differs, so nothing here can
+// pass by accident of path validity — that is what ai-01..ai-08 pin.
+{
+  const ch = 'sha256:' + '11'.repeat(32), sib = 'sha256:' + '22'.repeat(32);
+  const root = P.H('ust:node', P.H('ust:leaf', ch) + sib);
+  const at = (extra) => P.verifyAnchor(ch, { root, path: [{ dir: 'R', hash: sib }], ...extra, anchor: { substrate: 'bitcoin-ots', ...(extra.legacy ? { inclusion: extra.legacy } : {}) } });
+
+  check('F.9.5-c.4 a proof declaring NO construction is decided exactly as before (the total projection, not a grandfather branch)',
+    at({}).inclusion === true && at({ inclusion: { construction: 'ust-merkle-tagged' } }).inclusion === true);
+
+  check('F.9.5-c.5 a DECLARED foreign construction is not walked with the reference tree — the answer is withheld, not minted', (() => {
+    const r = at({ inclusion: { construction: 'acme-tree-v9' } });
+    // WITHHELD is the ABSENCE of the member. Asserting `=== undefined` would also pass on a build that returns
+    // nothing at all, so presence is what is tested, and the reason must NAME the faculty that is missing.
+    return !('inclusion' in r) && r.reason === 'unsupported_construction' && r.time === 'unproven';
+  })());
+
+  // ADVERSARIAL, and the direction that was MEASURED wrong on 2026-08-11: the path SATISFIES the reference tree, so
+  // the old core answered `true` — a confirmation issued under a name it never read. The other direction (an honest
+  // foreign tree answered `false`) is the same branch seen from the other side and is covered by the same check:
+  // there is exactly one place where a declared construction can be walked with the wrong one.
+  check('F.9.5-c.5 ADVERSARIAL: a declared foreign construction over a reference-satisfying path no longer reports inclusion', (() => {
+    const forms = ['acme-tree-v9', 'rfc6962-raw', 42, null, {}, ['x'], '', true];
+    return forms.every((f) => { const r = at({ inclusion: { construction: f } }); return !('inclusion' in r) && r.reason === 'unsupported_construction'; })
+      // …and the LEGACY carrier the shipped rekor connector routes on, which is where the defect actually lives today
+      && !('inclusion' in at({ legacy: { scheme: 'rfc6962-raw' } }))
+      && !('inclusion' in at({ legacy: {} }));
+  })());
+
+  // A withheld answer must never be readable as a confirmation by the strict form, and the tier must not lift.
+  check('F.9.5-c.5 a withheld inclusion cannot mint anchored time — the coordinate is lowered or held, never raised', (() => {
+    const r = at({ inclusion: { construction: 'acme-tree-v9' } });
+    return r.inclusion !== true && r.time !== 'anchored';
+  })());
+
+  // ── AND THE SAME CLAIM ON THE PATH A DOCUMENT TAKES. This block existed one revision without it, and the omission
+  // is the reason it is written out here rather than folded above: every check was aimed at `verifyAnchor`, where the
+  // third answer is visible, while `verify` flattened it back into `INVALID/E-ANCHOR` through a loose `!a.inclusion`.
+  // Measured that day: the same document read VALID:LIGHT before the round and INVALID after it — two wrong answers,
+  // with a green run either way. A claim about verdicts must be asserted where a verdict is produced.
+  {
+    const A = { priv: null };
+    const seed = Buffer.concat([Buffer.from('302e020100300506032b657004220420', 'hex'), Buffer.from('b2'.repeat(32), 'hex')]);
+    A.priv = createPrivateKey({ key: seed, format: 'der', type: 'pkcs8' });
+    A.pub = createPublicKey(A.priv).export({ format: 'der', type: 'spki' }).slice(-32).toString('base64url');
+    A.key_id = P.keyId(A.pub);
+    const tm = { generated_at: '2026-07-26T09:00:00Z', valid_from: '2026-07-26T09:00:00Z', valid_to: '2026-07-26T10:00:00Z' };
+    const d = P.seal(P.buildState({ domain_shard: A.key_id, ust_id: 'ust:20260726.09', key_id: A.key_id, class: 'observation' },
+      tm, { r: { kind: 'captured', value: { n: '1' } } }), A.priv, A.pub);
+    const dch = P.contentHash(d), dsib = 'sha256:' + '33'.repeat(32);
+    const droot = P.H('ust:node', P.H('ust:leaf', dch) + dsib);
+    const withProof = (extra) => P.verify({ ...d, proof: { root: droot, path: [{ dir: 'R', hash: dsib }], ...extra, anchor: { substrate: 'bitcoin-ots' } } }, { context: 'data' });
+
+    check('F.9.5-c.5 THROUGH verify(): a foreign construction is INDETERMINATE, never INVALID — inability is not guilt', (() => {
+      const r = withProof({ inclusion: { construction: 'acme-tree-v9' } });
+      return r.result === 'INDETERMINATE' && r.reason === 'unsupported_construction' && r.error === undefined;
+    })());
+    check('F.9.5-c.4 THROUGH verify(): declaring nothing, and declaring the reference, are the same verdict as before', (() =>
+      withProof({}).result === 'VALID:LIGHT' && withProof({ inclusion: { construction: 'ust-merkle-tagged' } }).result === 'VALID:LIGHT')());
+    check('F.9.5-c.5 THROUGH verify(): a proof that genuinely does not reach the root is still INVALID — withholding did not swallow the real refusal', (() =>
+      withProof({ root: 'sha256:' + 'ee'.repeat(32) }).error === 'E-ANCHOR')());
+  }
+}
+
 // #95 — inclusion is a substrate-profile capability (F.3 rev86), so the SEAM must be closed where delegation could forge.
 // A registered substrate (`rekor`) proves RFC 6962 inclusion to its own tree head, which the core's `ust:leaf`/`ust:node`
 // walk cannot express; the walk is now the BUNDLED connector. These close the attacks that delegation opens.

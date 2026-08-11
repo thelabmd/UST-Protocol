@@ -1543,6 +1543,14 @@
    "test": "packages/ust-protocol/conformance.mjs :: UST#147 the definition's form count matches the forms it lists — mutation-controlled (stating 3 while listing 8 reddens that check alone)"
   },
   {
+   "round": 201,
+   "math": "evaluating a construction one was not asked for is not evidence",
+   "spec": "A proof DECLARES the construction it was built under, and the declaration BINDS THE READER",
+   "code": "packages/ust-protocol/index.mjs :: verifyAnchorCore reads the declared construction and WITHHOLDS by omitting `inclusion`; verify() maps the omission to INDETERMINATE rather than E-ANCHOR; anchoredByProofs tracks an unread proof so no-fork is not claimed from an unreadable one",
+   "vector": "ai-09-declared-foreign-construction-withheld",
+   "test": "F.9.5-c.5 THROUGH verify(): a foreign construction is INDETERMINATE, never INVALID — inability is not guilt"
+  },
+  {
    "round": 200,
    "math": {
     "excluded": "No formal-model content, and the reason is the same one round 184 gave for its own math layer: a build decides WHERE code runs, never WHAT it concludes. What this round changes is which INPUTS the agreement is measured over — an evidence question, not a decision one. The model already states that two implementations agree by reproducing the corpus; nothing here adds to that, it makes one gate obey it."

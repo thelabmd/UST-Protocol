@@ -529,6 +529,10 @@
   {
    "round": 200,
    "no_recap": "The round closes no issue — it closes the empty vector layer of one ROUND (R-184) in the #147 registry sweep and moves one gate off its private copy of the corpus. #147 stays open; the recap unit is a closed issue, not a closed layer."
+  },
+  {
+   "round": 201,
+   "no_recap": "The round closes no issue. It closes the FIRST of the mechanisms in thelabmd/UST-Protocol#149 — a declared inclusion construction now binds the reader — while the byte-level definition of a construction name, the producer/verifier seam and the fork-choice bucket stay open there. #149 stays open; the recap unit is a closed issue, not a closed mechanism."
   }
  ]
 }

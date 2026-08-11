@@ -12,6 +12,10 @@ const tick = (a) => a.map((x) => '`' + x + '`');
 const blocks = {
   'error-codes': tick(REGISTRY.errorCodes).join(', '),
   'resolver-error-codes': tick(REGISTRY.resolverErrorCodes).join(', '),
+  // round 201 — the spec called this set CLOSED and listed FOUR while the registry held SIX; adding a seventh by
+  // hand would have widened the gap it was written to prevent. Generated now, so the closed set is closed BY the
+  // registry rather than by a sentence that has to be remembered.
+  'indeterminate-reasons': tick(REGISTRY.indeterminateReasons.document).join(', '),
   'purposes': tick(REGISTRY.purposes).join(' | '),
   'evidence-order': tick(REGISTRY.evidenceOrder).join(' | '),
   'verified-evidence-fields': 'required ' + tick(REGISTRY.verifiedEvidenceFields.required).join(', ')

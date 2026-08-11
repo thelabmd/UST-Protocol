@@ -19,7 +19,7 @@
   "_": "WHAT A VECTOR MAY PIN — read this before excluding the `vector` layer of a round, and before deciding a case \"cannot be a vector\". Derived from THIS corpus on 2026-08-10, not declared: 228 vectors across 43 kinds.",
   "the_rule": "A vector is a FIXED INPUT and a DECLARED RESULT that a runner must reproduce. The input being a DOCUMENT is one case among several; the result being a VERDICT is one case among several.",
   "measured_2026_08_10": {
-   "total": 234,
+   "total": 237,
    "kinds": 44,
    "input_is_a_document": 41,
    "input_is_a_value_or_string": 75,
@@ -3786,6 +3786,68 @@
    "expect": {
     "inclusion": false
    }
+  },
+  {
+   "kind": "anchor-inclusion",
+   "id": "ai-09-declared-foreign-construction-withheld",
+   "rule": "F.9.5-c.5 a construction this build cannot compute is WITHHELD — never walked with the reference tree",
+   "content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+   "root": "sha256:fcfd410aa45bc7a84cdb3a2f05d7263f4fbac29e0529c7748ede4996380e2124",
+   "path": [
+    {
+     "dir": "R",
+     "hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    }
+   ],
+   "inclusion": {
+    "construction": "acme-tree-v9"
+   },
+   "expect": {
+    "withheld": true,
+    "reason": "unsupported_construction"
+   },
+   "note": "Round 201, F.9.5-c.4/c.5. The three entries share ONE proof whose path the reference walk confirms; only the DECLARATION differs. That is deliberate: if the bytes differed, the vectors would pin path validity, which `ai-01..ai-08` already pin. What they pin here is that a verifier decides WHICH construction to compute before computing one. MEASURED 2026-08-11 before this round: this exact input answered `inclusion: true` — the core confirmed membership under a name it never read. The path DOES satisfy the reference tree, so the old answer was not a lie about the reference tree; it was an answer to a question nobody asked, handed to a consumer reading the declaration."
+  },
+  {
+   "kind": "anchor-inclusion",
+   "id": "ai-10-declared-reference-construction-confirmed",
+   "rule": "F.9.5-c.4 declaring the reference construction EXPLICITLY is the same statement as declaring nothing",
+   "content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+   "root": "sha256:fcfd410aa45bc7a84cdb3a2f05d7263f4fbac29e0529c7748ede4996380e2124",
+   "path": [
+    {
+     "dir": "R",
+     "hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    }
+   ],
+   "inclusion": {
+    "construction": "ust-merkle-tagged"
+   },
+   "expect": {
+    "inclusion": true
+   },
+   "note": "Round 201, F.9.5-c.4/c.5. The three entries share ONE proof whose path the reference walk confirms; only the DECLARATION differs. That is deliberate: if the bytes differed, the vectors would pin path validity, which `ai-01..ai-08` already pin. What they pin here is that a verifier decides WHICH construction to compute before computing one. The control that keeps ai-09 from being satisfied by a verifier that withholds on ANY carrier: the name is read, not merely detected."
+  },
+  {
+   "kind": "anchor-inclusion",
+   "id": "ai-11-carrier-without-a-readable-name-withheld",
+   "rule": "F.9.5-c.5 the PRESENCE of an inclusion carrier is the declaration; an unreadable name is not a licence to walk",
+   "content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+   "root": "sha256:fcfd410aa45bc7a84cdb3a2f05d7263f4fbac29e0529c7748ede4996380e2124",
+   "path": [
+    {
+     "dir": "R",
+     "hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    }
+   ],
+   "inclusion": {
+    "construction": null
+   },
+   "expect": {
+    "withheld": true,
+    "reason": "unsupported_construction"
+   },
+   "note": "Round 201, F.9.5-c.4/c.5. The three entries share ONE proof whose path the reference walk confirms; only the DECLARATION differs. That is deliberate: if the bytes differed, the vectors would pin path validity, which `ai-01..ai-08` already pin. What they pin here is that a verifier decides WHICH construction to compute before computing one. This entry exists because the first implementation of the rule read `a ?? b` and let `{scheme: null}` fall through to the reference walk — `??` skips null. Nothing about carrying a construction object with no readable name says \"use yours\". A port that extracts the name with a null-coalescing read fails here and nowhere else."
   },
   {
    "kind": "cadence-resolve",
