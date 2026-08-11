@@ -1543,6 +1543,18 @@
    "test": "packages/ust-protocol/conformance.mjs :: UST#147 the definition's form count matches the forms it lists — mutation-controlled (stating 3 while listing 8 reddens that check alone)"
   },
   {
+   "round": 203,
+   "math": "input under which the two branches are reported AS A FORK",
+   "spec": {
+    "excluded": "No normative change: the subject is how THIS repository ANCHORS a registry record to the model section it was written for. A locus is our own bookkeeping, not a protocol object, and a port reads neither the registry nor the anchoring rule. The protocol FACT underneath — that a claim must be bound to evidence — is already normative and unchanged."
+   },
+   "code": "tools/model-domain-totality.mjs :: the registry walk REFUSES a model_locus that occurs more than once, instead of anchoring at the first hit",
+   "vector": {
+    "excluded": "No byte-vector: the input is this repository's own registry file and its model text, and the output is a gate verdict about bookkeeping. A vector fixes bytes a VERIFIER must judge; no verifier, ours or a port's, ever sees a model_locus. The `test` layer is the gate itself, which is executed by CI."
+   },
+   "test": "tools/model-domain-totality.mjs"
+  },
+  {
    "round": 202,
    "math": "Domain (enumerated, not sampled)",
    "spec": "The withheld answer is carried in the proof record by OMITTING the",

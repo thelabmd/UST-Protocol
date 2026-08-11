@@ -58,7 +58,7 @@
     {
       "id": "R30-input-boundary-grid",
       "rev": "rev30",
-      "model_locus": "the input-boundary grid",
+      "model_locus": "a from-CODE control — the input-boundary grid",
       "conformance_check": "BOUNDARY-GRID: every exported verifier admits its input once (no TOCTOU re-read across the surface — coverage answered in CI, not from memory)"
     },
     {
@@ -106,7 +106,7 @@
     {
       "id": "R34-source-bound-manifest",
       "rev": "rev34",
-      "model_locus": "content-bound to its source",
+      "model_locus": "making the manifest EVIDENCE content-bound to its source",
       "conformance_check": "SOURCE-BOUND MANIFEST: the executed-check manifest carries the sha256 of conformance.mjs and index.mjs — the lockstep gate recomputes them and rejects a stale manifest (evidence content-bound to its source, not trusted by CI order)"
     },
     {
@@ -550,7 +550,7 @@
     {
       "id": "R74-downstream-detection-does-not-happen",
       "rev": "rev72",
-      "model_locus": "There is no",
+      "model_locus": "input under which the two branches are reported AS A FORK",
       "conformance_check": "#122 ADVERSARIAL: the two branches are NEVER reported as a fork — the chain guard fires first, so downstream detection does not happen"
     }
   ]

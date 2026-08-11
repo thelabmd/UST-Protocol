@@ -537,6 +537,10 @@
   {
    "round": 202,
    "no_recap": "The round closes no issue. It completes round 201 — whose theorem was asserted at one of the three sites it quantifies over — and demonstrates on one theorem the domain line that thelabmd/UST-Protocol#150 would require of all of them. #150 and #149 both stay open; the recap unit is a closed issue."
+  },
+  {
+   "round": 203,
+   "no_recap": "The round closes no issue — it repairs one anchoring rule found by the census run for thelabmd/UST-Protocol#150, which stays open. The recap unit is a closed issue."
   }
  ]
 }

@@ -115,13 +115,30 @@ const enclosing = (pos) => {
   return null;
 };
 const registryCovered = new Set();
+const ambiguous = [];
 for (const r of REG.records || []) {
   if (!r.model_locus) continue;
   const at = MODEL.indexOf(r.model_locus);
   if (at < 0) continue;                      // the lockstep gate already fails on a locus that no longer appears
+  // round 203 — a locus that occurs MORE THAN ONCE anchors at the first hit, which is a section it was not written
+  // for. Measured 2026-08-11: three of 92 records were ambiguous, and `R74-downstream-detection-does-not-happen`
+  // carried the 11-character locus "There is no" with THREE occurrences — it credited §F.5b with a claim about
+  // producer fork-blindness, while the section the record exists for silently lost its binding. Both errors are
+  // invisible: one section is covered by the wrong record, another is uncovered and nothing says so. Ambiguity is
+  // refused rather than resolved by a rule about which hit to prefer, because any such rule is a guess about intent.
+  // CLOSED 2026-08-11 (round 203): the three ambiguous loci were replaced with phrases measured unique, and this
+  // branch keeps a fourth from being introduced.
+  if (MODEL.indexOf(r.model_locus, at + 1) !== -1) {
+    ambiguous.push(`[${r.id ?? r.rev ?? '?'}] model_locus is not unique (${r.model_locus.length} chars, ≥2 occurrences): ${JSON.stringify(r.model_locus.slice(0, 48))} — it anchors at the FIRST hit, crediting a section it was not written for`);
+    continue;
+  }
   const s = enclosing(at);
   if (s) registryCovered.add(s);
 }
+
+// An ambiguous locus is a FAILURE, not a warning: it credits one section wrongly AND leaves another uncredited,
+// and both are silent. Reported before the section walk so the count below is read against a sound registry.
+for (const m of ambiguous) failures.push(m);
 
 // CLOSED set. Each reason names WHO bears the obligation — that is why it is not an escape hatch:
 //   definitional              — a definition/framing/disclaimer; no party owes code for it.
