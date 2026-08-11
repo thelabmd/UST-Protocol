@@ -3999,21 +3999,39 @@ consumer holding a connector for `σ` and one holding none return **different** 
 neither reports uncertainty — the first `⊤`, the second `⊥`. Disagreement between honest verifiers is a strictly
 worse failure than either wrong answer alone, because no third party can adjudicate it from the document. ∎
 
-**Corollary (why `⊘` is the ABSENCE of the member, not a third value).** `Incl` is reported in a record whose
-consumers were written when the answer was a Boolean. Measured over this tree, they read it two ways: strict
-(`x.inclusion === true`) and loose (`!x.inclusion`). A third VALUE would be read as `⊤` by the loose form when it
-is truthy and as `⊥` when it is falsy — either way a wrong answer arrives silently. Omitting the member makes the
-strict form structurally unable to mint `⊤`, which is the dangerous direction; the loose form still reads `⊘` as
-`⊥`, so every loose reader is an ENUMERATED site that must be answered individually. That enumeration is finite
-and is part of the same change — a shape that makes one direction impossible and the other visible is the best
-available, and claiming it makes both safe would be false.
+**Corollary (`⊘` is DISTINGUISHABLE, and the model says nothing about how).** The codomain of `Incl_V` has three
+members and `⊘ ≠ ⊥`. What the model requires of any realization is exactly this and no more: **no reader of the
+reported answer may be able to reach `⊤` or `⊥` from `⊘` without an explicit decision.** Whether that is achieved
+by omitting a member, by a distinct type, or by a channel of its own is an ENGINEERING choice, and it belongs to
+§11.2 and to the code — not here.
+
+*This paragraph replaces one that had it backwards, and the replaced version is described rather than deleted
+because the error is instructive.* The first draft justified the chosen shape — omission — by how the consumers in
+THIS tree happen to read the member (some strictly, some loosely, so a truthy third value would be misread). That
+is a true observation and it is not mathematics: it derives a requirement from the habits of an implementation,
+which inverts the direction the whole ladder runs in. **MATH LEADS.** If a realization cannot distinguish `⊘`
+without a wrong answer leaking, that is a defect in the realization, and the theorem is the instrument that says
+so — it is not a reason to write the realization's convenience into the theorem. The engineering argument survives
+where it belongs, one layer down, as the reason §11.2 chose omission.
 
 **Corollary (what `⊘` may NOT do to the tier).** `⊘` withholds; it never lifts. Anchored TIME still requires `⊤`
 from an evaluated construction AND the substrate seam, so an unsigned, unverified name can lower or hold the anchor
 coordinate and can never raise it. Stated over the anchor coordinate only: on the §14 verdict lattice `INVALID` and
 `INDETERMINATE` are deliberately incomparable (#144), and this corollary does not order them.
 
-**Binding: realized** — *"F.9.5-c.5 a DECLARED foreign construction is not walked with the reference tree — the answer is withheld, not minted"*, *"F.9.5-c.5 ADVERSARIAL: a declared foreign construction over a reference-satisfying path no longer reports inclusion"*, *"F.9.5-c.4 a proof declaring NO construction is decided exactly as before (the total projection, not a grandfather branch)"*.
+**Domain (enumerated, not sampled).** This theorem quantifies over OBSERVATIONS of `Incl` by a consumer, and
+that set is machine-enumerable: `grep -n "verifyAnchorCore" packages/ust-protocol/index.mjs` → **3 call sites**
+(the embedded-proof branch of `verifyCore`, the public `verifyAnchor`, and `anchoredByProofs` on the witness
+path). All three are checked, and the third is checked separately because it is reached only through
+`witnessNoFork` and decides `authoritative` against `consumer-override`.
+
+*Why this line exists, when no other theorem here carries one.* Round 201 realized this theorem and asserted it at
+ONE of the three sites; the other two were edited and not checked, and the suite was green. The claim is universal
+and the evidence was an instance — the failure thelabmd/UST-Protocol#150 was opened to make impossible in general.
+Until that gate exists this line is the manual form of it, and it is written as a QUERY rather than a list so a
+fourth call site changes the count rather than hiding behind prose.
+
+**Binding: realized** — *"F.9.5-c.5 a DECLARED foreign construction is not walked with the reference tree — the answer is withheld, not minted"*, *"F.9.5-c.5 ADVERSARIAL: a declared foreign construction over a reference-satisfying path no longer reports inclusion"*, *"F.9.5-c.4 a proof declaring NO construction is decided exactly as before (the total projection, not a grandfather branch)"*, *"F.9.5-c.5 THROUGH verify(): a foreign construction is INDETERMINATE, never INVALID — inability is not guilt"*, *"F.9.5-c.5 THIRD call site (witness): a witness anchor whose construction this build cannot compute leaves no-fork UNPROVEN, never confirmed"*.
 
 
 **Conformance (math ⇒ spec ⇒ code ⇒ green vector, once realized).**

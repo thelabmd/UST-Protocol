@@ -1543,6 +1543,14 @@
    "test": "packages/ust-protocol/conformance.mjs :: UST#147 the definition's form count matches the forms it lists — mutation-controlled (stating 3 while listing 8 reddens that check alone)"
   },
   {
+   "round": 202,
+   "math": "Domain (enumerated, not sampled)",
+   "spec": "The withheld answer is carried in the proof record by OMITTING the",
+   "code": "packages/ust-protocol/index.mjs :: anchoredByProofs — the third of the three call sites the theorem quantifies over, and the one whose answer decides authoritative against consumer-override",
+   "vector": "ai-09-declared-foreign-construction-withheld",
+   "test": "F.9.5-c.5 THIRD call site (witness): a witness anchor whose construction this build cannot compute leaves no-fork UNPROVEN, never confirmed"
+  },
+  {
    "round": 201,
    "math": "evaluating a construction one was not asked for is not evidence",
    "spec": "A proof DECLARES the construction it was built under, and the declaration BINDS THE READER",

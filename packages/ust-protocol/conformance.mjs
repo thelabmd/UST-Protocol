@@ -2382,6 +2382,35 @@ console.log('\n═════════════════════�
       capped.status === 'indeterminate' && capped.reason === 'resource_limit' && capped.detail.includes('50 ms whole-operation budget'));
     check('F.9 T_v control: the same witness with no consumer cap verifies (confirmed) — the cap lowers decisibility, never flips a verdict',
       (await P.witnessNoFork(shard, AGW, { fetchImpl: fetchW, substrateVerify: fastSV })).status === 'confirmed');
+
+    // ── F.9.5-c.5 at its THIRD call site. The theorem quantifies over observations of inclusion by a consumer;
+    // `grep -n verifyAnchorCore index.mjs` enumerates that domain as THREE sites, and round 201 shipped checks at two
+    // of them. This is the third — `anchoredByProofs`, reached only through `witnessNoFork` — and it is the highest
+    // consequence of the three, because its answer decides `authoritative` against `consumer-override`.
+    //
+    // WHAT WOULD GO WRONG WITHOUT IT, and why a green suite did not show it: a withheld inclusion is FALSY, so the
+    // loop's `!incl.inclusion` read it as "this proof does not anchor the root" and the witness reported a definite
+    // no-fork. And the fix has its own trap in the same lines — the third channel is a STRING, the caller tests
+    // `if (r)`, and a non-empty string is truthy, so a careless repair pushes the REASON onto the anchored list as
+    // if it were an anchor.
+    {
+      const unread = (n) => ({ root: wRoot, path: [], inclusion: { construction: 'acme-tree-v9' }, anchor: { substrate: 'test-anchor', n } });
+      const logU = JSON.stringify({ domain_shard: shard, genesis_log: [{ content_hash: AGW, anchors: [unread('1')] }] });
+      const fetchU = async () => ({ ok: true, headers: { get: () => undefined }, arrayBuffer: async () => new TextEncoder().encode(logU).buffer });
+      const r = await P.witnessNoFork(shard, AGW, { fetchImpl: fetchU, substrateVerify: fastSV });
+      check('F.9.5-c.5 THIRD call site (witness): a witness anchor whose construction this build cannot compute leaves no-fork UNPROVEN, never confirmed',
+        r.status === 'pending' && /cannot compute/.test(r.detail || ''), `status=${r.status} detail=${(r.detail || '').slice(0, 80)}`);
+      // …and the reason string must not have been mistaken for an anchor. If it had, the single "anchored" root
+      // would have matched the served genesis and the status would read `confirmed`.
+      check('F.9.5-c.5 THIRD call site: the withholding REASON is not counted as an anchored root (a non-empty string is truthy)',
+        r.status !== 'confirmed');
+      // CONTROL — the same witness, same code path, with the construction declared as the reference one: the
+      // withholding must not have swallowed the ordinary answer.
+      const logC = JSON.stringify({ domain_shard: shard, genesis_log: [{ content_hash: AGW, anchors: [{ root: wRoot, path: [], inclusion: { construction: 'ust-merkle-tagged' }, anchor: { substrate: 'test-anchor', n: '1' } }] }] });
+      const fetchC = async () => ({ ok: true, headers: { get: () => undefined }, arrayBuffer: async () => new TextEncoder().encode(logC).buffer });
+      check('F.9.5-c.5 THIRD call site CONTROL: declaring the reference construction still confirms — withholding did not swallow the answer',
+        (await P.witnessNoFork(shard, AGW, { fetchImpl: fetchC, substrateVerify: fastSV })).status === 'confirmed');
+    }
     // round-27 P2-01 — typed policy admission: an INVALID maxWitnessOpMs (0 / -1 / NaN / Infinity / fractional) is REFUSED
     //   (resource_limit), never silently expanded to the 30 s default (which admitted a slow connector and returned confirmed).
     let allRefused = true;

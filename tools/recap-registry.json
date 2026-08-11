@@ -533,6 +533,10 @@
   {
    "round": 201,
    "no_recap": "The round closes no issue. It closes the FIRST of the mechanisms in thelabmd/UST-Protocol#149 — a declared inclusion construction now binds the reader — while the byte-level definition of a construction name, the producer/verifier seam and the fork-choice bucket stay open there. #149 stays open; the recap unit is a closed issue, not a closed mechanism."
+  },
+  {
+   "round": 202,
+   "no_recap": "The round closes no issue. It completes round 201 — whose theorem was asserted at one of the three sites it quantifies over — and demonstrates on one theorem the domain line that thelabmd/UST-Protocol#150 would require of all of them. #150 and #149 both stay open; the recap unit is a closed issue."
   }
  ]
 }

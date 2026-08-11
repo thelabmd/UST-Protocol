@@ -749,7 +749,12 @@ member `inclusion.construction` names the membership construction; **absent, it 
 existed declares the reference construction and is decided exactly as it always was. A verifier MUST evaluate the
 DECLARED construction and no other. If it can compute neither natively nor through an installed connector, it MUST
 answer `INDETERMINATE` with `reason: "unsupported_construction"` — **never `inclusion: false`, and never the
-reference walk applied to another tree.** Both wrong answers were measured in this implementation before the rule
+reference walk applied to another tree.** The withheld answer is carried in the proof record by OMITTING the
+`inclusion` member rather than by giving it a third value: consumers of that record read it both strictly
+(`=== true`) and loosely (`!x`), and a truthy third value is read as a confirmation by the loose form. Omission
+makes the confirming direction unreachable and leaves the refusing direction visible at a finite, enumerable set
+of call sites, each of which MUST answer it explicitly. This is a representation choice, not a property of the
+predicate — a realization that distinguishes the three answers some other way is conforming. Both wrong answers were measured in this implementation before the rule
 existed: a proof declaring a foreign construction, whose path happened to satisfy the reference walk, was CONFIRMED
 under a name the verifier never read; an honest foreign proof was REFUTED for the verifier's own inability. The
 second is the refusal-becomes-verdict error §14 forbids, and the first is worse than either taken alone — two
