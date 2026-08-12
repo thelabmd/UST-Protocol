@@ -1543,6 +1543,14 @@
    "test": "packages/ust-protocol/conformance.mjs :: UST#147 the definition's form count matches the forms it lists — mutation-controlled (stating 3 while listing 8 reddens that check alone)"
   },
   {
+   "round": 205,
+   "math": "a construction is a TRIPLE, and the body belongs to it",
+   "spec": "A construction is a leaf rule, a node rule AND a body grammar",
+   "code": "packages/ust-operator/index.mjs :: rfc6962AuditPath returns an AnchorProof in the normative shape, with `anchor` absent because the Locator does not exist yet when the root is being computed",
+   "vector": "ic-01-rfc6962-raw-n3-i1",
+   "test": "F.9.5-c.3 the proof NAMES its tree, in the NORMATIVE carrier (F.9.5-c.6 — `inclusion.construction`, not a member inside the substrate Locator)"
+  },
+  {
    "round": 204,
    "math": "a construction is a TRIPLE, and the body belongs to it",
    "spec": "A construction is a leaf rule, a node rule AND a body grammar",

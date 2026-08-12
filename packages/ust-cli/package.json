@@ -28,7 +28,7 @@
   "dependencies": {
     "@ust-protocol/rekor-verify": "^1.0.0-rc.29",
     "@ust-protocol/web-signer": "^1.0.0-rc.25",
-    "ust-protocol": "^1.0.0-rc.69",
+    "ust-protocol": "^1.0.0-rc.70",
     "@ust-protocol/ots-verify": "^1.0.0-rc.34"
   },
   "peerDependencies": {

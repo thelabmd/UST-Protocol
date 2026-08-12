@@ -1,6 +1,6 @@
 {
   "name": "@ust-protocol/operator",
-  "version": "0.10.6",
+  "version": "0.10.7",
   "type": "module",
   "description": "The STATEFUL UST operator layer — chains, key logs, checkpoints, anchor batches, and composition above the structural bounds. Builds on ust-protocol (the stateless base) and produces exactly what it verifies. NOTE: the bare name `ustate` on npm belongs to a third party and must never be taken.",
   "main": "./index.mjs",
@@ -21,7 +21,7 @@
     "test": "node conformance.mjs"
   },
   "dependencies": {
-    "ust-protocol": "^1.0.0-rc.69"
+    "ust-protocol": "^1.0.0-rc.70"
   },
   "license": "Apache-2.0",
   "repository": {

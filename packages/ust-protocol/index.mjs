@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.69', revision: 93 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.70', revision: 93 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -2131,8 +2131,18 @@ function verifyAnchorCore(contentHash, proof, opts = {}) {
   opts = opts || {};                                             // round-18 P1-01 — a default param only catches `undefined`; coerce `null` too (total boundary)
   // fail-closed on a malformed proof: validate shape BEFORE recomputing (no TypeError, no dir!=L ⇒ R fallthrough).
   const HASH = /^sha256:[0-9a-f]{64}$/;
-  if (!proof || typeof proof !== 'object' || !Array.isArray(proof.path) || !HASH.test(proof.root || ''))
+  // F.9.5-c.6 (round 205) — `path` IS the reference construction's body, not a member every proof owes. A proof
+  // declaring another construction carries that construction's body in `inclusion` and has no `path` at all;
+  // demanding one here refused the very shape §11.2 now registers, and the refusal arrived as E-ANCHOR — a verdict
+  // about the evidence for what was our own grammar mismatch. Measured: the operator's own producer output, handed
+  // over verbatim, was rejected at this line. `root` stays REQUIRED for every construction: it is the commitment
+  // handed to the substrate, and no body replaces it.
+  // CLOSED 2026-08-12 (round 205): `path` is required only for the reference construction; a declared body stands
+  // in its place, and the producer output now verifies verbatim.
+  if (!proof || typeof proof !== 'object' || !HASH.test(proof.root || ''))
     return { inclusion: false, time: 'unproven', status: 'verified', error: 'E-ANCHOR', detail: 'malformed anchor proof' };
+  if (proof.inclusion === undefined && !Array.isArray(proof.path))
+    return { inclusion: false, time: 'unproven', status: 'verified', error: 'E-ANCHOR', detail: 'malformed anchor proof: no `inclusion` body and no `path` — the reference construction requires `path`' };
   // ── inclusion is a CONNECTOR, not a protocol constant (owner call 2026-07-26; core+connectors at every level is what
   // makes this adoptable). The tagged `ust:leaf`/`ust:node` walk below is the BUNDLED reference connector — one tree
   // convention among several, not the convention. An operator anchoring with an RFC 6962 log (leaf = SHA256(0x00‖·),

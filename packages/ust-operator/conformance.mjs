@@ -447,14 +447,29 @@ check('Tiers:continuation-after-gap', afterGap.state.provenance.prev === P.conte
   // ONE call site, ONE execution: this harness's last gate requires declared == counted, so a check inside a
   // loop would inflate the count against its own declaration. The claim is universal anyway — *for every n in
   // the set, and every leaf in it* — so it is one assertion, and the failing (n, i) rides in the detail.
+  // Round 205 — the producer now returns an ANCHORPROOF (`{root, inclusion:{construction,index,tree_size,hashes}}`),
+  // so these checks reshape it for the local walker instead of reading members that no longer exist. Two things
+  // improved by the move rather than merely surviving it: the LEAF is now computed here from the registered
+  // definition — `SHA256(0x00 ‖ raw32)` — instead of being handed back by the function under test, so a producer
+  // that changed its leaf rule could no longer agree with itself; and `root` is checked in the prefixed wire form.
+  const leafOf = (ch) => createHash('sha256').update(Buffer.concat([Buffer.from([0x00]), Buffer.from(String(ch).slice(7), 'hex')])).digest();
+  // Shaped DEFENSIVELY: a producer that stops returning the normative members must make this go RED, not throw.
+  // Measured 2026-08-12 — the first version read `pr.root.slice(7)` unguarded, and reverting the producer to its old
+  // shape killed the run with a TypeError instead of failing a check. A suite that dies before its own tally is not
+  // a detector: nothing reports, and the `declared == counted` gate never runs.
+  // CLOSED 2026-08-12 (round 205): the shaper tolerates a missing member and the mutation now reddens the named
+  // check instead of killing the run.
+  const asWalk = (pr, ch) => ({ leafHash: leafOf(ch), index: pr?.inclusion?.index, treeSize: pr?.inclusion?.tree_size,
+    hashes: Array.isArray(pr?.inclusion?.hashes) ? pr.inclusion.hashes : [], rootHash: typeof pr?.root === 'string' ? pr.root.slice(7) : '' });
+
   let badBuild = '', badRoot = '';
   for (const n of [1, 2, 3, 7, 8, 120]) {
     const leaves = Array.from({ length: n }, (_, i) => h(i));
-    const root0 = S.rfc6962AuditPath(leaves, 0).rootHash;
+    const root0 = S.rfc6962AuditPath(leaves, 0).root;
     for (let i = 0; i < n; i++) {
       const pr = S.rfc6962AuditPath(leaves, i);
-      if (pr.error || !verifyInclusion(pr)) { badBuild ||= `n=${n} i=${i}${pr.error ? ' ' + pr.error : ''}`; }
-      if (!pr.error && pr.rootHash !== root0) { badRoot ||= `n=${n} i=${i}`; }
+      if (pr.error || !verifyInclusion(asWalk(pr, leaves[i]))) { badBuild ||= `n=${n} i=${i}${pr.error ? ' ' + pr.error : ''}`; }
+      if (!pr.error && pr.root !== root0) { badRoot ||= `n=${n} i=${i}`; }
     }
   }
   check('F.9.5-c.3 build-then-verify holds for EVERY leaf at n in {1,2,3,7,8,120} (the positive half)',
@@ -466,20 +481,21 @@ check('Tiers:continuation-after-gap', afterGap.state.provenance.prev === P.conte
   const base = S.rfc6962AuditPath(leaves, 37);
   const flip = (x) => x.slice(0, -1) + (x.slice(-1) === '0' ? '1' : '0');
   let killed = 0;
-  for (let k2 = 0; k2 < base.hashes.length; k2++)
-    if (!verifyInclusion({ ...base, hashes: base.hashes.map((x, j2) => (j2 === k2 ? flip(x) : x)) })) killed++;
+  const BW = asWalk(base, leaves[37]);
+  for (let k2 = 0; k2 < BW.hashes.length; k2++)
+    if (!verifyInclusion({ ...BW, hashes: BW.hashes.map((x, j2) => (j2 === k2 ? flip(x) : x)) })) killed++;
   check('F.9.5-c.3 EVERY single-step mutation breaks the proof (the load-bearing half)',
-    base.hashes.length > 0 && killed === base.hashes.length, `${killed}/${base.hashes.length}`);
-  check('F.9.5-c.3 a dropped step breaks it', !verifyInclusion({ ...base, hashes: base.hashes.slice(0, -1) }));
-  check('F.9.5-c.3 a substituted index breaks it', !verifyInclusion({ ...base, index: 38 }));
+    BW.hashes.length > 0 && killed === BW.hashes.length, `${killed}/${BW.hashes.length}`);
+  check('F.9.5-c.3 a dropped step breaks it', !verifyInclusion({ ...BW, hashes: BW.hashes.slice(0, -1) }));
+  check('F.9.5-c.3 a substituted index breaks it', !verifyInclusion({ ...BW, index: 38 }));
   check('F.9.5-c.3 another leaf\'s hash on this path breaks it',
-    !verifyInclusion({ ...base, leafHash: S.rfc6962AuditPath(leaves, 38).leafHash }));
+    !verifyInclusion({ ...BW, leafHash: leafOf(leaves[38]) }));
   check('F.9.5-c.3 two steps transposed break it — order is load-bearing, not decorative',
-    !verifyInclusion({ ...base, hashes: [base.hashes[1], base.hashes[0], ...base.hashes.slice(2)] }));
+    !verifyInclusion({ ...BW, hashes: [BW.hashes[1], BW.hashes[0], ...BW.hashes.slice(2)] }));
 
   // The scheme travels with the proof: a connector must be able to decline what it does not implement, and a
   // proof that does not say which tree it is under is the failure that reports nothing.
-  check('F.9.5-c.3 the proof NAMES its tree', base.anchor?.inclusion?.scheme === 'rfc6962-raw');
+  check('F.9.5-c.3 the proof NAMES its tree, in the NORMATIVE carrier (F.9.5-c.6 — `inclusion.construction`, not a member inside the substrate Locator)', base.inclusion?.construction === 'rfc6962-raw' && base.anchor === undefined);
 
   // Producer doors take untrusted input too.
   check('F.9.5-c.3 an out-of-range index is a structured refusal, not a throw',

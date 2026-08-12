@@ -545,6 +545,10 @@
   {
    "round": 204,
    "no_recap": "The round closes no issue — it closes the SECOND mechanism of thelabmd/UST-Protocol#149 (a construction name now resolves to bytes, and both ends read one carrier), while the fork-choice bucket and the producer side of the seam stay open there. #149 stays open; the recap unit is a closed issue, not a closed mechanism."
+  },
+  {
+   "round": 205,
+   "no_recap": "The round closes the THIRD and last mechanism of thelabmd/UST-Protocol#149 — producer and verifier of one construction now exchange a proof verbatim — but the issue also carries the fork-choice bucket, which is untouched. #149 stays open; the recap unit is a closed issue, not a closed mechanism."
   }
  ]
 }

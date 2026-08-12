@@ -459,15 +459,29 @@ export function rfc6962AuditPath(contentHashes, index) {
   };
   walk(0, n, i);
 
+  // Round 205 (F.9.5-c.3 + c.6) — the dual now emits an ANCHORPROOF, in the normative shape a verifier consumes.
+  //
+  // It used to return `{leafHash, index, treeSize, hashes, rootHash, anchor:{inclusion:{scheme}}}` — five members
+  // in a shape of its own, and MEASURED 2026-08-11 the result could not be handed to the only verifier of the same
+  // name: `@ust-protocol/rekor-verify` answered **false**, not "I cannot read this", because it looked for
+  // `tree_size` beside a `sha256:`-prefixed `root`. A constructive dual that produces what no predicate consumes is
+  // a dual on paper (#149). The shape below is §11.2's, with the body in the normative carrier (F.9.5-c.6).
+  // CLOSED 2026-08-12 (round 205): the producer output now verifies verbatim — measured against the shipped
+  // connector with no reshaping, both for the leaf it names and for a leaf it does not.
+  //
+  // `anchor` is deliberately ABSENT. The Locator names the substrate the ROOT was committed to, and this function
+  // runs BEFORE that commitment exists — the root is its output, not its input. Whoever anchors adds it; a producer
+  // that invented one here would be asserting a fact it cannot hold.
+  //
+  // `leafHash` was kept here for one revision as "the caller's own check", with a comment claiming a Buffer could
+  // not be mistaken for part of the wire. MEASURED immediately after: a Buffer makes the whole record NON-INERT,
+  // `admitDeep` refuses it at the door, and the producer's output could not be handed to a verifier verbatim — the
+  // exact defect this change exists to remove, reintroduced by the convenience field. The return is now the proof
+  // and nothing else; a caller wanting the leaf computes `SHA256(0x00 ‖ raw32)` itself, which is one line and is
+  // the definition anyway.
   return {
-    leafHash: leaves[i],
-    index: i,
-    treeSize: n,
-    hashes: path.map((b) => b.toString('hex')),
-    rootHash: mth(0, n).toString('hex'),
-    // The scheme travels WITH the proof so a connector claims only what it implements — `rfc6962-raw` is the
-    // string @ust-protocol/rekor-verify already keys its inclusionVerify on, not a new vocabulary.
-    anchor: { inclusion: { scheme: 'rfc6962-raw' } },
+    root: 'sha256:' + mth(0, n).toString('hex'),
+    inclusion: { construction: 'rfc6962-raw', index: i, tree_size: n, hashes: path.map((b) => b.toString('hex')) },
   };
 }
 
