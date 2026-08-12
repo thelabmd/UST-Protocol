@@ -19,7 +19,7 @@
   "_": "WHAT A VECTOR MAY PIN — read this before excluding the `vector` layer of a round, and before deciding a case \"cannot be a vector\". Derived from THIS corpus on 2026-08-10, not declared: 228 vectors across 43 kinds.",
   "the_rule": "A vector is a FIXED INPUT and a DECLARED RESULT that a runner must reproduce. The input being a DOCUMENT is one case among several; the result being a VERDICT is one case among several.",
   "measured_2026_08_10": {
-   "total": 237,
+   "total": 239,
    "kinds": 44,
    "input_is_a_document": 41,
    "input_is_a_value_or_string": 75,
@@ -3848,6 +3848,56 @@
     "reason": "unsupported_construction"
    },
    "note": "Round 201, F.9.5-c.4/c.5. The three entries share ONE proof whose path the reference walk confirms; only the DECLARATION differs. That is deliberate: if the bytes differed, the vectors would pin path validity, which `ai-01..ai-08` already pin. What they pin here is that a verifier decides WHICH construction to compute before computing one. This entry exists because the first implementation of the rule read `a ?? b` and let `{scheme: null}` fall through to the reference walk — `??` skips null. Nothing about carrying a construction object with no readable name says \"use yours\". A port that extracts the name with a null-coalescing read fails here and nowhere else."
+  },
+  {
+   "kind": "anchor-inclusion",
+   "id": "ic-01-rfc6962-raw-n3-i1",
+   "rule": "F.9.5-c.6 the registered body of `rfc6962-raw` — {index, tree_size, hashes} — walked by a connector that claims the name",
+   "content_hash": "sha256:0202020202020202020202020202020202020202020202020202020202020202",
+   "root": "sha256:df896896c799531f1fd1e556cea26a6989ab06853bcbfdd3e4f5097a611f658f",
+   "path": [],
+   "inclusion": {
+    "construction": "rfc6962-raw",
+    "index": 1,
+    "tree_size": 3,
+    "hashes": [
+     "dcffe786ded16d283c663846ad0c4ff26558fccde36ca9d30b2ea19eade9fc0e",
+     "acaa04663a8547a2f70c60cc18f9378796b13c4f9a08f70d6adae662365b30c6"
+    ]
+   },
+   "expect": {
+    "withheld": true,
+    "reason": "unsupported_construction"
+   },
+   "expect_with_connector": {
+    "inclusion": true
+   },
+   "note": "Round 204, F.9.5-c.6. THIS IS WHAT A CONSTRUCTION NAME MEANS, in bytes. Until this vector the token `rfc6962-raw` was defined in prose in two packages, and a port declaring the same name could build a different tree with nothing to disagree. n=3 is the smallest size that separates the two registered constructions: RFC 6962 splits at the largest power of two BELOW n (2|1), while the tagged tree halves and promotes the unpaired node unchanged — on any n that is not a power of two they differ, so a proof walked under the wrong one is not a degraded check but an answer to another question. TWO declared results, one input (form 7 of `what_a_vector_pins`): a build with no connector for this construction WITHHOLDS, and the same bytes under a build that claims it verify. Pinning only the second would let a core silently walk a foreign tree with its own; pinning only the first would leave the name meaning nothing."
+  },
+  {
+   "kind": "anchor-inclusion",
+   "id": "ic-02-rfc6962-raw-wrong-leaf-refused",
+   "rule": "F.9.5-c.6 the body is bound to ONE leaf — another content_hash over the same path is refused",
+   "content_hash": "sha256:0303030303030303030303030303030303030303030303030303030303030303",
+   "root": "sha256:df896896c799531f1fd1e556cea26a6989ab06853bcbfdd3e4f5097a611f658f",
+   "path": [],
+   "inclusion": {
+    "construction": "rfc6962-raw",
+    "index": 1,
+    "tree_size": 3,
+    "hashes": [
+     "dcffe786ded16d283c663846ad0c4ff26558fccde36ca9d30b2ea19eade9fc0e",
+     "acaa04663a8547a2f70c60cc18f9378796b13c4f9a08f70d6adae662365b30c6"
+    ]
+   },
+   "expect": {
+    "withheld": true,
+    "reason": "unsupported_construction"
+   },
+   "expect_with_connector": {
+    "inclusion": false
+   },
+   "note": "Round 204, F.9.5-c.6. THIS IS WHAT A CONSTRUCTION NAME MEANS, in bytes. Until this vector the token `rfc6962-raw` was defined in prose in two packages, and a port declaring the same name could build a different tree with nothing to disagree. n=3 is the smallest size that separates the two registered constructions: RFC 6962 splits at the largest power of two BELOW n (2|1), while the tagged tree halves and promotes the unpaired node unchanged — on any n that is not a power of two they differ, so a proof walked under the wrong one is not a degraded check but an answer to another question. The control that keeps ic-01 from being satisfied by a connector that answers `true` to everything: same proof, different leaf, and the answer must flip. Without it \"the connector verified it\" would be indistinguishable from \"the connector said yes\"."
   },
   {
    "kind": "cadence-resolve",

@@ -9,6 +9,7 @@
 // Two things must both be true, and they pull against each other, which is why this is gated:
 //   · nothing already in the field breaks — the bundled default still confirms every proof issued before delegation
 //   · the seam is hostile-safe — a connector is a third-party module, so its return and its throw are untrusted input
+import { readFileSync } from 'node:fs';
 import * as P from '../packages/ust-protocol/index.mjs';
 
 let pass = 0; const fail = [];
@@ -99,6 +100,34 @@ ok('the rekor inclusion connector DECLINES a proof that does not declare its sch
   if (typeof mod.inclusionVerify !== 'function') return false;
   return mod.inclusionVerify(CH, goodProof) === null && P.verifyAnchor(CH, goodProof, { inclusionVerify: P.combineInclusion([mod.inclusionVerify]) }).inclusion === true;
 })(), 'it must not answer for a tree the publisher never declared — a guessed leaf convention verifies somebody else\'s entry');
+// ── the WITH-CONNECTOR half of the two-sided construction vectors (round 204, F.9.5-c.6).
+//
+// The corpus states TWO results for one input: a build with no connector for the declared construction WITHHOLDS,
+// and the same bytes under a build that claims it verify. `conformance.mjs` runs the first half — it is the core,
+// and the core implements no foreign construction. This runs the second, because only here is a connector present.
+// Without it the vectors would pin the refusal and leave the NAME meaning nothing, which is the defect they exist
+// to close: `rfc6962-raw` was defined in prose in two packages and by no artifact a port could reproduce.
+{
+  const CORPUS = JSON.parse(readFileSync(new URL('../vectors/conformance-vectors.json', import.meta.url), 'utf8')).vectors;
+  const CASES = CORPUS.filter((v) => v.expect_with_connector !== undefined);
+  // A corpus-driven check that selects nothing passes quietly — say the size.
+  ok('the corpus carries two-sided construction vectors (with-connector half)', CASES.length === 2, `found ${CASES.length}`);
+
+  let rekor = null;
+  try { rekor = (await import('@ust-protocol/rekor-verify')).inclusionVerify; } catch { /* not installed */ }
+  ok('the Rekor connector is importable — the with-connector half is EXERCISED, not skipped', typeof rekor === 'function');
+
+  if (typeof rekor === 'function') {
+    const inc = P.combineInclusion([rekor]);
+    for (const v of CASES) {
+      const proof = { root: v.root, path: v.path ?? [], ...(v.inclusion ? { inclusion: v.inclusion } : {}), anchor: { substrate: 'bitcoin-ots', ...(v.inclusion ? { inclusion: v.inclusion } : {}) } };
+      const r = P.verifyAnchor(v.content_hash, proof, { inclusionVerify: inc });
+      ok(`${v.id} — with a connector claiming '${v.inclusion?.construction}', the answer is ${JSON.stringify(v.expect_with_connector)}`,
+        r.inclusion === v.expect_with_connector.inclusion, `got inclusion=${r.inclusion} reason=${r.reason ?? '-'}`);
+    }
+  }
+}
+
 console.log(`\n  inclusion connector   PASS ${pass}   FAIL ${fail.length}`);
 if (fail.length) { fail.forEach((f) => console.log('    ✗ ' + f)); process.exit(1); }
 console.log('  ✓ inclusion is delegable, the bundled connector still confirms everything already in the field, and the seam is total');

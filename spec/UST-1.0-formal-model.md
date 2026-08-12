@@ -3975,6 +3975,39 @@ where `σ_ref` is the bundled tagged walk (`ust:leaf`/`ust:node` over ASCII `sha
 is therefore a consequence of the definition and not a grandfather clause in code — every proof issued before this
 theorem existed has `name(π) = σ_ref` and is decided exactly as before.
 
+**Theorem F.9.5-c.6 (a construction is a TRIPLE, and the body belongs to it — not to the protocol).** F.9.5-c.4
+gives a proof a NAME. A name is only useful if it resolves to something, and the something is not a pair of hash
+functions. Define a construction as
+
+  `σ = (leaf, node, body)` — a leaf rule, a node rule, and the GRAMMAR of what a proof must carry to be walked.
+
+*The third member is forced, not stylistic.* The bundled construction hashes ASCII `sha256:` strings, and the
+strings carry no position, so a walk cannot know which side a sibling is on: the body must state it, one direction
+per step — `[{dir, hash}]`. RFC 6962 hashes raw digests and splits at the largest power of two below `n`, so the
+side of every sibling is a FUNCTION of `(index, tree_size)`: the body carries those two numbers and the bare
+sibling list, and directions in it would be redundant data a producer could contradict. Neither body is a
+simplification of the other, and no single grammar covers both without carrying, for one of them, a field that its
+own walk must ignore. A protocol that fixed ONE body would therefore fix the tree — the exact normativity §11.2
+gave up when it made inclusion a connector (F.9.5-c.1).
+
+**Corollary (registering a name registers the grammar).** Since `σ` includes `body`, an entry in the construction
+registry that names only hash rules is incomplete: two implementations agreeing on `leaf` and `node` can still
+fail to exchange a proof, because neither knows what the other will send. That is not hypothetical — it is the
+measured state of this tree before this theorem: one package emits `{index, treeSize, hashes, rootHash}` and
+another reads `{index, tree_size, hashes}` beside a prefixed `root`, both under the same name, and a proof handed
+from the first to the second is answered **false** rather than "I cannot read this" (thelabmd/UST-Protocol#149).
+
+**Corollary (ONE carrier, and why it is not the Locator).** The body travels in `π.inclusion`, beside `root` and
+`path`, never inside `π.anchor`. §11.2 holds membership and substrate to be two INDEPENDENT proofs that must not
+be conflated, and `anchor` is the substrate's Locator: a tree's grammar placed there would make the publisher's
+membership evidence a field of the substrate that merely witnessed its root. The reference construction keeps its
+body in `path` — that member predates this theorem and every proof ever issued uses it, so `σ_ref`'s grammar IS
+`path`, and no reissue is implied for anything already published. ∎
+
+**Binding: pending — thelabmd/UST-Protocol#149** for the CARRIER move: the shipped Rekor connector still reads the
+body from `π.anchor.inclusion`, so until it is moved this theorem states where the body belongs while one
+implementation reads it elsewhere. The naming half is realized — *"F.9.5-c.5 a DECLARED foreign construction is not walked with the reference tree — the answer is withheld, not minted"*.
+
 **Theorem F.9.5-c.5 (evaluating a construction one was not asked for is not evidence).** Let `C_V` be the
 constructions a verifier `V` can compute — those it implements natively plus those an installed connector claims.
 Write `Incl_V(π) ∈ {⊤, ⊥, ⊘}`, where `⊘` means the predicate is UNDEFINED for this verifier.

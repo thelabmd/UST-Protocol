@@ -181,9 +181,13 @@ export const substrateVerify = makeSubstrateVerify();
 // proof-substitution hole this repo is built to refuse.
 export function inclusionVerify(contentHash, proof) {
   try {
-    const a = proof?.anchor;
-    const inc = a?.inclusion;
-    if (!inc || inc.scheme !== 'rfc6962-raw') return null;                      // not ours — let the next connector try
+    // Round 204 (F.9.5-c.6) — the body reads from `proof.inclusion`, the NORMATIVE carrier, and the member is
+    // `construction`. Before this it read `proof.anchor.inclusion.scheme`: a name of our own in a place of our own,
+    // inside the SUBSTRATE's Locator, which §11.2 keeps separate from the membership proof on purpose. Nothing
+    // published used that shape — measured across the estate, only this package and the operator's producer
+    // mentioned it — so the move costs no reissue and removes the second place a construction could be declared.
+    const inc = proof?.inclusion;
+    if (!inc || inc.construction !== 'rfc6962-raw') return null;                // not ours — let the next connector try
     if (typeof contentHash !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(contentHash)) return false;
     if (typeof proof.root !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(proof.root)) return false;
     // The leaf is bound to OUR content_hash by construction: leaf = SHA256(0x00 ‖ the 32 raw bytes of content_hash).

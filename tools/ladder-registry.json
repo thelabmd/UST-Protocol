@@ -1543,6 +1543,14 @@
    "test": "packages/ust-protocol/conformance.mjs :: UST#147 the definition's form count matches the forms it lists — mutation-controlled (stating 3 while listing 8 reddens that check alone)"
   },
   {
+   "round": 204,
+   "math": "a construction is a TRIPLE, and the body belongs to it",
+   "spec": "A construction is a leaf rule, a node rule AND a body grammar",
+   "code": "packages/ust-rekor-verify/index.mjs :: inclusionVerify reads the NORMATIVE carrier `proof.inclusion.construction` instead of a member of its own inside the substrate Locator",
+   "vector": "ic-01-rfc6962-raw-n3-i1",
+   "test": "tools/inclusion-connector-gate.mjs"
+  },
+  {
    "round": 203,
    "math": "input under which the two branches are reported AS A FORK",
    "spec": {

@@ -722,7 +722,8 @@ example; another operator MAY register a different public append-only log). Time
 Anchored time MUST NOT depend on a mutable lookup. A verifier obtains time from an **AnchorProof** carried in
 the transcript (or supplied by the caller):
 ```
-AnchorProof := { "root": ContentHash, "path": [ {"dir":"L"|"R","hash":ContentHash}, ... ], "anchor": Locator }
+AnchorProof := { "root": ContentHash, "path"?: [ {"dir":"L"|"R","hash":ContentHash}, ... ],
+                 "inclusion"?: { "construction": string, ...body }, "anchor": Locator }
 ```
 The verifier establishes that the State's `content_hash` is a member of the leaf-set committed by `root`, then
 validates `root`'s commitment under the **substrate's verification profile**. These are TWO INDEPENDENT proofs and
@@ -762,6 +763,25 @@ consumers, one holding a connector and one not, returned DIFFERENT verdicts on t
 reported uncertainty, which is precisely the determinism this section rests agreement on. The declaration is
 UNSIGNED and therefore ROUTES only: it can lower or hold the anchor coordinate and can never raise it, so a
 substituted name buys an adversary nothing a stripped proof would not already buy.
+
+**A construction is a leaf rule, a node rule AND a body grammar.** Registering only the hash rules is not enough:
+two implementations can agree on both and still fail to exchange a proof, because neither knows what the other
+will send. The body therefore travels in `inclusion`, beside `root` — never inside `anchor`, which is the
+SUBSTRATE's Locator and belongs to the second of §11.2's two independent proofs. The reference construction is the
+exception that costs nothing: its body IS `path`, the member every proof issued so far already carries, so
+`inclusion` is absent from all of them and they keep verifying unchanged.
+
+**Registered constructions (§17).** A verifier MUST evaluate the DECLARED construction and no other; one it can
+compute neither natively nor through a connector yields `INDETERMINATE(unsupported_construction)`.
+
+| `construction` | leaf | node | body |
+|---|---|---|---|
+| `ust-merkle-tagged` (default, absent ⇒ this) | `H("ust:leaf", content_hash)` over the ASCII `sha256:`-prefixed string | `H("ust:node", left ‖ right)` over the same strings | `path`: ordered `{dir, hash}` steps — the strings carry no position, so direction must be stated |
+| `rfc6962-raw` | `SHA256(0x00 ‖ raw32)` over the DECODED 32 bytes | `SHA256(0x01 ‖ left ‖ right)` over raw digests | `{ index, tree_size, hashes[] }` — bare siblings; direction is a function of `(index, tree_size)`, and stating it would be data a producer could contradict |
+
+RFC 6962 splits a range at the largest power of two strictly below its length; the tagged tree splits in half and
+promotes an unpaired node unchanged. The two therefore disagree on any `n` that is not a power of two, which is
+why walking one under the other is not a degraded check but a different question.
 
 **The anchor SUBSTRATE is an operator choice (like the signature scheme), NOT the protocol.** The protocol
 fixes only: (1) the proof is self-contained/in-band (the inclusion evidence travels WITH the document — no mutable

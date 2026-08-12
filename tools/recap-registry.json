@@ -541,6 +541,10 @@
   {
    "round": 203,
    "no_recap": "The round closes no issue — it repairs one anchoring rule found by the census run for thelabmd/UST-Protocol#150, which stays open. The recap unit is a closed issue."
+  },
+  {
+   "round": 204,
+   "no_recap": "The round closes no issue — it closes the SECOND mechanism of thelabmd/UST-Protocol#149 (a construction name now resolves to bytes, and both ends read one carrier), while the fork-choice bucket and the producer side of the seam stay open there. #149 stays open; the recap unit is a closed issue, not a closed mechanism."
   }
  ]
 }
