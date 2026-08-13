@@ -1,5 +1,5 @@
 {
- "version": "UST 1.0 conformance vectors (rc.70 - a refusal can no longer become a verdict: a build lacking a primitive answers INDETERMINATE(unsupported_alg) and the resolvers, which return records rather than §14 verdicts, fail CLOSED with E-UNSUPPORTED held in its own registry set; the faculty-absent vector pins BOTH halves, with the faculty and without it (#144); prior rc.68 - a STATED substrate refusal stops sharing a door with a malformed receipt: a connector answering {final:false, reason} is reported as the refusal it is, its reason admitted as a bounded slug because a not-ours module may not write prose into a verdict, and a DECLINE stays distinct from both so the router seam is unchanged (#141); prior rc.67 - admits(k,c) becomes evaluable: the normative class-set per operating role is stated, so a role REFUSES a class it does not admit instead of labelling a key that authorized nothing (#130); prior rc.66: a root is published TWICE and only the SEAL enumerates: the batch commitment gets the prev-only `anchor` subtype, root REQUIRED and constituents ABSENT, because enumeration is not an input to the inclusion predicate and IS a membership oracle over other principals (#127, F.5u); prior rc.65: REGISTRY registers and MEASURES the verdict, completeness and forkChoice result vocabularies against actual code usage; the measurement found an error code in the RESULT slot and a second vocabulary under the same field name, #111; prior rc.40: external-audit remediation: 5 P0 fixed structurally (epic UST-1o6); prior rc.33: #75 ROOT 3 (math-derived, NO manifest): forkChoice/verifyStream resolve per-frame AUTHORITY (impersonation P0-03) + grid EQUALITY (off-grid P0-04); stream-authority/stream-grid/fork-choice vectors; prior: - #75 ROOT 1 two-phase verify + anchor-time (authority-at-time vectors: retired/compromised/premature K_n(t) window judged against the PROVEN anchor); prior: - #75 ROOT 2 key-log temporal state machine (keylog-state vectors: revoked/rotated-out/retired key cannot sign later; closed key_op schema); prior: - #75 strict encoders P1-01/02/03 (utf8-reject, b64url, cadence); prior: — self-audit fix: freshness:attested now requires a VERIFIED keylogHeadAnchor (inclusion + substrate-final), a raw self-computed head hash proves nothing = overclaim closed. Prior: #41 canon arbiter, #40 identity hardening, #44 agent-safety, #45 downgrade + fork-choice)",
+ "version": "UST 1.0 conformance vectors (rc.71 - the partition-kind DOMAIN K enters the corpus: two clean-room verifiers enumerated {captured, computed} and refused every conforming document of the reference operator, while the parity comparison ran over 41 documents that carried no `absence` partition - a count floor is not a coverage floor (#154); prior rc.70 - a refusal can no longer become a verdict: a build lacking a primitive answers INDETERMINATE(unsupported_alg) and the resolvers, which return records rather than §14 verdicts, fail CLOSED with E-UNSUPPORTED held in its own registry set; the faculty-absent vector pins BOTH halves, with the faculty and without it (#144); prior rc.68 - a STATED substrate refusal stops sharing a door with a malformed receipt: a connector answering {final:false, reason} is reported as the refusal it is, its reason admitted as a bounded slug because a not-ours module may not write prose into a verdict, and a DECLINE stays distinct from both so the router seam is unchanged (#141); prior rc.67 - admits(k,c) becomes evaluable: the normative class-set per operating role is stated, so a role REFUSES a class it does not admit instead of labelling a key that authorized nothing (#130); prior rc.66: a root is published TWICE and only the SEAL enumerates: the batch commitment gets the prev-only `anchor` subtype, root REQUIRED and constituents ABSENT, because enumeration is not an input to the inclusion predicate and IS a membership oracle over other principals (#127, F.5u); prior rc.65: REGISTRY registers and MEASURES the verdict, completeness and forkChoice result vocabularies against actual code usage; the measurement found an error code in the RESULT slot and a second vocabulary under the same field name, #111; prior rc.40: external-audit remediation: 5 P0 fixed structurally (epic UST-1o6); prior rc.33: #75 ROOT 3 (math-derived, NO manifest): forkChoice/verifyStream resolve per-frame AUTHORITY (impersonation P0-03) + grid EQUALITY (off-grid P0-04); stream-authority/stream-grid/fork-choice vectors; prior: - #75 ROOT 1 two-phase verify + anchor-time (authority-at-time vectors: retired/compromised/premature K_n(t) window judged against the PROVEN anchor); prior: - #75 ROOT 2 key-log temporal state machine (keylog-state vectors: revoked/rotated-out/retired key cannot sign later; closed key_op schema); prior: - #75 strict encoders P1-01/02/03 (utf8-reject, b64url, cadence); prior: — self-audit fix: freshness:attested now requires a VERIFIED keylogHeadAnchor (inclusion + substrate-final), a raw self-computed head hash proves nothing = overclaim closed. Prior: #41 canon arbiter, #40 identity hardening, #44 agent-safety, #45 downgrade + fork-choice)",
  "note": "Deterministic + reproducible. Keypairs from fixed seeds (A=0011..eeff, B=ffee..1100). canon=JCS tightened; H(tag,x)=sha256(ascii(tag)||0x00||x); content_hash=H(\"ust:state\",canon({ust,state})); key_id=H(\"ust:keylog\",raw_pub); partition_hash=H(\"ust:shard\",canon({domain_shard,ust_id,partition,value})) — UNIFORM, every partition binds domain_shard, name is a VALUE (non-colliding), no domain-less computed. Each vector states the SPEC rule it pins. Signature-type vectors use expect: 'VALID' | 'E-SIG' for the Ed25519 PRIMITIVE check (strict, canonical-S); this is not a document verdict — a conforming verifier's document verdict is always tier-qualified (VALID:LIGHT/HIGH/TOP), never a bare VALID. Partition names inside hash/commit inputs (e.g. 'secret') are arbitrary sample names, not protocol features.",
  "seeds": {
   "A": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
@@ -19,9 +19,9 @@
   "_": "WHAT A VECTOR MAY PIN — read this before excluding the `vector` layer of a round, and before deciding a case \"cannot be a vector\". Derived from THIS corpus on 2026-08-10, not declared: 228 vectors across 43 kinds.",
   "the_rule": "A vector is a FIXED INPUT and a DECLARED RESULT that a runner must reproduce. The input being a DOCUMENT is one case among several; the result being a VERDICT is one case among several.",
   "measured_2026_08_10": {
-   "total": 239,
-   "kinds": 44,
-   "input_is_a_document": 41,
+   "total": 243,
+   "kinds": 45,
+   "input_is_a_document": 45,
    "input_is_a_value_or_string": 75,
    "input_is_a_genesis_plus_log": 63,
    "input_is_raw_bytes": 27,
@@ -11007,6 +11007,171 @@
    "note": "A non-canonical (2)",
    "message_hex": "39a591f5321bbe07fd5a23dc2f39d025d74526615746727ceefd6e82ae65c06f",
    "sig_hex": "a9d55260f765261eb9b84e106f665e00b867287a761990d7135963ee0a7d59dca5bb704786be79fc476f91d3f3f89b03984d8068dcf1bb7dfc6637b45450ac04"
+  },
+  {
+   "id": "partition-kind-captured-admitted",
+   "kind": "partition-kind",
+   "rule": "S4.4/S5 the admitted kind domain K (F.1.1) — EVERY element verifies",
+   "role": "data",
+   "expect": "admitted",
+   "note": "#154 — a corpus document carrying kind:\"captured\". The corpus is the parity population: two implementations that disagree on a kind absent from every vector agree on every vector.",
+   "doc": {
+    "ust": "1.0",
+    "state": {
+     "id": {
+      "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "ust_id": "ust:20260628.1450",
+      "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "class": "observation"
+     },
+     "time": {
+      "generated_at": "2026-06-28T14:03:12Z",
+      "valid_from": "2026-06-28T14:00:00Z",
+      "valid_to": "2026-06-28T15:00:00Z"
+     },
+     "data": {
+      "d": {
+       "kind": "captured",
+       "value": {
+        "v": "0"
+       }
+      }
+     },
+     "hashes": {
+      "d": "sha256:c5242cd9bba3a3b37aa6b2ce8b7ac4f2f2cfad0cea8a4e5aa46e440d7ab58772"
+     }
+    },
+    "sig": {
+     "alg": "Ed25519",
+     "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+     "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+     "sig": "M6nVSWr5bXQAmluoiJZxj4shw1Cb0mKArXiGBJEIKs0XuH58KNNjmgGQezU20Ufi3Nrl3rEp2Unv__wlpVhGCQ"
+    }
+   }
+  },
+  {
+   "id": "partition-kind-computed-admitted",
+   "kind": "partition-kind",
+   "rule": "S4.4/S5 the admitted kind domain K (F.1.1) — EVERY element verifies",
+   "role": "data",
+   "expect": "admitted",
+   "note": "#154 — a corpus document carrying kind:\"computed\". The corpus is the parity population: two implementations that disagree on a kind absent from every vector agree on every vector.",
+   "doc": {
+    "ust": "1.0",
+    "state": {
+     "id": {
+      "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "ust_id": "ust:20260628.1451",
+      "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "class": "observation"
+     },
+     "time": {
+      "generated_at": "2026-06-28T14:03:12Z",
+      "valid_from": "2026-06-28T14:00:00Z",
+      "valid_to": "2026-06-28T15:00:00Z"
+     },
+     "data": {
+      "d": {
+       "kind": "computed",
+       "value": {
+        "v": "1"
+       }
+      }
+     },
+     "hashes": {
+      "d": "sha256:9875560f81529ec63889b4a249076c54a6f12ad40774595009c835125a3c7023"
+     }
+    },
+    "sig": {
+     "alg": "Ed25519",
+     "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+     "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+     "sig": "3-rAT96rk6NtOW560a-OMqcsne-vfKQfcTCRBufiFY4v83SrBE-wd57TwSC8NStUFTF1ep9nMg2_vPn4ecrHCw"
+    }
+   }
+  },
+  {
+   "id": "partition-kind-absence-admitted",
+   "kind": "partition-kind",
+   "rule": "S4.4/S5 the admitted kind domain K (F.1.1) — EVERY element verifies",
+   "role": "data",
+   "expect": "admitted",
+   "note": "#154 — a corpus document carrying kind:\"absence\". The corpus is the parity population: two implementations that disagree on a kind absent from every vector agree on every vector.",
+   "doc": {
+    "ust": "1.0",
+    "state": {
+     "id": {
+      "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "ust_id": "ust:20260628.1452",
+      "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "class": "observation"
+     },
+     "time": {
+      "generated_at": "2026-06-28T14:03:12Z",
+      "valid_from": "2026-06-28T14:00:00Z",
+      "valid_to": "2026-06-28T15:00:00Z"
+     },
+     "data": {
+      "d": {
+       "kind": "absence",
+       "value": {
+        "reason": "unreachable",
+        "subject": "GOES-18"
+       }
+      }
+     },
+     "hashes": {
+      "d": "sha256:ec0455b2421d045ee3e612b616e3577ec224045ffb6fbacad45fb6b936f55a39"
+     }
+    },
+    "sig": {
+     "alg": "Ed25519",
+     "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+     "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+     "sig": "lg6uvwVmskK4TnD8FkrQlpD9VpaS5cbIeSF5jou5F4Lf0fEBVeU6sReiDkYns4kwI80Wono91qh5rf8chLXzCQ"
+    }
+   }
+  },
+  {
+   "id": "partition-kind-outside-K-refused",
+   "kind": "partition-kind",
+   "rule": "S4.4/S5 a kind outside K is refused — fail-closed against K, not against a local list",
+   "role": "data",
+   "expect": "E-MALFORMED",
+   "note": "#154 — the other direction of the equality: admitting MORE accepts a tag the standard never defined.",
+   "doc": {
+    "ust": "1.0",
+    "state": {
+     "id": {
+      "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "ust_id": "ust:20260628.1459",
+      "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+      "class": "observation"
+     },
+     "time": {
+      "generated_at": "2026-06-28T14:03:12Z",
+      "valid_from": "2026-06-28T14:00:00Z",
+      "valid_to": "2026-06-28T15:00:00Z"
+     },
+     "data": {
+      "d": {
+       "kind": "attested",
+       "value": {
+        "v": "1"
+       }
+      }
+     },
+     "hashes": {
+      "d": "sha256:dfc16b69df8a6947871cb24499613a18bb5de3782d9d3b8c924818e80fd47afc"
+     }
+    },
+    "sig": {
+     "alg": "Ed25519",
+     "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+     "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+     "sig": "DP_EYKbh9foihLBQRWIINX18oU4T6_0ufTmXTyroqvYw9TaNYyXyM-WOM9XVN-NNekISf3ggJgdvdA2HOVRKBw"
+    }
+   }
   }
  ]
 }

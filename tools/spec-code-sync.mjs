@@ -78,6 +78,33 @@ check('results', verdictResults, REGISTRY.results);
 // §11.3 completeness words, from the field the stream verdict actually sets
 check('completeness', [...src.matchAll(/\bcomplete:\s*['"`]([a-z-]+)['"`]/g)].map((m) => m[1]), REGISTRY.completeness);
 
+// §4.4/§5 partition kinds, across EVERY verifier surface — #154.
+//
+// This set is not scanned out of `src` like the others, and that difference IS the finding. The core, the browser
+// verifier and the extension each declare `const KINDS = [...]` INDEPENDENTLY, and the clean-room ones must keep
+// declaring it: a second implementation that imported the core would stop being a second implementation. So the
+// enumeration is legitimately plural, and the only thing that can hold the copies together is a gate that reads
+// EACH of them against the registry. Without this leg, `docs/` and `extension/` shipped `{captured, computed}` for
+// as long as it took a live document to notice — every gate green, every slot of the reference operator refused.
+{
+  const surfaces = [
+    ['packages/ust-protocol/index.mjs', full],
+    ['docs/ust-verify.mjs', readFileSync(new URL('../docs/ust-verify.mjs', import.meta.url), 'utf8')],
+    ['extension/lib/ust-verify.mjs', readFileSync(new URL('../extension/lib/ust-verify.mjs', import.meta.url), 'utf8')],
+  ];
+  for (const [name, text] of surfaces) {
+    const m = /const KINDS = \[([^\]]*)\]/.exec(text);
+    if (!m) { fail++; report.push(`  ✗ partitionKinds: ${name} declares no \`const KINDS = [...]\` — the scanner lost its subject, so this leg would pass for anything`); continue; }
+    const got = [...m[1].matchAll(/['"`]([a-z-]+)['"`]/g)].map((x) => x[1]);
+    const missing = REGISTRY.partitionKinds.filter((k) => !got.includes(k));
+    const extra = got.filter((k) => !REGISTRY.partitionKinds.includes(k));
+    if (missing.length || extra.length) {
+      fail++;
+      report.push(`  ✗ partitionKinds: ${name} admits [${got}]` + (missing.length ? ` — MISSING [${missing}] (a conforming document is refused; the verdict names the publisher)` : '') + (extra.length ? ` — EXTRA [${extra}] (a tag the standard never defined is accepted)` : ''));
+    } else report.push(`  ✓ partitionKinds: ${name} admits exactly K (${got.length})`);
+  }
+}
+
 
 console.log('\n  spec-code-sync (LAYER 2 — REGISTRY == code usage):');
 report.forEach((r) => console.log(r));

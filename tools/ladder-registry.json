@@ -1623,6 +1623,14 @@
    "code": "vectors/conformance-vectors.json :: expect_floor added to the six data-role class-role vectors, with the reason the six key-role ones must NOT carry it recorded beside them",
    "vector": "role-derivation-in-data",
    "test": "packages/ust-light/test.mjs :: round-185 floor verdict for role-derivation-in-data (ceiling says admitted) — mutation-controlled by narrowing DATA_CLASSES to ['observation'], which reddens exactly the attestation and derivation rows"
+  },
+  {
+   "round": 206,
+   "math": "The partition-kind domain `K` is one object, and fail-closed is only sound relative to it",
+   "spec": "A verifier's admitted set MUST EQUAL it: admitting more accepts a tag",
+   "code": "packages/ust-protocol/index.mjs :: REGISTRY.partitionKinds — the single definition; docs/ust-verify.mjs and extension/lib/ust-verify.mjs admit `absence` and name the offending kind in the error, both clean-room copies keeping their own literal by design",
+   "vector": "partition-kind-absence-admitted",
+   "test": "packages/ust-protocol/conformance.mjs :: #154 the cross-implementation corpus exercises every element of K — mutation-controlled by removing the absence vector (parity COVERAGE leg goes red) and by narrowing either clean-room literal (spec-code-sync names the missing element and the direction of the flip)"
   }
  ],
  "first_accounted_round": 76,

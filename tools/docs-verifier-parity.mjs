@@ -75,6 +75,16 @@ for (const [name, doc, context] of [...battery, ...fromCorpus]) {
   if (!agree) fail++;
   if (!agree || !name.startsWith('vector:')) console.log((agree ? '  ✓ ' : '  ✗ DIVERGE ') + name + '  — ref:' + pv + '  web:' + wv);
 }
+// #154 — a COUNT floor is not a COVERAGE floor. The corpus leg passed 41 document-bearing vectors for months
+// while carrying zero `absence` partitions, so the two implementations were compared on every kind EXCEPT the one
+// they disagreed about — and the disagreement shipped, refusing every live document of the reference operator.
+// A population large enough to look thorough is still silent about what it never contains.
+{
+  const carried = new Set(fromCorpus.flatMap(([, doc]) => Object.values(doc.state?.data ?? {}).map((part) => part?.kind)));
+  const unexercised = P.REGISTRY.partitionKinds.filter((k) => !carried.has(k));
+  if (unexercised.length) { fail++; console.log(`  ✗ COVERAGE: no corpus vector carries partition kind(s) [${unexercised}] — the comparison is silent on exactly those`); }
+  else console.log(`  ✓ COVERAGE: the corpus exercises every element of K (${P.REGISTRY.partitionKinds.join(', ')})`);
+}
 // A floor, so an empty or mis-filtered corpus reads as a broken gate rather than a clean run.
 const FLOOR = 20;
 if (fromCorpus.length < FLOOR) { fail++; console.log(`  ✗ only ${fromCorpus.length} document-bearing vectors resolved from the corpus (floor ${FLOOR}) — the corpus leg has gone blind`); }

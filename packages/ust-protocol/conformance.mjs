@@ -337,6 +337,14 @@ for (const v of V.vectors) {
       const got = r.error === 'E-KEY' ? 'E-KEY' : 'admitted';
       check(v.id, got === v.expect, `admits(k,c) ${v.id}: got ${got} (${r.error ?? r.result}) expected ${v.expect}`); break; }
     case 'document-negative': check(v.id, P.verify(v.doc, { context: 'data' }).result === 'INVALID'); break;
+    // #154 — the kind domain K, as CORPUS vectors rather than only as in-suite assertions. Living in the corpus
+    // is the point: `docs-verifier-parity` drives every document-bearing vector through BOTH implementations,
+    // so a kind present here is a kind the two can no longer silently disagree about.
+    case 'partition-kind': {
+      const r = P.verify(v.doc, { context: v.role ?? 'data' });
+      check(v.id, v.expect === 'admitted' ? r.result === 'VALID:LIGHT' : r.error === v.expect, `${r.result ?? ''}${r.error ?? ''}`);
+      break;
+    }
     // #144 — a TWO-SIDED vector: the same document under a build that HAS the primitive and one that does not.
     // This runner is the build that has it, so it executes the with-faculty half; the without-faculty half is
     // executed by `browser-build.test.mjs`, which loads the build whose crypto refuses. Both halves are normative
@@ -3129,6 +3137,38 @@ console.log('\n═════════════════════�
     check('UST#147 the definition names at least three input forms that are NOT a document (the narrowness it replaces)',
       nonDoc.length >= 3, `${nonDoc.length} non-document form(s)`);
   }
+}
+
+// ─── #154 the partition-kind DOMAIN K — enumerated once, checked as an equality ────────────────────────
+//
+// The pre-existing #4 check pins one NEGATIVE instance ('observation' → E-MALFORMED) and #39 pins one POSITIVE
+// instance (absence verifies). Neither says the admitted set IS K, and that is precisely the gap that shipped:
+// two clean-room verifiers omitted `absence`, every instance-check they ran still passed, and every live document
+// of the reference operator was refused. An instance is not a domain.
+{
+  const K = P.REGISTRY.partitionKinds;
+  check('#154 the admitted partition-kind domain is EXACTLY the registry set K',
+    K.length === 3 && ['captured', 'computed', 'absence'].every((k) => K.includes(k)), `K = [${K}]`);
+
+  // Drive the verifier with EVERY element, and with one that is not an element. The loop is over K itself, so a
+  // kind added to the registry without a verifier that admits it turns this red on the next run.
+  const built = K.map((kind) => {
+    const value = kind === 'absence' ? { reason: 'unreachable' } : { v: '1' };
+    return [kind, P.seal(P.buildState({ ...ID, ust_id: 'ust:20260628.1451' }, T, { d: { kind, value } }), A.priv, A.pubB64)];
+  });
+  const refused = P.seal(P.buildState({ ...ID, ust_id: 'ust:20260628.1452' }, T, { d: { kind: 'attested', value: { v: '1' } } }), A.priv, A.pubB64);
+  check('#154 every element of K verifies, and a kind outside K is refused',
+    built.every(([, doc]) => P.verify(doc, { context: 'data' }).result === 'VALID:LIGHT')
+    && P.verify(refused, { context: 'data' }).error === 'E-MALFORMED',
+    built.map(([k, doc]) => `${k}:${P.verify(doc, { context: 'data' }).result ?? P.verify(doc, { context: 'data' }).error}`).join(' '));
+
+  // The corpus leg. Two implementations are compared over the conformance corpus; if the corpus never carries a
+  // kind, the comparison is silent about exactly the element they may disagree on — measured: zero `absence`
+  // documents, and the disagreement lived in production until a live document found it.
+  const corpus = readFileSync(new URL('../../vectors/conformance-vectors.json', import.meta.url), 'utf8');
+  const unexercised = K.filter((k) => !new RegExp(`"kind"\\s*:\\s*"${k}"`).test(corpus));
+  check('#154 the cross-implementation corpus exercises every element of K',
+    unexercised.length === 0, unexercised.length ? `never carried by any vector: [${unexercised}]` : '');
 }
 
 // ─── #39 negative / absence observation — the notary's other half ──────────────────────────────────────

@@ -549,6 +549,10 @@
   {
    "round": 205,
    "no_recap": "The round closes the THIRD and last mechanism of thelabmd/UST-Protocol#149 — producer and verifier of one construction now exchange a proof verbatim — but the issue also carries the fork-choice bucket, which is untouched. #149 stays open; the recap unit is a closed issue, not a closed mechanism."
+  },
+  {
+   "round": 206,
+   "no_recap": "The round lands the fix and the gates that make it durable, but it does not CLOSE thelabmd/UST-Protocol#154. What the issue reports is that an OUTSIDER's verifier refuses a conforming document, and an outsider does not build from source: the corrected browser verifier reaches readers when the page redeploys, and the extension ships on its own surface entirely. Until both are the code a stranger actually loads, the finding is still true for every reader who has not cloned this repository — so the issue stays open, and the recap unit is a closed issue, not a closed mechanism."
   }
  ]
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.70', revision: 93 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.71', revision: 93 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -3234,6 +3234,16 @@ export const REGISTRY = deepFreeze({   // round-25 P0-04 — DEEP-frozen: the ca
   purposes: ['ust:name-no-fork', 'ust:authority-checkpoint', 'ust:authority-checkpoint-signature',
     'ust:checkpoint-authority-recovery', 'ust:genesis-epoch-transition', 'ust:checkpoint-uniqueness-attestation',
     'ust:evidence-receipt', 'ust:evidence-receipt-signature'],
+  // PARTITION KINDS (§4.4/§5, F.1.1) — the domain `K` a verifier admits, and the ONLY definition of it. The
+  // obligation is EQUALITY: admitting more accepts a tag the standard never defined; admitting fewer returns a
+  // false INVALID on a conforming document, and the verdict then names the publisher rather than the verifier.
+  // Measured #154 (2026-08-13): `absence` was missing from the browser verifier and the extension — two shipped,
+  // clean-room implementations — and every live document of the reference operator was refused, because every
+  // slot carries an `absence` partition for each source that did not answer. Both were faithful to the registry
+  // they read; the registry named two kinds and the §4.4 grammar named three. The four independent enumerations
+  // are why this set is here: the spec's registry section is GENERATED from it, and every implementation's
+  // literal — including the clean-room ones, which must NOT import this module — is diffed against it.
+  partitionKinds: ['captured', 'computed', 'absence'],
   // INVALID error codes (§15) — every code the verifier/API can emit. Ordered as §15 lists them.
   errorCodes: ['E-MALFORMED', 'E-CANON', 'E-BOUNDS', 'E-CYCLE', 'E-SIG', 'E-KEY', 'E-GENESIS', 'E-ANCHOR',
     'E-COMMIT', 'E-ROOT', 'E-SEED', 'E-PREV', 'E-AUTHORITY', 'E-SEQ', 'E-EVIDENCE', 'E-ASSURANCE', 'E-BYTES', 'E-REPLICATION', 'E-DISCOVERY'],   // E-BYTES — the byte-admission door class (round-48 P0-01: snapshotBytes rejects a non-native-Uint8Array as E-BYTES-TYPE/-SHARED/-SIZE)

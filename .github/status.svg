@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 516" role="img" aria-labelledby="st-t st-d">
-<title id="st-t">UST 1.0.0-rc.70 — release candidate status</title>
-<desc id="st-d">UST status: 1.0.0-rc.70 — a release candidate, not a final 1.0. Verify machine-readable state without trusting whoever handed it to you. Multiple external AI reviews incorporated structurally; an independent human cryptographic audit is pending; suitable for evaluation and integration testing. The wire format ust:&quot;1.0&quot; is stable across all release candidates; pin exact versions.</desc>
+<title id="st-t">UST 1.0.0-rc.71 — release candidate status</title>
+<desc id="st-d">UST status: 1.0.0-rc.71 — a release candidate, not a final 1.0. Verify machine-readable state without trusting whoever handed it to you. Multiple external AI reviews incorporated structurally; an independent human cryptographic audit is pending; suitable for evaluation and integration testing. The wire format ust:&quot;1.0&quot; is stable across all release candidates; pin exact versions.</desc>
 <g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" font-size="15">
   <rect x="1.5" y="1.5" width="877" height="513" rx="10" fill="#0d1117" stroke="#3d444d" stroke-width="1.5"/>
   <text x="28" y="40" fill="#58a6ff" font-size="17" font-weight="600">UST Protocol</text>
@@ -10,7 +10,7 @@
   <text x="30" y="110" fill="#58a6ff" font-size="12" font-weight="600" letter-spacing="2">RELEASE STATUS</text>
   <text x="42" y="136" fill="#8b949e" >Version</text>
   <text x="192" y="136" fill="#8b949e" >:</text>
-  <text x="214" y="136" fill="#79c0ff" >1.0.0-rc.70</text>
+  <text x="214" y="136" fill="#79c0ff" >1.0.0-rc.71</text>
   <text x="42" y="162" fill="#8b949e" >Stage</text>
   <text x="192" y="162" fill="#8b949e" >:</text>
   <text x="214" y="162" fill="#d29922" >RELEASE CANDIDATE</text>

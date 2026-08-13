@@ -86,6 +86,47 @@ commitment to the observed values of that tuple.
 
 **Binding: none — definitional.** It fixes the ambient objects (Ω, the coordinate random variables) that every later section quantifies over; no party owes code for a naming of the ambient space.
 
+## F.1.1 The partition-kind domain `K` is one object, and fail-closed is only sound relative to it (#154)
+
+F.1 gives each partition a value in `V`; it does not say what a partition ASSERTS about how that value came to be.
+That is the kind, and the protocol admits exactly three:
+
+  `K := { captured, computed, absence }`
+
+`captured` = witnessed from the world, `computed` = derived, `absence` = a NEGATIVE observation carrying a reason
+(§4.4, #39 — the notary's other half). The kind is a descriptive tag: it is inside the signed bytes and therefore
+inside the signature, but it is not an input to `partitionHash`, so it changes no hash.
+
+**The obligation is EQUALITY, not membership.** Let `A_impl ⊆ Σ*` be the kind set an implementation admits. Every
+conforming verifier owes `A_impl = K`, and each direction of failure is a verdict flip with opposite sign:
+
+- `A_impl ⊋ K` — admits a kind the protocol never defined. The reader is told a value was witnessed when nothing
+  in the standard says what the tag means. Unsound in the accepting direction.
+- `A_impl ⊊ K` — refuses a conforming document. Fail-closed on an unknown kind is the correct MECHANISM, but the
+  mechanism decides against `A_impl`, not against `K`; a missing element turns a correct refusal into a **false
+  INVALID on a valid document**, and the verdict names the publisher rather than the verifier.
+
+This second direction is not hypothetical. Measured 2026-08-13: the browser verifier and the extension enumerated
+`{captured, computed}` and returned `E-MALFORMED` on every live document of the reference operator, because each
+slot carries `absence` partitions for sources that did not answer. Both implementations were faithful to what they
+read; the registry they read from named two kinds while the §4.4 grammar named three. CLOSED 2026-08-13 — round 206
+(#154): `K` is named here, realized once as `REGISTRY.partitionKinds`, and every verifier surface is diffed against
+it; the page's own call path now returns `VALID:HIGH` on the document that produced the report.
+
+**Why the mechanism could not save it.** *Corollary (naming an instance, again)* in F.5v already fixes the right
+shape — enumerate the POSITIVE set, closed and small, everything else blind by default. That shape is sound only
+when the positive set is ONE object. Here it was four: the core library, the browser verifier, the extension and
+the spec registry each enumerated `K` independently, and no theorem quantified over `K`, so nothing was violated
+when they diverged. Per-implementation soundness held throughout; AGREEMENT is a property of the domain, and an
+undefined domain cannot carry it.
+
+Hence `K` is named here and realized once, as REGISTRY data: the spec's registry section is generated from it and
+the code's literal usage is diffed against it, so the four enumerations become one. A verifier's admitted set is
+checkable against `K` — and, separately, the corpus over which two implementations are compared must EXERCISE every
+element of `K`, or the comparison is silent on exactly the element they disagree about.
+
+**Binding: realized** — *"#154 the admitted partition-kind domain is EXACTLY the registry set K"* · *"#154 every element of K verifies, and a kind outside K is refused"* · *"#154 the cross-implementation corpus exercises every element of K"*.
+
 ## F.2 Measurement vs reality — the origin of "fixation, not truth"
 
 Distinguish two maps into `V`:

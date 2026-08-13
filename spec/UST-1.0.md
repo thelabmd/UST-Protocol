@@ -3,7 +3,7 @@
 
 *This specification text is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](../LICENSE-SPEC). Reference code in this repository is licensed Apache-2.0. Use of the name **UST** / **Universal State Transcript** and the **UST-compatible** claim: see [TRADEMARK.md](../TRADEMARK.md).*
 
-> **Release candidate — `1.0.0-rc.70`.** This specification has been extensively red-teamed; an independent
+> **Release candidate — `1.0.0-rc.71`.** This specification has been extensively red-teamed; an independent
 > external cryptographic audit is pending. It is subject to change until `1.0.0` final. The wire format `ust:"1.0"`
 > is stable across all rc's — pin exact versions. Per-version history is in [`CHANGELOG.md`](../CHANGELOG.md).
 
@@ -254,7 +254,7 @@ State := {                                   // the top-level `ust` (§4.1) is s
      "valid_from":   string,                 // RFC 3339 UTC
      "valid_to":     string                  // RFC 3339 UTC-Z; valid_from ≤ valid_to ≤/≥ generated_at per §11; NO freshness grace in 1.0 (freshness = the anchor, P10)
   },
-  "data":    Data,                     // REQUIRED — partitions (§4.4); each has a KIND (captured/computed) and a VISIBILITY (public/private) — privacy is PER-PARTITION
+  "data":    Data,                     // REQUIRED — partitions (§4.4); each has a KIND (captured/computed/absence, §4.4) and a VISIBILITY (public/private) — privacy is PER-PARTITION
   "hashes":     { "<partition>": ContentHash }, // REQUIRED — per-partition hash (§4.4), recomputed by the verifier
   "provenance": Provenance                   // OPTIONAL — chains, source anchors, seed, layer seed (§9)
 }
@@ -321,7 +321,9 @@ value. The partition hashes UNIFORMLY like any other; `absence` is a SEMANTIC la
 the SAME for every partition — it ALWAYS binds `domain_shard`, and the partition NAME is carried as a VALUE
 (`partition:`), never as a key, so a partition name can never overwrite a protocol field:
 `H_shard(canon({domain_shard, ust_id, partition: <name>, value}))`.
-- `kind` (`captured` = witnessed · `computed` = derived) is a DESCRIPTIVE tag and does NOT change the hash.
+- `kind` (`captured` = witnessed · `computed` = derived · `absence` = a negative observation, below) is a
+  DESCRIPTIVE tag and does NOT change the hash. It is nonetheless INSIDE the signature, and a verifier's admitted
+  set MUST equal the registry domain `K` (§17, F.1.1) — "descriptive" bounds what it affects, not whether it is checked.
 - The old domain-less `computed` mode (hashing WITHOUT `domain_shard`, so independent engines got an IDENTICAL
   hash for "cross-engine corroboration") was REMOVED in rc.2: that agreement was FORGEABLE (a publisher COPIES the
   domain-less hash to fake agreement — as this spec already noted) and FRAGILE (a `"3.14"` vs `"3.140"`
@@ -2023,7 +2025,17 @@ Independent re-implementation is expected; the vectors make "verify without trus
   SEVERAL substrates composes their plugins (`combineSubstrates`) — each returns the same `{final,time}`
   answer in its own dialect; an unknown substrate ⇒ `INDETERMINATE(unsupported)`, never INVALID. Future
   substrates register the same way — the protocol is substrate-agnostic. AnchorProof keys `root,path,anchor`.
-- **partition kind:** `captured` · `computed` — BOTH bind `domain_shard` (descriptive tag only; the domain-less `computed` mode was REMOVED in rc.2). **partition privacy:** `blinded` · `encrypted` (both cryptographic — what is HIDDEN in the signed state). A "secret URL" is a DISCLOSURE CHANNEL (§out-of-scope, G18), not a privacy mode; removed from the registry in rc.4.
+- **partition kind** — the domain `K` (F.1.1). A verifier's admitted set MUST EQUAL it: admitting more accepts a tag
+  this standard never defined; admitting fewer returns a false INVALID on a conforming document. Generated from
+  `REGISTRY.partitionKinds`, because a hand-kept copy here is exactly how #154 happened — this line named two kinds
+  while the §4.4 grammar named three, and two clean-room verifiers implemented this line.
+  <!-- BEGIN spec-sync:partition-kinds -->
+`captured` · `computed` · `absence`
+<!-- END spec-sync:partition-kinds -->
+  ALL THREE bind `domain_shard` (descriptive tag only — it is inside the signature but is not an input to
+  `partitionHash`; the domain-less `computed` mode was REMOVED in rc.2). **partition privacy:** `blinded` ·
+  `encrypted` (both cryptographic — what is HIDDEN in the signed state). A "secret URL" is a DISCLOSURE CHANNEL
+  (§out-of-scope, G18), not a privacy mode; removed from the registry in rc.4.
 - **alg (signatures):** `Ed25519` (strict, §7). **hash:** `sha256:` domain-separated (§7). **enc.alg (AEAD):**
   `AES-256-GCM` (**MTI — mandatory to implement**: every conforming verifier implements it),
   `XChaCha20-Poly1305` (OPTIONAL: a verifier that does not implement it MUST return

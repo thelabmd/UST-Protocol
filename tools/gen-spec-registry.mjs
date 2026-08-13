@@ -23,6 +23,9 @@ const blocks = {
   'evidence-receipt-fields': 'required ' + tick(REGISTRY.evidenceReceiptClaimFields.required).join(', ')
     + '; optional ' + tick(REGISTRY.evidenceReceiptClaimFields.optional).join(', '),
   'hash-domains': tick(REGISTRY.hashDomains).join(' | '),
+  // #154 — the kind domain K. Hand-written prose here is how it drifted: the registry said two kinds while
+  // the §4.4 grammar said three, and two clean-room verifiers implemented the registry.
+  'partition-kinds': tick(REGISTRY.partitionKinds).join(' · '),
 };
 
 const path = new URL('../spec/UST-1.0.md', import.meta.url);

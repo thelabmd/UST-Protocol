@@ -71,7 +71,11 @@ const USTID = /^ust:\d{4}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\.([01]\d|2[0-3])((
 const CLASSES = ['observation', 'attestation', 'derivation', 'genesis', 'key', 'cadence'];
 const TRANSCRIPT = ['ust', 'state', 'sig', 'proof'], SIGK = ['alg', 'key_id', 'pub', 'sig'];
 const RES_NAMES = new Set(['ust', 'state', 'sig', 'proof', 'id', 'time', 'data', 'hashes', 'provenance', 'domain_shard', 'ust_id', 'key_id', 'class', 'parent_ust', 'kind', 'value', 'privacy', 'commit', 'enc', 'sources', 'constituents', 'based_on', 'root', 'seed', 'prev', 'alg', 'pub', 'partition', 'nonce', '__proto__', 'constructor', 'prototype']);
-const KINDS = ['captured', 'computed'], PRIVACY = ['blinded', 'encrypted'];
+// §4.4/§5 domain K (REGISTRY.partitionKinds, F.1.1). A clean-room verifier must NOT import the core, so this
+// literal is the second enumeration BY DESIGN — and `spec-code-sync` diffs it against the registry, because
+// #154: omitting `absence` refused every live document of the reference operator with E-MALFORMED. The
+// obligation is EQUALITY with K, in both directions.
+const KINDS = ['captured', 'computed', 'absence'], PRIVACY = ['blinded', 'encrypted'];
 
 // §14 LIGHT floor verify (from the spec). Async. Returns {result, identity, publisher, ust_id, class, content_hash}.
 export async function verify(doc, opts = {}) {
@@ -132,7 +136,7 @@ export async function verify(doc, opts = {}) {
     for (const name of dk) {
       if (RES_NAMES.has(name)) return bad('E-MALFORMED', 'reserved partition name: ' + name);
       const part = st.data[name];
-      if (!KINDS.includes(part.kind)) return bad('E-MALFORMED', 'unknown kind: ' + name);
+      if (!KINDS.includes(part.kind)) return bad('E-MALFORMED', 'unknown partition kind: ' + name + '.' + part.kind);
       if (part.privacy === undefined) { if (part.value === undefined) return bad('E-MALFORMED', 'public partition without value: ' + name); }
       else {
         if (!PRIVACY.includes(part.privacy)) return bad('E-MALFORMED', 'unknown privacy: ' + name);
