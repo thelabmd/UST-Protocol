@@ -38,7 +38,7 @@ own realization and the citations that would let a reader verify it are never wr
 the obligation has no owner while still reading as owned. A reader asking *what does UST not do yet* is handed
 answers of unknown age. Measured 2026-08-13: five of eight pending bindings named issues that were already
 closed — the oldest for 15 days — and the only enforcement asked of the reference was that it be three
-characters long (#156).
+characters long. CLOSED 2026-08-13 — round 208 (#156): the reference is now resolved against the live tracker.
 
 So a deferral is DEFERRED, never discharged, and two things follow. **It must be resolvable** — the reference is
 checked against the live tracker, and a closed tracker forces the line to move, either to `realized` with

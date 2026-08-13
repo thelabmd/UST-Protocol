@@ -9,7 +9,7 @@
 // Measured 2026-08-13: FIVE of the eight pending bindings named issues that had already closed, the oldest 15 days
 // earlier, and two more deferrals sat in prose where no check could see them at all. The only enforcement that
 // existed was in `model-domain-totality.mjs`: `if (kind === 'pending' && reason.length < 3)`. The reference had to
-// be three characters long. `pending — #106` would have passed forever.
+// be three characters long. `pending — #106` would have passed forever. CLOSED 2026-08-13 — round 208, by this file.
 //
 // It fails in BOTH directions and neither is visible from inside the document. Work that shipped leaves the model
 // understating its own realization, with the citations that would prove it never written. Work that did not ship
