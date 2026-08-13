@@ -11,8 +11,22 @@
 // live in node_modules.
 import * as P from 'ust-protocol';
 import { createPrivateKey, createPublicKey, randomBytes } from 'node:crypto';
-import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, readdirSync, unlinkSync } from 'node:fs';
+import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, readdirSync, unlinkSync, writeSync } from 'node:fs';
 import { execSync } from 'node:child_process';
+
+// STDOUT IS WRITTEN SYNCHRONOUSLY, EVERY COMMAND.
+//
+// `console.log` to a PIPE is asynchronous, and `process.exit()` — which this CLI calls at the end of every command
+// — discards whatever has not drained. Below the pipe buffer nothing is lost, so the defect is invisible until the
+// output crosses it. Measured 2026-08-13: `read --depth all --json` returned exactly 65536 bytes through a pipe and
+// 65684 to a file, and the renderer's `JSON.parse` failed on a store whose only sin was growing. Nothing was wrong
+// with the store, the chain or the command.
+//
+// The fix is not "make the big command careful": every command here writes then exits, so every one of them is the
+// same defect waiting for its output to grow. A synchronous write to fd 1 cannot be truncated by a later exit, so
+// the CLI writes that way once, centrally, and no future output has to remember. CLOSED 2026-08-13 — the pipe
+// and the file now return the same 65684 bytes, and `diarium.md` renders from the store again.
+console.log = (...a) => writeSync(1, a.map((x) => (typeof x === 'string' ? x : String(x))).join(' ') + '\n');
 import { join } from 'node:path';
 
 const CWD = process.cwd();

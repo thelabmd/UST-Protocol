@@ -552,7 +552,8 @@
   },
   {
    "round": 206,
-   "no_recap": "The round lands the fix and the gates that make it durable, but it does not CLOSE thelabmd/UST-Protocol#154. What the issue reports is that an OUTSIDER's verifier refuses a conforming document, and an outsider does not build from source: the corrected browser verifier reaches readers when the page redeploys, and the extension ships on its own surface entirely. Until both are the code a stranger actually loads, the finding is still true for every reader who has not cloned this repository — so the issue stays open, and the recap unit is a closed issue, not a closed mechanism."
+   "issue": 154,
+   "content_hash": "sha256:88b04359b937217cda252b5020db33f344428860033e4f80275f521f854d51b4"
   }
  ]
 }
