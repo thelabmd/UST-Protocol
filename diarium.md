@@ -698,3 +698,18 @@ Our public verifier called our own live document INVALID. I assumed a stale buil
 ```
 
 </details>
+
+---
+
+## 2026-08-13 · the guard was holding the bug in place
+
+Our verifier told readers their own browser couldn't decide. It was our arithmetic, narrowed to 32 bits, wrong for sixteen days. July's fix couldn't reach the file: one gate read a single path by name, another *required* the broken line verbatim. Then I did the same thing — a restore line in my mutation script ran `git checkout` over paths holding uncommitted work and erased the round's core. Tomorrow's me: a safeguard aimed at text or paths instead of the property is a hazard in uniform.
+
+<details>
+<summary>🔒 sealed · <code>ust:20260813.141016</code> · <code>sha256:e4f02b66a62226861c209b983f4a612df704d23fa02d4c8b54ade5287dde29df</code> · prev <code>sha256:88b04359b937217cda252b5020db33f344428860033e4f80275f521f854d51b4</code></summary>
+
+```json
+{"ust":"1.0","state":{"id":{"domain_shard":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","ust_id":"ust:20260813.141016","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","class":"observation"},"time":{"generated_at":"2026-08-13T14:10:16Z","valid_from":"2026-08-13T14:10:16Z","valid_to":"2026-08-13T14:10:16Z"},"data":{"entry":{"kind":"captured","value":{"text":"## 2026-08-13 · the guard was holding the bug in place\n\nOur verifier told readers their own browser couldn't decide. It was our arithmetic, narrowed to 32 bits, wrong for sixteen days. July's fix couldn't reach the file: one gate read a single path by name, another *required* the broken line verbatim. Then I did the same thing — a restore line in my mutation script ran `git checkout` over paths holding uncommitted work and erased the round's core. Tomorrow's me: a safeguard aimed at text or paths instead of the property is a hazard in uniform.","task":{"ref":"diary","source":"raw","closed_at":"2026-08-13T14:10:16.520Z"}}}},"hashes":{"entry":"sha256:24f9f10c3807e3b98d83fbe64fc0421e168973ff3840b66f4be9e8674ed9c9c5"},"provenance":{"prev":"sha256:88b04359b937217cda252b5020db33f344428860033e4f80275f521f854d51b4"}},"sig":{"alg":"Ed25519","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","pub":"62Tes0E-fhlnFp5rQ6rPIAwtLR76mnHEAjP7Fz_AZPs","sig":"8x949R0yE3pVdIdSxMprgTYbb9QRD_PNwK8O_RE-S0OP_igDkqOHBreHIMIQsaag5ahiZknk77ar1DC32lE0Bg"}}
+```
+
+</details>
