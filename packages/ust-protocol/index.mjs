@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.71', revision: 93 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.72', revision: 94 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -3244,6 +3244,26 @@ export const REGISTRY = deepFreeze({   // round-25 P0-04 — DEEP-frozen: the ca
   // are why this set is here: the spec's registry section is GENERATED from it, and every implementation's
   // literal — including the clean-room ones, which must NOT import this module — is diffed against it.
   partitionKinds: ['captured', 'computed', 'absence'],
+  // ANCHOR REFUSAL REASONS (§11.2, F.5c.1, F.5.1b) — the CLOSED set a substrate connector may return beside
+  // `final: false`, mapped to WHO CAN ACT on it. The three values are the F.5.1 table collapsed to its only
+  // decision-relevant axis: `evidence` = the publisher publishes different bytes; `faculties` = the consumer
+  // brings a connector, a network, a trust root; `ruleset` = NEITHER party, this build has no rules for it.
+  // A conjunction refusing without a reason collapses all three into one word, and the collapse always resolves
+  // toward the reader, who is present — measured #155 (2026-08-13): a 32-bit narrowing in the browser verifier's
+  // inclusion climb reached readers as `pending — a browser cannot decide`, and stayed there sixteen days
+  // because the sentence was about them and therefore not falsifiable by them.
+  anchorRefusalReasons: {
+    'proof-absent': 'evidence',                  // the anchor carries no proof, and no pointer to fetch one
+    'unreadable-entry': 'evidence',              // the proof is present and does not decode
+    // `unsupported-proof-form` replaces the shipped `wrong-entry-kind` (2026-08-07 → #155): a rekor entry kind
+    // this connector does not implement and an OTS op it does not implement are ONE thought, and the old name
+    // also carried the wrong TERM — "wrong" reads as the publisher's error where the term is the ruleset's.
+    'unsupported-proof-form': 'ruleset',         // a proof form this build has no rules for
+    'entry-attests-another-root': 'evidence',    // the entry is sound and commits to a DIFFERENT root
+    'inclusion-failed': 'evidence',              // the RFC 6962 path does not reach the proof's rootHash
+    'checkpoint-unsigned': 'evidence',           // rootHash is not a head the log's pinned key signed
+    'substrate-unreachable': 'faculties',        // a surface this verifier must read did not answer
+  },
   // INVALID error codes (§15) — every code the verifier/API can emit. Ordered as §15 lists them.
   errorCodes: ['E-MALFORMED', 'E-CANON', 'E-BOUNDS', 'E-CYCLE', 'E-SIG', 'E-KEY', 'E-GENESIS', 'E-ANCHOR',
     'E-COMMIT', 'E-ROOT', 'E-SEED', 'E-PREV', 'E-AUTHORITY', 'E-SEQ', 'E-EVIDENCE', 'E-ASSURANCE', 'E-BYTES', 'E-REPLICATION', 'E-DISCOVERY'],   // E-BYTES — the byte-admission door class (round-48 P0-01: snapshotBytes rejects a non-native-Uint8Array as E-BYTES-TYPE/-SHARED/-SIZE)

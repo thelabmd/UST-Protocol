@@ -1,5 +1,5 @@
 {
- "version": "UST 1.0 conformance vectors (rc.71 - the partition-kind DOMAIN K enters the corpus: two clean-room verifiers enumerated {captured, computed} and refused every conforming document of the reference operator, while the parity comparison ran over 41 documents that carried no `absence` partition - a count floor is not a coverage floor (#154); prior rc.70 - a refusal can no longer become a verdict: a build lacking a primitive answers INDETERMINATE(unsupported_alg) and the resolvers, which return records rather than §14 verdicts, fail CLOSED with E-UNSUPPORTED held in its own registry set; the faculty-absent vector pins BOTH halves, with the faculty and without it (#144); prior rc.68 - a STATED substrate refusal stops sharing a door with a malformed receipt: a connector answering {final:false, reason} is reported as the refusal it is, its reason admitted as a bounded slug because a not-ours module may not write prose into a verdict, and a DECLINE stays distinct from both so the router seam is unchanged (#141); prior rc.67 - admits(k,c) becomes evaluable: the normative class-set per operating role is stated, so a role REFUSES a class it does not admit instead of labelling a key that authorized nothing (#130); prior rc.66: a root is published TWICE and only the SEAL enumerates: the batch commitment gets the prev-only `anchor` subtype, root REQUIRED and constituents ABSENT, because enumeration is not an input to the inclusion predicate and IS a membership oracle over other principals (#127, F.5u); prior rc.65: REGISTRY registers and MEASURES the verdict, completeness and forkChoice result vocabularies against actual code usage; the measurement found an error code in the RESULT slot and a second vocabulary under the same field name, #111; prior rc.40: external-audit remediation: 5 P0 fixed structurally (epic UST-1o6); prior rc.33: #75 ROOT 3 (math-derived, NO manifest): forkChoice/verifyStream resolve per-frame AUTHORITY (impersonation P0-03) + grid EQUALITY (off-grid P0-04); stream-authority/stream-grid/fork-choice vectors; prior: - #75 ROOT 1 two-phase verify + anchor-time (authority-at-time vectors: retired/compromised/premature K_n(t) window judged against the PROVEN anchor); prior: - #75 ROOT 2 key-log temporal state machine (keylog-state vectors: revoked/rotated-out/retired key cannot sign later; closed key_op schema); prior: - #75 strict encoders P1-01/02/03 (utf8-reject, b64url, cadence); prior: — self-audit fix: freshness:attested now requires a VERIFIED keylogHeadAnchor (inclusion + substrate-final), a raw self-computed head hash proves nothing = overclaim closed. Prior: #41 canon arbiter, #40 identity hardening, #44 agent-safety, #45 downgrade + fork-choice)",
+ "version": "UST 1.0 conformance vectors (rc.72 - a refusal that named the READER: the browser verifiers inclusion climb narrowed tree indices to 32 bits, so every anchor written after the public log passed 2^31 failed for sixteen days while the page reported it as a limit of the readers browser; the connector had fixed the same arithmetic on 2026-07-28, but its gate read one file BY NAME and a conformance leg separately REQUIRED the other copy to keep the narrowing form verbatim; anchor refusals now carry a reason from a closed registry set mapped to who can act on it (#155); prior rc.71 - the partition-kind DOMAIN K enters the corpus: two clean-room verifiers enumerated {captured, computed} and refused every conforming document of the reference operator, while the parity comparison ran over 41 documents that carried no `absence` partition - a count floor is not a coverage floor (#154); prior rc.70 - a refusal can no longer become a verdict: a build lacking a primitive answers INDETERMINATE(unsupported_alg) and the resolvers, which return records rather than §14 verdicts, fail CLOSED with E-UNSUPPORTED held in its own registry set; the faculty-absent vector pins BOTH halves, with the faculty and without it (#144); prior rc.68 - a STATED substrate refusal stops sharing a door with a malformed receipt: a connector answering {final:false, reason} is reported as the refusal it is, its reason admitted as a bounded slug because a not-ours module may not write prose into a verdict, and a DECLINE stays distinct from both so the router seam is unchanged (#141); prior rc.67 - admits(k,c) becomes evaluable: the normative class-set per operating role is stated, so a role REFUSES a class it does not admit instead of labelling a key that authorized nothing (#130); prior rc.66: a root is published TWICE and only the SEAL enumerates: the batch commitment gets the prev-only `anchor` subtype, root REQUIRED and constituents ABSENT, because enumeration is not an input to the inclusion predicate and IS a membership oracle over other principals (#127, F.5u); prior rc.65: REGISTRY registers and MEASURES the verdict, completeness and forkChoice result vocabularies against actual code usage; the measurement found an error code in the RESULT slot and a second vocabulary under the same field name, #111; prior rc.40: external-audit remediation: 5 P0 fixed structurally (epic UST-1o6); prior rc.33: #75 ROOT 3 (math-derived, NO manifest): forkChoice/verifyStream resolve per-frame AUTHORITY (impersonation P0-03) + grid EQUALITY (off-grid P0-04); stream-authority/stream-grid/fork-choice vectors; prior: - #75 ROOT 1 two-phase verify + anchor-time (authority-at-time vectors: retired/compromised/premature K_n(t) window judged against the PROVEN anchor); prior: - #75 ROOT 2 key-log temporal state machine (keylog-state vectors: revoked/rotated-out/retired key cannot sign later; closed key_op schema); prior: - #75 strict encoders P1-01/02/03 (utf8-reject, b64url, cadence); prior: — self-audit fix: freshness:attested now requires a VERIFIED keylogHeadAnchor (inclusion + substrate-final), a raw self-computed head hash proves nothing = overclaim closed. Prior: #41 canon arbiter, #40 identity hardening, #44 agent-safety, #45 downgrade + fork-choice)",
  "note": "Deterministic + reproducible. Keypairs from fixed seeds (A=0011..eeff, B=ffee..1100). canon=JCS tightened; H(tag,x)=sha256(ascii(tag)||0x00||x); content_hash=H(\"ust:state\",canon({ust,state})); key_id=H(\"ust:keylog\",raw_pub); partition_hash=H(\"ust:shard\",canon({domain_shard,ust_id,partition,value})) — UNIFORM, every partition binds domain_shard, name is a VALUE (non-colliding), no domain-less computed. Each vector states the SPEC rule it pins. Signature-type vectors use expect: 'VALID' | 'E-SIG' for the Ed25519 PRIMITIVE check (strict, canonical-S); this is not a document verdict — a conforming verifier's document verdict is always tier-qualified (VALID:LIGHT/HIGH/TOP), never a bare VALID. Partition names inside hash/commit inputs (e.g. 'secret') are arbitrary sample names, not protocol features.",
  "seeds": {
   "A": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
@@ -19,14 +19,15 @@
   "_": "WHAT A VECTOR MAY PIN — read this before excluding the `vector` layer of a round, and before deciding a case \"cannot be a vector\". Derived from THIS corpus on 2026-08-10, not declared: 228 vectors across 43 kinds.",
   "the_rule": "A vector is a FIXED INPUT and a DECLARED RESULT that a runner must reproduce. The input being a DOCUMENT is one case among several; the result being a VERDICT is one case among several.",
   "measured_2026_08_10": {
-   "total": 243,
-   "kinds": 45,
+   "total": 250,
+   "kinds": 46,
    "input_is_a_document": 45,
    "input_is_a_value_or_string": 75,
    "input_is_a_genesis_plus_log": 63,
    "input_is_raw_bytes": 27,
    "forms": 8,
-   "_how_these_were_counted": "THREE of these are re-derived on every run by the UST#147 checks (total, kinds, forms) and cannot drift. `input_is_a_document` counts vectors carrying a `doc` field and `input_is_a_genesis_plus_log` counts those carrying a `genesis` field — both reproduced on 2026-08-10 while adding the round-138/139/142 vectors, which is how the second one moved from 59 to 63. `input_is_a_value_or_string` and `input_is_raw_bytes` are the counts recorded when this definition was first derived, and THEIR FORMULA WAS NEVER WRITTEN DOWN: neither a field scan nor a kind roster reproduces 75 or 27. They were left untouched here rather than quietly re-fitted, because a number adjusted to survive a gate is worse than a number that admits it cannot be re-derived. Note also that a count keyed to a FIELD is not a count keyed to MEANING — the four stream vectors added in round 198 take documents as input and do not appear under `input_is_a_document`, because their documents arrive in `frames`. Making every one of these derivable (a kind → form roster, so a new kind cannot exist outside the definition) is tracked as its own round."
+   "_how_these_were_counted": "THREE of these are re-derived on every run by the UST#147 checks (total, kinds, forms) and cannot drift. `input_is_a_document` counts vectors carrying a `doc` field and `input_is_a_genesis_plus_log` counts those carrying a `genesis` field — both reproduced on 2026-08-10 while adding the round-138/139/142 vectors, which is how the second one moved from 59 to 63. `input_is_a_value_or_string` and `input_is_raw_bytes` are the counts recorded when this definition was first derived, and THEIR FORMULA WAS NEVER WRITTEN DOWN: neither a field scan nor a kind roster reproduces 75 or 27. They were left untouched here rather than quietly re-fitted, because a number adjusted to survive a gate is worse than a number that admits it cannot be re-derived. Note also that a count keyed to a FIELD is not a count keyed to MEANING — the four stream vectors added in round 198 take documents as input and do not appear under `input_is_a_document`, because their documents arrive in `frames`. Making every one of these derivable (a kind → form roster, so a new kind cannot exist outside the definition) is tracked as its own round.",
+   "_round_207": "#155 added 7 `anchor-refusal` vectors — a form the earlier derivation had no instance of: the input is an ANCHOR and a root, and the declared result is a REFUSAL REASON rather than a verdict. It is recorded here because the definition exists to stop \"this cannot be a vector\" from being asserted, and a refusal reason was exactly the kind of thing that argument would have excluded."
   },
   "forms": [
    {
@@ -11171,6 +11172,123 @@
      "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
      "sig": "DP_EYKbh9foihLBQRWIINX18oU4T6_0ufTmXTyroqvYw9TaNYyXyM-WOM9XVN-NNekISf3ggJgdvdA2HOVRKBw"
     }
+   }
+  },
+  {
+   "id": "anchor-refusal-proof-absent",
+   "kind": "anchor-refusal",
+   "rule": "S11.2/F.5.1b — a conjunction refuses by NAMING its conjunct, from the closed registry set R, and each reason carries the term that says who can act",
+   "expect": "proof-absent",
+   "term": "evidence",
+   "note": "#155 — the anchor carries no proof and no pointer to fetch one",
+   "root": "sha256:abababababababababababababababababababababababababababababababab",
+   "anchor": {
+    "substrate": "rekor"
+   }
+  },
+  {
+   "id": "anchor-refusal-unreadable-entry",
+   "kind": "anchor-refusal",
+   "rule": "S11.2/F.5.1b — a conjunction refuses by NAMING its conjunct, from the closed registry set R, and each reason carries the term that says who can act",
+   "expect": "unreadable-entry",
+   "term": "evidence",
+   "note": "#155 — the logged entry is present and does not decode",
+   "root": "sha256:abababababababababababababababababababababababababababababababab",
+   "anchor": {
+    "substrate": "rekor",
+    "body": "!!!not-base64!!!",
+    "inclusionProof": {
+     "logIndex": 0,
+     "treeSize": 1,
+     "hashes": []
+    }
+   }
+  },
+  {
+   "id": "anchor-refusal-unsupported-proof-form",
+   "kind": "anchor-refusal",
+   "rule": "S11.2/F.5.1b — a conjunction refuses by NAMING its conjunct, from the closed registry set R, and each reason carries the term that says who can act",
+   "expect": "unsupported-proof-form",
+   "term": "ruleset",
+   "note": "#155 — an entry kind this build has no rules for — NEITHER party can move it",
+   "root": "sha256:abababababababababababababababababababababababababababababababab",
+   "anchor": {
+    "substrate": "rekor",
+    "body": "eyJraW5kIjoiZHNzZSJ9",
+    "inclusionProof": {
+     "logIndex": 0,
+     "treeSize": 1,
+     "hashes": []
+    }
+   }
+  },
+  {
+   "id": "anchor-refusal-entry-attests-another-root",
+   "kind": "anchor-refusal",
+   "rule": "S11.2/F.5.1b — a conjunction refuses by NAMING its conjunct, from the closed registry set R, and each reason carries the term that says who can act",
+   "expect": "entry-attests-another-root",
+   "term": "evidence",
+   "note": "#155 — the entry is sound and commits to a DIFFERENT root",
+   "root": "sha256:abababababababababababababababababababababababababababababababab",
+   "anchor": {
+    "substrate": "rekor",
+    "body": "eyJraW5kIjoiaGFzaGVkcmVrb3JkIiwic3BlYyI6eyJkYXRhIjp7Imhhc2giOnsiYWxnb3JpdGhtIjoic2hhMjU2IiwidmFsdWUiOiJjZGNkY2RjZGNkY2RjZGNkY2RjZGNkY2RjZGNkY2RjZGNkY2RjZGNkY2RjZGNkY2RjZGNkY2RjZGNkY2RjZGNkIn19fX0=",
+    "inclusionProof": {
+     "logIndex": 0,
+     "treeSize": 1,
+     "hashes": []
+    }
+   }
+  },
+  {
+   "id": "anchor-refusal-inclusion-failed",
+   "kind": "anchor-refusal",
+   "rule": "S11.2/F.5.1b — a conjunction refuses by NAMING its conjunct, from the closed registry set R, and each reason carries the term that says who can act",
+   "expect": "inclusion-failed",
+   "term": "evidence",
+   "note": "#155 — the RFC 6962 path does not reach the proof rootHash — the conjunct the #155 defect lived in",
+   "root": "sha256:abababababababababababababababababababababababababababababababab",
+   "anchor": {
+    "substrate": "rekor",
+    "body": "eyJraW5kIjoiaGFzaGVkcmVrb3JkIiwic3BlYyI6eyJkYXRhIjp7Imhhc2giOnsiYWxnb3JpdGhtIjoic2hhMjU2IiwidmFsdWUiOiIyNzFhNDEzYmQzMzljNTcwOWZkY2VhZWM0MWYxNGYxMWU5ZmJmYjUwNDJkNzJkMzMxYzY1ZjMyYjI4NGNkMDlhIn19fX0=",
+    "inclusionProof": {
+     "logIndex": 0,
+     "treeSize": 1,
+     "hashes": [],
+     "rootHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+   }
+  },
+  {
+   "id": "anchor-refusal-checkpoint-unsigned",
+   "kind": "anchor-refusal",
+   "rule": "S11.2/F.5.1b — a conjunction refuses by NAMING its conjunct, from the closed registry set R, and each reason carries the term that says who can act",
+   "expect": "checkpoint-unsigned",
+   "term": "evidence",
+   "note": "#155 — inclusion holds and rootHash is not a head the pinned log key signed",
+   "root": "sha256:abababababababababababababababababababababababababababababababab",
+   "anchor": {
+    "substrate": "rekor",
+    "body": "eyJraW5kIjoiaGFzaGVkcmVrb3JkIiwic3BlYyI6eyJkYXRhIjp7Imhhc2giOnsiYWxnb3JpdGhtIjoic2hhMjU2IiwidmFsdWUiOiIyNzFhNDEzYmQzMzljNTcwOWZkY2VhZWM0MWYxNGYxMWU5ZmJmYjUwNDJkNzJkMzMxYzY1ZjMyYjI4NGNkMDlhIn19fX0=",
+    "inclusionProof": {
+     "logIndex": 0,
+     "treeSize": 1,
+     "hashes": [],
+     "rootHash": "339ccf1516ee3db67dc92e96fe9c14244dcc980022beabdcd4d0417462ddc4bd"
+    }
+   }
+  },
+  {
+   "id": "anchor-refusal-substrate-unreachable",
+   "kind": "anchor-refusal",
+   "rule": "S11.2/F.5.1b — a conjunction refuses by NAMING its conjunct, from the closed registry set R, and each reason carries the term that says who can act",
+   "expect": "substrate-unreachable",
+   "term": "faculties",
+   "note": "#155 — a surface the verifier must read did not answer — the CONSUMER faculty term",
+   "root": "sha256:abababababababababababababababababababababababababababababababab",
+   "anchor": {
+    "substrate": "bitcoin-ots",
+    "ots": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEIq6urq6urq6urq6urq6urq6urq6urq6urq6urq6urq6sABYiWDXPXGQEBKg=="
    }
   }
  ]

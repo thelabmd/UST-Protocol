@@ -109,7 +109,10 @@ const EXPECTED_CASES = { canon: 11, 'canon-reject': 4, hash: 5, key_id: 1, b64ur
 // …and the COMPLEMENT is pinned too, which is what keeps `PURE_KINDS` from being this gate's real domain. A kind
 // added to the corpus lands in the not-run set and reddens the count below, so the author must decide whether it
 // belongs here — instead of it passing unnoticed because a hand-written list did not mention it.
-const EXPECTED_KINDS_TOTAL = 45, EXPECTED_KINDS_NOT_RUN = 39;   // measured 2026-08-13 (44/38 on 2026-08-10)
+const EXPECTED_KINDS_TOTAL = 46, EXPECTED_KINDS_NOT_RUN = 40;   // measured 2026-08-13 (45/39 earlier the same day, 44/38 on 2026-08-10)
+// 45 → 46: `anchor-refusal` (#155). NOT runnable by pure primitives, and for a reason worth stating: its input is
+// an ANCHOR rather than a document, and deciding it needs the witness path — a fetch, a connector, and the RFC 6962
+// climb. It is the first kind whose declared result is a REFUSAL REASON rather than a verdict.
 // 44 → 45: `partition-kind` (#154). Classified as NOT runnable by pure primitives — its vectors carry whole
 // signed documents, so deciding one needs the verifier, not `canon`/`keyId`. The kind exists because the
 // partition-kind DOMAIN had to enter the corpus: two implementations compared over vectors that never carried

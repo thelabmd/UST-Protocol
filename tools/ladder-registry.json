@@ -1631,6 +1631,14 @@
    "code": "packages/ust-protocol/index.mjs :: REGISTRY.partitionKinds — the single definition; docs/ust-verify.mjs and extension/lib/ust-verify.mjs admit `absence` and name the offending kind in the error, both clean-room copies keeping their own literal by design",
    "vector": "partition-kind-absence-admitted",
    "test": "packages/ust-protocol/conformance.mjs :: #154 the cross-implementation corpus exercises every element of K — mutation-controlled by removing the absence vector (parity COVERAGE leg goes red) and by narrowing either clean-room literal (spec-code-sync names the missing element and the direction of the flip)"
+  },
+  {
+   "round": 207,
+   "math": "a report may name only a term it MEASURED, and a defect in `v` has no row",
+   "spec": "a connector answering `final: false` MUST name WHICH check failed",
+   "code": "packages/ust-protocol/index.mjs :: REGISTRY.anchorRefusalReasons — the closed set with the term that says WHO CAN ACT, realized once; docs/ust-resolve.mjs carries the clean-room literal and the BigInt climb, packages/ust-rekor-verify/index.mjs names the six refusals it had left bare",
+   "vector": "anchor-refusal-inclusion-failed",
+   "test": "packages/ust-protocol/conformance.mjs :: #155 the web witness inclusion climb verifies an index above 2^31 — the leg it replaced PINNED the browser copy to the 32-bit literal; mutation-controlled by reverting the climb (this leg plus three in tools/unbounded-index-gate.mjs go red) and by dropping, mis-terming or straying a reason (spec-code-sync and the coverage leg name which)"
   }
  ],
  "first_accounted_round": 76,

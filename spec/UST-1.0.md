@@ -3,7 +3,7 @@
 
 *This specification text is licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](../LICENSE-SPEC). Reference code in this repository is licensed Apache-2.0. Use of the name **UST** / **Universal State Transcript** and the **UST-compatible** claim: see [TRADEMARK.md](../TRADEMARK.md).*
 
-> **Release candidate — `1.0.0-rc.71`.** This specification has been extensively red-teamed; an independent
+> **Release candidate — `1.0.0-rc.72`.** This specification has been extensively red-teamed; an independent
 > external cryptographic audit is pending. It is subject to change until `1.0.0` final. The wire format `ust:"1.0"`
 > is stable across all rc's — pin exact versions. Per-version history is in [`CHANGELOG.md`](../CHANGELOG.md).
 
@@ -2025,6 +2025,16 @@ Independent re-implementation is expected; the vectors make "verify without trus
   SEVERAL substrates composes their plugins (`combineSubstrates`) — each returns the same `{final,time}`
   answer in its own dialect; an unknown substrate ⇒ `INDETERMINATE(unsupported)`, never INVALID. Future
   substrates register the same way — the protocol is substrate-agnostic. AnchorProof keys `root,path,anchor`.
+- **anchor refusal reason** — a connector answering `final: false` MUST name WHICH check failed, from this closed
+  set, and each reason is mapped to WHO CAN ACT on it: `evidence` the publisher, `faculties` the consumer,
+  `ruleset` neither party (F.5.1b). A shared unnamed `false` over a conjunction collapses those three into one
+  word, and the collapse resolves toward whoever is reading — measured #155, where a defect in the verifier's own
+  arithmetic was reported to readers as a limit of their browser and stayed there sixteen days.
+  <!-- BEGIN spec-sync:anchor-refusal-reasons -->
+`proof-absent` → *evidence* · `unreadable-entry` → *evidence* · `unsupported-proof-form` → *ruleset* · `entry-attests-another-root` → *evidence* · `inclusion-failed` → *evidence* · `checkpoint-unsigned` → *evidence* · `substrate-unreachable` → *faculties*
+<!-- END spec-sync:anchor-refusal-reasons -->
+  A reason outside this set is a verifier defect; an element the implementation can never produce is a claim over
+  an empty domain, so conformance drives every one of them out of the shipped entry point.
 - **partition kind** — the domain `K` (F.1.1). A verifier's admitted set MUST EQUAL it: admitting more accepts a tag
   this standard never defined; admitting fewer returns a false INVALID on a conforming document. Generated from
   `REGISTRY.partitionKinds`, because a hand-kept copy here is exactly how #154 happened — this line named two kinds

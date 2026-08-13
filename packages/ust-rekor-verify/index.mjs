@@ -108,19 +108,19 @@ export function makeSubstrateVerify({ fetchImpl = fetch, api = REKOR, rekorPubKe
       // entry UUID is 64–80 hex; logIndex a non-negative integer) before constructing the URL, else decline.
       const uuidOk = a.uuid == null || /^[0-9a-f]{64,80}$/.test(String(a.uuid));
       const idxOk = a.logIndex == null || (Number.isInteger(a.logIndex) && a.logIndex >= 0);
-      if (!uuidOk || !idxOk) return { final: false, time: 'unproven' };
+      if (!uuidOk || !idxOk) return { final: false, time: 'unproven', reason: 'proof-absent' };
       try {
         const url = a.uuid ? `${api}/api/v1/log/entries/${a.uuid}` : `${api}/api/v1/log/entries?logIndex=${a.logIndex}`;
         const r = await fetchImpl(url, { signal: AbortSignal.timeout(10000) });
-        if (!r.ok) return { final: false, time: 'unproven' };
+        if (!r.ok) return { final: false, time: 'unproven', reason: 'substrate-unreachable' };
         const j = await r.json();
         const entry = Object.values(j)[0];
         proof = proof || entry?.verification?.inclusionProof;
         integratedTime = integratedTime || entry?.integratedTime;
         bodyB64 = bodyB64 || entry?.body;
-      } catch { return { final: false, time: 'unproven' }; }
+      } catch { return { final: false, time: 'unproven', reason: 'substrate-unreachable' }; }
     }
-    if (!proof || !bodyB64) return { final: false, time: 'unproven' };
+    if (!proof || !bodyB64) return { final: false, time: 'unproven', reason: 'proof-absent' };
 
     // (1) the logged entry MUST attest THIS root, checked by the EXACT hashedrekord schema — NOT a substring
     // scan of the body (#71: a validly-signed entry that merely CONTAINS the hash in some other field, e.g. a
@@ -128,16 +128,21 @@ export function makeSubstrateVerify({ fetchImpl = fetch, api = REKOR, rekorPubKe
     // string (utf8); Rekor stores sha256(artifact) at spec.data.hash.value with algorithm sha256.
     const rootHex = root.replace(/^sha256:/, '');
     const artifactHash = createHash('sha256').update(Buffer.from(rootHex, 'utf8')).digest('hex');
-    // THESE THREE ARE STATED REFUSALS, NOT DECLINES, and until 2026-08-07 all three returned `null`.
+    // EVERY REFUSAL BELOW IS STATED, NOT A DECLINE, and every one carries a reason from REGISTRY.anchorRefusalReasons.
     //
     // By this line the anchor has already NAMED `rekor` — the guard at the top of this function let nothing else
     // through. So no later plugin can answer for it, and `null` sends the router looking for one anyway; the
     // consumer is then told the substrate was unreachable when this connector had just told it claim is not proof.
     // The reason is a slug because the core admits it as one: a not-ours module may not write prose into a verdict.
+    //
+    // Until 2026-08-07 all of them returned `null`; three then became stated, and SIX others — the malformed
+    // pointer, the two fetch failures, the absent proof, and the two conjuncts below — kept a bare `false`. Those two
+    // conjuncts are exactly where the #155 defect lived, and a caller could not tell them apart from a network
+    // outage. F.5.1b: a conjunction refuses by NAMING its conjunct, because the reasons differ in who can act.
     let entry;
     try { entry = JSON.parse(Buffer.from(bodyB64, 'base64').toString('utf8')); }
     catch { return { final: false, time: 'unproven', reason: 'unreadable-entry' }; }
-    if (entry?.kind !== 'hashedrekord') return { final: false, time: 'unproven', reason: 'wrong-entry-kind' };
+    if (entry?.kind !== 'hashedrekord') return { final: false, time: 'unproven', reason: 'unsupported-proof-form' };
     const h = entry?.spec?.data?.hash;
     if (!h || h.algorithm !== 'sha256' || h.value !== artifactHash) {
       return { final: false, time: 'unproven', reason: 'entry-attests-another-root' };
@@ -146,12 +151,12 @@ export function makeSubstrateVerify({ fetchImpl = fetch, api = REKOR, rekorPubKe
     // (2) the inclusion path reaches proof.rootHash (RFC 6962).
     const leafHash = sha256(Buffer.concat([Buffer.from([0x00]), Buffer.from(bodyB64, 'base64')]));
     if (!verifyInclusion({ leafHash, index: proof.logIndex, treeSize: proof.treeSize, hashes: proof.hashes || [], rootHash: proof.rootHash }))
-      return { final: false, time: 'unproven' };
+      return { final: false, time: 'unproven', reason: 'inclusion-failed' };
 
     // (3) #69 A1 — proof.rootHash MUST be a root the LOG signed. Without a valid checkpoint signature the
     // inclusion proof is only a self-consistent Merkle object (a fabricated treeSize=1 tree passes (2)).
     if (!verifyCheckpoint(proof.checkpoint, proof.rootHash, proof.treeSize, pubKey))
-      return { final: false, time: 'unproven' };
+      return { final: false, time: 'unproven', reason: 'checkpoint-unsigned' };
 
     return { final: true, time: integratedTime ? new Date(integratedTime * 1000).toISOString().slice(0, 19) + 'Z' : 'rekor-logged', log_index: String(proof.logIndex) };
   };

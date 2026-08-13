@@ -105,6 +105,44 @@ check('completeness', [...src.matchAll(/\bcomplete:\s*['"`]([a-z-]+)['"`]/g)].ma
   }
 }
 
+// §11.2 anchor refusal reasons, across every surface that DECLARES or EMITS one — #155.
+//
+// Two different obligations, because the two kinds of surface relate to the set differently and one check for
+// both would be vacuous on one of them:
+//   · the browser verifier DECLARES the set with its terms (clean-room — it may not import the core), so it owes
+//     EQUALITY, keys AND terms, exactly as partitionKinds above;
+//   · every surface EMITS reasons without declaring them, so each emitted slug owes MEMBERSHIP. Declaration and
+//     emission can drift apart inside ONE file: a typo'd slug still renders, just with no term beside it.
+{
+  const R = REGISTRY.anchorRefusalReasons;
+  const web = readFileSync(new URL('../docs/ust-resolve.mjs', import.meta.url), 'utf8');
+  const m = /export const REFUSAL_TERMS = \{([^}]*)\}/.exec(web);
+  if (!m) { fail++; report.push('  ✗ anchorRefusalReasons: docs/ust-resolve.mjs declares no `export const REFUSAL_TERMS = {...}` — the scanner lost its subject, so this leg would pass for anything'); }
+  else {
+    const got = Object.fromEntries([...m[1].matchAll(/['"]([a-z-]+)['"]\s*:\s*['"]([a-z-]+)['"]/g)].map((x) => [x[1], x[2]]));
+    const missing = Object.keys(R).filter((k) => !(k in got));
+    const extra = Object.keys(got).filter((k) => !(k in R));
+    const wrongTerm = Object.keys(got).filter((k) => k in R && got[k] !== R[k]).map((k) => `${k}: ${got[k]} ≠ ${R[k]}`);
+    if (missing.length || extra.length || wrongTerm.length) {
+      fail++;
+      report.push('  ✗ anchorRefusalReasons: docs/ust-resolve.mjs'
+        + (missing.length ? ` — MISSING [${missing}] (the reason renders with no term, so the reader is not told who can act)` : '')
+        + (extra.length ? ` — EXTRA [${extra}] (a reason the standard never defined)` : '')
+        + (wrongTerm.length ? ` — WRONG TERM [${wrongTerm}] (the refusal points at the wrong party)` : ''));
+    } else report.push(`  ✓ anchorRefusalReasons: docs/ust-resolve.mjs declares exactly R with its terms (${Object.keys(got).length})`);
+  }
+  for (const [name, text] of [
+    ['docs/ust-resolve.mjs', web],
+    ['packages/ust-rekor-verify/index.mjs', readFileSync(new URL('../packages/ust-rekor-verify/index.mjs', import.meta.url), 'utf8')],
+  ]) {
+    const used = [...new Set([...text.matchAll(/reason: '([a-z-]+)'/g)].map((x) => x[1]))];
+    if (!used.length) { fail++; report.push(`  ✗ anchorRefusalReasons: ${name} emits no reason at all — a conjunction that refuses without naming its conjunct is the #155 defect`); continue; }
+    const unknown = used.filter((r) => !(r in R));
+    if (unknown.length) { fail++; report.push(`  ✗ anchorRefusalReasons: ${name} emits [${unknown}] — outside R, so a consumer receives a word this standard does not define`); }
+    else report.push(`  ✓ anchorRefusalReasons: ${name} emits ${used.length} reason(s), all in R`);
+  }
+}
+
 
 console.log('\n  spec-code-sync (LAYER 2 — REGISTRY == code usage):');
 report.forEach((r) => console.log(r));

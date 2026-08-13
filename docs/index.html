@@ -466,13 +466,13 @@ async function run() {
             <dt>no-fork</dt><dd>${wc ? '<b>witness-confirmed</b> — a single anchored genesis, cross-checked against its substrate (Rekor RFC&nbsp;6962 inclusion and/or a Bitcoin block header) → automatic HIGH'
               : (resolution.witness && resolution.witness.status === 'pending' ? 'pending — ' + esc(resolution.witness.detail)
               : 'witness ' + esc((resolution.witness && resolution.witness.status) || 'unreachable') + (resolution.witness && resolution.witness.detail ? ' (' + esc(resolution.witness.detail) + ')' : ''))}</dd>
-            <dt>revocation</dt><dd>${esc(resolution.revocation)} — X1 windows need anchored time; a browser cannot decide them</dd>
+            <dt>revocation</dt><dd>${esc(resolution.revocation)} — not attempted in this run: deciding an X1 window needs an anchored time, and this page did not obtain one</dd>
             <dt>identity source</dt><dd>${esc(resolution.source || '')}</dd>
           </dl>
           ${wc ? '' : `<label class="note" style="display:block;margin-top:10px;cursor:pointer">
             <input type="checkbox" id="nofork" ${noForkChecked ? 'checked' : ''}>
             The witness did not auto-confirm — I have independently checked that <b>no rival genesis exists</b> for ${esc(resolution.publisher)}.
-            ${noForkChecked ? '' : '<br><span class="hint">unchecked → the name stays resolved-but-provisional; check it to reach VALID:HIGH (same as the CLI\'s --no-fork-confirmed). Reached here only if neither the Rekor nor the Bitcoin anchor could be checked (explorer/log unreachable).</span>'}
+            ${noForkChecked ? '' : '<br><span class="hint">unchecked → the name stays resolved-but-provisional; check it to reach VALID:HIGH (same as the CLI\'s --no-fork-confirmed). Every anchor that was tried is listed above with the conjunct it failed at; <b>evidence</b> is the publisher\'s to move, <b>faculties</b> yours, <b>ruleset</b> neither party\'s.</span>'}
           </label>`}</div>`;
       }
     }

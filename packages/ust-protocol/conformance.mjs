@@ -43,6 +43,11 @@ let pass = 0, fail = 0, note = 0; const fails = []; const executed = [];
 const check = (id, ok, d) => { executed.push(id); if (ok) pass++; else { fail++; fails.push(id + (d ? ' — ' + d : '')); } };   // round-28 P1-03 — record EVERY executed check id for the executed-manifest the lockstep gate consumes (not source-substring)
 const noted = (id, m) => { note++; };
 
+// #155 — the browser verifier, loaded once. It is the surface the `anchor-refusal` vectors are executed against:
+// the witness path is a CONNECTOR concern (F.5c.1), so the reasons live where the connectors are called, and this
+// is the implementation that shipped the defect the vectors pin.
+const WEB = await import('../../docs/ust-resolve.mjs');
+
 // ─── 1. primitive vectors from the deterministic suite ───
 for (const v of V.vectors) {
   switch (v.kind) {
@@ -337,6 +342,21 @@ for (const v of V.vectors) {
       const got = r.error === 'E-KEY' ? 'E-KEY' : 'admitted';
       check(v.id, got === v.expect, `admits(k,c) ${v.id}: got ${got} (${r.error ?? r.result}) expected ${v.expect}`); break; }
     case 'document-negative': check(v.id, P.verify(v.doc, { context: 'data' }).result === 'INVALID'); break;
+    // #155 / F.5.1b — every element of the closed refusal set R, driven out of the SHIPPED entry point rather than
+    // asserted about a helper. A wrong reason is as red as a wrong verdict here, which is the point: before this,
+    // five distinct failures and both fetch paths shared one word, and the prose beside that word named the reader.
+    case 'anchor-refusal': {
+      const log = { domain_shard: 'example.com', genesis_log: [{ content_hash: v.root, anchors: [{ root: v.root, anchor: v.anchor }] }] };
+      const stub = async (url) => {
+        if (String(url).includes('ust-witness')) return { ok: true, json: async () => log };
+        throw new Error('explorer offline');       // the bitcoin path's route to its faculties-term reason
+      };
+      const r = await WEB.witnessNoFork('example.com', v.root, stub);
+      const got = (r.reasons ?? []).map((x) => x.reason);
+      check(v.id, r.status === 'pending' && got.includes(v.expect) && WEB.REFUSAL_TERMS[v.expect] === v.term,
+        `status=${r.status} reasons=[${got}] expected ${v.expect} (${v.term})`);
+      break;
+    }
     // #154 — the kind domain K, as CORPUS vectors rather than only as in-suite assertions. Living in the corpus
     // is the point: `docs-verifier-parity` drives every document-bearing vector through BOTH implementations,
     // so a kind present here is a kind the two can no longer silently disagree about.
@@ -1633,7 +1653,51 @@ console.log('\n═════════════════════�
 {
   const resolve = readFileSync(new URL('../../docs/ust-resolve.mjs', import.meta.url), 'utf8');
   check('web resolver auto-queries the witness', resolve.includes('export async function witnessNoFork') && resolve.includes('rekorInclusion'));
-  check('web witness has the RFC6962 right-edge shift', resolve.includes('fn === sn || (fn & 1) === 1') && resolve.includes('while (fn !== 0'));
+  // Until #155 this leg PINNED the browser climb to the literal `fn === sn || (fn & 1) === 1`, taking a 32-bit
+  // expression for the RFC 6962 right-edge RULE. It is not the rule; it was the defect. So when the connector
+  // moved to BigInt on 2026-07-28 this file could not follow — a sweep of docs/ would have turned this leg red
+  // and read as the mistake, and the browser verifier stayed broken for sixteen days on every live anchor.
+  // Behaviour survives translation between two clean-room implementations; TEXT does not. So the leg now RUNS
+  // both climbs on the same paths, on BOTH sides of the boundary, and requires them to agree.
+  {
+    const web = await import('../../docs/ust-resolve.mjs');
+    const { verifyInclusion } = await import('../ust-rekor-verify/index.mjs');
+    const HH = (t, ...b) => createHash('sha256').update(Buffer.concat([Buffer.from([t]), ...b])).digest();
+    const disagree = [];
+    for (const [label, index, size] of [['below_2_31', 2036940646, 2036940652], ['above_2_31', 2149645490, 2149645504], ['above_2_53', '9007199254740993', '9007199254740999']]) {
+      const leaf = HH(0x00, Buffer.from('leaf:' + label));
+      const sibs = Array.from({ length: 24 }, (_, i) => HH(0x01, Buffer.from('sib:' + label + ':' + i)));
+      let fn = BigInt(index), sn = BigInt(size) - 1n, h = leaf;
+      for (const s of sibs) {
+        if (fn === sn || (fn & 1n) === 1n) { h = HH(0x01, s, h); while (fn !== 0n && (fn & 1n) === 0n) { fn >>= 1n; sn >>= 1n; } }
+        else h = HH(0x01, h, s);
+        fn >>= 1n; sn >>= 1n;
+      }
+      const arg = { leafHash: leaf, index, treeSize: size, hashes: sibs.map((b) => b.toString('hex')), rootHash: h.toString('hex') };
+      const w = await web.rekorInclusion(arg), c = verifyInclusion(arg);
+      if (w !== true || c !== true) disagree.push(`${label}: web=${w} connector=${c}`);
+      // and the negative half — a different leaf must fail in BOTH, or "agrees" is satisfied by two broken climbs
+      if (await web.rekorInclusion({ ...arg, leafHash: HH(0x00, Buffer.from('other')) }) !== false) disagree.push(label + ': web accepts a wrong leaf');
+    }
+    check('#155 the web witness inclusion climb verifies an index above 2^31', disagree.length === 0, disagree.join('; '));
+
+    // F.5.1b — COVERAGE of the closed set R, which is a different claim from "each vector passes". The `anchor-refusal`
+    // vectors above execute whatever the corpus happens to contain; this asserts that what it contains is the WHOLE
+    // domain. #154 is the reason the two are separated: 41 documents passed a parity gate while none of them carried
+    // the element the two implementations disagreed about, so a green run said nothing about the gap.
+    const covered = new Set(V.vectors.filter((x) => x.kind === 'anchor-refusal').map((x) => x.expect));
+    const unexercised = Object.keys(P.REGISTRY.anchorRefusalReasons).filter((r) => !covered.has(r));
+    const strays = [...covered].filter((r) => !(r in P.REGISTRY.anchorRefusalReasons));
+    check('#155 every element of R is exercised, and a reason outside R is refused',
+      unexercised.length === 0 && strays.length === 0,
+      (unexercised.length ? `never exercised: [${unexercised}] — a claim over an empty domain` : '')
+      + (strays.length ? ` vector expects [${strays}] which R does not define` : ''));
+    // and the clean-room literal IS the registry, terms included — the term is what tells a reader who can act,
+    // so a set that matches on keys and drifts on terms points every refusal at the wrong party.
+    check('#155 a witness refusal names its conjunct, and every reason is in the closed set R',
+      Object.entries(P.REGISTRY.anchorRefusalReasons).every(([k, term]) => web.REFUSAL_TERMS[k] === term) &&
+      Object.keys(web.REFUSAL_TERMS).length === Object.keys(P.REGISTRY.anchorRefusalReasons).length);
+  }
   check('web witness confirmed = automatic HIGH (no checkbox)', readFileSync(new URL('../../docs/index.html', import.meta.url), 'utf8').includes("witness.status === 'confirmed'"));
 }
 

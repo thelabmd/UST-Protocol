@@ -26,6 +26,10 @@ const blocks = {
   // #154 — the kind domain K. Hand-written prose here is how it drifted: the registry said two kinds while
   // the §4.4 grammar said three, and two clean-room verifiers implemented the registry.
   'partition-kinds': tick(REGISTRY.partitionKinds).join(' · '),
+  // #155 — the anchor-refusal set, rendered WITH its term, because the term is the load-bearing half: the set
+  // exists so a reader learns who can act, and a list of slugs without terms would carry the names and lose that.
+  'anchor-refusal-reasons': Object.entries(REGISTRY.anchorRefusalReasons)
+    .map(([r, term]) => '`' + r + '` → *' + term + '*').join(' · '),
 };
 
 const path = new URL('../spec/UST-1.0.md', import.meta.url);

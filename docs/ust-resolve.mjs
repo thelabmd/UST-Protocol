@@ -178,20 +178,41 @@ const u8hex = (u) => [...u].map((x) => x.toString(16).padStart(2, '0')).join('')
 const u8eq = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
 
 // RFC 6962 §2.1.1 inclusion (canonical, right-edge while-shift) — async because WebCrypto digest is async.
-async function rekorInclusion({ leafHash, index, treeSize, hashes, rootHash }) {
-  if (index >= treeSize || index < 0) return false;
-  let hash = leafHash, fn = index, sn = treeSize - 1;
-  for (const sibHex of hashes) {
-    const sib = hexToU8(sibHex);
-    if (fn === sn || (fn & 1) === 1) {
-      hash = await sha256raw(concatU8([new Uint8Array([1]), sib, hash]));
-      while (fn !== 0 && (fn & 1) === 0) { fn >>= 1; sn >>= 1; }
-    } else {
-      hash = await sha256raw(concatU8([new Uint8Array([1]), hash, sib]));
+//
+// TREE INDICES ARE UNBOUNDED NATURALS AND MUST NOT BE NARROWED (#155). RFC 6962 §2.1.1 defines the path over
+// naturals and the wire form is uint64; JavaScript's `>>` and `&` coerce to SIGNED 32-BIT, so an index at or
+// above 2^31 goes negative mid-climb. The connector package met this on a live log on 2026-07-28 and moved to
+// BigInt; THIS clean-room copy did not, because the gate written that day read the package by name and a
+// conformance check separately required this file to contain the narrowing form verbatim. Measured 2026-08-13:
+// every anchor of the reference operator written after the public log passed 2,147,483,648 entries failed here,
+// for sixteen days, and the page reported it as a limit of the reader's browser.
+// number | string | bigint are all accepted: a log serving a uint64 past 2^53 must send it as a string, and
+// refusing that would reinstate the same ceiling one power higher.
+// TOTALITY (#155, swept from the connector's round-46 self-audit) — an inclusion proof is UNTRUSTED input, and this
+// is an EXPORT, so a null argument or a hostile Proxy with a throwing getter must be a structured `false`, never a
+// host throw. Destructuring in the SIGNATURE threw on `null` where the connector returned false; the parity corpus
+// found it the first time the two were compared directly instead of source-pinned.
+export async function rekorInclusion(proof) {
+  try {
+    if (!proof || typeof proof !== 'object') return false;
+    const { leafHash, index, treeSize, hashes, rootHash } = proof;
+    if (!Array.isArray(hashes)) return false;
+    let fn, sn;
+    try { fn = BigInt(index); sn = BigInt(treeSize) - 1n; } catch { return false; }
+    if (fn < 0n || sn < 0n || fn > sn) return false;
+    let hash = leafHash;
+    for (const sibHex of hashes) {
+      const sib = hexToU8(sibHex);
+      if (fn === sn || (fn & 1n) === 1n) {
+        hash = await sha256raw(concatU8([new Uint8Array([1]), sib, hash]));
+        while (fn !== 0n && (fn & 1n) === 0n) { fn >>= 1n; sn >>= 1n; }
+      } else {
+        hash = await sha256raw(concatU8([new Uint8Array([1]), hash, sib]));
+      }
+      fn >>= 1n; sn >>= 1n;
     }
-    fn >>= 1; sn >>= 1;
-  }
-  return fn === 0 && u8hex(hash) === rootHash.replace(/^sha256:/, '');
+    return fn === 0n && u8hex(hash) === String(rootHash).replace(/^sha256:/, '');
+  } catch { return false; }
 }
 const concatU8 = (arrs) => { const n = arrs.reduce((s, a) => s + a.length, 0); const o = new Uint8Array(n); let i = 0; for (const a of arrs) { o.set(a, i); i += a.length; } return o; };
 
@@ -233,17 +254,29 @@ async function rekorCheckpoint(checkpoint, rootHex, treeSize) {
 }
 
 // Verify a rekor anchor (browser): the entry attests THIS root, the inclusion proof reaches rootHash, AND
-// rootHash is a root Rekor signed (#69 A1). All three or it is not final.
+// rootHash is a root Rekor signed (#69 A1). All three or it is not final — and the refusal NAMES which one
+// failed, from REGISTRY.anchorRefusalReasons (#155, F.5.1b). The three conjuncts belong to DIFFERENT terms of
+// the F.5.1 table, so one shared `false` tells the reader nothing about who can act, and the prose that used to
+// stand in for it named the reader's own browser — a claim the reader cannot disprove from where they stand.
 async function rekorFinal(anchorInner, rootSha) {
   const proof = anchorInner.inclusionProof, bodyB64 = anchorInner.body;
-  if (!proof || !bodyB64) return false;
-  const body = atob(bodyB64);
-  const rootHex = rootSha.replace(/^sha256:/, '');
-  const artifactHash = u8hex(await sha256raw(teu(rootHex)));   // Rekor stores sha256(root-hex)
-  if (!body.includes(artifactHash)) return false;
+  if (!proof || !bodyB64) return { ok: false, reason: 'proof-absent' };
+  // (1) the entry must attest THIS root by the EXACT hashedrekord schema. A substring scan of the body passes an
+  // entry that merely CONTAINS the hash in some other field (#71) — fixed in the connector, and swept here.
+  let entry;
+  try { entry = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(bodyB64), (c) => c.charCodeAt(0)))); }
+  catch { return { ok: false, reason: 'unreadable-entry' }; }
+  if (entry?.kind !== 'hashedrekord') return { ok: false, reason: 'unsupported-proof-form' };
+  const artifactHash = u8hex(await sha256raw(teu(String(rootSha).replace(/^sha256:/, ''))));   // Rekor stores sha256(root-hex)
+  const h = entry?.spec?.data?.hash;
+  if (!h || h.algorithm !== 'sha256' || h.value !== artifactHash) return { ok: false, reason: 'entry-attests-another-root' };
+  // (2) the inclusion path reaches proof.rootHash
   const leafHash = await sha256raw(concatU8([new Uint8Array([0]), Uint8Array.from(atob(bodyB64), (c) => c.charCodeAt(0))]));
-  if (!await rekorInclusion({ leafHash, index: proof.logIndex, treeSize: proof.treeSize, hashes: proof.hashes || [], rootHash: proof.rootHash })) return false;
-  return rekorCheckpoint(proof.checkpoint, proof.rootHash, proof.treeSize);   // #69 A1: bind root to the signed head
+  if (!await rekorInclusion({ leafHash, index: proof.logIndex, treeSize: proof.treeSize, hashes: proof.hashes || [], rootHash: proof.rootHash }))
+    return { ok: false, reason: 'inclusion-failed' };
+  // (3) #69 A1 — bind that root to a head the pinned log key signed
+  if (!await rekorCheckpoint(proof.checkpoint, proof.rootHash, proof.treeSize)) return { ok: false, reason: 'checkpoint-unsigned' };
+  return { ok: true };
 }
 
 // ─── Bitcoin-OTS witness substrate (browser clean-room, #68) ─────────────────────────────────
@@ -281,26 +314,47 @@ async function parseOtsBitcoin(ots) {
 
 // Verify a bitcoin-ots anchor (browser): the proof starts at THIS anchor's root, and the value it commits
 // to a Bitcoin block equals that block's real merkle root (display order = internal bytes reversed).
+// Same refusal discipline as rekorFinal (#155): every NO carries a reason from REGISTRY.anchorRefusalReasons,
+// because "no explorer answered" is the consumer's term and "this proof commits to another root" is not.
 async function bitcoinFinal(anchorInner, rootRef, fetchImpl) {
   try {
-    if (!anchorInner.ots) return null;
+    if (!anchorInner.ots) return { ok: false, reason: 'proof-absent' };
     const ots = Uint8Array.from(atob(anchorInner.ots), (c) => c.charCodeAt(0));
-    const parsed = await parseOtsBitcoin(ots);
-    if (!parsed) return null;
-    if (u8hex(parsed.digest) !== (rootRef || '').replace(/^sha256:/, '')) return null;  // binds to this genesis root
+    let parsed;
+    // an op this build does not implement is the RULESET term, not a broken proof — parseOtsBitcoin throws by name.
+    try { parsed = await parseOtsBitcoin(ots); }
+    catch (e) { return { ok: false, reason: /unsupported/.test(e?.message || '') ? 'unsupported-proof-form' : 'unreadable-entry' }; }
+    // parsed but carrying no Bitcoin attestation yet — the ordinary pending-OTS case, and the publisher's to wait out.
+    if (!parsed) return { ok: false, reason: 'proof-absent' };
+    if (u8hex(parsed.digest) !== (rootRef || '').replace(/^sha256:/, '')) return { ok: false, reason: 'entry-attests-another-root' };
     const wantMerkle = u8hex(parsed.merkle.slice().reverse());
     for (const base of BTC_EXPLORERS) {
       try {
         const hash = (await (await fetchImpl(`${base}/block-height/${parsed.height}`, { signal: AbortSignal.timeout(10000) })).text()).trim();
         if (!/^[0-9a-f]{64}$/.test(hash)) continue;
         const blk = await (await fetchImpl(`${base}/block/${hash}`, { signal: AbortSignal.timeout(10000) })).json();
-        if (blk && blk.merkle_root === wantMerkle) return { final: true, time: blk.timestamp, height: parsed.height };
-        return null;   // a definitive answer from a reachable explorer — a mismatch is a real NO, not "try another"
+        if (blk && blk.merkle_root === wantMerkle) return { ok: true, time: blk.timestamp, height: parsed.height };
+        return { ok: false, reason: 'inclusion-failed' };   // a definitive answer from a reachable explorer — a mismatch is a real NO
       } catch { /* explorer unreachable — try the next */ }
     }
-    return null;
-  } catch { return null; }
+    return { ok: false, reason: 'substrate-unreachable' };
+  } catch { return { ok: false, reason: 'unreadable-entry' }; }
 }
+
+// The CLOSED anchor-refusal set (§11.2, F.5.1b) mapped to the term of the F.5.1 table each reason belongs to —
+// which is to say, WHO can act: `evidence` the publisher, `faculties` the consumer, `ruleset` neither party.
+// Clean-room: this file may NOT import the core, so the literal lives here and `spec-code-sync` diffs it against
+// REGISTRY.anchorRefusalReasons. #154 is why that diff exists — four independent enumerations of one set is how
+// they diverge, and the divergence surfaces as a false verdict on somebody's live document.
+export const REFUSAL_TERMS = {
+  'proof-absent': 'evidence',
+  'unreadable-entry': 'evidence',
+  'unsupported-proof-form': 'ruleset',
+  'entry-attests-another-root': 'evidence',
+  'inclusion-failed': 'evidence',
+  'checkpoint-unsigned': 'evidence',
+  'substrate-unreachable': 'faculties',
+};
 
 // Fetch the witness log for `domain` and decide no-fork by cross-checking each active genesis's anchors.
 export async function witnessNoFork(domain, genesisHash, fetchImpl = fetch) {
@@ -313,14 +367,20 @@ export async function witnessNoFork(domain, genesisHash, fetchImpl = fetch) {
   } catch (e) { return { status: 'unreachable', detail: 'witness endpoint unreachable (' + (e.message || e) + ')' }; }
   if (!log || log.domain_shard !== domain || !Array.isArray(log.genesis_log)) return { status: 'unreachable', detail: 'witness log malformed' };
   const active = log.genesis_log.filter((g) => g && !g.superseded_by && /^sha256:[0-9a-f]{64}$/.test(g.content_hash || ''));
-  const anchored = [];
+  const anchored = [], refusals = [];
   for (const g of active) {
     const anchors = Array.isArray(g.anchors) ? g.anchors : (g.anchor ? [g.anchor] : []);
+    if (!anchors.length) refusals.push({ substrate: 'none', root: g.content_hash, reason: 'proof-absent' });
     let ok = false;
     for (const a of anchors) {
       const inner = a.anchor ?? a;
-      if (inner.substrate === 'rekor' && await rekorFinal(inner, a.root || g.content_hash)) { ok = true; break; }
-      if (inner.substrate === 'bitcoin-ots' && await bitcoinFinal(inner, a.root || g.content_hash, fetchImpl)) { ok = true; break; }
+      const root = a.root || g.content_hash;
+      let r;
+      if (inner.substrate === 'rekor') r = await rekorFinal(inner, root);
+      else if (inner.substrate === 'bitcoin-ots') r = await bitcoinFinal(inner, root, fetchImpl);
+      else r = { ok: false, reason: 'unsupported-proof-form' };
+      if (r.ok) { ok = true; break; }
+      refusals.push({ substrate: String(inner.substrate ?? 'unknown'), root, reason: r.reason });
     }
     if (ok) anchored.push(g);
   }
@@ -329,5 +389,14 @@ export async function witnessNoFork(domain, genesisHash, fetchImpl = fetch) {
     if (anchored[0].content_hash !== genesisHash) return { status: 'fork', detail: 'the anchored genesis differs from the served one' };
     return { status: 'confirmed', detail: 'a single anchored active genesis (Rekor and/or Bitcoin) — no rival root' };
   }
-  return { status: 'pending', detail: active.length ? 'genesis in the witness log but no anchor verifies here (explorer/log unreachable, or an unsupported proof)' : 'no active genesis in the witness log' };
+  // F.5.1b — the refusal NAMES its conjunct. What stood here was a guess at the reader's environment ("explorer/log
+  // unreachable, or an unsupported proof"), and for sixteen days it was wrong about a defect in this very file.
+  if (!active.length) return { status: 'pending', detail: 'no active genesis in the witness log', reasons: [] };
+  return {
+    status: 'pending',
+    detail: 'no anchor of the active genesis verifies — ' + refusals
+      .map((r) => `${r.substrate} ${String(r.root).slice(0, 14)}…: ${r.reason} (${REFUSAL_TERMS[r.reason] ?? 'unclassified'})`)
+      .join('; '),
+    reasons: refusals,
+  };
 }

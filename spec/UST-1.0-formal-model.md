@@ -3307,6 +3307,36 @@ at through a help message. The two publisher-movable rows above are *author diff
 something*, and neither is an assertion made TO the verifier. In prose all three read as "the operator can fix
 this", which is precisely why the term is named per input rather than inferred by the reader.
 
+**Corollary F.5.1b (a report may name only a term it MEASURED, and a defect in `v` has no row).** The table
+assigns every missing input to a term, and F.5.1a fixes who may be advised to move it. Neither settles what a
+report may say when it has established nothing. Naming an unmeasured term is not imprecision: the terms differ in
+WHO acts, so a wrong term sends the only party who could act away from the problem. And it fails in one
+direction. `x̂` and the witness column belong to absent parties; `ℐ_v` and `ρ_v` belong to the reader, who is
+present. A report written without measurement drifts to the reader — and the reader's remedy is testable, so the
+mis-attribution is confirmed rather than exposed when it does not work.
+
+**A defect in `v` is where this bites, because the table has no row for it.** Every row is a MISSING INPUT. A
+verifier that computes the wrong answer over inputs that are all present is not on the table at all, and the
+nearest-looking rows are exactly the two aimed at the reader. So an undifferentiated refusal does not merely lose
+detail; it converts the one failure no party can act on into an instruction to the one party who cannot fix it.
+
+Hence, where a rung's non-attainment is decided by a CONJUNCTION, **the report names the conjunct that failed and
+the values it failed on.** Not as courtesy. A conjunction has one input per conjunct and therefore one term per
+conjunct, so an undifferentiated `false` collapses several rows of the table into one word — and F.5.1 is the
+statement that those rows are not interchangeable. The operational test is falsifiability: a refusal naming its
+conjunct is a claim a reader can check and disprove; a refusal naming the reader's environment is a claim about
+the reader, which the reader cannot disprove from where they stand.
+
+The reason set is therefore CLOSED and each element carries its term, under the same equality obligation F.1.1
+puts on `K`: a reason outside the set is a verifier defect, and an element never exercised is a claim over an
+empty domain. Measured 2026-08-13 on the shipped browser verifier — five distinct failures, three of them
+conjuncts of one anchor check, reached the reader as the single word `pending`, annotated *a browser cannot
+decide*. The cause was none of the five: the inclusion climb narrowed an index to 32 bits (the corollary in
+F.9.5-c.1) and had been wrong for sixteen days. Splitting the conjunction named it in one run. CLOSED 2026-08-13
+— round 207 (#155).
+
+**Binding: realized for the witness path** (F.5.1 as a whole stays pending on #137/#138) — *"#155 a witness refusal names its conjunct, and every reason is in the closed set R"* · *"#155 every element of R is exercised, and a reason outside R is refused"*.
+
 **Corollary F.5.1a-bis (a version gap is a rung, and its term is the RULESET).** Let `d` carry minor `m` and let
 `V` implement `v < m`. The material `m` adds is not absent from the document and not withheld by any party — it
 is present and UNREACHABLE, because `V` has no rules for it. That is a fourth term, and it belongs to neither
@@ -3411,6 +3441,8 @@ of two is a sample wearing the word *enumerated*.
 - the report is derived from the SAME decision relation as the verdict; no second implementation.
 - no rung attributes an `ℐ_v`/`ρ_v` input to the publisher.
 - a rung whose input is settled is reported distinguishably from one whose input was merely not brought.
+- **a rung decided by a conjunction reports WHICH conjunct failed, from a closed reason set (F.5.1b).** The
+  refusal must be falsifiable by the reader; naming the reader's own environment is not.
 - **no verdict detail names a remedy the call already supplied (F.5.1d).** The vector pair is the theorem: the
   same document verified with and without an input must not produce the same prescriptive clause naming it.
 
@@ -3987,6 +4019,27 @@ path over naturals; the wire form is `uint64`. A builder using bitwise arithmeti
 goes negative above `2³¹`, producing a path that is correct for every tree small enough to test by hand. The
 verifier in this tree already met that defect on a live log. The dual must be written under the same discipline,
 or the pair agrees — wrongly — on exactly the trees nobody checks.
+
+**And the obligation is universal over IMPLEMENTATIONS, realized on one (#155).** The sentence above — *the
+verifier in this tree* — names one verifier; the tree holds two independent climbs, because the browser verifier is clean-room and may
+not import the connector. When the defect was fixed the enforcement was written to read the connector file BY
+NAME, so the second climb was outside the rule — and a conformance check separately asserted that the browser
+copy contained the narrowing form VERBATIM, having taken the 32-bit expression for a structural fingerprint of
+RFC 6962's right-edge rule. The enforcement did not merely miss the second copy; it PINNED it. A sweep in July
+would have gone red and read as the mistake.
+
+Measured 2026-08-13: the shipped page could NOT confirm no-fork for any anchor written after the public log
+passed `2³¹`, and had not been able to for sixteen days — reported to readers as a limit of their own browser
+(F.5.1b). CLOSED 2026-08-13 — round 207 (#155).
+
+A rule quantified over a class and enforced at a named instance is enforced nowhere else, and the clean-room
+requirement GUARANTEES there is somewhere else. Two things follow, and they are the realization. The enforcement
+must DISCOVER its domain — every site in the tree that climbs an externally supplied index, so that a third
+implementation is inside the rule the day it is written rather than the day someone remembers it. And a check may
+not pin an implementation to a literal the rule it serves forbids: behaviour survives translation between copies,
+text does not, so text-identity is the wrong instrument for a claim about two implementations that must differ.
+
+**Binding: realized** — *"#155 the web witness inclusion climb verifies an index above 2^31"*, which runs BOTH climbs on the same paths and requires them to agree; the discovery half is `tools/unbounded-index-gate.mjs`, which enumerates the climb sites from the tree rather than naming one, and is recorded as this round's test layer because a repository scan is a gate's work and not a conformance check's.
 
 **Binding: pending — thelabmd/UST-Protocol#127** for the BUILDER; the tree claim itself is realized — *"F.9.5-c.1 the BUNDLED §7 tree does not compose — sorting is global, so a subtree root bears no computable relation to the whole and a partial enumeration cannot carry a root"* · *"F.9.5-c.1 ADVERSARIAL the RFC 6962 tree DOES compose at a power-of-two split — so \"the root does not compose\" is false as a claim about this protocol and true only of the bundled tree"* · *"F.9.5-c.1 and it does NOT compose at a non-power-of-two split — the composing property is conditional, so neither tree licenses a general claim"* · *"F.9.5-c.1 the two trees disagree on the SAME leaves — an operator's root is not reproducible by the bundled walk, which is why §11.2 inclusion is a connector rather than a protocol constant"*. What remains is a builder composing a seal over an arbitrary admissible `N`, a partial node carrying `root` REFUSED, and inclusion against the single published root exercised for a leaf under a composed enumeration.
 
