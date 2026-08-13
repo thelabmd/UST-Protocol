@@ -556,8 +556,8 @@
   {
    "id": "L161-shortfall-names-its-input",
    "rev": "round-209",
-   "model_locus": "F.5.1e — a rung decided by a CONJUNCTION reports WHICH conjunct failed, from a closed reason set. `verifyStream` has six shortfalls below `complete`; four returned a bare word until 2026-08-13, and the verdict is UNCHANGED by that defect, so no verdict-comparing check can reach it.",
-   "conformance_check": "#161 every completeness shortfall NAMES its missing input"
+   "model_locus": "where a rung's non-attainment is decided by a CONJUNCTION, **the report names the conjunct that failed and\nthe values it failed on.**",
+   "conformance_check": "#161 the shortfall DOMAIN is enumerated from the source, not sampled"
   }
  ]
 }
