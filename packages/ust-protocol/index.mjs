@@ -2214,9 +2214,19 @@ function verifyAnchorCore(contentHash, proof, opts = {}) {
     const declared = carrier !== null && typeof carrier === 'object' && !Array.isArray(carrier)
       ? (carrier.construction !== undefined ? carrier.construction : carrier.scheme)
       : carrier;
-    if (carrier !== undefined && declared !== REGISTRY.referenceConstruction)
+    if (carrier !== undefined && declared !== REGISTRY.referenceConstruction) {
+      // #153 — the refusal ROUTES. The verdict is unchanged and must be: this is `ℐ_v` in the F.5.1 table, the
+      // consumer's column, so the honest report names WHICH connector claims the declared construction. Generated
+      // from REGISTRY.inclusionConstructions, never spelled here — the set is open by §11.2, and a name the map
+      // does not carry gets the registry itself rather than a sentence that reads as "no such thing exists".
+      const named = typeof declared === 'string' ? `'${declared.slice(0, 40)}'` : `of type ${typeof declared}`;
+      const claimant = typeof declared === 'string' ? REGISTRY.inclusionConstructions[declared] : undefined;
+      const route = claimant
+        ? `That construction is claimed by ${claimant}.`
+        : `No registered construction carries that name either — registered: ${Object.keys(REGISTRY.inclusionConstructions).map((k) => `'${k}'`).join(', ')}.`;
       return { time: 'unproven', status: 'unavailable', reason: 'unsupported_construction',
-        detail: `anchor proof declares inclusion construction ${typeof declared === 'string' ? `'${declared.slice(0, 40)}'` : `of type ${typeof declared}`} — this build implements '${REGISTRY.referenceConstruction}' and no installed connector claimed it; the answer is WITHHELD, never the reference walk applied to another tree (F.9.5-c.5)` };
+        detail: `anchor proof declares inclusion construction ${named} — this build implements '${REGISTRY.referenceConstruction}' and no installed connector claimed it. ${route} The answer is WITHHELD, never the reference walk applied to another tree (F.9.5-c.5)` };
+    }
     // No connector, or a router that claimed nothing. MEASURED before this existed: an empty router killed a VALID proof
     // with 'inclusion path does not reach root' — blaming the proof for the caller having no plugin installed. The shape
     // error names the BUNDLED connector, not the protocol, and points at where another tree plugs in.
@@ -3322,6 +3332,19 @@ export const REGISTRY = deepFreeze({   // round-25 P0-04 — DEEP-frozen: the ca
   // §11.2 keeps the construction a CONNECTOR — registering the reference one names the default, it does not make
   // the protocol prescribe a tree.
   referenceConstruction: 'ust-merkle-tagged',
+  // #153 — the construction → CLAIMANT map. A refusal for an unsupported construction is CORRECT and must not
+  // change (walking a foreign construction with the reference tree is the proof-substitution hole §11.2 exists to
+  // refuse), but a refusal that is right and unactionable still costs its reader an afternoon. By the F.5.1 table
+  // this remedy is `ℐ_v` — *bring a connector* — and that column is the CONSUMER's to move, so naming which one
+  // is the attribution the model prescribes rather than a courtesy.
+  //
+  // It is DATA, not a sentence, for the reason §11.2 makes the construction a connector at all: the set is open.
+  // A third party publishing a construction is the ordinary case, so a name absent from this map must produce a
+  // message that routes to the registry, never a dead end that reads as *no such thing exists*.
+  inclusionConstructions: {
+    'ust-merkle-tagged': 'bundled — implemented by this build (§7/§11.2)',
+    'rfc6962-raw': '@ust-protocol/rekor-verify — inject its `inclusionVerify` as the connector',
+  },
   verifiedEvidenceFields: { required: ['proof_kind', 'subject', 'source_id', 'facts'], optional: ['verifier_id', 'verifier_version'] },
   // M3 — the SIGNED connector-receipt claim (§12.3.5): facts only; a capability/assurance/independence field is E-EVIDENCE.
   evidenceReceiptClaimFields: { required: ['version', 'purpose', 'domain_shard', 'active_genesis', 'genesis_epoch', 'subject', 'proof_kind', 'facts', 'issued_at'], optional: ['payload_digest'] },

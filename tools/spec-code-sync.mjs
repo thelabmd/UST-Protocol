@@ -105,6 +105,24 @@ check('completeness', [...src.matchAll(/\bcomplete:\s*['"`]([a-z-]+)['"`]/g)].ma
   }
 }
 
+// §11.2 inclusion constructions → their CLAIMANT — #153. The map is what makes an `unsupported_construction`
+// refusal actionable, so two ways of going stale would make it lie: the BUNDLED construction missing from it (a
+// verifier that cannot route its own default), or a claimant naming a package this tree does not publish (a
+// reader sent to `npm i` something that does not exist, which is worse than the dead end it replaced).
+{
+  const M = REGISTRY.inclusionConstructions;
+  const keys = Object.keys(M);
+  if (!keys.includes(REGISTRY.referenceConstruction)) {
+    fail++;
+    report.push(`  ✗ inclusionConstructions: the bundled construction '${REGISTRY.referenceConstruction}' is absent from the map — a refusal cannot route to this build's own default`);
+  } else report.push(`  ✓ inclusionConstructions: the bundled construction is registered (${keys.length} total)`);
+  const pkgs = new Set(JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).workspaces
+    .map((w) => { try { return JSON.parse(readFileSync(new URL('../' + w + '/package.json', import.meta.url), 'utf8')).name; } catch { return null; } }).filter(Boolean));
+  const ghosts = keys.map((k) => [k, /(@[\w./-]+)/.exec(M[k])?.[1]]).filter(([, p]) => p && !pkgs.has(p));
+  if (ghosts.length) { fail++; report.push(`  ✗ inclusionConstructions: ${ghosts.map(([k, p]) => `'${k}' routes to ${p}, which this tree does not publish`).join('; ')}`); }
+  else report.push(`  ✓ inclusionConstructions: every claimant that names a package names one this tree publishes`);
+}
+
 // §11.2 anchor refusal reasons, across every surface that DECLARES or EMITS one — #155.
 //
 // Two different obligations, because the two kinds of surface relate to the set differently and one check for

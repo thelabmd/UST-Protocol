@@ -519,6 +519,30 @@ check('#5 anchor-missing-path→no-throw', (() => { try { P.verifyAnchor('sha256
       withProof({}).result === 'VALID:LIGHT' && withProof({ inclusion: { construction: 'ust-merkle-tagged' } }).result === 'VALID:LIGHT')());
     check('F.9.5-c.5 THROUGH verify(): a proof that genuinely does not reach the root is still INVALID — withholding did not swallow the real refusal', (() =>
       withProof({ root: 'sha256:' + 'ee'.repeat(32) }).error === 'E-ANCHOR')());
+    // #153 — the refusal is correct AND actionable. `ℐ_v` in the F.5.1 table is the CONSUMER's column, so the
+    // report names which connector claims the construction. Two branches, because the set is open by §11.2: a
+    // REGISTERED name routes to its claimant, an unregistered one routes to the registry rather than dead-ending.
+    // The verdict is asserted UNCHANGED in both, which is the half that must never move.
+    check('#153 a registered construction routes the reader to the connector that claims it', (() => {
+      const r = withProof({ inclusion: { construction: 'rfc6962-raw' } });
+      return r.result === 'INDETERMINATE' && r.reason === 'unsupported_construction'
+        && String(r.detail).includes(P.REGISTRY.inclusionConstructions['rfc6962-raw']);
+    })());
+    check('#153 an UNREGISTERED construction routes to the registry, never a dead end', (() => {
+      const r = withProof({ inclusion: { construction: 'acme-tree-v9' } });
+      const d = String(r.detail);
+      // asserted on the PROPERTY, not the prose: every registered name is offered, and no claimant is invented
+      // for a construction the map does not carry. Pinning the sentence would make an edit to the wording read
+      // as a regression, which is how a check starts defending text instead of behaviour (#155).
+      return r.result === 'INDETERMINATE' && r.reason === 'unsupported_construction'
+        && Object.keys(P.REGISTRY.inclusionConstructions).every((k) => d.includes(k))
+        && !/claimed by/.test(d);
+    })());
+    // the route is DATA: every registered claimant must be reachable from the message, so adding a construction
+    // to the registry without the message learning it is red rather than silently unrouted.
+    check('#153 every registered construction is reachable from the refusal it explains', (() =>
+      Object.keys(P.REGISTRY.inclusionConstructions).filter((c) => c !== P.REGISTRY.referenceConstruction)
+        .every((c) => String(withProof({ inclusion: { construction: c } }).detail).includes(P.REGISTRY.inclusionConstructions[c])))());
   }
 }
 

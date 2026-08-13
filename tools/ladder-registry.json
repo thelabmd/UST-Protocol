@@ -1665,6 +1665,16 @@
     "excluded": "There is nothing language-neutral to pin that is not already pinned. The completeness VERDICTS have vectors; the slugs are the reference implementation explaining its own answer, and holding a porter to our wording would make conformance turn on prose rather than on the decision."
    },
    "test": "packages/ust-protocol/conformance.mjs :: #161 the shortfall DOMAIN is enumerated from the source, not sampled — reads verifyStream and requires every non-`complete` return to carry a reason or a named hole; mutation-proven by ADDING a seventh silent return (6 found, 1 silent) and by stripping a reason from an existing one"
+  },
+  {
+   "round": 210,
+   "math": "bring a trust root, a connector, an accepted issuer | the CONSUMER only |",
+   "spec": "anchor refusal reason",
+   "code": "packages/ust-protocol/index.mjs :: REGISTRY.inclusionConstructions — construction → claimant as DATA, with the unsupported_construction detail generated from it; tools/spec-code-sync.mjs refuses a map missing the bundled construction or naming a package this tree does not publish",
+   "vector": {
+    "excluded": "The VERDICT is unchanged and already vectored — INDETERMINATE(unsupported_construction) in every case, which is the half a porter must reproduce. The route is this implementation explaining its own answer; holding a second implementation to our package names would make conformance turn on our distribution rather than on the decision."
+   },
+   "test": "packages/ust-protocol/conformance.mjs :: #153 every registered construction is reachable from the refusal it explains — mutation-proven by dropping the route, by inventing a claimant for an unregistered name, and by ADDING a construction the message cannot reach, which reddens the coverage leg alone"
   }
  ],
  "first_accounted_round": 76,
