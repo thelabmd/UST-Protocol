@@ -1,557 +1,563 @@
 {
-  "_comment": "The lockstep enforcement registry — DATA consumed by tools/model-lockstep-gate.mjs (round-27 P1-02). Each record is a model invariant asserted as REALIZED, paired with the EXACT public-entry adversarial-closure conformance check that proves the attack is refused. The gate does NOT infer adversariality from English tokens (round-27 P1-02: a positive check named '...never...' bypassed the old regex); it verifies, per record, that (a) the model still states the claim and (b) the named check exists and (conformance being green) passes. Add an enforcement realization => add a record here, or the exhaustiveness pass fails.",
-  "records": [
-    {
-      "id": "L1-one-authority-root",
-      "rev": "rev25",
-      "model_locus": "every downstream\nlayer takes the derived context, never raw fields.",
-      "conformance_check": "C1/L1 a raw pinnedPrior alongside a branded context → INVALID(E-AUTHORITY) — the context is the SOLE root (never raw fields, M2; round-26 P0-01)"
-    },
-    {
-      "id": "L2-recovery-genesis-fixed",
-      "rev": "rev25",
-      "model_locus": "immutable within the epoch",
-      "conformance_check": "C1/L2 raw recoveryKeys/recoveryThreshold alongside a branded context → INVALID(E-AUTHORITY) — checkpoint-recovery is genesis-fixed, never injected from a call argument (F.5l; round-26 P0-02)"
-    },
-    {
-      "id": "L3-evidence-exact-facts",
-      "rev": "rev24",
-      "model_locus": "the EXACT signature-verified",
-      "conformance_check": "M3/D getter-TOCTOU on receipt facts cannot mint an EvidenceHandle whose facts ≠ the signed facts → INVALID (round-26 P0-03, L3 closed)"
-    },
-    {
-      "id": "L3b-genesis-context-exact",
-      "rev": "rev24",
-      "model_locus": "the same snapshot binds `verifiedGenesisContext`",
-      "conformance_check": "M2/D verifiedGenesisContext: a getter on the genesis (TOCTOU) cannot mint a context whose scope ≠ the verified genesis → null (round-26 D — snapshot once)"
-    },
-    {
-      "id": "L5-total-non-null",
-      "rev": "rev24",
-      "model_locus": "totality includes malformed non-null on EVERY argument",
-      "conformance_check": "round-26 L5 malformed non-null on trailing args: resolveCadence and verifyJson accept a null trailing arg and return structured (no host throw)"
-    },
-    {
-      "id": "L4-witness-budget-public-entry",
-      "rev": "rev27",
-      "model_locus": "threaded through the PUBLIC entry",
-      "conformance_check": "round-26 P1-03/L4 resolveByDiscovery THREADS the consumer witness budget (maxWitnessOpMs) through the PUBLIC entry → a tight budget resource-limits the witness, no false served-list HIGH (F.9 ρ_v)"
-    },
-    {
-      "id": "R27-authority-graph-snapshot",
-      "rev": "rev28",
-      "model_locus": "authority graph crosses the ONE inert snapshot boundary",
-      "conformance_check": "round-27 P0-02 a getter on an authority checkpoint body cannot sign one body and mint another → INVALID(E-MALFORMED) (the chain crosses the snapshot boundary)"
-    },
-    {
-      "id": "R27-witness-budget-final-leaf",
-      "rev": "rev28",
-      "model_locus": "a budget exhausted on the FINAL awaited leaf",
-      "conformance_check": "round-27 P1-01 a budget exhausted on the FINAL leaf → INDETERMINATE(resource_limit), never reported as pending"
-    },
-    {
-      "id": "R30-admitDeep-canon-transparent",
-      "rev": "rev30",
-      "model_locus": "BYTE-TRANSPARENT to canon",
-      "conformance_check": "CANON-TRANSPARENT: admitDeep is byte-transparent to canon (never looser; byte-identical when accepted) — the input-boundary soundness linchpin"
-    },
-    {
-      "id": "R30-input-boundary-grid",
-      "rev": "rev30",
-      "model_locus": "a from-CODE control — the input-boundary grid",
-      "conformance_check": "BOUNDARY-GRID: every exported verifier admits its input once (no TOCTOU re-read across the surface — coverage answered in CI, not from memory)"
-    },
-    {
-      "id": "R31-admitDeep-canon-fuzz",
-      "rev": "rev31",
-      "model_locus": "differential FUZZ",
-      "conformance_check": "CANON-TRANSPARENT FUZZ: 3000 random inputs (pollution names / non-enumerable / sparse / non-plain proto / deep) — admitDeep is never looser than canon and byte-identical when accepted"
-    },
-    {
-      "id": "R39-r3-one-control",
-      "rev": "rev39",
-      "model_locus": "closed at ONE control, not per resolver",
-      "conformance_check": "R3 ONE-CONTROL: admitOpts deep-admits EVERY nested opts/config DATA value once, so a resolver NOT individually patched (verifyEpochTransition) reads its nested doc ≤1 and cannot be shown a second face — the whole nested-doc re-read class is closed at ONE boundary (round-31)"
-    },
-    {
-      "id": "R38-r3-nested",
-      "rev": "rev38",
-      "model_locus": "R3 spans the NESTED input graph",
-      "conformance_check": "R3 NESTED: a two-face NESTED genesis in a resolver opts/config graph → the output is a projection over the VERIFIED face, never the unsigned re-read (round-31 P0-01/02/03; admitOpts is shallow, nested untrusted docs are deep-admitted once)"
-    },
-    {
-      "id": "R37-lockstep-in-process",
-      "rev": "rev37",
-      "model_locus": "over the IN-MEMORY executed set",
-      "conformance_check": "LOCKSTEP IN-PROCESS: a disabled registered check is CAUGHT in-process — the lockstep validation over the LIVE executed set flags any registered adversarial-closure check absent from THIS run (never a committed, forgeable manifest; round-30 P1-02)"
-    },
-    {
-      "id": "R36-r4-monotonic",
-      "rev": "rev36",
-      "model_locus": "MONOTONIC elapsed-time clock",
-      "conformance_check": "R4 MONOTONIC: the witness budget clock is a monotonic ELAPSED source (performance.now), non-decreasing across reads — a wall-clock/NTP rollback cannot rewind the deadline and disable the whole-op budget (round-30 P1-01; not a wall clock with a wrapper)"
-    },
-    {
-      "id": "R35-r3-resolver",
-      "rev": "rev35",
-      "model_locus": "every resolver admits its untrusted input ONCE",
-      "conformance_check": "R3 RESOLVER: resolveKeys admits its genesis ONCE — a two-face Proxy (signed A to verify, tampered B to the reducer) emits keys for the VERIFIED face or errors, NEVER the re-read face"
-    },
-    {
-      "id": "R34-signature-registry",
-      "rev": "rev34",
-      "model_locus": "machine SIGNATURE REGISTRY",
-      "conformance_check": "FROM-CODE SIGNATURE REGISTRY: every consumer-surface export has a declared signature (real arity + a valid reachability fixture per position) — no surface export escapes the totality sweep, a new one fails until declared"
-    },
-    {
-      "id": "R34-source-bound-manifest",
-      "rev": "rev34",
-      "model_locus": "making the manifest EVIDENCE content-bound to its source",
-      "conformance_check": "SOURCE-BOUND MANIFEST: the executed-check manifest carries the sha256 of conformance.mjs and index.mjs — the lockstep gate recomputes them and rejects a stale manifest (evidence content-bound to its source, not trusted by CI order)"
-    },
-    {
-      "id": "R33-r4-clock-owned",
-      "rev": "rev33",
-      "model_locus": "faculties are its own",
-      "conformance_check": "R4 CLOCK-OWNED: a hostile __nowMs in public opts is DEAD (never read) — it cannot expand the witness budget or flip resource_limit into a served-list HIGH (round-29 P0-02; ρ_v belongs to the verifier)"
-    },
-    {
-      "id": "R32-r3-non-bypass",
-      "rev": "rev32",
-      "model_locus": "CONTROLLER with three stages",
-      "conformance_check": "R3 NON-BYPASS: a stateful Proxy answering the descriptor one value and [[Get]] another → INVALID, not a false VALID — verify reads the SAME face canon/identity reads"
-    },
-    {
-      "id": "R32-r3-identity",
-      "rev": "rev32",
-      "model_locus": "RETURNED id",
-      "conformance_check": "R3 IDENTITY: verify emits id(x̂) bound to the admitted snapshot it verified — the transcript is addressed by the returned id, not by a re-read of the raw input"
-    },
-    {
-      "id": "R31-grid-async-aware",
-      "rev": "rev31",
-      "model_locus": "AWAITS each verifier to settlement",
-      "conformance_check": "BOUNDARY-GRID async-aware: a verifier that re-reads its input AFTER an await is OBSERVED as read-count 2 (the grid awaits settlement; a sync snapshot would miss it) — round-29 div1"
-    },
-    {
-      "id": "R31-from-code-partition",
-      "rev": "rev31",
-      "model_locus": "classified FROM the module exports",
-      "conformance_check": "FROM-CODE PARTITION: every function export is classified surface|exempt (no silent drop — a new export fails until classified)"
-    },
-    {
-      "id": "R31-from-code-totality",
-      "rev": "rev31",
-      "model_locus": "hostile-fixture BATTERY (throwing-trap Proxy, revoked Proxy, throwing-index array-like) in any argument position",
-      "conformance_check": "FROM-CODE TOTALITY (hostile BATTERY): every consumer-surface export returns structured, never a host throw, on EACH escape shape (throwing-trap Proxy, REVOKED Proxy, throwing-index array-like) in any argument position — the fixture is exhaustive, so a new non-total path fails HERE (round-51)"
-    },
-    {
-      "id": "R27-witness-budget-typed-admission",
-      "rev": "rev28",
-      "model_locus": "ONLY an ABSENT budget selects the reference default",
-      "conformance_check": "round-27 P2-01 invalid maxWitnessOpMs (0/-1/NaN/Infinity/fractional) is REFUSED (resource_limit), never expanded to the reference default"
-    },
-    {
-      "id": "R40-r2-order-unified",
-      "rev": "rev40",
-      "model_locus": "the public evidence-order path is the SAME closed decode as the kernel",
-      "conformance_check": "R32 order cross-kind: transparency-log wearing pow facts {substrate,position} → unproven (its coord is log_id/index)"
-    },
-    {
-      "id": "R40-horn-projecttier",
-      "rev": "rev40",
-      "model_locus": "a `key-pinned` atom that lifts no Tier",
-      "conformance_check": "R32 Horn≡projectTier: every identity×time cell — max Horn Tier == projectTier"
-    },
-    {
-      "id": "R41-admission-closed-adt",
-      "rev": "rev41",
-      "model_locus": "applies the SAME CLOSED TYPED ADT the kernel's",
-      "conformance_check": "R33 P0-01 signed transparency-log receipt with an EXTRA facts field → INVALID (closed per-kind facts, kernel-aligned)"
-    },
-    {
-      "id": "R41-issuer-admitted-snapshot",
-      "rev": "rev41",
-      "model_locus": "the raw-re-read class is closed at this one residual",
-      "conformance_check": "R33 P0-02 issuer_id two-face Proxy → INVALID; issuer_id read from the ADMITTED snapshot R, never a raw re-read"
-    },
-    {
-      "id": "R42-authority-witness-closed-adt",
-      "rev": "rev42",
-      "model_locus": "SWEPT across every signed authority witness",
-      "conformance_check": "R34 P0-02 an authority checkpoint witness with an unsigned EXTRA sig field → INVALID (closed { body, sig } — no checkpoint-id malleability)"
-    },
-    {
-      "id": "R42-strict-pub32",
-      "rev": "rev42",
-      "model_locus": "never strict Pub32",
-      "conformance_check": "R34 P0-01 a genesis authority carrying a non-canonical Pub32 alias roots NO authority (strict Pub32 before keyId)"
-    },
-    {
-      "id": "R43-admitsigner-chokepoint",
-      "rev": "rev43",
-      "model_locus": "the signer-admission class closed at ONE primitive",
-      "conformance_check": "R35 P0-01 uniqueness sig.key_id ≠ issuer (admitSigner binds issuer===key_id===keyId(pub)) → NOT attested"
-    },
-    {
-      "id": "R43-admitsigner-gate",
-      "rev": "rev43",
-      "model_locus": "asserts the choke-point rejects EVERY sig-wrapper tampering class",
-      "conformance_check": "R35 admitSigner gate: every sig-wrapper tampering on a genuine attestation → NOT attested; only the genuine wrapper passes"
-    },
-    {
-      "id": "R45-authority-key-pair",
-      "rev": "rev45",
-      "model_locus": "the nested authority KEY-PAIR admission at ONE primitive",
-      "conformance_check": "R36 P1-01 admitAuthorityKey rejects a contradictory { key_id of A, pub of B } pair (via transition destination) — usable only if key_id === keyId(pub)"
-    },
-    {
-      "id": "R45-canonical-leaf",
-      "rev": "rev45",
-      "model_locus": "canonical wire at the crypto LEAF",
-      "conformance_check": "R36 P1-02 edVerifyStrict REJECTS a non-canonical Sig64 alias (same 64 bytes, different wire) — canonical enforced at the crypto leaf"
-    },
-    {
-      "id": "R46-merkle-copath-admit",
-      "rev": "rev46",
-      "model_locus": "R1 (admit the input) UNIFIED at every exported operation",
-      "conformance_check": "R37 P0-01 key-log Merkle sibling [] (not a canonical hash) → not terminal, NO host throw"
-    },
-    {
-      "id": "R46-lattice-operand-admit",
-      "rev": "rev46",
-      "model_locus": "R1 is uniform between input and output at every level",
-      "conformance_check": "R37/R39 joinAssurance with an OUT-OF-DOMAIN operand → RETURNS the valid operand (⊥ contributes nothing, never synthesizes strength from garbage), never a throw"
-    },
-    {
-      "id": "R47-assurance-single-admit",
-      "rev": "rev47",
-      "model_locus": "R1/R3/R4 made uniform at the last three exported ops",
-      "conformance_check": "R38 P1-01 (R1/R3) assuranceState on a two-face Proxy emits the ADMITTED (first) face, not a stronger re-read"
-    },
-    {
-      "id": "R47-budget-tighten-only",
-      "rev": "rev47",
-      "model_locus": "a caller resource scalar may only TIGHTEN",
-      "conformance_check": "R38 P1-03 (R4) verifyJson maxInputBytes:Infinity → structured E-MALFORMED, never an expanded ceiling"
-    },
-    {
-      "id": "R48-lattice-total-by-return",
-      "rev": "rev48",
-      "model_locus": "the door mirrors the INPUT door",
-      "conformance_check": "R39 P1-02 (R1) capAssurance with a HOSTILE consumer ceiling → RETURNS ⊥ (fail-closed cap), never a host throw"
-    },
-    {
-      "id": "R48-budget-refusal-fails-closed",
-      "rev": "rev48",
-      "model_locus": "never coalesces to a default",
-      "conformance_check": "R39 P1-01 (R4) refBudget:Infinity → E-MALFORMED (a refused budget FAILS CLOSED, never coalesces to the 256-node default)"
-    },
-    {
-      "id": "R49-sync-verify-admits-opts",
-      "rev": "rev49",
-      "model_locus": "admission must happen at EVERY door",
-      "conformance_check": "R40 P1-01 (R1) sync verify admits opts ONCE — verifyCore never re-reads the live opts Proxy (a two-face maxSupportedBytes trap fires 0×)"
-    },
-    {
-      "id": "R49-absent-not-malformed",
-      "rev": "rev49",
-      "model_locus": "a falsy value is not a missing one",
-      "conformance_check": "R40 P1-02 (R1) every MALFORMED capAssurance ceiling (falsy scalar / non-record / array: false,0,\"\",NaN,[],1,\"x\",true) → ⊥ (projectTier NONE), never a preserved TOP"
-    },
-    {
-      "id": "R50-opts-snapshot-frozen",
-      "rev": "rev50",
-      "model_locus": "means the admitted value is IMMUTABLE, not merely a copy",
-      "conformance_check": "R41 P1-01 (R1) the admitted opts snapshot handed to a capability as `this` is FROZEN (inert) — a resolveRef cannot mutate policy (acceptConsumerOverride) to flip LIGHT→HIGH"
-    },
-    {
-      "id": "R50-selector-fails-closed",
-      "rev": "rev50",
-      "model_locus": "must fail CLOSED",
-      "conformance_check": "R41 P1-02 (R1) resolveAuthority with a PRESENT falsy/scalar/array genesis → E-GENESIS (falsy ≠ absent), never a silent self-asserted"
-    },
-    {
-      "id": "R51-keylog-array-deep-admit",
-      "rev": "rev51",
-      "model_locus": "must be deep-admitted",
-      "conformance_check": "R42 P0-01 (R1/R3) resolveKeys DEEP-admits the key-log — a two-face entry (signed key B / unsigned key C) never authorizes C (structured error OR authorizes only B)"
-    },
-    {
-      "id": "R51-override-provenance-gate",
-      "rev": "rev51",
-      "model_locus": "The evidence/axiom boundary is a PROVENANCE gate",
-      "conformance_check": "R42 P1-01 (R1) an unminted servedNoFork + acceptConsumerOverride does NOT reach HIGH (override_liftable:false), yet still ≠ corroborated (rc35-P0a)"
-    },
-    {
-      "id": "R52-coerced-input-registry-gate",
-      "rev": "rev52",
-      "model_locus": "a defect CLASS is not closed by fixing its known instances",
-      "conformance_check": "R43/R44 STRUCTURAL: every require*/allow*/acceptConsumerOverride security-policy boolean in index.mjs + reference-checker.mjs is REGISTERED (a new grant flag fails until admitted + adversarially probed)"
-    },
-    {
-      "id": "R53-adapter-defers-to-kernel",
-      "rev": "rev53",
-      "model_locus": "must never inject a policy the checker would refuse",
-      "conformance_check": "R44 P0-01 verifyAuthorityBundle injects NO threshold DEFAULT — the adapter passes the consumer policy through (no `Number.isInteger(...) ? ... : 2` fallback that manufactures a quorum the sole-checker refuses)"
-    },
-    {
-      "id": "R53-adapter-selector-fails-closed",
-      "rev": "rev53",
-      "model_locus": "public adapter around a sound kernel is a TCB surface too",
-      "conformance_check": "R44 P1-01 verifyAuthorityCheckpointChain rejects a PRESENT malformed authority selector (genesisAuthority:false / recoveryKeys:0) → E-MALFORMED, never silently overridden or coalesced to {}"
-    },
-    {
-      "id": "R54-cross-arg-admission-order",
-      "rev": "rev54",
-      "model_locus": "at a multi-argument boundary, capture the TRUSTED inputs before executing",
-      "conformance_check": "R45 P0-01 (R1/R3) checkAuthorityProof ISOLATES the trusted config — a hostile package getter cannot inject witnesses/threshold into the config the verdict uses (config encoded BEFORE package; identical config_id + verdict)"
-    },
-    {
-      "id": "R54-behavioral-adapter-gate",
-      "rev": "rev54",
-      "model_locus": "closed by a BEHAVIORAL from-entrypoint gate, not a source regex",
-      "conformance_check": "R45 P1-01 verifyAuthorityBundle success is EXCLUSIVE to a Freshness judgment — a Genesis-only proof → INDETERMINATE authority_unresolved, never a public VALID"
-    },
-    {
-      "id": "R55-reduction-automaton-side-effect-free",
-      "rev": "rev55",
-      "model_locus": "the automaton reads its input as DATA, it never runs it",
-      "conformance_check": "R46 checkAuthorityProof REDUCES the config side-effect-free — a config accessor getter is NEVER executed (the automaton reads DATA, never runs it; this SUPERSEDES the rev45 source-level admission order — no code runs at the boundary at all)"
-    },
-    {
-      "id": "R56-package-read-once-decomposition",
-      "rev": "rev56",
-      "model_locus": "The whole proof is now read ONCE",
-      "conformance_check": "R46 (Theorem R — ρ_package) checkAuthorityProof reads the SIGNED package ONCE — a two-face term Proxy (a different term on re-read) yields the SAME verdict as the honest package (referencedIds and canon see the ONE admitted [[Get]] face; no split)"
-    },
-    {
-      "id": "R57-sync-verify-trusted-opts-first",
-      "rev": "rev57",
-      "model_locus": "the OBJECT-form sync verify path admits the trusted opts BEFORE the untrusted signed",
-      "conformance_check": "R46 self-audit (Theorem R) verify admits the TRUSTED opts BEFORE the untrusted doc — a doc getter that drops requireAuthoritative cannot rewrite the consumer policy the verdict uses (INVALID stays INVALID; cross-argument order, sync path)"
-    },
-    {
-      "id": "R58-totality-from-source-roster",
-      "rev": "rev58",
-      "model_locus": "the totality of every reduction door is enforced from the SOURCE export list",
-      "conformance_check": "R46 self-audit (totality, from-code) — NO public verifier/resolver export SYNC-throws a host exception on a hostile Proxy in every arg position (the SOURCE list is the roster; closes the combineSubstrates gate-completeness gap)"
-    },
-    {
-      "id": "R59-totality-roster",
-      "rev": "rev59",
-      "model_locus": "roster is now the RUNTIME MODULE NAMESPACE",
-      "conformance_check": "R47 P1-03 (roster completeness — RUNTIME namespace) — EVERY function-typed export of the module (100, incl. re-exports + arrow-consts + the byte kernel checkAuthorityProofBytes) is TOTAL on a hostile Proxy UNLESS explicitly classified MAY-THROW (producer / byte-string primitive / verdict class / throw-by-contract); a source-regex miss (arrow-const, re-export, future callable) can no longer evade the gate"
-    },
-    {
-      "id": "R69-bytes-in-boundary-export",
-      "rev": "rev69",
-      "model_locus": "IS the sound public boundary",
-      "conformance_check": "R47 (rev69 structural) resolveCadenceBytes IS the sound bytes-in boundary (pure function of immutable byte-strings, order-independent by construction) and the object resolveCadence adapter faithfully delegates to it (identical verdict on the same data)"
-    },
-    {
-      "id": "R85-f4-adapted-stream",
-      "rev": "rev85",
-      "model_locus": "a frame is measurable with respect to its own anchored interval",
-      "conformance_check": "#39 chain-consistent covering interval ⇒ no-deletion-only (omission still possible)"
-    },
-    {
-      "id": "R85-f5a-nonmembership",
-      "rev": "rev85",
-      "model_locus": "authenticated non-membership is proven, never assumed",
-      "conformance_check": "#42 SMT non-membership: absent key → proven non-membership (absent:true), not authoritative"
-    },
-    {
-      "id": "R85-f5b-downgrade",
-      "rev": "rev85",
-      "model_locus": "the floor is the consumer's, so a stripped proof cannot pass it",
-      "conformance_check": "#45 requireAnchored: proof STRIPPED (authoritative HIGH) → E-ANCHOR (downgrade rejected)"
-    },
-    {
-      "id": "R85-f5c-forkchoice",
-      "rev": "rev85",
-      "model_locus": "equivocation is detected rather than resolved by guessing",
-      "conformance_check": "#45 forkChoice: both anchored, one authority, distinct hash → E-PREV (equivocation)"
-    },
-    {
-      "id": "R85-f5d-keylog-fresh",
-      "rev": "rev85",
-      "model_locus": "a stale key-log cache cannot pass as fresh",
-      "conformance_check": "#40 requireFreshKeylog on a stale cache → INDETERMINATE stale_keylog"
-    },
-    {
-      "id": "R85-f5e-kn-proven-u",
-      "rev": "rev85",
-      "model_locus": "the process needs a PROVEN U, not an assumed one",
-      "conformance_check": "P0-01 retired key + UNANCHORED doc → NOT authoritative (fail-closed, K_n needs a proven U)"
-    },
-    {
-      "id": "R85-f5f-transitive",
-      "rev": "rev85",
-      "model_locus": "transitivity is what refuses the impersonation, with no new signed object",
-      "conformance_check": "AC carried current_key_id ≠ prior-authorized signer → INVALID(E-AUTHORITY)"
-    },
-    {
-      "id": "R85-f6-event-algebra",
-      "rev": "rev85",
-      "model_locus": "composition is an algebra over constituents, not a free-form merge",
-      "conformance_check": "#44 E-ROOT → obligation §9.4 attestation-root + expected/actual"
-    },
-    {
-      "id": "R91-f3-inclusion-consumer-owned",
-      "rev": "rev91",
-      "model_locus": "the connector is read from `opts` only",
-      "conformance_check": "#95 a doc-borne DATA look-alike (anchor.inclusionVerify: true) earns nothing — the connector is read from opts only"
-    },
-    {
-      "id": "R91-f3-inclusion-typed-leaf",
-      "rev": "rev91",
-      "model_locus": "the leaf is CLOSED and TYPED",
-      "conformance_check": "#95 a non-Boolean connector return cannot mint inclusion — typed closed leaf"
-    },
-    {
-      "id": "R91-f3-inclusion-totality",
-      "rev": "rev91",
-      "model_locus": "the door is TOTAL",
-      "conformance_check": "#95 a hostile connector (throw / revoked Proxy) → structured reject, never a host throw"
-    },
-    {
-      "id": "R91-f3-inclusion-no-time",
-      "rev": "rev91",
-      "model_locus": "delegation does NOT lift the time rung",
-      "conformance_check": "#95 an inclusion connector cannot mint anchored TIME — the substrate seam still gates it (C3)"
-    },
-    {
-      "id": "R91-f4-cadence-absent-benign",
-      "rev": "rev91",
-      "model_locus": "the publisher declares no change, so the genesis value is what is known",
-      "conformance_check": "#95/F.4 cadence ABSENT (404) is benign — the publisher declares no change, the document still resolves"
-    },
-    {
-      "id": "R91-f4-cadence-unreadable-indeterminate",
-      "rev": "rev91",
-      "model_locus": "an empty log is a VALUE, and writing one in place of an unanswered query",
-      "conformance_check": "#95/F.4 cadence UNREADABLE is INDETERMINATE, never substituted by an empty log (a wrong value in ℐ would manufacture completeness)"
-    },
-    {
-      "id": "R92-f4-completeness-orthogonal-to-tier",
-      "rev": "rev92",
-      "model_locus": "the SCORED set of an attestation must be closed under the axis that attestation names, while its REPORTED set may be strictly wider",
-      "conformance_check": "rev92 completeness ⊥ tier: an undeclared grid bounds the RANGE and subtracts nothing from Π"
-    },
-    {
-      "id": "R93-report-shape-named-or-absent",
-      "rev": "rev93",
-      "model_locus": "a NAMED floor value means **the measurement ran and earned nothing**",
-      "conformance_check": "rev93 empty slot: NAMED floor when measured (INVALID→tier NONE), ABSENT when unmeasurable (INDETERMINATE→no tier), and no basis either way"
-    },
-    {
-      "id": "R93b-inert-label-not-a-result",
-      "rev": "rev93",
-      "model_locus": "a value the derivation neutralizes MUST NOT be surfaced\nunder a name that reads as a result",
-      "conformance_check": "rev93 third case: a strength whose status is not verified is NEUTRALIZED to the floor, never its own rung"
-    },
-    {
-      "id": "R94-forkchoice-agrees-with-projection",
-      "rev": "rev94",
-      "model_locus": "the decision is not a projection of either field; it is the CONJUNCTION of the two facts the model separates",
-      "conformance_check": "rev94 fork-choice binding == derived identity ≥ corroborated, over the WHOLE seam grid (24 states)"
-    },
-    {
-      "id": "R95-ceremony-selfcheck-own-invariant",
-      "rev": "rev95",
-      "model_locus": "the property it tests must be one the ceremony itself",
-      "conformance_check": "rev95 a caller no-fork boolean never earns authoritative — the rung a ceremony self-check may not demand of it"
-    },
-    {
-      "id": "R76-cadence-mutation-root-only",
-      "rev": "round76",
-      "model_locus": "round 76 completes `mutating(c)`: both classes, same conjunct, same shape",
-      "conformance_check": "#107 an OPERATIONAL key may NOT move the cadence grid — `active` is NECESSARY, not SUFFICIENT"
-    },
-    {
-      "id": "R78-class-role-partition",
-      "rev": "round78",
-      "model_locus": "The correction is one enumeration read in BOTH directions rather than two lists that happen to agree today",
-      "conformance_check": "#97/tlx a data class in the KEY role → E-MALFORMED (the partition is two-sided)"
-    },
-    {
-      "id": "R78-key-role-exact-set",
-      "rev": "round78",
-      "model_locus": "`key` admits exactly `{genesis, key, cadence}` and `data` admits exactly the complement",
-      "conformance_check": "#97/tlx the key role admits EXACTLY the authority classes — genesis, key and cadence, measured from the set"
-    },
-    {
-      "id": "R79-role-declared-regime",
-      "rev": "round79",
-      "model_locus": "So role separation is a DECLARED refinement, the same shape as every other strength here",
-      "conformance_check": "#106 under a DECLARED genesis an add with NO role → E-KEY (a missing field is never the strongest claim)"
-    },
-    {
-      "id": "R79-role-inheritance-propagates-only",
-      "rev": "round79",
-      "model_locus": "Inheritance PROPAGATES a role; it can never INTRODUCE one",
-      "conformance_check": "#106 `supersedes` PROPAGATES the role down a lineage (no explicit role needed on a successor)"
-    },
-    {
-      "id": "R65-structural-bound-escaped-by-composition",
-      "rev": "rev65",
-      "model_locus": "The escape is checked against what the protocol can ADDRESS, not merely asserted as sufficient",
-      "conformance_check": "#101 ADVERSARIAL: a capacity grant does NOT admit an over-breadth FLAT seal — capacity is VOLUME, breadth is STRUCTURE"
-    },
-    {
-      "id": "R66-serving-axis-independence-not-self-declared",
-      "rev": "rev98",
-      "model_locus": "Discovery attestation measures REPLICATION; independence is not in `σ(bytes)`",
-      "conformance_check": "#102 ADVERSARIAL: a producer-declared locator set does NOT raise the independence coordinate (F.5a.1 transposed to serving)"
-    },
-    {
-      "id": "R67-substituted-copy-must-fail-agreement",
-      "rev": "rev98",
-      "model_locus": "`Rep_L(n) = ∀ ℓ ∈ L : contentHash(B(ℓ)) = contentHash(g)`",
-      "conformance_check": "#102 a copy that differs FAILS agreement, and one that agrees does not rescue it"
-    },
-    {
-      "id": "R68-profile-may-add-never-relocate",
-      "rev": "rev99",
-      "model_locus": "a profile may ADD a locator and may never RELOCATE one",
-      "conformance_check": "#102 ADVERSARIAL: a profile cannot RELOCATE a standard surface — a named key-log location is refused, resolution stays at the well-known path"
-    },
-    {
-      "id": "R69-silence-cannot-hide-evidence",
-      "rev": "rev99",
-      "model_locus": "a surface that is THERE is evidence whichever way the profile reads",
-      "conformance_check": "#102 ADVERSARIAL: an UNDECLARED surface that is PRESENT is still attested — silence cannot hide evidence"
-    },
-    {
-      "id": "R70-declaring-monotone-in-obligation",
-      "rev": "rev99",
-      "model_locus": "adding `S` to `D` can only turn a `skip` into a `FAIL`, never a `skip` into a pass",
-      "conformance_check": "#102 declaring is MONOTONE IN OBLIGATION: no declaration turns an absent surface into a pass"
-    },
-    {
-      "id": "R71-darkness-not-decidable-from-one-substrate",
-      "rev": "rev71",
-      "model_locus": "`obs(s, w) = absent` occurs in two distinct worlds",
-      "conformance_check": "#120 ADVERSARIAL: darkness is NOT decidable from one substrate — one silent declared leg yields PARTIAL, never dark"
-    },
-    {
-      "id": "R72-undeclared-anchor-still-counts",
-      "rev": "rev71",
-      "model_locus": "the anchored row never consults the declaration, so silence in",
-      "conformance_check": "#120 ADVERSARIAL: an UNDECLARED substrate carrying an anchor still counts — silence in the profile cannot hide evidence"
-    },
-    {
-      "id": "R73-producer-blind-to-own-fork",
-      "rev": "rev72",
-      "model_locus": "no function of `I_A` separates them, and `A` cannot refuse what it cannot see",
-      "conformance_check": "#122 ADVERSARIAL: two appenders from one head both succeed when the head is PRIVATE — the fork is produced and neither can see it"
-    },
-    {
-      "id": "R74-downstream-detection-does-not-happen",
-      "rev": "rev72",
-      "model_locus": "input under which the two branches are reported AS A FORK",
-      "conformance_check": "#122 ADVERSARIAL: the two branches are NEVER reported as a fork — the chain guard fires first, so downstream detection does not happen"
-    }
-  ]
+ "_comment": "The lockstep enforcement registry — DATA consumed by tools/model-lockstep-gate.mjs (round-27 P1-02). Each record is a model invariant asserted as REALIZED, paired with the EXACT public-entry adversarial-closure conformance check that proves the attack is refused. The gate does NOT infer adversariality from English tokens (round-27 P1-02: a positive check named '...never...' bypassed the old regex); it verifies, per record, that (a) the model still states the claim and (b) the named check exists and (conformance being green) passes. Add an enforcement realization => add a record here, or the exhaustiveness pass fails.",
+ "records": [
+  {
+   "id": "L1-one-authority-root",
+   "rev": "rev25",
+   "model_locus": "every downstream\nlayer takes the derived context, never raw fields.",
+   "conformance_check": "C1/L1 a raw pinnedPrior alongside a branded context → INVALID(E-AUTHORITY) — the context is the SOLE root (never raw fields, M2; round-26 P0-01)"
+  },
+  {
+   "id": "L2-recovery-genesis-fixed",
+   "rev": "rev25",
+   "model_locus": "immutable within the epoch",
+   "conformance_check": "C1/L2 raw recoveryKeys/recoveryThreshold alongside a branded context → INVALID(E-AUTHORITY) — checkpoint-recovery is genesis-fixed, never injected from a call argument (F.5l; round-26 P0-02)"
+  },
+  {
+   "id": "L3-evidence-exact-facts",
+   "rev": "rev24",
+   "model_locus": "the EXACT signature-verified",
+   "conformance_check": "M3/D getter-TOCTOU on receipt facts cannot mint an EvidenceHandle whose facts ≠ the signed facts → INVALID (round-26 P0-03, L3 closed)"
+  },
+  {
+   "id": "L3b-genesis-context-exact",
+   "rev": "rev24",
+   "model_locus": "the same snapshot binds `verifiedGenesisContext`",
+   "conformance_check": "M2/D verifiedGenesisContext: a getter on the genesis (TOCTOU) cannot mint a context whose scope ≠ the verified genesis → null (round-26 D — snapshot once)"
+  },
+  {
+   "id": "L5-total-non-null",
+   "rev": "rev24",
+   "model_locus": "totality includes malformed non-null on EVERY argument",
+   "conformance_check": "round-26 L5 malformed non-null on trailing args: resolveCadence and verifyJson accept a null trailing arg and return structured (no host throw)"
+  },
+  {
+   "id": "L4-witness-budget-public-entry",
+   "rev": "rev27",
+   "model_locus": "threaded through the PUBLIC entry",
+   "conformance_check": "round-26 P1-03/L4 resolveByDiscovery THREADS the consumer witness budget (maxWitnessOpMs) through the PUBLIC entry → a tight budget resource-limits the witness, no false served-list HIGH (F.9 ρ_v)"
+  },
+  {
+   "id": "R27-authority-graph-snapshot",
+   "rev": "rev28",
+   "model_locus": "authority graph crosses the ONE inert snapshot boundary",
+   "conformance_check": "round-27 P0-02 a getter on an authority checkpoint body cannot sign one body and mint another → INVALID(E-MALFORMED) (the chain crosses the snapshot boundary)"
+  },
+  {
+   "id": "R27-witness-budget-final-leaf",
+   "rev": "rev28",
+   "model_locus": "a budget exhausted on the FINAL awaited leaf",
+   "conformance_check": "round-27 P1-01 a budget exhausted on the FINAL leaf → INDETERMINATE(resource_limit), never reported as pending"
+  },
+  {
+   "id": "R30-admitDeep-canon-transparent",
+   "rev": "rev30",
+   "model_locus": "BYTE-TRANSPARENT to canon",
+   "conformance_check": "CANON-TRANSPARENT: admitDeep is byte-transparent to canon (never looser; byte-identical when accepted) — the input-boundary soundness linchpin"
+  },
+  {
+   "id": "R30-input-boundary-grid",
+   "rev": "rev30",
+   "model_locus": "a from-CODE control — the input-boundary grid",
+   "conformance_check": "BOUNDARY-GRID: every exported verifier admits its input once (no TOCTOU re-read across the surface — coverage answered in CI, not from memory)"
+  },
+  {
+   "id": "R31-admitDeep-canon-fuzz",
+   "rev": "rev31",
+   "model_locus": "differential FUZZ",
+   "conformance_check": "CANON-TRANSPARENT FUZZ: 3000 random inputs (pollution names / non-enumerable / sparse / non-plain proto / deep) — admitDeep is never looser than canon and byte-identical when accepted"
+  },
+  {
+   "id": "R39-r3-one-control",
+   "rev": "rev39",
+   "model_locus": "closed at ONE control, not per resolver",
+   "conformance_check": "R3 ONE-CONTROL: admitOpts deep-admits EVERY nested opts/config DATA value once, so a resolver NOT individually patched (verifyEpochTransition) reads its nested doc ≤1 and cannot be shown a second face — the whole nested-doc re-read class is closed at ONE boundary (round-31)"
+  },
+  {
+   "id": "R38-r3-nested",
+   "rev": "rev38",
+   "model_locus": "R3 spans the NESTED input graph",
+   "conformance_check": "R3 NESTED: a two-face NESTED genesis in a resolver opts/config graph → the output is a projection over the VERIFIED face, never the unsigned re-read (round-31 P0-01/02/03; admitOpts is shallow, nested untrusted docs are deep-admitted once)"
+  },
+  {
+   "id": "R37-lockstep-in-process",
+   "rev": "rev37",
+   "model_locus": "over the IN-MEMORY executed set",
+   "conformance_check": "LOCKSTEP IN-PROCESS: a disabled registered check is CAUGHT in-process — the lockstep validation over the LIVE executed set flags any registered adversarial-closure check absent from THIS run (never a committed, forgeable manifest; round-30 P1-02)"
+  },
+  {
+   "id": "R36-r4-monotonic",
+   "rev": "rev36",
+   "model_locus": "MONOTONIC elapsed-time clock",
+   "conformance_check": "R4 MONOTONIC: the witness budget clock is a monotonic ELAPSED source (performance.now), non-decreasing across reads — a wall-clock/NTP rollback cannot rewind the deadline and disable the whole-op budget (round-30 P1-01; not a wall clock with a wrapper)"
+  },
+  {
+   "id": "R35-r3-resolver",
+   "rev": "rev35",
+   "model_locus": "every resolver admits its untrusted input ONCE",
+   "conformance_check": "R3 RESOLVER: resolveKeys admits its genesis ONCE — a two-face Proxy (signed A to verify, tampered B to the reducer) emits keys for the VERIFIED face or errors, NEVER the re-read face"
+  },
+  {
+   "id": "R34-signature-registry",
+   "rev": "rev34",
+   "model_locus": "machine SIGNATURE REGISTRY",
+   "conformance_check": "FROM-CODE SIGNATURE REGISTRY: every consumer-surface export has a declared signature (real arity + a valid reachability fixture per position) — no surface export escapes the totality sweep, a new one fails until declared"
+  },
+  {
+   "id": "R34-source-bound-manifest",
+   "rev": "rev34",
+   "model_locus": "making the manifest EVIDENCE content-bound to its source",
+   "conformance_check": "SOURCE-BOUND MANIFEST: the executed-check manifest carries the sha256 of conformance.mjs and index.mjs — the lockstep gate recomputes them and rejects a stale manifest (evidence content-bound to its source, not trusted by CI order)"
+  },
+  {
+   "id": "R33-r4-clock-owned",
+   "rev": "rev33",
+   "model_locus": "faculties are its own",
+   "conformance_check": "R4 CLOCK-OWNED: a hostile __nowMs in public opts is DEAD (never read) — it cannot expand the witness budget or flip resource_limit into a served-list HIGH (round-29 P0-02; ρ_v belongs to the verifier)"
+  },
+  {
+   "id": "R32-r3-non-bypass",
+   "rev": "rev32",
+   "model_locus": "CONTROLLER with three stages",
+   "conformance_check": "R3 NON-BYPASS: a stateful Proxy answering the descriptor one value and [[Get]] another → INVALID, not a false VALID — verify reads the SAME face canon/identity reads"
+  },
+  {
+   "id": "R32-r3-identity",
+   "rev": "rev32",
+   "model_locus": "RETURNED id",
+   "conformance_check": "R3 IDENTITY: verify emits id(x̂) bound to the admitted snapshot it verified — the transcript is addressed by the returned id, not by a re-read of the raw input"
+  },
+  {
+   "id": "R31-grid-async-aware",
+   "rev": "rev31",
+   "model_locus": "AWAITS each verifier to settlement",
+   "conformance_check": "BOUNDARY-GRID async-aware: a verifier that re-reads its input AFTER an await is OBSERVED as read-count 2 (the grid awaits settlement; a sync snapshot would miss it) — round-29 div1"
+  },
+  {
+   "id": "R31-from-code-partition",
+   "rev": "rev31",
+   "model_locus": "classified FROM the module exports",
+   "conformance_check": "FROM-CODE PARTITION: every function export is classified surface|exempt (no silent drop — a new export fails until classified)"
+  },
+  {
+   "id": "R31-from-code-totality",
+   "rev": "rev31",
+   "model_locus": "hostile-fixture BATTERY (throwing-trap Proxy, revoked Proxy, throwing-index array-like) in any argument position",
+   "conformance_check": "FROM-CODE TOTALITY (hostile BATTERY): every consumer-surface export returns structured, never a host throw, on EACH escape shape (throwing-trap Proxy, REVOKED Proxy, throwing-index array-like) in any argument position — the fixture is exhaustive, so a new non-total path fails HERE (round-51)"
+  },
+  {
+   "id": "R27-witness-budget-typed-admission",
+   "rev": "rev28",
+   "model_locus": "ONLY an ABSENT budget selects the reference default",
+   "conformance_check": "round-27 P2-01 invalid maxWitnessOpMs (0/-1/NaN/Infinity/fractional) is REFUSED (resource_limit), never expanded to the reference default"
+  },
+  {
+   "id": "R40-r2-order-unified",
+   "rev": "rev40",
+   "model_locus": "the public evidence-order path is the SAME closed decode as the kernel",
+   "conformance_check": "R32 order cross-kind: transparency-log wearing pow facts {substrate,position} → unproven (its coord is log_id/index)"
+  },
+  {
+   "id": "R40-horn-projecttier",
+   "rev": "rev40",
+   "model_locus": "a `key-pinned` atom that lifts no Tier",
+   "conformance_check": "R32 Horn≡projectTier: every identity×time cell — max Horn Tier == projectTier"
+  },
+  {
+   "id": "R41-admission-closed-adt",
+   "rev": "rev41",
+   "model_locus": "applies the SAME CLOSED TYPED ADT the kernel's",
+   "conformance_check": "R33 P0-01 signed transparency-log receipt with an EXTRA facts field → INVALID (closed per-kind facts, kernel-aligned)"
+  },
+  {
+   "id": "R41-issuer-admitted-snapshot",
+   "rev": "rev41",
+   "model_locus": "the raw-re-read class is closed at this one residual",
+   "conformance_check": "R33 P0-02 issuer_id two-face Proxy → INVALID; issuer_id read from the ADMITTED snapshot R, never a raw re-read"
+  },
+  {
+   "id": "R42-authority-witness-closed-adt",
+   "rev": "rev42",
+   "model_locus": "SWEPT across every signed authority witness",
+   "conformance_check": "R34 P0-02 an authority checkpoint witness with an unsigned EXTRA sig field → INVALID (closed { body, sig } — no checkpoint-id malleability)"
+  },
+  {
+   "id": "R42-strict-pub32",
+   "rev": "rev42",
+   "model_locus": "never strict Pub32",
+   "conformance_check": "R34 P0-01 a genesis authority carrying a non-canonical Pub32 alias roots NO authority (strict Pub32 before keyId)"
+  },
+  {
+   "id": "R43-admitsigner-chokepoint",
+   "rev": "rev43",
+   "model_locus": "the signer-admission class closed at ONE primitive",
+   "conformance_check": "R35 P0-01 uniqueness sig.key_id ≠ issuer (admitSigner binds issuer===key_id===keyId(pub)) → NOT attested"
+  },
+  {
+   "id": "R43-admitsigner-gate",
+   "rev": "rev43",
+   "model_locus": "asserts the choke-point rejects EVERY sig-wrapper tampering class",
+   "conformance_check": "R35 admitSigner gate: every sig-wrapper tampering on a genuine attestation → NOT attested; only the genuine wrapper passes"
+  },
+  {
+   "id": "R45-authority-key-pair",
+   "rev": "rev45",
+   "model_locus": "the nested authority KEY-PAIR admission at ONE primitive",
+   "conformance_check": "R36 P1-01 admitAuthorityKey rejects a contradictory { key_id of A, pub of B } pair (via transition destination) — usable only if key_id === keyId(pub)"
+  },
+  {
+   "id": "R45-canonical-leaf",
+   "rev": "rev45",
+   "model_locus": "canonical wire at the crypto LEAF",
+   "conformance_check": "R36 P1-02 edVerifyStrict REJECTS a non-canonical Sig64 alias (same 64 bytes, different wire) — canonical enforced at the crypto leaf"
+  },
+  {
+   "id": "R46-merkle-copath-admit",
+   "rev": "rev46",
+   "model_locus": "R1 (admit the input) UNIFIED at every exported operation",
+   "conformance_check": "R37 P0-01 key-log Merkle sibling [] (not a canonical hash) → not terminal, NO host throw"
+  },
+  {
+   "id": "R46-lattice-operand-admit",
+   "rev": "rev46",
+   "model_locus": "R1 is uniform between input and output at every level",
+   "conformance_check": "R37/R39 joinAssurance with an OUT-OF-DOMAIN operand → RETURNS the valid operand (⊥ contributes nothing, never synthesizes strength from garbage), never a throw"
+  },
+  {
+   "id": "R47-assurance-single-admit",
+   "rev": "rev47",
+   "model_locus": "R1/R3/R4 made uniform at the last three exported ops",
+   "conformance_check": "R38 P1-01 (R1/R3) assuranceState on a two-face Proxy emits the ADMITTED (first) face, not a stronger re-read"
+  },
+  {
+   "id": "R47-budget-tighten-only",
+   "rev": "rev47",
+   "model_locus": "a caller resource scalar may only TIGHTEN",
+   "conformance_check": "R38 P1-03 (R4) verifyJson maxInputBytes:Infinity → structured E-MALFORMED, never an expanded ceiling"
+  },
+  {
+   "id": "R48-lattice-total-by-return",
+   "rev": "rev48",
+   "model_locus": "the door mirrors the INPUT door",
+   "conformance_check": "R39 P1-02 (R1) capAssurance with a HOSTILE consumer ceiling → RETURNS ⊥ (fail-closed cap), never a host throw"
+  },
+  {
+   "id": "R48-budget-refusal-fails-closed",
+   "rev": "rev48",
+   "model_locus": "never coalesces to a default",
+   "conformance_check": "R39 P1-01 (R4) refBudget:Infinity → E-MALFORMED (a refused budget FAILS CLOSED, never coalesces to the 256-node default)"
+  },
+  {
+   "id": "R49-sync-verify-admits-opts",
+   "rev": "rev49",
+   "model_locus": "admission must happen at EVERY door",
+   "conformance_check": "R40 P1-01 (R1) sync verify admits opts ONCE — verifyCore never re-reads the live opts Proxy (a two-face maxSupportedBytes trap fires 0×)"
+  },
+  {
+   "id": "R49-absent-not-malformed",
+   "rev": "rev49",
+   "model_locus": "a falsy value is not a missing one",
+   "conformance_check": "R40 P1-02 (R1) every MALFORMED capAssurance ceiling (falsy scalar / non-record / array: false,0,\"\",NaN,[],1,\"x\",true) → ⊥ (projectTier NONE), never a preserved TOP"
+  },
+  {
+   "id": "R50-opts-snapshot-frozen",
+   "rev": "rev50",
+   "model_locus": "means the admitted value is IMMUTABLE, not merely a copy",
+   "conformance_check": "R41 P1-01 (R1) the admitted opts snapshot handed to a capability as `this` is FROZEN (inert) — a resolveRef cannot mutate policy (acceptConsumerOverride) to flip LIGHT→HIGH"
+  },
+  {
+   "id": "R50-selector-fails-closed",
+   "rev": "rev50",
+   "model_locus": "must fail CLOSED",
+   "conformance_check": "R41 P1-02 (R1) resolveAuthority with a PRESENT falsy/scalar/array genesis → E-GENESIS (falsy ≠ absent), never a silent self-asserted"
+  },
+  {
+   "id": "R51-keylog-array-deep-admit",
+   "rev": "rev51",
+   "model_locus": "must be deep-admitted",
+   "conformance_check": "R42 P0-01 (R1/R3) resolveKeys DEEP-admits the key-log — a two-face entry (signed key B / unsigned key C) never authorizes C (structured error OR authorizes only B)"
+  },
+  {
+   "id": "R51-override-provenance-gate",
+   "rev": "rev51",
+   "model_locus": "The evidence/axiom boundary is a PROVENANCE gate",
+   "conformance_check": "R42 P1-01 (R1) an unminted servedNoFork + acceptConsumerOverride does NOT reach HIGH (override_liftable:false), yet still ≠ corroborated (rc35-P0a)"
+  },
+  {
+   "id": "R52-coerced-input-registry-gate",
+   "rev": "rev52",
+   "model_locus": "a defect CLASS is not closed by fixing its known instances",
+   "conformance_check": "R43/R44 STRUCTURAL: every require*/allow*/acceptConsumerOverride security-policy boolean in index.mjs + reference-checker.mjs is REGISTERED (a new grant flag fails until admitted + adversarially probed)"
+  },
+  {
+   "id": "R53-adapter-defers-to-kernel",
+   "rev": "rev53",
+   "model_locus": "must never inject a policy the checker would refuse",
+   "conformance_check": "R44 P0-01 verifyAuthorityBundle injects NO threshold DEFAULT — the adapter passes the consumer policy through (no `Number.isInteger(...) ? ... : 2` fallback that manufactures a quorum the sole-checker refuses)"
+  },
+  {
+   "id": "R53-adapter-selector-fails-closed",
+   "rev": "rev53",
+   "model_locus": "public adapter around a sound kernel is a TCB surface too",
+   "conformance_check": "R44 P1-01 verifyAuthorityCheckpointChain rejects a PRESENT malformed authority selector (genesisAuthority:false / recoveryKeys:0) → E-MALFORMED, never silently overridden or coalesced to {}"
+  },
+  {
+   "id": "R54-cross-arg-admission-order",
+   "rev": "rev54",
+   "model_locus": "at a multi-argument boundary, capture the TRUSTED inputs before executing",
+   "conformance_check": "R45 P0-01 (R1/R3) checkAuthorityProof ISOLATES the trusted config — a hostile package getter cannot inject witnesses/threshold into the config the verdict uses (config encoded BEFORE package; identical config_id + verdict)"
+  },
+  {
+   "id": "R54-behavioral-adapter-gate",
+   "rev": "rev54",
+   "model_locus": "closed by a BEHAVIORAL from-entrypoint gate, not a source regex",
+   "conformance_check": "R45 P1-01 verifyAuthorityBundle success is EXCLUSIVE to a Freshness judgment — a Genesis-only proof → INDETERMINATE authority_unresolved, never a public VALID"
+  },
+  {
+   "id": "R55-reduction-automaton-side-effect-free",
+   "rev": "rev55",
+   "model_locus": "the automaton reads its input as DATA, it never runs it",
+   "conformance_check": "R46 checkAuthorityProof REDUCES the config side-effect-free — a config accessor getter is NEVER executed (the automaton reads DATA, never runs it; this SUPERSEDES the rev45 source-level admission order — no code runs at the boundary at all)"
+  },
+  {
+   "id": "R56-package-read-once-decomposition",
+   "rev": "rev56",
+   "model_locus": "The whole proof is now read ONCE",
+   "conformance_check": "R46 (Theorem R — ρ_package) checkAuthorityProof reads the SIGNED package ONCE — a two-face term Proxy (a different term on re-read) yields the SAME verdict as the honest package (referencedIds and canon see the ONE admitted [[Get]] face; no split)"
+  },
+  {
+   "id": "R57-sync-verify-trusted-opts-first",
+   "rev": "rev57",
+   "model_locus": "the OBJECT-form sync verify path admits the trusted opts BEFORE the untrusted signed",
+   "conformance_check": "R46 self-audit (Theorem R) verify admits the TRUSTED opts BEFORE the untrusted doc — a doc getter that drops requireAuthoritative cannot rewrite the consumer policy the verdict uses (INVALID stays INVALID; cross-argument order, sync path)"
+  },
+  {
+   "id": "R58-totality-from-source-roster",
+   "rev": "rev58",
+   "model_locus": "the totality of every reduction door is enforced from the SOURCE export list",
+   "conformance_check": "R46 self-audit (totality, from-code) — NO public verifier/resolver export SYNC-throws a host exception on a hostile Proxy in every arg position (the SOURCE list is the roster; closes the combineSubstrates gate-completeness gap)"
+  },
+  {
+   "id": "R59-totality-roster",
+   "rev": "rev59",
+   "model_locus": "roster is now the RUNTIME MODULE NAMESPACE",
+   "conformance_check": "R47 P1-03 (roster completeness — RUNTIME namespace) — EVERY function-typed export of the module (100, incl. re-exports + arrow-consts + the byte kernel checkAuthorityProofBytes) is TOTAL on a hostile Proxy UNLESS explicitly classified MAY-THROW (producer / byte-string primitive / verdict class / throw-by-contract); a source-regex miss (arrow-const, re-export, future callable) can no longer evade the gate"
+  },
+  {
+   "id": "R69-bytes-in-boundary-export",
+   "rev": "rev69",
+   "model_locus": "IS the sound public boundary",
+   "conformance_check": "R47 (rev69 structural) resolveCadenceBytes IS the sound bytes-in boundary (pure function of immutable byte-strings, order-independent by construction) and the object resolveCadence adapter faithfully delegates to it (identical verdict on the same data)"
+  },
+  {
+   "id": "R85-f4-adapted-stream",
+   "rev": "rev85",
+   "model_locus": "a frame is measurable with respect to its own anchored interval",
+   "conformance_check": "#39 chain-consistent covering interval ⇒ no-deletion-only (omission still possible)"
+  },
+  {
+   "id": "R85-f5a-nonmembership",
+   "rev": "rev85",
+   "model_locus": "authenticated non-membership is proven, never assumed",
+   "conformance_check": "#42 SMT non-membership: absent key → proven non-membership (absent:true), not authoritative"
+  },
+  {
+   "id": "R85-f5b-downgrade",
+   "rev": "rev85",
+   "model_locus": "the floor is the consumer's, so a stripped proof cannot pass it",
+   "conformance_check": "#45 requireAnchored: proof STRIPPED (authoritative HIGH) → E-ANCHOR (downgrade rejected)"
+  },
+  {
+   "id": "R85-f5c-forkchoice",
+   "rev": "rev85",
+   "model_locus": "equivocation is detected rather than resolved by guessing",
+   "conformance_check": "#45 forkChoice: both anchored, one authority, distinct hash → E-PREV (equivocation)"
+  },
+  {
+   "id": "R85-f5d-keylog-fresh",
+   "rev": "rev85",
+   "model_locus": "a stale key-log cache cannot pass as fresh",
+   "conformance_check": "#40 requireFreshKeylog on a stale cache → INDETERMINATE stale_keylog"
+  },
+  {
+   "id": "R85-f5e-kn-proven-u",
+   "rev": "rev85",
+   "model_locus": "the process needs a PROVEN U, not an assumed one",
+   "conformance_check": "P0-01 retired key + UNANCHORED doc → NOT authoritative (fail-closed, K_n needs a proven U)"
+  },
+  {
+   "id": "R85-f5f-transitive",
+   "rev": "rev85",
+   "model_locus": "transitivity is what refuses the impersonation, with no new signed object",
+   "conformance_check": "AC carried current_key_id ≠ prior-authorized signer → INVALID(E-AUTHORITY)"
+  },
+  {
+   "id": "R85-f6-event-algebra",
+   "rev": "rev85",
+   "model_locus": "composition is an algebra over constituents, not a free-form merge",
+   "conformance_check": "#44 E-ROOT → obligation §9.4 attestation-root + expected/actual"
+  },
+  {
+   "id": "R91-f3-inclusion-consumer-owned",
+   "rev": "rev91",
+   "model_locus": "the connector is read from `opts` only",
+   "conformance_check": "#95 a doc-borne DATA look-alike (anchor.inclusionVerify: true) earns nothing — the connector is read from opts only"
+  },
+  {
+   "id": "R91-f3-inclusion-typed-leaf",
+   "rev": "rev91",
+   "model_locus": "the leaf is CLOSED and TYPED",
+   "conformance_check": "#95 a non-Boolean connector return cannot mint inclusion — typed closed leaf"
+  },
+  {
+   "id": "R91-f3-inclusion-totality",
+   "rev": "rev91",
+   "model_locus": "the door is TOTAL",
+   "conformance_check": "#95 a hostile connector (throw / revoked Proxy) → structured reject, never a host throw"
+  },
+  {
+   "id": "R91-f3-inclusion-no-time",
+   "rev": "rev91",
+   "model_locus": "delegation does NOT lift the time rung",
+   "conformance_check": "#95 an inclusion connector cannot mint anchored TIME — the substrate seam still gates it (C3)"
+  },
+  {
+   "id": "R91-f4-cadence-absent-benign",
+   "rev": "rev91",
+   "model_locus": "the publisher declares no change, so the genesis value is what is known",
+   "conformance_check": "#95/F.4 cadence ABSENT (404) is benign — the publisher declares no change, the document still resolves"
+  },
+  {
+   "id": "R91-f4-cadence-unreadable-indeterminate",
+   "rev": "rev91",
+   "model_locus": "an empty log is a VALUE, and writing one in place of an unanswered query",
+   "conformance_check": "#95/F.4 cadence UNREADABLE is INDETERMINATE, never substituted by an empty log (a wrong value in ℐ would manufacture completeness)"
+  },
+  {
+   "id": "R92-f4-completeness-orthogonal-to-tier",
+   "rev": "rev92",
+   "model_locus": "the SCORED set of an attestation must be closed under the axis that attestation names, while its REPORTED set may be strictly wider",
+   "conformance_check": "rev92 completeness ⊥ tier: an undeclared grid bounds the RANGE and subtracts nothing from Π"
+  },
+  {
+   "id": "R93-report-shape-named-or-absent",
+   "rev": "rev93",
+   "model_locus": "a NAMED floor value means **the measurement ran and earned nothing**",
+   "conformance_check": "rev93 empty slot: NAMED floor when measured (INVALID→tier NONE), ABSENT when unmeasurable (INDETERMINATE→no tier), and no basis either way"
+  },
+  {
+   "id": "R93b-inert-label-not-a-result",
+   "rev": "rev93",
+   "model_locus": "a value the derivation neutralizes MUST NOT be surfaced\nunder a name that reads as a result",
+   "conformance_check": "rev93 third case: a strength whose status is not verified is NEUTRALIZED to the floor, never its own rung"
+  },
+  {
+   "id": "R94-forkchoice-agrees-with-projection",
+   "rev": "rev94",
+   "model_locus": "the decision is not a projection of either field; it is the CONJUNCTION of the two facts the model separates",
+   "conformance_check": "rev94 fork-choice binding == derived identity ≥ corroborated, over the WHOLE seam grid (24 states)"
+  },
+  {
+   "id": "R95-ceremony-selfcheck-own-invariant",
+   "rev": "rev95",
+   "model_locus": "the property it tests must be one the ceremony itself",
+   "conformance_check": "rev95 a caller no-fork boolean never earns authoritative — the rung a ceremony self-check may not demand of it"
+  },
+  {
+   "id": "R76-cadence-mutation-root-only",
+   "rev": "round76",
+   "model_locus": "round 76 completes `mutating(c)`: both classes, same conjunct, same shape",
+   "conformance_check": "#107 an OPERATIONAL key may NOT move the cadence grid — `active` is NECESSARY, not SUFFICIENT"
+  },
+  {
+   "id": "R78-class-role-partition",
+   "rev": "round78",
+   "model_locus": "The correction is one enumeration read in BOTH directions rather than two lists that happen to agree today",
+   "conformance_check": "#97/tlx a data class in the KEY role → E-MALFORMED (the partition is two-sided)"
+  },
+  {
+   "id": "R78-key-role-exact-set",
+   "rev": "round78",
+   "model_locus": "`key` admits exactly `{genesis, key, cadence}` and `data` admits exactly the complement",
+   "conformance_check": "#97/tlx the key role admits EXACTLY the authority classes — genesis, key and cadence, measured from the set"
+  },
+  {
+   "id": "R79-role-declared-regime",
+   "rev": "round79",
+   "model_locus": "So role separation is a DECLARED refinement, the same shape as every other strength here",
+   "conformance_check": "#106 under a DECLARED genesis an add with NO role → E-KEY (a missing field is never the strongest claim)"
+  },
+  {
+   "id": "R79-role-inheritance-propagates-only",
+   "rev": "round79",
+   "model_locus": "Inheritance PROPAGATES a role; it can never INTRODUCE one",
+   "conformance_check": "#106 `supersedes` PROPAGATES the role down a lineage (no explicit role needed on a successor)"
+  },
+  {
+   "id": "R65-structural-bound-escaped-by-composition",
+   "rev": "rev65",
+   "model_locus": "The escape is checked against what the protocol can ADDRESS, not merely asserted as sufficient",
+   "conformance_check": "#101 ADVERSARIAL: a capacity grant does NOT admit an over-breadth FLAT seal — capacity is VOLUME, breadth is STRUCTURE"
+  },
+  {
+   "id": "R66-serving-axis-independence-not-self-declared",
+   "rev": "rev98",
+   "model_locus": "Discovery attestation measures REPLICATION; independence is not in `σ(bytes)`",
+   "conformance_check": "#102 ADVERSARIAL: a producer-declared locator set does NOT raise the independence coordinate (F.5a.1 transposed to serving)"
+  },
+  {
+   "id": "R67-substituted-copy-must-fail-agreement",
+   "rev": "rev98",
+   "model_locus": "`Rep_L(n) = ∀ ℓ ∈ L : contentHash(B(ℓ)) = contentHash(g)`",
+   "conformance_check": "#102 a copy that differs FAILS agreement, and one that agrees does not rescue it"
+  },
+  {
+   "id": "R68-profile-may-add-never-relocate",
+   "rev": "rev99",
+   "model_locus": "a profile may ADD a locator and may never RELOCATE one",
+   "conformance_check": "#102 ADVERSARIAL: a profile cannot RELOCATE a standard surface — a named key-log location is refused, resolution stays at the well-known path"
+  },
+  {
+   "id": "R69-silence-cannot-hide-evidence",
+   "rev": "rev99",
+   "model_locus": "a surface that is THERE is evidence whichever way the profile reads",
+   "conformance_check": "#102 ADVERSARIAL: an UNDECLARED surface that is PRESENT is still attested — silence cannot hide evidence"
+  },
+  {
+   "id": "R70-declaring-monotone-in-obligation",
+   "rev": "rev99",
+   "model_locus": "adding `S` to `D` can only turn a `skip` into a `FAIL`, never a `skip` into a pass",
+   "conformance_check": "#102 declaring is MONOTONE IN OBLIGATION: no declaration turns an absent surface into a pass"
+  },
+  {
+   "id": "R71-darkness-not-decidable-from-one-substrate",
+   "rev": "rev71",
+   "model_locus": "`obs(s, w) = absent` occurs in two distinct worlds",
+   "conformance_check": "#120 ADVERSARIAL: darkness is NOT decidable from one substrate — one silent declared leg yields PARTIAL, never dark"
+  },
+  {
+   "id": "R72-undeclared-anchor-still-counts",
+   "rev": "rev71",
+   "model_locus": "the anchored row never consults the declaration, so silence in",
+   "conformance_check": "#120 ADVERSARIAL: an UNDECLARED substrate carrying an anchor still counts — silence in the profile cannot hide evidence"
+  },
+  {
+   "id": "R73-producer-blind-to-own-fork",
+   "rev": "rev72",
+   "model_locus": "no function of `I_A` separates them, and `A` cannot refuse what it cannot see",
+   "conformance_check": "#122 ADVERSARIAL: two appenders from one head both succeed when the head is PRIVATE — the fork is produced and neither can see it"
+  },
+  {
+   "id": "R74-downstream-detection-does-not-happen",
+   "rev": "rev72",
+   "model_locus": "input under which the two branches are reported AS A FORK",
+   "conformance_check": "#122 ADVERSARIAL: the two branches are NEVER reported as a fork — the chain guard fires first, so downstream detection does not happen"
+  },
+  {
+   "id": "L161-shortfall-names-its-input",
+   "rev": "round-209",
+   "model_locus": "F.5.1e — a rung decided by a CONJUNCTION reports WHICH conjunct failed, from a closed reason set. `verifyStream` has six shortfalls below `complete`; four returned a bare word until 2026-08-13, and the verdict is UNCHANGED by that defect, so no verdict-comparing check can reach it.",
+   "conformance_check": "#161 every completeness shortfall NAMES its missing input"
+  }
+ ]
 }

@@ -209,8 +209,18 @@ export const MUTATIONS = [
     id: 'undeclared-grid-mints-complete', mustDetect: true, observe: ['conformance'],
     why: 'the no-grid ceiling. Broken, a stream with no signed cadence reports no-omission — the completeness axis starts paying for silence.',
     file: 'packages/ust-protocol/index.mjs',
-    from: "    return { complete: 'chain-consistent', head: prevHash, ...(a.from !== undefined && a.to !== undefined ? { interval: { from: a.from, to: a.to } } : {}) };",
-    to: "    return { complete: 'complete', head: prevHash, ...(a.from !== undefined && a.to !== undefined ? { interval: { from: a.from, to: a.to } } : {}) };",
+    from: "    return { complete: 'chain-consistent', head: prevHash, ...(bounded ? { interval: { from: a.from, to: a.to } } : {}),",
+    to: "    return { complete: 'complete', head: prevHash, ...(bounded ? { interval: { from: a.from, to: a.to } } : {}),",
+  },
+  // #161 — a shortfall that says nothing. The verdict is UNCHANGED by this break (still `provisional`), which is
+  // exactly why it needs its own mutant: no verdict-comparing check can see it, and the defect it reproduces sat in
+  // the tree until someone read the returned object field by field.
+  {
+    id: 'shortfall-refuses-without-naming', mustDetect: true, observe: ['conformance'],
+    why: 'the shortfall vocabulary. Broken, an absent checkpoint answers a bare word and the consumer cannot tell WHICH input would move it — the F.5.1e defect, one layer down from the verdict.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "    reason: genesis\n      ? 'open-tail: no checkpoint, so the observed set has no declared extent — the chain proves no-deletion BETWEEN the frames held, never that they are all of them'\n      : 'unbounded: neither a genesis nor a checkpoint — the origin is unbound and the extent undeclared; the chain proves no-deletion between the frames held and nothing about either end' };",
+    to: "  };",
   },
   // ── verdict seams: the battery's hard requirements ────────────────────────────────────────────────────────────
   {
