@@ -3244,7 +3244,7 @@ export const REGISTRY = deepFreeze({   // round-25 P0-04 — DEEP-frozen: the ca
   // are why this set is here: the spec's registry section is GENERATED from it, and every implementation's
   // literal — including the clean-room ones, which must NOT import this module — is diffed against it.
   partitionKinds: ['captured', 'computed', 'absence'],
-  // ANCHOR REFUSAL REASONS (§11.2, F.5c.1, F.5.1b) — the CLOSED set a substrate connector may return beside
+  // ANCHOR REFUSAL REASONS (§11.2, F.5c.1, F.5.1e) — the CLOSED set a substrate connector may return beside
   // `final: false`, mapped to WHO CAN ACT on it. The three values are the F.5.1 table collapsed to its only
   // decision-relevant axis: `evidence` = the publisher publishes different bytes; `faculties` = the consumer
   // brings a connector, a network, a trust root; `ruleset` = NEITHER party, this build has no rules for it.

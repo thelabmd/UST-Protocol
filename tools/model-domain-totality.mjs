@@ -235,7 +235,25 @@ if (specUnbound.length > 8) console.log(`    … and ${specUnbound.length - 8} m
 // finds a section, or the binding test accepts a citation that resolves against nothing. Both are checked against
 // SYNTHETIC input rather than against the model, so a control cannot drift with the document it guards.
 {
+  // A COROLLARY LABEL NAMES ONE COROLLARY (#156). Round 207 introduced `F.5.1b (a report may name only a term it
+  // MEASURED)` into a section that already had `F.5.1b (the report grants nothing)` — and `F.5.1d` cites F.5.1b BY
+  // NAME, so the citation became ambiguous the moment the second one landed. It reached HEAD and was found only
+  // because an unrelated issue quoted the older corollary back. Nothing could have caught it: the ambiguous-term
+  // gate pins WORDS by hand because which word names two mechanisms is a judgement, while a label defined twice is
+  // DERIVABLE — so it belongs here, where the whole model is already parsed.
+  {
+    const defs = [...MODEL.matchAll(/\*\*Corollary (F\.[0-9a-z.-]+?)\s*\(/g)].map((m) => m[1]);
+    const dup = [...new Set(defs.filter((l, i) => defs.indexOf(l) !== i))];
+    if (dup.length) {
+      dup.forEach((l) => console.error(`  ✗ corollary label ${l} defines ${defs.filter((x) => x === l).length} different corollaries — every citation of it is ambiguous, and the older one is the one other sections already reference by name`));
+      process.exit(1);
+    }
+    console.log(`  ✓ ${defs.length} corollary labels, each naming exactly one corollary`);
+  }
+
   const ctl = [
+    ['a duplicate corollary label is DETECTED — the leg above is not vacuous',
+      (() => { const d = ['F.9.9z', 'F.9.9z'].filter((l, i, a) => a.indexOf(l) !== i); return d.length === 1; })()],
     ['the heading scanner finds a synthetic F-section',
       [...'\n## F.9.9 a fabricated section that exists only in this control\n'.matchAll(/\n(#{2,4}) (F\.[0-9a-z.]+[^\n]*)/g)].length === 1],
     ['the heading scanner finds nothing in text that has no F-section',

@@ -11177,7 +11177,7 @@
   {
    "id": "anchor-refusal-proof-absent",
    "kind": "anchor-refusal",
-   "rule": "S11.2/F.5.1b — a conjunction refuses by NAMING its conjunct, from the closed registry set R, and each reason carries the term that says who can act",
+   "rule": "S11.2/F.5.1e — a conjunction refuses by NAMING its conjunct, from the closed registry set R, and each reason carries the term that says who can act",
    "expect": "proof-absent",
    "term": "evidence",
    "note": "#155 — the anchor carries no proof and no pointer to fetch one",
@@ -11189,7 +11189,7 @@
   {
    "id": "anchor-refusal-unreadable-entry",
    "kind": "anchor-refusal",
-   "rule": "S11.2/F.5.1b — a conjunction refuses by NAMING its conjunct, from the closed registry set R, and each reason carries the term that says who can act",
+   "rule": "S11.2/F.5.1e — a conjunction refuses by NAMING its conjunct, from the closed registry set R, and each reason carries the term that says who can act",
    "expect": "unreadable-entry",
    "term": "evidence",
    "note": "#155 — the logged entry is present and does not decode",
@@ -11207,7 +11207,7 @@
   {
    "id": "anchor-refusal-unsupported-proof-form",
    "kind": "anchor-refusal",
-   "rule": "S11.2/F.5.1b — a conjunction refuses by NAMING its conjunct, from the closed registry set R, and each reason carries the term that says who can act",
+   "rule": "S11.2/F.5.1e — a conjunction refuses by NAMING its conjunct, from the closed registry set R, and each reason carries the term that says who can act",
    "expect": "unsupported-proof-form",
    "term": "ruleset",
    "note": "#155 — an entry kind this build has no rules for — NEITHER party can move it",
@@ -11225,7 +11225,7 @@
   {
    "id": "anchor-refusal-entry-attests-another-root",
    "kind": "anchor-refusal",
-   "rule": "S11.2/F.5.1b — a conjunction refuses by NAMING its conjunct, from the closed registry set R, and each reason carries the term that says who can act",
+   "rule": "S11.2/F.5.1e — a conjunction refuses by NAMING its conjunct, from the closed registry set R, and each reason carries the term that says who can act",
    "expect": "entry-attests-another-root",
    "term": "evidence",
    "note": "#155 — the entry is sound and commits to a DIFFERENT root",
@@ -11243,7 +11243,7 @@
   {
    "id": "anchor-refusal-inclusion-failed",
    "kind": "anchor-refusal",
-   "rule": "S11.2/F.5.1b — a conjunction refuses by NAMING its conjunct, from the closed registry set R, and each reason carries the term that says who can act",
+   "rule": "S11.2/F.5.1e — a conjunction refuses by NAMING its conjunct, from the closed registry set R, and each reason carries the term that says who can act",
    "expect": "inclusion-failed",
    "term": "evidence",
    "note": "#155 — the RFC 6962 path does not reach the proof rootHash — the conjunct the #155 defect lived in",
@@ -11262,7 +11262,7 @@
   {
    "id": "anchor-refusal-checkpoint-unsigned",
    "kind": "anchor-refusal",
-   "rule": "S11.2/F.5.1b — a conjunction refuses by NAMING its conjunct, from the closed registry set R, and each reason carries the term that says who can act",
+   "rule": "S11.2/F.5.1e — a conjunction refuses by NAMING its conjunct, from the closed registry set R, and each reason carries the term that says who can act",
    "expect": "checkpoint-unsigned",
    "term": "evidence",
    "note": "#155 — inclusion holds and rootHash is not a head the pinned log key signed",
@@ -11281,7 +11281,7 @@
   {
    "id": "anchor-refusal-substrate-unreachable",
    "kind": "anchor-refusal",
-   "rule": "S11.2/F.5.1b — a conjunction refuses by NAMING its conjunct, from the closed registry set R, and each reason carries the term that says who can act",
+   "rule": "S11.2/F.5.1e — a conjunction refuses by NAMING its conjunct, from the closed registry set R, and each reason carries the term that says who can act",
    "expect": "substrate-unreachable",
    "term": "faculties",
    "note": "#155 — a surface the verifier must read did not answer — the CONSUMER faculty term",

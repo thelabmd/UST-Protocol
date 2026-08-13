@@ -2027,7 +2027,7 @@ Independent re-implementation is expected; the vectors make "verify without trus
   substrates register the same way — the protocol is substrate-agnostic. AnchorProof keys `root,path,anchor`.
 - **anchor refusal reason** — a connector answering `final: false` MUST name WHICH check failed, from this closed
   set, and each reason is mapped to WHO CAN ACT on it: `evidence` the publisher, `faculties` the consumer,
-  `ruleset` neither party (F.5.1b). A shared unnamed `false` over a conjunction collapses those three into one
+  `ruleset` neither party (F.5.1e). A shared unnamed `false` over a conjunction collapses those three into one
   word, and the collapse resolves toward whoever is reading — measured #155, where a defect in the verifier's own
   arithmetic was reported to readers as a limit of their browser and stayed there sixteen days.
   <!-- BEGIN spec-sync:anchor-refusal-reasons -->

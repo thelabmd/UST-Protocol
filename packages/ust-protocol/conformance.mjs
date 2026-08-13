@@ -342,7 +342,7 @@ for (const v of V.vectors) {
       const got = r.error === 'E-KEY' ? 'E-KEY' : 'admitted';
       check(v.id, got === v.expect, `admits(k,c) ${v.id}: got ${got} (${r.error ?? r.result}) expected ${v.expect}`); break; }
     case 'document-negative': check(v.id, P.verify(v.doc, { context: 'data' }).result === 'INVALID'); break;
-    // #155 / F.5.1b — every element of the closed refusal set R, driven out of the SHIPPED entry point rather than
+    // #155 / F.5.1e — every element of the closed refusal set R, driven out of the SHIPPED entry point rather than
     // asserted about a helper. A wrong reason is as red as a wrong verdict here, which is the point: before this,
     // five distinct failures and both fetch paths shared one word, and the prose beside that word named the reader.
     case 'anchor-refusal': {
@@ -1681,7 +1681,7 @@ console.log('\n═════════════════════�
     }
     check('#155 the web witness inclusion climb verifies an index above 2^31', disagree.length === 0, disagree.join('; '));
 
-    // F.5.1b — COVERAGE of the closed set R, which is a different claim from "each vector passes". The `anchor-refusal`
+    // F.5.1e — COVERAGE of the closed set R, which is a different claim from "each vector passes". The `anchor-refusal`
     // vectors above execute whatever the corpus happens to contain; this asserts that what it contains is the WHOLE
     // domain. #154 is the reason the two are separated: 41 documents passed a parity gate while none of them carried
     // the element the two implementations disagreed about, so a green run said nothing about the gap.

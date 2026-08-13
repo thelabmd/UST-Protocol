@@ -158,6 +158,8 @@ jobs:
         run: node tools/consumer-probe-gate.mjs
       - name: dependency floors (a package declares the sibling version this tree actually tested against)
         run: node tools/dependency-floor-gate.mjs --write && git diff --exit-code -- '**/package.json' && node tools/dependency-floor-gate.mjs
+      - name: pending bindings (a deferral names a tracker that is still OPEN, and only in the resolvable form)
+        run: node tools/pending-binding-gate.mjs --write && git diff --exit-code -- tools/tracker-state.json && node tools/pending-binding-gate.mjs
       - name: root inventory (every top-level file AND directory is declared, not accumulated)
         run: node tools/root-inventory-gate.mjs
       - name: operator layer round-trip (@ust-protocol/operator PRODUCES exactly what the base VERIFIES)

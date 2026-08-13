@@ -138,7 +138,7 @@ export function makeSubstrateVerify({ fetchImpl = fetch, api = REKOR, rekorPubKe
     // Until 2026-08-07 all of them returned `null`; three then became stated, and SIX others — the malformed
     // pointer, the two fetch failures, the absent proof, and the two conjuncts below — kept a bare `false`. Those two
     // conjuncts are exactly where the #155 defect lived, and a caller could not tell them apart from a network
-    // outage. F.5.1b: a conjunction refuses by NAMING its conjunct, because the reasons differ in who can act.
+    // outage. F.5.1e: a conjunction refuses by NAMING its conjunct, because the reasons differ in who can act.
     let entry;
     try { entry = JSON.parse(Buffer.from(bodyB64, 'base64').toString('utf8')); }
     catch { return { final: false, time: 'unproven', reason: 'unreadable-entry' }; }

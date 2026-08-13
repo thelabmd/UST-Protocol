@@ -1639,6 +1639,18 @@
    "code": "packages/ust-protocol/index.mjs :: REGISTRY.anchorRefusalReasons — the closed set with the term that says WHO CAN ACT, realized once; docs/ust-resolve.mjs carries the clean-room literal and the BigInt climb, packages/ust-rekor-verify/index.mjs names the six refusals it had left bare",
    "vector": "anchor-refusal-inclusion-failed",
    "test": "packages/ust-protocol/conformance.mjs :: #155 the web witness inclusion climb verifies an index above 2^31 — the leg it replaced PINNED the browser copy to the 32-bit literal; mutation-controlled by reverting the climb (this leg plus three in tools/unbounded-index-gate.mjs go red) and by dropping, mis-terming or straying a reason (spec-code-sync and the coverage leg name which)"
+  },
+  {
+   "round": 208,
+   "math": "A DEFERRAL IS A CLAIM ABOUT SOMETHING THIS DOCUMENT CANNOT SEE.",
+   "spec": {
+    "excluded": "Round 208 changed nothing normative. The deferral rule governs how the FORMAL MODEL records its own obligations — it binds this repository’s bookkeeping, not an implementation of UST, and putting it in the normative spec would oblige every porter to a discipline that is ours."
+   },
+   "code": "tools/pending-binding-gate.mjs :: resolves every `Binding: pending — #N` against a committed tracker state that `--write` regenerates; fail-closed on an unreachable tracker; tools/model-domain-totality.mjs gains the duplicate-corollary-label leg",
+   "vector": {
+    "excluded": "There is nothing language-neutral to pin. A vector fixes an INPUT and a declared RESULT a second implementation must reproduce; the subject here is whether OUR model’s deferrals resolve against OUR tracker, which no other implementation has and none should be held to."
+   },
+   "test": "tools/pending-binding-gate.mjs :: five mutations — a closed tracker, a prose deferral, a marker naming no tracker in its span, an issue absent from the state, and a duplicate corollary label — each red with its own message; the closed-tracker leg re-proven after the first attempt reported `absent from the state` instead"
   }
  ],
  "first_accounted_round": 76,

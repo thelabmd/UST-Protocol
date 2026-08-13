@@ -27,7 +27,26 @@ protocol's coercion — see F.5p.1 for the same partition one level down, on the
 of a CLOSED half is refused while an unknown member of the OPEN half is ignored. Versioning is that partition
 generalised from one document to the wire.
 
-*Status: reporting side pending, `thelabmd/UST-Protocol#138`.*
+**A DEFERRAL IS A CLAIM ABOUT SOMETHING THIS DOCUMENT CANNOT SEE.** Every section below ends in a `**Binding:**`
+line, and three of its four forms are self-contained: `realized` cites checks that resolve inside this tree, and
+`none — <reason>` is judged on its face. `pending — <tracker>` is the exception. It points OUTSIDE, so it is the
+one claim whose truth changes without anyone editing this document or the code — the day the tracker closes, the
+line becomes false in silence.
+
+It fails in both directions, and neither is visible from in here. If the work shipped, the model UNDERSTATES its
+own realization and the citations that would let a reader verify it are never written. If the work did not ship,
+the obligation has no owner while still reading as owned. A reader asking *what does UST not do yet* is handed
+answers of unknown age. Measured 2026-08-13: five of eight pending bindings named issues that were already
+closed — the oldest for 15 days — and the only enforcement asked of the reference was that it be three
+characters long (#156).
+
+So a deferral is DEFERRED, never discharged, and two things follow. **It must be resolvable** — the reference is
+checked against the live tracker, and a closed tracker forces the line to move, either to `realized` with
+citations or to a tracker that is open. Closing an issue is not discharging an obligation; only citations are.
+**And it may only be written in the marker form** — a deferral phrased as prose beside a tracker reference is
+invisible to the check that resolves it, which is how two of them survived: this very line read *Status: reporting
+side pending, #138* for the nine days after #138 closed, and F.5e.1's own `realized` line went on asserting that
+#106 *remains open* for fifteen.
 
 
 > **Status: NON-NORMATIVE.** This appendix gives a measure-theoretic semantics for UST. It defines nothing new:
@@ -1114,7 +1133,7 @@ An earlier draft of this section put the inheritance on `rotate` — the self-au
 wrong for a reason that has nothing to do with roles: see §F.5e.0. The correction does require a key-log field,
 and `supersedes` earns entry under §F.5e.2 precisely because the verifier ACTS on it to derive the role.
 
-**Binding: pending — thelabmd/UST-Protocol#106.** This section states a design the implementation does not yet
+**Binding: pending — thelabmd/UST-Protocol#158.** This section states a design the implementation does not yet
 carry, which is the point of stating it first.
 
 **Two paragraphs stood here until round 79 and are removed rather than edited, because both described `rotate`.**
@@ -1267,7 +1286,7 @@ An earlier draft of this section hedged the cadence clause as "insofar as a prof
 The hedge is the wrong shape and is withdrawn: a verifier cannot ask a profile at verification time, so a rule
 conditioned on one is not a rule.
 
-**Binding: realized — thelabmd/UST-Protocol#107 closed.** #106 (the general role vocabulary) remains open; it
+**Binding: realized — thelabmd/UST-Protocol#107 closed.** The general role vocabulary is carried by #158; it
 GENERALIZES this conjunct and does not replace it.
 
 ## F.5e.4 The verification ROLE is a partition of classes, and a one-sided partition is not one
@@ -2591,7 +2610,7 @@ assertion tells a reader that `W` is alive. It says nothing about whether `W` is
 publisher and watcher are the same party it cannot: independence is not in `σ(bytes)` (F.5o), and a watcher
 announcing its own liveness is announcing exactly the property it is entitled to announce and no other.
 
-**Binding: pending — thelabmd/UST-Protocol#137 (the report) and #138 (the ruleset term and the version verdict).** An earlier draft marked this `none — definitional`, which was
+**Binding: pending — thelabmd/UST-Protocol#158.** #137 and #138 both closed (2026-08-06 and 2026-08-04) and this line went on naming them for a week — the decay #156 names. What is owed is not the behaviour but a check the section can CITE. An earlier draft marked this `none — definitional`, which was
 wrong and closed the section's path DOWNWARD. The rule is protocol mathematics CONSUMED BY AN OPERATOR, and it
 descends: a report that lists rungs must distinguish a rung CHECKED AND MET from one NOT ATTEMPTED, which is this
 section applied to the report rather than to a watcher. Silence about a rung is the same collapse — *nothing was
@@ -3307,7 +3326,7 @@ at through a help message. The two publisher-movable rows above are *author diff
 something*, and neither is an assertion made TO the verifier. In prose all three read as "the operator can fix
 this", which is precisely why the term is named per input rather than inferred by the reader.
 
-**Corollary F.5.1b (a report may name only a term it MEASURED, and a defect in `v` has no row).** The table
+**Corollary F.5.1e (a report may name only a term it MEASURED, and a defect in `v` has no row).** The table
 assigns every missing input to a term, and F.5.1a fixes who may be advised to move it. Neither settles what a
 report may say when it has established nothing. Naming an unmeasured term is not imprecision: the terms differ in
 WHO acts, so a wrong term sends the only party who could act away from the problem. And it fails in one
@@ -3435,13 +3454,13 @@ anchor supplied and not verified. So the gate built to refuse correctness-by-coi
 coincidence: the two clauses it happened to see use the dotted form. A roster that enumerates one access shape
 of two is a sample wearing the word *enumerated*.
 
-**Binding: pending — thelabmd/UST-Protocol#137 (the report) and #138 (the ruleset term and the version verdict).**
+**Binding: pending — thelabmd/UST-Protocol#158** — for a CITABLE check, not for the behaviour: the ladder report landed in core at `rev104` and #138’s version vectors run, but no executed check carries this section’s id, so `realized` cannot honestly be written here. #137 and #138 closed on 2026-08-06 and 2026-08-04; this line named them for a week afterwards (#156).
 
 **Conformance (math ⇒ code ⇒ green vector, once realized).**
 - the report is derived from the SAME decision relation as the verdict; no second implementation.
 - no rung attributes an `ℐ_v`/`ρ_v` input to the publisher.
 - a rung whose input is settled is reported distinguishably from one whose input was merely not brought.
-- **a rung decided by a conjunction reports WHICH conjunct failed, from a closed reason set (F.5.1b).** The
+- **a rung decided by a conjunction reports WHICH conjunct failed, from a closed reason set (F.5.1e).** The
   refusal must be falsifiable by the reader; naming the reader's own environment is not.
 - **no verdict detail names a remedy the call already supplied (F.5.1d).** The vector pair is the theorem: the
   same document verified with and without an input must not produce the same prescriptive clause naming it.
@@ -3570,7 +3589,7 @@ would have licensed a command that silently omits three axes, with green accepta
 found only by enumerating from the verifier's own reads instead of from the mechanism names, which is the same
 discipline a gate owes its domain: enumerate, never sample.
 
-**Binding: pending — UST-Protocol#131 (the crossing command; the per-axis refusals cited in F.5y.1 are realized and executed, the composite ceremony is not).**
+**Binding: realized** — *"F.5y an uncrossed cadence log is REFUSED under the successor genesis"* · *"F.5y an uncrossed frame stream is REFUSED under the successor genesis (M4)"* · *"F.5y an uncrossed witness log makes the publisher its OWN fork"* · *"F.5y the crossing preserves the superseded root and its anchors"*. Until 2026-08-13 this line read `pending — #131 (the crossing command … the composite ceremony is not)`; #131 shipped that ceremony and closed on 2026-08-03, and the sentence denying it went on running in CI beside the four checks that contradict it for ten days (#156).
 
 ## F.5z A supersession is a TERMINAL KEY-LOG ACT — the carrier is forced, not chosen (#133)
 
@@ -3661,7 +3680,7 @@ entry (F.5e.2). Calling this operation `supersede` would be the fourth time in t
 two mechanisms, and the previous three each caused a wrong edit before anyone noticed. The operation is `reroot`
 and its field is `to_genesis`.
 
-**Binding: pending — UST-Protocol#133 (the operation is specified here and not yet realized, and the requirement it serves has no wire form at all)**
+**Binding: realized** — *"F.5z a root-signed `reroot` resolves and REPORTS the successor"* · *"F.5z the key log is TERMINAL after a `reroot` — a later entry is refused"* · *"F.5z a `reroot` naming its OWN genesis is a cycle, not a supersession"* · *"F.5z the `reroot` field set is CLOSED — a stray field is refused"* · *"F.5z.4 a supersession claimed with NO signed half is refused, not followed"* · *"F.5z.5 the two halves must AGREE — an index naming a different successor fails closed"* · *"F.5z.5 no-shrink refuses a log that DROPPED the signed half"*. Until 2026-08-13 this line read `pending — #133 (the operation is specified here and not yet realized, and the requirement it serves has no wire form at all)` — while thirteen `F.5z` checks ran on every build. #133 closed 2026-08-03; the denial stood for ten days, which is the decay #156 is about: a deferral is the one binding form whose truth changes with nobody editing anything.
 
 ## F.6 Composition — the event algebra
 
@@ -4030,7 +4049,7 @@ would have gone red and read as the mistake.
 
 Measured 2026-08-13: the shipped page could NOT confirm no-fork for any anchor written after the public log
 passed `2³¹`, and had not been able to for sixteen days — reported to readers as a limit of their own browser
-(F.5.1b). CLOSED 2026-08-13 — round 207 (#155).
+(F.5.1e). CLOSED 2026-08-13 — round 207 (#155).
 
 A rule quantified over a class and enforced at a named instance is enforced nowhere else, and the clean-room
 requirement GUARANTEES there is somewhere else. Two things follow, and they are the realization. The enforcement

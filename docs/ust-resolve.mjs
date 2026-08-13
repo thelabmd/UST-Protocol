@@ -255,7 +255,7 @@ async function rekorCheckpoint(checkpoint, rootHex, treeSize) {
 
 // Verify a rekor anchor (browser): the entry attests THIS root, the inclusion proof reaches rootHash, AND
 // rootHash is a root Rekor signed (#69 A1). All three or it is not final — and the refusal NAMES which one
-// failed, from REGISTRY.anchorRefusalReasons (#155, F.5.1b). The three conjuncts belong to DIFFERENT terms of
+// failed, from REGISTRY.anchorRefusalReasons (#155, F.5.1e). The three conjuncts belong to DIFFERENT terms of
 // the F.5.1 table, so one shared `false` tells the reader nothing about who can act, and the prose that used to
 // stand in for it named the reader's own browser — a claim the reader cannot disprove from where they stand.
 async function rekorFinal(anchorInner, rootSha) {
@@ -341,7 +341,7 @@ async function bitcoinFinal(anchorInner, rootRef, fetchImpl) {
   } catch { return { ok: false, reason: 'unreadable-entry' }; }
 }
 
-// The CLOSED anchor-refusal set (§11.2, F.5.1b) mapped to the term of the F.5.1 table each reason belongs to —
+// The CLOSED anchor-refusal set (§11.2, F.5.1e) mapped to the term of the F.5.1 table each reason belongs to —
 // which is to say, WHO can act: `evidence` the publisher, `faculties` the consumer, `ruleset` neither party.
 // Clean-room: this file may NOT import the core, so the literal lives here and `spec-code-sync` diffs it against
 // REGISTRY.anchorRefusalReasons. #154 is why that diff exists — four independent enumerations of one set is how
@@ -389,7 +389,7 @@ export async function witnessNoFork(domain, genesisHash, fetchImpl = fetch) {
     if (anchored[0].content_hash !== genesisHash) return { status: 'fork', detail: 'the anchored genesis differs from the served one' };
     return { status: 'confirmed', detail: 'a single anchored active genesis (Rekor and/or Bitcoin) — no rival root' };
   }
-  // F.5.1b — the refusal NAMES its conjunct. What stood here was a guess at the reader's environment ("explorer/log
+  // F.5.1e — the refusal NAMES its conjunct. What stood here was a guess at the reader's environment ("explorer/log
   // unreachable, or an unsupported proof"), and for sixteen days it was wrong about a defect in this very file.
   if (!active.length) return { status: 'pending', detail: 'no active genesis in the witness log', reasons: [] };
   return {
