@@ -1651,6 +1651,20 @@
     "excluded": "There is nothing language-neutral to pin. A vector fixes an INPUT and a declared RESULT a second implementation must reproduce; the subject here is whether OUR model’s deferrals resolve against OUR tracker, which no other implementation has and none should be held to."
    },
    "test": "tools/pending-binding-gate.mjs :: five mutations — a closed tracker, a prose deferral, a marker naming no tracker in its span, an issue absent from the state, and a duplicate corollary label — each red with its own message; the closed-tracker leg re-proven after the first attempt reported `absent from the state` instead"
+  },
+  {
+   "round": 209,
+   "math": {
+    "excluded": "F.5.1e already states the obligation — a rung decided by a conjunction reports WHICH conjunct failed, from a closed reason set. This round is a REALIZATION gap in verifyStream, not a new theorem, and inventing one for work the model already covers would be the vacuity this repository spends its gates on."
+   },
+   "spec": {
+    "excluded": "Nothing normative moved. The shortfall slugs are the reference report naming its own missing inputs; a second implementation is held to the VERDICT (complete / chain-consistent / provisional), which is unchanged, not to the prose beside it."
+   },
+   "code": "packages/ust-protocol/index.mjs :: verifyStream — every shortfall return carries a slug naming its missing input (`unbounded`, `open-tail`, `no-grid`, `unbounded-interval`, `cadence-change`) beside the two that already spoke (`origin-unbound`, `hole`)",
+   "vector": {
+    "excluded": "There is nothing language-neutral to pin that is not already pinned. The completeness VERDICTS have vectors; the slugs are the reference implementation explaining its own answer, and holding a porter to our wording would make conformance turn on prose rather than on the decision."
+   },
+   "test": "packages/ust-protocol/conformance.mjs :: #161 the shortfall DOMAIN is enumerated from the source, not sampled — reads verifyStream and requires every non-`complete` return to carry a reason or a named hole; mutation-proven by ADDING a seventh silent return (6 found, 1 silent) and by stripping a reason from an existing one"
   }
  ],
  "first_accounted_round": 76,

@@ -3435,7 +3435,7 @@ export function verifyStream(frames, config) {
       const cF = resolveCadence(genesis, cadenceLog, a.from, { keylog }), cT = resolveCadence(genesis, cadenceLog, a.to, { keylog });
       if (cF.error) return { error: cF.error, detail: 'cadence: ' + cF.detail };
       if (cT.error) return { error: cT.error, detail: 'cadence: ' + cT.detail };
-      if (cF.cadence !== cT.cadence) return { complete: 'chain-consistent', head: prevHash, interval: { from: a.from, to: a.to }, detail: 'interval crosses a cadence change — split it at the boundary; each side is `complete` under its own cadence (continuity)' };
+      if (cF.cadence !== cT.cadence) return { complete: 'chain-consistent', head: prevHash, interval: { from: a.from, to: a.to }, reason: 'cadence-change', detail: 'interval crosses a cadence change — split it at the boundary; each side is `complete` under its own cadence (continuity)' };
       const grid = cF.cadence > 0 ? ustGrid(a.from, a.to, cF.cadence) : null;
       if (grid) {
         const gridSet = new Set(grid);
@@ -3459,9 +3459,21 @@ export function verifyStream(frames, config) {
     // windowed checkpoint but no signed cadence (grid null) OR a checkpoint with no interval bounds. When the interval
     // WAS validated (a.from/a.to present — first==from, last==to, no frame outside) return it so a no-event claim over
     // it is completeness-backed; no-deletion over [from,to] is proven even without the grid (that only adds no-omission).
-    return { complete: 'chain-consistent', head: prevHash, ...(a.from !== undefined && a.to !== undefined ? { interval: { from: a.from, to: a.to } } : {}) };
+    // #161 — a shortfall NAMES its missing input (F.5.1e). Two situations reach this return and they are not the
+    // same shortfall: with bounds, no-deletion over [from,to] is proven and only the GRID is missing; without
+    // bounds there is no interval for completeness to be measured over at all. Reported as one word until 2026-08-13.
+    const bounded = a.from !== undefined && a.to !== undefined;
+    return { complete: 'chain-consistent', head: prevHash, ...(bounded ? { interval: { from: a.from, to: a.to } } : {}),
+      reason: bounded
+        ? 'no-grid: the interval is bounded and no-deletion over it is proven, but the publisher declares no signed cadence — no-OMISSION cannot be judged without the expected grid (§11.3)'
+        : 'unbounded-interval: the checkpoint declares no from/to, so there is no interval for completeness to be measured over — no-deletion between the frames held is proven, nothing about the ends' };
   }
-  return { complete: 'provisional', head: prevHash };                  // no checkpoint → open tail (P5)
+  // no checkpoint → open tail (P5). The two ends are bounded by DIFFERENT artifacts, so the refusal says which
+  // one is absent rather than reporting the same word for both (#161).
+  return { complete: 'provisional', head: prevHash,
+    reason: genesis
+      ? 'open-tail: no checkpoint, so the observed set has no declared extent — the chain proves no-deletion BETWEEN the frames held, never that they are all of them'
+      : 'unbounded: neither a genesis nor a checkpoint — the origin is unbound and the extent undeclared; the chain proves no-deletion between the frames held and nothing about either end' };
 }
 
 // §11.3 #39 — a NO-EVENT claim (a `kind:'absence'`/`reason:'no-event'` partition over a ust_id window) is only as

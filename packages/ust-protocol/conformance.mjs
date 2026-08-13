@@ -1728,6 +1728,33 @@ console.log('\n═════════════════════�
   // (3) omission covered by a signed gap → complete
   const h0 = fr('ust:20260628.142900', gH), hg = gp('ust:20260628.142930', P.contentHash(h0)), h2 = fr('ust:20260628.143000', P.contentHash(hg));
   check('#70 omission covered by a signed gap → complete', P.verifyStream([h0, hg, h2], { genesis: gen, checkpoint: cp(P.contentHash(h2), 3, P.contentHash(h2)) }).complete === 'complete');
+  // #161 — EVERY shortfall names its missing input (F.5.1e). Two legs, and the second is the load-bearing one:
+  // the first pins the six paths that exist today, the second enumerates the DOMAIN from the source, so a SEVENTH
+  // return added later is red the day it is written rather than the day someone measures the report. Before
+  // 2026-08-13 four of the six carried a bare word; `origin-unbound` and `hole` were the only two that spoke.
+  {
+    const iv = { from: 'ust:20260628.142900', to: 'ust:20260628.143000' };
+    const cpi = (head, n, prev, bounds) => signC(P.buildCheckpoint({ domain_shard: dom, ust_id: 'ust:20260628.143001', key_id: C.key_id }, Tc, head, n, prev, bounds));
+    const nH2 = P.contentHash(genNo), m0 = fr('ust:20260628.142900', nH2), m1 = fr('ust:20260628.142930', P.contentHash(m0)), m2 = fr('ust:20260628.143000', P.contentHash(m1));
+    const S = [f0, f1, f2], last = P.contentHash(f2);
+    const cases = [
+      ['no genesis and no checkpoint', P.verifyStream(S, {}), 'unbounded'],
+      ['genesis, no checkpoint', P.verifyStream(S, { genesis: gen }), 'open-tail'],
+      ['checkpoint, no genesis', P.verifyStream(S, { checkpoint: cpi(last, 3, last, iv) }), 'origin-unbound'],
+      ['checkpoint, no signed cadence', P.verifyStream([m0, m1, m2], { genesis: genNo, checkpoint: cpi(P.contentHash(m2), 3, P.contentHash(m2), iv) }), 'no-grid'],
+      ['checkpoint with no interval bounds', P.verifyStream(S, { genesis: gen, checkpoint: cpi(last, 3, last) }), 'unbounded-interval'],
+    ];
+    const wrong = cases.filter(([, r, want]) => !String(r.reason || '').startsWith(want + ':')).map(([n, r, want]) => `${n}: want ${want}, got ${String(r.reason ?? r.hole ?? '(nothing)').slice(0, 30)}`);
+    check('#161 every completeness shortfall NAMES its missing input', wrong.length === 0, wrong.join(' · '));
+    // the DOMAIN, read from the source: every `complete:` return that is not `complete` itself must carry a reason
+    // or a named hole. Naming the five above would pass for a sixth that says nothing.
+    const src = readFileSync(new URL('./index.mjs', import.meta.url), 'utf8');
+    const fn = src.slice(src.indexOf('export function verifyStream'), src.indexOf('\n// ─── §12.3', src.indexOf('export function verifyStream')));
+    const returns = [...fn.matchAll(/complete: '([a-z-]+)'[\s\S]*?;/g)].filter((m) => m[1] !== 'complete' && m[1] !== 'none');
+    const silent = returns.filter((m) => !/\breason:|\bhole\b[,:]/.test(m[0])).map((m) => m[0].slice(0, 60));
+    check('#161 the shortfall DOMAIN is enumerated from the source, not sampled', returns.length >= 4 && silent.length === 0,
+      `${returns.length} shortfall return(s) found, ${silent.length} carry no reason: ${silent.join(' | ')}`);
+  }
   // (4) no SIGNED cadence → the grid is undecidable → chain-consistent, NEVER complete (anti-lie: the cadence
   //     is signed in the genesis, not a caller/per-checkpoint choice, so a coarser grid cannot be claimed).
   const nH = P.contentHash(genNo), n0 = fr('ust:20260628.142900', nH), n1 = fr('ust:20260628.142930', P.contentHash(n0)), n2 = fr('ust:20260628.143000', P.contentHash(n1));
