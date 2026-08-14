@@ -198,6 +198,56 @@ if (checkFile) {
     process.exit(1);
   }
 
+  // ── THE RENDER IS PART OF THE DOCUMENT (#164). Two published reports broke in the LAYOUT while the markdown
+  // was valid and every check above was right to pass: round 211's delivery note put a fenced block inside a
+  // list item, which ends the item and unindents the rest; round 212's § 5 put one inside a four-column cell,
+  // where its unwrappable longest line pinned column 2 at 611px and starved column 4 to 119px. Same class — a
+  // block construct in a container whose layout it dominates. The generator fixed the second by construction;
+  // an AUTHOR can still write the first, so it is refused here, where the filled document is read.
+  const listFence = [];
+  {
+    let inFence = false, listIndent = null;
+    body.split('\n').forEach((l, i) => {
+      const open = /^(\s*)```/.exec(l);
+      if (open) {
+        if (!inFence && listIndent !== null && open[1].length <= listIndent) listFence.push(i + 1);
+        inFence = !inFence;
+        return;
+      }
+      if (inFence) return;
+      const item = /^(\s*)[-*+] |^(\s*)\d+\. /.exec(l);
+      if (item) listIndent = (item[1] ?? item[2]).length;
+      else if (/^\S/.test(l)) listIndent = null;
+    });
+  }
+  if (listFence.length) {
+    console.error(`\n  ✗ ${listFence.length} fenced block(s) open INSIDE a list item without being indented into it (line ${listFence.join(', ')}).\n    The fence ends the item and everything after it unindents — the markdown is valid and the page is wrong.\n    Indent the fence to the item's content column, or lift the block out of the list.`);
+    process.exit(1);
+  }
+  // A table is ONE column grid. A row that spans a different total is a ragged grid, and the row that is short
+  // is the one a reader loses. The generator pads; a hand-edited table can still be ragged.
+  const ragged = [];
+  for (const t of body.match(/<table[\s\S]*?<\/table>/g) ?? []) {
+    const spans = (t.match(/<tr>[\s\S]*?<\/tr>/g) ?? []).map((r) => (r.match(/<td[^>]*>/g) ?? [])
+      .reduce((n, c) => n + Number(/colspan="(\d+)"/.exec(c)?.[1] ?? 1), 0));
+    if (new Set(spans).size > 1) ragged.push(spans.join('/'));
+  }
+  if (ragged.length) {
+    console.error(`\n  ✗ ${ragged.length} table(s) have rows spanning DIFFERENT column totals (${ragged.join(' · ')}) — one table is one grid,\n    and a short row leaves cells a reader never sees. Pad the last cell with colspan.`);
+    process.exit(1);
+  }
+  // CONTROL — both layout rules must fire on the shapes that actually broke, and stay silent on the fixed ones.
+  {
+    const fires = (t) => { let f = false, ind = null, hit = false;
+      t.split('\n').forEach((l) => { const o = /^(\s*)```/.exec(l);
+        if (o) { if (!f && ind !== null && o[1].length <= ind) hit = true; f = !f; return; }
+        if (f) return; const it = /^(\s*)[-*+] /.exec(l); if (it) ind = it[1].length; else if (/^\S/.test(l)) ind = null; });
+      return hit; };
+    const R_HIT = fires('- an item\n\n```\ncode\n```\n');
+    const R_MISS = fires('- an item\n\n  ```\n  code\n  ```\n') || fires('prose\n\n```\ncode\n```\n');
+    if (!R_HIT || R_MISS) { console.error('✗ CONTROL: the list-fence rule does not discriminate — this check is blind'); process.exit(1); }
+  }
+
   if (marks.length) {
     console.error(`\n  ✗ ${marks.length} section(s) still carry a FILL marker — a skeleton is not a report, and an unfilled\n    marker posted to an issue reads as the tool being broken at the moment a reader trusts it:\n`);
     for (const m of marks) console.error('    ' + m.slice(0, 110));

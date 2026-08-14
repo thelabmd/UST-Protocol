@@ -121,6 +121,22 @@ for (const form of ['incident', 'audit', 'delivery']) {
   }
 }
 
+// ── 7. the RENDER is part of the document (#164). Round 211's delivery note put a fenced block inside a list
+//    item; the fence ends the item and everything after it unindents. The markdown was valid, every check passed,
+//    and the page was wrong. The generator cannot prevent it — an author writes it — so `--check` refuses it, and
+//    the same document with the fence indented into the item must still be accepted.
+{
+  const head = '## § 1 head\n\n> **no diagram** — this fixture relates nothing to anything, so a picture would invent the relation\n\n';
+  const tail = '\n\n<!-- diagram-slots: 1 -->\n';
+  const bad = join(dir, 'layout-bad.md'), good = join(dir, 'layout-good.md');
+  writeFileSync(bad, head + '- an item that owns the block:\n\n```\nline\n```' + tail);
+  writeFileSync(good, head + '- an item that owns the block:\n\n  ```\n  line\n  ```' + tail);
+  check(run(['--check', bad]).code !== 0,
+    'the check ACCEPTED a fenced block opened inside a list item — the fence ends the item, the page unindents, and the markdown is valid the whole way down');
+  check(run(['--check', good]).code === 0,
+    'the check REFUSED a fence correctly indented INTO its list item — the rule must name the broken shape, not fences near lists');
+}
+
 rmSync(dir, { recursive: true, force: true });
 
 console.log(`\n  recap-compose selfcheck   PASS ${pass}   FAIL ${fail}   (${markers} judgment marker(s) in a fresh skeleton)`);
