@@ -158,6 +158,8 @@ jobs:
         run: node tools/consumer-probe-gate.mjs
       - name: dependency floors (a package declares the sibling version this tree actually tested against)
         run: node tools/dependency-floor-gate.mjs --write && git diff --exit-code -- '**/package.json' && node tools/dependency-floor-gate.mjs
+      - name: core network boundary (the core reaches the network only where someone declared it)
+        run: node tools/core-network-boundary-gate.mjs
       - name: pending bindings (a deferral names a tracker that is still OPEN, and only in the resolvable form)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # the gate FAILS CLOSED on an unread tracker; unauthenticated is 60 req/h and would flake

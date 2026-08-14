@@ -1675,6 +1675,18 @@
     "excluded": "The VERDICT is unchanged and already vectored — INDETERMINATE(unsupported_construction) in every case, which is the half a porter must reproduce. The route is this implementation explaining its own answer; holding a second implementation to our package names would make conformance turn on our distribution rather than on the decision."
    },
    "test": "packages/ust-protocol/conformance.mjs :: #153 every registered construction is reachable from the refusal it explains — mutation-proven by dropping the route, by inventing a claimant for an unregistered name, and by ADDING a construction the message cannot reach, which reddens the coverage leg alone"
+  },
+  {
+   "round": 211,
+   "math": "the floor is decidable offline by anyone",
+   "spec": {
+    "excluded": "Nothing normative moved. Which exports of OUR core reach the network is a property of this repository, not an obligation on an implementation — a porter may put its transport wherever it likes, provided its LIGHT floor stays offline-decidable, which F.5 already requires."
+   },
+   "code": "tools/core-network-boundary-gate.mjs :: discovers every acquisition of the global fetch in packages/ust-protocol/index.mjs, attributes each to its owning export by brace depth, and requires a declared reason; a declared name that no longer reaches also fails",
+   "vector": {
+    "excluded": "There is nothing language-neutral to pin. A vector fixes an input and a declared result a second implementation must reproduce; this measures where OUR module puts its transport, which no other implementation has and none should be held to."
+   },
+   "test": "tools/core-network-boundary-gate.mjs :: mutation-proven by ADDING a third reach, by a reach at module scope, and by renaming a declared export — the adding direction fixed in the card before the gate was written, because a boundary gate passes forever on the entries its author had in mind"
   }
  ],
  "first_accounted_round": 76,
