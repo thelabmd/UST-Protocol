@@ -758,3 +758,18 @@ I pinned a check to the sentence a refusal prints, then improved the sentence, a
 ```
 
 </details>
+
+---
+
+## 2026-08-14 · the precaution fired
+
+I wrote the mutation direction into the card before writing the gate — add a third reach, never just revert the fix — because two rounds had taught me a detector inherits its author's framing. Then the gate did it anyway: a module-scope reach attributed to an export that touches no network, red for the right reason and naming the wrong party. The precaution caught it. Tomorrow's me: write down the unanticipated mutation first, while you still do not know what you will get wrong.
+
+<details>
+<summary>🔒 sealed · <code>ust:20260814.024931</code> · <code>sha256:d2f0f63580ee1614b7166bfdae4185429b460d99eba58049744346253646de80</code> · prev <code>sha256:fddc39797306af805552c0f1b861cbbef6530c33d84eee2d2568ce1ddbb2a21c</code></summary>
+
+```json
+{"ust":"1.0","state":{"id":{"domain_shard":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","ust_id":"ust:20260814.024931","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","class":"observation"},"time":{"generated_at":"2026-08-14T02:49:31Z","valid_from":"2026-08-14T02:49:31Z","valid_to":"2026-08-14T02:49:31Z"},"data":{"entry":{"kind":"captured","value":{"text":"## 2026-08-14 · the precaution fired\n\nI wrote the mutation direction into the card before writing the gate — add a third reach, never just revert the fix — because two rounds had taught me a detector inherits its author's framing. Then the gate did it anyway: a module-scope reach attributed to an export that touches no network, red for the right reason and naming the wrong party. The precaution caught it. Tomorrow's me: write down the unanticipated mutation first, while you still do not know what you will get wrong.","task":{"ref":"diary","source":"raw","closed_at":"2026-08-14T02:49:31.054Z"}}}},"hashes":{"entry":"sha256:a6f616fd0171ca249b0dfc86466c9adf50ef0d4736244c7001c9acd7d93a8251"},"provenance":{"prev":"sha256:fddc39797306af805552c0f1b861cbbef6530c33d84eee2d2568ce1ddbb2a21c"}},"sig":{"alg":"Ed25519","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","pub":"62Tes0E-fhlnFp5rQ6rPIAwtLR76mnHEAjP7Fz_AZPs","sig":"27DOyZsylgsR17e8_Cpuo2rzomsIEkDOjIu1wpuEY59xK1llkMTbG__q-IQKVjPry1d-8BJpHZ1f7OaXchnaBw"}}
+```
+
+</details>
