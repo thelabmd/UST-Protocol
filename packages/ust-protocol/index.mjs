@@ -3087,7 +3087,9 @@ export { verifyAuthorityBundle, buildAuthorityProof, checkAuthorityProof, checkA
 //     vectors + guard before it ships). The linear tier LIGHT ⊆ HIGH ⊆ TOP is ONE policy projection of a PRODUCT of
 //     FOUR orthogonal, independently-strengthening STRENGTH axes — identity and freshness strengthen SEPARATELY
 //     (F.5 gap 1/3, product-incomparability M1.4). Each axis is a finite CHAIN (a rank); AssuranceState is their
-//     product under the componentwise (partial) order — a LATTICE of 2·4·4·2 = 64 states: meet = per-axis min,
+//     product under the componentwise (partial) order — a LATTICE of 2·3·4·2 = 48 states (identity is 3 rungs
+//     since round-53 dropped `pinned`; the comment read 64 until 2026-08-14, when the arithmetic had not followed
+//     the removal — spec §F.5.0 and formal-model F.5.0 carried 48 correctly throughout): meet = per-axis min,
 //     join = per-axis max. `projectTier` reads ONLY identity+time (the classic tier); freshness rides alongside.
 //     M1.1 (rc.36): EvidenceBasis is NOT a strength axis — a capability set is a Boolean lattice (P(Caps), ⊆), not a
 //     4-chain; the rc.35 five-axis product (256) was self-contradictory ("a SET" yet "every axis is a total order").
