@@ -143,7 +143,11 @@ if (checkFile) {
   }
 
   // ── every SLOTTED section decides: a diagram, or a stated refusal. An absence is neither. ──────────────
-  const declared = body.match(/<!-- diagram-slots: ([^>]*?) -->/);
+  // The generator APPENDS this line last, so read the LAST one. A report that quotes the marker while describing
+  // a defect in it would otherwise be refused for containing its own subject — the record of a defect must not read
+  // as the defect, the same trap `unbounded-index-gate` closed by stripping comments before scanning. Measured: the
+  // round-212 report quoted an EMPTY declaration as the thing it was fixing and was refused for having one.
+  const declared = [...body.matchAll(/<!-- diagram-slots: ([^>]*?) -->/g)].pop();
   if (!declared) {
     console.error('✗ the composed file declares no diagram-slot list — recompose it; a check cannot enumerate a domain the file does not carry');
     process.exit(1);
