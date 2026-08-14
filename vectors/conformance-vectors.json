@@ -19,8 +19,8 @@
     "_": "WHAT A VECTOR MAY PIN — read this before excluding the `vector` layer of a round, and before deciding a case \"cannot be a vector\". Derived from THIS corpus on 2026-08-10, not declared: 228 vectors across 43 kinds.",
     "the_rule": "A vector is a FIXED INPUT and a DECLARED RESULT that a runner must reproduce. The input being a DOCUMENT is one case among several; the result being a VERDICT is one case among several.",
     "measured_2026_08_10": {
-      "total": 252,
-      "kinds": 47,
+      "total": 254,
+      "kinds": 48,
       "input_is_a_document": 45,
       "input_is_a_value_or_string": 75,
       "input_is_a_genesis_plus_log": 63,
@@ -28,7 +28,8 @@
       "forms": 8,
       "_how_these_were_counted": "THREE of these are re-derived on every run by the UST#147 checks (total, kinds, forms) and cannot drift. `input_is_a_document` counts vectors carrying a `doc` field and `input_is_a_genesis_plus_log` counts those carrying a `genesis` field — both reproduced on 2026-08-10 while adding the round-138/139/142 vectors, which is how the second one moved from 59 to 63. `input_is_a_value_or_string` and `input_is_raw_bytes` are the counts recorded when this definition was first derived, and THEIR FORMULA WAS NEVER WRITTEN DOWN: neither a field scan nor a kind roster reproduces 75 or 27. They were left untouched here rather than quietly re-fitted, because a number adjusted to survive a gate is worse than a number that admits it cannot be re-derived. Note also that a count keyed to a FIELD is not a count keyed to MEANING — the four stream vectors added in round 198 take documents as input and do not appear under `input_is_a_document`, because their documents arrive in `frames`. Making every one of these derivable (a kind → form roster, so a new kind cannot exist outside the definition) is tracked as its own round.",
       "_round_207": "#155 added 7 `anchor-refusal` vectors — a form the earlier derivation had no instance of: the input is an ANCHOR and a root, and the declared result is a REFUSAL REASON rather than a verdict. It is recorded here because the definition exists to stop \"this cannot be a vector\" from being asserted, and a refusal reason was exactly the kind of thing that argument would have excluded.",
-      "_round_216": "#42 added 2 `map-currency` vectors — a form whose input is a DOCUMENT plus a consumer trust CONFIGURATION and whose declared result is a coordinate ON the identity resolution rather than a tier. It is recorded because the currency basis is decided at the admission door and at no primitive below it, so a porter reproducing only the map primitives would reproduce none of it; and because the second vector's `expect_absent` is what makes the pair non-vacuous — asserting a strength alone stays green on a build that dropped the coordinate."
+      "_round_216": "#42 added 2 `map-currency` vectors — a form whose input is a DOCUMENT plus a consumer trust CONFIGURATION and whose declared result is a coordinate ON the identity resolution rather than a tier. It is recorded because the currency basis is decided at the admission door and at no primitive below it, so a porter reproducing only the map primitives would reproduce none of it; and because the second vector's `expect_absent` is what makes the pair non-vacuous — asserting a strength alone stays green on a build that dropped the coordinate.",
+      "_round_217": "#151 added 2 `refusal-shape` vectors — a form whose declared result is the SET OF FIELDS a verdict carries rather than its value. Recorded because both halves are normative and a one-directional check is satisfied by a refusal that simply became an answer: one vector names what MUST be present, its twin names what MUST NOT."
     },
     "forms": [
       {
@@ -12061,6 +12062,99 @@
         "map_root_currency",
         "map_root"
       ]
+    },
+    {
+      "kind": "refusal-shape",
+      "id": "refusal-shape-01-measured-facts-ride",
+      "rule": "S14/F.5.1f a refusal carries every coordinate it MEASURED and the vocabulary that refused — the undecided case is where the reader must choose what to bring, so it may not be the one served by prose",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "refusal.example",
+            "ust_id": "ust:20260709.00",
+            "key_id": "sha256:406c4c37a1e17178ffda0aaddc363cfe40d9c4f272b3bf9051a2bc915ffa0820",
+            "class": "observation"
+          },
+          "time": {
+            "generated_at": "2026-07-09T00:00:00Z",
+            "valid_from": "2026-07-09T00:00:00Z",
+            "valid_to": "2027-07-09T00:00:00Z"
+          },
+          "data": {
+            "x": {
+              "kind": "captured",
+              "value": {
+                "v": "1"
+              }
+            }
+          },
+          "hashes": {
+            "x": "sha256:412b7420e68138e67e30b77f0d27e6df4d55b717a7571ecb97330a96dabcbbcf"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:406c4c37a1e17178ffda0aaddc363cfe40d9c4f272b3bf9051a2bc915ffa0820",
+          "pub": "Ub-uf6ksUVUSzTrUQnYOQWEuWd_sORP2cLchwEJVsGg",
+          "sig": "SI5gU0O5yGtpppKnNJEmZ17msQW4GB7KlGA5xyHeVbP2sA7cb9mW8MzR08KlQnD5EO7WBAN1Cfav4d2sSVDvAw"
+        }
+      },
+      "opts": {
+        "context": "data"
+      },
+      "expect_present": [
+        "assurance",
+        "absent",
+        "verifier",
+        "registry_digest"
+      ],
+      "expect_result": "INDETERMINATE"
+    },
+    {
+      "kind": "refusal-shape",
+      "id": "refusal-shape-02-no-dispositive-field-and-no-invented-axis",
+      "rule": "S14/F.5.1f a refusal carries NO tier — the field a consumer branches on to proceed — and never floors an axis it did not reach: the integrity floor `invalid` is a FINDING, and inability is not guilt",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "refusal.example",
+            "ust_id": "ust:20260709.00",
+            "key_id": "sha256:406c4c37a1e17178ffda0aaddc363cfe40d9c4f272b3bf9051a2bc915ffa0820",
+            "class": "observation"
+          },
+          "time": {
+            "generated_at": "2026-07-09T00:00:00Z",
+            "valid_from": "2026-07-09T00:00:00Z",
+            "valid_to": "2027-07-09T00:00:00Z"
+          },
+          "data": {
+            "x": {
+              "kind": "captured",
+              "value": {
+                "v": "1"
+              }
+            }
+          },
+          "hashes": {
+            "x": "sha256:412b7420e68138e67e30b77f0d27e6df4d55b717a7571ecb97330a96dabcbbcf"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:406c4c37a1e17178ffda0aaddc363cfe40d9c4f272b3bf9051a2bc915ffa0820",
+          "pub": "Ub-uf6ksUVUSzTrUQnYOQWEuWd_sORP2cLchwEJVsGg",
+          "sig": "SI5gU0O5yGtpppKnNJEmZ17msQW4GB7KlGA5xyHeVbP2sA7cb9mW8MzR08KlQnD5EO7WBAN1Cfav4d2sSVDvAw"
+        }
+      },
+      "opts": {
+        "context": "data"
+      },
+      "expect_absent_fields": [
+        "tier"
+      ],
+      "expect_integrity_not": "invalid"
     }
   ]
 }

@@ -3552,6 +3552,77 @@ of two is a sample wearing the word *enumerated*.
 - **no verdict detail names a remedy the call already supplied (F.5.1d).** The vector pair is the theorem: the
   same document verified with and without an input must not produce the same prescriptive clause naming it.
 
+**Corollary F.5.1f (a refusal carries every MEASURED fact and no DISPOSITIVE field).** The report corollaries
+above govern what a diagnostic may say. This one governs what the REFUSAL ITSELF carries, which is a different
+surface and was starved by an argument that reads as prudence.
+
+Let `A(d, ℐ)` be the assurance state and `C(d)` the claim the document makes by its own form — a name-form
+`domain_shard` claims a name, a key-form claims only a key. The disposition is `VALID:π(A)` when `A` decides `C`
+and `INDETERMINATE` when it does not. A refusal is therefore not the statement that `A` is unknown; it is the
+statement that `A` does not reach `C`. Withholding a coordinate of `A` that WAS measured returns strictly less
+than the run established, on precisely the branch where the reader must decide what to bring, and the
+measurement is already spent.
+
+**§14 had already settled both halves, and the verdict did not carry them.** The normative text states that
+`INDETERMINATE` carries NO tier and that *its assurance is PARTIAL, not `⊥`* — this corollary derives the same
+two facts from R2 rather than introducing them, which is the honest record: the rule existed and nothing
+returned it. That makes the defect the same class as F.5p's — an obligation stated where no surface discharges
+it — and not a gap in the rules.
+
+**The lattice has no value meaning NOT EVALUATED, and the first attempt at this corollary assumed it did.**
+The tempting argument is that `A` is total — every axis is a chain with a floor, so an unfinished run reports
+`⊥` rather than an absence. Measured against the axes, that argument is false on one coordinate, and the
+asymmetry is why §14 says PARTIAL rather than `⊥`:
+
+| axis | floor | what the floor SAYS |
+|---|---|---|
+| identity | `self-asserted` | nothing beyond the document's own key was established |
+| freshness | `unverified` | nothing about currency was established |
+| time | `unproven` | no anchor was established |
+| **integrity** | **`invalid`** | **the canon/hash/signature check RAN and FAILED** |
+
+Three floors mean *nothing proven*; the fourth is a FINDING. So `⊥` is not the honest report of an unfinished
+run — a refusal emitting it would assert the document is invalid, which is the one thing §14 forbids a refusal
+to say (*inability is not guilt*). Hence a coordinate of `A` rides the refusal exactly when it was MEASURED, and
+an unmeasured coordinate is ABSENT — absence being the word this tree already uses where a slot has no honest
+value. A refusal reporting `integrity: invalid` is an INVALID verdict wearing an INDETERMINATE label, and a gate
+must refuse it.
+
+**The projection may not ride, and the reason is NOT informational.** `π` is a function of `A`, so a refusal
+carrying `A` already determines the tier: withholding the field withholds no INFORMATION, and any argument
+phrased that way is false. The prohibition is about AFFORDANCE. Let `F` be the fields on which a consumer
+branches in order to PROCEED — `result` and the tier. §14/#44 makes a refusal un-skippable by returning it as an
+error the caller must acknowledge rather than a datum it may read past; a refusal object carrying the tier is
+SHAPED like an answer, and the shape is what licenses the act. Hence
+
+> a refusal carries every coordinate of `A` and no member of `F`.
+
+The information stays reachable — `π` (`projectTier`) is exported and normative — so a consumer that wants the
+projection computes it in its own code. That is a different act from reading a field, and the difference is the
+whole of the protection: we do not hide the tier, we decline to pre-chew it.
+
+**Attribution belongs on a refusal a fortiori, and the standing argument for excluding it is unsound.** The
+attribution rule was stated as *every VALID verdict carries both fields; a refusal carries neither (nothing to
+attribute)*. Consider a refusal whose cause is an ABSENT FACULTY — `INDETERMINATE(unsupported_alg)`, the case
+§14 already normalizes. Its entire content is a fact about the VERIFIER: this build cannot evaluate the
+primitive, and a build that can answers normally on the same bytes. Attribution is then the only coordinate that
+separates *the document does not support the claim* from *this build could not evaluate it*, which are opposite
+instructions to the reader. And `verifier`/`registry_digest` are not members of `F`: nobody proceeds on a
+version. So the exclusion removed a fact exactly where it decides the reader's next move.
+
+**Realization (rc.72 line, REV 70).** One refusal shape across the core verdict, the MCP tool result and the
+operator feed's FULL projection: `assurance` (the measured axes), `absent` (the same array `explainLadder`
+computes, each entry naming its `party` and whether it is `movable`), `verifier` and `registry_digest`. No
+`tier`. A gate holds BOTH halves — every measured fact present on the refusal, and no dispositive field present
+— because a one-directional check would be satisfied by a refusal that simply became an answer.
+
+**Conformance.**
+- `A` is returned where it was measured: *"F.5.1f a refusal carries the MEASURED assurance axes"*.
+- and never invented where it was not: *"F.5.1f a refusal never reports integrity invalid — the one floor that is a finding"*.
+- the dispositive field never rides: *"F.5.1f a refusal carries NO tier — the field a consumer branches on to proceed"*.
+- attribution on a refusal: *"F.5.1f a refusal names the vocabulary that refused (verifier + registry_digest)"*.
+- one computation, not two (F.5.1b): *"F.5.1f the refusal's absent[] is what explainLadder computes, not a second derivation"*.
+
 ## F.5x Authorization reads the DOCUMENT, so `class` is not one axis among several — it is the only one there is (#130)
 
 Round 149 stated the class-sets for `admits(k, c)` and an operator immediately asked the reasonable question:

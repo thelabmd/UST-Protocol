@@ -29,6 +29,13 @@ export const MUTATIONS = [
     to: "const mapRootBasis = (trust, root) => 'consumer-asserted'; /* mutant */",
   },
   {
+    id: 'refusal-drops-its-facts', gate: 'node packages/ust-protocol/conformance.mjs',
+    why: 'formal model F.5.1f — the ONE seam that gives every INDETERMINATE exit its shape. Broken, a refusal goes back to naming no vocabulary and no absent input, which is the state measured before round 217: five fields against the answer\'s nine, on precisely the branch where the reader must decide what to bring.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: 'return { ...facts, absent: absentInputs(opts), verifier: VERSION, registry_digest: registryDigest() };',
+    to: 'return { ...facts }; /* mutant */',
+  },
+  {
     id: 'map-root-currency-unlabelled', gate: 'node packages/ust-protocol/conformance.mjs',
     why: 'formal model F.5a.2b — a pinned root supplies CURRENCY by axiom, and an axiom the verdict does not label reads as an evidence fact. Broken, the map rung ships with no currency coordinate, which is exactly the silence this round removed: the verdict says a superseded binding is active and offers nothing to refuse on.',
     file: 'packages/ust-protocol/index.mjs',

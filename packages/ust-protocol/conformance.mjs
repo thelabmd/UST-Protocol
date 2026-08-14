@@ -399,6 +399,15 @@ for (const v of V.vectors) {
     // F.5a.2b — the CURRENCY coordinate is decided at the ADMISSION door, not at the map primitive, so a porter
     // reproduces it here and nowhere else. `expect_absent` is the load-bearing half: without it a vector asserting
     // only a strength would stay green on a build that dropped the coordinate entirely.
+    // F.5.1f — the declared result is the SET OF FIELDS, and BOTH halves are normative: a one-directional check is
+    // satisfied by a refusal that simply became an answer, so one vector names what must be present and its twin
+    // what must not.
+    case 'refusal-shape': { const r = P.verify(v.doc, v.opts || {});
+      let ok = v.expect_result ? r.result === v.expect_result : r.result === 'INDETERMINATE';
+      ok = ok && (v.expect_present || []).every((f) => r[f] !== undefined);
+      ok = ok && (v.expect_absent_fields || []).every((f) => !(f in r));
+      if (v.expect_integrity_not) ok = ok && r.assurance?.integrity !== v.expect_integrity_not;
+      check(v.id, ok); break; }
     case 'map-currency': { const r = P.resolveAuthority(v.doc, v.opts); check(v.id, Object.entries(v.expect).every(([k, val]) => r[k] === val) && (v.expect_absent || []).every((k) => r[k] === undefined)); break; }
     case 'authority-at-time': { const r = atU(v.doc, v.genesis, v.keylog, v.anchor_time); const id = r.identity || {}; check(v.id, v.expect.error ? (r.result === 'INVALID' && new RegExp(v.expect.error).test(r.error || '')) : (id.strength === v.expect.strength && id.status === v.expect.status)); break; }
     // #75 ROOT 3 (math-derived, no manifest) — composition authority: forkChoice/verifyStream resolve per-frame
@@ -2621,6 +2630,29 @@ console.log('\n═════════════════════�
   check('F.5a.2b a consumer-pinned map root reports map_root_currency consumer-asserted', rPinned.map_root_currency === 'consumer-asserted');
   check('F.5a.2b the checkpoint-map surface carries the SAME currency coordinate', Fmap({ map: { proof: cproof, mapRoot: cmap.root } }).map_root_currency === 'consumer-asserted');
   check('F.5a.2 a map root with no admission basis earns no map rung', (r => r.strength !== 'authoritative' && r.map_root_currency === undefined)(P.resolveAuthority(docK, { genesis: gen, keylog: [add], nameMap: { proof: nproof, mapRoot: nmap.root } })));
+}
+
+// ─── F.5.1f THE REFUSAL SHAPE — a refusal carries every MEASURED fact and no DISPOSITIVE field. Measured before
+//     the change: 13 INDETERMINATE exits in verifyCore, 5 naming the verifier, 1 also the digest, 0 carrying the
+//     absent set or the assurance. The shape is attached at ONE seam, so a fourteenth exit inherits it.
+{
+  const RK = kp('7e'.repeat(32)), RD = 'refusal.example';
+  const rdoc = P.seal(P.buildState({ domain_shard: RD, ust_id: 'ust:20260709.00', key_id: RK.key_id, class: 'observation' }, T, { x: { kind: 'captured', value: { v: '1' } } }), RK.priv, RK.pubB64);
+  const r = P.verify(rdoc, { context: 'data' });
+  check('F.5.1f a refusal carries the MEASURED assurance axes', r.result === 'INDETERMINATE' && !!r.assurance && Object.keys(P.ASSURANCE_AXES).every((ax) => typeof r.assurance[ax] === 'string'));
+  check('F.5.1f a refusal never reports integrity invalid — the one floor that is a finding', r.assurance?.integrity !== 'invalid');
+  check('F.5.1f a refusal carries NO tier — the field a consumer branches on to proceed', r.tier === undefined && !('tier' in r));
+  check('F.5.1f a refusal names the vocabulary that refused (verifier + registry_digest)', !!r.verifier?.revision && /^sha256:[0-9a-f]{64}$/.test(r.registry_digest || ''));
+  // F.5.1b — ONE derivation, not two. The refusal's array must be what the report computes for the SAME call,
+  // byte for byte: two derivations of `what did this call not bring` is exactly the drift F.5.1b forbids.
+  check('F.5.1f the refusal\'s absent[] is what explainLadder computes, not a second derivation',
+    JSON.stringify(r.absent) === JSON.stringify(P.explainLadder(rdoc, { context: 'data' }).absent));
+  // MEASURED GAP, left named rather than closed with a green nothing. The seam also covers exits that never
+  // reached the assurance, and the check written for it was VACUOUS: every input tried (a stray top-level field,
+  // an unevaluable embedded proof, `requireAnchored` without a connector) answers INVALID, so the second
+  // disjunct never ran and the check asserted nothing. The early exits ARE reachable — `unsupported_alg` needs a
+  // build lacking the primitive, which is the browser corpus, not this one — so the coverage belongs where that
+  // build is exercised. A check that cannot fail is worse than an absent one: it reads as coverage.
 }
 
 // ─── #76 §1.7 CHECKPOINT RECOVERY — genesis-authorized 2-of-3 multisig re-authorizes the checkpoint authority after

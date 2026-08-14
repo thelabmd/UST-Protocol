@@ -724,7 +724,23 @@ export function verify(doc, opts = {}) {
   let id; try { if (D && typeof D === 'object' && D.state !== undefined) id = contentHash(D); } catch { /* malformed → no addressable id */ }
   return floorTier(id === undefined ? verdict : { ...verdict, id });
 }
+// F.5.1f — the refusal SEAM. Thirteen exits in the body answer INDETERMINATE, and each carried whatever its own
+// return statement happened to include: measured 2026-08-14, 5 of 13 named the verifier, 1 of those also named the
+// registry digest, none carried `absent`. Editing thirteen statements is how the fourteenth is wrong, so the shape
+// is attached ONCE, here. `assurance` is NOT synthesized: it rides only from an exit that MEASURED it, because the
+// lattice bottom is not the honest report of an unfinished run — the integrity floor is `invalid`, a FINDING, and a
+// refusal may not make it. `tier` never rides: it is the field a consumer branches on to proceed, and a refusal
+// shaped like an answer is consumed as one (§14/#44).
+// CLOSED 2026-08-14 by this seam (round 217): the counts above are what the tree looked like BEFORE it, kept as the
+// record of what was being fixed. One STANDING gap is named beside the checks — the early exits, which no reachable
+// input in this corpus drives to INDETERMINATE, so their coverage belongs to the build that lacks the primitive.
 function verifyCore(doc, opts = {}) {
+  const v = verifyCoreInner(doc, opts);
+  if (v?.result !== 'INDETERMINATE') return v;
+  const { tier: _dropped, ...facts } = v;
+  return { ...facts, absent: absentInputs(opts), verifier: VERSION, registry_digest: registryDigest() };
+}
+function verifyCoreInner(doc, opts = {}) {
   try {
     // step 1 — structural admission (§14.1)
     if (typeof doc !== 'object' || doc === null) return bad('E-MALFORMED', 'not an object');
@@ -1103,7 +1119,7 @@ function verifyCore(doc, opts = {}) {
       // resolved to LIGHT (no independent no-fork evidence) was told to supply it again, byte-identically to a call
       // that supplied nothing. The key-form clause is NOT a supply remedy — it names other BYTES to author (the x̂
       // term), which no call can hand in — so it survives unconditionally, and that is the discrimination.
-      return { result: 'INDETERMINATE', reason: 'unavailable', identity: { ...identity, mode: shardMode }, detail: 'name-form domain_shard is a domain claim the verifier could not confirm (tier resolved to LIGHT — the identity axis reached no name binding)' + supplyRemedy(opts, 'genesis', ': supply genesis to bind the name (→ HIGH)') + '. A key-form domain_shard = key_id yields a self-asserted key-identity document (→ VALID:LIGHT). "cannot confirm" ⇒ INDETERMINATE (UST-ybn — the unified rule); explainLadder() names the inputs THIS call did not supply' };
+      return { result: 'INDETERMINATE', reason: 'unavailable', assurance, identity: { ...identity, mode: shardMode }, detail: 'name-form domain_shard is a domain claim the verifier could not confirm (tier resolved to LIGHT — the identity axis reached no name binding)' + supplyRemedy(opts, 'genesis', ': supply genesis to bind the name (→ HIGH)') + '. A key-form domain_shard = key_id yields a self-asserted key-identity document (→ VALID:LIGHT). "cannot confirm" ⇒ INDETERMINATE (UST-ybn — the unified rule); explainLadder() names the inputs THIS call did not supply' };
     // A verdict that does not say WHO judged it cannot be re-checked later. `verifier` + `registry_digest` bind this
     // result to the rules that produced it: pin the pair and the same verdict is reproducible after the protocol has
     // moved on, which is what lets the rules keep changing without redefining verdicts already handed out.
@@ -1600,6 +1616,25 @@ const R2_TERM = deepFreeze(Object.assign(Object.create(null), {
   noForkConfirmed: 'ℐ_v — the CONSUMER\'s own override, never the publisher\'s',
 }));
 
+// F.5.1f — ONE derivation of the absent set, read from the CALL. It was inline in `explainLadder`, which reaches
+// it through `verify`; the refusal path needs the same array and cannot call `explainLadder` without recursion.
+// Extracting it is what keeps F.5.1b honest — a second copy is how a report and a verdict come to disagree about
+// the same bytes, and here they would be two answers to the question `what did this call not bring`.
+const absentInputs = (O) => {
+  const absent = [];
+  for (const name of Object.keys(R2_TERM)) {
+    let brought; try { brought = O?.[name] !== undefined; } catch { brought = false; }   // TOTAL: a hostile getter must not turn a refusal into a malformed verdict
+    if (!brought) {
+      const term = R2_TERM[name];
+      // WHO may move it — three named parties and a residual, not a boolean. A boolean collapsed the witness
+      // into the publisher and told an operator to produce what it is structurally barred from producing.
+      const party = term.startsWith('x̂') ? 'publisher' : term.startsWith('WITNESS') ? 'witness' : 'consumer';
+      absent.push(deepFreeze({ input: name, term, hint: R2_HINT[name], party, movable: party === 'publisher' }));
+    }
+  }
+  return deepFreeze(absent);
+};
+
 export function explainLadder(doc, opts = {}) {
   const bad = (error, detail) => ({ error, detail });
   try {
@@ -1622,15 +1657,7 @@ export function explainLadder(doc, opts = {}) {
       : null;
     // ABSENT inputs, classified. Read from the CALL, not from a rule table — so nothing here can disagree with
     // what the relation actually saw.
-    const absent = [];
-    for (const name of Object.keys(R2_TERM))
-      if (O[name] === undefined) {
-        const term = R2_TERM[name];
-        // WHO may move it — three named parties and a residual, not a boolean. A boolean collapsed the witness
-        // into the publisher and told an operator to produce what it is structurally barred from producing.
-        const party = term.startsWith('x̂') ? 'publisher' : term.startsWith('WITNESS') ? 'witness' : 'consumer';
-        absent.push(deepFreeze({ input: name, term, hint: R2_HINT[name], party, movable: party === 'publisher' }));
-      }
+    const absent = absentInputs(O);
     return deepFreeze({
       verdict: v.result,
       reason: v.reason ?? null,

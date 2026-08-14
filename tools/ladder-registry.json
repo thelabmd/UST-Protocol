@@ -1751,6 +1751,14 @@
       "code": "packages/ust-protocol/index.mjs :: `mapRootAdmitted` becomes `mapRootBasis` and returns a currency BASIS instead of a boolean, carried into the verdict as `map_root_currency` at BOTH admission sites — the name-map identity rung and the checkpoint-map freshness rung — because one mechanism admitted both typed spaces through one silent boolean",
       "vector": "map-currency-01-pinned-root-is-consumer-asserted",
       "test": "F.5a.2b a consumer-pinned map root reports map_root_currency consumer-asserted"
+    },
+    {
+      "round": 217,
+      "math": "a refusal carries every coordinate of `A` and no member of `F`",
+      "spec": "a refusal MUST carry the coordinates it MEASURED",
+      "code": "packages/ust-protocol/index.mjs :: one refusal SEAM over verifyCore's thirteen INDETERMINATE exits attaches `absent`, `verifier` and `registry_digest` and strips any `tier`; `absentInputs` is extracted so the refusal and the ladder report read ONE derivation of what the call did not bring",
+      "vector": "refusal-shape-01-measured-facts-ride",
+      "test": "F.5.1f a refusal carries NO tier — the field a consumer branches on to proceed"
     }
   ],
   "first_accounted_round": 76,

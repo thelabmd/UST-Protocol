@@ -151,7 +151,15 @@ STRING still never carries it — `VALID:LIGHT`/`VALID:HIGH`/`VALID:TOP` are the
 **`INDETERMINATE` carries NO tier, and that is the same distinction stated once more.** Its assurance is PARTIAL, not
 `⊥` — the integrity floor may well have held and only a dependency was unreachable — so ranking it `NONE` would
 under-claim exactly as badly as an over-claim, and would blur the line §14 keeps sharp: *cannot decide* is never
-*earned nothing*.
+*earned nothing*. **So a refusal MUST carry the coordinates it MEASURED** (`assurance`, partial by construction —
+an axis the run did not reach is ABSENT, never floored, because the integrity floor `invalid` is a FINDING and a
+refusal may not make it), **the inputs the call did not bring** (`absent`, each naming the party that may move it
+— the same derivation the ladder report returns, never a second one), **and the vocabulary that refused**
+(`verifier` + `registry_digest`). It MUST NOT carry `tier`: that is the field a consumer branches on to proceed,
+and a refusal shaped like an answer is consumed as one. Attribution is REQUIRED here rather than excused: a
+refusal caused by an absent faculty (`unsupported_alg`) is entirely a statement about the verifier, and the pair
+is the only coordinate separating *the document does not support the claim* from *this build could not evaluate
+it* (formal model F.5.1f).
 
 - **LIGHT — trust in a minute (THE FLOOR).** A signed, canonical, addressable state document. *Publish* =
   generate a keypair, sign your canonical JSON, serve it (the pubkey travels in `sig.pub`). *Verify* = recompute
@@ -3165,3 +3173,32 @@ operator profile (§20), never the protocol. The five passes converged from "the
   `C`-part constant in names and constant in time. Four conformance checks, mutation-proven: dropping the currency
   coordinate reddens exactly the check that names it, and admitting any root reddens the self-supplied-root
   reproduction that has guarded this door since the external audit. conformance 1001/0, 62 model sections bound.
+- **REV 70 (2026-08-14, `rc.72` line)** — **the refusal returned five fields where the answer returned nine, and
+  §14 had already required otherwise (#151).** Measured on the reference build: a VALID verdict carries `tier`,
+  `assurance` across all four axes, `identity`, `verifier`, `registry_digest`; an `INDETERMINATE` carried
+  `result, reason, identity, detail, id` and an English sentence. For an agent that is an inversion — the
+  undecided case is the one where it must choose what to bring, and it was the one served by prose. **The rule
+  was not missing.** §14 already states that `INDETERMINATE` carries no tier and that *its assurance is PARTIAL,
+  not `⊥`*; nothing returned the partial state, which makes this the F.5p class — an obligation stated where no
+  surface discharges it — rather than a gap in the rules. **The shape was per-return-statement, not per-rule.**
+  Thirteen exits in `verifyCore` answer INDETERMINATE; 5 named the verifier, 1 of those also the registry digest,
+  0 carried the absent set. Editing thirteen statements is how the fourteenth is wrong, so the shape is attached
+  at ONE seam and a new exit inherits it. **The `absent` array is the ladder report's own derivation**, extracted
+  so both read one function — the refusal cannot call `explainLadder`, which reaches it through `verify`, and a
+  second copy is precisely the drift F.5.1b forbids. **`tier` does not ride, and the reason is not
+  informational:** the tier is a function of the assurance, so withholding the field withholds nothing an agent
+  cannot compute — `projectTier` is exported and normative. It is withheld because it is the field a consumer
+  branches on to PROCEED, and #44 makes a refusal un-skippable by returning it as an error rather than a datum;
+  a refusal object shaped like an answer is consumed as one. **Attribution was excluded by a stated argument that
+  does not hold.** The gate's rule read *a refusal carries neither (nothing to attribute)*. But a refusal caused
+  by an ABSENT FACULTY — `INDETERMINATE(unsupported_alg)`, the case rc.70 normalized — is ENTIRELY a fact about
+  the verifier: this build cannot evaluate the primitive, another answers on the same bytes. The pair is the only
+  coordinate separating *the document does not support the claim* from *this build could not evaluate it*, and
+  neither field is one a consumer proceeds on. **One correction made mid-round and kept:** the first draft argued
+  the refusal should carry `A` because the lattice is total, so an unfinished run reports `⊥`. Measured against
+  the axes, that is false on one coordinate — `integrity: ['invalid','valid']`, so its floor is a FINDING, not
+  *nothing proven* — and a refusal emitting it would assert the document invalid, the one thing §14 forbids a
+  refusal to say. Hence a coordinate rides where it was MEASURED and is ABSENT where it was not, which is what
+  §14's word PARTIAL already meant. **And one check was deleted rather than kept green:** the leg written for the
+  early exits was vacuous — every input tried answers INVALID, so its second disjunct never ran — and the gap is
+  named in place, because a check that cannot fail reads as coverage. Formal model gains F.5.1f. 1008 checks.
