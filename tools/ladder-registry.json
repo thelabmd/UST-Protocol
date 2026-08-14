@@ -1687,6 +1687,20 @@
     "excluded": "There is nothing language-neutral to pin. A vector fixes an input and a declared result a second implementation must reproduce; this measures where OUR module puts its transport, which no other implementation has and none should be held to."
    },
    "test": "tools/core-network-boundary-gate.mjs :: mutation-proven by ADDING a third reach, by a reach at module scope, and by renaming a declared export — the adding direction fixed in the card before the gate was written, because a boundary gate passes forever on the entries its author had in mind"
+  },
+  {
+   "round": 212,
+   "math": {
+    "excluded": "The class is one the model already names — an enforcement must enumerate its domain, and a claim over an empty set is free — but the model governs what a VERIFIER owes, not what this repository’s report tooling owes. Restating it there to cover a composer would widen the formal model into our workflow, which is the one place it has always refused to go."
+   },
+   "spec": {
+    "excluded": "Nothing normative moved. A porter writes no reports in this shape and is held to no part of it; the composer is how THIS tree records rounds, and the normative spec says nothing about that on purpose."
+   },
+   "code": "tools/recap-compose.mjs :: slot() and drawn() both register a section identifier — a number where the form numbers headings, a name where it does not; the declaration separates with | so a name can be an id, the lookup keys both styles from one map, and an EMPTY declaration is itself refused",
+   "vector": {
+    "excluded": "There is nothing language-neutral to pin. A vector fixes an input and a declared result a second implementation must reproduce; this governs the shape of OUR round reports, which no other implementation writes and none should be held to."
+   },
+   "test": "tools/recap-compose-selfcheck.mjs :: four legs per FORM — the form declares a non-empty slot domain, a DELETED slot is refused, a STATED refusal is accepted, and an emptied declaration is refused; leg 4 also had to stop filling a diagram slot with prose, because prose is not a decision"
   }
  ],
  "first_accounted_round": 76,

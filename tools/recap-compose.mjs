@@ -143,14 +143,26 @@ if (checkFile) {
   }
 
   // ── every SLOTTED section decides: a diagram, or a stated refusal. An absence is neither. ──────────────
-  const declared = body.match(/<!-- diagram-slots: ([\d,]*) -->/);
+  const declared = body.match(/<!-- diagram-slots: ([^>]*?) -->/);
   if (!declared) {
     console.error('✗ the composed file declares no diagram-slot list — recompose it; a check cannot enumerate a domain the file does not carry');
     process.exit(1);
   }
-  const want = declared[1] ? declared[1].split(',').map(Number) : [];
-  const parts = body.split(/^## § /m).slice(1);
-  const bySection = new Map(parts.map((p) => [Number(p.split(/\s/)[0]), p]));
+  // An EMPTY declaration is not a form without diagrams — it is a domain nobody enumerated, and a loop over it is
+  // green for free. That is the defect #163 measured in `audit` and `delivery`, so it is refused here rather than
+  // tolerated: a form that genuinely has no slot must say so, and none does today.
+  const want = declared[1].trim() ? declared[1].split('|').map((x) => x.trim()).filter(Boolean) : [];
+  if (!want.length) {
+    console.error('✗ the composed file declares an EMPTY diagram-slot list — a check over an empty domain passes for free. Every form emits at least one slot; recompose, or state in the form why it has none.');
+    process.exit(1);
+  }
+  // sections key by NUMBER where the form numbers them and by NAME where it does not — one lookup, both styles.
+  const bySection = new Map();
+  for (const p of body.split(/^## /m).slice(1)) {
+    const head = p.split('\n')[0].trim();
+    const num = /^§\s*(\d+)/.exec(head);
+    bySection.set(num ? num[1] : head.replace(/&nbsp;/g, ' ').trim(), p);
+  }
   const undecided = [], reasons = new Map();
   for (const n of want) {
     const sec = bySection.get(n) ?? '';
@@ -161,7 +173,7 @@ if (checkFile) {
     reasons.set(n, refusal[1].trim());
   }
   if (undecided.length) {
-    console.error(`✗ § ${undecided.join(', § ')} — neither a diagram nor a stated refusal. Removing the slot is not deciding it:`);
+    console.error(`✗ ${undecided.map((u) => (/^\d+$/.test(u) ? '§ ' + u : '`' + u + '`')).join(', ')} — neither a diagram nor a stated refusal. Removing the slot is not deciding it:`);
     console.error('    write the diagram, or  > **no diagram** — <why no collapse, no span and no path applies here>');
     process.exit(1);
   }
@@ -272,7 +284,14 @@ const surfacesScaffold = () => mermaid([
 
 // A scaffold appears when its relation is ASSERTED; otherwise the section carries the question, so the author
 // decides once and visibly rather than forgetting the option exists.
-const drawn = (flag, build, prompt) => (on(flag) ? `\n${build()}\n` : `\n${FILL(prompt)}\n`);
+// #163 — a slot REGISTERS itself, whichever form emits it. `drawn` did not, so `audit` and `delivery` shipped
+// `<!-- diagram-slots:  -->` and `--check` looped over nothing: green for free, over an empty domain, inside the
+// one tool whose job is refusing exactly that. The section is named rather than numbered because those two forms
+// do not number their headings — one mechanism reaching both styles, not a second mechanism beside the first.
+const drawn = (flag, build, prompt, section) => {
+  if (section) SLOTTED.push(String(section));
+  return on(flag) ? `\n${build()}\n` : `\n${FILL(prompt)}\n`;
+};
 
 // ── MEASURED: the corpus this tree produces right now
 const conf = sh(process.execPath, ['packages/ust-protocol/conformance.mjs']);
@@ -392,7 +411,7 @@ const KINDS = { collapse: () => collapseScaffold(), span: () => ganttScaffold(),
 // in --check: a slotted section must carry a diagram or a stated refusal, and an absence is neither.
 const SLOTTED = [];
 const slot = (section) => {
-  SLOTTED.push(Number(section));
+  SLOTTED.push(String(section));
   const here = Object.keys(KINDS).filter((k) => String(arg(k, '')) === String(section));
   if (here.length) return '\n' + here.map((k) => KINDS[k]()).join('\n\n') + '\n';
   return `\n${FILL(`a diagram for § ${section} IF a relation here is worth drawing — collapse (several situations, one observation) · span (a duration) · path (a value crossing stages) · boundary (what is and is not established) · surfaces (more than one artifact). Scaffold with --<kind> ${section}. Delete this line if nothing here earns one`)}\n`;
@@ -532,7 +551,7 @@ ${FILL('one short paragraph stating exactly what the evidence supports — no mo
 - **does establish:** ${FILL('the bounded conclusion')}
 - **does not establish:** ${FILL('the bounded exclusion')}
 - **remains conditional on:** ${FILL('the open gate or dependency')}
-${drawn('boundary', boundaryScaffold, 'a BOUNDARY diagram — the one picture an external reader will actually look at. Pass --boundary to scaffold one, or delete this line')}
+${drawn('boundary', boundaryScaffold, 'a BOUNDARY diagram — the one picture an external reader will actually look at. Pass --boundary to scaffold one, or delete this line', 'Audit conclusion')}
 ## Residual risk
 
 - ${FILL('known limitation, unreviewed surface, unsupported environment, evidence that remains unavailable')}
@@ -556,7 +575,7 @@ ${FILL('one sentence: what exists now that did not exist before')}
 
 - ${FILL('the concrete resulting state — a command, an artifact, a surface, a version')}
 ${publishedLine}- ${FILL('what an operator or consumer can now do that they could not')}
-${drawn('surfaces', surfacesScaffold, 'a SURFACE map if this spans more than one artifact and their relation IS the delivery. Pass --surfaces to scaffold one, or delete this line if it is one thing in one place')}
+${drawn('surfaces', surfacesScaffold, 'a SURFACE map if this spans more than one artifact and their relation IS the delivery. Pass --surfaces to scaffold one, or delete this line if it is one thing in one place', 'What it is')}
 ## Scope
 
 - **Affected:** ${FILL('the surface this touches')}
@@ -581,7 +600,7 @@ ${diaryBlock}
 
 const out = head() + BODIES[form]();
 
-console.log(out + `\n<!-- diagram-slots: ${[...new Set(SLOTTED)].sort((a, b) => a - b).join(',')} -->\n`);
+console.log(out + `\n<!-- diagram-slots: ${[...new Set(SLOTTED)].join('|')} -->\n`);
 console.error(`\n  composed ${form} report, round ${round} → #${issue}. Every number above is read from a command or a file in this tree.`);
 const drawnCount = [...out.matchAll(/```mermaid/g)].length;
 console.error(`  ${[...out.matchAll(/<<<FILL:/g)].length} judgment section(s) are yours; ${drawnCount} diagram(s) scaffolded through the lab palette.`);

@@ -59,9 +59,44 @@ const refused = run(['--check', skeleton]);
 check(refused.code !== 0, 'the check ACCEPTED a skeleton that still carries FILL markers — the refusal that makes the shape binding does not fire');
 
 // ── 4. ACCEPTS the same document once the markers are gone
-writeFileSync(filled, readFileSync(skeleton, 'utf8').replace(/<<<FILL:[\s\S]*?>>>/g, 'написано человеком'));
+const REFUSAL = '> **no diagram** — the selfcheck fixture draws no relation, so there is nothing here to picture';
+writeFileSync(filled, readFileSync(skeleton, 'utf8').replace(/<<<FILL:[\s\S]*?>>>/g,
+  (m) => (/diagram|BOUNDARY|SURFACE map/.test(m) ? REFUSAL : 'написано человеком')));
 const accepted = run(['--check', filled]);
 check(accepted.code === 0, `the check REFUSED a fully written report (exit ${accepted.code}) — a checker that never accepts is a checker nobody can satisfy: ${accepted.out.slice(0, 200)}`);
+
+// ── 5. the diagram-slot rule reaches EVERY form (#163). Before this, `audit` and `delivery` emitted an EMPTY
+//    slot declaration, so `--check` looped zero times and passed for free — a claim over an empty domain, inside
+//    the tool whose job is refusing exactly that. Per form: deleting the slot must be refused, stating a refusal
+//    must be accepted, and an emptied declaration must be refused on its own.
+for (const form of ['incident', 'audit', 'delivery']) {
+  const g = run(['--round', '999', '--issue', '999', '--form', form]);
+  const declared = /<!-- diagram-slots: ([^>]*?) -->/.exec(g.out);
+  check(!!declared && declared[1].trim().length > 0,
+    `the ${form} form declares no diagram slot — an empty domain makes the slot rule vacuous for this form`);
+
+  const dropped = join(dir, `${form}-dropped.md`);
+  writeFileSync(dropped, g.out.split('\n').filter((l) => !/<<<FILL:[^>]*(diagram|BOUNDARY|SURFACE map)/.test(l)).join('\n')
+    .replace(/<<<FILL:[\s\S]*?>>>/g, 'написано человеком'));
+  check(run(['--check', dropped]).code !== 0,
+    `the ${form} form ACCEPTED a report whose diagram slot was DELETED — removing a slot is not deciding it, and this form does not say so`);
+
+  // Distinct sections owe DISTINCT reasons — the composer refuses a reason pasted twice, and the incident form
+  // has five slots, so a fixture that shrugs identically five times is refused by a rule that is working.
+  let nth = 0;
+  const stated = join(dir, `${form}-stated.md`);
+  writeFileSync(stated, g.out.replace(/<<<FILL:[\s\S]*?>>>/g,
+    (m) => (/diagram|BOUNDARY|SURFACE map/.test(m)
+      ? `> **no diagram** — slot ${++nth} of this fixture relates nothing to anything, so a picture would invent the relation it claims to show`
+      : 'написано человеком')));
+  check(run(['--check', stated]).code === 0,
+    `the ${form} form REFUSED a STATED no-diagram decision — the refusal shape must be the same in every form, or an author learns two conventions`);
+
+  const emptied = join(dir, `${form}-empty.md`);
+  writeFileSync(emptied, readFileSync(stated, 'utf8').replace(/<!-- diagram-slots: [^>]*-->/, '<!-- diagram-slots:  -->'));
+  check(run(['--check', emptied]).code !== 0,
+    `the ${form} form ACCEPTED an EMPTY slot declaration — a loop over an empty domain is green for free, which is the defect #163 measured`);
+}
 
 rmSync(dir, { recursive: true, force: true });
 
