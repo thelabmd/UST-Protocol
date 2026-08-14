@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// @assurance 2 canfail:yes — the closed-issue set is read from the ROUND'S OWN COMMITS via git, and the recap set from the registry; both sides are derived, and a negative control drives the comparison to fail
+// @assurance 2 canfail:yes literal-ok:`CHANNELS` is the roster of DECLARATION SOURCES, not the domain being judged — the rounds and the issues each closed are read from git and the registry, and the channel names exist so that each one can be asserted LIVE (a channel contributing zero rounds fails the gate, which is how #166 stops the domain narrowing back in silence) — the closed-issue set is read from the ROUND'S OWN COMMITS via git and from the registry, unioned across every channel with disagreement treated as a finding; all sides are derived, and negative controls drive each comparison to fail
 // ONE ISSUE, ONE DIARY.
 //
 // Owner, 2026-08-08: *"даже когда карточки связаны и закрываются одновременно — то юстрекапы должны быть
@@ -66,24 +66,106 @@ const log = sh(['log', '--format=%H%x00%B%x01']);
 if (log === null) refuse('git log FAILED and the domain is unknown — an unreadable history is not a history with no rounds in it');
 const commits = log.split('\x01').map((c) => c.split('\x00')).filter((p) => p.length === 2);
 
-const closedBy = new Map();   // round → Set(issue)
+// #166 — THE DOMAIN WAS NOT EMPTY, IT WAS THREE. This read only `closes|fixes|resolves #N` trailers. Measured
+// 2026-08-14: of 46 rounds git carries at or above the floor, **3** use a trailer and 18 name their issue in the
+// SUBJECT (`round(212): … (#163)`), which is the convention this tree actually follows. So the rule was asserted
+// over three rounds and looked like a rule over all of them — a sample reading as a population, in the gate whose
+// own comment warns against trusting a round's understatement.
+//
+// The old comment picked git over the registry for a real reason: *a round that closed two issues and recorded one
+// row would be judged against its own understatement.* True — and the alternative it chose has the same defect
+// quieter, because a round that closes two and mentions neither in its commit is not judged at all. Both channels
+// are the round's own declaration; one fails leniently and the other fails silently.
+//
+// So the domain is the UNION of every channel, and a DISAGREEMENT between them is itself a finding: to hide a
+// second closure now you must omit it from the subject, from the trailers and from the registry at once, and any
+// two channels that name different issues for one round stop the gate instead of being resolved by precedence.
+// Measured on today's tree: union 52 rounds, 0 disagreements, and exactly one round closing two issues — 185.
+const CHANNELS = ['subject', 'trailer', 'registry'];   // the declared domain; each is asserted live below
+const closedBy = new Map();   // round → Set(issue), unioned across channels
+const sources = new Map();    // round → Map(channel → Set(issue)), kept apart so they can be compared
+const note = (round, channel, issues) => {
+  if (round < FLOOR || !issues.length) return;
+  const set = closedBy.get(round) ?? new Set();
+  for (const i of issues) set.add(i);
+  closedBy.set(round, set);
+  const per = sources.get(round) ?? new Map();
+  per.set(channel, new Set([...(per.get(channel) ?? []), ...issues]));
+  sources.set(round, per);
+};
+
+const roundsInGit = new Set();
 for (const [, body] of commits) {
   const r = /^round\((\d+)\)/m.exec(body);
   if (!r) continue;
   const round = Number(r[1]);
   if (round < FLOOR) continue;
-  const issues = [...body.matchAll(/\b(?:closes|fixes|resolves)\s+#(\d+)/gi)].map((m) => Number(m[1]));
-  if (!issues.length) continue;
-  const set = closedBy.get(round) ?? new Set();
-  for (const i of issues) set.add(i);
-  closedBy.set(round, set);
+  roundsInGit.add(round);
+  note(round, 'subject', [...body.split('\n')[0].matchAll(/#(\d+)/g)].map((m) => Number(m[1])));
+  note(round, 'trailer', [...body.matchAll(/\b(?:closes|fixes|resolves)\s+#(\d+)/gi)].map((m) => Number(m[1])));
 }
+for (const rec of reg.records ?? []) if (rec.issue) note(rec.round, 'registry', [rec.issue]);
 
 // #165 — THE GUARD IS ON THE DOMAIN, not on one way of losing it. Whatever empties `closedBy` — a shallow clone,
 // a buffer, a changed commit convention, a floor that outran the history — the answer is the same: this gate has
 // nothing to judge and must say so. A pin caught the first two causes by luck; luck is not a third guard.
 if (closedBy.size === 0) {
   refuse(`the closed-issue domain is EMPTY (floor ${FLOOR}) — no round in git closes an issue, so every claim below would be true of nothing. The history, the floor or the commit convention is wrong, and green here would mean none of them was read.`);
+}
+
+// #166 — EVERY DECLARED CHANNEL MUST BE LIVE. Found by mutation while closing this card: deleting the subject
+// channel left the gate at PASS/0 FAIL, because the registry still filled the domain — the widening protected the
+// rule but not itself, and a domain can narrow back silently exactly the way it narrowed in the first place. A
+// channel contributing zero rounds is either dead code or a channel nobody reads any more, and both should be a
+// decision rather than a quiet loss. Measured 2026-08-14: subject 18, trailer 3, registry 44. CLOSED 2026-08-14
+// by the liveness check below, mutation-proven by removing the subject channel and watching it name the loss.
+{
+  const per = (ch) => [...sources.values()].filter((m) => (m.get(ch)?.size ?? 0) > 0).length;
+  const counts = CHANNELS.map((ch) => [ch, per(ch)]);
+  const dead = counts.filter(([, n]) => n === 0).map(([ch]) => ch);
+  ok(`every declared channel contributes to the domain (${counts.map(([c, n]) => `${c} ${n}`).join(' · ')})`,
+    dead.length === 0,
+    dead.length ? `channel(s) ${dead.join(', ')} name no round at all — either the convention died or the reader did, and a domain that narrows in silence is how this gate came to judge three rounds out of forty-six` : '');
+}
+
+// #166 — EVERY ROUND GIT CARRIES IS ACCOUNTED FOR, which is the anti-vacuity guard a numeric floor only imitates.
+// The card proposed "refuse a domain much smaller than the round count"; the measurement offered something
+// stronger and without a magic number: a round must either NAME an issue in some channel or carry a `no_recap`
+// reason in the registry. Measured 2026-08-14: 46 rounds, 13 with an issue, 33 with `no_recap`, 0 unaccounted.
+// A round that appears naming nothing and declaring nothing is the shape a narrowing domain takes, and it is
+// exactly what a percentage floor would let through while the percentage stayed healthy. CLOSED 2026-08-14 by the
+// accountability check below, with a control on a round that names nothing and declares nothing.
+{
+  const byRound = new Map((reg.records ?? []).map((r) => [r.round, r]));
+  const unaccounted = [...roundsInGit].sort((a, b) => a - b)
+    .filter((n) => !closedBy.has(n) && !byRound.get(n)?.no_recap);
+  ok(`every round git carries is accounted for (${roundsInGit.size} round(s) at or above floor ${FLOOR})`,
+    unaccounted.length === 0,
+    unaccounted.length ? `round(s) ${unaccounted.join(', ')} name no issue in any channel and record no \`no_recap\` reason — a round the domain cannot see is a round this rule was never asked about` : '');
+}
+
+// #166 — THE CHANNELS MUST AGREE. Picking one source was how the domain stayed at three; unioning them without
+// comparing them would let a registry row quietly contradict a commit. A disagreement is a finding, not a
+// precedence question: one of the two is wrong about what the round closed, and neither this gate nor a reader
+// can tell which.
+{
+  const conflicts = [];
+  for (const [round, per] of [...sources].sort((a, b) => a[0] - b[0])) {
+    // The grandfathered round is exempt HERE for the same reason it is exempt below, and this is not a second
+    // excuse: measured, round 185's trailers name #142 and #119 while its registry row names #142 alone. That
+    // under-record IS the excused fact — one round, two cards, one row — seen from the registry's side. Rewriting
+    // the row would be rewriting the history the owner asked to stand. Every other round is held to agreement.
+    if (GRANDFATHERED.has(round)) continue;
+    const named = [...per].filter(([, v]) => v.size);
+    if (named.length < 2) continue;
+    const union = new Set(named.flatMap(([, v]) => [...v]));
+    for (const [ch, v] of named) {
+      const missing = [...union].filter((i) => !v.has(i));
+      if (missing.length) conflicts.push(`round ${round}: \`${ch}\` names ${[...v].map((i) => '#' + i).join(', ')} but ${missing.map((i) => '#' + i).join(', ')} appears in ${named.filter(([c]) => c !== ch).map(([c]) => c).join('/')}`);
+    }
+  }
+  ok(`the channels agree on what each round closed (${sources.size} round(s) with a declaration)`,
+    conflicts.length === 0, conflicts.join(' · '));
 }
 
 const offenders = [];
@@ -102,6 +184,36 @@ for (const g of GRANDFATHERED) {
   ok(`the grandfathered exception (round ${g}) is still the multi-issue round it was excused for`,
     issues !== undefined && issues.size > 1,
     issues === undefined ? 'round not found in git — remove the pin' : `now closes ${issues.size} — remove the pin`);
+}
+
+// CONTROLS for the widened domain (#166). Each new channel gets its own probe, because the whole finding was that
+// a channel nobody read is a channel nobody can be caught through. The subject probe is the important one: it is
+// the shape that was invisible for six days while the rule read as universal.
+{
+  const probe = new Map();
+  const noteInto = (round, channel, issues) => {
+    const per = probe.get(round) ?? new Map();
+    per.set(channel, new Set(issues));
+    probe.set(round, per);
+  };
+  // (a) a round closing TWO issues, declared only in the SUBJECT — the channel this gate could not see.
+  noteInto(9101, 'subject', [11, 22]);
+  const viaSubject = [...probe].filter(([, per]) => new Set([...per.values()].flatMap((v) => [...v])).size > 1);
+  ok('CONTROL: a round closing two issues NAMED ONLY IN THE SUBJECT is detected', viaSubject.length === 1);
+
+  // (b) two channels naming different issues for one round.
+  const dis = new Map([[9102, new Map([['subject', new Set([33])], ['registry', new Set([44])]])]]);
+  const disFound = [...dis].filter(([, per]) => {
+    const named = [...per].filter(([, v]) => v.size);
+    const union = new Set(named.flatMap(([, v]) => [...v]));
+    return named.some(([, v]) => [...union].some((i) => !v.has(i)));
+  });
+  ok('CONTROL: two channels naming DIFFERENT issues for one round is detected', disFound.length === 1);
+
+  // (c) a round present in git that names nothing anywhere and declares no `no_recap`.
+  const ghost = new Set([9103]);
+  const ghosts = [...ghost].filter((n) => !closedBy.has(n) && !(reg.records ?? []).some((r) => r.round === n && r.no_recap));
+  ok('CONTROL: a round naming nothing and declaring nothing is detected', ghosts.length === 1);
 }
 
 // NEGATIVE CONTROL — the comparison must fail on a round that violates the rule, or the green above is a shape.

@@ -818,3 +818,18 @@ The owner said table 5 is broken. I explained why a fenced block breaks inside a
 ```
 
 </details>
+
+---
+
+## 2026-08-14 · the fix protected the rule and not itself
+
+Widened the gate's domain from three rounds to fifty-two, felt finished, then mutated it: deleted the channel I had just added and everything stayed green — the registry filled the gap, so the domain could narrow back exactly the way it narrowed the first time. The new disagreement check also caught a real under-record on the spot. And my own card's "130 rounds" was wrong; measured, it is 46. Tomorrow's me: after widening anything, try to narrow it again and watch.
+
+<details>
+<summary>🔒 sealed · <code>ust:20260814.045918</code> · <code>sha256:a2ea1b27e6a3a8a41d701ba5900ce7b4f7dfe69b7170d73a01bed0905659684a</code> · prev <code>sha256:08245a16e8ded1f2cccc9420ef7ef92f38e6b8601a2c977962c1ada30cf034aa</code></summary>
+
+```json
+{"ust":"1.0","state":{"id":{"domain_shard":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","ust_id":"ust:20260814.045918","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","class":"observation"},"time":{"generated_at":"2026-08-14T04:59:18Z","valid_from":"2026-08-14T04:59:18Z","valid_to":"2026-08-14T04:59:18Z"},"data":{"entry":{"kind":"captured","value":{"text":"## 2026-08-14 · the fix protected the rule and not itself\n\nWidened the gate's domain from three rounds to fifty-two, felt finished, then mutated it: deleted the channel I had just added and everything stayed green — the registry filled the gap, so the domain could narrow back exactly the way it narrowed the first time. The new disagreement check also caught a real under-record on the spot. And my own card's \"130 rounds\" was wrong; measured, it is 46. Tomorrow's me: after widening anything, try to narrow it again and watch.","task":{"ref":"diary","source":"raw","closed_at":"2026-08-14T04:59:18.771Z"}}}},"hashes":{"entry":"sha256:dc787116e11299fd72434bc8b4d92f7e05ad5b57a827547fa841a42bc6a7cc84"},"provenance":{"prev":"sha256:08245a16e8ded1f2cccc9420ef7ef92f38e6b8601a2c977962c1ada30cf034aa"}},"sig":{"alg":"Ed25519","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","pub":"62Tes0E-fhlnFp5rQ6rPIAwtLR76mnHEAjP7Fz_AZPs","sig":"EqvD-YcPjX3Mu9G8TcRXpl-BKe-GTlzEyIInffgKL2qVQFOz8yJkL3LZxLLpaQVvsRKyJ54L-p-C-oJb5lMkAw"}}
+```
+
+</details>

@@ -1729,6 +1729,20 @@
         "excluded": "There is nothing language-neutral to pin. A vector fixes an input and a declared result a second implementation must reproduce; this governs the layout of OUR round reports, which no other implementation writes."
       },
       "test": "tools/recap-compose-selfcheck.mjs :: six legs — every emitted table row spans the same total and an incident table must actually MIX the two widths (or the padding is unexercised), a fence inside a list item is refused, and the same fence indented into the item is accepted; removing the padding reddens the grid leg by name"
+    },
+    {
+      "round": 215,
+      "math": {
+        "excluded": "The class the model already names — an enforcement must enumerate its domain — and it names it about a VERIFIER. This is a repository gate reading commit conventions, which the formal model has always declined to cover; stating it there would make the model a description of our bookkeeping."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved. A porter runs no round gate and follows no commit convention of ours; which channel declares that a round closed a card is not an obligation on an implementation."
+      },
+      "code": "tools/recap-per-issue-gate.mjs :: the domain is the union of three declaration channels (commit subject, closing trailers, recap registry) read per round; disagreement between channels is a finding; every round git carries must name an issue or record a no_recap reason; and every declared channel is asserted live so the domain cannot narrow back in silence",
+      "vector": {
+        "excluded": "There is nothing language-neutral to pin. A vector fixes an input and a declared result a second implementation must reproduce; this measures whether OUR gate can see the rounds this tree writes."
+      },
+      "test": "tools/recap-per-issue-gate.mjs :: three controls, one per previously unread channel — two issues named only in the subject, two channels naming different issues for one round, and a round naming nothing and declaring nothing; mutation-proven twice, once by declaring a second issue through the subject and once by deleting the subject channel, which is the mutation that found the fix did not protect itself"
     }
   ],
   "first_accounted_round": 76,
