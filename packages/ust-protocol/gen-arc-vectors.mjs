@@ -62,7 +62,7 @@ const add = (id, op, fields) => V.push({ id, op, ...fields });
   add('fresh-attested-withheld-in-stable', 'deriveCheckpointFreshness', { chain: [C0], opts: { genesisAuthority: gAuth(K0), target, commitment: btc(900, headId), terminality: term, trust: { connectors }, uniqueness: { attestations: [ua(Wa), ua(Wb)], trustRoots, domains, threshold: 2 } }, expect: { keylog_freshness: 'corroborated', attested_withheld: 'experimental-gate' } });   // K1: stable path caps attested
   const cpLeaf = P.checkpointMapLeaf({ domain_shard: D, genesis_epoch: EP, sequence: '0', checkpoint: headId });
   const cmap = P.buildVerifiableMap([cpLeaf, P.checkpointMapLeaf({ domain_shard: D, genesis_epoch: EP, sequence: '1', checkpoint: 'sha256:' + 'ee'.repeat(32) })]);
-  add('fresh-attested-map', 'deriveCheckpointFreshness', { chain: [C0], opts: { genesisAuthority: gAuth(K0), target, commitment: btc(900, headId), terminality: term, uniqueness: { map: { proof: cmap.prove(cpLeaf.key), mapRoot: cmap.root } }, trust: { connectors, mapRoots: [cmap.root] }, allowExperimentalAttested: true }, expect: { keylog_freshness: 'attested', basis: 'authenticated-map-uniqueness' } });
+  add('fresh-attested-map', 'deriveCheckpointFreshness', { chain: [C0], opts: { genesisAuthority: gAuth(K0), target, commitment: btc(900, headId), terminality: term, uniqueness: { map: { proof: cmap.prove(cpLeaf.key), mapRoot: cmap.root } }, trust: { connectors, mapRoots: [cmap.root] }, allowExperimentalAttested: true }, expect: { keylog_freshness: 'attested', basis: 'authenticated-map-uniqueness', map_root_currency: 'consumer-asserted' } });   // F.5a.2b — the currency BASIS rides the verdict: a pinned root supplies `R = R_t` by axiom, and a second implementation must say so too
 }
 
 // ─── recovery (F.5l) + epoch (F.5m) + terminality (F.5n) ───
@@ -150,6 +150,16 @@ const add = (id, op, fields) => V.push({ id, op, ...fields });
   const nLeaf = P.nameMapLeaf({ domain_shard: D, active_genesis: AG }), nmap = P.buildVerifiableMap([nLeaf]), empty = P.buildVerifiableMap([]);
   add('name-map-authoritative', 'verifyActiveGenesisUniqueness', { proof: nmap.prove(nLeaf.key), opts: { domain_shard: D, active_genesis: AG, mapRoot: nmap.root }, expect: { authoritative: true, basis: 'authenticated-map-uniqueness' } });
   add('name-map-absent-nonmembership', 'verifyActiveGenesisUniqueness', { proof: empty.prove(nLeaf.key), opts: { domain_shard: D, active_genesis: AG, mapRoot: empty.root }, expect: { authoritative: false, absent: true } });
+  // F.5a.2b — the SAME coordinate on the name-map surface, where it is decided: `verifyActiveGenesisUniqueness` proves
+  // inclusion under a root and knows nothing about how that root was admitted, so the currency basis only exists one
+  // level up. Pinning only the checkpoint row would make the language-neutral domain a sample of the two typed spaces.
+  const nG = kp(s(0x51)), nK = kp(s(0x52)), nD = 'example.com', nT = { generated_at: '2026-01-01T00:00:00Z', valid_from: '2026-01-01T00:00:00Z', valid_to: '2027-01-01T00:00:00Z' };
+  const nGen = P.seal(P.buildGenesis({ domain_shard: nD, ust_id: 'ust:20260101.00', key_id: nG.key_id }, nT, nG.pub), nG.priv, nG.pub);
+  const nAdd = P.seal(P.buildKeyLogEntry({ domain_shard: nD, ust_id: 'ust:20260101.01', key_id: nG.key_id }, nT, { op: 'add', pub: nK.pub, new_key_id: nK.key_id }, P.contentHash(nGen)), nG.priv, nG.pub);
+  const nDoc = P.seal(P.buildState({ domain_shard: nD, ust_id: 'ust:20260101.02', key_id: nK.key_id, class: 'observation' }, nT, { x: { kind: 'captured', value: { v: '1' } } }), nK.priv, nK.pub);
+  const n2Leaf = P.nameMapLeaf({ domain_shard: nD, active_genesis: P.contentHash(nGen) }), n2map = P.buildVerifiableMap([n2Leaf]);
+  add('name-map-currency-consumer-asserted', 'resolveAuthority', { doc: nDoc, opts: { genesis: nGen, keylog: [nAdd], nameMap: { proof: n2map.prove(n2Leaf.key), mapRoot: n2map.root }, trust: { mapRoots: [n2map.root] } }, expect: { strength: 'authoritative', map_root_currency: 'consumer-asserted' } });
+  add('name-map-no-admission-basis-no-rung', 'resolveAuthority', { doc: nDoc, opts: { genesis: nGen, keylog: [nAdd], nameMap: { proof: n2map.prove(n2Leaf.key), mapRoot: n2map.root } }, expect: { strength: 'self-asserted' } });   // measured, not predicted: with no admission basis the map branch is never entered and identity falls to the floor — the rung is not reached at all
 }
 
 // ─── recovery + epoch units (F.5l/F.5m) ───

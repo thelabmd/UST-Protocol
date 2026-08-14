@@ -396,6 +396,10 @@ for (const v of V.vectors) {
       const rolesOk = !v.expect.roles || Object.entries(v.expect.roles).every(([k, want]) => r.roles?.get(k) === want);
       check(v.id, v.expect.error ? r.error === v.expect.error : (!r.error && r.active.size === v.expect.active_count && r.validKeys.size === v.expect.all_count && rolesOk)); break; }
     // #75 ROOT 1 — K_n(t): authority resolved at a PROVEN anchor time (lower bound premature · upper bound X1).
+    // F.5a.2b — the CURRENCY coordinate is decided at the ADMISSION door, not at the map primitive, so a porter
+    // reproduces it here and nowhere else. `expect_absent` is the load-bearing half: without it a vector asserting
+    // only a strength would stay green on a build that dropped the coordinate entirely.
+    case 'map-currency': { const r = P.resolveAuthority(v.doc, v.opts); check(v.id, Object.entries(v.expect).every(([k, val]) => r[k] === val) && (v.expect_absent || []).every((k) => r[k] === undefined)); break; }
     case 'authority-at-time': { const r = atU(v.doc, v.genesis, v.keylog, v.anchor_time); const id = r.identity || {}; check(v.id, v.expect.error ? (r.result === 'INVALID' && new RegExp(v.expect.error).test(r.error || '')) : (id.strength === v.expect.strength && id.status === v.expect.status)); break; }
     // #75 ROOT 3 (math-derived, no manifest) — composition authority: forkChoice/verifyStream resolve per-frame
     // authority (impersonation) + grid equality (off-grid), all language-neutral.
@@ -2605,6 +2609,18 @@ console.log('\n═════════════════════�
   check('#42 typed key spaces: a name-map proof is rejected as a checkpoint-map proof (no collision)', P.verifyCheckpointMapUniqueness(nproof, { domain_shard: 'noosphere.md', genesis_epoch: EP, sequence: '0', checkpoint: headId, mapRoot: nmap.root }).attested === false);
   check('#42 SMT non-membership: absent key → proven non-membership (absent:true), not authoritative', (r => r.authoritative === false && r.absent === true)(P.verifyActiveGenesisUniqueness(emptyMap.prove(nLeaf.key), { domain_shard: 'noosphere.md', active_genesis: P.contentHash(gen), mapRoot: emptyMap.root })));
   check('#42 SMT rival-value-bound is NOT non-membership (absent falsy) — distinct from an absent key', (r => r.authoritative === false && !r.absent)(P.verifyActiveGenesisUniqueness(nproof, { domain_shard: 'noosphere.md', active_genesis: 'sha256:' + '00'.repeat(32), mapRoot: nmap.root })));
+
+  // formal model F.5a.2 — the CURRENCY step. An inclusion proof settles uniqueness UNDER its root; `activeGenesis(n)`
+  // is a claim about NOW, and the passage between them is `R = R_t`. The domain rotates: a LATER root binds the name
+  // to a different genesis, while the publisher keeps serving the earlier proof and the consumer keeps its pin.
+  const gen2 = signG(P.buildGenesis({ domain_shard: 'noosphere.md', ust_id: 'ust:20260629.19', key_id: G.key_id }, T, G.pubB64));
+  const nmap2 = P.buildVerifiableMap([P.nameMapLeaf({ domain_shard: 'noosphere.md', active_genesis: P.contentHash(gen2) })]);
+  const rPinned = P.resolveAuthority(docK, { genesis: gen, keylog: [add], nameMap: { proof: nproof, mapRoot: nmap.root }, trust: { mapRoots: [nmap.root] } });
+  check('F.5a.2 a SUPERSEDED name binding still verifies under its own root — uniqueness is UNDER R, not at t',
+    nmap2.root !== nmap.root && rPinned.strength === 'authoritative' && rPinned.map_root === nmap.root);
+  check('F.5a.2b a consumer-pinned map root reports map_root_currency consumer-asserted', rPinned.map_root_currency === 'consumer-asserted');
+  check('F.5a.2b the checkpoint-map surface carries the SAME currency coordinate', Fmap({ map: { proof: cproof, mapRoot: cmap.root } }).map_root_currency === 'consumer-asserted');
+  check('F.5a.2 a map root with no admission basis earns no map rung', (r => r.strength !== 'authoritative' && r.map_root_currency === undefined)(P.resolveAuthority(docK, { genesis: gen, keylog: [add], nameMap: { proof: nproof, mapRoot: nmap.root } })));
 }
 
 // ─── #76 §1.7 CHECKPOINT RECOVERY — genesis-authorized 2-of-3 multisig re-authorizes the checkpoint authority after

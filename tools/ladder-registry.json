@@ -1743,6 +1743,14 @@
         "excluded": "There is nothing language-neutral to pin. A vector fixes an input and a declared result a second implementation must reproduce; this measures whether OUR gate can see the rounds this tree writes."
       },
       "test": "tools/recap-per-issue-gate.mjs :: three controls, one per previously unread channel — two issues named only in the subject, two channels naming different issues for one round, and a round naming nothing and declaring nothing; mutation-proven twice, once by declaring a second issue through the subject and once by deleting the subject channel, which is the mutation that found the fix did not protect itself"
+    },
+    {
+      "round": 216,
+      "math": "Prefix-uniqueness supplies the first and is silent on the second",
+      "spec": "a verifier MUST report the basis on which currency is held (`map_root_currency`) and MUST NOT",
+      "code": "packages/ust-protocol/index.mjs :: `mapRootAdmitted` becomes `mapRootBasis` and returns a currency BASIS instead of a boolean, carried into the verdict as `map_root_currency` at BOTH admission sites — the name-map identity rung and the checkpoint-map freshness rung — because one mechanism admitted both typed spaces through one silent boolean",
+      "vector": "map-currency-01-pinned-root-is-consumer-asserted",
+      "test": "F.5a.2b a consumer-pinned map root reports map_root_currency consumer-asserted"
     }
   ],
   "first_accounted_round": 76,

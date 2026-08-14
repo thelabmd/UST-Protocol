@@ -743,6 +743,93 @@ realized now.)
 
 All green at REV 44 (conformance 228/0, cli 130/0, mcp live 11/0).
 
+## F.5a.2 Uniqueness is proven UNDER a root; `active` is a claim about now — the currency step (#42)
+
+F.5a discharges the universal negation `¬∃ B ≠ A : B ∈ activeGenesis(n)` by prefix-uniqueness: a key has exactly
+one leaf, so one inclusion proof answers for every rival at once. That step is correct, and it is not the whole
+distance to the verdict the ladder emits.
+
+**Two statements, one implication between them.** Write `bind(n, R)` for the value at key `n` under signed root
+`R`. An inclusion proof establishes
+
+- `incl(n, A, R) ⇒ ¬∃ B ≠ A : bind(n, R) = B` — uniqueness **under `R`**.
+
+`identity = authoritative` asserts `activeGenesis(n) = A`, evaluated at verification time `t`. Passing from the
+first to the second requires `R = R_t` — that `R` is the CURRENT root of the authority. Call this predicate
+`Cur(R, t) := ¬∃ R′ : R′ ≻ R` over the authority's root sequence. It is itself an authenticated non-membership,
+i.e. the class of fact F.5a set out to discharge.
+
+**Proposition F.5a.2 (prefix-uniqueness RELOCATES the non-membership obligation; it does not remove it).**
+`authoritative(n)` at `t` is measurable in `ℐ` iff `ℐ` contains both `incl(n, A, R)` and `Cur(R, t)`.
+Prefix-uniqueness supplies the first and is silent on the second.
+*Proof.* Suppose `ℐ` contains only `incl(n, A, R)`. Take two histories agreeing on every byte of the bundle: in
+`H₁` the authority's latest root is `R` and binds `n ↦ A`; in `H₂` a later root `R′ ≻ R` binds `n ↦ B ≠ A`,
+while `R` and its proof remain exactly as served. `incl(n, A, R)` holds in both, so it is `ℐ`-measurable in
+both, while `activeGenesis(n)` differs — hence `activeGenesis(n) = A` is not `ℐ`-measurable. Conversely, given
+`Cur(R, t)`, `R = R_t` and uniqueness under `R_t` is uniqueness among active bindings. ∎
+
+**The relocation is the gain, and it is strict.** The universe of the negation changes, and with it the class of
+evidence able to settle it:
+
+- **before** — non-membership over NAMES: `B` ranges over every genesis an adversary can construct. The universe
+  is unkeyed and unbounded, nothing in it makes absence exhibitable, and only a trusted observer's report can
+  stand in for the missing structure. This is why F.5a classes the publisher's served list as membership-only.
+- **after** — non-membership over ROOTS: `R′` ranges over one sequence, totally ordered, produced by one party.
+  Once the roots are committed to the anchor substrate, that sequence is embedded in a structure which is itself
+  totally ordered in time, so `Cur(R, t)` is maximality in `{ R′ ∈ Fₜ : signed by m, R′ ≻ R }` — decidable in
+  `Fₜ` from a view of the substrate that is complete after `R`'s anchor.
+
+So the residual is not a trusted observer but SUBSTRATE-VIEW COMPLETENESS, which §11.3 already treats as a
+named, measurable property. That is the honest statement of what the map route buys, and it is strictly weaker
+than the elimination the phrase *the universal `¬∃B` collapses to a single positive lookup* suggests when read
+alone.
+
+**Proposition F.5a.2b (an unanchored pinned root supplies `Cur` by AXIOM, not by evidence).** Let the consumer
+configuration `C` carry a set of admitted roots and let `R ∈ C` with no anchor coordinate for `R` in `ℐ`. Then
+`Cur(R, t)` is decided by `C` alone and by no coordinate of `ℐ`, so by the discipline of Proposition F.5a.1 it
+is a consumer axiom `Ax_C^cur` and must be LABELLED as one. The conjunction the verdict then reports is an
+evidence fact (`incl`) and a consumer axiom (`Cur`) — a mixed statement, valid but UNDATED, and an undated
+statement about a time-varying binding is read as a statement about now.
+*Proof.* Identical in form to Proposition F.5a.1: the two histories `H₁`, `H₂` above agree on every element of
+`ℐ` and differ on `Cur`, so no `ℐ`-coordinate decides it; `C` does. ∎
+
+**Corollary F.5a.2c (the namespace authority is not derivable from the substrate — a negative result).** The
+`C`-indexed part does not vanish. Deriving `activeGenesis(n)` from `Fₜ` alone by first-anchored-wins requires
+proving that no earlier anchored binding for `n` exists — non-membership again, one level down, over a substrate
+that commits opaque roots and therefore supports membership, not keyed lookup; enumerating it is the F.3.1
+obligation restated. A root served from the publisher's own surface is self-referential, an authority named by
+DNS or a well-known path returns the choice to the party the statement is about (excluded by F.5a.1 clause 2 in
+substance), and trust-on-first-use was withdrawn with the `pinned` rung. Hence `authoritative` is NOT reachable
+with an empty consumer configuration, and the correct claim for the map route is the reduction above: the
+epoch-varying coordinate moves from `C` into `Fₜ`, leaving a `C`-part constant in the number of names and
+constant in time.
+
+**One admission, two typed spaces, two different obligations.** §12.3.4 admits both maps through the same
+predicate, and their keys differ in temporal semantics:
+
+- **name-map**, key `= (domain_shard)`: the bound value legitimately CHANGES on authority rotation. Missing
+  `Cur` is an OVERSTATEMENT — a superseded binding verifies under its own root and reports the top identity rung.
+- **checkpoint-map**, key `= (domain_shard, genesis_epoch, sequence)`: the coordinate is write-once by intent,
+  so a later root binding a different value is equivocation, not authority rotation. Missing `Cur` is an UNCHECKED
+  PREMISE — the write-once property is assumed, and its violation is exactly the event anti-equivocation claims
+  to exclude.
+
+Both need the coordinate named; they do not need different coordinates. The verdict reports the BASIS on which
+currency is held, and the consequence of that basis is a property of the key space, stated here.
+
+**Realization (rc.72 line, REV 69).** The admission predicate returns a currency BASIS rather than a boolean —
+`mapRootBasis(trust, root)` — and both call sites carry it into the verdict as `map_root_currency`. Exactly one
+value is realized, `consumer-asserted`; the anchored value is the open work of #42, and its absence is a named
+absence rather than an emitted rung. No tier moves: what was silent is now labelled.
+
+**Conformance (each claim is a running property — math ⇒ code ⇒ green check, `packages/ust-protocol/conformance.mjs`).**
+- Proposition F.5a.2 (uniqueness is under a root, and a superseded binding still verifies under its own):
+  *"F.5a.2 a SUPERSEDED name binding still verifies under its own root — uniqueness is UNDER R, not at t"*.
+- Proposition F.5a.2b (the axiom is labelled, never silent): *"F.5a.2b a consumer-pinned map root reports map_root_currency consumer-asserted"*.
+- The same coordinate on the second typed space (one mechanism, both surfaces):
+  *"F.5a.2b the checkpoint-map surface carries the SAME currency coordinate"*.
+- Fail-closed (no map coordinate without a basis): *"F.5a.2 a map root with no admission basis earns no map rung"*.
+
 ## F.5b Downgrade resistance is the consumer's floor, not the producer's promise
 
 The tiers are totally ordered, `LIGHT < HIGH < TOP`, and by Theorem F.5 each is a coarser σ-algebra than the

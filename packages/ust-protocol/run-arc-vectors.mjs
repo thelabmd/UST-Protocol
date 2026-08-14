@@ -20,6 +20,7 @@ const call = {
   verifyCheckpointUniqueness: (v) => P.verifyCheckpointUniqueness(v.attestations, v.opts),
   verifyCheckpointMapUniqueness: (v) => P.verifyCheckpointMapUniqueness(v.proof, v.opts),
   verifyActiveGenesisUniqueness: (v) => P.verifyActiveGenesisUniqueness(v.proof, v.opts),
+  resolveAuthority: (v) => P.resolveAuthority(v.doc, v.opts),                     // F.5a.2b — the currency coordinate is decided HERE, not at the map primitive; the second typed space needs its own row or the domain is a sample
   verifyCheckpointRecovery: (v) => P.verifyCheckpointRecovery(v.statements, v.opts),
   verifyEpochTransition: (v) => P.verifyEpochTransition(v.statement, v.opts),
   projectTier: (v) => P.projectTier(v.state),                                     // #78 lattice — returns a bare tier string

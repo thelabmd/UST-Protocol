@@ -1537,6 +1537,15 @@ Two INDEPENDENT (non-publisher) bases prove `¬∃ rival at the coordinate`, bot
   from the same bundle as the proof (P0-01, external audit).** A verifier that lets an evidence bundle supply BOTH
   the proof and its root grants a self-declared `authoritative`/`attested` (assurance is earned by proof over a
   consumer-held root, capped by trust — §F.5.0); the map proof is verified against the consumer-admitted root only.
+  **An inclusion proof establishes uniqueness UNDER its root, which is not yet a statement about now** (formal
+  model F.5a.2). Passing from `bind(n, R) = A` to `activeGenesis(n) = A` needs `R` to be the CURRENT root, and
+  that is an authenticated non-membership over the authority's root sequence — relocated by prefix-uniqueness,
+  not discharged by it. A root held in the consumer's configuration with no anchor coordinate supplies currency
+  by AXIOM, so a verifier MUST report the basis on which currency is held (`map_root_currency`) and MUST NOT
+  emit a map-based rung with none. Exactly one basis is defined at this revision: `consumer-asserted`. The
+  obligation differs by key space and the model states why — a name-map value legitimately changes on authority
+  rotation, so a missing currency basis would be an overstatement; a checkpoint-map coordinate is write-once by
+  intent, so it would be an unchecked premise.
 - **Accepted-witness quorum** (`purpose:"ust:checkpoint-uniqueness-attestation"`) — `≥ threshold` **DISTINCT
   CONSUMER-RESOLVED trust domains** signing the byte-identical uniqueness claim over `(domain, genesis_epoch,
   sequence, authority checkpoint)`. **Independence is CONSUMER-owned** (the consumer maps issuer→domain), NEVER
@@ -3116,3 +3125,43 @@ operator profile (§20), never the protocol. The five passes converged from "the
   implementations and compares every shared primitive; reversing key order in the signer's `canon` reddens seven
   rows by name, and restoring the floor's old class condition reddens exactly the untested-direction check with the
   divergence spelled out.
+- **REV 69 (2026-08-14, `rc.72` line)** — **an inclusion proof settles uniqueness UNDER a root, and the ladder read
+  it as a statement about now.** Found while starting the anchored-map work of #42; the finding sits one level above
+  it. F.5a discharges `¬∃ B ≠ A : B ∈ activeGenesis(n)` by prefix-uniqueness, and that step is correct. What it
+  establishes is `bind(n, R) = A` — uniqueness under the root `R`. What `identity = authoritative` asserts is
+  `activeGenesis(n) = A`, evaluated now. The passage between them needs `R = R_t`, and *that* is an authenticated
+  non-membership over the authority's root sequence — the class of fact F.5a set out to discharge. **So
+  prefix-uniqueness RELOCATES the obligation rather than removing it**, and the relocation is the real gain, worth
+  stating exactly: the universe changes from NAMES (unkeyed, unbounded, absence exhibitable only through a trusted
+  observer's report) to ROOTS (one totally ordered sequence from one party, embedded once anchored in a substrate
+  itself ordered in time), so the residual is SUBSTRATE-VIEW COMPLETENESS — a named, measurable property of §11.3 —
+  and not a trusted observer. **Reproduced before it was written.** A consumer pinning an epoch-1 map root, with the
+  domain since rotated and a later root binding the name elsewhere, gets `VALID:HIGH`, `identity: authoritative`,
+  `independently_verified: true`, and no field on the verdict that says as-of-when; the `freshness` sitting on that
+  same object is the KEY-LOG's, so a reader who takes it for the currency of the identity claim reads the wrong
+  mechanism under the right word. **This is the class the protocol already refuses one axis over:** §12.2a settles
+  that a cached key-log proves only `revoke ∉ my view`, and P0-03 deleted the `keylogHeadAnchor → attested` shortcut
+  because an anchored head is membership-at-anchor, not latest-head. A pinned map root proves only
+  `rival ∉ my view of the map at some unstated past moment` — and where the key-log axis at least reports
+  `freshness: unverified`, the map axis reported nothing. The hostile reading, that a stale pin is merely the
+  consumer's own view faithfully returned, is answered by the key-log itself: also caller-supplied, also cacheable,
+  and the protocol did not say *your cache, your problem* — it made staleness a named axis with four rungs and a
+  floor. **The asymmetry was the defect, not the staleness.** §12.3.4 now requires the verdict to name the basis on
+  which currency is held and forbids a map-based rung with none; the admission predicate returns that basis instead
+  of a boolean, at BOTH typed spaces, because the obligation differs by key space while the coordinate does not — a
+  name-map value legitimately changes on authority rotation, so silence there is an OVERSTATEMENT, while a
+  checkpoint-map coordinate is write-once by intent, so silence there is an UNCHECKED PREMISE and its violation is
+  the very equivocation that rung claims to exclude. One basis is defined, `consumer-asserted`; the anchored one is
+  the open work of #42 and its absence is named rather than emitted. **No tier moves and no verdict changes value:
+  what was silent is labelled** — which is also what a consumer wanting to refuse an undated map coordinate has to
+  refuse on. Formal model gains F.5a.2, with Proposition F.5a.2 (relocation, proved by two histories agreeing on the
+  bundle and differing on the root sequence), Proposition F.5a.2b (an unanchored pin supplies currency by AXIOM, so
+  it must be labelled exactly as F.5a.1 labels the no-fork override), and **Corollary F.5a.2c, a negative result**:
+  a namespace authority is not derivable from the substrate — first-anchored-wins needs non-membership one level
+  down over a substrate that commits opaque roots and so supports membership rather than keyed lookup, a
+  publisher-served root is self-referential, DNS returns the choice to the party the statement is about, and TOFU
+  left with the `pinned` rung. **`authoritative` is therefore NOT reachable with an empty consumer configuration**,
+  and the honest claim for the map route is that the epoch-varying coordinate moves from `C` into `Fₜ`, leaving a
+  `C`-part constant in names and constant in time. Four conformance checks, mutation-proven: dropping the currency
+  coordinate reddens exactly the check that names it, and admitting any root reddens the self-supplied-root
+  reproduction that has guarded this door since the external audit. conformance 1001/0, 62 model sections bound.

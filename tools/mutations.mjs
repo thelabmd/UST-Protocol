@@ -25,8 +25,15 @@ export const MUTATIONS = [
     id: 'name-map-root-self-admitted', gate: 'node packages/ust-protocol/security-regression.mjs',
     why: 'the #42 consumer-admission of a name-map root. Broken, ANY root counts as admitted, so a self-supplied name-map root earns identity=authoritative — the P0-01a reproduction expects exactly that refusal.',
     file: 'packages/ust-protocol/index.mjs',
-    from: 'const mapRootAdmitted = (trust, root) => Array.isArray(trust?.mapRoots) && trust.mapRoots.includes(root);',
-    to: 'const mapRootAdmitted = (trust, root) => true; /* mutant */',
+    from: "const mapRootBasis = (trust, root) => (Array.isArray(trust?.mapRoots) && trust.mapRoots.includes(root) ? 'consumer-asserted' : null);",
+    to: "const mapRootBasis = (trust, root) => 'consumer-asserted'; /* mutant */",
+  },
+  {
+    id: 'map-root-currency-unlabelled', gate: 'node packages/ust-protocol/conformance.mjs',
+    why: 'formal model F.5a.2b — a pinned root supplies CURRENCY by axiom, and an axiom the verdict does not label reads as an evidence fact. Broken, the map rung ships with no currency coordinate, which is exactly the silence this round removed: the verdict says a superseded binding is active and offers nothing to refuse on.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: 'map_root: nm.map_root, map_root_currency: nmCur, status: st2',
+    to: 'map_root: nm.map_root, status: st2',
   },
   {
     id: 'diary-cap-not-enforced', gate: 'node --test packages/diarium/test/store.test.mjs',

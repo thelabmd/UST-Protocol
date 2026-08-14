@@ -1952,7 +1952,13 @@ export function quorumTrustDomains(list, config) {
 // ─── UST-0ol Phase 1 — the TRUST BOUNDARY (I_C). A map root is admissible ONLY if the CONSUMER independently holds
 //     it (trust.mapRoots — anchored/pinned out-of-band); it is NEVER taken from the same bundle as the proof. Absence
 //     of admission ⇒ no strong rung (fail-safe). This is the separation of trust-configuration from evidence.
-const mapRootAdmitted = (trust, root) => Array.isArray(trust?.mapRoots) && trust.mapRoots.includes(root);
+//     F.5a.2 — and it returns a CURRENCY BASIS, never a boolean. An inclusion proof establishes uniqueness UNDER its
+//     root; `activeGenesis(n) = A` is a claim about NOW, and the step between them is `R = R_t` — non-membership over
+//     the authority's root sequence, RELOCATED by prefix-uniqueness rather than discharged by it. A pinned root with
+//     no anchor coordinate supplies that step by AXIOM, so the verdict must LABEL it (`map_root_currency`) exactly as
+//     Proposition F.5a.1 labels the no-fork override. One basis is realized; `anchored` is the open work of #42, and
+//     its absence is a named absence, never an emitted rung.
+const mapRootBasis = (trust, root) => (Array.isArray(trust?.mapRoots) && trust.mapRoots.includes(root) ? 'consumer-asserted' : null);
 // P0-1 (rc.35 audit) — a module-private capability set. Only resolveByDiscovery (which actually ran witnessNoFork)
 // mints a servedNoFork object into it; a transcript caller cannot add to it, so a plain look-alike object earns nothing.
 const VERIFIED_SERVED = new WeakSet();
@@ -2080,10 +2086,11 @@ export function resolveAuthority(doc, opts = {}) {
   //     `consumer-override` (independently_verified:false), NEVER silently `authoritative` (the removed overclaim,
   //     same class as `mapInclusion:true`). A consumer consciously honoring its own override sets acceptConsumerOverride
   //     at verify(); the verdict stays transparent. Present-but-invalid evidence never upgrades (fail-safe).
-  if (nameMap && mapRootAdmitted(trust, nameMap.mapRoot)) {                          // #42 — name-map inclusion, root CONSUMER-ADMITTED (Phase 1); a self-supplied root never reaches here
+  const nmCur = nameMap ? mapRootBasis(trust, nameMap.mapRoot) : null;               // F.5a.2b — the currency basis, or NOTHING; a self-supplied root never reaches here
+  if (nameMap && nmCur) {                                                            // #42 — name-map inclusion, root CONSUMER-ADMITTED (Phase 1)
     const nm = verifyActiveGenesisUniqueness(nameMap.proof, { domain_shard: doc.state.id.domain_shard, active_genesis: contentHash(genesis), mapRoot: nameMap.mapRoot });
     if (nm.authoritative) return { strength: 'authoritative', noFork: 'map-inclusion', independently_verified: true,
-      basis: 'authenticated-map-uniqueness', map_root: nm.map_root, map_root_admitted: true, status: st2, capacity, freshness };
+      basis: 'authenticated-map-uniqueness', map_root: nm.map_root, map_root_currency: nmCur, status: st2, capacity, freshness };   // F.5a.2b — the ROTATION-bearing key space: an unlabelled currency would be an overstatement (a superseded binding verifies under its own root)
   }
   if (noForkEvidence !== undefined) {
     const ev = verifyNoForkEvidence(noForkEvidence, { domain_shard: doc.state.id.domain_shard, active_genesis: contentHash(genesis), trustRoots: trustRoots || {} });
@@ -3055,7 +3062,8 @@ export function deriveCheckpointFreshness(chain, config) {
   // failed) ⇒ `attested ⇒ corroborated ∧ independent-uniqueness`; uniqueness alone never earns `attested`.
   if (uniqueness) {
     let uq = null;                                                                       // two INDEPENDENT bases for the SAME predicate
-    if (uniqueness.map && mapRootAdmitted(trust, uniqueness.map.mapRoot)) uq = verifyCheckpointMapUniqueness(uniqueness.map.proof, { domain_shard: b.domain_shard, genesis_epoch: b.genesis_epoch, sequence: b.sequence, checkpoint: headId, mapRoot: uniqueness.map.mapRoot });   // Phase 1: map root must be consumer-admitted (trust.mapRoots)
+    const cpCur = uniqueness.map ? mapRootBasis(trust, uniqueness.map.mapRoot) : null;   // F.5a.2b — SAME coordinate, second typed space: here the key is write-once by intent, so an unlabelled currency is an unchecked PREMISE (a later root binding a rival value is equivocation, the very event this rung claims to exclude)
+    if (uniqueness.map && cpCur) uq = { ...verifyCheckpointMapUniqueness(uniqueness.map.proof, { domain_shard: b.domain_shard, genesis_epoch: b.genesis_epoch, sequence: b.sequence, checkpoint: headId, mapRoot: uniqueness.map.mapRoot }), map_root_currency: cpCur };   // Phase 1: map root must be consumer-admitted (trust.mapRoots)
     if ((!uq || !uq.attested) && uniqueness.attestations) uq = verifyCheckpointUniqueness(uniqueness.attestations, { domain_shard: b.domain_shard, genesis_epoch: b.genesis_epoch, sequence: b.sequence, checkpoint: headId, trustRoots: uniqueness.trustRoots, domains: uniqueness.domains, threshold: uniqueness.threshold });
     if (uq && uq.attested) {
       // K1 ship-gate: the STABLE verifier does not emit `attested`. Without the explicit experimental opt-in the
@@ -3063,10 +3071,10 @@ export function deriveCheckpointFreshness(chain, config) {
       // rung named — an honest downgrade, never a silent one.
       if (aea !== true) return { result: 'VALID', keylog_freshness: 'corroborated', basis: uq.basis, anti_equivocation: 'attested',
         attested_withheld: 'experimental-gate', stability: 'experimental-extension',
-        ...(uq.map_root ? { map_root: uq.map_root } : {}), head: headId, sequence: b.sequence, active_genesis: b.active_genesis };
+        ...(uq.map_root ? { map_root: uq.map_root } : {}), ...(uq.map_root_currency ? { map_root_currency: uq.map_root_currency } : {}), head: headId, sequence: b.sequence, active_genesis: b.active_genesis };
       return { result: 'VALID', keylog_freshness: 'attested', basis: uq.basis, anti_equivocation: 'attested', stability: 'experimental-extension',
         ...(uq.threshold ? { threshold: uq.threshold, accepted_witnesses: uq.accepted_witnesses, trust_domains: uq.trust_domains } : {}),
-        ...(uq.map_root ? { map_root: uq.map_root } : {}), head: headId, sequence: b.sequence, active_genesis: b.active_genesis };
+        ...(uq.map_root ? { map_root: uq.map_root } : {}), ...(uq.map_root_currency ? { map_root_currency: uq.map_root_currency } : {}), head: headId, sequence: b.sequence, active_genesis: b.active_genesis };
     }
   }
   return { result: 'VALID', keylog_freshness: 'corroborated', basis: 'publisher-checkpoint', anti_equivocation: 'unverified',  // ceiling without independent uniqueness

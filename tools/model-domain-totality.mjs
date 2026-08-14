@@ -53,7 +53,10 @@ const bounds = heads.map((h) => h.pos).concat(MODEL.length);
 // section silently LEAVE the domain — renamed to a non-`F.x` heading, it would simply stop being enumerated and this
 // gate would still pass. That is the very defect class this gate exists to close, so the count is exact and any change
 // to the section inventory must be a deliberate edit here.
-const EXPECTED_SECTIONS = 61;   // 60 → 61: F.1.1 — the partition-kind domain K, which the model never named; four
+const EXPECTED_SECTIONS = 62;   // 61 → 62: F.5a.2 — the CURRENCY step. F.5a proved uniqueness UNDER a root and the
+// ladder read it as `active`, which is a claim about now; the passage between them is non-membership over the
+// authority's root sequence, RELOCATED by prefix-uniqueness rather than discharged, and a pinned root supplied it by
+// an axiom no verdict labelled (#42). Prior 60 → 61: F.1.1 — the partition-kind domain K, which the model never named; four
 // independent enumerations (core, browser verifier, extension, spec registry) drifted and two shipped verifiers
 // refused every conforming document of the reference operator, with no theorem violated because none quantified
 // over K (#154). Prior 59 → 60: F.5e.2a — §F.5e.2's admission criterion ("the verifier ACTS ON IT") governs an INPUT field and is meaningless over an OUTPUT one; measured, the §14 and fork-choice `result` vocabularies intersect at INDETERMINATE, so `kind` is the only thing separating two different answers

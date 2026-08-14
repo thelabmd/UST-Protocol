@@ -599,6 +599,10 @@
       "round": 215,
       "content_hash": "sha256:a2ea1b27e6a3a8a41d701ba5900ce7b4f7dfe69b7170d73a01bed0905659684a",
       "issue": 166
+    },
+    {
+      "round": 216,
+      "no_recap": "Round 216 closed no issue. It moved a finding INTO #42 and left it open: the currency step is named, the coordinate ships, and the anchoring the card asks for is still ahead — so is #151, whose headline this round answered with a negative result rather than a mechanism. The unit is the CLOSED ISSUE; a round that reshapes open work has no recipient, and an entry written for it would be an entry written to satisfy a gate."
     }
   ]
 }
