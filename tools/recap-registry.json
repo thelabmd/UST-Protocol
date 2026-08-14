@@ -607,6 +607,10 @@
     {
       "round": 217,
       "no_recap": "Round 217 closed no issue. #151 stays open — this is its point 2 of four, and the round that finishes the card is the one that owes the report. The unit is the CLOSED ISSUE; an entry written for a round that advances open work would be an entry written to satisfy a gate."
+    },
+    {
+      "round": 218,
+      "no_recap": "Round 218 closed no issue. #151 stays open — this is its point 3 of four, and the round that finishes the card owes the report. The unit is the CLOSED ISSUE; an entry for a round that advances open work would be written to satisfy a gate."
     }
   ]
 }

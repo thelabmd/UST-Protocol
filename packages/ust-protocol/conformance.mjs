@@ -2628,6 +2628,16 @@ console.log('\n═════════════════════�
   check('F.5a.2 a SUPERSEDED name binding still verifies under its own root — uniqueness is UNDER R, not at t',
     nmap2.root !== nmap.root && rPinned.strength === 'authoritative' && rPinned.map_root === nmap.root);
   check('F.5a.2b a consumer-pinned map root reports map_root_currency consumer-asserted', rPinned.map_root_currency === 'consumer-asserted');
+  // F.5a.3 — the rungs partition PREDICATES, not evidence bases. Both admitted routes establish the same
+  // proposition, so they are one rung; what differs is the FAILURE MODE of the evidence, which the consumer's
+  // admission policy prices and the ladder does not record.
+  const mapRoute  = { integrity: 'valid', identity: 'authoritative', freshness: 'unverified', time: 'anchored' };
+  const witRoute  = { ...mapRoute };
+  check('F.5a.3 two verdicts differing ONLY in evidence basis project to the SAME tier',
+    P.projectTier(mapRoute) === 'TOP' && P.projectTier(witRoute) === 'TOP'
+    && P.projectTier({ ...mapRoute, basis: 'authenticated-map-uniqueness' }) === P.projectTier({ ...witRoute, basis: 'accepted-external-witness' }));
+  check('F.5a.3 the basis rides the verdict — one rung does not mean one story',
+    rPinned.basis === 'authenticated-map-uniqueness' && rPinned.noFork === 'map-inclusion');
   check('F.5a.2b the checkpoint-map surface carries the SAME currency coordinate', Fmap({ map: { proof: cproof, mapRoot: cmap.root } }).map_root_currency === 'consumer-asserted');
   check('F.5a.2 a map root with no admission basis earns no map rung', (r => r.strength !== 'authoritative' && r.map_root_currency === undefined)(P.resolveAuthority(docK, { genesis: gen, keylog: [add], nameMap: { proof: nproof, mapRoot: nmap.root } })));
 }

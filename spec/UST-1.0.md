@@ -1560,6 +1560,16 @@ Two INDEPENDENT (non-publisher) bases prove `¬∃ rival at the coordinate`, bot
   self-declared: a claim that carries its own `trust_domain`/`issuer_id` is REJECTED (P0-2), and a bare-observation
   co-sign is corroboration with the WRONG purpose ⇒ not admitted as uniqueness.
 
+**One rung, two bases — and the basis is a FIELD, never a rung (formal model F.5a.3).** Both routes above
+establish the SAME proposition, `¬∃ rival binding for n`. A tier rung records the strength of what was
+ESTABLISHED, not the manner of establishing it, so a verifier MUST project the same tier from either, and MUST
+carry the basis alongside the strength rather than encoding it in the strength. There is no rung above
+`authoritative`: `¬∃ rival` is already universal over the rival space, so a further rung could only relabel an
+evidence basis. What DOES differ between the routes is the failure mode — a map authority commits a TOTAL
+function over the key space with one signature, so withholding a statement about `n` requires a different root,
+while a witness signs a claim ABOUT `n` and selective silence leaves no artifact — and that difference is priced
+by the consumer's admission policy, not by the ladder.
+
 **One quorum algebra (M5).** Every quorum surface (witness uniqueness here, checkpoint-recovery §12.3.2, the
 `quorumTrustDomains` aggregate) runs the SAME four steps: **admit** (authenticate + bind FIRST; a malformed element
 admits nothing and never throws) → **group** by `canon(claim)` AFTER admission (an unauthenticated element can never

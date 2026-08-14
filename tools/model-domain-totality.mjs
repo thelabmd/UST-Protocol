@@ -53,7 +53,11 @@ const bounds = heads.map((h) => h.pos).concat(MODEL.length);
 // section silently LEAVE the domain — renamed to a non-`F.x` heading, it would simply stop being enumerated and this
 // gate would still pass. That is the very defect class this gate exists to close, so the count is exact and any change
 // to the section inventory must be a deliberate edit here.
-const EXPECTED_SECTIONS = 62;   // 61 → 62: F.5a.2 — the CURRENCY step. F.5a proved uniqueness UNDER a root and the
+const EXPECTED_SECTIONS = 63;   // 62 → 63: F.5a.3 — the rungs partition PREDICATES, not evidence bases. The
+// decision was already recorded; its ARGUMENT was refuted by F.5a.2c the same day (it separated the two routes by
+// where their trust bottoms out, and both bottom out in `C`), so the section carries the refuted reasoning beside
+// the sound one — a correct decision defended by a broken argument is the one most likely to be re-opened badly.
+// Prior 61 → 62: F.5a.2 — the CURRENCY step. F.5a proved uniqueness UNDER a root and the
 // ladder read it as `active`, which is a claim about now; the passage between them is non-membership over the
 // authority's root sequence, RELOCATED by prefix-uniqueness rather than discharged, and a pinned root supplied it by
 // an axiom no verdict labelled (#42). Prior 60 → 61: F.1.1 — the partition-kind domain K, which the model never named; four

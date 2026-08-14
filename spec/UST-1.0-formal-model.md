@@ -830,6 +830,59 @@ absence rather than an emitted rung. No tier moves: what was silent is now label
   *"F.5a.2b the checkpoint-map surface carries the SAME currency coordinate"*.
 - Fail-closed (no map coordinate without a basis): *"F.5a.2 a map root with no admission basis earns no map rung"*.
 
+## F.5a.3 The rungs partition PREDICATES, not evidence bases — and the first argument for that was wrong (#151)
+
+Two routes reach `authoritative`: an anchored map inclusion (F.5a b) and an accepted external witness (F.5a.1).
+Whether they are one rung or two is a question about the LADDER, and it was first answered with an argument that
+F.5a.2c refutes.
+
+**The refuted argument, kept with its refutation.** It read: a rung must be decidable in the σ-algebra the ladder
+climbs; the witness route is decided in the consumer's trust configuration `C`, which is not a world coordinate;
+therefore it cannot be a rung. F.5a.2c shows the MAP route also bottoms out in `C` — the namespace authority is
+admitted there and nowhere else — so the premise separates nothing and every conclusion resting on it is
+unsupported. It is recorded rather than deleted because a correct decision defended by a broken argument is the
+one most likely to be re-opened badly: the next reader who notices the flaw has no way to tell whether the
+decision fell with it.
+
+**Proposition F.5a.3 (one predicate, one rung).** Let `e₁` be an admitted map inclusion and `e₂` an admitted
+witness attestation, both for `(n, A)`. Each yields the SAME proposition `¬∃ B ≠ A : B ∈ activeGenesis(n)`. A rung
+is a strength of the fact ESTABLISHED, not of the manner of establishing it, so `σ(ℐ ∪ {e₁})` and `σ(ℐ ∪ {e₂})`
+agree on the ladder's coordinate and the two are one rung. A ladder separating them would be ordering EVIDENCE
+rather than assurance — the M1.3 category error F.5a corrects once already, arriving here from the other side. ∎
+
+**What does differ, and where it belongs.** The routes fail differently, and the difference is structural rather
+than a matter of degree:
+
+- the map authority commits a TOTAL function over the key space with ONE signature — `bind(·, R)` is defined at
+  every key — so a statement about `n` cannot be withheld without producing a different root, and roots are
+  comparable and, once anchored, publicly ordered;
+- a witness signs a claim ABOUT `n`. Evidence exists only where the witness chose to speak, so selective silence
+  leaves no artifact at all.
+
+The map's non-membership is therefore by CONSTRUCTION and the witness's is by TESTIMONY. That is a difference in
+the FAILURE MODE of the evidence, which is what an admission policy `C` exists to price, and not a difference in
+what was established, which is what a rung exists to record. Hence the basis rides as a FIELD and the tier stays
+a projection of the axes alone.
+
+**Corollary F.5a.3a (there is no fourth rung, and the reason is not a naming problem).** A rung above
+`authoritative` would have to name a strictly stronger PREDICATE about the same coordinate. `¬∃ rival` admits no
+strengthening — it is already universal over the rival space — so any candidate fourth rung would be a relabelled
+evidence basis, which Proposition F.5a.3 excludes. Choosing a different word for it changes nothing, because the
+objection is that there is no proposition left to order.
+
+**Not taken on faith.** The claim that external confirmation is the least-used property of the protocol is
+plausible and UNMEASURED. It becomes observable once the anchored route ships: the share of calls supplying
+`trustRoots` or `noForkEvidence` against the share reaching the rung by inclusion. The decision is recorded now
+and the number is attached later; if the number contradicts it, this section is re-opened with a new closing.
+
+**Realization.** Measured, not built: `projectTier` reads the four axes and has never seen a basis, while the
+verdict already carries `basis`, `noFork` and (round 216) `map_root_currency` beside the strength. The work here
+is the invariant that keeps it so.
+
+**Conformance.**
+- Proposition F.5a.3: *"F.5a.3 two verdicts differing ONLY in evidence basis project to the SAME tier"*.
+- the basis is not lost either: *"F.5a.3 the basis rides the verdict — one rung does not mean one story"*.
+
 ## F.5b Downgrade resistance is the consumer's floor, not the producer's promise
 
 The tiers are totally ordered, `LIGHT < HIGH < TOP`, and by Theorem F.5 each is a coarser σ-algebra than the
