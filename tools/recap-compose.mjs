@@ -394,8 +394,19 @@ const head = () => `# THE LAB<br>${HEAD_KIND[form]}
 //
 // TABLES ARE HTML AND FULL WIDTH. A markdown table shrinks to its content and reads like a draft beside the ones
 // before it; a comparison the reader must scan needs the page, not a column.
-const td = (v) => `<td valign="top">\n\n${v}\n\n</td>`;
-const tbl = (rows) => `<table width="100%">\n${rows.map((r) => '<tr>' + r.map(td).join('') + '</tr>').join('\n')}\n</table>`;
+const td = (v, span) => `<td valign="top"${span > 1 ? ` colspan="${span}"` : ''}>\n\n${v}\n\n</td>`;
+// #164 — ONE TABLE, ONE COLUMN GRID, so a cell that cannot wrap is paid for by a cell in a DIFFERENT ROW. Tool
+// output is a fenced block whose longest line does not wrap; measured on the round-212 report, that line pinned
+// column 2 at 611px and left column 4 with 119px, where 837 characters of prose became a 1520px noodle and the
+// table overflowed the comment (scrollWidth 964 > 878). The composer cannot police the content — it emits the
+// skeleton BEFORE the author fills it, so the block does not exist yet. So it removes the COUPLING instead: a row
+// may be shorter than the widest row, and its last cell spans the remainder. A row that invites tool output is
+// then written with two cells and gets the page, and no other row pays for it.
+const tbl = (rows) => {
+  const cols = Math.max(...rows.map((r) => r.length));
+  const body = rows.map((r) => '<tr>' + r.map((v, i) => td(v, i === r.length - 1 ? cols - i : 1)).join('') + '</tr>');
+  return `<table width="100%">\n${body.join('\n')}\n</table>`;
+};
 const alert = (kind, body) => `> [!${kind}]\n> ${body}`;
 
 // ── A DIAGRAM IS DERIVED, NOT POSITIONED ─────────────────────────────────────────────────────────────────────
@@ -453,8 +464,14 @@ ${slot(4)}
 
 ${tbl([
   ['**CONFORMANCE**', checks ? `${checks[1]} checks, ${checks[2]} failing${vectors !== null ? `, ${vectors} vectors` : ''}` : '«conformance did not report»', '**CI**', ciSteps !== null ? `${ciSteps} steps (\`npm run ci:local\`)` : FILL('CI state')],
-  ['**CAN THE CHECK FAIL**', FILL('revert the fix and name exactly what goes red — with its own message, not a neighbour\'s'), '**CONTROL**', FILL('the detector fires on the real defect and stays silent on correct code')],
-  ...(gateLines.length ? [['**GATES**', gateLines.join('<br>'), '**NOTE**', FILL('anything a gate reported that a reader should not skip')]] : []),
+  // Full-width rows (#164). These four cells hold the evidence — a reverted fix's actual output, the gate lines,
+  // the control. Evidence arrives as blocks that do not wrap, and a quarter column cannot hold one without
+  // charging the other three. The factual pair above stays four-up because it is four short facts.
+  ['**CAN THE CHECK FAIL**', FILL('revert the fix and name exactly what goes red — with its own message, not a neighbour\'s')],
+  ['**CONTROL**', FILL('the detector fires on the real defect and stays silent on correct code')],
+  ...(gateLines.length
+    ? [['**GATES**', gateLines.join('<br>')], ['**NOTE**', FILL('anything a gate reported that a reader should not skip')]]
+    : []),
 ])}
 ${slot(5)}
 <details><summary>commits</summary>

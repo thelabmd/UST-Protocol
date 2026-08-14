@@ -98,6 +98,29 @@ for (const form of ['incident', 'audit', 'delivery']) {
     `the ${form} form ACCEPTED an EMPTY slot declaration — a loop over an empty domain is green for free, which is the defect #163 measured`);
 }
 
+// ── 6. every ROW spans the same total (#164). One table means one column grid, so a cell whose content cannot
+//    wrap sets a minimum width that a cell in a DIFFERENT row pays for. § 5 invites tool output — a fenced block
+//    with an unwrappable longest line — and on the round-212 report that pinned column 2 at 611px, starved
+//    column 4 to 119px and overflowed the comment. The fix lets a row be shorter and span the remainder, which is
+//    only sound if the grid stays well formed. This leg asserts that, and it is what fails if the padding goes.
+for (const form of ['incident', 'audit', 'delivery']) {
+  const g = run(['--round', '999', '--issue', '999', '--form', form]);
+  let ragged = 0, mixed = 0, tables = 0;
+  for (const t of g.out.match(/<table[\s\S]*?<\/table>/g) ?? []) {
+    tables++;
+    const spans = (t.match(/<tr>[\s\S]*?<\/tr>/g) ?? []).map((r) => (r.match(/<td[^>]*>/g) ?? [])
+      .reduce((n, c) => n + Number(/colspan="(\d+)"/.exec(c)?.[1] ?? 1), 0));
+    if (new Set(spans).size > 1) ragged++;
+    if (new Set((t.match(/<tr>[\s\S]*?<\/tr>/g) ?? []).map((r) => (r.match(/<td/g) ?? []).length)).size > 1) mixed++;
+  }
+  check(tables > 0 && ragged === 0,
+    `the ${form} form emitted ${ragged} table(s) whose rows span DIFFERENT column totals — a ragged grid is not a table, and the row that is short is the one a reader loses`);
+  if (form === 'incident') {
+    check(mixed > 0,
+      'no incident table mixes a four-up factual row with a full-width evidence row — the padding is unexercised, so this leg would pass over a grid that never needed it');
+  }
+}
+
 rmSync(dir, { recursive: true, force: true });
 
 console.log(`\n  recap-compose selfcheck   PASS ${pass}   FAIL ${fail}   (${markers} judgment marker(s) in a fresh skeleton)`);
