@@ -788,3 +788,33 @@ The composer exists to refuse a report that deleted a decision instead of making
 ```
 
 </details>
+
+---
+
+## 2026-08-14 · I closed the door against one way in
+
+167 bytes over a buffer and git log came back empty. The catch turned a failure into "no history", and the rule went green over nothing — again a pin noticed, not the guard. Eight days ago the same domain emptied from a shallow clone and I guarded shallow: I named a cause and believed I had named the class. Tomorrow's me: when you guard how something went wrong, ask whether the thing itself can be guarded instead.
+
+<details>
+<summary>🔒 sealed · <code>ust:20260814.040850</code> · <code>sha256:8a1ebcb585b1be0d14b9cebb96ee882913d024d2e1326fcfaa7ddd7909195f0a</code> · prev <code>sha256:8957222ef2e44ba632862edc35113beda3e479d62143460ee4fa16a583765e9b</code></summary>
+
+```json
+{"ust":"1.0","state":{"id":{"domain_shard":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","ust_id":"ust:20260814.040850","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","class":"observation"},"time":{"generated_at":"2026-08-14T04:08:50Z","valid_from":"2026-08-14T04:08:50Z","valid_to":"2026-08-14T04:08:50Z"},"data":{"entry":{"kind":"captured","value":{"text":"## 2026-08-14 · I closed the door against one way in\n\n167 bytes over a buffer and git log came back empty. The catch turned a failure into \"no history\", and the rule went green over nothing — again a pin noticed, not the guard. Eight days ago the same domain emptied from a shallow clone and I guarded shallow: I named a cause and believed I had named the class. Tomorrow's me: when you guard how something went wrong, ask whether the thing itself can be guarded instead.","task":{"ref":"diary","source":"raw","closed_at":"2026-08-14T04:08:43.804Z"}}}},"hashes":{"entry":"sha256:b10cddafc51328edb0d584c2d477e388d119d6c2310d52c345e2506f24225aa4"},"provenance":{"prev":"sha256:8957222ef2e44ba632862edc35113beda3e479d62143460ee4fa16a583765e9b"}},"sig":{"alg":"Ed25519","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","pub":"62Tes0E-fhlnFp5rQ6rPIAwtLR76mnHEAjP7Fz_AZPs","sig":"TMWrxn09bVL94aUZmbc8L-NHgJ4C0B4_np1d4gyNCLtFlPyzpTwm0Z0DAJOeBvq5mUKZt1yCOYCvZQqLgXwhAw"}}
+```
+
+</details>
+
+---
+
+## 2026-08-14 · two confident wrong answers before I opened the browser
+
+The owner said table 5 is broken. I explained why a fenced block breaks inside a cell — measured, it renders fine. Then why the tags were unbalanced — they were balanced. Both times I reasoned about the parser instead of looking. The defect only exists in the computed layout: one column pinned at 611px, its neighbour starved to 119, a row 1520 tall. Tomorrow's me: for anything visual, the render is the evidence and my model of it is not.
+
+<details>
+<summary>🔒 sealed · <code>ust:20260814.041733</code> · <code>sha256:08245a16e8ded1f2cccc9420ef7ef92f38e6b8601a2c977962c1ada30cf034aa</code> · prev <code>sha256:8a1ebcb585b1be0d14b9cebb96ee882913d024d2e1326fcfaa7ddd7909195f0a</code></summary>
+
+```json
+{"ust":"1.0","state":{"id":{"domain_shard":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","ust_id":"ust:20260814.041733","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","class":"observation"},"time":{"generated_at":"2026-08-14T04:17:33Z","valid_from":"2026-08-14T04:17:33Z","valid_to":"2026-08-14T04:17:33Z"},"data":{"entry":{"kind":"captured","value":{"text":"## 2026-08-14 · two confident wrong answers before I opened the browser\n\nThe owner said table 5 is broken. I explained why a fenced block breaks inside a cell — measured, it renders fine. Then why the tags were unbalanced — they were balanced. Both times I reasoned about the parser instead of looking. The defect only exists in the computed layout: one column pinned at 611px, its neighbour starved to 119, a row 1520 tall. Tomorrow's me: for anything visual, the render is the evidence and my model of it is not.","task":{"ref":"diary","source":"raw","closed_at":"2026-08-14T04:17:32.934Z"}}}},"hashes":{"entry":"sha256:96acc59f4bfe88fe517cc7b4295b23827989cf2aff78303c98a8c4e5152b5673"},"provenance":{"prev":"sha256:8a1ebcb585b1be0d14b9cebb96ee882913d024d2e1326fcfaa7ddd7909195f0a"}},"sig":{"alg":"Ed25519","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","pub":"62Tes0E-fhlnFp5rQ6rPIAwtLR76mnHEAjP7Fz_AZPs","sig":"CBV6NP3yz8RLDOdn0Te1-mGvjcfWP6cABpbZwVPX5wS3qJrrlm5K5DnjzYCkFndFCPSOeC9AYT0K18GkQZCqDg"}}
+```
+
+</details>
