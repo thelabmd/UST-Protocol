@@ -2,6 +2,28 @@
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
 export const VERSION = { wire: '1.0', spec: '1.0.0-rc.72', revision: 94 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
+// ─── #43 — OUTBOUND REQUESTS CARRY A LABEL. Measured 2026-08-15: nothing here set one, so every call from this
+//     tree left as the runtime's bare default (`node`/`undici`), indistinguishable from any other script on both
+//     our own logs and a provider's. Being identifiable is PROTECTION for a client that behaves: anonymous
+//     programmatic traffic is the first an API sheds, while a named client with a contact URL is the one a
+//     provider writes to before blocking. The two versions stay SEPARATE on purpose — `ust/<wire>` says what the
+//     traffic IS, the component's package version says which implementation is calling; folded into one number
+//     they diverge at wire 1.1. The value carries WHAT THE SOFTWARE IS and nothing about the user: no install id,
+//     no counter, no document. It is a label on a request the consumer's own code already makes, never telemetry
+//     we collect. Browsers forbid the header and drop it silently, so the same seam is safe in a browser build.
+//     CLOSED 2026-08-15 — every network surface in this tree labels its calls, and `tools/user-agent-gate.mjs`
+//     enumerates them FROM SOURCE and compares each version against its own package.json, so a new surface has
+//     to opt in and an old label cannot go stale in silence.
+export const REPO_URL = 'https://github.com/thelabmd/UST-Protocol';
+export const userAgent = (component, version) => `ust/${VERSION.wire} (${component}/${version}; +${REPO_URL})`;
+// ONE SEAM, never a per-call-site edit: the DEFAULT `fetchImpl` is signed, so every existing call inherits it and
+// a new one cannot forget. A caller supplying its own `fetchImpl` is supplying its own client, and we do not
+// relabel someone else's requests.
+export const labelledFetch = (component, version, impl = fetch) => (url, init = {}) =>
+  impl(url, { ...init, headers: { ...(init?.headers || {}), 'user-agent': userAgent(component, version) } });
+// The core's own client, captured ONCE. The package version comes from `VERSION.spec` rather than a literal:
+// a second copy of that number would go stale at the next rc while still reading as current.
+const ustFetch = labelledFetch('ust-protocol', VERSION.spec);
 // Written FROM THE SPEC (§ references inline), NOT copied from the vector generator — so running it against
 // the vectors is a cross-check between two independently-written artifacts. Zero-dependency: node:crypto
 // (Ed25519 + SHA-256). Portable note: WebCrypto (SubtleCrypto Ed25519) or @noble/{ed25519,hashes} for
@@ -4137,7 +4159,7 @@ export async function witnessNoFork(shard, genesisHash, opts) {
   const o = admitOpts(opts);
   if (o === null || typeof shard !== 'string' || typeof genesisHash !== 'string')
     return { status: 'indeterminate', reason: 'unavailable', detail: 'witnessNoFork requires a string shard + genesisHash and an inert opts record (round-29 P1-01 totality)' };
-  const { fetchImpl = fetch, substrateVerify, maxWitnessOpMs } = o;
+  const { fetchImpl = ustFetch, substrateVerify, maxWitnessOpMs } = o;
   let log;
   try {
     const r = await fetchImpl(`https://${shard}/.well-known/ust-witness`, { signal: AbortSignal.timeout(10000), redirect: 'error' });
@@ -4265,7 +4287,7 @@ export async function resolveByDiscovery(doc, opts = {}, transport = {}) {
   const D = admitDeep(doc);   // round-27 (3, self-audit) — admit the doc ONCE at THIS door: the discovery `shard` (the fetch URL) and the verify verdict must read the SAME bytes, else a getter fetches one domain's genesis/witness while the verdict is over another.
   if (D === ADMIT_REJECT) return { verdict: { result: 'INVALID', error: 'E-MALFORMED', detail: 'document is not an inert record (round-27: the ONE input boundary)' }, resolution: null };
   doc = D;
-  const { fetchImpl = fetch, substrateVerify } = T;
+  const { fetchImpl = ustFetch, substrateVerify } = T;
   const base = verify(doc, opts);
   const shard = doc?.state?.id?.domain_shard || '';
   const worth = !opts.offline && !opts.genesis &&

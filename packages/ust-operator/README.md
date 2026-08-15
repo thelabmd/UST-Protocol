@@ -28,7 +28,7 @@ base). Each piece PRODUCES exactly what `ust-protocol` VERIFIES — round-trip `
 - **`Stream`** — prev-chain per `(domain_shard, tier)` + checkpoints + `gap()`/`resume()` (§11.3/§11.1). ↔ `verifyStream`.
 - **`KeyLog`** — genesis-rooted append-only `class:"key"` chain: add/revoke (§12.2 — `rotate` was retired in rev97; replacement is `add(supersedes)` + `revoke`). ↔ `resolveAuthority`.
 - **`AnchorBatch`** — content_hashes → Merkle root → per-doc `AnchorProof` (§11.1/§11.2). ↔ `verifyAnchor`.
-- **`walkChain`** — walk `based_on`/`constituents` via a `fetch`, verify each, bounded + acyclic (§9.5).
+- **`walkChain`** — walk `based_on`/`constituents` via a `resolve(content_hash)`, verify each, bounded + acyclic (§9.5).
 - **`sealLayerChain`/`assembleLayers`** — shard-chain LAYERS / selective disclosure; outer seed commits
   subordinates' content_hashes (G20, no self-reference); each layer verified independently (E4) (§10a).
 - **`substrates` / `substrateVerifier(deps)`** — anchor-substrate registry; `bitcoin-ots` (OTS→Bitcoin header,

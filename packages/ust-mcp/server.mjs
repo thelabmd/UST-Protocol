@@ -9,6 +9,9 @@ import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { listTools, dispatch } from './index.mjs';
+// #43 — ONE seam for this package: every outbound call inherits the label, so a new call site cannot forget it.
+const UA = 'ust/1.0 (ust-mcp/1.0.0-rc.61; +https://github.com/thelabmd/UST-Protocol)';
+const ustFetch = (url, init = {}) => fetch(url, { ...init, headers: { ...(init?.headers || {}), 'user-agent': UA } });
 
 // VERSION is read from THIS package's own manifest — never hardcoded (a hardcoded copy silently drifted to rc.7
 // while package.json climbed; a stale advertised version is a safety lie, so the manifest is the ONE source).
@@ -38,7 +41,7 @@ console.error('ust-mcp ' + VERSION + ' (ust-protocol ' + protoVersion + ') — s
 // fail-silent, opt-out via NO_UPDATE_CHECK / CI. Makes staleness SELF-ANNOUNCING — the failure mode that just
 // bit us (a stale server rejecting valid documents) is exactly what this surfaces.
 if (!process.env.NO_UPDATE_CHECK && !process.env.CI) {
-  fetch('https://registry.npmjs.org/-/package/ust-mcp/dist-tags', { signal: AbortSignal.timeout(2500) })
+  ustFetch('https://registry.npmjs.org/-/package/ust-mcp/dist-tags', { signal: AbortSignal.timeout(2500) })
     .then((r) => r.json())
     .then((tags) => {
       const newest = Object.values(tags).sort(cmpVer).pop();

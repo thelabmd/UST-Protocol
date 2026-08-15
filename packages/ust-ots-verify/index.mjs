@@ -27,7 +27,7 @@ import { createHash } from 'node:crypto';
 // The format is two screens of binary. The dependency was the only heavy thing about it.
 // CLOSED 2026-08-07 — the codec is `./ots-codec.mjs`, the peer declaration is gone, and the shipped tree
 // carries no third-party code on this path. Kept as the evidence the reversal rests on, not as a live hole.
-import { parseOts, serializeOts, bitcoinAttestations, isComplete, upgradeOts } from './ots-codec.mjs';
+import { parseOts, serializeOts, bitcoinAttestations, isComplete, upgradeOts, labelled } from './ots-codec.mjs';
 
 const EXPLORERS = ['https://blockstream.info/api', 'https://mempool.space/api'];
 const OTS_BTC_TAG = Buffer.from([0x05, 0x88, 0x96, 0x0d, 0x73, 0xd7, 0x19, 0x01]);
@@ -72,7 +72,12 @@ export function parseOtsBitcoin(ots) {
 //
 // `pending` is a true answer. Turning it into `final` by calling out is a different act, and it belongs to
 // whoever publishes the proof — `upgradeOts` is exported for exactly that, on the operator's side.
-export function makeSubstrateVerify({ upgrade = false, fetchImpl = fetch, explorers = EXPLORERS, minConfirmations = 6, quorum = 2 } = {}) {
+// #43 — this connector reaches a THIRD-PARTY service, so its requests carry a label. The label is written once,
+// in `ots-codec.mjs`, and imported here. It is not shared with the OTHER connectors: those are separate packages
+// that declare no dependencies, and taking one for a string would cost more than the copy — agreement between
+// those copies is held by `tools/user-agent-gate.mjs`, which reads each version from its own package.json. A copy
+// whose agreement is CHECKED is a second witness; an unchecked one is drift. (`signed` is imported above.)
+export function makeSubstrateVerify({ upgrade = false, fetchImpl = labelled(fetch), explorers = EXPLORERS, minConfirmations = 6, quorum = 2 } = {}) {
   return async function substrateVerify(anchor, root) {
     // totality (round-46 self-audit) — the anchor is UNTRUSTED: read its fields behind a guard so a hostile getter/Proxy declines
     // (null → the router tries the next plugin), never a host throw. The integrated path passes an inert admitted proof; this covers a direct call.

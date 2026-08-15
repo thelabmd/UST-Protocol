@@ -11,6 +11,8 @@ import { readFileSync, writeFileSync, realpathSync, mkdirSync, unlinkSync, readd
 import { fileURLToPath } from 'node:url';
 import { createCipheriv, createDecipheriv, scryptSync, randomBytes, createHash, generateKeyPairSync, createPrivateKey, createPublicKey, sign as edsign } from 'node:crypto';
 import * as P from 'ust-protocol';
+// #43 — ONE seam for this package: every outbound call inherits the label, so a new call site cannot forget it.
+const ustFetch = P.labelledFetch('ust-cli', '1.0.0-rc.106');
 import { makeSsrfSafeFetch } from 'ust-protocol/ssrf';   // #71 — the SAME Node SSRF guard the MCP uses (resolve→classify→reject private)
 import * as W from '@ust-protocol/web-signer';
 
@@ -391,7 +393,7 @@ export function validateKeylogChain(genesisDoc, entries) {
 // roads get the same confirmation discipline (the record is confirmed by a resolver, never by the API
 // that wrote it). Returns seen/not — the CALLER decides whether absence is fatal (cf-api) or a warning
 // with a re-attest pointer (by-hand: registrar TTLs can be long, the ceremony must not strand the user).
-export async function dohConfirmTxt({ domain, genHash, fetchImpl = fetch, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), attempts = 6, delayMs = 3000, onAttempt = null }) {
+export async function dohConfirmTxt({ domain, genHash, fetchImpl = ustFetch, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), attempts = 6, delayMs = 3000, onAttempt = null }) {
   for (let i = 0; i < attempts; i++) {
     const doh = await fetchImpl(`https://cloudflare-dns.com/dns-query?name=_ust.${domain}&type=TXT`, { headers: { accept: 'application/dns-json' } }).then((r) => r.json()).catch(() => ({}));
     if ((doh.Answer || []).some((a) => (a.data || '').replace(/"/g, '').includes(genHash))) return true;
@@ -404,7 +406,7 @@ export async function dohConfirmTxt({ domain, genHash, fetchImpl = fetch, sleep 
 // Cloudflare one-click: UPSERT the _ust TXT (find → PUT if present, else POST) then CONFIRM it via a
 // DNS-over-HTTPS readback (idempotent + fail-closed, 9th audit #7). fetchImpl/sleep are injected so the
 // regression suite exercises the update-path and the readback-failure-path with no live network.
-export async function cfUpsert({ domain, txt, genHash, token, fetchImpl = fetch, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), onAttempt = null }) {
+export async function cfUpsert({ domain, txt, genHash, token, fetchImpl = ustFetch, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), onAttempt = null }) {
   if (!token) throw new Error('cf-api needs a ZONE-scoped CF_TOKEN (DNS:edit for this zone — never account-wide)');
   const cf = (path, init) => fetchImpl('https://api.cloudflare.com/client/v4' + path, { ...init, headers: { Authorization: 'Bearer ' + token, 'content-type': 'application/json', ...(init?.headers) } }).then((r) => r.json());
   const zone = (await cf(`/zones?name=${domain}`)).result?.[0]; if (!zone) throw new Error('CF zone not found / token cannot see ' + domain);
@@ -532,7 +534,7 @@ export function buildWitnessLog(genesisText, anchors = null, priorLogText = null
 // of the genesis leaf-root in a public log — NOT the identity of who logged it (that is the genesis's own
 // signature, resolved separately). Convention: the artifact is the root's hex string; Rekor stores its
 // sha256. Seconds, not Bitcoin's hours.
-export async function logToRekor(rootHex, { fetchImpl = fetch, api = 'https://rekor.sigstore.dev' } = {}) {
+export async function logToRekor(rootHex, { fetchImpl = ustFetch, api = 'https://rekor.sigstore.dev' } = {}) {
   const artifact = Buffer.from(rootHex.replace(/^sha256:/, ''), 'utf8');
   const hash = createHash('sha256').update(artifact).digest('hex');
   const { publicKey, privateKey } = generateKeyPairSync('ec', { namedCurve: 'P-256' });
@@ -670,7 +672,7 @@ export function buildWranglerProject({ domain, genesisText, keylogText = null, w
 // sites passed neither the cadence log nor the witness anchors, so a deploy from either NULLED /.well-known/ust-cadence
 // and DESTROYED the served Rekor/OTS anchors. That is not three bugs; it is one missing assembler, found three times.
 // Nothing here enumerates artifacts at a call site any more: they ask for the set and pass it whole.
-export async function collectServed({ domain, genesisText, genPath, keylogText = null, witnessFile = null, cadenceFile = null, profileText = null, fetchImpl = fetch, log = () => {} }) {
+export async function collectServed({ domain, genesisText, genPath, keylogText = null, witnessFile = null, cadenceFile = null, profileText = null, fetchImpl = ustFetch, log = () => {} }) {
   const genHash = P.contentHash(JSON.parse(genesisText));
   const anchorsOf = (text) => { try { const w = JSON.parse(text); const a = w?.genesis_log?.find((e) => e.content_hash === genHash)?.anchors; return Array.isArray(a) && a.length ? a : null; } catch { return null; } };
 
@@ -811,7 +813,7 @@ export async function wranglerDeploy({ domain, genesisText, keylogText = null, w
 
 // DNS half (small-token): apex proxy check/flip + SSL advisory. Scope needed: Zone.DNS:Edit only — the SSL
 // read degrades to a note when the token cannot see zone settings (never blocks the smaller scope).
-export async function cfApexSteps({ domain, token, flipProxy = false, fetchImpl = fetch }) {
+export async function cfApexSteps({ domain, token, flipProxy = false, fetchImpl = ustFetch }) {
   if (!token) throw new Error('apex steps need a CF token with Zone.DNS:Edit for ' + domain + ' — create one prefilled: ' + CF_DNS_TOKEN_URL);
   const cf = (path, init) => fetchImpl('https://api.cloudflare.com/client/v4' + path, { ...init, headers: { Authorization: 'Bearer ' + token, ...(init?.headers) } }).then((r) => r.json());
   const zone = (await cf(`/zones?name=${domain}`)).result?.[0];
@@ -845,7 +847,7 @@ export async function cfApexSteps({ domain, token, flipProxy = false, fetchImpl 
 // Full-token path (single credential, 3 scopes) — deploy worker + route via the API, then the apex steps.
 // Idempotent (PUT script, list→PUT/POST route), fail-closed (the genesis must VERIFY before ANY network
 // write; success is never claimed without a live attestation by the caller).
-export async function cfPublish({ domain, genesisText, keylogText = null, witnessText = null, cadenceText = null, profileText = null, token, flipProxy = false, fetchImpl = fetch }) {
+export async function cfPublish({ domain, genesisText, keylogText = null, witnessText = null, cadenceText = null, profileText = null, token, flipProxy = false, fetchImpl = ustFetch }) {
   if (!token) throw new Error('cf adapter needs CF_TOKEN (Workers Scripts:Edit + Workers Routes:Edit + DNS:Edit for this zone) — or split the scopes: `--auth wrangler` + a DNS-only token (' + CF_DNS_TOKEN_URL + ')');
   const { genHash } = validatePublishInputs({ domain, genesisText, keylogText });
   const cf = (path, init) => fetchImpl('https://api.cloudflare.com/client/v4' + path, { ...init, headers: { Authorization: 'Bearer ' + token, ...(init?.headers) } }).then((r) => r.json());
@@ -891,7 +893,7 @@ export async function cfPublish({ domain, genesisText, keylogText = null, witnes
 // §20.1 compliance attestation — the four discovery-serving probes, infrastructure-agnostic (the publisher
 // may run ANY stack; this attests the PROPERTIES). Fail-closed on violations; what could not be checked is
 // reported as `skip` (NOT ATTESTED), never silently passed. fetchImpl injected — testable without a network.
-export async function attestDiscovery({ domain, mirrors = [], expectHash = null, fetchImpl = fetch }) {
+export async function attestDiscovery({ domain, mirrors = [], expectHash = null, fetchImpl = ustFetch }) {
   const checks = [];
   const url = `https://${domain}/.well-known/ust-genesis`;
   const get = (u, init) => fetchImpl(u, { ...init, signal: AbortSignal.timeout(10000) });
@@ -1175,7 +1177,7 @@ export function ceremonyMap(current) {
 // Live gate with PROPAGATION PATIENCE (rc.8, live lesson from the first real ceremony): after a proxy
 // flip the public DNS answer takes minutes to converge — a single immediate fetch races it and fails a
 // PERFECTLY GOOD deployment. Retry with spacing, narrate each attempt, stay fail-closed at the end.
-export async function confirmLive({ domain, genHash, fetchImpl = fetch, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), attempts = 9, delayMs = 20000, onAttempt = null }) {
+export async function confirmLive({ domain, genHash, fetchImpl = ustFetch, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), attempts = 9, delayMs = 20000, onAttempt = null }) {
   let last;
   for (let i = 1; i <= attempts; i++) {
     try {
@@ -1311,7 +1313,7 @@ export function ceremonySummary({ domain, genHash, opKeyId, maxP, cadence, outDi
 
 // Fetch the CANONICAL surfaces (hash-verified) and attest every mirror URL against them — the mirror is
 // untrusted by design: bytes are fetched, verified as UST, and content_hash-matched. Never a claim.
-export async function attestMirror({ domain, genesisUrls = [], keylogUrls = [], fetchImpl = fetch }) {
+export async function attestMirror({ domain, genesisUrls = [], keylogUrls = [], fetchImpl = ustFetch }) {
   const get = (u) => fetchImpl(u, { signal: AbortSignal.timeout(10000) }).then((r) => (r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`))));
   const canonical = await get(`https://${domain}/.well-known/ust-genesis`);
   const { verdict: cv, doc: canonDoc } = verifyRaw(canonical);
@@ -1430,7 +1432,7 @@ export function whatsNextSummary({ domain, genHash, checks = [] }) {
 // mint). Three-state, fail-closed: 'absent' ONLY on a proven 404/410; a valid genesis for THIS domain =
 // 'live'; EVERYTHING else (network error, non-UST bytes, foreign/wrong-class document) = 'indeterminate'
 // — and an operation able to orphan an identity stops on indeterminate unless explicitly overridden.
-export async function remintProbe({ domain, fetchImpl = fetch }) {
+export async function remintProbe({ domain, fetchImpl = ustFetch }) {
   let res;
   try { res = await fetchImpl(`https://${domain}/.well-known/ust-genesis`, { signal: AbortSignal.timeout(8000) }); }
   catch (e) { return { status: 'indeterminate', detail: 'well-known unreachable: ' + e.message }; }
@@ -1608,7 +1610,7 @@ async function cmdVerify() {
     const inclusionVerify = incPlugins.length ? P.combineInclusion(incPlugins) : undefined;   // #95 — same plugins, other question
     // #71 — the discovery target comes from an UNTRUSTED document; the SSRF guard (resolve → reject private IPs)
     // wraps the fetch on the CLI too, not only the MCP. Core's lexical isPublicDnsShard is the floor beneath it.
-    const guardedFetch = makeSsrfSafeFetch(async (u, init) => { console.error(`  ⏳ resolving identity from ${new URL(u).origin} … (--offline to skip)`); return fetch(u, init); });
+    const guardedFetch = makeSsrfSafeFetch(async (u, init) => { console.error(`  ⏳ resolving identity from ${new URL(u).origin} … (--offline to skip)`); return ustFetch(u, init); });
     const rd = await P.resolveByDiscovery(doc, { context: opts.context, offline: !!arg('offline', false), noForkConfirmed: noFork, requireAuthoritative: opts.requireAuthoritative, requireAnchored: opts.requireAnchored, requireFreshKeylog: opts.requireFreshKeylog, keylogFreshAsOf: opts.keylogFreshAsOf },
       { substrateVerify, fetchImpl: guardedFetch });
     if (!substrateVerify && rd.resolution && String(rd.resolution.noFork || '').startsWith('HIGH pending')) console.error('  ℹ️  anchor not cross-checked — `npm i @ust-protocol/ots-verify @ust-protocol/rekor-verify` for automatic HIGH');
@@ -2021,13 +2023,13 @@ async function cmdMirror() {
     const repoFlag = arg('repo'); if (!repoFlag || repoFlag === true) die('--repo owner/repo is required for --publish gh (a PUBLIC repo — the mirror must be readable by anyone)');
     const dirFlag = arg('dir', 'mirror') === true ? 'mirror' : arg('dir', 'mirror');
     console.log('  ⏳ fetching the canonical bytes from https://' + domain + '/.well-known/…');
-    let g; try { g = await fetch(`https://${domain}/.well-known/ust-genesis`, { signal: AbortSignal.timeout(10000) }).then((r) => (r.ok ? r.text() : Promise.reject(new Error('canonical genesis unreachable: HTTP ' + r.status)))); } catch (e) { die(e.message); }
+    let g; try { g = await ustFetch(`https://${domain}/.well-known/ust-genesis`, { signal: AbortSignal.timeout(10000) }).then((r) => (r.ok ? r.text() : Promise.reject(new Error('canonical genesis unreachable: HTTP ' + r.status)))); } catch (e) { die(e.message); }
     let k = null;
-    try { const kr = await fetch(`https://${domain}/.well-known/ust-keylog`, { signal: AbortSignal.timeout(10000) }); k = kr.ok ? await kr.text() : null; } catch { k = null; }
+    try { const kr = await ustFetch(`https://${domain}/.well-known/ust-keylog`, { signal: AbortSignal.timeout(10000) }); k = kr.ok ? await kr.text() : null; } catch { k = null; }
     console.log('  ⏳ publishing via YOUR gh CLI (create-or-update, idempotent — this tool holds no credential)…');
         // the WHOLE served set, fetched the same way discovery reads it — a mirror of two of four is a mirror that
     // contradicts itself, and after a supersession it contradicts itself loudly.
-    const fetchServed = async (name) => { try { const r = await fetch(`https://${domain}/.well-known/ust-${name}`, { signal: AbortSignal.timeout(10000) }); return r.ok ? await r.text() : null; } catch { return null; } };
+    const fetchServed = async (name) => { try { const r = await ustFetch(`https://${domain}/.well-known/ust-${name}`, { signal: AbortSignal.timeout(10000) }); return r.ok ? await r.text() : null; } catch { return null; } };
     const artifacts = { genesis: g, keylog: k };
     for (const name of DISCOVERY_ARTIFACTS) if (!(name in artifacts)) artifacts[name] = await fetchServed(name);
     for (const [n, v] of Object.entries(artifacts)) console.log(`  ${v == null ? '·' : '✓'} ust-${n}${v == null ? ': not served upstream — will be removed from the mirror' : ''}`);
@@ -2081,7 +2083,7 @@ async function cmdWitness() {
   const domain = arg('domain'); if (!domain || domain === true) die('--domain is required');
 
   console.log('\n  🔭 witness (rekor) for ' + domain);
-  let genesisText; try { genesisText = await fetch(`https://${domain}/.well-known/ust-genesis`, { signal: AbortSignal.timeout(10000) }).then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); }); }
+  let genesisText; try { genesisText = await ustFetch(`https://${domain}/.well-known/ust-genesis`, { signal: AbortSignal.timeout(10000) }).then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); }); }
   catch (e) { die('could not fetch the live genesis: ' + e.message + ' — run `ust genesis` / `ust publish cf` first'); }
   const { verdict, doc: genesis } = verifyRaw(genesisText);
   if (!P.isValid(verdict) || genesis.state?.id?.class !== 'genesis') die('the served well-known is not a valid genesis');
@@ -2099,7 +2101,7 @@ async function cmdWitness() {
   // Fetching it twice for two purposes is how the anchors survived while the genesis_log did not.
   let existing = [], priorWitness = null;
   try {
-    const r = await fetch(`https://${domain}/.well-known/ust-witness`, { signal: AbortSignal.timeout(8000) });
+    const r = await ustFetch(`https://${domain}/.well-known/ust-witness`, { signal: AbortSignal.timeout(8000) });
     if (r.ok) {
       priorWitness = await r.text();
       const wl = JSON.parse(priorWitness);
@@ -2119,7 +2121,7 @@ async function cmdWitness() {
     if (d.error) die(`--profile is refused by the same reader a verifier uses: ${d.error} — ${d.detail}`); }
   if (arg('deploy', false)) {
     console.log('  ⏳ updating the live witness endpoint (CF worker)…');
-    let keylogText = null; try { keylogText = await fetch(`https://${domain}/.well-known/ust-keylog`, { signal: AbortSignal.timeout(8000) }).then((r) => r.ok ? r.text() : null); } catch { /* ok */ }
+    let keylogText = null; try { keylogText = await ustFetch(`https://${domain}/.well-known/ust-keylog`, { signal: AbortSignal.timeout(8000) }).then((r) => r.ok ? r.text() : null); } catch { /* ok */ }
     try { await wranglerDeploy({ domain, ...(await collectServed({ domain, genesisText, genPath: null, keylogText, profileText: witnessProfile, log: console.log })), witnessText: witness }); } catch (e) { die('deploy failed: ' + e.message + '\n  (the anchor is logged in Rekor; re-run --deploy or update the endpoint by hand)'); }
     console.log('  ✅ witness endpoint updated — verifiers with @ust-protocol/rekor-verify now confirm no-fork automatically');
     console.log(`     re-attest:  ${invocation()} verify <slot>   (install ots-verify + rekor-verify)`);
@@ -2478,8 +2480,8 @@ async function cmdGenesis() {
     try {
       const rand = `q${randomBytes(6).toString('hex')}=${randomBytes(6).toString('hex')}`;
       const baseline = JSON.stringify(liveDoc); void baseline;
-      const a = await fetch(`https://${domain}/.well-known/ust-genesis`, { signal: AbortSignal.timeout(10000) }).then((r) => r.text());
-      const probed = await fetch(`https://${domain}/.well-known/ust-genesis?${rand}`, { signal: AbortSignal.timeout(10000) }).then((r) => (r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`))));
+      const a = await ustFetch(`https://${domain}/.well-known/ust-genesis`, { signal: AbortSignal.timeout(10000) }).then((r) => r.text());
+      const probed = await ustFetch(`https://${domain}/.well-known/ust-genesis?${rand}`, { signal: AbortSignal.timeout(10000) }).then((r) => (r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`))));
       if (probed === a) console.log('  ✅ query-robustness probe: an unknown ?query returns byte-identical bytes (§20.1)');
       else console.log(`  ⚠️  §20.1 SERVING: the response VARIES with an unknown query parameter — cache-key amplification is open; fix the cache config, then \`${invocation()} discovery ${domain}\``);
     } catch (e) { console.log('  ⚠️  §20.1 SERVING: query-robustness probe inconclusive (' + e.message + ') — run `${invocation()} discovery ' + domain + '` later'); }
@@ -2553,7 +2555,7 @@ export async function rootSignerFrom(pkcs8, rootPubB64url) {
 // caller: a missing cadence log is the first declaration, an unreadable one must never be treated as empty (that
 // would chain onto the wrong head and orphan what is served).
 const discoveryFetcher = (domain) => async (path) => {
-  const r = await fetch(`https://${domain}${path}`, { signal: AbortSignal.timeout(10000), redirect: 'error' });
+  const r = await ustFetch(`https://${domain}${path}`, { signal: AbortSignal.timeout(10000), redirect: 'error' });
   if (!r.ok) { const e = new Error(`HTTP ${r.status} at ${path}`); e.httpStatus = r.status; throw e; }
   return r.text();
 };

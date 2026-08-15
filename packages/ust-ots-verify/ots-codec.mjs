@@ -207,7 +207,18 @@ export const isComplete = (parsed) => bitcoinAttestations(parsed).length > 0;
  * CLOSED 2026-08-07 in the same edit that measured it — the signature carries the finding: `candidate`,
  * `corroborated: false`, and an untouched input, with a test asserting the foreign reply DOES splice.
  */
-export async function upgradeOts(input, { fetchImpl = fetch, timeoutMs = 15_000, maxBytes = 10_000 } = {}) {
+// #43 — the CALENDAR path reaches third-party OTS servers, and it is the highest-volume outbound call this tree
+// makes: an operator upgrading pending proofs hits it once per pending anchor. It was found by the user-agent
+// gate rather than by the sweep that preceded it — the sweep enumerated packages, and this is a second module
+// inside one that was already counted.
+// This is the LEAF of the package (`index.mjs` imports it, never the reverse), so the package's one label lives
+// here and is imported upward. The copy this package does keep is the one ACROSS packages, where taking a
+// dependency for a string would cost more than the copy; a second copy INSIDE one module graph buys nothing and
+// drifts on the next rc.
+export const UA = 'ust/1.0 (ust-ots-verify/1.0.0-rc.35; +https://github.com/thelabmd/UST-Protocol)';
+export const labelled = (impl) => (url, init = {}) => impl(url, { ...init, headers: { ...(init?.headers || {}), 'user-agent': UA } });
+const labelledCal = labelled(fetch);
+export async function upgradeOts(input, { fetchImpl = labelledCal, timeoutMs = 15_000, maxBytes = 10_000 } = {}) {
   // Deep copy: an upgrade that mutated its argument would leave a caller holding a half-spliced proof after a
   // refusal, with no way to tell it from the one it handed in.
   const parsed = parseOts(serializeOts(input));

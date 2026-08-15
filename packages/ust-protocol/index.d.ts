@@ -101,6 +101,7 @@ export function isVerifiedHandle(kind: unknown, x: unknown): unknown;
 export function joinAssurance(a: unknown, b: unknown): unknown;
 export function keyId(pubB64url: unknown): unknown;
 export function keylogLeaf(entryHash: unknown): string;
+export function labelledFetch(component: unknown, version: unknown, impl?: unknown): unknown;
 export function meetAssurance(a: unknown, b: unknown): unknown;
 export function merkleRoot(contentHashes: unknown): unknown;
 export function nameMapLeaf(arg0: unknown): unknown;
@@ -121,6 +122,7 @@ export const REFERENCE_CHECKER_VERSION: unknown;
 export const REGISTRY: unknown;
 export function registryDigest(): unknown;
 export function replicationAgreement(arg0?: unknown): unknown;
+export const REPO_URL: unknown;
 export function resolveAuthority(doc: unknown, opts?: unknown): unknown;
 export function resolveByDiscovery(doc: unknown, opts?: unknown, transport?: unknown): Promise<{ verdict: unknown; resolution: unknown }>;
 export function resolveCadence(genesis: unknown, cadenceLog?: unknown, atTime?: unknown, opts?: unknown): { error: unknown; detail: unknown };
@@ -140,6 +142,7 @@ export const STABILITY: Readonly<{ light: 'stable'; high: 'stable'; corroborated
 export function strictB64url(s: unknown, bytes: unknown): unknown;
 export function surfaceVerdict(arg0?: unknown): unknown;
 export const TIER_RANK: unknown;
+export function userAgent(component: unknown, version: unknown): unknown;
 export function ustGrid(from: unknown, to: unknown, cadenceSec: unknown): unknown;
 export class UstIndeterminate extends Error { constructor(verdict?: unknown); }
 export class UstInvalid extends Error { constructor(verdict?: unknown); }

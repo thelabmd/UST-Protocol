@@ -37,4 +37,4 @@ export const STREAM_KEYS: Readonly<{ head: 'ust:stream:head'; count: 'ust:stream
 export const substrates: unknown;
 export function substrateVerifier(deps?: unknown): unknown;
 export class Tiers { constructor(verdict?: unknown); }
-export function walkChain(doc: unknown, fetch: unknown, arg2?: unknown): Promise<unknown>;
+export function walkChain(doc: unknown, resolve: unknown, arg2?: unknown): Promise<unknown>;

@@ -1799,6 +1799,20 @@
       "test": "#42 requireIndependentAuthority: no assigned domain ⇒ INDETERMINATE, never an inferred independence"
     },
     {
+      "round": 223,
+      "math": {
+        "excluded": "No theorem moved and none should. A request label decides no verdict: strip it and every document in the corpus verifies identically, because nothing in the decision relation reads a transport header. The formal model quantifies over what a verifier concludes from bytes it holds, and this round changes only how those bytes were asked for."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved. A conforming implementation is free to label its requests or not, and a porter who omits this reaches exactly the same verdicts; making it normative would bind a second implementation to our operational courtesy and would be unenforceable from a document anyway. The obligation this round creates is on THIS tree, so it lives in a gate rather than in the spec."
+      },
+      "code": "packages/ust-protocol/index.mjs :: userAgent + labelledFetch, one seam per package with the DEFAULT fetchImpl labelled, adopted across all eight network surfaces (core, cli, mcp x2, ots-verify x2, rekor-verify, and the mcp server)",
+      "vector": {
+        "excluded": "A vector fixes an input and a declared result a second implementation must reproduce. This round produces neither: the label rides on an HTTP request, not in a document, and a conformance vector that asserted a header would be asserting a property of our transport rather than of the wire a porter has to agree with."
+      },
+      "test": "tools/user-agent-gate.mjs :: every shipped module that reaches the network is DISCOVERED from source, never listed"
+    },
+    {
       "round": 222,
       "math": {
         "excluded": "No theorem moved. This round states no property of the protocol; it records what six earlier rounds established and closes the card. Adding a model section for a closing act would make the formal model a description of our bookkeeping, which it has always declined to be."

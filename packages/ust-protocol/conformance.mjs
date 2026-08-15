@@ -13,7 +13,11 @@ const withWitnessClock = async (clock, body) => { __setWitnessClockForConformanc
 // CLASS[n] !== 'surface', so the two can no longer diverge. (Totality itself is already guaranteed by R34's surface×BATTERY.)
 const MAY_THROW_TOTALITY = (n) => /^(build|seal|make)/.test(n) || /(Claim|Leaf|Id|Epoch)$/.test(n) || /^Ust[A-Z]/.test(n)
   || ['canon', 'H', 'Hbytes', 'keyId', 'merkleRoot', 'partitionHash', 'contentHash', 'signedContent', 'admitUtf8', 'anyLoneSurrogate', 'ustGrid', 'blindPartition', 'blindedCommit', 'seed', 'axisRank', 'evidenceCaps', 'admitDeep', 'isValid', 'cannotDecide', 'verifiedEvidence', 'replicationAgreement', 'surfaceVerdict', 'anchorRollup'].includes(n)
-  || ['verifyOrThrow', 'assertValid'].includes(n);
+  || ['verifyOrThrow', 'assertValid'].includes(n)
+  // #43 — PRODUCER side: these shape OUR outbound request from OUR OWN constants and never read untrusted wire.
+  // `userAgent` interpolates two strings the caller controls, and `labelledFetch` spreads a caller-supplied init —
+  // a hostile value there belongs to the caller's own call, not to a document under judgment.
+  || ['userAgent', 'labelledFetch'].includes(n);
 
 const V = JSON.parse(readFileSync(new URL('../../vectors/conformance-vectors.json', import.meta.url)));
 function kp(seedHex) {
@@ -3579,6 +3583,7 @@ console.log('\n═════════════════════�
     verifyCheckpointUniqueness: 'surface', verifyEpochTransition: 'surface', verifyKeylogTerminality: 'surface',
     verifyNameMapRoot: 'surface', proveMapRootAnchor: 'surface',   // #42 — both read untrusted wire (a signed root statement, an anchor proof) and refuse rather than throw
     nameMapRootClaim: 'exempt', buildNameMapRoot: 'exempt',        // PRODUCER side: shapes and signs the operator's own bytes, no untrusted input to admit
+    userAgent: 'exempt', labelledFetch: 'exempt',                  // #43 PRODUCER side too, but they SIGN nothing — they shape our own outbound request from our own constants
     deriveStreamFloor: 'surface',   // F.5s — reads a genesis, a transition list and a root document, all untrusted wire; refuses, never throws
     verifyNoForkEvidence: 'surface', resolveAuthority: 'surface', resolveByDiscovery: 'surface', resolveCadence: 'surface',
     resolveCadenceBytes: 'surface',   // round-47 rev69 — the SOUND bytes-in boundary (a pure function of immutable byte-strings; resolveCadence is its object adapter)

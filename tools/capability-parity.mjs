@@ -137,6 +137,9 @@ const PRIMITIVES = {
   snapshotBytes: 'THE byte-admission door (round-48 P0-01): exact native Uint8Array to immutable copy, shared by the kernel and both resolvers',
   UstInvalid: 'a verdict CARRIER — a typed throw. A surface cannot expose it as a capability; it is the shape an answer arrives in',
   UstIndeterminate: 'the other verdict carrier, and the same argument: it transports a verdict rather than being one',
+  REPO_URL: 'the contact address a labelled request carries (#43) — an attribute of this implementation, like VERSION, and not a protocol act; a second implementation would carry its own',
+  userAgent: 'builds the wire label `ust/<wire> (<component>/<version>; +<repo>)`. It answers "who is calling", never a question about a document, so it decides no verdict and belongs to no capability',
+  labelledFetch: 'wraps a transport so outbound calls carry that label. Deliberately NOT a capability: a capability cell claims a surface implements a protocol act, and every surface here would read `full` for something that changes no answer. The cross-surface agreement it does owe is held by `tools/user-agent-gate.mjs`, which reads each package version rather than accepting a stance',
 };
 
 // A connector exposes the substrate seam (verifyAnchor delegate + typed evidence emit), not core names.

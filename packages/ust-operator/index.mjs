@@ -485,9 +485,13 @@ export function rfc6962AuditPath(contentHashes, index) {
   };
 }
 
-// ─── walkChain (consumer §9.5): walk based_on/constituents referents via `fetch`, verify each, bounded + acyclic.
-//     `fetch(content_hash) → doc | null`. depth-0 = local only (P.verify default). Cycle detection by content_hash.
-export async function walkChain(doc, fetch, { depth = 1, breadth = 64, seen = new Set() } = {}) {
+// ─── walkChain (consumer §9.5): walk based_on/constituents referents via a RESOLVER, verify each, bounded + acyclic.
+//     `resolve(content_hash) → doc | null`. depth-0 = local only (P.verify default). Cycle detection by content_hash.
+//     The parameter was called `fetch` until 2026-08-15, and the name cost a live defect: a sweep that labelled every
+//     outbound HTTP call (#43) read it as the global and routed a CONTENT HASH into the network client, which answers
+//     "unknown scheme". Same word, two mechanisms — the caller's store lookup and an HTTP request — so the collision
+//     now lives in the name rather than in whoever reads it next. A resolver is not a transport and never was.
+export async function walkChain(doc, resolve, { depth = 1, breadth = 64, seen = new Set() } = {}) {
   const ch = P.contentHash(doc);
   if (seen.has(ch)) return { content_hash: ch, error: 'E-CYCLE' };
   seen.add(ch);
@@ -497,8 +501,8 @@ export async function walkChain(doc, fetch, { depth = 1, breadth = 64, seen = ne
   const refs = [...(doc.state.provenance?.based_on?.map(b => b.hash) || []), ...(doc.state.provenance?.constituents || [])];
   if (refs.length > breadth) return { ...node, error: 'E-BOUNDS' };
   for (const h of refs) {
-    const r = await fetch(h);
-    node.refs.push(r ? await walkChain(r, fetch, { depth: depth - 1, breadth, seen }) : { content_hash: h, result: 'unavailable' });
+    const r = await resolve(h);
+    node.refs.push(r ? await walkChain(r, resolve, { depth: depth - 1, breadth, seen }) : { content_hash: h, result: 'unavailable' });
   }
   return node;
 }

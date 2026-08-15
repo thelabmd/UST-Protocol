@@ -89,7 +89,13 @@ export function verifyCheckpoint(checkpoint, expectedRootHex, expectedTreeSize, 
   return false;
 }
 
-export function makeSubstrateVerify({ fetchImpl = fetch, api = REKOR, rekorPubKeyPem = REKOR_PUBKEY_PEM } = {}) {
+// #43 — this connector reaches a THIRD-PARTY service, so its requests carry a label. The shape is duplicated
+// rather than imported ON PURPOSE: this package declares no dependencies, and taking one for a string would cost
+// more than the copy. Agreement is held by `tools/user-agent-gate.mjs`, which reads the version from
+// package.json — a copy whose agreement is CHECKED is a second witness, an unchecked one is drift.
+const UA = 'ust/1.0 (ust-rekor-verify/1.0.0-rc.30; +https://github.com/thelabmd/UST-Protocol)';
+const labelled = (impl) => (url, init = {}) => impl(url, { ...init, headers: { ...(init?.headers || {}), 'user-agent': UA } });
+export function makeSubstrateVerify({ fetchImpl = labelled(fetch), api = REKOR, rekorPubKeyPem = REKOR_PUBKEY_PEM } = {}) {
   const pubKey = createPublicKey(rekorPubKeyPem);
   return async function substrateVerify(anchor, root) {
     // totality (round-46 self-audit) — the anchor is UNTRUSTED: read it behind a guard so a hostile getter/Proxy declines (null →

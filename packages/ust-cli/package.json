@@ -29,7 +29,7 @@
     "@ust-protocol/rekor-verify": "^1.0.0-rc.30",
     "@ust-protocol/web-signer": "^1.0.0-rc.25",
     "ust-protocol": "^1.0.0-rc.72",
-    "@ust-protocol/ots-verify": "^1.0.0-rc.34"
+    "@ust-protocol/ots-verify": "^1.0.0-rc.35"
   },
   "peerDependencies": {
     "wrangler": "*"

@@ -11,7 +11,10 @@ import { makeSsrfSafeFetch } from './ssrf-guard.mjs';
 // #69 E4 — the MCP takes UNTRUSTED documents from agents and auto-fetches their domain_shard, so the discovery
 // egress is resolution-guarded (a public NAME resolving to a private ADDRESS is refused) on top of the core's
 // lexical SSRF floor. A single shared wrapper over global fetch, passed as resolveByDiscovery's fetchImpl.
-const ssrfSafeFetch = makeSsrfSafeFetch();
+// #43 — this surface supplies its OWN fetchImpl into the core, so it bypasses the core's signed default: a caller
+// that brings its own client is not relabelled, and here the caller is US. Signed at the point it is built, so the
+// SSRF guard and the label travel together and neither can be added without the other.
+const ssrfSafeFetch = P.labelledFetch('ust-mcp', '1.0.0-rc.61', makeSsrfSafeFetch());
 
 const doc1 = (state) => ({ ust: '1.0', state });
 // build tools return the UNSIGNED state + the exact `signing_input` bytes; the caller (agent/operator) signs
