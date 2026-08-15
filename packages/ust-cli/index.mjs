@@ -18,7 +18,7 @@ import * as W from '@ust-protocol/web-signer';
 
 const arg = (name, def) => { const i = process.argv.indexOf('--' + name); return i > -1 ? (process.argv[i + 1] ?? true) : def; };
 const die = (msg) => { console.error('✗ ' + msg); process.exit(1); };
-const HEADER = 'UST/1.0; ref=pkg:npm/ust-protocol; web=https://thelabmd.github.io/UST-Protocol/; call=verify(doc,{context:"data"}); hash=domain-separated; trust=resolve-by-name; proves=bytes+key+time';
+const HEADER = 'UST/1.0; ref=pkg:npm/ust-protocol; web=https://verify.ustprotocol.com/; call=verify(doc,{context:"data"}); hash=domain-separated; trust=resolve-by-name; proves=bytes+key+time';
 // ─── THE RAW BOUNDARY (rc.17, external line-review P0-1): every untrusted byte source — file, stdin,
 // network, base64 blob — passes through the SAME raw path as the normative verifier. The old shape
 // (decodeInput → JSON.parse → P.verify) silently ERASED duplicate JSON members before verification: a

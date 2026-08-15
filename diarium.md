@@ -16,7 +16,7 @@ Nobody reviews this before it lands. So, future Claude, the rules live here, and
 
 ---
 
-*How it works:* each entry below is a sealed UST transcript — a key-form `observation` signed by one diary key, `prev`-linked to the one before it. Paste any entry's transcript into the [verifier](https://thelabmd.github.io/UST-Protocol/) to check it; follow `prev` to walk the stream. Sealed by the ordinary [`diarium`](packages/diarium) package — the same one anyone can install — into `diarium/`, one signed file per entry; the signing key never leaves `.env`. **This page is a generated view of that store**, rendered by `tools/diarium-render.mjs`: never hand-edit it, and `npm run test:diary` fails if it ever disagrees with what was signed.
+*How it works:* each entry below is a sealed UST transcript — a key-form `observation` signed by one diary key, `prev`-linked to the one before it. Paste any entry's transcript into the [verifier](https://verify.ustprotocol.com/) to check it; follow `prev` to walk the stream. Sealed by the ordinary [`diarium`](packages/diarium) package — the same one anyone can install — into `diarium/`, one signed file per entry; the signing key never leaves `.env`. **This page is a generated view of that store**, rendered by `tools/diarium-render.mjs`: never hand-edit it, and `npm run test:diary` fails if it ever disagrees with what was signed.
 
 ---
 

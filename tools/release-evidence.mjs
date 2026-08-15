@@ -86,7 +86,7 @@ if (mode === 'generate') {
   const r1 = P.verify(doc, { context: 'data' });
   const r2 = await cleanRoom(doc, { context: 'data' });
   if (!P.isValid(r1) || !P.isValid(r2)) throw new Error('evidence does not verify: ' + (r1.error || r2.error));
-  const blob = 'UST/1.0; ref=pkg:npm/ust-protocol; web=https://thelabmd.github.io/UST-Protocol/; call=verify(doc,{context:"data"}); hash=domain-separated; trust=resolve-by-name; proves=bytes+key+time\n———UST(base64)———\n'
+  const blob = 'UST/1.0; ref=pkg:npm/ust-protocol; web=https://verify.ustprotocol.com/; call=verify(doc,{context:"data"}); hash=domain-separated; trust=resolve-by-name; proves=bytes+key+time\n———UST(base64)———\n'
     + Buffer.from(JSON.stringify(doc), 'utf8').toString('base64');
   writeFileSync(evidencePath, blob);
   console.log(`✓ ${VER}: evidence generated, ${r1.result} under both verifiers, content_hash ${r1.content_hash}`);

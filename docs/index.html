@@ -10,7 +10,11 @@
      the preview is re-uploaded. A SHA-pinned raw URL is immutable — the same discipline the workflow uses to pin
      third-party actions. Title and description are copied verbatim from the tags above so the two cannot drift. -->
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://thelabmd.github.io/UST-Protocol/">
+<!-- Two hosts serve these bytes: the custom domain and the GitHub Pages origin behind it. The page's own
+     advice is to resolve the verifier BY NAME, so it must say which name is the one — otherwise it asks of a
+     reader a discipline it does not keep itself. -->
+<link rel="canonical" href="https://verify.ustprotocol.com/">
+<meta property="og:url" content="https://verify.ustprotocol.com/">
 <meta property="og:site_name" content="THE LAB">
 <meta property="og:title" content="Verify a UST — Universal State Transcript">
 <meta property="og:description" content="Paste a UST 1.0 transcript. The canonical reference verifier runs in your browser — nothing is uploaded. Returns VALID:LIGHT/HIGH/TOP, INVALID, or INDETERMINATE.">
@@ -27,10 +31,10 @@
   "@graph": [
     {
       "@type": "WebApplication",
-      "@id": "https://thelabmd.github.io/UST-Protocol/#verifier",
+      "@id": "https://verify.ustprotocol.com/#verifier",
       "name": "UST Verifier",
       "alternateName": "Universal State Transcript Verifier",
-      "url": "https://thelabmd.github.io/UST-Protocol/",
+      "url": "https://verify.ustprotocol.com/",
       "applicationCategory": "SecurityApplication",
       "operatingSystem": "Any (runs in the browser; nothing is uploaded)",
       "description": "The canonical web verifier for UST 1.0 (Universal State Transcript) — paste a transcript, get VALID:LIGHT/HIGH/TOP, INVALID, or INDETERMINATE. Client-side WebCrypto; the only reliable verdict is a conforming verifier's output.",

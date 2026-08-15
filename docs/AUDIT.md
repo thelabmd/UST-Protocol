@@ -48,7 +48,7 @@ git     github.com/thelabmd/UST-Protocol   # monorepo — everything below in on
           vectors/conformance-vectors.json   # deterministic test vectors (26; the runner adds behavioral checks — 56 total)
           packages/ust-protocol/       # reference impl + its conformance runner
           examples/                    # sample docs (valid + tampered) + verify recipes
-web     thelabmd.github.io/UST-Protocol # in-browser verifier (client-side) + llms.txt (machine instructions)
+web     verify.ustprotocol.com # in-browser verifier (client-side) + llms.txt (machine instructions)
 ```
 On request (kept out of the public repo): the **second, clean-room implementation** (`ust-verify-web`, WebCrypto,
 written from the spec without importing `ust-protocol`) and the **red-team dossier** (the six passes below, in full).
@@ -187,7 +187,7 @@ residual risk, and what would you require before a `1.0.0` final tag?
   0 divergences** as of rev64. The previous wording claimed 32/32; that number came from an older harness and no
   longer corresponded to anything this tree runs, so it is replaced by what `npm run test:docs-parity` prints
   today. A count of independent agreements is the one number an auditor weighs most, and it was overstated.
-- **223 recorded rounds** in `CHANGELOG.md`, carrying the reference-checker from `rev3` to `rev94`. The adversarial
+- **224 recorded rounds** in `CHANGELOG.md`, carrying the reference-checker from `rev3` to `rev94`. The adversarial
   ones are folded in STRUCTURALLY rather than patched: each round that found something states the MECHANISM, not
   the instance, and closes it with a check that fails on the next instance of the same class. The round count and
   the revision range are both measurable from this tree; "how adversarial" is a judgement and is left to you.

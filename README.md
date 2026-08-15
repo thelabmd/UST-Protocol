@@ -62,7 +62,7 @@ verify(doc, { context: 'data' }).result   // → VALID:LIGHT / HIGH / TOP
 // don't hash the JSON yourself — hashes are domain-separated; the library canonicalizes
 ```
 
-Or skip even that line: paste [any transcript](https://raw.githubusercontent.com/thelabmd/UST-Protocol/refs/heads/main/examples/ust-sample.json) into the [web verifier](https://thelabmd.github.io/UST-Protocol/) —
+Or skip even that line: paste [any transcript](https://raw.githubusercontent.com/thelabmd/UST-Protocol/refs/heads/main/examples/ust-sample.json) into the [web verifier](https://verify.ustprotocol.com/) —
 client-side, nothing is uploaded.
 
 ## ●  Verify one right now
@@ -72,7 +72,7 @@ The fastest way to understand UST is to verify one — no install, no account, 6
 for a bare signed document, climbing to `HIGH`/`TOP` as the publisher adds name-binding and an anchor. Always run the
 canonical reference — never eyeball:
 
-- **Browser (nothing is uploaded):** [thelabmd.github.io/UST-Protocol](https://thelabmd.github.io/UST-Protocol/) — paste the blob, the base64, or the JSON. A bare signed document (like the sample) reads `VALID:LIGHT`; when its publisher also serves the standard name-binding surfaces, resolution + witness (Rekor and Bitcoin checked natively) climb it to `VALID:HIGH` automatically.
+- **Browser (nothing is uploaded):** [verify.ustprotocol.com](https://verify.ustprotocol.com/) — paste the blob, the base64, or the JSON. A bare signed document (like the sample) reads `VALID:LIGHT`; when its publisher also serves the standard name-binding surfaces, resolution + witness (Rekor and Bitcoin checked natively) climb it to `VALID:HIGH` automatically.
 - **Node:** `npm i ust-protocol` → `verify(doc, { context: 'data' })` gives the `VALID:LIGHT` floor; `resolveByDiscovery(doc)` climbs to `VALID:HIGH` when the publisher serves discovery.
 - **Zero-dependency single files:** [`docs/ust-verify.mjs`](docs/ust-verify.mjs) (the LIGHT floor) + [`docs/ust-resolve.mjs`](docs/ust-resolve.mjs) (authority resolution + witness) — WebCrypto, clean-room, cross-checked against `ust-protocol`; fetch them from **this** repository, never from a sender's message.
 - **MCP:** [`@ust-protocol/mcp`](https://www.npmjs.com/package/@ust-protocol/mcp) exposes `ust_verify` to agents.
@@ -377,7 +377,7 @@ purpose is your policy, not the protocol's coercion. Spec [§19](spec/UST-1.0.md
 | `packages/ust-rekor-verify/` | opt-in Sigstore Rekor anchor-substrate plugin ([npm](https://www.npmjs.com/package/@ust-protocol/rekor-verify)) |
 | `packages/diarium/` | agent memory as a verifiable stream — a task closes, the agent writes what it learned, sealed and `prev`-chained ([npm](https://www.npmjs.com/package/diarium)) |
 | `extension/` | "Make it UST" — a demo Chrome extension: sign by selection, verify by selection (LIGHT) |
-| `docs/` | the [web verifier](https://thelabmd.github.io/UST-Protocol/) (client-side, GitHub Pages) + `ust-verify.mjs`, a zero-dependency verifier + `llms.txt` |
+| `docs/` | the [web verifier](https://verify.ustprotocol.com/) (client-side, GitHub Pages) + `ust-verify.mjs`, a zero-dependency verifier + `llms.txt` |
 | `examples/` | sample documents (valid + tampered) and verification recipes |
 
 ## ●  License

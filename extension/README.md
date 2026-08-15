@@ -22,7 +22,7 @@ zero-dependency verifier `ust-verify.mjs`).
 ## What ends up on your clipboard
 
 ```
-UST/1.0; ref=pkg:npm/ust-protocol; web=https://thelabmd.github.io/UST-Protocol/; call=verify(doc,{context:"data"}); hash=domain-separated; trust=resolve-by-name; proves=bytes+key+time
+UST/1.0; ref=pkg:npm/ust-protocol; web=https://verify.ustprotocol.com/; call=verify(doc,{context:"data"}); hash=domain-separated; trust=resolve-by-name; proves=bytes+key+time
 Source: https://example.com/article  (claimed by sender — NOT verified; not part of the proof)
 ———UST(base64)———
 eyJ1c3QiOiIxLjAiLCJzdGF0ZSI6eyJpZCI6ey…
@@ -43,7 +43,7 @@ way). *(For API / JSON-LD-graph surfaces, use the richer JSON-LD `UstVerify` obj
 **In the extension (recipient side):** click the toolbar icon and paste the whole thing into **Verify a
 transcript** — it decodes, verifies with the bundled zero-dependency verifier, and shows the verdict plus the
 content **regenerated from the signed bytes** (the sender's preamble is never displayed as truth). Everything runs
-locally. Or use the [web verifier](https://thelabmd.github.io/UST-Protocol/), or the reference from npm:
+locally. Or use the [web verifier](https://verify.ustprotocol.com/), or the reference from npm:
 
 ```
 npm i ust-protocol@rc

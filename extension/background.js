@@ -49,7 +49,7 @@ function b64utf8(str) {
 // (API/graph surfaces should use the richer JSON-LD form instead — see bd.) base64 = paste-robust exact bytes. ───
 function clipboardBlob(doc, pageUrl) {
   const src = pageUrl ? 'Source: ' + pageUrl + '  (claimed by sender — NOT verified; not part of the proof)\n' : '';
-  return 'UST/1.0; ref=pkg:npm/ust-protocol; web=https://thelabmd.github.io/UST-Protocol/; ' +
+  return 'UST/1.0; ref=pkg:npm/ust-protocol; web=https://verify.ustprotocol.com/; ' +
     'call=verify(doc,{context:"data"}); hash=domain-separated; trust=resolve-by-name; proves=bytes+key+time\n' +
     src +
     '———UST(base64)———\n' +

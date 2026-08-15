@@ -3,7 +3,7 @@
 // implementation written FROM THE SPEC (it does NOT import ust-protocol) and cross-checked against ust-protocol on
 // the conformance vectors — a second, independent conforming verifier, not a re-export. Runs in browsers, Workers,
 // and Node (global crypto.subtle); async. Backs the findable web verifier at
-// https://thelabmd.github.io/UST-Protocol/ and is the zero-dep verifier an AI can fetch from the CANONICAL source
+// https://verify.ustprotocol.com/ and is the zero-dep verifier an AI can fetch from the CANONICAL source
 // (this repo) — never from a sender's blob. LIGHT floor + stream completeness.
 const te = (s) => new TextEncoder().encode(s);
 const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');

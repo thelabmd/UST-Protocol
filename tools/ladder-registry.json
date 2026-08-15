@@ -1799,6 +1799,20 @@
       "test": "#42 requireIndependentAuthority: no assigned domain ⇒ INDETERMINATE, never an inferred independence"
     },
     {
+      "round": 226,
+      "math": {
+        "excluded": "No theorem moved. An address decides no verdict: the same bytes verify identically whichever host served the verifier that read them. The model quantifies over evidence a verifier holds, and a hostname is not evidence."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved. The spec's advice — resolve the verifier BY NAME, never trust one a sender links you to — is unchanged and is exactly what this round makes true of our own deployment. WHICH name is ours is a fact about this operator, and the spec is deliberately free of it."
+      },
+      "code": "packages/ust-cli/index.mjs :: the clipboard HEADER a publisher stamps into every artifact now names the live verifier, and so do the extension's and release-evidence's copies of it",
+      "vector": {
+        "excluded": "A vector fixes an input and a declared result a second implementation must reproduce. Where OUR verifier is hosted is neither; a porter reproduces verdicts, not our deployment."
+      },
+      "test": "tools/verifier-url-gate.mjs :: no tracked file points at the retired origin"
+    },
+    {
       "round": 225,
       "math": {
         "excluded": "No theorem moved, and the distinction is the point. The decision relation is unchanged: the same document under the same trust configuration earns the same verdict. What changed is which PLATFORMS can evaluate it. The model quantifies over what a verifier may conclude from evidence it holds, never over the faculties of the host it runs on."
