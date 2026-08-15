@@ -67,6 +67,15 @@
   * { box-sizing:border-box; }
   body { margin:0; background:var(--paper); color:var(--ink); font:14px/1.6 var(--mono); }
   main { max-width:780px; margin:0 auto; padding:56px 22px 90px; }
+  /* Two columns on a wide screen: what you PASTE stays put, what the verifier SAYS scrolls beside it.
+     Mobile is untouched — `.cols` is an ordinary block below the breakpoint, so the order stays paste → verdict. */
+  @media (min-width:1040px) {
+    main { max-width:1400px; }
+    .cols { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:40px; align-items:start; }
+    .col-in { position:sticky; top:24px; max-height:calc(100vh - 48px); overflow-y:auto; padding-right:10px; }
+    .col-out { min-width:0; }
+    .col-in textarea#in { min-height:clamp(220px, 42vh, 460px); }
+  }
   .kicker { font:500 11px/1 var(--mono); letter-spacing:0.22em; text-transform:uppercase; color:var(--accent); margin:0 0 14px; }
   h1 { font:600 34px/1.15 var(--serif); margin:0 0 12px; letter-spacing:-0.01em; }
   .sub { font:400 16px/1.65 var(--serif); color:var(--muted2); margin:0 0 30px; max-width:60ch; }
@@ -154,6 +163,8 @@
 </head>
 <body>
 <main>
+<div class="cols">
+<div class="col-in">
   <p class="kicker">UST · Universal State Transcript</p>
   <h1>Verify a transcript.</h1>
   <p class="sub">Paste a UST 1.0 document — the whole clipboard blob, the base64, or the raw JSON. The
@@ -172,7 +183,9 @@
     <textarea id="kin" spellcheck="false" style="min-height:70px;margin-top:8px" placeholder='[ {…key-log entry…} ]   (/.well-known/ust-keylog — the JSON array)'></textarea>
     <textarea id="cin" spellcheck="false" style="min-height:70px;margin-top:8px" placeholder='[ {…cadence entry…} ]   (/.well-known/ust-cadence — the JSON array; only if the publisher CHANGED its cadence)'></textarea>
   </details>
+</div>
 
+<div class="col-out">
   <div id="out"></div>
 
   <section class="card" style="margin-top:34px">
@@ -188,6 +201,8 @@
     <a href="./ust-verify.mjs"><code>ust-verify.mjs</code></a> (zero-dependency, WebCrypto) ·
     MCP <code>@ust-protocol/mcp</code>.</p>
   </section>
+</div>
+</div>
 
   <footer>
     Canonical reference: <a href="https://www.npmjs.com/package/ust-protocol"><code>npm ust-protocol</code></a> ·
