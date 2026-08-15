@@ -32,6 +32,7 @@ const ustFetch = labelledFetch('ust-protocol', VERSION.spec);
 // an option and not reachable from the data path — see `_crypto.mjs` for why that distinction is load-bearing.
 import { sha256Hex, ed25519Verify, ed25519Sign, aesGcmDecrypt } from './_crypto.mjs';
 import { utf8, utf8Len, decodeUtf8, concatBytes, toHex, fromHex, toB64url, fromB64url } from './_bytes.mjs';
+import { beginSignatureResolution, endSignatureResolution, unresolvedSignatures, recordSignature, consultSignature } from './_sigmemo.mjs';   // #144 — the async signature faculty is VERIFIER-OWNED and internal, for the same reason the clock is: a caller-supplied answer to "did this verify" is a forgery oracle
 import { witnessNow } from './_clock.mjs';   // rev33 R4 — the witness-budget clock is a VERIFIER-OWNED faculty in an INTERNAL module, never a caller-supplied opts field (round-29 P0-02)
 
 // ─── §6 Canonicalization (JCS tightened) ────────────────────────────────────────────────────────────
@@ -211,6 +212,11 @@ export function edVerifyStrict(pubB64url, msgUtf8, sigB64url) {
   const sigBytes = fromB64url(sigB64url);
   if (!canonicalS(sigBytes)) return false;
   if (!admitPoint(fromB64url(pubB64url)) || !admitPoint(sigBytes.subarray(0, 32))) return false;
+  // #144 — the ASYNC faculty, consulted AFTER every strict wire check above, so a pre-resolved answer can only
+  // ever stand for a triple this door would itself have put to the primitive. Outside a resolution session this
+  // answers `null` and the synchronous primitive decides, exactly as before — Node is unchanged.
+  const resolved = consultSignature(pubB64url, msgUtf8, sigB64url);
+  if (resolved !== null) return resolved;
   try { return ed25519Verify(utf8(msgUtf8), fromB64url(pubB64url), fromB64url(sigB64url)); }
   // #144 — THE THIRD OUTCOME IS NOT `false`. This `catch` predates the browser build's refusal and is right for
   // what it was written for: a malformed key or signature is not an exception, it is a `false`. It could not tell
@@ -2412,22 +2418,58 @@ function verifyAnchorCore(contentHash, proof, opts = {}) {
 // official substrate plugins are async. verifyAsync pre-resolves a doc.proof's substrate ONCE (await), then
 // runs the sync verifier with the resolved receipt as a sync shim — so TOP is reachable with async plugins
 // through a single contract, and verify() never has to become async. Everything else is identical to verify().
+// #144 — the SECOND async faculty. `verifyCore` is synchronous; a browser offers Ed25519 only through the
+// asynchronous `crypto.subtle`. Run the core; if it refused for want of the primitive — `INDETERMINATE
+// (unsupported_alg)`, the honest answer the sync door already produces — resolve the signatures it asked about
+// and run it again with real answers. See `_sigmemo.mjs` for why the memo is verifier-owned and why the set of
+// triples is found by replay rather than by walking the document.
+//
+// Every exit keeps the fail direction: a faculty that is absent in BOTH forms, a triple the async form could not
+// answer, or a run that did not converge all return the refusal unchanged. Nothing here can turn "I could not
+// check" into `false`.
+const SIG_RESOLUTION_MAX_PASSES = 64;   // a document carries finitely many signatures; this is a runaway backstop, not a limit anyone should reach
+const subtleEd25519 = async (pubB64url, msgUtf8, sigB64url) => {
+  try {
+    const k = await crypto.subtle.importKey('raw', fromB64url(pubB64url), { name: 'Ed25519' }, false, ['verify']);
+    return await crypto.subtle.verify({ name: 'Ed25519' }, k, fromB64url(sigB64url), utf8(msgUtf8)) === true;
+  } catch { return null; }   // NOT `false`: a build without Ed25519 in `crypto.subtle` is INABILITY, and the caller keeps its refusal
+};
+async function verifyCoreWithSignatureFaculty(doc, opts) {
+  const sync = verifyCore(doc, opts);
+  if (!cannotDecide(sync)) return sync;
+  if (typeof crypto === 'undefined' || !crypto?.subtle) return sync;
+  const memo = new Map();
+  for (let pass = 0; pass < SIG_RESOLUTION_MAX_PASSES; pass++) {
+    let verdict, asked;
+    beginSignatureResolution(memo);
+    try { verdict = verifyCore(doc, opts); } finally { asked = unresolvedSignatures(); endSignatureResolution(); }
+    // Nothing new was asked: every question this run put had its REAL answer, so this pass IS the real run.
+    if (!asked.length) return verdict;
+    for (const t of asked) {
+      const ok = await subtleEd25519(t.pub, t.msg, t.sig);
+      if (ok === null) return sync;   // the async faculty is missing too — the synchronous refusal is still the honest answer
+      recordSignature(memo, t.pub, t.msg, t.sig, ok);
+    }
+  }
+  return sync;
+}
+
 export async function verifyAsync(doc, opts = {}) {
   opts = admitOpts(opts);                                        // round-19 P1-02 — inert snapshot; a throwing accessor/Proxy trap → null → structured reject (not a host throw)
   if (opts === null) return { result: 'INVALID', error: 'E-MALFORMED', detail: 'opts must be an inert record (round-19 P1-02 totality)' };
   const D = admitDeep(doc);                                      // round-27 (3) — admit ONCE at this public door; below runs verifyCore over the inert snapshot (a getter can't split the substrate await from the sync verify)
   if (D === ADMIT_REJECT) return { result: 'INVALID', error: 'E-MALFORMED', detail: 'document is not an inert record (round-27: the ONE input boundary)' };
   doc = D;
-  if (!doc?.proof || !opts.substrateVerify || opts.offline) return verifyCore(doc, opts);
+  if (!doc?.proof || !opts.substrateVerify || opts.offline) return verifyCoreWithSignatureFaculty(doc, opts);
   // round-17 P0-01 — verify an IMMUTABLE SNAPSHOT. The live object could be swapped between the await and the sync
   // verify (TOCTOU): the substrate receipt is obtained for root A, then a mutated document B with root B reuses it and
   // gets VALID:TOP for evidence that was never its own (I4/F.5c: TimeStrength=anchored must be evidence for content_hash(d)).
   // Snapshot before the await; the sync shim ALSO binds the receipt to the captured (anchor, root), so a different root
   // can never claim it.
-  let snap; try { snap = JSON.parse(JSON.stringify(doc)); } catch { return verifyCore(doc, opts); }
+  let snap; try { snap = JSON.parse(JSON.stringify(doc)); } catch { return verifyCoreWithSignatureFaculty(doc, opts); }
   const capA = snap.proof?.anchor, capR = snap.proof?.root;
   let receipt; try { receipt = await opts.substrateVerify(capA, capR); } catch { receipt = null; }
-  return verifyCore(snap, { ...opts, substrateVerify: (a, r) => (a === capA && r === capR ? receipt : null) });   // verifyCore (NOT verify): no re-clone, so the receipt-identity binding `a === capA` holds across the door
+  return verifyCoreWithSignatureFaculty(snap, { ...opts, substrateVerify: (a, r) => (a === capA && r === capR ? receipt : null) });   // verifyCore (NOT verify): no re-clone, so the receipt-identity binding `a === capA` holds across the door
 }
 
 // §3.1/F.5c FORK-CHOICE — canonical = anchor-included. One `ust_id` may have several candidate documents with

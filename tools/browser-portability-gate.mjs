@@ -466,6 +466,63 @@ ${PROBE[d]}`;
     'the anchor would match prose, and the statement would not have to be findable');
 }
 
+// ─── 8. #144 — the browser REACHES A VERDICT, and still refuses a forgery ────────────────────────────────
+//
+// Sections 1-5 prove the mapped core RUNS. That is a different claim from "a browser can verify a document":
+// until now it could not, because `verifyCore` is synchronous and a browser offers Ed25519 only through the
+// asynchronous `crypto.subtle`, so the honest answer was INDETERMINATE(unsupported_alg) — correct, and useless.
+//
+// `verifyAsync` resolves the signatures the core asked about and runs it again with real answers. Both halves
+// are pinned here, on the SAME bytes, because either alone would be satisfiable by a defect: the refusal alone
+// says nothing was gained, and the verdict alone would not show that the synchronous door still refuses rather
+// than having been quietly loosened. The adversarial leg is the one that matters most — a path that resolves
+// signatures asynchronously is exactly where a forgery would try to enter.
+{
+  const runner = `
+const L = await import('${join(ROOT, 'packages/ust-light/index.mjs')}');
+const B = await import('${join(dir, 'index.mjs')}');
+const kp = await L.keypair();
+const id = { domain_shard: kp.key_id, ust_id: 'ust:20260715.12', key_id: kp.key_id, class: 'observation' };
+const time = { generated_at: '2026-07-15T12:00:00Z', valid_from: '2026-07-15T12:00:00Z', valid_to: '2026-07-15T13:00:00Z' };
+const doc = await L.seal(await L.buildState(id, time, { t: { kind: 'captured', value: { c: '21.5' } } }), kp.privateKey, kp.pub);
+const sync = B.verify(doc, { context: 'data' });
+const asy = await B.verifyAsync(doc, { context: 'data' });
+const bad = JSON.parse(JSON.stringify(doc));
+bad.sig.sig = (bad.sig.sig[0] === 'A' ? 'B' : 'A') + bad.sig.sig.slice(1);
+const tampered = await B.verifyAsync(bad, { context: 'data' });
+const other = JSON.parse(JSON.stringify(doc));
+other.state.data.t.value.c = '99.9';
+const swapped = await B.verifyAsync(other, { context: 'data' });
+console.log(JSON.stringify({ sync: sync.result + '/' + (sync.reason || ''), asy: asy.result, tampered: tampered.result + '/' + (tampered.error || ''), swapped: swapped.result }));
+`;
+  let out = null;
+  try {
+    out = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '--eval', runner],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim());
+  } catch (e) {
+    check('#144 the browser build decides a document', false,
+      String(e.stderr || e.message).split('\n').filter((l) => /Error|NODE GLOBAL/.test(l))[0]?.slice(0, 160) ?? 'no output');
+  }
+  if (out) {
+    // The synchronous door is UNCHANGED: it still refuses rather than guessing. If this ever reads VALID, the
+    // faculty leaked into the sync path and every Node consumer's guarantee moved with it.
+    check(`#144 the SYNC door still refuses for want of the primitive (${out.sync})`, out.sync === 'INDETERMINATE/unsupported_alg',
+      'the synchronous verify() answered something other than the honest refusal');
+    // …and the async door reaches the verdict the reference reaches on the same bytes.
+    // Static label, measured value in the detail: a name assembled at run time cannot be cited by the ladder
+    // registry, which points at a check BY ITS TEXT.
+    check('#144 verifyAsync REACHES a verdict in the browser build', out.asy === 'VALID:LIGHT',
+      `got ${out.asy} — the browser still cannot decide a document the reference calls VALID:LIGHT`);
+    // ADVERSARIAL: the resolution path may not launder a forgery.
+    check(`#144 ADVERSARIAL a tampered signature is REFUSED through the async path (${out.tampered})`, out.tampered === 'INVALID/E-SIG',
+      'a flipped signature byte survived the asynchronous resolution — the memo answered for a triple it was not obtained for');
+    // ADVERSARIAL: the same key, a DIFFERENT signing input. A memo keyed on anything less than the whole triple
+    // would hand this document the answer obtained for the first one.
+    check(`#144 ADVERSARIAL altered CONTENT under the same key is REFUSED (${out.swapped})`, out.swapped === 'INVALID',
+      'mutated content verified — a resolved signature answered for a message it was never obtained for');
+  }
+}
+
 console.log(failures === 0
   ? '\n  browser portability: every package declares a browser stance, each portable one RUNS without Node globals, and each node-only one says so and still means it'
   : `\n  browser portability: ${failures} FAILURE(S)`);

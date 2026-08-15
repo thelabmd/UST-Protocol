@@ -1799,6 +1799,20 @@
       "test": "#42 requireIndependentAuthority: no assigned domain ⇒ INDETERMINATE, never an inferred independence"
     },
     {
+      "round": 225,
+      "math": {
+        "excluded": "No theorem moved, and the distinction is the point. The decision relation is unchanged: the same document under the same trust configuration earns the same verdict. What changed is which PLATFORMS can evaluate it. The model quantifies over what a verifier may conclude from evidence it holds, never over the faculties of the host it runs on."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved. The spec already says a verifier that does not implement a primitive answers INDETERMINATE(unsupported_alg) rather than guessing, and that sentence is what the browser was correctly obeying. How an implementation obtains a faculty is its own business; binding a porter to our async door would make an engineering choice normative."
+      },
+      "code": "packages/ust-protocol/_sigmemo.mjs :: the verifier-owned signature memo, plus verifyCoreWithSignatureFaculty in index.mjs — the fixpoint that resolves what the core asked about and runs it again with real answers",
+      "vector": {
+        "excluded": "A vector fixes an input and a declared result a second implementation must reproduce. This round's subject is a BUILD's faculty and the door that supplies it — not bytes. The half a vector CAN express, the honest refusal without the primitive, is already pinned by `faculty-absent-ed25519`, and this round leaves that answer exactly as it was."
+      },
+      "test": "tools/browser-portability-gate.mjs :: #144 verifyAsync REACHES a verdict in the browser build"
+    },
+    {
       "round": 224,
       "math": {
         "excluded": "No theorem moved. Whether a PACKAGE runs in a browser is a property of an artifact's host environment, not of the decision relation: the same document, the same trust configuration and the same evidence yield the same verdict whether the code executing them was installed in Node or bundled for a page. The model quantifies over what a verifier may conclude, and nothing here changes that set."

@@ -636,6 +636,10 @@
     {
       "round": 224,
       "no_recap": "Round 224 closed no GitHub issue: #148 keeps its two porting boxes open, and this round answers the half about the gate's domain - enumerate every package, declare a stance, check it in both directions. The unit is the CLOSED ISSUE; an entry for the half that landed would claim a card that is still deciding what its other half is worth."
+    },
+    {
+      "round": 225,
+      "no_recap": "Round 225 closed no GitHub issue: #144 asks that a browser stop turning a refusal into a verdict, and this round gives the browser the faculty so the question stops arising in the core — but the shipped page still runs its own clean-room copy, which is the half the card is really about. The unit is the CLOSED ISSUE, and closing it needs the page moved onto this."
     }
   ]
 }
