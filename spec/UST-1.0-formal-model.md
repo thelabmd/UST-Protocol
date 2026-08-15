@@ -3217,6 +3217,68 @@ The REFUSAL itself lives one layer up and is checked there, not here: `packages/
 - the private-head case reproduces the fork and shows both branches individually valid.
 - the shared-head case refuses the second appender, and the refusal names which guarantee it rests on.
 
+## F.5s The stream FLOOR, and the one coordinate where suppression FORGES (#160)
+
+`¬∃ state at t` looks like one claim and is two, split at the address where the identity began. Write `Addr` for
+the ust_id space (§8, totally ordered) and `F` for the FLOOR — the address of the ROOT genesis of the identity's
+epoch chain.
+
+- `t < F` — the identity did not exist. The operator owes no coverage there, and any document addressed there is
+  a RETROSPECTIVE claim, distinguishable by an anchor later than its address.
+- `t ≥ F` — the identity existed and the slot is empty. A coverage fact, decidable only through §11.3.
+
+So `F` is the boundary of the OBLIGATION domain, and that is what makes its direction of error asymmetric:
+
+> a floor EARLIER than the truth is conservative — the operator answers for time before it existed.
+> a floor LATER than the truth DISOWNS real gaps, reclassifying them as a world in which nothing was owed.
+
+**Theorem F.5s-a (root-ness is authenticated non-membership).** The assertion that a held genesis is the ROOT is the proposition
+`¬∃ transition into my epoch`. It is not decidable from the genesis document: measured, a genesis carries `pub`,
+`role`, `max_partitions`, `max_transcript_bytes`, `cadence`, `checkpointAuthority`, `recovery`, `roles` — and no
+predecessor reference of any kind. Nor is it decidable from a transition: `verifyEpochTransition` reads only
+hashes (`from_genesis_epoch`, `to_active_genesis`) and never sees a genesis document.
+*Proof.* Two histories: in `H₁` the held genesis is the root; in `H₂` an earlier epoch transitioned into it and
+the transition is simply not in `ℐ`. Every byte the consumer holds is identical, so no function of `ℐ` separates
+them. ∎ Hence the floor question reduces to the class F.5a treats — declaring an origin does not leave the
+witness class, it relocates one level into it.
+
+**Theorem F.5s-b (on this coordinate, suppression FORGES).** Let the consumer trace the chain back through the
+transitions it was given and take the earliest reached genesis as the floor. A publisher that WITHHOLDS its
+earliest transitions moves the derived floor LATER, and every gap in `[F_true, F_derived)` is thereby
+reclassified from a coverage failure into a period in which nothing was owed.
+*Proof.* Immediate from the split above: the reclassification follows from the boundary moving, and withholding
+moves it in exactly one direction. ∎
+
+**This inverts W1, and it is the only coordinate measured to do so.** Everywhere else in this model, removing
+evidence from `ℐ` can only lower the decidable tier (F.5b, monotone erosion) — authority can be DENIED but not
+fabricated. Here removal IMPROVES the publisher's answer. The reason is structural rather than incidental: every
+other coordinate is a claim the publisher wants ADMITTED, so its evidence is something it supplies; the floor is
+a boundary the publisher wants MOVED, and the evidence that pins it is something it supplies too. A negative
+claim whose domain the claimant delimits is not bounded at all.
+
+**Corollary F.5s-c (a publisher-supplied chain earns a CANDIDATE, never a floor).** By F.5s-b the chain's
+completeness is the publisher's to withhold, so a floor derived from it alone is a self-delimited negative claim.
+`F` is ESTABLISHED only when root-ness enters `ℐ` from outside the publisher's influence — a consumer-held root
+(the `trust` pattern of §12.3.4) or, when it ships, the anchored map of F.5a. Otherwise the honest verdict names
+the floor as UNESTABLISHED, with the missing coordinate reported through the F.5.1f absent set.
+
+**Corollary F.5s-d (a partial trace supplies no usable bound EITHER WAY).** One might hope a partial trace at
+least bounds `F` from above. It does not: the bound `F ≤ X_k` needs genesis addresses to be monotone along the
+chain, and `verifyEpochTransition` cannot observe an address at all, so nothing enforces it. Reporting a partial
+trace as a dated floor is therefore wrong twice — the direction is unsafe, and the bound is unproven.
+
+**Realization (rc.72 line, REV 71).** `deriveStreamFloor` walks the supplied transitions to a candidate root,
+binds a supplied root genesis to it by `genesisEpoch(contentHash(·))`, and returns `established: true` ONLY when
+that root is also consumer-admitted; otherwise it returns the candidate under its own name with root-ness named
+as the missing coordinate. Deliberately NOT done: address monotonicity in the transition check, which would buy a
+bound for a question no surface asks, at the price of editing a signed form.
+
+**Conformance.**
+- Theorem F.5s-a: *"F.5s a genesis carries no predecessor — root-ness is not decidable from the document"*.
+- Theorem F.5s-b: *"F.5s withholding the earliest transition moves the derived floor LATER (suppression forges)"*.
+- Corollary F.5s-c: *"F.5s a publisher-supplied chain earns a candidate, never an established floor"*.
+- Corollary F.5s-c, the established half: *"F.5s a consumer-admitted root establishes the floor"*.
+
 ## F.5t The NAME is a claim, and an unverifiable one is worse than none
 
 A consumer decides whether to verify an artifact by reading how it identifies itself. An artifact carrying

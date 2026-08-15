@@ -29,6 +29,13 @@ export const MUTATIONS = [
     to: "const mapRootBasis = (trust, root) => 'consumer-asserted'; /* mutant */",
   },
   {
+    id: 'publisher-chain-establishes-the-floor', gate: 'node packages/ust-protocol/conformance.mjs',
+    why: 'formal model F.5s-c — the floor is ESTABLISHED only when root-ness comes from outside the publisher. Broken, a publisher-supplied chain establishes it, and since the chain\'s completeness is the publisher\'s to withhold, an operator hides its earliest transitions and every gap before the later floor is reclassified as a period in which nothing was owed. This is the one coordinate where suppression FORGES instead of lowering.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "  if (!(Array.isArray(c.trust?.streamRoots) && c.trust.streamRoots.includes(rh)))",
+    to: "  if (false) /* mutant */",
+  },
+  {
     id: 'refusal-drops-its-facts', gate: 'node packages/ust-protocol/conformance.mjs',
     why: 'formal model F.5.1f — the ONE seam that gives every INDETERMINATE exit its shape. Broken, a refusal goes back to naming no vocabulary and no absent input, which is the state measured before round 217: five fields against the answer\'s nine, on precisely the branch where the reader must decide what to bring.',
     file: 'packages/ust-protocol/index.mjs',

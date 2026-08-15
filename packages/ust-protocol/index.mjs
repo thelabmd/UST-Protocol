@@ -2695,6 +2695,66 @@ export function verifyEpochTransition(statement, config) {
 const CP_BODY_KEYS = new Set(['version', 'purpose', 'domain_shard', 'genesis_epoch', 'sequence', 'previous_checkpoint', 'previous_epoch_final_checkpoint', 'active_genesis', 'checkpoint_authority', 'keylog']);
 const CP_CA_KEYS = new Set(['current_key_id', 'next_key_id', 'next_pub', 'effective_sequence']);
 const isHashStr = (s) => typeof s === 'string' && /^sha256:[0-9a-f]{64}$/.test(s);
+// ─── F.5s THE STREAM FLOOR — the boundary of the OBLIGATION domain, and the one coordinate measured to invert W1.
+//     `¬∃ state at t` is TWO claims split at the address where the identity began: below it the operator owes no
+//     coverage (a document addressed there is a RETROSPECTIVE claim, an anchor later than its address); at or above
+//     it an empty slot is a coverage fact (§11.3). So the direction of error is asymmetric — a floor EARLIER than
+//     the truth is conservative, a floor LATER DISOWNS real gaps.
+//     Root-ness (`¬∃ transition into my epoch`) is authenticated non-membership and is NOT decidable from what the
+//     publisher serves: a genesis carries no predecessor reference, and `verifyEpochTransition` reads only hashes.
+//     A publisher WITHHOLDING its earliest transitions therefore moves the derived floor LATER — removal IMPROVES
+//     its answer, which is the reverse of monotone erosion (F.5b) and holds nowhere else in this verifier.
+//     Hence: a publisher-supplied chain earns a CANDIDATE; the floor is ESTABLISHED only when root-ness enters from
+//     outside the publisher's influence — a consumer-held root today, an anchored map when #42 ships.
+//     TOTAL by construction: every input is untrusted wire, so a hostile accessor is a structured refusal.
+export function deriveStreamFloor(config = {}) {
+  const c = admitOpts(config);
+  if (c === null) return { established: false, detail: 'config must be an inert record (totality — a hostile accessor is a refusal, never a throw)' };
+  const G = admitDeep(c.genesis);
+  if (G === ADMIT_REJECT || !G || typeof G !== 'object' || Array.isArray(G)) return { established: false, detail: 'genesis must be an inert record' };
+  const Ts = admitDeep(c.transitions ?? []);
+  if (Ts === ADMIT_REJECT || !Array.isArray(Ts)) return { established: false, detail: 'transitions must be an inert array' };
+  const shard = G.state?.id?.domain_shard;
+  if (typeof shard !== 'string' || !shard) return { established: false, detail: 'genesis carries no domain_shard' };
+  const hashOf = (d) => { try { return contentHash(d); } catch { return null; } };   // canon can refuse; a refusal is not a throw here
+  // Index by the epoch each transition ARRIVES AT — the direction the walk needs. Two transitions arriving at one
+  // epoch from different predecessors is a FORKED chain: it determines no root, and picking one would be first-wins.
+  const into = new Map();
+  for (const t of Ts) {
+    const cl = t?.claim;
+    if (!cl || cl.purpose !== 'ust:genesis-epoch-transition' || cl.domain_shard !== shard) continue;
+    if (typeof cl.to_genesis_epoch !== 'string' || typeof cl.from_genesis_epoch !== 'string') continue;
+    if (into.has(cl.to_genesis_epoch) && into.get(cl.to_genesis_epoch) !== cl.from_genesis_epoch)
+      return { established: false, detail: 'two transitions arrive at one epoch from DIFFERENT predecessors — the chain forks and determines no root' };
+    into.set(cl.to_genesis_epoch, cl.from_genesis_epoch);
+  }
+  const gh = hashOf(G);
+  if (gh === null) return { established: false, detail: 'genesis is not canonicalizable' };
+  let epoch = genesisEpoch(gh), traced = 0;
+  const seen = new Set([epoch]);
+  while (into.has(epoch)) {
+    const prev = into.get(epoch);
+    if (seen.has(prev)) return { established: false, detail: 'the transition chain cycles — no root is reachable' };
+    seen.add(prev); epoch = prev; traced++;
+  }
+  const base = { established: false, root_epoch: epoch, epochs_traced: traced };
+  // A walk of ZERO steps means the supplied genesis IS the chain's earliest — so it is the root DOCUMENT, and
+  // demanding a second copy of it would be ceremony. It is still only a CANDIDATE: zero steps is also what a
+  // withheld chain looks like, which is precisely F.5s-b.
+  if (c.rootGenesis === undefined && traced > 0)
+    return { ...base, detail: 'no root genesis supplied — the floor is an ADDRESS and lives only in that document; an epoch is a one-way hash of it' };
+  const R = c.rootGenesis === undefined ? G : admitDeep(c.rootGenesis);
+  if (R === ADMIT_REJECT || !R || typeof R !== 'object' || Array.isArray(R)) return { ...base, detail: 'rootGenesis must be an inert record' };
+  const rh = hashOf(R);
+  if (rh === null) return { ...base, detail: 'rootGenesis is not canonicalizable' };
+  if (genesisEpoch(rh) !== epoch) return { ...base, detail: 'the supplied rootGenesis is not the earliest epoch of THIS chain (its epoch does not match the walk)' };
+  const addr = R.state?.id?.ust_id;
+  if (typeof addr !== 'string' || !addr) return { ...base, detail: 'rootGenesis carries no ust_id — no address, no floor' };
+  if (!(Array.isArray(c.trust?.streamRoots) && c.trust.streamRoots.includes(rh)))
+    return { ...base, candidate_floor: addr, basis: 'publisher-chain',
+      detail: 'CANDIDATE only (F.5s-c): the chain came from the publisher, which can withhold its earliest transitions and move the floor LATER — root-ness must enter from a consumer-held root or an anchored map' };
+  return { established: true, floor: addr, root_epoch: epoch, epochs_traced: traced, basis: 'consumer-admitted-root' };
+}
 export function verifyAuthorityCheckpointChain(chain, config) {
   // round-27 P0-01/P0-02 — snapshot the COMPLETE (chain, config) authority graph ONCE, DEEP. rev24 put admitDeep on the
   // evidence/genesis-context entries but NOT here, so the chain verifier held live `cp.body` / raw `genesis` / `recoveries`

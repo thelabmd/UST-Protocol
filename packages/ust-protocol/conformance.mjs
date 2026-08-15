@@ -402,6 +402,15 @@ for (const v of V.vectors) {
     // F.5.1f — the declared result is the SET OF FIELDS, and BOTH halves are normative: a one-directional check is
     // satisfied by a refusal that simply became an answer, so one vector names what must be present and its twin
     // what must not.
+    // F.5s — the declared result COMPARES TWO CALLS. A single fixed input cannot state "withholding moves the
+    // answer": the claim is about the DIFFERENCE between two information sets, so the vector carries both.
+    case 'stream-floor': { const r = P.deriveStreamFloor(v.config || {});
+      let ok = true;
+      if (v.config_with_chain) { const r2 = P.deriveStreamFloor(v.config_with_chain);
+        ok = r.candidate_floor === v.expect.withheld_candidate && r2.candidate_floor === v.expect.shown_candidate
+          && (!v.expect.both_unestablished || (r.established === false && r2.established === false)); }
+      else ok = Object.entries(v.expect).every(([k, val]) => r[k] === val);
+      check(v.id, ok); break; }
     case 'refusal-shape': { const r = P.verify(v.doc, v.opts || {});
       let ok = v.expect_result ? r.result === v.expect_result : r.result === 'INDETERMINATE';
       ok = ok && (v.expect_present || []).every((f) => r[f] !== undefined);
@@ -2665,6 +2674,41 @@ console.log('\n═════════════════════�
   // build is exercised. A check that cannot fail is worse than an absent one: it reads as coverage.
 }
 
+// ─── F.5s THE STREAM FLOOR — the boundary of the OBLIGATION domain, and the one coordinate that inverts W1.
+{
+  const KF = kp('7c'.repeat(32)), DF = 'floor.example';
+  const TF = (d) => ({ generated_at: d, valid_from: d, valid_to: '2030-01-01T00:00:00Z' });
+  const g1 = P.seal(P.buildGenesis({ domain_shard: DF, ust_id: 'ust:20200101.00', key_id: KF.key_id }, TF('2020-01-01T00:00:00Z'), KF.pubB64), KF.priv, KF.pubB64);
+  const g2 = P.seal(P.buildGenesis({ domain_shard: DF, ust_id: 'ust:20260101.00', key_id: KF.key_id }, TF('2026-01-01T00:00:00Z'), KF.pubB64), KF.priv, KF.pubB64);
+  const h1 = P.contentHash(g1), h2 = P.contentHash(g2);
+  const tr = [{ claim: { purpose: 'ust:genesis-epoch-transition', domain_shard: DF, from_genesis_epoch: P.genesisEpoch(h1), to_genesis_epoch: P.genesisEpoch(h2), to_active_genesis: h2 } }];
+  const neverRotated = P.deriveStreamFloor({ genesis: g1 });
+  const rotatedHidden = P.deriveStreamFloor({ genesis: g2 });
+  const rotatedShown  = P.deriveStreamFloor({ genesis: g2, transitions: tr, rootGenesis: g1 });
+  // F.5s-a — two histories, one observation: a never-rotated identity and a rotated one whose transitions were
+  // withheld are INDISTINGUISHABLE in what the publisher serves, because a genesis carries no predecessor.
+  check('F.5s a genesis carries no predecessor — root-ness is not decidable from the document',
+    neverRotated.epochs_traced === 0 && rotatedHidden.epochs_traced === 0
+    && neverRotated.established === false && rotatedHidden.established === false
+    && neverRotated.basis === rotatedHidden.basis);
+  // F.5s-b — and the two worlds do NOT give the same floor: withholding moves it SIX YEARS later, reclassifying
+  // every gap in between as a period in which nothing was owed. Removal IMPROVES the publisher's answer.
+  check('F.5s withholding the earliest transition moves the derived floor LATER (suppression forges)',
+    rotatedHidden.candidate_floor === 'ust:20260101.00' && rotatedShown.candidate_floor === 'ust:20200101.00'
+    && rotatedShown.candidate_floor < rotatedHidden.candidate_floor);
+  // F.5s-c — which is why neither earns a floor: the chain's completeness is the publisher's to withhold.
+  check('F.5s a publisher-supplied chain earns a candidate, never an established floor',
+    rotatedShown.established === false && rotatedShown.basis === 'publisher-chain' && rotatedShown.floor === undefined);
+  check('F.5s a consumer-admitted root establishes the floor',
+    (r => r.established === true && r.floor === 'ust:20200101.00' && r.basis === 'consumer-admitted-root')
+      (P.deriveStreamFloor({ genesis: g2, transitions: tr, rootGenesis: g1, trust: { streamRoots: [h1] } })));
+  // a forked chain determines no root, and picking one would be first-wins
+  check('F.5s two transitions into one epoch from different predecessors → no root',
+    P.deriveStreamFloor({ genesis: g2, transitions: [...tr, { claim: { ...tr[0].claim, from_genesis_epoch: 'sha256:' + '11'.repeat(32) } }] }).detail?.includes('forks'));
+  check('F.5s TOTAL: a hostile config is a structured refusal, never a throw',
+    (() => { try { return P.deriveStreamFloor(new Proxy({}, { get() { throw new Error('boom'); } })).established === false; } catch { return false; } })());
+}
+
 // ─── #76 §1.7 CHECKPOINT RECOVERY — genesis-authorized 2-of-3 multisig re-authorizes the checkpoint authority after
 //     key loss, WITHOUT bypassing checkpoint validation. Dormant emergency mechanism, not a normal rotation.
 {
@@ -3469,6 +3513,7 @@ console.log('\n═════════════════════�
     verifyEvidenceReceipt: 'surface', verifyActiveGenesisUniqueness: 'surface', verifyAuthorityBundle: 'surface',
     verifyAuthorityCheckpointChain: 'surface', verifyCheckpointMapUniqueness: 'surface', verifyCheckpointRecovery: 'surface',
     verifyCheckpointUniqueness: 'surface', verifyEpochTransition: 'surface', verifyKeylogTerminality: 'surface',
+    deriveStreamFloor: 'surface',   // F.5s — reads a genesis, a transition list and a root document, all untrusted wire; refuses, never throws
     verifyNoForkEvidence: 'surface', resolveAuthority: 'surface', resolveByDiscovery: 'surface', resolveCadence: 'surface',
     resolveCadenceBytes: 'surface',   // round-47 rev69 — the SOUND bytes-in boundary (a pure function of immutable byte-strings; resolveCadence is its object adapter)
     resolveCheckpointRoots: 'surface', resolveKeys: 'surface', resolveSupersession: 'surface', resolveKeysBytes: 'surface', deriveAssurance: 'surface', deriveCheckpointFreshness: 'surface',
@@ -3571,6 +3616,7 @@ console.log('\n═════════════════════�
     verifyAnchor: [oHash, oProof, oOpts], verifyEvidenceReceipt: [oStmt, oConf], verifyActiveGenesisUniqueness: [oProof, oConf],
     verifyAuthorityBundle: [oConf, oConf], verifyAuthorityCheckpointChain: [oChain, oConf], verifyCheckpointMapUniqueness: [oProof, oConf],
     verifyCheckpointRecovery: [oChain, oConf], verifyCheckpointUniqueness: [oChain, oConf], verifyEpochTransition: [oStmt, oConf],
+    deriveStreamFloor: [oConf],
     verifyKeylogTerminality: [oHead, oProof], verifyNoForkEvidence: [oStmt, oConf], resolveAuthority: [oDoc, oOpts],
     compareEvidenceOrder: [oEv, oEv], quorumTrustDomains: [oList, oConf],   // round-38 P1-02 — the exported evidence algebra is now a consumer surface in the totality sweep (admits its operands)
     assuranceLE: [oAssur, oAssur], meetAssurance: [oAssur, oAssur], joinAssurance: [oAssur, oAssur], projectTier: [oAssur], capAssurance: [oAssur, oAssur], checkBounds: [oDoc],   // round-39 P1-02 — the assurance lattice + the exported bounds validator are consumer surfaces now that the door returns a sentinel (total-by-return, never a throw)

@@ -19,8 +19,8 @@
     "_": "WHAT A VECTOR MAY PIN — read this before excluding the `vector` layer of a round, and before deciding a case \"cannot be a vector\". Derived from THIS corpus on 2026-08-10, not declared: 228 vectors across 43 kinds.",
     "the_rule": "A vector is a FIXED INPUT and a DECLARED RESULT that a runner must reproduce. The input being a DOCUMENT is one case among several; the result being a VERDICT is one case among several.",
     "measured_2026_08_10": {
-      "total": 254,
-      "kinds": 48,
+      "total": 256,
+      "kinds": 49,
       "input_is_a_document": 45,
       "input_is_a_value_or_string": 75,
       "input_is_a_genesis_plus_log": 63,
@@ -29,7 +29,8 @@
       "_how_these_were_counted": "THREE of these are re-derived on every run by the UST#147 checks (total, kinds, forms) and cannot drift. `input_is_a_document` counts vectors carrying a `doc` field and `input_is_a_genesis_plus_log` counts those carrying a `genesis` field — both reproduced on 2026-08-10 while adding the round-138/139/142 vectors, which is how the second one moved from 59 to 63. `input_is_a_value_or_string` and `input_is_raw_bytes` are the counts recorded when this definition was first derived, and THEIR FORMULA WAS NEVER WRITTEN DOWN: neither a field scan nor a kind roster reproduces 75 or 27. They were left untouched here rather than quietly re-fitted, because a number adjusted to survive a gate is worse than a number that admits it cannot be re-derived. Note also that a count keyed to a FIELD is not a count keyed to MEANING — the four stream vectors added in round 198 take documents as input and do not appear under `input_is_a_document`, because their documents arrive in `frames`. Making every one of these derivable (a kind → form roster, so a new kind cannot exist outside the definition) is tracked as its own round.",
       "_round_207": "#155 added 7 `anchor-refusal` vectors — a form the earlier derivation had no instance of: the input is an ANCHOR and a root, and the declared result is a REFUSAL REASON rather than a verdict. It is recorded here because the definition exists to stop \"this cannot be a vector\" from being asserted, and a refusal reason was exactly the kind of thing that argument would have excluded.",
       "_round_216": "#42 added 2 `map-currency` vectors — a form whose input is a DOCUMENT plus a consumer trust CONFIGURATION and whose declared result is a coordinate ON the identity resolution rather than a tier. It is recorded because the currency basis is decided at the admission door and at no primitive below it, so a porter reproducing only the map primitives would reproduce none of it; and because the second vector's `expect_absent` is what makes the pair non-vacuous — asserting a strength alone stays green on a build that dropped the coordinate.",
-      "_round_217": "#151 added 2 `refusal-shape` vectors — a form whose declared result is the SET OF FIELDS a verdict carries rather than its value. Recorded because both halves are normative and a one-directional check is satisfied by a refusal that simply became an answer: one vector names what MUST be present, its twin names what MUST NOT."
+      "_round_217": "#151 added 2 `refusal-shape` vectors — a form whose declared result is the SET OF FIELDS a verdict carries rather than its value. Recorded because both halves are normative and a one-directional check is satisfied by a refusal that simply became an answer: one vector names what MUST be present, its twin names what MUST NOT.",
+      "_round_219": "#160 added 2 `stream-floor` vectors — a form whose declared result COMPARES TWO CALLS rather than fixing one: the point is that withholding evidence moves the answer, so a single call cannot state it. Recorded because the definition exists to stop \"this cannot be a vector\" from being asserted, and a differential between two information sets is exactly what the earlier derivation had no instance of."
     },
     "forms": [
       {
@@ -12155,6 +12156,229 @@
         "tier"
       ],
       "expect_integrity_not": "invalid"
+    },
+    {
+      "kind": "stream-floor",
+      "id": "stream-floor-01-withholding-moves-it-later",
+      "rule": "S11.3/F.5s-b the ONE coordinate where suppression FORGES: a publisher that withholds its earliest epoch transitions moves the derived floor LATER, and every gap before it is reclassified as a period in which nothing was owed. Both answers must stay UNESTABLISHED, which is the protection.",
+      "config": {
+        "genesis": {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "floor.example",
+              "ust_id": "ust:20260101.00",
+              "key_id": "sha256:5bcaba47f2c2433338ab376dfb3087231fe465cc669884f1dc7c95465b7fc170",
+              "class": "genesis"
+            },
+            "time": {
+              "generated_at": "2026-01-01T00:00:00Z",
+              "valid_from": "2026-01-01T00:00:00Z",
+              "valid_to": "2030-01-01T00:00:00Z"
+            },
+            "data": {
+              "genesis": {
+                "kind": "captured",
+                "value": {
+                  "pub": "94sdqbPfs_o6PlTEPnk4nS8E1rzLYphPKL1vkXmKdQ0",
+                  "role": "name-binding-root"
+                }
+              }
+            },
+            "hashes": {
+              "genesis": "sha256:ab116077ede2d601db04c86554309cd4952356d4d58f0af32d42f3da9405d87b"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:5bcaba47f2c2433338ab376dfb3087231fe465cc669884f1dc7c95465b7fc170",
+            "pub": "94sdqbPfs_o6PlTEPnk4nS8E1rzLYphPKL1vkXmKdQ0",
+            "sig": "OyU2x0xEESMEknVyPT_cN1c5nA-LxOYZe-OUoo14NsUrAEG4SpoDIVr0z3560BBDpmZMtshEq9Mn2BLinADpCg"
+          }
+        }
+      },
+      "config_with_chain": {
+        "genesis": {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "floor.example",
+              "ust_id": "ust:20260101.00",
+              "key_id": "sha256:5bcaba47f2c2433338ab376dfb3087231fe465cc669884f1dc7c95465b7fc170",
+              "class": "genesis"
+            },
+            "time": {
+              "generated_at": "2026-01-01T00:00:00Z",
+              "valid_from": "2026-01-01T00:00:00Z",
+              "valid_to": "2030-01-01T00:00:00Z"
+            },
+            "data": {
+              "genesis": {
+                "kind": "captured",
+                "value": {
+                  "pub": "94sdqbPfs_o6PlTEPnk4nS8E1rzLYphPKL1vkXmKdQ0",
+                  "role": "name-binding-root"
+                }
+              }
+            },
+            "hashes": {
+              "genesis": "sha256:ab116077ede2d601db04c86554309cd4952356d4d58f0af32d42f3da9405d87b"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:5bcaba47f2c2433338ab376dfb3087231fe465cc669884f1dc7c95465b7fc170",
+            "pub": "94sdqbPfs_o6PlTEPnk4nS8E1rzLYphPKL1vkXmKdQ0",
+            "sig": "OyU2x0xEESMEknVyPT_cN1c5nA-LxOYZe-OUoo14NsUrAEG4SpoDIVr0z3560BBDpmZMtshEq9Mn2BLinADpCg"
+          }
+        },
+        "transitions": [
+          {
+            "claim": {
+              "purpose": "ust:genesis-epoch-transition",
+              "domain_shard": "floor.example",
+              "from_genesis_epoch": "sha256:cfee3769555f34811161561643ab1b276199e288f441b79efb569f5b6649b979",
+              "to_genesis_epoch": "sha256:6690b908876aec4ff310786ff40dcccf4f8c52c829d75ed4109c171ee0779483",
+              "to_active_genesis": "sha256:fd49b8bac678e442253cd9311937e966524468ffcd56df239b262eb0e8b862ee"
+            }
+          }
+        ],
+        "rootGenesis": {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "floor.example",
+              "ust_id": "ust:20200101.00",
+              "key_id": "sha256:5bcaba47f2c2433338ab376dfb3087231fe465cc669884f1dc7c95465b7fc170",
+              "class": "genesis"
+            },
+            "time": {
+              "generated_at": "2020-01-01T00:00:00Z",
+              "valid_from": "2020-01-01T00:00:00Z",
+              "valid_to": "2030-01-01T00:00:00Z"
+            },
+            "data": {
+              "genesis": {
+                "kind": "captured",
+                "value": {
+                  "pub": "94sdqbPfs_o6PlTEPnk4nS8E1rzLYphPKL1vkXmKdQ0",
+                  "role": "name-binding-root"
+                }
+              }
+            },
+            "hashes": {
+              "genesis": "sha256:2643420f4cc60f98361e98a5a5d6cd11921cbdb923e5a9fdbd36b7cf08dcbdf6"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:5bcaba47f2c2433338ab376dfb3087231fe465cc669884f1dc7c95465b7fc170",
+            "pub": "94sdqbPfs_o6PlTEPnk4nS8E1rzLYphPKL1vkXmKdQ0",
+            "sig": "WPn87WHJUIfung5uNaK--Np0mwu1tAqMLoYnS5GOs3Mq3YZqab6jEbEase8R2bt8yMHSHNosGL3LqDq384vvCA"
+          }
+        }
+      },
+      "expect": {
+        "withheld_candidate": "ust:20260101.00",
+        "shown_candidate": "ust:20200101.00",
+        "both_unestablished": true
+      }
+    },
+    {
+      "kind": "stream-floor",
+      "id": "stream-floor-02-consumer-admitted-root-establishes",
+      "rule": "S11.3/F.5s-c a publisher-supplied chain earns a CANDIDATE; the floor is ESTABLISHED only when root-ness enters from outside the publisher — here a consumer-held root, the same pattern as an admitted map root in S12.3.4",
+      "config": {
+        "genesis": {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "floor.example",
+              "ust_id": "ust:20260101.00",
+              "key_id": "sha256:5bcaba47f2c2433338ab376dfb3087231fe465cc669884f1dc7c95465b7fc170",
+              "class": "genesis"
+            },
+            "time": {
+              "generated_at": "2026-01-01T00:00:00Z",
+              "valid_from": "2026-01-01T00:00:00Z",
+              "valid_to": "2030-01-01T00:00:00Z"
+            },
+            "data": {
+              "genesis": {
+                "kind": "captured",
+                "value": {
+                  "pub": "94sdqbPfs_o6PlTEPnk4nS8E1rzLYphPKL1vkXmKdQ0",
+                  "role": "name-binding-root"
+                }
+              }
+            },
+            "hashes": {
+              "genesis": "sha256:ab116077ede2d601db04c86554309cd4952356d4d58f0af32d42f3da9405d87b"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:5bcaba47f2c2433338ab376dfb3087231fe465cc669884f1dc7c95465b7fc170",
+            "pub": "94sdqbPfs_o6PlTEPnk4nS8E1rzLYphPKL1vkXmKdQ0",
+            "sig": "OyU2x0xEESMEknVyPT_cN1c5nA-LxOYZe-OUoo14NsUrAEG4SpoDIVr0z3560BBDpmZMtshEq9Mn2BLinADpCg"
+          }
+        },
+        "transitions": [
+          {
+            "claim": {
+              "purpose": "ust:genesis-epoch-transition",
+              "domain_shard": "floor.example",
+              "from_genesis_epoch": "sha256:cfee3769555f34811161561643ab1b276199e288f441b79efb569f5b6649b979",
+              "to_genesis_epoch": "sha256:6690b908876aec4ff310786ff40dcccf4f8c52c829d75ed4109c171ee0779483",
+              "to_active_genesis": "sha256:fd49b8bac678e442253cd9311937e966524468ffcd56df239b262eb0e8b862ee"
+            }
+          }
+        ],
+        "rootGenesis": {
+          "ust": "1.0",
+          "state": {
+            "id": {
+              "domain_shard": "floor.example",
+              "ust_id": "ust:20200101.00",
+              "key_id": "sha256:5bcaba47f2c2433338ab376dfb3087231fe465cc669884f1dc7c95465b7fc170",
+              "class": "genesis"
+            },
+            "time": {
+              "generated_at": "2020-01-01T00:00:00Z",
+              "valid_from": "2020-01-01T00:00:00Z",
+              "valid_to": "2030-01-01T00:00:00Z"
+            },
+            "data": {
+              "genesis": {
+                "kind": "captured",
+                "value": {
+                  "pub": "94sdqbPfs_o6PlTEPnk4nS8E1rzLYphPKL1vkXmKdQ0",
+                  "role": "name-binding-root"
+                }
+              }
+            },
+            "hashes": {
+              "genesis": "sha256:2643420f4cc60f98361e98a5a5d6cd11921cbdb923e5a9fdbd36b7cf08dcbdf6"
+            }
+          },
+          "sig": {
+            "alg": "Ed25519",
+            "key_id": "sha256:5bcaba47f2c2433338ab376dfb3087231fe465cc669884f1dc7c95465b7fc170",
+            "pub": "94sdqbPfs_o6PlTEPnk4nS8E1rzLYphPKL1vkXmKdQ0",
+            "sig": "WPn87WHJUIfung5uNaK--Np0mwu1tAqMLoYnS5GOs3Mq3YZqab6jEbEase8R2bt8yMHSHNosGL3LqDq384vvCA"
+          }
+        },
+        "trust": {
+          "streamRoots": [
+            "sha256:80a0cc16e8109d143742d0b3c1913aa6d8ecfc8a924501f6d7b76874f2f9c50f"
+          ]
+        }
+      },
+      "expect": {
+        "established": true,
+        "floor": "ust:20200101.00",
+        "basis": "consumer-admitted-root"
+      }
     }
   ]
 }

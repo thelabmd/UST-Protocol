@@ -81,6 +81,7 @@ export function compareEvidenceOrder(a: unknown, b: unknown): string;
 export function contentHash(doc: unknown): string;
 export function deriveAssurance(graph: unknown): unknown;
 export function deriveCheckpointFreshness(chain: unknown, config: unknown): unknown;
+export function deriveStreamFloor(config?: unknown): unknown;
 export function edVerifyStrict(pubB64url: unknown, msgUtf8: unknown, sigB64url: unknown): unknown;
 export function epochTransitionClaim(arg0?: unknown): { purpose: unknown; domain_shard: unknown; from_genesis_epoch: unknown; from_final_checkpoint: unknown; to_checkpoint_authority: unknown; to_initial_sequence: unknown };
 export const EVIDENCE_CAPS_UNIVERSE: unknown;

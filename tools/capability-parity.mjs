@@ -95,7 +95,7 @@ const CAPS = {
   // §12.1 is 'recovery/supersession' — one section, one capability. witnessSuccessor BUILDS the successor witness
   // log when a name re-roots; witnessNoShrink is the rule it must satisfy, shared with any mirror that ingests it.
   'recovery':           { core: ['checkpointRecoveryClaim', 'buildRecoveryStatement', 'verifyCheckpointRecovery', 'witnessSuccessor', 'witnessNoShrink'] },
-  'epoch-transition':   { core: ['epochTransitionClaim', 'buildEpochTransition', 'verifyEpochTransition'] },
+  'epoch-transition':   { core: ['epochTransitionClaim', 'buildEpochTransition', 'verifyEpochTransition', 'deriveStreamFloor'] },   // F.5s — the floor is read OFF the epoch chain, so it belongs to the capability that owns the chain, not to a second one
   'uniqueness-attest':  { core: ['checkpointUniquenessClaim', 'buildUniquenessAttestation', 'verifyCheckpointUniqueness'] },
   'verifiable-map':     { core: ['buildVerifiableMap', 'checkpointMapLeaf', 'nameMapLeaf', 'verifyCheckpointMapUniqueness', 'verifyActiveGenesisUniqueness'] },
   'keylog-commitment':  { core: ['keylogLeaf', 'buildKeylogCommitment', 'verifyKeylogTerminality'], cli: 'rotateKeylog' },

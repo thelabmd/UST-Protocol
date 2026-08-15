@@ -831,6 +831,19 @@ stream is complete, therefore trusted."
 `(domain_shard, tier)`; a second frame claiming first-position (a `prev` = genesis when an origin already
 exists) ⇒ E-PREV. This forecloses "orphan a new stream to hide prior frames."
 
+**The FLOOR, and the one coordinate where suppression FORGES (formal model F.5s).** `¬∃ state at t` is TWO claims
+split at the address where the identity began — the ROOT genesis of its epoch chain. Below that address the
+operator owes no coverage, and a document addressed there is a RETROSPECTIVE claim (its anchor is later than its
+address); at or above it an empty slot is a coverage fact under §11.3. The direction of error is therefore
+asymmetric: a floor EARLIER than the truth is conservative, while a floor LATER DISOWNS real gaps. **Root-ness
+is authenticated non-membership** — a genesis carries no predecessor reference, so a never-rotated identity and
+a rotated one whose transitions were withheld are indistinguishable in what the publisher serves. Consequently a
+publisher that withholds its earliest transitions moves a derived floor LATER, and removal IMPROVES its answer —
+the reverse of the monotone erosion every other coordinate obeys. A verifier therefore MUST NOT report a floor
+established from a publisher-supplied chain: such a chain earns a CANDIDATE, and the floor is ESTABLISHED only
+when root-ness enters from outside the publisher's influence (a consumer-held root, as with map roots in
+§12.3.4).
+
 **Frame-slot uniqueness (Y1).** Within a sequenced stream the `prev`-chain is LINEAR: exactly ONE authoritative
 document per `(domain_shard, ust_id, tier)`; a second document for an occupied slot is a fork ⇒ E-PREV. This is
 precisely what makes a committed prediction NON-grindable (§10) — and it holds ONLY when the stream is verified
@@ -3212,3 +3225,30 @@ operator profile (§20), never the protocol. The five passes converged from "the
   §14's word PARTIAL already meant. **And one check was deleted rather than kept green:** the leg written for the
   early exits was vacuous — every input tried answers INVALID, so its second disjunct never ran — and the gap is
   named in place, because a check that cannot fail reads as coverage. Formal model gains F.5.1f. 1008 checks.
+- **REV 71 (2026-08-15, `rc.72` line)** — **the stream FLOOR, and the one coordinate measured to invert W1
+  (#160).** `¬∃ state at t` is two claims split at the address where the identity began: below it the operator
+  owes no coverage and a document addressed there is a RETROSPECTIVE claim, at or above it an empty slot is a
+  coverage fact under §11.3. So the floor is the boundary of the OBLIGATION domain, and its error direction is
+  asymmetric — earlier is conservative, LATER disowns real gaps. **Root-ness is authenticated non-membership.**
+  Measured: a genesis carries `pub`, `role`, `max_partitions`, `max_transcript_bytes`, `cadence`,
+  `checkpointAuthority`, `recovery`, `roles` and NO predecessor reference; `verifyEpochTransition` reads only
+  hashes and never sees a genesis document. A never-rotated identity and a rotated one whose transitions were
+  withheld are therefore indistinguishable in what the publisher serves. **Consequently suppression FORGES here
+  rather than lowering.** Reproduced: with the transitions withheld the derived floor is `ust:20260101.00`; with
+  the chain and root supplied it is `ust:20200101.00` — six years of gaps reclassified as a period in which
+  nothing was owed, purely by removing evidence. Every other coordinate in this verifier obeys monotone erosion
+  (F.5b): removing evidence can only lower the decidable tier. This one improves the publisher's answer, and the
+  reason is structural — a negative claim whose domain the claimant delimits is not bounded at all. **So a
+  publisher-supplied chain earns a CANDIDATE and never a floor**; the floor is ESTABLISHED only when root-ness
+  enters from outside the publisher's influence, today a consumer-held root by the same `trust` pattern §12.3.4
+  uses for map roots. **The card's founding premise did not survive the measurement**: *declare the domain and
+  absence becomes exhibitable* holds only when the domain's own boundary is exhibitable, and here the boundary is
+  itself an unbounded negation — declaring an origin does not leave the witness class, it relocates one level
+  into it. **Two designs were withdrawn before any code was written.** A declared floor field was refused because
+  a declaration is a place to lie where today there is none (owner's rule: the ceremony already holds the data and
+  we do not let anyone lie); and a dated partial-trace floor was refused twice over — the direction is unsafe, and
+  the upper bound it would rest on needs address monotonicity along the chain, which `verifyEpochTransition`
+  cannot even observe. Deliberately NOT done: adding that monotonicity, which would buy a bound for a question no
+  surface asks at the price of editing a signed form. Realized as `deriveStreamFloor`, TOTAL by construction; the
+  vector pair is a DIFFERENTIAL between two information sets, because a single fixed input cannot state that
+  withholding moves the answer. 1020 checks.

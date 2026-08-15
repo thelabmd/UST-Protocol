@@ -1771,6 +1771,14 @@
         "excluded": "The proposition is about the PROJECTION, whose inputs are already pinned by the twelve exhaustive tier-projection vectors over the lattice. A vector asserting that a field the function cannot read does not change its output would fix an input no conforming implementation can accept in the first place."
       },
       "test": "F.5a.3 two verdicts differing ONLY in evidence basis project to the SAME tier"
+    },
+    {
+      "round": 219,
+      "math": "claim whose domain the claimant delimits is not bounded at all",
+      "spec": "such a chain earns a CANDIDATE, and the floor is ESTABLISHED only",
+      "code": "packages/ust-protocol/index.mjs :: `deriveStreamFloor` walks the supplied epoch transitions to a candidate root, binds a supplied root genesis to it by `genesisEpoch(contentHash(·))`, and returns `established` ONLY when that root is consumer-admitted — a publisher-supplied chain earns a candidate under its own name, because the chain's completeness is the publisher's to withhold",
+      "vector": "stream-floor-01-withholding-moves-it-later",
+      "test": "F.5s withholding the earliest transition moves the derived floor LATER (suppression forges)"
     }
   ],
   "first_accounted_round": 76,
