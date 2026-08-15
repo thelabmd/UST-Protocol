@@ -1799,6 +1799,20 @@
       "test": "#42 requireIndependentAuthority: no assigned domain ⇒ INDETERMINATE, never an inferred independence"
     },
     {
+      "round": 227,
+      "math": {
+        "excluded": "No theorem moved. Which bytes a host serves decides no verdict; the same document verifies identically whether the verifier that read it was installed from a registry or fetched from a page. The model quantifies over evidence, and provenance of the verifier binary is not evidence about a document."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved. A conforming implementation may be distributed any way its author likes; the spec's only relevant sentence — resolve the verifier by name, never trust one a sender links you to — is unchanged, and this round is us finally obeying it on our own deployment rather than a new obligation on anyone else."
+      },
+      "code": "docs/lib/ust-protocol/index.mjs :: the vendored browser build the page serves, produced by the package's own browser map and compared to it byte for byte",
+      "vector": {
+        "excluded": "A vector fixes an input and a declared result a second implementation must reproduce. The claim here is that two copies of ONE implementation are identical, which is a byte comparison rather than a conformance question; a porter reproduces verdicts, not our distribution."
+      },
+      "test": "tools/vendor-browser-core.mjs :: nothing is served that the package no longer ships"
+    },
+    {
       "round": 226,
       "math": {
         "excluded": "No theorem moved. An address decides no verdict: the same bytes verify identically whichever host served the verifier that read them. The model quantifies over evidence a verifier holds, and a hostname is not evidence."

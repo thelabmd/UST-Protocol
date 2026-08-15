@@ -644,6 +644,10 @@
     {
       "round": 226,
       "no_recap": "Round 226 closed no GitHub issue: the verifier moved to its own domain, which no card asked for and none is finished by. The unit is the CLOSED ISSUE, and a diary entry written for a deployment change would be an entry written because a gate wanted one."
+    },
+    {
+      "round": 227,
+      "no_recap": "Round 227 closed no GitHub issue: it is the precondition for moving the page onto the reference implementation, and the card that finishes is #144, which stays open until the page actually stops running its own copy. The unit is the CLOSED ISSUE, and an entry for a precondition would claim work that has not landed."
     }
   ]
 }

@@ -164,6 +164,8 @@ jobs:
         run: node tools/user-agent-gate.mjs
       - name: verifier url (one address in docs/CNAME; every emitted header and pointer agrees)
         run: node tools/verifier-url-gate.mjs
+      - name: vendored browser core (what the verifier page SERVES is what npm publishes, byte for byte)
+        run: node tools/vendor-browser-core.mjs --write && git diff --exit-code -- docs/lib && node tools/vendor-browser-core.mjs
       - name: pending bindings (a deferral names a tracker that is still OPEN, and only in the resolvable form)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # the gate FAILS CLOSED on an unread tracker; unauthenticated is 60 req/h and would flake
