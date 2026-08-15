@@ -1797,6 +1797,22 @@
         "excluded": "The claim is about what a CONSUMER CONFIGURATION does to a verdict, and a vector fixes bytes plus a declared result. The admissible half is already pinned by `map-root-anchor-02` (an authority the consumer does not hold mints nothing); what is new here is a policy floor, whose input is not part of any document a second implementation would be handed."
       },
       "test": "#42 requireIndependentAuthority: no assigned domain ⇒ INDETERMINATE, never an inferred independence"
+    },
+    {
+      "round": 222,
+      "math": {
+        "excluded": "No theorem moved. This round states no property of the protocol; it records what six earlier rounds established and closes the card. Adding a model section for a closing act would make the formal model a description of our bookkeeping, which it has always declined to be."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved. A porter runs no recap and closes no card of ours; which report accompanies a closing is not an obligation on an implementation."
+      },
+      "code": {
+        "excluded": "No code changed. The round's artifacts are a sealed diary entry, a rendered page derived from it, and two registry rows — none of which any verifier reads."
+      },
+      "vector": {
+        "excluded": "There is nothing language-neutral to pin: a vector fixes an input and a declared result a second implementation must reproduce, and this round produced neither an input nor a result."
+      },
+      "test": "tools/recap-per-issue-gate.mjs :: the round is accounted by the gate that refused it first — a recap belongs to work recorded in a version line, and the CHANGELOG row for 222 is what discharges that; the diary half is held by test:diary, which fails if the rendered page disagrees with the signed store"
     }
   ],
   "first_accounted_round": 76,

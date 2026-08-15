@@ -623,6 +623,11 @@
     {
       "round": 221,
       "no_recap": "Round 221 closed no issue: #42 stays open on its operator half, and this round adds a coordinate rather than finishing a card. The unit is the CLOSED ISSUE; an entry written for a round that sharpens an open one would be written to satisfy a gate."
+    },
+    {
+      "round": 222,
+      "issue": 151,
+      "content_hash": "sha256:b0abb9c79d91eb065e77793f57da9ec147ae71feb98cf7bb32501570fc5878c4"
     }
   ]
 }
