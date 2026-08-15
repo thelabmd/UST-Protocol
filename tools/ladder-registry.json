@@ -1799,6 +1799,20 @@
       "test": "#42 requireIndependentAuthority: no assigned domain ⇒ INDETERMINATE, never an inferred independence"
     },
     {
+      "round": 229,
+      "math": {
+        "excluded": "No theorem moved. The substrate was always the consumer's faculty and the decision relation always read its receipt; this round supplies that faculty in one more environment. A document earns exactly the verdict it earned before, on the same evidence."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved. §11.2 keeps the substrate delegated on purpose, and which connectors an implementation ships — and for which hosts — is precisely what the spec leaves to implementations. A porter owes a receipt of the declared shape, not our adapter."
+      },
+      "code": "docs/substrate-browser.mjs :: substrateVerify for a page, mapping the existing browser rekor/OTS checks onto the contract the core asks for, at the assurance they actually hold",
+      "vector": {
+        "excluded": "A vector fixes an input and a declared result a second implementation must reproduce. The claim here is that a receipt obtained in a BROWSER matches the one the Node connector produces for the same anchor — a cross-connector agreement over live substrate answers, which no offline vector can carry. It is named as owed in the parity gate rather than left implied."
+      },
+      "test": "tools/primitive-parity-gate.mjs :: every shared entry point agrees; the entry-point SET is pinned"
+    },
+    {
       "round": 228,
       "math": {
         "excluded": "No theorem moved. Two public entries were made to return one shape and a gate stopped being asked a question a browser cannot answer; the decision relation is untouched, and every document earns the verdict it earned before. The model quantifies over verdicts, not over which door a caller knocked on."
