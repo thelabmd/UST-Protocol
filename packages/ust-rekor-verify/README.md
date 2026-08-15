@@ -15,7 +15,7 @@
    ▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀
 ```
 
-**Browser: node-only.** This package does **not** run in a browser, and that is a decision rather than an omission. See `ust:browser.why` in its `package.json` for the reason, and UST-Protocol#148 for what a browser can and cannot reach without it.
+**Browser: node-only.** This package does **not** run in a browser, and that is a decision rather than an omission. See `ust:browser.why` in its `package.json` for the reason, and UST-Protocol#148 for what a browser can and cannot reach without it. A page is not left without a route: the core delegates the substrate through the consumer-supplied `substrateVerify` faculty by design, so a browser reaching for an anchored verdict supplies its own — which is a connector you replace, not a capability the core lacks. What a browser cannot do is install THIS one and have it work.
 
 UST (Universal State Transcript) is trust infrastructure for data: a signed, canonical, tamper-evident record of
 *state* — some data about the world at a moment — that verifies the same however it reached you. TLS secures the
