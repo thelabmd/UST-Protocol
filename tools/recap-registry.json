@@ -619,6 +619,10 @@
     {
       "round": 220,
       "no_recap": "Round 220 closed no GitHub issue: #42 stays open on its operator half (a map must actually be run and its root anchored before anything downstream is measurable), and #151's headline was answered by the negative result of round 216 rather than by this build. The unit is the CLOSED ISSUE; an entry for a round that finishes protocol work while the card waits on an operator would be written to satisfy a gate."
+    },
+    {
+      "round": 221,
+      "no_recap": "Round 221 closed no issue: #42 stays open on its operator half, and this round adds a coordinate rather than finishing a card. The unit is the CLOSED ISSUE; an entry written for a round that sharpens an open one would be written to satisfy a gate."
     }
   ]
 }

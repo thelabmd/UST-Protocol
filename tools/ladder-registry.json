@@ -1787,6 +1787,16 @@
       "code": "packages/ust-protocol/index.mjs :: the `nameMapRootClaim`/`buildNameMapRoot`/`verifyNameMapRoot` trio mirrors the audited no-fork-evidence shape, and `proveMapRootAnchor` mints an unforgeable token only when the authority signature AND the anchor inclusion both hold — enlisted in the admitDeep preservation registry, without which the branch is silently dead",
       "vector": "map-root-anchor-01-signed-and-anchored-mints",
       "test": "#42 anchored-authority earns authoritative with NO consumer mapRoots — per-epoch config becomes one-time"
+    },
+    {
+      "round": 221,
+      "math": "ABSENCE of an assigned domain is UNESTABLISHED, never independent",
+      "spec": "A verifier reports the assigned domain as `map_authority_domain` and MUST NOT infer independence from",
+      "code": "packages/ust-protocol/index.mjs :: the consumer's `trust_domain` for a map authority is read, rides the minted token into the verdict as `map_authority_domain`, and `requireIndependentAuthority` refuses `authoritative` on an unassigned domain or one equal to the publisher's — reading whichever coordinate the route supplied, so both routes to authoritative answer the same question",
+      "vector": {
+        "excluded": "The claim is about what a CONSUMER CONFIGURATION does to a verdict, and a vector fixes bytes plus a declared result. The admissible half is already pinned by `map-root-anchor-02` (an authority the consumer does not hold mints nothing); what is new here is a policy floor, whose input is not part of any document a second implementation would be handed."
+      },
+      "test": "#42 requireIndependentAuthority: no assigned domain ⇒ INDETERMINATE, never an inferred independence"
     }
   ],
   "first_accounted_round": 76,

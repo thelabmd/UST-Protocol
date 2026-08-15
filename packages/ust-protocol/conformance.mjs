@@ -2712,6 +2712,30 @@ console.log('\n═════════════════════�
   // and the anchor is the OTHER half: a signed root with no substrate answer stays unproven.
   const unanchored = await P.proveMapRootAnchor(stmt, anchorProof, { mapAuthorities: AUTH });
   check('#42 a signed root with no anchor evidence does not mint — the basis needs BOTH halves', unanchored.ok === false);
+  // INDEPENDENCE is a SEPARATE question from strength, and it is CONSUMER-owned. Both must be visible from the
+  // first day they can differ: fused, every verdict issued before an independent authority exists becomes
+  // retroactively ambiguous, and a consumer needing independence has nothing to require it on.
+  const selfDom = { [AU.key_id]: { pub: AU.pubB64, trust_domain: DM } };          // the authority IS the publisher
+  const indepDom = { [AU.key_id]: { pub: AU.pubB64, trust_domain: 'map-op-x' } }; // a different trust domain
+  const mintSelf = await P.proveMapRootAnchor(stmt, anchorProof, { mapAuthorities: selfDom, substrateVerify: sv });
+  const mintIndep = await P.proveMapRootAnchor(stmt, anchorProof, { mapAuthorities: indepDom, substrateVerify: sv });
+  const nm = (tok) => ({ proof: mp.prove(lf.key), mapRoot: mp.root, rootProof: tok });
+  check('#42 the consumer-assigned trust domain rides the verdict, and the authority cannot assign its own',
+    P.resolveAuthority(doc, { ...base, nameMap: nm(mintIndep.token) }).map_authority_domain === 'map-op-x'
+    && P.verifyNameMapRoot({ ...stmt, claim: { ...stmt.claim, trust_domain: 'i-am-independent' } }, { mapAuthorities: indepDom }).ok === false);
+  // silence is NOT independence
+  check('#42 requireIndependentAuthority: no assigned domain ⇒ INDETERMINATE, never an inferred independence',
+    (r => r.result === 'INDETERMINATE' && /never inferred from silence/.test(r.detail || ''))
+      (P.verify(doc, { ...base, nameMap: nm(minted.token), requireIndependentAuthority: true })));
+  // self-vouching is a real property and NOT this one
+  check('#42 requireIndependentAuthority: the authority in the PUBLISHER\'s own domain is refused',
+    (r => r.result === 'INDETERMINATE' && /own trust domain/.test(r.detail || ''))
+      (P.verify(doc, { ...base, nameMap: nm(mintSelf.token), requireIndependentAuthority: true })));
+  check('#42 requireIndependentAuthority: a DIFFERENT trust domain satisfies the floor',
+    P.verify(doc, { ...base, nameMap: nm(mintIndep.token), requireIndependentAuthority: true }).result === 'VALID:HIGH');
+  // and the floor changes NOTHING for a consumer that does not set it — adding a coordinate grants no verdict
+  check('#42 the independence coordinate grants nothing: the same call without the floor is unchanged',
+    P.verify(doc, { ...base, nameMap: nm(mintSelf.token) }).result === 'VALID:HIGH');
 }
 
 // ─── F.5s THE STREAM FLOOR — the boundary of the OBLIGATION domain, and the one coordinate that inverts W1.
@@ -2953,7 +2977,7 @@ console.log('\n═════════════════════�
     const SELECTORS = ['keylog', 'genesis', 'checkpoint', 'pinnedKeys', 'cadenceLog', 'recoveryKeys', 'genesisAuthority', 'pinnedPrior'];
     const coalesced = SELECTORS.filter((s) => new RegExp('Array\\.isArray\\(' + s + '\\)\\s*\\?\\s*' + s + '\\b|\\b' + s + '\\s*\\|\\|\\s*(\\{\\}|\\[\\])').test(src));   // round-44 P1-01 — ban BOTH `Array.isArray(X)?X:d` AND `X || {}` / `X || []` for authority selectors (both silently replace a present malformed selector with a default)
     check('R43/R44 STRUCTURAL: no authority SELECTOR uses a coalesce (`Array.isArray(X)?X:d`, `X || {}`, `X || []`) — a present malformed selector is admitted, never silently emptied/defaulted' + (coalesced.length ? ' — FOUND: ' + coalesced.join(',') : ''), coalesced.length === 0);
-    const REGISTERED = new Set(['requirePerFrameValid', 'allowExperimentalAttested', 'acceptConsumerOverride', 'noForkConfirmed', 'corroborated', 'requireAuthoritative', 'requireAnchored', 'requireFreshKeylog', 'offline', 'requireVersion']);   // requireVersion is a STRING version match, not a truthy grant — registered so the scan is exhaustive
+    const REGISTERED = new Set(['requirePerFrameValid', 'allowExperimentalAttested', 'acceptConsumerOverride', 'noForkConfirmed', 'corroborated', 'requireAuthoritative', 'requireAnchored', 'requireFreshKeylog', 'offline', 'requireVersion', 'requireIndependentAuthority']);   // requireVersion is a STRING version match, not a truthy grant — registered so the scan is exhaustive
     const found = new Set([...src.matchAll(/\b(require[A-Z][A-Za-z]+|allow[A-Z][A-Za-z]+|acceptConsumerOverride)\b/g)].map((m) => m[1]));
     const unregistered = [...found].filter((f) => !REGISTERED.has(f));
     check('R43/R44 STRUCTURAL: every require*/allow*/acceptConsumerOverride security-policy boolean in index.mjs + reference-checker.mjs is REGISTERED (a new grant flag fails until admitted + adversarially probed)' + (unregistered.length ? ' — UNREGISTERED: ' + unregistered.join(',') : ''), unregistered.length === 0);

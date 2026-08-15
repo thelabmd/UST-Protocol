@@ -1575,7 +1575,18 @@ Two INDEPENDENT (non-publisher) bases prove `¬∃ rival at the coordinate`, bot
   is what distinguishes a map from a witness (F.5a.3), so binding the root to a domain would restore the
   per-name silence that distinction removes. The mechanism is registered as `ust-name-map/v1`; the AUTHORITY is
   not registered and must not be — that would spend the specification's neutrality on one operator, and by
-  F.5a.2c it would not close the question anyway.
+  F.5a.2c it would not close the question anyway. **Independence is a SEPARATE coordinate from strength, and it is
+  CONSUMER-owned.** An entry in `mapAuthorities` MAY carry a `trust_domain`, which the consumer assigns; an
+  authority MUST NOT name its own (the closed claim schema has no slot for one, and a statement carrying one is
+  refused). A verifier reports the assigned domain as `map_authority_domain` and MUST NOT infer independence from
+  its absence. `requireIndependentAuthority` is the consumer floor: it refuses `authoritative` when no domain was
+  assigned, and when the vouching authority sits in the publisher's own domain — a publisher vouching for itself
+  under an anchored map is NON-EQUIVOCATING, which is a real property and a different one. The distinction is
+  normative from the first revision in which the two can differ: fused, every verdict issued before an
+  independent authority exists would become retroactively ambiguous, and a consumer needing independence would
+  have nothing to require it on. The specification names no authority and takes no position on who operates one;
+  it fixes only how a consumer admits, labels and requires them, so an ecosystem may develop several without any
+  implementation changing.
 - **Accepted-witness quorum** (`purpose:"ust:checkpoint-uniqueness-attestation"`) — `≥ threshold` **DISTINCT
   CONSUMER-RESOLVED trust domains** signing the byte-identical uniqueness claim over `(domain, genesis_epoch,
   sequence, authority checkpoint)`. **Independence is CONSUMER-owned** (the consumer maps issuer→domain), NEVER
@@ -3290,3 +3301,24 @@ operator profile (§20), never the protocol. The five passes converged from "the
   conformance checks, two language-neutral vectors (the first ASYNC form in the corpus, pinning the MINT from
   serializable inputs — the token's identity property cannot itself be a vector, and a serialized look-alike would
   pin the opposite of what it is for). 1027 checks.
+- **REV 73 (2026-08-15, `rc.72` line)** — **independence is a separate coordinate from strength, and it becomes
+  visible on the day the two can first differ (#42).** REV 72 made a map root prove itself by signature and
+  anchor, admitted against the consumer's `mapAuthorities`. That leaves a question the verdict could not answer:
+  whether the vouching authority is INDEPENDENT of the publisher. A publisher operating a map over its own names
+  and a third party operating one over many produce the same `authoritative`, and the difference between them is
+  the whole reason the coordinate exists. **Fusing them has a cost that only arrives later**: every verdict issued
+  before an independent authority exists would become retroactively ambiguous, and a consumer that needs
+  independence would have nothing to require it on — so the distinction is normative now rather than when it
+  becomes convenient. **The mechanism is F.5a.1 verbatim, applied to the other independent-authority witness.** An
+  entry in `mapAuthorities` MAY carry a `trust_domain`, assigned by the CONSUMER; the closed root-claim schema has
+  no slot for one and a statement carrying it is refused, so an authority cannot name its own. The verdict reports
+  `map_authority_domain`, and **absence is UNESTABLISHED, never independent** — inferring the strong reading from
+  silence would re-admit self-declaration through an omission instead of a field. `requireIndependentAuthority` is
+  the consumer floor and reads whichever coordinate the route supplied, so both routes to `authoritative` answer
+  the question the same way rather than one of them being a sample. **What self-vouching DOES buy is named rather
+  than dismissed:** under an anchored map a publisher can no longer say one thing to one consumer and another to
+  another (F.5a.3), which is a real property and a different one. **The specification names no authority and takes
+  no position on who operates one** — it fixes only how a consumer admits, labels and requires them, so an
+  ecosystem may develop several without any implementation changing. Adding the coordinate grants no verdict: a
+  call that does not set the floor is unchanged, pinned by its own check. Five conformance checks, one mutant
+  (`silence-reads-as-independence`). 1032 checks.

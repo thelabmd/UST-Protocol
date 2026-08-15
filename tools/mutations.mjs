@@ -29,6 +29,13 @@ export const MUTATIONS = [
     to: "  if (true) return { basis: 'consumer-asserted' }; /* mutant */",
   },
   {
+    id: 'silence-reads-as-independence', gate: 'node packages/ust-protocol/conformance.mjs',
+    why: 'F.5a.1 clause 2 — independence is CONSUMER-owned, so an unassigned trust domain is UNESTABLISHED, never independent. Broken, silence satisfies the floor: a consumer that asked for an independent authority and configured none is told it has one, which is the self-declared independence the clause exists to forbid, arriving through an omission instead of a field.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: '      if (vouchDomain === undefined || vouchDomain === st.id.domain_shard)',
+    to: '      if (vouchDomain === st.id.domain_shard) /* mutant */',
+  },
+  {
     id: 'minted-map-token-cloned-away', gate: 'node packages/ust-protocol/conformance.mjs',
     why: '#42 — a minted token is preserved BY IDENTITY through admission. Broken, `admitDeep` clones it like any plain record, the WeakSet no longer recognises it, and the anchored-authority branch is simply never taken: the consumer that did everything right silently drops back to the per-epoch pinned root. Found the hard way while building it — the branch looked dead and the token was the reason.',
     file: 'packages/ust-protocol/index.mjs',

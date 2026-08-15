@@ -984,8 +984,8 @@ function verifyCoreInner(doc, opts = {}) {
     // proven upper bound and must never become the coordinate (it made a retired-key doc VALID:HIGH with a forged/absent
     // string while the honest late U rejected it). No proof ⇒ U is undefined ⇒ a closed key lifecycle fails closed.
     const acceptOverride = admitBool(opts.acceptConsumerOverride);   // round-42 P1-02 (R1) — strict: the string "false" (or any non-boolean) is TRUTHY and would activate the HIGH override projection; a wrong-typed grant is malformed, not truthy
-    const reqAuth = admitBool(opts.requireAuthoritative), reqFresh = admitBool(opts.requireFreshKeylog), reqAnch = admitBool(opts.requireAnchored);   // round-43 — strict: a falsy-coerced restriction (requireAuthoritative:0) would SILENTLY DROP the caller's policy (a coerced value is malformed, never a dropped requirement — the measured-input rule applies to restrictions too)
-    if (reqAuth === ADMIT_REJECT || reqFresh === ADMIT_REJECT || reqAnch === ADMIT_REJECT) return bad('E-MALFORMED', 'requireAuthoritative/requireFreshKeylog/requireAnchored must be booleans (round-43 — a coerced restriction must not silently drop the caller policy)');
+    const reqAuth = admitBool(opts.requireAuthoritative), reqFresh = admitBool(opts.requireFreshKeylog), reqAnch = admitBool(opts.requireAnchored), reqIndep = admitBool(opts.requireIndependentAuthority);   // round-43 — strict: a falsy-coerced restriction (requireAuthoritative:0) would SILENTLY DROP the caller's policy (a coerced value is malformed, never a dropped requirement — the measured-input rule applies to restrictions too)
+    if (reqAuth === ADMIT_REJECT || reqFresh === ADMIT_REJECT || reqAnch === ADMIT_REJECT || reqIndep === ADMIT_REJECT) return bad('E-MALFORMED', 'requireAuthoritative/requireFreshKeylog/requireAnchored/requireIndependentAuthority must be booleans (round-43 — a coerced restriction must not silently drop the caller policy)');
     if (acceptOverride === ADMIT_REJECT) return bad('E-MALFORMED', 'acceptConsumerOverride must be a boolean (round-42 P1-02 — a non-boolean grant would flip the consumer-override projection by truthiness)');
     let identity;
     if (opts.genesis != null) identity = resolveAuthority(doc, { ...opts, anchorTime: provenAnchorTime !== undefined ? provenAnchor(provenAnchorTime) : undefined });   // round-41 P1-02 — a PRESENT genesis (incl. a falsy one) resolves authority; a malformed genesis returns E-GENESIS (propagated below), never a silent self-asserted (round-17 P0-02 — mint a proven-anchor TOKEN; a raw opts.anchorTime is dropped and can never reach K_n(t))
@@ -997,6 +997,21 @@ function verifyCoreInner(doc, opts = {}) {
       return identity.status === 'unavailable'
         ? { result: 'INDETERMINATE', reason: 'unavailable', identity, detail: identity.detail }   // W1: retry, NOT failure
         : bad('E-GENESIS', 'authoritative required but ' + identity.strength + '/' + identity.status);
+    // INDEPENDENCE IS A SEPARATE QUESTION FROM STRENGTH, and both routes to `authoritative` answer it the same way.
+    // A publisher that vouches for itself — through a map it runs, or a witness sitting in its own trust domain —
+    // gives a real property (with an anchored map it can no longer equivocate undetectably, F.5a.3) but NOT
+    // independence. Those two must be distinguishable in the verdict from the first day they can differ: leave them
+    // fused and every verdict issued before an independent authority exists becomes retroactively ambiguous, and a
+    // consumer that needs independence has nothing to require it ON. The coordinate is CONSUMER-owned (F.5a.1
+    // clause 2) — the vouching party cannot label its own domain — so SILENCE means unestablished, never independent.
+    if (reqIndep && identity.strength === 'authoritative') {
+      const vouchDomain = identity.map_authority_domain ?? identity.trust_domain;
+      if (vouchDomain === undefined || vouchDomain === st.id.domain_shard)
+        return { result: 'INDETERMINATE', reason: 'unavailable', identity,
+          detail: vouchDomain === undefined
+            ? 'independence required, and the consumer assigned NO trust domain to the vouching authority — independence is consumer-owned and is never inferred from silence (§12.1a, F.5a.1)'
+            : 'independence required, and the vouching authority sits in the PUBLISHER\'s own trust domain — self-vouching under an anchored map is non-equivocating, which is a real property and not this one' };
+    }
     // §12.2a #40 — a consumer that needs a CURRENT key-log (revocation may have propagated) sets requireFreshKeylog:
     // an `unverified` freshness (a possibly-stale cache) ⇒ INDETERMINATE (retry: re-fetch the key-log from the
     // authoritative discovery surface or supply a VERIFIED keylogHeadAnchor), NEVER a silent accept on a stale view.
@@ -1902,7 +1917,12 @@ export function verifyNameMapRoot(statement, config) {
   if (pub !== S.sig.pub) return { ok: false, detail: 'authority pub is not the configured one' };
   let msg; try { msg = canon(S.claim); } catch { return { ok: false, detail: 'claim not canonicalizable' }; }
   if (!edVerifyStrict(S.sig.pub, msg, S.sig.sig)) return { ok: false, detail: 'Ed25519 verify failed' };
-  return { ok: true, authority_id: S.issuer_id, map_root: S.claim.map_root };
+  // The TRUST DOMAIN is the consumer's label for this authority, exactly as `trustRoots` labels a witness: the
+  // authority cannot name its own (a `trust_domain` inside the signed claim would be the self-granted independence
+  // F.5a.1 clause 2 forbids, and the closed schema has no slot for one). Absent ⇒ ABSENT: no independence is
+  // asserted from silence.
+  return { ok: true, authority_id: S.issuer_id, map_root: S.claim.map_root,
+    ...(typeof admitted === 'object' && typeof admitted.trust_domain === 'string' && admitted.trust_domain ? { trust_domain: admitted.trust_domain } : {}) };
 }
 // The UNFORGEABLE token, same discipline as VERIFIED_ANCHOR / VERIFIED_FRESH: only this function — which actually
 // ran BOTH checks — mints one, so a caller's look-alike `{map_root, as_of}` earns nothing. ASYNC because the
@@ -1918,9 +1938,9 @@ export async function proveMapRootAnchor(statement, proof, opts = {}) {
   const av = verifyAnchorCore(vr.map_root, Pf, { ...O, substrateVerify: (a, r) => (a === capA && r === capR ? receipt : null) });   // CORE, not the public door: the door re-admits the proof, and a second clone breaks the `a === capA` identity binding that ties the receipt to THIS call — the same reason verifyAsync calls verifyCore
   if (!(av.inclusion === true && av.time === 'anchored' && isRealRfc3339Z(av.anchorTime)))
     return { ok: false, detail: 'the root is signed but NOT anchor-proven — ' + (av.detail || av.status || 'no proven time'), authority_id: vr.authority_id };
-  const token = deepFreeze({ map_root: vr.map_root, authority_id: vr.authority_id, as_of: av.anchorTime });
+  const token = deepFreeze({ map_root: vr.map_root, authority_id: vr.authority_id, as_of: av.anchorTime, ...(vr.trust_domain ? { trust_domain: vr.trust_domain } : {}) });
   VERIFIED_MAP_ROOT.add(token);
-  return { ok: true, token, map_root: vr.map_root, authority_id: vr.authority_id, as_of: av.anchorTime };
+  return { ok: true, token, map_root: vr.map_root, authority_id: vr.authority_id, as_of: av.anchorTime, ...(vr.trust_domain ? { trust_domain: vr.trust_domain } : {}) };
 }
 // subject binding → scope binding → admission (consumer connectors) → role (allowed_proof_kinds, B4) → total.
 // Tamper/malformation ⇒ INVALID(E-EVIDENCE); not-admitted-for-THIS-consumer/scope/subject ⇒ INDETERMINATE
@@ -2043,7 +2063,7 @@ const mapRootBasis = (trust, root, token) => {
   // look-alike `{map_root, as_of}` is not in the set and earns nothing. The per-epoch coordinate lives in `Fₜ`
   // here; the `C`-part left over is the AUTHORITY, admitted once (F.5a.2, and F.5a.2c on why it cannot be zero).
   if (token !== null && typeof token === 'object' && VERIFIED_MAP_ROOT.has(token) && token.map_root === root)
-    return { basis: 'anchored-authority', as_of: token.as_of, authority: token.authority_id };
+    return { basis: 'anchored-authority', as_of: token.as_of, authority: token.authority_id, ...(token.trust_domain ? { authority_domain: token.trust_domain } : {}) };
   if (Array.isArray(trust?.mapRoots) && trust.mapRoots.includes(root)) return { basis: 'consumer-asserted' };
   return null;
 };
@@ -2178,7 +2198,7 @@ export function resolveAuthority(doc, opts = {}) {
   if (nameMap && nmCur) {                                                            // #42 — name-map inclusion, root CONSUMER-ADMITTED (Phase 1)
     const nm = verifyActiveGenesisUniqueness(nameMap.proof, { domain_shard: doc.state.id.domain_shard, active_genesis: contentHash(genesis), mapRoot: nameMap.mapRoot });
     if (nm.authoritative) return { strength: 'authoritative', noFork: 'map-inclusion', independently_verified: true,
-      basis: 'authenticated-map-uniqueness', map_root: nm.map_root, map_root_currency: nmCur.basis, ...(nmCur.as_of ? { map_root_as_of: nmCur.as_of } : {}), ...(nmCur.authority ? { map_authority: nmCur.authority } : {}), status: st2, capacity, freshness };   // F.5a.2b — the ROTATION-bearing key space: an unlabelled currency would be an overstatement (a superseded binding verifies under its own root)
+      basis: 'authenticated-map-uniqueness', map_root: nm.map_root, map_root_currency: nmCur.basis, ...(nmCur.as_of ? { map_root_as_of: nmCur.as_of } : {}), ...(nmCur.authority ? { map_authority: nmCur.authority } : {}), ...(nmCur.authority_domain ? { map_authority_domain: nmCur.authority_domain } : {}), status: st2, capacity, freshness };   // F.5a.2b — the ROTATION-bearing key space: an unlabelled currency would be an overstatement (a superseded binding verifies under its own root)
   }
   if (noForkEvidence !== undefined) {
     const ev = verifyNoForkEvidence(noForkEvidence, { domain_shard: doc.state.id.domain_shard, active_genesis: contentHash(genesis), trustRoots: trustRoots || {} });

@@ -725,6 +725,19 @@ name-authoritative TIER only under an explicit projection `π_override` (`accept
 always carries `independently_verified = false`. In particular `noForkConfirmed = 1` alone never yields the label
 `authoritative` — the REV 44 overclaim (a raw boolean earning `authoritative`) is closed by construction.
 
+**Realization (extended REV 73 to the map authority).** The theorem is stated for a witness and holds verbatim
+for the OTHER independent-authority witness of F.5a b: an entry in `mapAuthorities` carries the consumer's
+`trust_domain`, the closed root-claim schema has no slot for one, and a statement carrying it is refused — so the
+independence coordinate enters `ℐ_C` only through `C`. Two consequences are worth stating because they are easy
+to fuse. First, ABSENCE of an assigned domain is UNESTABLISHED, never independent: inferring the strong reading
+from silence would re-admit self-declaration through an omission instead of a field. Second, a publisher vouching
+for itself through a map it operates is NON-EQUIVOCATING — an anchored root cannot say one thing to one consumer
+and another to another (F.5a.3) — and that is a real property which is NOT independence. The two must be
+distinguishable in the verdict from the first revision in which they can differ, or every verdict issued before
+an independent authority exists is retroactively ambiguous. The consumer floor is `requireIndependentAuthority`,
+and it reads whichever coordinate the route supplied, so both routes to `authoritative` answer the question the
+same way.
+
 **Realization.** `Admit_C` = `verifyNoForkEvidence(e, {domain_shard, active_genesis, trustRoots})`; the build side
 is `buildNoForkEvidence`/`noForkClaim`. The earned/override split is the two terminal branches of
 `resolveAuthority`: an admitted `e` → `{strength:"authoritative", basis:"accepted-external-witness", witness_id,
