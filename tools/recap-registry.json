@@ -648,6 +648,10 @@
     {
       "round": 227,
       "no_recap": "Round 227 closed no GitHub issue: it is the precondition for moving the page onto the reference implementation, and the card that finishes is #144, which stays open until the page actually stops running its own copy. The unit is the CLOSED ISSUE, and an entry for a precondition would claim work that has not landed."
+    },
+    {
+      "round": 228,
+      "no_recap": "Round 228 closed no GitHub issue: the page now runs the reference implementation, which is most of #144, but the clean-room files are still in the tree and #129 still owns where they belong. The unit is the CLOSED ISSUE, and an entry now would claim a card whose last step has not landed."
     }
   ]
 }

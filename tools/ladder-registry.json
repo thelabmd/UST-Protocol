@@ -1799,6 +1799,20 @@
       "test": "#42 requireIndependentAuthority: no assigned domain ⇒ INDETERMINATE, never an inferred independence"
     },
     {
+      "round": 228,
+      "math": {
+        "excluded": "No theorem moved. Two public entries were made to return one shape and a gate stopped being asked a question a browser cannot answer; the decision relation is untouched, and every document earns the verdict it earned before. The model quantifies over verdicts, not over which door a caller knocked on."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved. Which entry point a consumer calls, and how a page is wired to it, are implementation questions the spec deliberately leaves alone; a porter reproduces verdicts, and the verdicts are unchanged."
+      },
+      "code": "packages/ust-protocol/index.mjs :: finishVerdict shared by both public doors, and resolveByDiscovery gating on the ASYNC verdict so a browser reaches discovery at all",
+      "vector": {
+        "excluded": "A vector fixes an input and a declared result. Both defects here are about REACHABILITY — whether a build can get to an answer it already agrees with — which a vector cannot express: on any platform with the synchronous faculty the corpus answers identically before and after."
+      },
+      "test": "web: the no-fork checkbox is suppressed on the CORE's corroborated bases, not on page-local prose"
+    },
+    {
       "round": 227,
       "math": {
         "excluded": "No theorem moved. Which bytes a host serves decides no verdict; the same document verifies identically whether the verifier that read it was installed from a registry or fetched from a page. The model quantifies over evidence, and provenance of the verifier binary is not evidence about a document."

@@ -202,7 +202,7 @@
     rule</b>: <code>valid_from == valid_to</code> is an honest <b>instant</b> capture, not “expired.” The only
     verdicts are <code>VALID:LIGHT/HIGH/TOP</code>, <code>INVALID</code>, <code>INDETERMINATE</code> — and only a
     conforming verifier’s output counts. Runnable references: <code>npm i ust-protocol</code> · this page’s
-    <a href="./ust-verify.mjs"><code>ust-verify.mjs</code></a> (zero-dependency, WebCrypto) ·
+    <a href="./lib/ust-protocol/index.mjs"><code>ust-protocol</code></a>, the vendored reference build ·
     MCP <code>@ust-protocol/mcp</code>.</p>
   </section>
 </div>
@@ -211,14 +211,15 @@
   <footer>
     Canonical reference: <a href="https://www.npmjs.com/package/ust-protocol"><code>npm ust-protocol</code></a> ·
     source <a href="https://github.com/thelabmd/UST-Protocol">github.com/thelabmd/UST-Protocol</a>.
-    This page runs <a href="./ust-verify.mjs"><code>ust-verify.mjs</code></a> (zero-dependency, WebCrypto).
+    This page runs the <b>reference implementation itself</b> — <a href="./lib/ust-protocol/index.mjs"><code>ust-protocol</code></a>, vendored here and held byte-identical to the npm package by a CI gate, so what you run is what you install.
     Resolve the verifier <b>by name</b>; never trust a verifier a sender links you to.
   </footer>
 </main>
 
 <script type="module">
-import { verify } from './ust-verify.mjs';
-import { resolveAuthority, fetchIdentity, witnessNoFork, resolveCadence } from './ust-resolve.mjs';
+// THE REFERENCE IMPLEMENTATION, vendored: `docs/lib/ust-protocol/` is the package's own browser build, and
+// `vendor-browser-core` holds it byte-identical to what npm publishes. What you run here IS what you install.
+import { verifyAsync, resolveByDiscovery } from './lib/ust-protocol/index.mjs';
 
 const $ = (id) => document.getElementById(id);
 const inEl = $('in'), outEl = $('out');
@@ -341,22 +342,11 @@ outEl.addEventListener('click', (e) => {
   else { box.classList.remove('mdview', 'md'); box.innerHTML = esc(rawOf(partVals[ci])); }
 });
 
-// resolution state: fetched identity is cached per domain; the no-fork assertion is the HUMAN's
-// explicit act (a checkbox), exactly like the CLI's --no-fork-confirmed — never auto-asserted.
-const identCache = new Map();
-let noForkChecked = false;
-async function getIdentity(domain) {
-  const g = $('gin')?.value.trim(), k = $('kin')?.value.trim(), c = $('cin')?.value.trim();
-  if (g) {
-    try { return { genesis: JSON.parse(g), keylog: k ? JSON.parse(k) : [], cadenceLog: c ? JSON.parse(c) : [], source: 'pasted (offline)' }; }
-    catch (e) { return { error: 'manual genesis/key-log/cadence-log not valid JSON: ' + e.message, source: 'pasted (offline)' }; }
-  }
-  if (identCache.has(domain)) return identCache.get(domain);
-  try {
-    const ident = { ...(await fetchIdentity(domain)), source: 'fetched from https://' + domain + '/.well-known/ (§20.1 discovery)' };
-    identCache.set(domain, ident); return ident;
-  } catch (e) { return { error: 'discovery fetch failed: ' + e.message + ' — paste the genesis/key log manually below', source: 'fetch' }; }
-}
+// This page CANNOT supply a no-fork basis, and that is the design rather than an omission. `noForkConfirmed` is a
+// CONSUMER-CONFIGURATION decision — an integrator who has audited a name's genesis history sets it on the CLI or
+// in the library, under their own responsibility. A reader on a page has not audited anything, so a checkbox here
+// would manufacture `consumer-override` HIGH out of a click: the reader moving EVIDENCE, which is the publisher's
+// to move. A verifier that accepts a click as evidence is not one anybody should trust with the rest of its answers.
 
 async function run() {
   const raw = inEl.value.trim();
@@ -367,43 +357,31 @@ async function run() {
   try { doc = extractDoc(raw); }
   catch (e) { outEl.innerHTML = `<div class="verdict bad"><span class="dot"></span>UNREADABLE</div><div class="err">Could not decode a UST document from that input (${esc(e.message)}). Paste the whole blob, the base64, or the JSON.</div>`; return; }
 
-  let resolution = null;
-  let r = await verify(doc, { context: 'data' }).catch((e) => ({ result: 'INVALID', error: 'E-MALFORMED', detail: String(e && e.message || e) }));
-  const shard = doc.state && doc.state.id && doc.state.id.domain_shard || '';
-  const nameMode = shard && !/^sha256:[0-9a-f]{64}$/.test(shard);
-  if (nameMode && (r.result === 'VALID:LIGHT' || (r.result === 'INDETERMINATE' && r.reason === 'unavailable'))) {
-    const ident = await getIdentity(shard);
-    if (ident.genesis) {
-      const auth = await resolveAuthority(doc, { genesis: ident.genesis, keylog: ident.keylog, noForkConfirmed: noForkChecked });
-      if (!auth.error) {
-        // WITNESS auto-query (#68): cross-check each anchor against its substrate (Rekor RFC 6962 inclusion
-        // and/or a Bitcoin block header). A confirmed witness is no-fork EVIDENCE → automatic HIGH, no manual
-        // checkbox (same as CLI/MCP). A fork → E-GENESIS.
-        let witness = null;
-        try { witness = await witnessNoFork(shard, auth.genesisHash, fetch); } catch { witness = { status: 'unreachable' }; }
-        if (witness && witness.status === 'fork') {
-          resolution = { ...auth, source: ident.source, witness, fork: true };
-          r = { result: 'INVALID', error: 'E-GENESIS', detail: witness.detail };
-        } else {
-          // §11.3 — report the grid the publisher has SIGNED for this document's own moment. `cadence: null` is a
-          // POSITIVE fact: the publisher declares no grid, so its ceiling is `chain-consistent` (no-deletion) and a
-          // no-omission claim is not available to it at all. A surface that EXISTS but could not be read is carried as
-          // `cadence_unreadable` rather than shown as "none" — never a verdict against bytes nobody read.
-          let cadence = null, cadenceUnreadable;
-          try {
-            const cr = resolveCadence(ident.genesis, ident.cadenceLog || [], doc.state.id.ust_id, { keylog: ident.keylog });
-            if (cr.error) cadenceUnreadable = cr.error + (cr.detail ? ' — ' + cr.detail : '');
-            else if (cr.unresolved) cadenceUnreadable = cr.unresolved;
-            else cadence = cr.cadence === null ? null : String(cr.cadence);
-          } catch (e) { cadenceUnreadable = 'cadence did not resolve: ' + (e && e.message || e); }
-          if (ident.indeterminate) cadenceUnreadable = ident.indeterminate.surface + ' present but unreadable: ' + ident.indeterminate.detail;
-          const grant = noForkChecked || (witness && witness.status === 'confirmed');
-          resolution = { ...auth, source: ident.source, witness, noFork: witness && witness.status === 'confirmed' ? 'witness-confirmed' : (noForkChecked ? 'asserted-by-you' : 'unconfirmed'),
-            cadence, ...(cadenceUnreadable ? { cadence_unreadable: cadenceUnreadable } : {}) };
-          r = await verify(doc, { context: 'data', capacity: auth.capacity, ...(grant ? { authority: { publisher: auth.publisher } } : {}) });
-        }
-      } else resolution = { error: auth.error, source: ident.source };
-    } else resolution = { error: ident.error, source: ident.source };
+  // ONE call into the reference implementation. Discovery of `/.well-known/`, authority resolution, the witness
+  // cross-check, capacity and the substrate all live in `resolveByDiscovery`, which ends in `verifyAsync`. The
+  // page decides NOTHING about a verdict any more; it renders one. That is not tidiness: every verdict this page
+  // used to assemble by hand was a place where it could disagree with the implementation it tells you to install.
+  let resolution = null, r;
+  const gTxt = $('gin')?.value.trim(), kTxt = $('kin')?.value.trim();
+  if (gTxt) {
+    // Offline path: the reader supplied the identity, so discovery is neither attempted nor needed.
+    try {
+      const genesis = JSON.parse(gTxt), keylog = kTxt ? JSON.parse(kTxt) : [];
+      // Ticking the box asserts the no-fork basis YOURSELF, which the verifier records as `consumer-override`.
+      // It grants HIGH on that basis only when the consumer also ACCEPTS overrides — and the box IS that
+      // acceptance, made by a human, in the open. Passing one without the other is why this path sat at the
+      // LIGHT floor with an override nobody had agreed to honour.
+      r = await verifyAsync(doc, { context: 'data', genesis, keylog });
+      resolution = { publisher: r.publisher ?? (doc.state?.id?.domain_shard || ''), strength: r.identity?.strength,
+        noFork: 'unconfirmed — offline, so no witness was read',
+        source: 'pasted by you (offline) — no request left this page' };
+    } catch (e) {
+      resolution = { error: 'the pasted genesis / key log is not valid JSON: ' + e.message, source: 'pasted by you (offline)' };
+      r = await verifyAsync(doc, { context: 'data' });
+    }
+  } else {
+    const out = await resolveByDiscovery(doc, { context: 'data' });
+    r = out.verdict; resolution = out.resolution;
   }
   Promise.resolve(r).then((r) => {
     const valid = typeof r.result === 'string' && r.result.slice(0, 6) === 'VALID:';
@@ -477,27 +455,37 @@ async function run() {
         html += `<div class="card"><h2>Authority resolution</h2>
           <p class="note" style="margin-top:0">✗ ${esc(resolution.error)}<br><span class="hint">source: ${esc(resolution.source || '')}</span></p></div>`;
       } else {
-        const wc = resolution.witness && resolution.witness.status === 'confirmed';
+        // The vocabulary is the CORE's, not this page's. It distinguishes an INDEPENDENTLY corroborated witness
+        // from a basis the reader asserted — the two used to be collapsed here into one word, which handed the
+        // strongest identity rung to a file the judged publisher serves about itself.
+        const nf = String(resolution.noFork || 'unconfirmed');
+        const corroborated = nf.startsWith('served-list') || nf.startsWith('accepted-external-witness');
+        const cap = resolution.capacity || {};
         html += `<div class="card"><h2>Authority resolution</h2>
           <dl class="kv" style="margin-top:0">
-            <dt>publisher</dt><dd>${esc(resolution.publisher)} — the document key is IN this name's resolved key set</dd>
-            <dt>capacity</dt><dd>max_partitions ${esc(String(resolution.capacity.maxPartitions ?? 'floor'))}${resolution.capacity.maxTranscriptBytes ? ' · max_transcript_bytes ' + esc(String(resolution.capacity.maxTranscriptBytes)) : ''} (grant admitted)</dd>
-            <dt>no-fork</dt><dd>${wc ? '<b>witness-confirmed</b> — a single anchored genesis, cross-checked against its substrate (Rekor RFC&nbsp;6962 inclusion and/or a Bitcoin block header) → automatic HIGH'
-              : (resolution.witness && resolution.witness.status === 'pending' ? 'pending — ' + esc(resolution.witness.detail)
-              : 'witness ' + esc((resolution.witness && resolution.witness.status) || 'unreachable') + (resolution.witness && resolution.witness.detail ? ' (' + esc(resolution.witness.detail) + ')' : ''))}</dd>
-            <dt>revocation</dt><dd>${esc(resolution.revocation)} — not attempted in this run: deciding an X1 window needs an anchored time, and this page did not obtain one</dd>
-            <dt>identity source</dt><dd>${esc(resolution.source || '')}</dd>
+            <dt>publisher</dt><dd>${esc(String(resolution.publisher || ''))} — the document key is IN this name's resolved key set</dd>
+            <dt>identity</dt><dd>${esc(String(resolution.strength || 'not established'))} — the strength the verifier itself reports, never one this page infers</dd>
+            <dt>capacity</dt><dd>${cap.maxPartitions != null || cap.maxTranscriptBytes != null
+              ? 'max_partitions ' + esc(String(cap.maxPartitions ?? 'floor')) + (cap.maxTranscriptBytes ? ' · max_transcript_bytes ' + esc(String(cap.maxTranscriptBytes)) : '') + ' (grant admitted)'
+              : 'floor — no grant declared'}</dd>
+            <dt>no-fork</dt><dd>${esc(nf)}${resolution.witness_reason ? ' <span class="hint">(' + esc(String(resolution.witness_reason)) + ')</span>' : ''}</dd>
+            <dt>cadence</dt><dd>${resolution.cadence === null
+              ? 'none declared — a POSITIVE fact: this publisher can never claim no-omission, and its ceiling is chain-consistent'
+              : esc(String(resolution.cadence ?? 'not resolved'))}</dd>
+            <dt>identity source</dt><dd>${esc(String(resolution.source || ''))}</dd>
           </dl>
-          ${wc ? '' : `<label class="note" style="display:block;margin-top:10px;cursor:pointer">
-            <input type="checkbox" id="nofork" ${noForkChecked ? 'checked' : ''}>
-            The witness did not auto-confirm — I have independently checked that <b>no rival genesis exists</b> for ${esc(resolution.publisher)}.
-            ${noForkChecked ? '' : '<br><span class="hint">unchecked → the name stays resolved-but-provisional; check it to reach VALID:HIGH (same as the CLI\'s --no-fork-confirmed). Every anchor that was tried is listed above with the conjunct it failed at; <b>evidence</b> is the publisher\'s to move, <b>faculties</b> yours, <b>ruleset</b> neither party\'s.</span>'}
-          </label>`}</div>`;
+          ${corroborated ? '' : `<p class="note" style="margin-top:10px">
+            The publisher's witness log did not corroborate a single anchored genesis, so the name stays
+            <b>resolved-but-provisional</b> and the verdict stops at the LIGHT floor. That is the honest answer, not a
+            missing button: <b>evidence</b> is the publisher's to move, <b>faculties</b> are yours, <b>the ruleset</b>
+            is neither party's. This page will not offer you a box that raises a tier on your say-so — a reader who
+            has not audited a name's genesis history cannot supply that basis, and a verifier that accepts a click as
+            evidence is not one you should trust with anything else. An integrator who HAS that basis passes it in
+            configuration (<code>--no-fork-confirmed</code> on the CLI, <code>noForkConfirmed</code> in the library).
+          </p>`}</div>`;
       }
     }
     outEl.innerHTML = html;
-    const nf = $('nofork');
-    if (nf) nf.addEventListener('change', () => { noForkChecked = nf.checked; run(); });
   }).catch((e) => {
     outEl.innerHTML = `<div class="verdict bad"><span class="dot"></span>ERROR</div><div class="err">${esc(e.message || String(e))}</div>`;
   });
@@ -505,7 +493,7 @@ async function run() {
 
 $('go').addEventListener('click', run);
 $('clear').addEventListener('click', () => { inEl.value = ''; outEl.innerHTML = ''; inEl.focus(); });
-inEl.addEventListener('input', () => { identCache.clear(); noForkChecked = false; if (inEl.value.trim()) run(); else outEl.innerHTML = ''; });
+inEl.addEventListener('input', () => { if (inEl.value.trim()) run(); else outEl.innerHTML = ''; });
 for (const mid of ['gin', 'kin']) $(mid).addEventListener('input', () => { if (inEl.value.trim()) run(); });
 </script>
 </body>

@@ -1753,7 +1753,16 @@ console.log('\n═════════════════════�
       Object.entries(P.REGISTRY.anchorRefusalReasons).every(([k, term]) => web.REFUSAL_TERMS[k] === term) &&
       Object.keys(web.REFUSAL_TERMS).length === Object.keys(P.REGISTRY.anchorRefusalReasons).length);
   }
-  check('web witness confirmed = automatic HIGH (no checkbox)', readFileSync(new URL('../../docs/index.html', import.meta.url), 'utf8').includes("witness.status === 'confirmed'"));
+  // The page suppresses the human no-fork checkbox exactly when the witness corroborated ON ITS OWN. This check
+  // used to pin `witness.status === 'confirmed'` — a fragment of an implementation the page has since stopped
+  // having, so it defended prose rather than the property, and reddened the day the page moved onto the reference.
+  // It now pins the CORE's own vocabulary: the two bases `resolveByDiscovery` reports for an independently
+  // corroborated no-fork. Rename them in the core and this reddens, which is the coupling worth having.
+  {
+    const page = readFileSync(new URL('../../docs/index.html', import.meta.url), 'utf8');
+    check('web: the no-fork checkbox is suppressed on the CORE\'s corroborated bases, not on page-local prose',
+      page.includes("served-list") && page.includes("accepted-external-witness") && /corroborated \? '' :/.test(page));
+  }
 }
 
 // ─── #69 C (#70) — completeness against the SIGNED cadence grid: no-deletion (`chain-consistent`) is re-earned

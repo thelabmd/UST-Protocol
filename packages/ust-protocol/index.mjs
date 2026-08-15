@@ -749,6 +749,13 @@ export function verify(doc, opts = {}) {
   // addresses the transcript by THIS returned id (a projection of the admitted artifact), never by re-hashing the raw input
   // `doc` — so a live/mutable/Proxy object that shows one face to `verify` and another to a later `contentHash(doc)` cannot
   // split the verdict from the identity. The verdict and the id come from the SAME single admission.
+  return finishVerdict(D, verdict);
+}
+// The tail BOTH public doors share. It lived inside `verify` alone, so `verifyAsync` silently returned a
+// verdict WITHOUT `id` — the projection rev32 added precisely so a consumer addresses the transcript by what
+// the verifier ADMITTED rather than by re-hashing a live object. Two public entries answering one question
+// must return one shape, or "switch to the async door" quietly costs a guarantee nobody announced giving up.
+function finishVerdict(D, verdict) {
   let id; try { if (D && typeof D === 'object' && D.state !== undefined) id = contentHash(D); } catch { /* malformed → no addressable id */ }
   return floorTier(id === undefined ? verdict : { ...verdict, id });
 }
@@ -2460,16 +2467,16 @@ export async function verifyAsync(doc, opts = {}) {
   const D = admitDeep(doc);                                      // round-27 (3) — admit ONCE at this public door; below runs verifyCore over the inert snapshot (a getter can't split the substrate await from the sync verify)
   if (D === ADMIT_REJECT) return { result: 'INVALID', error: 'E-MALFORMED', detail: 'document is not an inert record (round-27: the ONE input boundary)' };
   doc = D;
-  if (!doc?.proof || !opts.substrateVerify || opts.offline) return verifyCoreWithSignatureFaculty(doc, opts);
+  if (!doc?.proof || !opts.substrateVerify || opts.offline) return finishVerdict(doc, await verifyCoreWithSignatureFaculty(doc, opts));
   // round-17 P0-01 — verify an IMMUTABLE SNAPSHOT. The live object could be swapped between the await and the sync
   // verify (TOCTOU): the substrate receipt is obtained for root A, then a mutated document B with root B reuses it and
   // gets VALID:TOP for evidence that was never its own (I4/F.5c: TimeStrength=anchored must be evidence for content_hash(d)).
   // Snapshot before the await; the sync shim ALSO binds the receipt to the captured (anchor, root), so a different root
   // can never claim it.
-  let snap; try { snap = JSON.parse(JSON.stringify(doc)); } catch { return verifyCoreWithSignatureFaculty(doc, opts); }
+  let snap; try { snap = JSON.parse(JSON.stringify(doc)); } catch { return finishVerdict(doc, await verifyCoreWithSignatureFaculty(doc, opts)); }
   const capA = snap.proof?.anchor, capR = snap.proof?.root;
   let receipt; try { receipt = await opts.substrateVerify(capA, capR); } catch { receipt = null; }
-  return verifyCoreWithSignatureFaculty(snap, { ...opts, substrateVerify: (a, r) => (a === capA && r === capR ? receipt : null) });   // verifyCore (NOT verify): no re-clone, so the receipt-identity binding `a === capA` holds across the door
+  return finishVerdict(snap, await verifyCoreWithSignatureFaculty(snap, { ...opts, substrateVerify: (a, r) => (a === capA && r === capR ? receipt : null) }));   // verifyCore (NOT verify): no re-clone, so the receipt-identity binding `a === capA` holds across the door
 }
 
 // §3.1/F.5c FORK-CHOICE — canonical = anchor-included. One `ust_id` may have several candidate documents with
@@ -4330,7 +4337,10 @@ export async function resolveByDiscovery(doc, opts = {}, transport = {}) {
   if (D === ADMIT_REJECT) return { verdict: { result: 'INVALID', error: 'E-MALFORMED', detail: 'document is not an inert record (round-27: the ONE input boundary)' }, resolution: null };
   doc = D;
   const { fetchImpl = ustFetch, substrateVerify } = T;
-  const base = verify(doc, opts);
+  // #144 one level up: discovery was gated on the SYNCHRONOUS verdict, which in a browser is
+  // INDETERMINATE(unsupported_alg) - so `worth` was false, discovery never ran, and the page received the
+  // refusal instead of a resolution. Measured in the real page 2026-08-15; the async door carries the faculty.
+  const base = await verifyAsync(doc, opts);
   const shard = doc?.state?.id?.domain_shard || '';
   const worth = !opts.offline && !opts.genesis &&
     (base.result === 'VALID:LIGHT' || (base.result === 'INDETERMINATE' && base.reason === 'unavailable'));
