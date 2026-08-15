@@ -109,7 +109,7 @@ const EXPECTED_CASES = { canon: 11, 'canon-reject': 4, hash: 5, key_id: 1, b64ur
 // …and the COMPLEMENT is pinned too, which is what keeps `PURE_KINDS` from being this gate's real domain. A kind
 // added to the corpus lands in the not-run set and reddens the count below, so the author must decide whether it
 // belongs here — instead of it passing unnoticed because a hand-written list did not mention it.
-const EXPECTED_KINDS_TOTAL = 49, EXPECTED_KINDS_NOT_RUN = 43;   // measured 2026-08-14 — rounds 216-219 add `map-currency`, `refusal-shape` and `stream-floor`, all classified NOT-RUN: its input is a signed document plus a consumer trust configuration, so it needs the Ed25519 faculty the browser build refuses by name (46/40 on 2026-08-13, 45/39 earlier that day, 44/38 on 2026-08-10)
+const EXPECTED_KINDS_TOTAL = 50, EXPECTED_KINDS_NOT_RUN = 44;   // measured 2026-08-14 — rounds 216-220 add `map-currency`, `refusal-shape`, `stream-floor` and `map-root-anchor`, all classified NOT-RUN: its input is a signed document plus a consumer trust configuration, so it needs the Ed25519 faculty the browser build refuses by name (46/40 on 2026-08-13, 45/39 earlier that day, 44/38 on 2026-08-10)
 // 45 → 46: `anchor-refusal` (#155). NOT runnable by pure primitives, and for a reason worth stating: its input is
 // an ANCHOR rather than a document, and deciding it needs the witness path — a fetch, a connector, and the RFC 6962
 // climb. It is the first kind whose declared result is a REFUSAL REASON rather than a verdict.

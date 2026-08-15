@@ -1566,7 +1566,16 @@ Two INDEPENDENT (non-publisher) bases prove `¬∃ rival at the coordinate`, bot
   emit a map-based rung with none. Exactly one basis is defined at this revision: `consumer-asserted`. The
   obligation differs by key space and the model states why — a name-map value legitimately changes on authority
   rotation, so a missing currency basis would be an overstatement; a checkpoint-map coordinate is write-once by
-  intent, so it would be an unchecked premise.
+  intent, so it would be an unchecked premise. **Two bases are defined.** `consumer-asserted` — the root is held in
+  the consumer's configuration, which supplies currency by axiom. `anchored-authority` — the root arrives as a
+  CLOSED signed statement `{ claim: { purpose: "ust:name-map-root", map_root }, issuer_id, sig }`, admitted
+  against the consumer's `mapAuthorities` (admission is the CONSUMER's, never the statement's) and proven
+  included in the anchor substrate; the verdict then carries `map_root_as_of` taken from the ANCHOR. The signed
+  claim carries no time and no domain: a signer may not self-declare time, and one signature covering EVERY name
+  is what distinguishes a map from a witness (F.5a.3), so binding the root to a domain would restore the
+  per-name silence that distinction removes. The mechanism is registered as `ust-name-map/v1`; the AUTHORITY is
+  not registered and must not be — that would spend the specification's neutrality on one operator, and by
+  F.5a.2c it would not close the question anyway.
 - **Accepted-witness quorum** (`purpose:"ust:checkpoint-uniqueness-attestation"`) — `≥ threshold` **DISTINCT
   CONSUMER-RESOLVED trust domains** signing the byte-identical uniqueness claim over `(domain, genesis_epoch,
   sequence, authority checkpoint)`. **Independence is CONSUMER-owned** (the consumer maps issuer→domain), NEVER
@@ -2100,7 +2109,7 @@ Independent re-implementation is expected; the vectors make "verify without trus
 **Signed purposes — canonical set** (generated from `index.mjs` `REGISTRY`; includes the §12.1a `ust:name-no-fork`
 purpose alongside the §12.3 family; kept == code by the `spec-code-sync` gate):
 <!-- BEGIN spec-sync:purposes -->
-`ust:name-no-fork` | `ust:authority-checkpoint` | `ust:authority-checkpoint-signature` | `ust:checkpoint-authority-recovery` | `ust:genesis-epoch-transition` | `ust:checkpoint-uniqueness-attestation` | `ust:evidence-receipt` | `ust:evidence-receipt-signature`
+`ust:name-no-fork` | `ust:authority-checkpoint` | `ust:authority-checkpoint-signature` | `ust:checkpoint-authority-recovery` | `ust:genesis-epoch-transition` | `ust:checkpoint-uniqueness-attestation` | `ust:evidence-receipt` | `ust:evidence-receipt-signature` | `ust:name-map-root`
 <!-- END spec-sync:purposes -->
 
 ---
@@ -3252,3 +3261,32 @@ operator profile (§20), never the protocol. The five passes converged from "the
   surface asks at the price of editing a signed form. Realized as `deriveStreamFloor`, TOTAL by construction; the
   vector pair is a DIFFERENTIAL between two information sets, because a single fixed input cannot state that
   withholding moves the answer. 1020 checks.
+- **REV 72 (2026-08-15, `rc.72` line)** — **the anchored map root: the per-epoch configuration becomes one-time
+  (#42, closes the #151 epic).** REV 69 measured that `authoritative` by map inclusion was decided against a root
+  the CONSUMER pinned, so a consumer's configuration had to be updated at the map's own cadence and the verdict
+  carried no date; it named the anchored basis as absent. This realizes it. A name-map root is now carried as a
+  CLOSED signed statement `{ claim: { purpose: "ust:name-map-root", map_root }, issuer_id, sig }`, admitted
+  against the consumer's `mapAuthorities` by the same discipline `verifyNoForkEvidence` uses — admission is the
+  CONSUMER's, never the statement's (F.5a.1 clause 2) — and then proven included in the anchor substrate. Both
+  halves are required: `proveMapRootAnchor` mints an unforgeable token only when the signature AND the anchor
+  hold, by the `VERIFIED_ANCHOR`/`VERIFIED_FRESH` discipline, so a caller's plain look-alike carrying the same
+  public values earns nothing. **This is the factorization of REV 69, built:** the epoch-varying coordinate moved
+  from `C` into `Fₜ`, and the `C`-part became one entry per AUTHORITY — constant in the number of names and
+  constant in time — instead of one per root. **The verdict is DATED from the anchor** (`map_root_as_of`); the
+  signed claim carries no time, by the round-35 rule that kept `valid_as_of` out of a signed claim, and no domain
+  either, because one signature covering EVERY name is what distinguishes a map from a witness (F.5a.3) and
+  binding the root to a domain would restore the per-name silence that distinction removes. **The mechanism is
+  registered, the authority is not**: `nameMapConstructions['ust-name-map/v1']` says how a root is carried and
+  checked, which every implementation must agree on, while registering an authority would spend the
+  specification's neutrality on one operator — and by F.5a.2c would not close the question anyway, since a
+  namespace authority is not derivable from the substrate. **So the ceiling stays honest: this buys one-time
+  configuration, never zero.** **Two defects were met in the building, both of the same class** — an identity
+  binding broken by re-admission. The public `verifyAnchor` re-clones its proof, so the receipt-identity check
+  `a === capA` failed and a correctly anchored root reported *substrate unreachable*; the core door does not
+  re-clone, which is the fix `verifyAsync` already carries for the same reason. And the minted token was cloned
+  by `admitDeep` like any plain record, so the WeakSet no longer recognised it and the whole branch was silently
+  dead — a preservation registry for exactly this already existed and the new token had not been enlisted in it.
+  Both are now mutants: `minted-map-token-cloned-away` reddens the two checks that name the basis. Five
+  conformance checks, two language-neutral vectors (the first ASYNC form in the corpus, pinning the MINT from
+  serializable inputs — the token's identity property cannot itself be a vector, and a serialized look-alike would
+  pin the opposite of what it is for). 1027 checks.

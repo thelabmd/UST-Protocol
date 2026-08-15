@@ -404,6 +404,11 @@ for (const v of V.vectors) {
     // what must not.
     // F.5s — the declared result COMPARES TWO CALLS. A single fixed input cannot state "withholding moves the
     // answer": the claim is about the DIFFERENCE between two information sets, so the vector carries both.
+    // #42 — the only ASYNC case in this loop (the module is top-level-await), and the only one whose declared result
+    // is a MINT. The token itself cannot be a vector: its property is IDENTITY, and a serialized look-alike would
+    // pin the opposite of what it is for — that half lives in a conformance check and its mutant.
+    case 'map-root-anchor': { const r = await P.proveMapRootAnchor(v.statement, v.anchor_proof, { mapAuthorities: v.mapAuthorities, substrateVerify: async () => v.substrate_receipt ?? null });
+      check(v.id, Object.entries(v.expect).every(([k, val]) => r[k] === val)); break; }
     case 'stream-floor': { const r = P.deriveStreamFloor(v.config || {});
       let ok = true;
       if (v.config_with_chain) { const r2 = P.deriveStreamFloor(v.config_with_chain);
@@ -2674,6 +2679,41 @@ console.log('\n═════════════════════�
   // build is exercised. A check that cannot fail is worse than an absent one: it reads as coverage.
 }
 
+// ─── #42 / F.5a.2 — THE ANCHORED-AUTHORITY BASIS. The per-epoch coordinate moves from `C` into `Fₜ`: the consumer
+//     admits the AUTHORITY once, and each epoch's root proves itself by signature + anchor. What stays in `C` is the
+//     authority, and F.5a.2c says that is irreducible — this buys one-time configuration, never zero.
+{
+  const GG = kp('c1'.repeat(32)), KK = kp('d1'.repeat(32)), AU = kp('e1'.repeat(32)), IM = kp('f1'.repeat(32));
+  const DM = 'noosphere.md';
+  const gen = P.seal(P.buildGenesis({ domain_shard: DM, ust_id: 'ust:20260709.00', key_id: GG.key_id }, T, GG.pubB64), GG.priv, GG.pubB64);
+  const add = P.seal(P.buildKeyLogEntry({ domain_shard: DM, ust_id: 'ust:20260709.01', key_id: GG.key_id }, T, { op: 'add', pub: KK.pubB64, new_key_id: KK.key_id }, P.contentHash(gen)), GG.priv, GG.pubB64);
+  const doc = P.seal(P.buildState({ domain_shard: DM, ust_id: 'ust:20260709.02', key_id: KK.key_id, class: 'observation' }, T, { x: { kind: 'captured', value: { v: '1' } } }), KK.priv, KK.pubB64);
+  const lf = P.nameMapLeaf({ domain_shard: DM, active_genesis: P.contentHash(gen) });
+  const mp = P.buildVerifiableMap([lf]);
+  const stmt = P.buildNameMapRoot({ map_root: mp.root }, AU.priv, AU.pubB64);
+  const anchorProof = { root: P.Hbytes('ust:leaf', Buffer.from(mp.root, 'utf8')), path: [], anchor: { kind: 'bitcoin-ots' } };
+  const sv = async () => ({ final: true, time: '2026-08-01T00:00:00Z' });
+  const AUTH = { [AU.key_id]: AU.pubB64 };
+  const minted = await P.proveMapRootAnchor(stmt, anchorProof, { mapAuthorities: AUTH, substrateVerify: sv });
+  const base = { genesis: gen, keylog: [add], context: 'data' };
+  const withTok = P.resolveAuthority(doc, { ...base, nameMap: { proof: mp.prove(lf.key), mapRoot: mp.root, rootProof: minted.token } });
+  check('#42 anchored-authority earns authoritative with NO consumer mapRoots — per-epoch config becomes one-time',
+    minted.ok === true && withTok.strength === 'authoritative' && withTok.map_root_currency === 'anchored-authority');
+  // the DATE comes from the anchor, never from the signer: the claim carries no time at all (round-35 rule).
+  check('#42 the anchored basis DATES the verdict from Fₜ, and the signed claim carries no time',
+    withTok.map_root_as_of === '2026-08-01T00:00:00Z' && stmt.claim.map_root === mp.root && Object.keys(stmt.claim).join(',') === 'purpose,map_root');
+  // unforgeability: only proveMapRootAnchor mints. A caller's plain look-alike holds only PUBLIC values.
+  const lookalike = { map_root: mp.root, authority_id: AU.key_id, as_of: '2026-08-01T00:00:00Z' };
+  check('#42 a look-alike root token is not in the mint set — it earns nothing',
+    P.resolveAuthority(doc, { ...base, nameMap: { proof: mp.prove(lf.key), mapRoot: mp.root, rootProof: lookalike } }).strength !== 'authoritative');
+  // admission is the CONSUMER's: an authority it does not hold never mints, however well-formed the statement.
+  const impostor = await P.proveMapRootAnchor(P.buildNameMapRoot({ map_root: mp.root }, IM.priv, IM.pubB64), anchorProof, { mapAuthorities: AUTH, substrateVerify: sv });
+  check('#42 an authority absent from the consumer mapAuthorities never mints', impostor.ok === false);
+  // and the anchor is the OTHER half: a signed root with no substrate answer stays unproven.
+  const unanchored = await P.proveMapRootAnchor(stmt, anchorProof, { mapAuthorities: AUTH });
+  check('#42 a signed root with no anchor evidence does not mint — the basis needs BOTH halves', unanchored.ok === false);
+}
+
 // ─── F.5s THE STREAM FLOOR — the boundary of the OBLIGATION domain, and the one coordinate that inverts W1.
 {
   const KF = kp('7c'.repeat(32)), DF = 'floor.example';
@@ -3513,6 +3553,8 @@ console.log('\n═════════════════════�
     verifyEvidenceReceipt: 'surface', verifyActiveGenesisUniqueness: 'surface', verifyAuthorityBundle: 'surface',
     verifyAuthorityCheckpointChain: 'surface', verifyCheckpointMapUniqueness: 'surface', verifyCheckpointRecovery: 'surface',
     verifyCheckpointUniqueness: 'surface', verifyEpochTransition: 'surface', verifyKeylogTerminality: 'surface',
+    verifyNameMapRoot: 'surface', proveMapRootAnchor: 'surface',   // #42 — both read untrusted wire (a signed root statement, an anchor proof) and refuse rather than throw
+    nameMapRootClaim: 'exempt', buildNameMapRoot: 'exempt',        // PRODUCER side: shapes and signs the operator's own bytes, no untrusted input to admit
     deriveStreamFloor: 'surface',   // F.5s — reads a genesis, a transition list and a root document, all untrusted wire; refuses, never throws
     verifyNoForkEvidence: 'surface', resolveAuthority: 'surface', resolveByDiscovery: 'surface', resolveCadence: 'surface',
     resolveCadenceBytes: 'surface',   // round-47 rev69 — the SOUND bytes-in boundary (a pure function of immutable byte-strings; resolveCadence is its object adapter)
@@ -3616,7 +3658,7 @@ console.log('\n═════════════════════�
     verifyAnchor: [oHash, oProof, oOpts], verifyEvidenceReceipt: [oStmt, oConf], verifyActiveGenesisUniqueness: [oProof, oConf],
     verifyAuthorityBundle: [oConf, oConf], verifyAuthorityCheckpointChain: [oChain, oConf], verifyCheckpointMapUniqueness: [oProof, oConf],
     verifyCheckpointRecovery: [oChain, oConf], verifyCheckpointUniqueness: [oChain, oConf], verifyEpochTransition: [oStmt, oConf],
-    deriveStreamFloor: [oConf],
+    deriveStreamFloor: [oConf], verifyNameMapRoot: [oStmt, oConf], proveMapRootAnchor: [oStmt, oConf, oConf],
     verifyKeylogTerminality: [oHead, oProof], verifyNoForkEvidence: [oStmt, oConf], resolveAuthority: [oDoc, oOpts],
     compareEvidenceOrder: [oEv, oEv], quorumTrustDomains: [oList, oConf],   // round-38 P1-02 — the exported evidence algebra is now a consumer surface in the totality sweep (admits its operands)
     assuranceLE: [oAssur, oAssur], meetAssurance: [oAssur, oAssur], joinAssurance: [oAssur, oAssur], projectTier: [oAssur], capAssurance: [oAssur, oAssur], checkBounds: [oDoc],   // round-39 P1-02 — the assurance lattice + the exported bounds validator are consumer surfaces now that the door returns a sentinel (total-by-return, never a throw)

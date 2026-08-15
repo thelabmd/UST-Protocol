@@ -7,6 +7,7 @@
 // This is the axis the conformance hostile-ARG battery does NOT cover (there the hostile value is the opts/doc; HERE it
 // is the module's RETURN). It drives each seam with a battery of hostile module returns + a throwing module, and pins
 // the count of substrateVerify() INVOCATION sites from source so a NEW seam fails RED until it is driven here.
+import { createPrivateKey, createPublicKey } from 'node:crypto';
 import * as P from './index.mjs';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -29,12 +30,20 @@ const contentHash = 'sha256:' + 'a'.repeat(64);
 const anchorRoot = P.H('ust:leaf', contentHash);
 const proof = { root: anchorRoot, path: [], anchor: 'anchor-x' };
 const docWithProof = { proof: { anchor: 'anchor-x', root: anchorRoot, path: [] } };
+// #42 — a genuinely signed root statement, so the seam is REACHED: an unadmitted authority would refuse before it.
+const rootKp = (() => { const priv = createPrivateKey({ key: Buffer.concat([Buffer.from('302e020100300506032b657004220420', 'hex'), Buffer.from('a7'.repeat(32), 'hex')]), format: 'der', type: 'pkcs8' });
+  const pub = createPublicKey(priv).export({ format: 'der', type: 'spki' }).slice(-32).toString('base64url'); return { priv, pub }; })();
+const rootStatement = P.buildNameMapRoot({ map_root: contentHash }, rootKp.priv, rootKp.pub);
+const rootAuthorities = { [P.keyId(rootKp.pub)]: rootKp.pub };
 
 // SEAM ROSTER — the public entrypoints that reach a substrate module seam (resolveByDiscovery is covered by the
 // from-source pin + the shared decodeSubstrate total door; it is not run behaviorally here because it needs a live transport).
 const SEAMS = [
   { name: 'verifyAnchor', run: (mod) => P.verifyAnchor(contentHash, proof, { substrateVerify: mod }) },
   { name: 'verifyAsync', run: (mod) => P.verifyAsync(docWithProof, { substrateVerify: mod }) },
+  // #42 — the map-root anchor seam. It AWAITS the not-ours module directly before handing its receipt to the core
+  // door, so a hostile return/throw must become a structured refusal here too, not a host throw one level up.
+  { name: 'proveMapRootAnchor', run: (mod) => P.proveMapRootAnchor(rootStatement, proof, { mapAuthorities: rootAuthorities, substrateVerify: mod }) },
 ];
 
 for (const seam of SEAMS) {
@@ -60,7 +69,7 @@ for (const ln of src.split('\n')) {
   if (c2 !== -1 && c2 < idx) continue;   // the match is inside a line comment, not a real invocation
   invocations++;
 }
-const PINNED = 3;   // verifyAnchorCore + verifyAsync + anchoredByProofs. Update WITH the SEAMS roster when a new substrate invocation site lands.
+const PINNED = 4;   // verifyAnchorCore + verifyAsync + anchoredByProofs + proveMapRootAnchor (#42). Update WITH the SEAMS roster when a new substrate invocation site lands.
 ok(`from-source: substrateVerify() invocation sites == ${PINNED} (a NEW seam must be driven in SEAMS + re-pinned)`, invocations === PINNED);
 
 console.log(`\n  module-seam-totality (S1 — NOT-OURS module returns are TOTAL, trust-boundary law UST-5tm)   PASS ${pass}   FAIL ${F.length}`);

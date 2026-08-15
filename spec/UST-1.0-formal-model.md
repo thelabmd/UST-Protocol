@@ -817,10 +817,16 @@ predicate, and their keys differ in temporal semantics:
 Both need the coordinate named; they do not need different coordinates. The verdict reports the BASIS on which
 currency is held, and the consequence of that basis is a property of the key space, stated here.
 
-**Realization (rc.72 line, REV 69).** The admission predicate returns a currency BASIS rather than a boolean —
-`mapRootBasis(trust, root)` — and both call sites carry it into the verdict as `map_root_currency`. Exactly one
-value is realized, `consumer-asserted`; the anchored value is the open work of #42, and its absence is a named
-absence rather than an emitted rung. No tier moves: what was silent is now labelled.
+**Realization (rc.72 line, REV 69, completed REV 72).** The admission predicate returns a currency BASIS rather
+than a boolean — `mapRootBasis(trust, root, token)` — and both call sites carry it into the verdict as
+`map_root_currency`. REV 69 realized one value, `consumer-asserted`, and named the other as absent. REV 72
+realizes it: `anchored-authority`, where the root arrives as a CLOSED signed statement admitted against the
+consumer's `mapAuthorities` and is then proven included in the anchor substrate, minting an unforgeable token by
+the same discipline as `VERIFIED_ANCHOR`/`VERIFIED_FRESH`. That is the factorization above, built: the
+epoch-varying coordinate moved from `C` into `Fₜ`, the `C`-part became one entry per AUTHORITY rather than one
+per root, and the verdict is DATED (`map_root_as_of`) from the anchor rather than from the signer — the claim
+carries no time at all, by the round-35 rule that kept `valid_as_of` out of a signed claim. No tier moves for an
+existing consumer: what was silent is labelled, and what was per-epoch is now one-time.
 
 **Conformance (each claim is a running property — math ⇒ code ⇒ green check, `packages/ust-protocol/conformance.mjs`).**
 - Proposition F.5a.2 (uniqueness is under a root, and a superseded binding still verifies under its own):

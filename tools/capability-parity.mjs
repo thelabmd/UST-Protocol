@@ -97,7 +97,7 @@ const CAPS = {
   'recovery':           { core: ['checkpointRecoveryClaim', 'buildRecoveryStatement', 'verifyCheckpointRecovery', 'witnessSuccessor', 'witnessNoShrink'] },
   'epoch-transition':   { core: ['epochTransitionClaim', 'buildEpochTransition', 'verifyEpochTransition', 'deriveStreamFloor'] },   // F.5s — the floor is read OFF the epoch chain, so it belongs to the capability that owns the chain, not to a second one
   'uniqueness-attest':  { core: ['checkpointUniquenessClaim', 'buildUniquenessAttestation', 'verifyCheckpointUniqueness'] },
-  'verifiable-map':     { core: ['buildVerifiableMap', 'checkpointMapLeaf', 'nameMapLeaf', 'verifyCheckpointMapUniqueness', 'verifyActiveGenesisUniqueness'] },
+  'verifiable-map':     { core: ['buildVerifiableMap', 'checkpointMapLeaf', 'nameMapLeaf', 'verifyCheckpointMapUniqueness', 'verifyActiveGenesisUniqueness', 'nameMapRootClaim', 'buildNameMapRoot', 'verifyNameMapRoot', 'proveMapRootAnchor'] },   // #42 — the ROOT half of the same capability: carrying, admitting and anchor-proving the root a map proof is checked against
   'keylog-commitment':  { core: ['keylogLeaf', 'buildKeylogCommitment', 'verifyKeylogTerminality'], cli: 'rotateKeylog' },
   'cadence-grid':       { core: ['ustGrid', 'resolveCadence', 'resolveCadenceBytes'], mcp: 'ust_resolve_cadence', cli: 'cadence' },
   // Split OUT of build-transcript (2026-07-27): that capability bundles eight builders behind ONE representative probe

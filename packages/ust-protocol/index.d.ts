@@ -58,6 +58,7 @@ export function buildGap(id: unknown, time: unknown, prev: unknown, reason?: unk
 export function buildGenesis(id: unknown, time: unknown, pub: unknown, maxPartitions?: unknown, maxTranscriptBytes?: unknown, cadence?: unknown, checkpointAuthority?: unknown, recovery?: unknown, roles?: unknown): Record<string, unknown>;
 export function buildKeylogCommitment(entryHashes: unknown): unknown;
 export function buildKeyLogEntry(id: unknown, time: unknown, keyOp: unknown, prev: unknown): Record<string, unknown>;
+export function buildNameMapRoot(fields: unknown, privKeyObj: unknown, issuerPubB64url: unknown): { claim: unknown; issuer_id: unknown; sig: unknown };
 export function buildNoForkEvidence(fields: unknown, privKeyObj: unknown, issuerPubB64url: unknown): { claim: unknown; issuer_id: unknown; sig: unknown };
 export function buildRecoveryStatement(fields: unknown, privKeyObj: unknown, issuerPubB64url: unknown): { claim: unknown; issuer_id: unknown; sig: unknown };
 export function buildState(id: unknown, time: unknown, data: unknown, provenance: unknown, opts?: unknown): unknown;
@@ -103,6 +104,7 @@ export function keylogLeaf(entryHash: unknown): string;
 export function meetAssurance(a: unknown, b: unknown): unknown;
 export function merkleRoot(contentHashes: unknown): unknown;
 export function nameMapLeaf(arg0: unknown): unknown;
+export function nameMapRootClaim(arg0: unknown): { purpose: unknown; map_root: unknown };
 export function nameSetReport(entries: unknown): { outcome: unknown; examined: unknown; named: unknown; documents: unknown; violations: unknown };
 export function noEventBacking(claimWindow: unknown, streamResult: unknown, frames: unknown): string;
 export function noForkClaim(arg0: unknown): { purpose: unknown; domain_shard: unknown; active_genesis: unknown };
@@ -111,6 +113,7 @@ export function parseProfile(profile: unknown): { unsupported: unknown; attribut
 export function partitionHash(arg0: unknown): unknown;
 export const PREV_ONLY_SUBTYPES: readonly ['checkpoint', 'gap', 'anchor'];
 export function projectTier(state: unknown): string;
+export function proveMapRootAnchor(statement: unknown, proof: unknown, opts?: unknown): Promise<unknown>;
 export function provePredicates(seams?: unknown): unknown;
 export function quorumTrustDomains(list: unknown, config: unknown): unknown;
 export const REFERENCE_CHECKER_RULES: unknown;
@@ -155,6 +158,7 @@ export function verifyEpochTransition(statement: unknown, config: unknown): unkn
 export function verifyEvidenceReceipt(receipt: unknown, config: unknown): unknown;
 export function verifyJson(rawBytes: unknown, opts?: unknown): UstVerdict;
 export function verifyKeylogTerminality(head_: unknown, proof?: unknown): { terminal: unknown; detail: unknown };
+export function verifyNameMapRoot(statement: unknown, config: unknown): unknown;
 export function verifyNoForkEvidence(evidence: unknown, config: unknown): unknown;
 export function verifyOrThrow(doc: unknown, opts?: unknown): unknown;
 export function verifyStream(frames: unknown, config: unknown): UstStreamVerdict;

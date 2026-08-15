@@ -1779,6 +1779,14 @@
       "code": "packages/ust-protocol/index.mjs :: `deriveStreamFloor` walks the supplied epoch transitions to a candidate root, binds a supplied root genesis to it by `genesisEpoch(contentHash(·))`, and returns `established` ONLY when that root is consumer-admitted — a publisher-supplied chain earns a candidate under its own name, because the chain's completeness is the publisher's to withhold",
       "vector": "stream-floor-01-withholding-moves-it-later",
       "test": "F.5s withholding the earliest transition moves the derived floor LATER (suppression forges)"
+    },
+    {
+      "round": 220,
+      "math": "epoch-varying coordinate moved from `C` into `Fₜ`, the `C`-part became one entry per AUTHORITY rather than one",
+      "spec": "`anchored-authority` — the root arrives as a",
+      "code": "packages/ust-protocol/index.mjs :: the `nameMapRootClaim`/`buildNameMapRoot`/`verifyNameMapRoot` trio mirrors the audited no-fork-evidence shape, and `proveMapRootAnchor` mints an unforgeable token only when the authority signature AND the anchor inclusion both hold — enlisted in the admitDeep preservation registry, without which the branch is silently dead",
+      "vector": "map-root-anchor-01-signed-and-anchored-mints",
+      "test": "#42 anchored-authority earns authoritative with NO consumer mapRoots — per-epoch config becomes one-time"
     }
   ],
   "first_accounted_round": 76,

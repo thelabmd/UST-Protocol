@@ -615,6 +615,10 @@
     {
       "round": 219,
       "no_recap": "Round 219 closed no issue. #160 stays open: the protocol half shipped, and the answering surface that would USE a floor is the operator's, tracked separately. The unit is the CLOSED ISSUE; an entry for a round that advances open work would be written to satisfy a gate."
+    },
+    {
+      "round": 220,
+      "no_recap": "Round 220 closed no GitHub issue: #42 stays open on its operator half (a map must actually be run and its root anchored before anything downstream is measurable), and #151's headline was answered by the negative result of round 216 rather than by this build. The unit is the CLOSED ISSUE; an entry for a round that finishes protocol work while the card waits on an operator would be written to satisfy a gate."
     }
   ]
 }

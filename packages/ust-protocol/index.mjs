@@ -353,7 +353,7 @@ export const admitDeep = (v, seen = new WeakSet()) => {   // THE input-boundary 
   const t = typeof v;
   if (t === 'function' || t === 'symbol') return ADMIT_REJECT;                         // canon throws on a function/symbol value → so do we (canon-exact); the only helper-carrying input (a keylog `prove` closure) is a BUILDER field, never passed as signed proof data
   if (t !== 'object') return v;                                                        // primitive scalar passes through
-  if (HANDLE_BRAND.has(v) || VERIFIED_ANCHOR.has(v) || VERIFIED_SERVED.has(v) || VERIFIED_FRESH.has(v)) return v;   // round-27/31 — a verifier-MINTED brand (a verified handle, or an anchor/served/fresh token) is ALREADY a trusted inert snapshot: pass it through, never deep-copy off the brand (a copy loses the WeakSet identity the resolvers check). A caller cannot forge a brand, so this is sound; it lets admitOpts DEEP-admit nested data (round-31) without stripping branded tokens.
+  if (HANDLE_BRAND.has(v) || VERIFIED_ANCHOR.has(v) || VERIFIED_SERVED.has(v) || VERIFIED_FRESH.has(v) || VERIFIED_MAP_ROOT.has(v)) return v;   // #42 — a minted token is preserved BY IDENTITY: cloning it here would strip the very unforgeability it exists for, silently, and the branch would simply never be taken   // round-27/31 — a verifier-MINTED brand (a verified handle, or an anchor/served/fresh token) is ALREADY a trusted inert snapshot: pass it through, never deep-copy off the brand (a copy loses the WeakSet identity the resolvers check). A caller cannot forge a brand, so this is sound; it lets admitOpts DEEP-admit nested data (round-31) without stripping branded tokens.
   if (seen.has(v)) return ADMIT_REJECT;                                                // cycle → refuse (total, never infinite); non-cyclic depth is unbounded, matching canon
   seen.add(v);
   try {
@@ -1870,6 +1870,58 @@ const closedTransitionWitness = (cm) => decodeExact(cm, { claim: _evObj, sig: _e
 const closedVoteWitness = (vw) => decodeExact(vw, { claim: _evObj, issuer_id: { t: _evHash }, sig: _evObj }) && admitSigner(vw.sig, vw.issuer_id) !== null && decodeExact(vw.claim, VOTE_CLAIM_SCHEMA);   // issuer_id REQUIRED + bound to sig.key_id === keyId(pub) (round-35 P0-01)
 const closedRecoveryWitness = (rw) => decodeExact(rw, { claim: _evObj, issuer_id: { t: _evHash }, sig: _evObj }) && admitSigner(rw.sig, rw.issuer_id) !== null && decodeExact(rw.claim, RECOVERY_CLAIM_SCHEMA);   // round-35 P0-02
 const closedNoForkWitness = (nw) => decodeExact(nw, { claim: _evObj, issuer_id: { t: _evHash }, sig: _evObj }) && admitSigner(nw.sig, nw.issuer_id) !== null && decodeExact(nw.claim, NOFORK_CLAIM_SCHEMA);   // round-35 P0-03 — no-fork is a signed authority witness, now in the closed-ADT sweep
+// ─── #42 / F.5a.2 — THE NAME-MAP ROOT AS A SIGNED, ANCHORED ARTIFACT.
+//     Round 216 measured the defect: `authoritative` by map inclusion was decided against a root the CONSUMER pinned,
+//     so its configuration had to be updated at the map's own cadence, and the verdict carried no date. The fix
+//     factorizes the coordinate: the AUTHORITY is admitted once (`trust.mapAuthorities`, time-invariant, one entry per
+//     authority), while the per-epoch part — WHICH root — proves itself by the authority's signature plus an anchor,
+//     i.e. it moves from `C` into `Fₜ`. What that does NOT do is answer WHICH MAP (F.5a.2c is a negative result:
+//     a namespace authority is not derivable from the substrate), which is exactly why the authority stays in `C`.
+//     The claim carries the ROOT and nothing else: no time, because a signer may not self-declare it (the round-35
+//     rule that kept `valid_as_of` out of the no-fork claim) — the date comes from the anchor; and no domain, because
+//     one signature covering EVERY name is the map's whole advantage over a witness (F.5a.3), and binding the root to
+//     a domain would hand the authority the per-name silence that advantage exists to remove.
+const NAMEMAP_ROOT_CLAIM_SCHEMA = { purpose: { t: (x) => x === 'ust:name-map-root' }, map_root: { t: _evHash } };
+const closedNameMapRootWitness = (w) => decodeExact(w, { claim: _evObj, issuer_id: { t: _evHash }, sig: _evObj }) && admitSigner(w.sig, w.issuer_id) !== null && decodeExact(w.claim, NAMEMAP_ROOT_CLAIM_SCHEMA);
+export function nameMapRootClaim({ map_root }) { return { purpose: 'ust:name-map-root', map_root }; }
+export function buildNameMapRoot(fields, privKeyObj, issuerPubB64url) {
+  const claim = nameMapRootClaim(fields);
+  const sig = toB64url(ed25519Sign(utf8(canon(claim)), privKeyObj));
+  return { claim, issuer_id: keyId(issuerPubB64url), sig: { alg: 'Ed25519', key_id: keyId(issuerPubB64url), pub: issuerPubB64url, sig } };
+}
+// Admit a signed root against the CONSUMER's map authorities. Same discipline as `verifyNoForkEvidence`: the
+// authority cannot name itself — admission is a function of `C`, never of the statement (F.5a.1 clause 2).
+export function verifyNameMapRoot(statement, config) {
+  const c = admitOpts(config); if (c === null) return { ok: false, detail: 'config must be an inert record (totality)' };
+  const S = admitDeep(statement); if (S === ADMIT_REJECT) return { ok: false, detail: 'root statement is not an inert record' };
+  if (!S || typeof S !== 'object') return { ok: false, detail: 'no root statement' };
+  if (!closedNameMapRootWitness(S)) return { ok: false, detail: 'root statement is not a closed typed ADT { claim:{purpose,map_root}, issuer_id, sig }' };
+  const admitted = c.mapAuthorities && typeof c.mapAuthorities === 'object' ? c.mapAuthorities[S.issuer_id] : undefined;
+  if (!admitted) return { ok: false, detail: 'map authority not in the consumer mapAuthorities — admission is the consumer\'s, never the statement\'s' };
+  const pub = typeof admitted === 'string' ? admitted : admitted.pub;
+  if (pub !== S.sig.pub) return { ok: false, detail: 'authority pub is not the configured one' };
+  let msg; try { msg = canon(S.claim); } catch { return { ok: false, detail: 'claim not canonicalizable' }; }
+  if (!edVerifyStrict(S.sig.pub, msg, S.sig.sig)) return { ok: false, detail: 'Ed25519 verify failed' };
+  return { ok: true, authority_id: S.issuer_id, map_root: S.claim.map_root };
+}
+// The UNFORGEABLE token, same discipline as VERIFIED_ANCHOR / VERIFIED_FRESH: only this function — which actually
+// ran BOTH checks — mints one, so a caller's look-alike `{map_root, as_of}` earns nothing. ASYNC because the
+// substrate seam is, and the receipt is bound by identity to the one call that produced it (the verifyAsync pattern).
+const VERIFIED_MAP_ROOT = new WeakSet();
+export async function proveMapRootAnchor(statement, proof, opts = {}) {
+  const O = admitOpts(opts); if (O === null) return { ok: false, detail: 'opts must be an inert record (totality)' };
+  const vr = verifyNameMapRoot(statement, O);
+  if (!vr.ok) return { ok: false, detail: 'root statement rejected — ' + vr.detail };
+  const Pf = admitDeep(proof); if (Pf === ADMIT_REJECT) return { ok: false, detail: 'anchor proof is not an inert record' };
+  const capA = Pf?.anchor, capR = Pf?.root;
+  let receipt; try { receipt = O.substrateVerify ? await O.substrateVerify(capA, capR) : null; } catch { receipt = null; }
+  const av = verifyAnchorCore(vr.map_root, Pf, { ...O, substrateVerify: (a, r) => (a === capA && r === capR ? receipt : null) });   // CORE, not the public door: the door re-admits the proof, and a second clone breaks the `a === capA` identity binding that ties the receipt to THIS call — the same reason verifyAsync calls verifyCore
+  if (!(av.inclusion === true && av.time === 'anchored' && isRealRfc3339Z(av.anchorTime)))
+    return { ok: false, detail: 'the root is signed but NOT anchor-proven — ' + (av.detail || av.status || 'no proven time'), authority_id: vr.authority_id };
+  const token = deepFreeze({ map_root: vr.map_root, authority_id: vr.authority_id, as_of: av.anchorTime });
+  VERIFIED_MAP_ROOT.add(token);
+  return { ok: true, token, map_root: vr.map_root, authority_id: vr.authority_id, as_of: av.anchorTime };
+}
 // subject binding → scope binding → admission (consumer connectors) → role (allowed_proof_kinds, B4) → total.
 // Tamper/malformation ⇒ INVALID(E-EVIDENCE); not-admitted-for-THIS-consumer/scope/subject ⇒ INDETERMINATE
 // (evidence_unverified) — absence of admission is not proof of fraud, but it earns nothing (fail-closed).
@@ -1985,7 +2037,16 @@ export function quorumTrustDomains(list, config) {
 //     no anchor coordinate supplies that step by AXIOM, so the verdict must LABEL it (`map_root_currency`) exactly as
 //     Proposition F.5a.1 labels the no-fork override. One basis is realized; `anchored` is the open work of #42, and
 //     its absence is a named absence, never an emitted rung.
-const mapRootBasis = (trust, root) => (Array.isArray(trust?.mapRoots) && trust.mapRoots.includes(root) ? 'consumer-asserted' : null);
+const mapRootBasis = (trust, root, token) => {
+  // `anchored-authority` FIRST: it is the earned basis, and it is decided by an UNFORGEABLE token — only
+  // `proveMapRootAnchor`, which ran both the authority signature and the anchor, mints one, so a caller's
+  // look-alike `{map_root, as_of}` is not in the set and earns nothing. The per-epoch coordinate lives in `Fₜ`
+  // here; the `C`-part left over is the AUTHORITY, admitted once (F.5a.2, and F.5a.2c on why it cannot be zero).
+  if (token !== null && typeof token === 'object' && VERIFIED_MAP_ROOT.has(token) && token.map_root === root)
+    return { basis: 'anchored-authority', as_of: token.as_of, authority: token.authority_id };
+  if (Array.isArray(trust?.mapRoots) && trust.mapRoots.includes(root)) return { basis: 'consumer-asserted' };
+  return null;
+};
 // P0-1 (rc.35 audit) — a module-private capability set. Only resolveByDiscovery (which actually ran witnessNoFork)
 // mints a servedNoFork object into it; a transcript caller cannot add to it, so a plain look-alike object earns nothing.
 const VERIFIED_SERVED = new WeakSet();
@@ -2113,11 +2174,11 @@ export function resolveAuthority(doc, opts = {}) {
   //     `consumer-override` (independently_verified:false), NEVER silently `authoritative` (the removed overclaim,
   //     same class as `mapInclusion:true`). A consumer consciously honoring its own override sets acceptConsumerOverride
   //     at verify(); the verdict stays transparent. Present-but-invalid evidence never upgrades (fail-safe).
-  const nmCur = nameMap ? mapRootBasis(trust, nameMap.mapRoot) : null;               // F.5a.2b — the currency basis, or NOTHING; a self-supplied root never reaches here
+  const nmCur = nameMap ? mapRootBasis(trust, nameMap.mapRoot, nameMap.rootProof) : null;               // F.5a.2b — the currency basis, or NOTHING; a self-supplied root never reaches here
   if (nameMap && nmCur) {                                                            // #42 — name-map inclusion, root CONSUMER-ADMITTED (Phase 1)
     const nm = verifyActiveGenesisUniqueness(nameMap.proof, { domain_shard: doc.state.id.domain_shard, active_genesis: contentHash(genesis), mapRoot: nameMap.mapRoot });
     if (nm.authoritative) return { strength: 'authoritative', noFork: 'map-inclusion', independently_verified: true,
-      basis: 'authenticated-map-uniqueness', map_root: nm.map_root, map_root_currency: nmCur, status: st2, capacity, freshness };   // F.5a.2b — the ROTATION-bearing key space: an unlabelled currency would be an overstatement (a superseded binding verifies under its own root)
+      basis: 'authenticated-map-uniqueness', map_root: nm.map_root, map_root_currency: nmCur.basis, ...(nmCur.as_of ? { map_root_as_of: nmCur.as_of } : {}), ...(nmCur.authority ? { map_authority: nmCur.authority } : {}), status: st2, capacity, freshness };   // F.5a.2b — the ROTATION-bearing key space: an unlabelled currency would be an overstatement (a superseded binding verifies under its own root)
   }
   if (noForkEvidence !== undefined) {
     const ev = verifyNoForkEvidence(noForkEvidence, { domain_shard: doc.state.id.domain_shard, active_genesis: contentHash(genesis), trustRoots: trustRoots || {} });
@@ -3149,8 +3210,8 @@ export function deriveCheckpointFreshness(chain, config) {
   // failed) ⇒ `attested ⇒ corroborated ∧ independent-uniqueness`; uniqueness alone never earns `attested`.
   if (uniqueness) {
     let uq = null;                                                                       // two INDEPENDENT bases for the SAME predicate
-    const cpCur = uniqueness.map ? mapRootBasis(trust, uniqueness.map.mapRoot) : null;   // F.5a.2b — SAME coordinate, second typed space: here the key is write-once by intent, so an unlabelled currency is an unchecked PREMISE (a later root binding a rival value is equivocation, the very event this rung claims to exclude)
-    if (uniqueness.map && cpCur) uq = { ...verifyCheckpointMapUniqueness(uniqueness.map.proof, { domain_shard: b.domain_shard, genesis_epoch: b.genesis_epoch, sequence: b.sequence, checkpoint: headId, mapRoot: uniqueness.map.mapRoot }), map_root_currency: cpCur };   // Phase 1: map root must be consumer-admitted (trust.mapRoots)
+    const cpCur = uniqueness.map ? mapRootBasis(trust, uniqueness.map.mapRoot, uniqueness.map.rootProof) : null;   // F.5a.2b — SAME coordinate, second typed space: here the key is write-once by intent, so an unlabelled currency is an unchecked PREMISE (a later root binding a rival value is equivocation, the very event this rung claims to exclude)
+    if (uniqueness.map && cpCur) uq = { ...verifyCheckpointMapUniqueness(uniqueness.map.proof, { domain_shard: b.domain_shard, genesis_epoch: b.genesis_epoch, sequence: b.sequence, checkpoint: headId, mapRoot: uniqueness.map.mapRoot }), map_root_currency: cpCur.basis, ...(cpCur.as_of ? { map_root_as_of: cpCur.as_of } : {}) };   // Phase 1: map root must be consumer-admitted (trust.mapRoots)
     if ((!uq || !uq.attested) && uniqueness.attestations) uq = verifyCheckpointUniqueness(uniqueness.attestations, { domain_shard: b.domain_shard, genesis_epoch: b.genesis_epoch, sequence: b.sequence, checkpoint: headId, trustRoots: uniqueness.trustRoots, domains: uniqueness.domains, threshold: uniqueness.threshold });
     if (uq && uq.attested) {
       // K1 ship-gate: the STABLE verifier does not emit `attested`. Without the explicit experimental opt-in the
@@ -3158,10 +3219,10 @@ export function deriveCheckpointFreshness(chain, config) {
       // rung named — an honest downgrade, never a silent one.
       if (aea !== true) return { result: 'VALID', keylog_freshness: 'corroborated', basis: uq.basis, anti_equivocation: 'attested',
         attested_withheld: 'experimental-gate', stability: 'experimental-extension',
-        ...(uq.map_root ? { map_root: uq.map_root } : {}), ...(uq.map_root_currency ? { map_root_currency: uq.map_root_currency } : {}), head: headId, sequence: b.sequence, active_genesis: b.active_genesis };
+        ...(uq.map_root ? { map_root: uq.map_root } : {}), ...(uq.map_root_currency ? { map_root_currency: uq.map_root_currency } : {}), ...(uq.map_root_as_of ? { map_root_as_of: uq.map_root_as_of } : {}), head: headId, sequence: b.sequence, active_genesis: b.active_genesis };
       return { result: 'VALID', keylog_freshness: 'attested', basis: uq.basis, anti_equivocation: 'attested', stability: 'experimental-extension',
         ...(uq.threshold ? { threshold: uq.threshold, accepted_witnesses: uq.accepted_witnesses, trust_domains: uq.trust_domains } : {}),
-        ...(uq.map_root ? { map_root: uq.map_root } : {}), ...(uq.map_root_currency ? { map_root_currency: uq.map_root_currency } : {}), head: headId, sequence: b.sequence, active_genesis: b.active_genesis };
+        ...(uq.map_root ? { map_root: uq.map_root } : {}), ...(uq.map_root_currency ? { map_root_currency: uq.map_root_currency } : {}), ...(uq.map_root_as_of ? { map_root_as_of: uq.map_root_as_of } : {}), head: headId, sequence: b.sequence, active_genesis: b.active_genesis };
     }
   }
   return { result: 'VALID', keylog_freshness: 'corroborated', basis: 'publisher-checkpoint', anti_equivocation: 'unverified',  // ceiling without independent uniqueness
@@ -3340,7 +3401,7 @@ export const REGISTRY = deepFreeze({   // round-25 P0-04 — DEEP-frozen: the ca
   // signed `canon` preimage purposes (§12.1a/§12.3) — domain-separated, never interchangeable.
   purposes: ['ust:name-no-fork', 'ust:authority-checkpoint', 'ust:authority-checkpoint-signature',
     'ust:checkpoint-authority-recovery', 'ust:genesis-epoch-transition', 'ust:checkpoint-uniqueness-attestation',
-    'ust:evidence-receipt', 'ust:evidence-receipt-signature'],
+    'ust:evidence-receipt', 'ust:evidence-receipt-signature', 'ust:name-map-root'],   // #42 — the signed name-map ROOT statement (§12.3.4, F.5a.2)
   // PARTITION KINDS (§4.4/§5, F.1.1) — the domain `K` a verifier admits, and the ONLY definition of it. The
   // obligation is EQUALITY: admitting more accepts a tag the standard never defined; admitting fewer returns a
   // false INVALID on a conforming document, and the verdict then names the publisher rather than the verifier.
@@ -3441,6 +3502,13 @@ export const REGISTRY = deepFreeze({   // round-25 P0-04 — DEEP-frozen: the ca
   inclusionConstructions: {
     'ust-merkle-tagged': 'bundled — implemented by this build (§7/§11.2)',
     'rfc6962-raw': '@ust-protocol/rekor-verify — inject its `inclusionVerify` as the connector',
+  },
+  // #42 — the MECHANISM is named here; the AUTHORITY is not, and must not be. Registering a mechanism says how a
+  // name-map root is carried and checked, which every implementation must agree on. Registering an authority would
+  // spend the specification's neutrality to bless one operator, and F.5a.2c shows it would not even close the
+  // question — a namespace authority is not derivable, so it belongs in the consumer's configuration by construction.
+  nameMapConstructions: {
+    'ust-name-map/v1': 'a depth-256 sparse Merkle map over H("ust:name-map-key", canon({domain_shard})); its root is carried as a CLOSED signed statement { claim: { purpose: "ust:name-map-root", map_root }, issuer_id, sig } and admitted against the consumer\'s `mapAuthorities`, with the DATE taken from an anchor and never from the signer (§12.3.4, F.5a.2)',
   },
   verifiedEvidenceFields: { required: ['proof_kind', 'subject', 'source_id', 'facts'], optional: ['verifier_id', 'verifier_version'] },
   // M3 — the SIGNED connector-receipt claim (§12.3.5): facts only; a capability/assurance/independence field is E-EVIDENCE.

@@ -19,8 +19,8 @@
     "_": "WHAT A VECTOR MAY PIN — read this before excluding the `vector` layer of a round, and before deciding a case \"cannot be a vector\". Derived from THIS corpus on 2026-08-10, not declared: 228 vectors across 43 kinds.",
     "the_rule": "A vector is a FIXED INPUT and a DECLARED RESULT that a runner must reproduce. The input being a DOCUMENT is one case among several; the result being a VERDICT is one case among several.",
     "measured_2026_08_10": {
-      "total": 256,
-      "kinds": 49,
+      "total": 258,
+      "kinds": 50,
       "input_is_a_document": 45,
       "input_is_a_value_or_string": 75,
       "input_is_a_genesis_plus_log": 63,
@@ -30,7 +30,8 @@
       "_round_207": "#155 added 7 `anchor-refusal` vectors — a form the earlier derivation had no instance of: the input is an ANCHOR and a root, and the declared result is a REFUSAL REASON rather than a verdict. It is recorded here because the definition exists to stop \"this cannot be a vector\" from being asserted, and a refusal reason was exactly the kind of thing that argument would have excluded.",
       "_round_216": "#42 added 2 `map-currency` vectors — a form whose input is a DOCUMENT plus a consumer trust CONFIGURATION and whose declared result is a coordinate ON the identity resolution rather than a tier. It is recorded because the currency basis is decided at the admission door and at no primitive below it, so a porter reproducing only the map primitives would reproduce none of it; and because the second vector's `expect_absent` is what makes the pair non-vacuous — asserting a strength alone stays green on a build that dropped the coordinate.",
       "_round_217": "#151 added 2 `refusal-shape` vectors — a form whose declared result is the SET OF FIELDS a verdict carries rather than its value. Recorded because both halves are normative and a one-directional check is satisfied by a refusal that simply became an answer: one vector names what MUST be present, its twin names what MUST NOT.",
-      "_round_219": "#160 added 2 `stream-floor` vectors — a form whose declared result COMPARES TWO CALLS rather than fixing one: the point is that withholding evidence moves the answer, so a single call cannot state it. Recorded because the definition exists to stop \"this cannot be a vector\" from being asserted, and a differential between two information sets is exactly what the earlier derivation had no instance of."
+      "_round_219": "#160 added 2 `stream-floor` vectors — a form whose declared result COMPARES TWO CALLS rather than fixing one: the point is that withholding evidence moves the answer, so a single call cannot state it. Recorded because the definition exists to stop \"this cannot be a vector\" from being asserted, and a differential between two information sets is exactly what the earlier derivation had no instance of.",
+      "_round_220": "#42 added 2 `map-root-anchor` vectors — the first form in this corpus whose runner is ASYNC and whose declared result is a MINT rather than a verdict. The minted token itself cannot be a vector: its whole property is identity (only the function that ran both checks produces one), and a serialized look-alike would test the opposite. So the vector pins the MINTING from serializable inputs, and the identity property is pinned by a conformance check plus its mutant."
     },
     "forms": [
       {
@@ -12378,6 +12379,78 @@
         "established": true,
         "floor": "ust:20200101.00",
         "basis": "consumer-admitted-root"
+      }
+    },
+    {
+      "kind": "map-root-anchor",
+      "id": "map-root-anchor-01-signed-and-anchored-mints",
+      "rule": "S12.3.4/F.5a.2 the anchored-authority basis needs BOTH halves: a CLOSED signed root statement admitted against the consumer's mapAuthorities, and that root proven included in the anchor substrate. The date rides from the ANCHOR — the signed claim carries no time, because a signer may not self-declare it.",
+      "statement": {
+        "claim": {
+          "purpose": "ust:name-map-root",
+          "map_root": "sha256:f2a7999e8f8f3f162e4ff24ed5b72904858bc168bef3cc2cee29289d1dc413dd"
+        },
+        "issuer_id": "sha256:2a16b5c9f6bbea040a5f6560d627c0b6b75d8858c980462dbed23e1c0d852c38",
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:2a16b5c9f6bbea040a5f6560d627c0b6b75d8858c980462dbed23e1c0d852c38",
+          "pub": "JfwyxHilpPhORVegNC4IJ4yINkG2FJvbC0qYarbCy3g",
+          "sig": "JLpzmGzUr0ZGiULr739GBYeW3TWKtyrCNjsGq7igDZ7k1MfeJWSzaM5JrO2hsMkXxteLjmrrVh0JPhwLJkJhBQ"
+        }
+      },
+      "anchor_proof": {
+        "root": "sha256:48702b560a680e2392b9b8adcd801f44de03869956bf7b3d58448819930bf10e",
+        "path": [],
+        "anchor": {
+          "kind": "bitcoin-ots"
+        }
+      },
+      "substrate_receipt": {
+        "final": true,
+        "time": "2026-08-01T00:00:00Z"
+      },
+      "mapAuthorities": {
+        "sha256:2a16b5c9f6bbea040a5f6560d627c0b6b75d8858c980462dbed23e1c0d852c38": "JfwyxHilpPhORVegNC4IJ4yINkG2FJvbC0qYarbCy3g"
+      },
+      "expect": {
+        "ok": true,
+        "as_of": "2026-08-01T00:00:00Z",
+        "map_root": "sha256:f2a7999e8f8f3f162e4ff24ed5b72904858bc168bef3cc2cee29289d1dc413dd"
+      }
+    },
+    {
+      "kind": "map-root-anchor",
+      "id": "map-root-anchor-02-authority-not-admitted-never-mints",
+      "rule": "S12.3.4/F.5a.1 clause 2 — admission is the CONSUMER's and never the statement's. A well-formed, correctly signed, genuinely anchored root from an authority the consumer does not hold mints nothing; otherwise an impostor runs its own map and earns the name.",
+      "statement": {
+        "claim": {
+          "purpose": "ust:name-map-root",
+          "map_root": "sha256:f2a7999e8f8f3f162e4ff24ed5b72904858bc168bef3cc2cee29289d1dc413dd"
+        },
+        "issuer_id": "sha256:077da5455a0a71a55edb5ae3d4f5c4b5e846b7a144e17a0cfa73104939be14f3",
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:077da5455a0a71a55edb5ae3d4f5c4b5e846b7a144e17a0cfa73104939be14f3",
+          "pub": "3L5P2vQ8YUaIm4Kw5pD8iMEoZgUuo-oEKx95iLylrgg",
+          "sig": "btKdZDCpLj44Ztju7CnWluXb4Fg4YLCHkmviYlzsqHa10FhhOi_DBt0cwZ_toKAvDnCIjVX07SfVPjmcmZlrCA"
+        }
+      },
+      "anchor_proof": {
+        "root": "sha256:48702b560a680e2392b9b8adcd801f44de03869956bf7b3d58448819930bf10e",
+        "path": [],
+        "anchor": {
+          "kind": "bitcoin-ots"
+        }
+      },
+      "substrate_receipt": {
+        "final": true,
+        "time": "2026-08-01T00:00:00Z"
+      },
+      "mapAuthorities": {
+        "sha256:2a16b5c9f6bbea040a5f6560d627c0b6b75d8858c980462dbed23e1c0d852c38": "JfwyxHilpPhORVegNC4IJ4yINkG2FJvbC0qYarbCy3g"
+      },
+      "expect": {
+        "ok": false
       }
     }
   ]
