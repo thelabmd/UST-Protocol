@@ -14,6 +14,8 @@
    ▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀
 ```
 
+**Browser: node-only.** This package does **not** run in a browser, and that is a decision rather than an omission. See `ust:browser.why` in its `package.json` for the reason, and UST-Protocol#148 for what a browser can and cannot reach without it.
+
 > `§` refers to [`spec/UST-1.0.md`](../../spec/UST-1.0.md) throughout.
 
 > **Two rules this protocol does not trade away.**

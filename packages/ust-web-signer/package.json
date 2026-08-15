@@ -1,7 +1,11 @@
 {
   "name": "@ust-protocol/web-signer",
-  "version": "1.0.0-rc.25",
+  "version": "1.0.0-rc.26",
   "description": "WebCrypto Ed25519 signer + producer for UST (Universal State Transcript) 1.0 — the browser-side piece that ust-protocol deliberately omits (a private key never enters the verifier). Byte-compatible; produces documents that verify VALID under ust-protocol.",
+  "ust:browser": {
+    "stance": "native",
+    "why": "WebCrypto Ed25519 signer with no platform import at all — browsers, Workers and Node run the same file. This is the piece ust-protocol deliberately omits, because a private key never enters a verification library."
+  },
   "author": "THE LAB (https://thelab.md)",
   "type": "module",
   "main": "./index.mjs",

@@ -2,6 +2,10 @@
   "name": "@ust-protocol/rekor-verify",
   "version": "1.0.0-rc.30",
   "description": "Opt-in Sigstore Rekor (transparency-log) substrateVerify for UST anchors — a fast, independent witness substrate next to Bitcoin. Zero-dep (REST + RFC6962 inclusion + pinned-key checkpoint signature). #68 witness / #69 A1 / #71 schema-exact hashedrekord.",
+  "ust:browser": {
+    "stance": "node-only",
+    "why": "The Rekor connector uses node:crypto for SHA-256 and for the P-256 checkpoint signature, and the Buffer global throughout the RFC 6962 climb. Its verification path is already asynchronous, so WebCrypto would fit — see UST-Protocol#148 for why that port is a decision rather than a chore."
+  },
   "type": "module",
   "main": "index.mjs",
   "exports": {

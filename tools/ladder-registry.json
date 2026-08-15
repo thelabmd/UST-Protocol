@@ -1799,6 +1799,22 @@
       "test": "#42 requireIndependentAuthority: no assigned domain ⇒ INDETERMINATE, never an inferred independence"
     },
     {
+      "round": 224,
+      "math": {
+        "excluded": "No theorem moved. Whether a PACKAGE runs in a browser is a property of an artifact's host environment, not of the decision relation: the same document, the same trust configuration and the same evidence yield the same verdict whether the code executing them was installed in Node or bundled for a page. The model quantifies over what a verifier may conclude, and nothing here changes that set."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved, and the distinction is worth stating because the card sounds like it should. The spec already requires a verifier to REPORT what it cannot evaluate rather than pass it silently - that obligation is discharged in verdicts, per document. Which environments a given implementation's packages happen to run in is a fact about this tree's distribution, binding on us and on nobody porting the protocol."
+      },
+      "code": {
+        "excluded": "No library code changed. The round adds a DECLARATION to nine manifests and the same statement to nine READMEs, and moves two published versions because a manifest field and a README line are shipped bytes. Nothing a verifier executes moved; the enforcement that reads the declarations is the test layer below."
+      },
+      "vector": {
+        "excluded": "A vector fixes an input and a declared result a second implementation must reproduce. A package's browser stance is neither: there is no input, and the result a porter would have to reproduce would be a fact about OUR distribution rather than about the wire."
+      },
+      "test": "tools/browser-portability-gate.mjs :: the portability domain is READ from packages/, not listed here"
+    },
+    {
       "round": 223,
       "math": {
         "excluded": "No theorem moved and none should. A request label decides no verdict: strip it and every document in the corpus verifies identically, because nothing in the decision relation reads a transport header. The formal model quantifies over what a verifier concludes from bytes it holds, and this round changes only how those bytes were asked for."

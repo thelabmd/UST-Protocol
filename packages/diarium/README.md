@@ -7,6 +7,8 @@ Agent memory as a verifiable UST stream.
 npm i -D diarium
 ```
 
+**Browser: node-only.** This package does **not** run in a browser, and that is a decision rather than an omission. See `ust:browser.why` in its `package.json` for the reason, and UST-Protocol#148 for what a browser can and cannot reach without it.
+
 A task closes in your tracker. The agent writes what it understood and what it learned from it — a few sentences, its own voice. That text is sealed as a UST `observation`, `prev`-chained to the entry before it, and appended to `diarium/`. The agent reads it back later as its own memory, walking the chain instead of loading the whole corpus.
 
 Nothing here proves the work was done well. A sealed entry proves **the agent said this, then**, and that nobody — including the agent — rewrote it afterwards. Fixation, not truth. Ordering and non-repudiation are the product; correctness is not on offer.

@@ -632,6 +632,10 @@
     {
       "round": 223,
       "no_recap": "Round 223 closed no GitHub issue: #43 asks that outbound requests carry a label across the whole estate, and this round labels the nine surfaces in THIS tree while the card also covers what a deployed operator sends. The unit is the CLOSED ISSUE; an entry for a round that finishes the protocol half of an open card would be written to satisfy a gate rather than to record a moment."
+    },
+    {
+      "round": 224,
+      "no_recap": "Round 224 closed no GitHub issue: #148 keeps its two porting boxes open, and this round answers the half about the gate's domain - enumerate every package, declare a stance, check it in both directions. The unit is the CLOSED ISSUE; an entry for the half that landed would claim a card that is still deciding what its other half is worth."
     }
   ]
 }

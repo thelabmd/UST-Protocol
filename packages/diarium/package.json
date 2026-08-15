@@ -2,6 +2,10 @@
   "name": "diarium",
   "version": "0.2.27",
   "description": "Agent memory as a verifiable UST stream \u2014 a task closes, the agent writes what it learned, the entry is sealed and prev-chained. Tamper-evident, offline-verifiable, no server.",
+  "ust:browser": {
+    "stance": "node-only",
+    "why": "A command-line tool over a filesystem store: it seals entries, reads a chain from disk and holds a signing key from the environment. Every one of those is a Node capability, and none of them is something a page should be doing."
+  },
   "type": "module",
   "bin": {
     "diarium": "./bin/diarium.mjs"

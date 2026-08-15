@@ -15,6 +15,8 @@
    ▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀
 ```
 
+**Browser: native.** This package runs in a browser as written — no platform import, no `Buffer`, and the same file in Node, Workers and a page.
+
 UST (Universal State Transcript) is trust infrastructure for data: a signed, canonical, tamper-evident record of
 *state* — some data about the world at a moment — that verifies the same however it reached you. TLS secures the
 pipe; **UST secures the payload**, so the guarantee travels with the data instead of with the connection.

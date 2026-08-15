@@ -2,6 +2,10 @@
   "name": "@ust-protocol/cli",
   "version": "1.0.0-rc.106",
   "description": "The reference `ust` CLI for UST (Universal State Transcript) 1.0 — verify a transcript, print canonical bytes for cross-language diffing, and run the HIGH genesis ceremony. One entrypoint; the Go binary reproduces this surface.",
+  "ust:browser": {
+    "stance": "node-only",
+    "why": "A command-line tool: it reads and writes the filesystem, spawns wrangler, and its whole subject is a publisher's local ceremony. There is no browser question here — the artifact it produces is what a browser reads."
+  },
   "author": "THE LAB (https://thelab.md)",
   "type": "module",
   "bin": {
@@ -27,7 +31,7 @@
   },
   "dependencies": {
     "@ust-protocol/rekor-verify": "^1.0.0-rc.30",
-    "@ust-protocol/web-signer": "^1.0.0-rc.25",
+    "@ust-protocol/web-signer": "^1.0.0-rc.26",
     "ust-protocol": "^1.0.0-rc.72",
     "@ust-protocol/ots-verify": "^1.0.0-rc.35"
   },

@@ -2,6 +2,10 @@
   "name": "@ust-protocol/mcp",
   "version": "1.0.0-rc.61",
   "description": "Model Context Protocol (MCP) server for UST \u2014 agent-facing verbs over ust-protocol: verify, build/create, combine, resolve name-authority, anchor. An agent needs only this server plus its own key.",
+  "ust:browser": {
+    "stance": "node-only",
+    "why": "An MCP server speaking stdio to a local agent process. The transport itself is a Node capability; a browser has no stdio to speak over, so this is not a port that was skipped but a shape that does not translate."
+  },
   "author": "THE LAB (https://thelab.md)",
   "type": "module",
   "main": "./index.mjs",

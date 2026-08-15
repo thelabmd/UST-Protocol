@@ -1,7 +1,11 @@
 {
   "name": "ust-light",
-  "version": "1.0.0-rc.56",
+  "version": "1.0.0-rc.57",
   "description": "UST 1.0 LIGHT floor — standalone, zero-dependency sign/verify for canonical, addressable, string-only signed state. A ust-light document is a valid UST document.",
+  "ust:browser": {
+    "stance": "native",
+    "why": "The LIGHT floor is asynchronous everywhere on WebCrypto rather than carrying a second build, so the single file IS the browser file. A floor that refused the browser would not be a floor."
+  },
   "type": "module",
   "main": "index.mjs",
   "exports": {

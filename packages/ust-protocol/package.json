@@ -2,6 +2,10 @@
   "name": "ust-protocol",
   "version": "1.0.0-rc.72",
   "description": "Universal State Transcript (UST) \u2014 the stateless reference base: canonical hashing (JCS), Ed25519 signing, three-tier verification (LIGHT/HIGH/TOP), privacy commitments, chains, and anchoring. Trust infrastructure for machine-readable state.",
+  "ust:browser": {
+    "stance": "mapped",
+    "why": "Runs in a browser under its own package.json `browser` map, which swaps the cryptographic faculty at BUILD time (#143). The mapped build implements SHA-256 and REFUSES Ed25519 and AES-GCM by name rather than approximating them, so a browser reaches canonicalisation, hashing and shape checking and performs the signature step itself with crypto.subtle."
+  },
   "author": "THE LAB (https://thelab.md)",
   "type": "module",
   "main": "./index.mjs",

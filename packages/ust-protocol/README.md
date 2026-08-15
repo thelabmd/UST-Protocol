@@ -15,6 +15,8 @@
    ▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀
 ```
 
+**Browser: mapped.** This package runs in a browser under its `browser` map, which selects a build implementing SHA-256 and refusing Ed25519 and AES-GCM by name — a browser gets canonicalisation, hashing and shape checking, and performs the signature step itself with `crypto.subtle`.
+
 **Verify machine-readable state without trusting whoever handed it to you.**
 
 > **Two rules this protocol does not trade away.**

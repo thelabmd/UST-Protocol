@@ -15,6 +15,8 @@
    ▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀
 ```
 
+**Browser: node-only.** This package does **not** run in a browser, and that is a decision rather than an omission. See `ust:browser.why` in its `package.json` for the reason, and UST-Protocol#148 for what a browser can and cannot reach without it.
+
 UST (Universal State Transcript) is trust infrastructure for data: a signed, canonical, tamper-evident record of
 *state* — some data about the world at a moment — that verifies the same however it reached you. TLS secures the
 pipe; **UST secures the payload**, so the guarantee travels with the data instead of with the connection.

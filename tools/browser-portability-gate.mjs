@@ -20,7 +20,7 @@
 // disagrees with itself across platforms is worse than one that does not build — the documents would verify in
 // one place and not the other, which is the cross-language split the whole canon discipline exists to prevent.
 
-import { readFileSync, writeFileSync, mkdtempSync, cpSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync, cpSync, readdirSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
@@ -327,7 +327,146 @@ console.log(JSON.stringify({ result: v.result, ch: await L.contentHash(doc) }));
   }
 }
 
+// ─── 7. THE DOMAIN — every package DECIDES, and the decision is checked in BOTH directions ──────────────
+//
+// #148. Sections 1–6 above are correct and their domain was two packages, named in this file. Everything else
+// was outside by OMISSION, and an omission reads as coverage: `ust-web-signer` — whose entire subject is
+// signing in a page — had no gate touching it, and measured 2026-08-15 it runs a full seal with `Buffer`,
+// `process` and `require` deleted. A package that IS portable and is watched by nothing is the same defect as
+// one that is not portable and says nothing; both are a limit nobody stated. CLOSED 2026-08-15 by this section.
+//
+// So the domain is now read from disk, every package carries `ust:browser` in its own manifest, and the two
+// directions are checked against each other:
+//
+//   native | mapped  → EXECUTED here with the Node globals gone. A declaration nothing runs is a claim.
+//   node-only        → its README says so where a stranger reads it, AND it genuinely depends on Node.
+//
+// That second half is the anti-swap leg and it is the one worth arguing for. Without it, a package that became
+// portable keeps its `node-only` label forever — green, and wrong in the direction that costs a consumer a tier.
+// CLOSED 2026-08-15 — the domain is enumerated from `packages/` and every package carries a stance, so a new
+// package is red here until someone decides for it. Proven by mutation in three directions: relabelling a
+// portable package node-only reddens, relabelling a node-only package portable reddens, deleting a stance
+// reddens. The first of those found a defect in this very leg, and that story is told where it happened.
+{
+  const PKGS_DIR = join(ROOT, 'packages');
+  const STANCES = ['native', 'mapped', 'node-only'];
+  const MIN_WHY = 80;
+
+  const pkgs = readdirSync(PKGS_DIR, { withFileTypes: true }).filter((d) => d.isDirectory())
+    .map((d) => d.name)
+    .filter((d) => existsSync(join(PKGS_DIR, d, 'package.json')))
+    .map((d) => ({ dir: d, json: JSON.parse(readFileSync(join(PKGS_DIR, d, 'package.json'), 'utf8')) }));
+
+  check(`the portability domain is READ from packages/, not listed here (${pkgs.length} package(s): ${pkgs.map((p) => p.dir).join(', ')})`,
+    pkgs.length >= 5, `found ${pkgs.length} — the enumeration has lost its subject and every leg below would be vacuous`);
+
+  // Shipped source of a package, taken from its own `files` declaration — the set npm actually publishes, so
+  // the question "does this package depend on Node" is asked of the artifact a consumer installs.
+  //
+  // A first version guessed the set by filename and excluded `*.test.mjs`. `ust-web-signer`'s test is called
+  // `test.mjs`, so it stayed in, and its `process.exit(…)` certified a package with no Node dependency at all as
+  // Node-dependent — the anti-swap leg, the one leg here worth having, silently answering yes for the wrong file.
+  // Measured by the mutation that relabelled that package, which is the only reason it was found.
+  const shippedSources = (dir, files) => (files ?? []).flatMap((entry) => {
+    const rel = String(entry).replace(/^\.\//, '');
+    const abs = join(PKGS_DIR, dir, rel);
+    if (!existsSync(abs)) return [];
+    if (rel.endsWith('/')) return readdirSync(abs).filter((f) => f.endsWith('.mjs')).map((f) => readFileSync(join(abs, f), 'utf8'));
+    return rel.endsWith('.mjs') ? [readFileSync(abs, 'utf8')] : [];
+  });
+  // Comments are stripped before the question is asked. Round 223 paid for the other way round: a package that
+  // reaches no network at all was pulled into a gate's domain by the word `fetch` inside its own prose.
+  const codeOf = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '').replace(/([^:])\/\/.*$/gm, '$1');
+  const NODE_DEP = /from\s+'node:|import\s+'node:|(?<![.\w$])(Buffer|process|__dirname|__filename|require)\s*[.(\[]/;
+  const dependsOnNode = (dir, files) => shippedSources(dir, files).some((s) => NODE_DEP.test(codeOf(s)));
+
+  // Portable packages are EXECUTED. A probe per package, because their surfaces differ — and the map must cover
+  // the portable set exactly, so a newly-portable package is red here until someone writes it something to do.
+  const PROBE = {
+    'ust-protocol': `const P = await import('${join(dir, 'index.mjs')}');
+      console.log(JSON.stringify({ ok: (await P.contentHash({ ust: '1.0', state: { id: { domain_shard: 'e.example', ust_id: 'ust:20260815.09' }, time: {}, data: {} } })).startsWith('sha256:') }));`,
+    'ust-light': `const L = await import('${join(ROOT, 'packages/ust-light/index.mjs')}');
+      const kp = await L.keypair();
+      console.log(JSON.stringify({ ok: typeof kp.key_id === 'string' && kp.key_id.length > 0 }));`,
+    'ust-web-signer': `const W = await import('${join(ROOT, 'packages/ust-web-signer/index.mjs')}');
+      const s = await W.generateSigner();
+      const doc = await W.signObservation(s, { ust_id: 'ust:20260815.09',
+        time: { generated_at: '2026-08-15T09:00:00Z', valid_from: '2026-08-15T09:00:00Z', valid_to: '2026-08-15T09:00:00Z' },
+        data: { m: { value: 'x' } } });
+      console.log(JSON.stringify({ ok: doc.sig?.alg === 'Ed25519' && (await W.contentHash(doc)).startsWith('sha256:') }));`,
+  };
+
+  const portable = pkgs.filter((p) => ['native', 'mapped'].includes(p.json['ust:browser']?.stance)).map((p) => p.dir);
+  check(`every portable package has an execution probe (${portable.join(', ')})`,
+    portable.every((d) => PROBE[d]), `missing a probe for: ${portable.filter((d) => !PROBE[d]).join(', ')} — a stance nothing runs is a claim, not a check`);
+  check(`no probe outlives its package (${Object.keys(PROBE).join(', ')})`,
+    Object.keys(PROBE).every((d) => portable.includes(d)),
+    `${Object.keys(PROBE).filter((d) => !portable.includes(d)).join(', ')} is probed and no longer declared portable — a probe list that outlives its subject reads as coverage`);
+
+  for (const { dir: d, json } of pkgs) {
+    const m = json['ust:browser'];
+    if (!m || !STANCES.includes(m.stance)) {
+      check(`packages/${d} declares ust:browser.stance`, false,
+        `add "ust:browser": { "stance": "${STANCES.join('|')}", "why": "…" } — every other package decided, and silence is the one answer this gate refuses`);
+      continue;
+    }
+    check(`packages/${d} states WHY its stance is what it is (${m.stance})`, String(m.why ?? '').trim().length >= MIN_WHY,
+      `under ${MIN_WHY} characters is a placeholder, not a decision`);
+
+    if (m.stance === 'mapped') {
+      check(`packages/${d} declares 'mapped' and carries a browser map`, !!json.browser && Object.keys(json.browser).length > 0,
+        'a mapped stance with no `browser` field maps nothing — the bundler would take the Node file');
+    }
+
+    if (m.stance === 'node-only') {
+      // (a) said where a stranger reads it — an ANCHOR is pinned, never a sentence: pinning the wording would
+      //     make an editorial improvement break the build, which is a defect this repository has shipped before.
+      const readme = existsSync(join(PKGS_DIR, d, 'README.md')) ? readFileSync(join(PKGS_DIR, d, 'README.md'), 'utf8') : '';
+      check(`packages/${d}/README.md states the limit under a **Browser:** anchor`, /^\*\*Browser:\s*node-only/m.test(readme),
+        'a manifest field is machine-readable and a README is what a person reads; the limit has to be in both');
+      // (b) …and it is TRUE. This is the direction that keeps the two from swapping in silence.
+      // vacuity: a package whose declared `files` carry no module at all would answer "no Node dependency" for
+      // the reason that there is nothing to read, which is not the same answer and must not look like one.
+      const sources = shippedSources(d, json.files);
+      check(`packages/${d} ships at least one module for the question to be asked of (${sources.length})`, sources.length > 0,
+        'its `files` declaration lists no .mjs, so the leg below would be answering over an empty set');
+      check(`packages/${d} declared node-only genuinely depends on Node`, dependsOnNode(d, json.files),
+        'nothing in its shipped source imports node: or touches a Node global — the declaration is stale, and a stale limit costs a consumer a tier it could have had');
+    }
+  }
+
+  // Portable stances are EXECUTED, with every Node global not merely deleted but booby-trapped.
+  for (const d of portable.filter((d) => PROBE[d])) {
+    const runner = `
+for (const g of ['Buffer', 'process', 'require', '__dirname', '__filename', 'global']) {
+  try { delete globalThis[g]; } catch {}
+  try { Object.defineProperty(globalThis, g, { get() { throw new Error('NODE GLOBAL USED: ' + g); }, configurable: true }); } catch {}
+}
+${PROBE[d]}`;
+    try {
+      const out = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '--eval', runner],
+        { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim());
+      check(`packages/${d} declared portable RUNS with Buffer/process/require deleted`, out.ok === true, 'the probe returned false');
+    } catch (e) {
+      check(`packages/${d} declared portable RUNS with Buffer/process/require deleted`, false,
+        String(e.stderr || e.message).split('\n').filter((l) => /Error|NODE GLOBAL/.test(l))[0]?.slice(0, 150) ?? 'no output');
+    }
+  }
+
+  // ── CONTROLS — each leg discriminates rather than passing on anything
+  check('CONTROL: an unknown stance is not accepted', !STANCES.includes('portable-ish'));
+  check('CONTROL: the node-dependence probe reads CODE, not prose',
+    !NODE_DEP.test(codeOf('// this module used to require Buffer and process.env\nexport const x = 1;')),
+    'a comment describing a removed Node dependency would certify a stale node-only declaration');
+  check('CONTROL: the node-dependence probe DOES see a real use',
+    NODE_DEP.test(codeOf("import { readFileSync } from 'node:fs';")) && NODE_DEP.test(codeOf('const b = Buffer.from(x);')),
+    'the probe answers no to a genuine Node dependency, so every node-only declaration below is unchecked');
+  check('CONTROL: the README anchor is not satisfied by the word appearing anywhere',
+    !/^\*\*Browser:\s*node-only/m.test('This package is node-only in practice.'),
+    'the anchor would match prose, and the statement would not have to be findable');
+}
+
 console.log(failures === 0
-  ? '\n  browser portability: the mapped core and the LIGHT floor both run without Node globals'
+  ? '\n  browser portability: every package declares a browser stance, each portable one RUNS without Node globals, and each node-only one says so and still means it'
   : `\n  browser portability: ${failures} FAILURE(S)`);
 process.exit(failures === 0 ? 0 : 1);

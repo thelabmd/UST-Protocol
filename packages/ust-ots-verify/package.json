@@ -2,6 +2,10 @@
   "name": "@ust-protocol/ots-verify",
   "version": "1.0.0-rc.35",
   "description": "Opt-in Bitcoin/OpenTimestamps substrateVerify for UST anchors — cross-checks a genesis/hour root against a REAL Bitcoin block header + >=6 confirmations. #68 witness / #69 A2 / #71 explorer-corroborated (2-of-N).",
+  "ust:browser": {
+    "stance": "node-only",
+    "why": "The OpenTimestamps connector uses node:crypto for SHA-256, RIPEMD-160 and SHA-1, and the Buffer global throughout the codec. RIPEMD-160 exists in neither WebCrypto nor this tree, so a browser build would have to refuse two of the three unary operations the format defines — see UST-Protocol#148 for what a port would and would not buy."
+  },
   "type": "module",
   "main": "index.mjs",
   "exports": {

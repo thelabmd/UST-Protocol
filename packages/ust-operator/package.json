@@ -3,6 +3,10 @@
   "version": "0.10.9",
   "type": "module",
   "description": "The STATEFUL UST operator layer \u2014 chains, key logs, checkpoints, anchor batches, and composition above the structural bounds. Builds on ust-protocol (the stateless base) and produces exactly what it verifies. NOTE: the bare name `ustate` on npm belongs to a third party and must never be taken.",
+  "ust:browser": {
+    "stance": "node-only",
+    "why": "The stateful operator layer: streams, key-log, anchor batching. It runs where the publisher's keys and store are, which is a server. A browser is on the consuming side of everything this package produces."
+  },
   "main": "./index.mjs",
   "types": "./index.d.ts",
   "exports": {
