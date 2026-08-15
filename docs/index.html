@@ -220,6 +220,10 @@
 // THE REFERENCE IMPLEMENTATION, vendored: `docs/lib/ust-protocol/` is the package's own browser build, and
 // `vendor-browser-core` holds it byte-identical to what npm publishes. What you run here IS what you install.
 import { verifyAsync, resolveByDiscovery } from './lib/ust-protocol/index.mjs';
+// The SUBSTRATE is the consumer's faculty, supplied to the core rather than built into it. Without it a page
+// reads a publisher's witness log and can confirm nothing from it — which is exactly what this verifier lost
+// the moment it moved onto the reference build, and what this restores.
+import { substrateVerify } from './substrate-browser.mjs';
 
 const $ = (id) => document.getElementById(id);
 const inEl = $('in'), outEl = $('out');
@@ -380,7 +384,7 @@ async function run() {
       r = await verifyAsync(doc, { context: 'data' });
     }
   } else {
-    const out = await resolveByDiscovery(doc, { context: 'data' });
+    const out = await resolveByDiscovery(doc, { context: 'data' }, { substrateVerify });
     r = out.verdict; resolution = out.resolution;
   }
   Promise.resolve(r).then((r) => {

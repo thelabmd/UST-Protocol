@@ -258,7 +258,7 @@ async function rekorCheckpoint(checkpoint, rootHex, treeSize) {
 // failed, from REGISTRY.anchorRefusalReasons (#155, F.5.1e). The three conjuncts belong to DIFFERENT terms of
 // the F.5.1 table, so one shared `false` tells the reader nothing about who can act, and the prose that used to
 // stand in for it named the reader's own browser — a claim the reader cannot disprove from where they stand.
-async function rekorFinal(anchorInner, rootSha) {
+export async function rekorFinal(anchorInner, rootSha) {
   const proof = anchorInner.inclusionProof, bodyB64 = anchorInner.body;
   if (!proof || !bodyB64) return { ok: false, reason: 'proof-absent' };
   // (1) the entry must attest THIS root by the EXACT hashedrekord schema. A substring scan of the body passes an
@@ -316,7 +316,7 @@ async function parseOtsBitcoin(ots) {
 // to a Bitcoin block equals that block's real merkle root (display order = internal bytes reversed).
 // Same refusal discipline as rekorFinal (#155): every NO carries a reason from REGISTRY.anchorRefusalReasons,
 // because "no explorer answered" is the consumer's term and "this proof commits to another root" is not.
-async function bitcoinFinal(anchorInner, rootRef, fetchImpl) {
+export async function bitcoinFinal(anchorInner, rootRef, fetchImpl) {
   try {
     if (!anchorInner.ots) return { ok: false, reason: 'proof-absent' };
     const ots = Uint8Array.from(atob(anchorInner.ots), (c) => c.charCodeAt(0));
