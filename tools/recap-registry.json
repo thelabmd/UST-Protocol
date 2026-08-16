@@ -665,6 +665,10 @@
       "round": 231,
       "issue": 148,
       "content_hash": "sha256:3de7c7abad202b7bf7cf90cf6339401363e0d5c12a2eefff16b33d4c5a56e969"
+    },
+    {
+      "round": 232,
+      "no_recap": "Round 232 closed no GitHub issue: it repairs a break this session's own round 227 introduced into the live verifier, and no card owns it. The unit is the CLOSED ISSUE; the incident is recorded in the version line where a reader meets it."
     }
   ]
 }

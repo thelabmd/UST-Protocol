@@ -1799,6 +1799,20 @@
       "test": "#42 requireIndependentAuthority: no assigned domain ⇒ INDETERMINATE, never an inferred independence"
     },
     {
+      "round": 232,
+      "math": {
+        "excluded": "No theorem moved. Whether a host delivers a file decides no verdict; a document that reaches a verifier earns exactly what it earned before. This is the boundary between the repository and the deployment, which the model does not quantify over and should not."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved. How an implementation is HOSTED is not a protocol question, and a porter serving the same bytes from anywhere is unaffected. The obligation broken here was ours to our own readers, not the protocol's to anyone."
+      },
+      "code": "docs/.nojekyll :: the one byte that stops the host's publisher from dropping every underscore-prefixed module the vendored build imports",
+      "vector": {
+        "excluded": "A vector fixes an input and a declared result a second implementation must reproduce. 'Our host serves the files we committed' is neither an input nor a result — it is a property of one deployment, and the check that holds it belongs where the vendoring happens."
+      },
+      "test": "tools/vendor-browser-core.mjs :: nothing is served that the package no longer ships"
+    },
+    {
       "round": 231,
       "math": {
         "excluded": "No theorem moved. The round measures that two implementations of a CONNECTOR agree on one live anchor; the decision relation reads a receipt and does not care which connector produced it. Agreement between two suppliers of one faculty is an engineering fact about this tree, not a property of the wire."

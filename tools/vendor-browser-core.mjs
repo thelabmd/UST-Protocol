@@ -108,5 +108,23 @@ if (existsSync(OUT_DIR)) {
     'the reverse leg accepts anything, so a retired module could go on being served');
 }
 
+// ─── the HOST must be able to SERVE what we vendored ──────────────────────────────────────────────────────────
+// GitHub Pages runs Jekyll by default, and Jekyll silently DROPS paths beginning with `_`. Four of the six files
+// here are `_crypto.mjs`, `_bytes.mjs`, `_clock.mjs`, `_sigmemo.mjs` — so the moment they were vendored, the live
+// verifier began serving `index.mjs` with a 200 and every one of its imports with a 404. The module graph never
+// resolved, no listener ever attached, and the page's buttons did nothing at all. Measured on the live host
+// 2026-08-16, and invisible from here: every check above compares the repo to the package, and both were right.
+//
+// `.nojekyll` is the one byte that turns the publisher off. The check is conditional on the CAUSE rather than
+// pinned to the file, so a tree that stops vendoring underscore names stops needing it and says so.
+const underscored = [...wanted.keys()].filter((n) => n.startsWith('_'));
+if (underscored.length) {
+  ok(`the host is told not to run Jekyll — ${underscored.length} vendored file(s) begin with '_' and Jekyll drops those`,
+    existsSync(join(ROOT, 'docs/.nojekyll')),
+    `docs/.nojekyll is missing, so ${underscored.join(', ')} will 404 on GitHub Pages while index.mjs returns 200 — the graph fails at the first import and the page silently does nothing`);
+} else {
+  ok('no vendored file begins with \'_\', so Jekyll has nothing to drop here', true);
+}
+
 console.log(fail ? `\n✗ vendored browser core: ${fail} failure(s)` : `\n✓ vendored browser core: ${wanted.size} file(s) served, each byte-identical to what the package publishes`);
 process.exit(fail ? 1 : 0);
