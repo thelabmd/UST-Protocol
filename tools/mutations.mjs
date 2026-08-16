@@ -254,6 +254,26 @@ export const MUTATIONS = [
     from: "    return { complete: 'chain-consistent', head: prevHash, ...(bounded ? { interval: { from: a.from, to: a.to } } : {}),",
     to: "    return { complete: 'complete', head: prevHash, ...(bounded ? { interval: { from: a.from, to: a.to } } : {}),",
   },
+  // #169 / round-233 — the SCOPE of a refusal. This break makes a coordinate the identity verdict never reads withhold
+  // that verdict anyway, which is how it shipped: every step correct, the blast radius wrong. It is the one direction a
+  // verdict-comparing check catches only if it compares against the SIBLING transport answer rather than a named value.
+  {
+    id: 'unknown-cadence-withholds-identity', mustDetect: true, observe: ['conformance'],
+    why: 'the scope of a refusal. Broken, an unreadable cadence log withholds the whole discovery resolution — identity, capacity and no-fork are never derived — although the cadence enters no single-document verdict; a browser then reads every document of a publisher that serves no cadence log as INDETERMINATE.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "        cadenceUnknown = { reason: /ceiling|§13/.test(e.message || '') ? 'resource_limit' : 'unavailable', detail: 'cadence-log present but unreadable: ' + (e && e.message || e) };",
+    to: "        return { verdict: base, resolution: { status: 'INDETERMINATE', reason: /ceiling|§13/.test(e.message || '') ? 'resource_limit' : 'unavailable', error: 'cadence-log present but unreadable: ' + (e && e.message || e) } };",
+  },
+  // #169 / round-233 — the opposite direction, and it must be a SEPARATE mutant: collapsing the unknown into the
+  // publisher's `null` leaves identity intact, so the scope check above stays green and only the substitution check
+  // moves. Two mutants because the two checks discriminate, and one mutant would let either of them rot unnoticed.
+  {
+    id: 'unknown-cadence-collapses-into-declared-none', mustDetect: true, observe: ['conformance'],
+    why: 'the third state. Broken, "the surface could not be read" is reported as "this publisher declares no grid" — a transient transport fact printed as a permanent property of the publisher, and the one substitution the F.4 closure forbids.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "    ...(cadenceUnknown ? { cadence_unknown: cadenceUnknown } : { cadence: cadRes.cadence === null ? null : String(cadRes.cadence) }),",
+    to: "    cadence: cadenceUnknown ? null : (cadRes.cadence === null ? null : String(cadRes.cadence)),",
+  },
   // #161 — a shortfall that says nothing. The verdict is UNCHANGED by this break (still `provisional`), which is
   // exactly why it needs its own mutant: no verdict-comparing check can see it, and the defect it reproduces sat in
   // the tree until someone read the returned object field by field.

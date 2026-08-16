@@ -428,10 +428,16 @@
    "conformance_check": "#95/F.4 cadence ABSENT (404) is benign — the publisher declares no change, the document still resolves"
   },
   {
-   "id": "R91-f4-cadence-unreadable-indeterminate",
+   "id": "R91-f4-cadence-unreadable-not-substituted",
    "rev": "rev91",
    "model_locus": "an empty log is a VALUE, and writing one in place of an unanswered query",
-   "conformance_check": "#95/F.4 cadence UNREADABLE is INDETERMINATE, never substituted by an empty log (a wrong value in ℐ would manufacture completeness)"
+   "conformance_check": "#95/F.4 cadence UNREADABLE is never substituted by an empty log — the coordinate is reported UNKNOWN (a wrong value in ℐ would manufacture completeness)"
+  },
+  {
+   "id": "R233-f4-unknown-cadence-lands-on-the-range-only",
+   "rev": "round-233",
+   "model_locus": "withholding the identity verdict because the cadence is unknown is the category error rev92 named,\ncommitted one layer down",
+   "conformance_check": "#169/F.4 an UNREADABLE cadence lands on the RANGE only — identity still resolves and the coordinate is reported unknown (disjoint carriers, rev92 one layer down)"
   },
   {
    "id": "R92-f4-completeness-orthogonal-to-tier",

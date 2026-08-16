@@ -81,11 +81,30 @@ for (const [label, mode] of [['404', 'absent'], ['410', 'gone']]) {
   ok(`an ABSENT cadence log (${label}) reports cadence: null rather than omitting the field`, 'cadence' in (r.resolution || {}) && r.resolution.cadence === null);
 }
 
-// ── 4. PRESENT-but-UNREADABLE is INDETERMINATE, never an empty log ────────────────────────────────────────────────
+// ── 4. PRESENT-but-UNREADABLE: the coordinate goes UNKNOWN, and the cost is SCOPED to the range ───────────────────
+// round-233 (#169) — this section used to assert the WHOLE resolution went INDETERMINATE, which withheld an identity
+// verdict over a coordinate `resolveAuthority` never reads and `ustGrid` reads only inside verifyStream. Two things must
+// hold, and the old assertion covered one: the value is never substituted, AND the cost never leaves the range. The
+// identity half is asserted by EQUALITY against the ABSENT run rather than against a named expectation, so a change to
+// what identity resolves to cannot leave this green.
+const benign = await discover({ cadence: 'absent' });
 for (const s of [500, 503, 403, 429]) {
   const r = await discover({ cadence: 'error', cadenceStatus: s });
-  ok(`HTTP ${s} on the cadence log → INDETERMINATE, never treated as "no cadence declared"`,
-    r.resolution?.status === 'INDETERMINATE' && /cadence-log present but unreadable/.test(r.resolution?.error || ''), JSON.stringify(r.resolution).slice(0, 130));
+  ok(`HTTP ${s} on the cadence log → the coordinate is UNKNOWN, never "no cadence declared"`,
+    !('cadence' in (r.resolution || {})) && r.resolution?.cadence_unknown?.reason === 'unavailable' &&
+    /cadence-log present but unreadable/.test(r.resolution?.cadence_unknown?.detail || ''), JSON.stringify(r.resolution).slice(0, 130));
+  ok(`HTTP ${s} leaves IDENTITY untouched — an unknown cadence lands on the range only`,
+    r.verdict?.result === benign.verdict?.result && r.resolution?.strength === benign.resolution?.strength &&
+    r.resolution?.status === undefined && r.resolution?.error === undefined,
+    JSON.stringify({ absent: benign.resolution?.strength, unreadable: r.resolution?.strength }).slice(0, 120));
+}
+{
+  // A browser CORS rejection carries NO status at all — the live shape, and a different door into the same branch.
+  const cors = async (url, init) => { if (url.endsWith('/.well-known/ust-cadence')) throw new TypeError('Failed to fetch'); return serve({})(url, init); };
+  const r = await P.resolveByDiscovery(doc, { offline: false, noForkConfirmed: true }, { fetchImpl: cors });
+  ok('a cadence fetch REJECTED with no status (browser CORS) reads UNKNOWN, not undeclared, and identity still resolves',
+    !('cadence' in (r.resolution || {})) && !!r.resolution?.cadence_unknown && r.resolution?.strength === benign.resolution?.strength,
+    JSON.stringify(r.resolution).slice(0, 130));
 }
 
 // ── 5. the raw-byte boundary: the same four checks the key-log gets ────────────────────────────────────────────────
@@ -139,4 +158,4 @@ for (const s of [500, 503, 403, 429]) {
 
 console.log(`\n  cadence discovery   PASS ${pass}   FAIL ${fail.length}`);
 if (fail.length) { fail.forEach((f) => console.log('    ✗ ' + f)); process.exit(1); }
-console.log('  ✓ a declared grid is reachable; an unreachable one is INDETERMINATE, never mistaken for "no cadence declared"');
+console.log('  ✓ a declared grid is reachable; an unreachable one reads UNKNOWN — never mistaken for "no cadence declared", and never wider than the range');

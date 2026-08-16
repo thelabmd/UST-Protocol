@@ -473,9 +473,11 @@ async function run() {
               ? 'max_partitions ' + esc(String(cap.maxPartitions ?? 'floor')) + (cap.maxTranscriptBytes ? ' · max_transcript_bytes ' + esc(String(cap.maxTranscriptBytes)) : '') + ' (grant admitted)'
               : 'floor — no grant declared'}</dd>
             <dt>no-fork</dt><dd>${esc(nf)}${resolution.witness_reason ? ' <span class="hint">(' + esc(String(resolution.witness_reason)) + ')</span>' : ''}</dd>
-            <dt>cadence</dt><dd>${resolution.cadence === null
+            <dt>cadence</dt><dd>${resolution.cadence_unknown
+              ? 'unknown — the surface exists and could not be read (' + esc(String(resolution.cadence_unknown.reason)) + '). Identity above is unaffected: the cadence is an input to a RANGE claim and to no single-document verdict. Distinct from the line below — that one is the publisher declaring no grid and is permanent, this one is a transport and is transient'
+              : resolution.cadence === null
               ? 'none declared — a POSITIVE fact: this publisher can never claim no-omission, and its ceiling is chain-consistent'
-              : esc(String(resolution.cadence ?? 'not resolved'))}</dd>
+              : esc(String(resolution.cadence))}</dd>
             <dt>identity source</dt><dd>${esc(String(resolution.source || ''))}</dd>
           </dl>
           ${corroborated ? '' : `<p class="note" style="margin-top:10px">

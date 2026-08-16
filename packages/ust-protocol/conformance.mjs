@@ -1403,10 +1403,25 @@ console.log('\n═════════════════════�
     check('#95/F.4 cadence ABSENT (404) is benign — the publisher declares no change, the document still resolves',
       !absent.resolution?.error && absent.resolution?.status !== 'INDETERMINATE' && absent.resolution?.cadence === null,
       JSON.stringify(absent.resolution).slice(0, 130));
+    // round-233 (#169) — a browser CORS rejection carries NO status at all, which is the live shape: `fetch` rejects and
+    // `httpStatus` is undefined, so absence is unobservable and the surface classifies as unreadable. Exercised beside
+    // the 503 because the two enter the same branch by different doors.
+    const cors = async (url) => { if (url.endsWith('/.well-known/ust-cadence')) throw new TypeError('Failed to fetch'); return serve(404)(url); };
     const unread = await P.resolveByDiscovery(doc, { noForkConfirmed: true }, { fetchImpl: serve(503) });
-    check('#95/F.4 cadence UNREADABLE is INDETERMINATE, never substituted by an empty log (a wrong value in ℐ would manufacture completeness)',
-      unread.resolution?.status === 'INDETERMINATE' && /cadence-log present but unreadable/.test(unread.resolution?.error || ''),
+    const blocked = await P.resolveByDiscovery(doc, { noForkConfirmed: true }, { fetchImpl: cors });
+    check('#95/F.4 cadence UNREADABLE is never substituted by an empty log — the coordinate is reported UNKNOWN (a wrong value in ℐ would manufacture completeness)',
+      [unread, blocked].every((r) => !('cadence' in (r.resolution || {})) && r.resolution?.cadence_unknown?.reason === 'unavailable' &&
+        /cadence-log present but unreadable/.test(r.resolution?.cadence_unknown?.detail || '')),
       JSON.stringify(unread.resolution).slice(0, 130));
+    // The sharpest available form: same document, same publisher, same key-log and witness — the ONLY difference is the
+    // transport's answer about a coordinate that `resolveAuthority` does not take and `ustGrid` reads only inside
+    // verifyStream. Identity must therefore come back IDENTICAL, and it is asserted by equality against the 404 run
+    // rather than by naming an expected value, so a change to what identity resolves to cannot leave this green.
+    check('#169/F.4 an UNREADABLE cadence lands on the RANGE only — identity still resolves and the coordinate is reported unknown (disjoint carriers, rev92 one layer down)',
+      [unread, blocked].every((r) => r.verdict?.result === absent.verdict?.result && r.resolution?.strength === absent.resolution?.strength &&
+        r.resolution?.publisher === absent.resolution?.publisher && r.resolution?.noFork === absent.resolution?.noFork &&
+        r.resolution?.status === undefined && r.resolution?.error === undefined),
+      JSON.stringify({ a: absent.verdict?.result, u: unread.verdict?.result, s: unread.resolution?.strength }).slice(0, 130));
   }
   const okDoc = P.seal(P.buildState(okId, T, { p: { kind: 'captured', value: { x: '1' } } }), A.priv, A.pubB64);
   const r2 = await P.resolveByDiscovery(okDoc, { context: 'data', offline: true }, { fetchImpl: spyFetch });

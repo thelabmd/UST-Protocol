@@ -2395,10 +2395,21 @@ four HTTPS surfaces.
 **ABSENT and UNREADABLE are different facts, and a verifier MUST NOT confuse them.** For the key log and
 the cadence log alike, `404`/`410` means the surface is genuinely not served — the publisher declares no
 key events, or no cadence change, and the genesis value stands. Any other failure (oversize, transport
-error, a status that is neither) means the surface EXISTS and could not be read: the verifier reports
-INDETERMINATE and MUST NOT substitute an empty log. Substituting one erases a real key retirement, or a
-real cadence change — and in the cadence case that manufactures a completeness verdict out of a network
-failure: a finer new cadence reads as holes, a coarser one reads as `complete` while frames are missing.
+error, a status that is neither — including a cross-origin rejection carrying no status at all) means the
+surface EXISTS and could not be read, and in NEITHER case may a verifier substitute an empty log.
+Substituting one erases a real key retirement, or a real cadence change — and in the cadence case that
+manufactures a completeness verdict out of a network failure: a finer new cadence reads as holes, a
+coarser one reads as `complete` while frames are missing.
+
+**What an unreadable surface costs is scoped to what that surface DECIDES, and the two logs are NOT
+symmetric.** An unreadable KEY log lands on identity — it may hide a retirement, so name authority cannot
+be computed and the verifier reports INDETERMINATE. An unreadable CADENCE log lands on the RANGE and
+nowhere else: the cadence is an input to `verifyStream`'s completeness verdict and to no single-document
+verdict, so the coordinate is reported UNKNOWN — a third state, distinct from a resolved value and equally
+distinct from the `null` that means *this publisher declares no grid* — the range ceiling becomes
+`chain-consistent`, and identity resolves normally. A verifier MUST NOT withhold a verdict on the strength
+of evidence that verdict does not consume: withholding an EARNED verdict is not the conservative
+direction, it is a second error pointing the other way.
 
 **Serving properties — a publisher claiming discovery conformance MUST hold all four. Each is a PROPERTY;
 the mechanism is the publisher's choice:**

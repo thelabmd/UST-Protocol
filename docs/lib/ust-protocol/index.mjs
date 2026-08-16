@@ -4346,21 +4346,25 @@ export async function resolveByDiscovery(doc, opts = {}, transport = {}) {
     (base.result === 'VALID:LIGHT' || (base.result === 'INDETERMINATE' && base.reason === 'unavailable'));
   if (!worth) return { verdict: base, resolution: null };
   if (!isPublicDnsShard(shard)) return { verdict: base, resolution: { skipped: 'domain_shard is not a public DNS name — discovery refused (SSRF guard)' } };
-  let genesis, keylog = [], cadenceLog = [], genesisHash, gRaw, kRaw, cRaw;
+  let genesis, keylog = [], cadenceLog = [], genesisHash, gRaw, kRaw, cRaw, cadenceUnknown;
   try {
     const get = async (p, cap) => { const r = await fetchImpl(`https://${shard}${p}`, { signal: AbortSignal.timeout(10000), redirect: 'error' }); if (!r.ok) { const e = new Error(`HTTP ${r.status} at ${p}`); e.httpStatus = r.status; throw e; } return readBounded(r, cap); };   // round-17 P1-03 — bounded read (byte ceiling before accumulate/scan/parse)
     gRaw = await get('/.well-known/ust-genesis');
     try { cRaw = await get('/.well-known/ust-cadence', CADENCE_MAX_BYTES); }
     catch (e) {
-      // §11.3 — the cadence log is AUTHORITY over the completeness GRID, so it inherits the key-log's distinction
-      // exactly (round-18 P0-03) rather than a looser one. ABSENT (404/410) means the publisher declares no change and
-      // the genesis value stands: the honest common case, since a publisher with one fixed cadence never writes a log,
-      // and an event-driven publisher declares none at all. PRESENT-but-UNREADABLE must NEVER collapse to `[]`, because
-      // that silently ERASES a cadence change and the range is then judged against the OLD grid — a finer new cadence
-      // reads as holes, a coarser one reads as `complete` while frames are in fact missing. Either way a completeness
-      // verdict manufactured by a transport failure, which is the one thing a completeness claim must never be.
+      // §11.3 — ABSENT (404/410) means the publisher declares no change and the genesis value stands: the honest common
+      // case, since a publisher with one fixed cadence never writes a log, and an event-driven publisher declares none at
+      // all. PRESENT-but-UNREADABLE must NEVER collapse to `[]`, because that silently ERASES a cadence change and the
+      // range is then judged against the OLD grid — a finer new cadence reads as holes, a coarser one reads as `complete`
+      // while frames are missing: a completeness verdict manufactured by a transport failure.
+      // round-233 (#169) — but that cost is SCOPED to the range. `c_n(t)` is an input to `verifyStream` and to NO
+      // single-document verdict (`ustGrid` has exactly one call site, inside verifyStream; `resolveAuthority` takes no
+      // cadence), so an unknown cadence says nothing about the identity carrier. Returning early here withheld an EARNED
+      // authority verdict — measured live: the same document read VALID:HIGH in Node and INDETERMINATE in a browser,
+      // where a CORS-blocked 404 arrives with no status to read. NOT symmetric with the key-log branch below, which is
+      // correct precisely because a hidden retirement lands on identity itself.
       if (e.httpStatus !== 404 && e.httpStatus !== 410)
-        return { verdict: base, resolution: { status: 'INDETERMINATE', reason: /ceiling|§13/.test(e.message || '') ? 'resource_limit' : 'unavailable', error: 'cadence-log present but unreadable: ' + (e && e.message || e) } };
+        cadenceUnknown = { reason: /ceiling|§13/.test(e.message || '') ? 'resource_limit' : 'unavailable', detail: 'cadence-log present but unreadable: ' + (e && e.message || e) };
     }
     try { kRaw = await get('/.well-known/ust-keylog', KEYLOG_MAX_BYTES); }
     catch (e) {
@@ -4425,18 +4429,25 @@ export async function resolveByDiscovery(doc, opts = {}, transport = {}) {
   // it fetch the same bytes again is both a wasted round-trip and a second chance to read a DIFFERENT log. A broken log
   // is an error here, not a silent `null` — "no cadence declared" and "your cadence log does not verify" are different
   // facts, and only the first one is benign.
-  const cadRes = resolveCadence(genesis, cadenceLog, doc?.state?.id?.ust_id, { keylog });
-  if (cadRes.error) return { verdict: base, resolution: { error: cadRes.error + ': published cadence-log does not resolve — ' + (cadRes.detail || '') } };
+  // round-233 — with the coordinate UNKNOWN there is nothing to resolve: `resolveCadence(genesis, [], …)` would hand back
+  // the GENESIS value as though it were in force, which is precisely the substitution the F.4 closure forbids. Not
+  // resolving is the whole point; the unknown is reported instead, below.
+  const cadRes = cadenceUnknown ? null : resolveCadence(genesis, cadenceLog, doc?.state?.id?.ust_id, { keylog });
+  if (cadRes?.error) return { verdict: base, resolution: { error: cadRes.error + ': published cadence-log does not resolve — ' + (cadRes.detail || '') } };
   const authOpts = { genesis, keylog, noForkConfirmed: opts.noForkConfirmed, noForkEvidence: opts.noForkEvidence, trustRoots: opts.trustRoots, servedNoFork, keylogFreshAsOf };
   const auth = resolveAuthority(doc, authOpts);
   if (auth.error) return { verdict: base, resolution: { error: auth.error + (auth.detail ? ' — ' + auth.detail : '') } };
   if (callerNoFork) noFork = auth.independently_verified ? 'accepted-external-witness (authoritative)' : 'caller-asserted (consumer-override)';
   const verdict = await verifyAsync(doc, { ...opts, genesis, keylog, noForkConfirmed: opts.noForkConfirmed, servedNoFork, keylogFreshAsOf, capacity: auth.capacity, substrateVerify });   // #69 E1 — await the doc's own anchor substrate (TOP); carry the EARNED freshness token (round-16 P0-02) into the final verdict
   return { verdict, resolution: { publisher: auth.publisher ?? shard, strength: auth.strength, capacity: auth.capacity, noFork, ...(witnessReason ? { witness_reason: witnessReason } : {}),
-    // `cadence: null` is a POSITIVE fact, not a missing field: this publisher declares no grid, so it can never earn
-    // more than `chain-consistent` — no-deletion — and can never claim no-omission. Reported, not omitted, so a
-    // consumer reads the ceiling rather than inferring one.
-    cadence: cadRes.cadence === null ? null : String(cadRes.cadence), ...(cadenceLog.length ? { cadence_log: cadenceLog } : {}),
+    // The cadence coordinate is THREE-valued and each state is reported POSITIVELY, never inferred from a missing field.
+    // `cadence: "<n>"` — resolved. `cadence: null` — this publisher DECLARES no grid, so it can never earn more than
+    // `chain-consistent` (no-deletion) and can never claim no-omission. `cadence_unknown` (round-233) — the surface exists
+    // and could not be read, so the range ceiling is the same `chain-consistent` while the REASON differs: the first is
+    // the publisher's standing declaration, the third is this verifier's transport, transient and not the publisher's
+    // fault. Collapsing the two would report a permanent property where there is a retry.
+    ...(cadenceUnknown ? { cadence_unknown: cadenceUnknown } : { cadence: cadRes.cadence === null ? null : String(cadRes.cadence) }),
+    ...(cadenceLog.length ? { cadence_log: cadenceLog } : {}),
     source: `https://${shard}/.well-known/ (§20.1 discovery + §12.1a witness)` } };
 }
 
