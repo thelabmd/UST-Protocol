@@ -3,6 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Same colour and same mechanism as ustprotocol.com, now that the footer matches it too:
+     without theme-color, iOS Safari tints its bottom bar from <body>'s own background — the
+     light --paper this page never touches at its edges — not from what actually paints the
+     bottom of the document. -->
+<meta name="theme-color" content="#1e1c1a">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Verify a UST — Universal State Transcript</title>
 <meta name="description" content="Paste a UST 1.0 transcript. The canonical reference verifier runs in your browser — nothing is uploaded. Returns VALID:LIGHT/HIGH/TOP, INVALID, or INDETERMINATE.">
 <!-- Link previews. The card is pinned to a COMMIT SHA, never a branch: the image GitHub serves as the repo's social
@@ -200,7 +206,13 @@
   .foot-col a:hover { color: #0c7c78; }
   .foot-base { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 24px clamp(24px, 3vw, 48px); border-top: 1px solid rgba(244, 242, 236, 0.14); padding-top: clamp(12px, 1.6vh, 16px); }
   .legal { display: flex; flex-direction: column; gap: 2px; font: 400 10.5px/1.55 'JetBrains Mono', monospace; color: rgba(244, 242, 236, 0.42); }
-  .seal { display: block; background: none; border: 0; color: rgba(244, 242, 236, 0.5); cursor: default; padding: 0; }
+  /* This page — unlike ustprotocol.com, which has no generic button reset — already styles
+     every <button> for its own Verify/Clear controls: 0.14em letter-spacing among them. That
+     is inherited, `font` shorthand does not reset it, and the seal is ASCII art column-
+     aligned by the monospace advance width alone — 0.14em per glyph skews every column
+     rightward, more with each character. Bytes were never wrong; the port only reset what
+     .seal itself needed and left the page's own button reset free to leak through it. */
+  .seal { display: block; background: none; border: 0; color: rgba(244, 242, 236, 0.5); cursor: default; padding: 0; letter-spacing: normal; text-transform: none; }
   .seal pre { font: 400 clamp(4.2px, 0.44vw, 5.2px)/1.2 'JetBrains Mono', monospace; margin: 0; color: inherit; user-select: none; transition: transform 150ms steps(2, end); }
   .seal:hover pre { transform: translateY(2px); }
   .seal.is-pressed pre { animation: sealErase 320ms steps(11, end) forwards; }
