@@ -21,7 +21,13 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '20'
-      - run: npm install
+      # `npm ci`, not `npm install` (UST-xu00, measured 2026-08-16). `npm install` REPAIRS a lock/package.json
+      # mismatch in place and carries on, so a desynced lock is invisible to CI BY CONSTRUCTION — it surfaced
+      # only in the release run, on `npm ci`, at the most irreversible moment available. Worse than the late
+      # signal: with `npm install` this job tests whatever npm resolves today rather than the tree the lock
+      # pins, which quietly breaks the equality this repository spends most on — what a stranger installs is
+      # what CI tests.
+      - run: npm ci
       - name: protocol conformance + language-neutral arc contract (spec == package == vectors)
         run: npm test
       - name: reference checker TCB — byte-vector corpus + coverage manifest (regenerate == committed) + JS asserts + robustness fuzz
