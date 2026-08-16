@@ -1002,13 +1002,26 @@ function verifyCoreInner(doc, opts = {}) {
       // answers, and the second one arrived with a green conformance run, because the new checks were aimed at
       // `verifyAnchor` and never came through `verify`. Inability is not guilt (§14, #144), and the enumeration of
       // loose readers this rule promised is only kept if each one is actually answered.
-      if (!('inclusion' in a))
-        return { result: 'INDETERMINATE', reason: a.reason ?? 'unavailable', detail: a.detail || 'embedded proof could not be evaluated', verifier: VERSION, registry_digest: registryDigest() };
-      if (!a.inclusion) return bad('E-ANCHOR', a.detail || 'embedded proof does not verify');
-      // §14.6 N9 — a document cannot be generated AFTER the anchor that contains it (pinned RFC3339-Z compare as instants).
-      if (a.time === 'anchored' && a.anchorTime && st.time.generated_at > a.anchorTime)
-        return bad('E-ANCHOR', 'generated_at after the anchor time (N9: the document postdates its own anchor)');
-      timeField = { strength: a.time, status: a.status, inclusion: true, ...(a.anchorTime ? { anchorTime: a.anchorTime } : {}), ...(a.assurance ? { assurance: a.assurance } : {}) };
+      if (!('inclusion' in a)) {
+        // round-235 (#172, F.9.5-c.5 Realization) — round 201 answered "is the document GUILTY of the verifier's
+        // inability" (no: INDETERMINATE, never INVALID) and the unqualified answer became the whole verdict: this
+        // returned before step 3, so identity/capacity/no-fork/witness were not withheld but NEVER DERIVED. `⊘` is a
+        // statement about the TIME carrier and the identity carrier is (genesis, key log, witness) — disjoint, neither
+        // a factor of the other (rev92, swept for the cadence at round 233 and not here). Measured live: the same
+        // document resolved VALID:HIGH with NO proof and INDETERMINATE with its own correct, substrate-final proof
+        // attached — attaching true evidence LOWERED the verdict, which inverts the incentive to anchor at all.
+        // Carried, not returned: `status:'unavailable'` + `unknown` is the THIRD state, unmistakable for the
+        // `status:'none'` of a document that carries no proof — only this one is repaired by installing a connector
+        // (`unsupported_construction` is a `faculties` term). A consumer that ASKED for the coordinate still gets a
+        // refusal: `reqAnch` below sees tier !== TOP and returns INDETERMINATE naming this status.
+        timeField = { strength: 'unproven', status: a.status ?? 'unavailable', unknown: { reason: a.reason ?? 'unavailable', ...(a.detail ? { detail: a.detail } : {}) } };
+      } else if (!a.inclusion) { return bad('E-ANCHOR', a.detail || 'embedded proof does not verify'); }   // READABLE and not reaching its root is a verdict; inability is not
+      else {
+        // §14.6 N9 — a document cannot be generated AFTER the anchor that contains it (pinned RFC3339-Z compare as instants).
+        if (a.time === 'anchored' && a.anchorTime && st.time.generated_at > a.anchorTime)
+          return bad('E-ANCHOR', 'generated_at after the anchor time (N9: the document postdates its own anchor)');
+        timeField = { strength: a.time, status: a.status, inclusion: true, ...(a.anchorTime ? { anchorTime: a.anchorTime } : {}), ...(a.assurance ? { assurance: a.assurance } : {}) };
+      }
     }
     const provenAnchorTime = timeField.strength === 'anchored' ? timeField.anchorTime : undefined;   // the proven upper bound U (else undefined)
     // step 3 — name authority (§14.3): HIGH resolves genesis+key-log; else self-asserted (a bare signed KEY, no domain

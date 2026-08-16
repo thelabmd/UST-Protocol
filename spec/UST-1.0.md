@@ -774,6 +774,22 @@ reported uncertainty, which is precisely the determinism this section rests agre
 UNSIGNED and therefore ROUTES only: it can lower or hold the anchor coordinate and can never raise it, so a
 substituted name buys an adversary nothing a stripped proof would not already buy.
 
+**The withheld answer is the ANCHOR COORDINATE's, not the document's (round 235).** `INDETERMINATE` above names
+what the verifier may conclude about MEMBERSHIP — it is not a verdict on the transcript. A document carrying a
+proof whose construction the verifier cannot compute MUST still resolve everything the anchor does not decide:
+identity, capacity, no-fork and the witness result are derived and reported exactly as they would be for the same
+document with no proof attached, the time coordinate stays `unproven`, and the anchor coordinate is reported as
+UNKNOWN — a third state, distinct from a verified proof and equally distinct from the absence of one, because only
+this state is repaired by installing a connector (`unsupported_construction` is a `faculties` term: the consumer
+owns it). The same rule as §20.1's cadence log, on the other axis: a verifier MUST NOT withhold a verdict on the
+strength of evidence that verdict does not consume. The consequence is not merely a reporting one — while the
+whole verdict fell, a publisher that began attaching correct proofs made every consumer lacking that connector
+strictly worse off than before, which inverts the incentive this section exists to create.
+**Two exceptions, and they are not symmetric with the rule.** Where the consumer has ASKED for the time
+coordinate — `requireAnchored` / an authoritative-with-anchor demand — an unreadable construction refuses exactly
+what was requested and the refusal stands. And a proof that IS readable and does not reach its root remains
+`E-ANCHOR`: inability is withheld, a failed membership is a verdict.
+
 **A construction is a leaf rule, a node rule AND a body grammar.** Registering only the hash rules is not enough:
 two implementations can agree on both and still fail to exchange a proof, because neither knows what the other
 will send. The body therefore travels in `inclusion`, beside `root` — never inside `anchor`, which is the

@@ -274,6 +274,26 @@ export const MUTATIONS = [
     from: "    ...(cadenceUnknown ? { cadence_unknown: cadenceUnknown } : { cadence: cadRes.cadence === null ? null : String(cadRes.cadence) }),",
     to: "    cadence: cadenceUnknown ? null : (cadRes.cadence === null ? null : String(cadRes.cadence)),",
   },
+  // #172 / round-235 — the SAME scope defect on the TIME axis, and it needs its own pair for the same reason the
+  // cadence one did. Broken, an inclusion construction this build cannot compute withholds the DOCUMENT's verdict,
+  // although membership-in-a-committed-root enters no identity coordinate. Sharper than #169's: the input that
+  // triggers it is a CORRECT proof, so attaching true evidence made a document verify worse than attaching none.
+  {
+    id: 'unreadable-construction-withholds-identity', mustDetect: true, observe: ['conformance'],
+    why: 'the scope of a refusal, on the anchor axis. Broken, a proof whose construction is unclaimed collapses the whole verdict to INDETERMINATE before name authority is resolved — identity, capacity, no-fork and the witness result are never derived, and a publisher that starts attaching proofs makes every consumer without that connector strictly worse off.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "        timeField = { strength: 'unproven', status: a.status ?? 'unavailable', unknown: { reason: a.reason ?? 'unavailable', ...(a.detail ? { detail: a.detail } : {}) } };",
+    to: "        return { result: 'INDETERMINATE', reason: a.reason ?? 'unavailable', detail: a.detail || 'embedded proof could not be evaluated', verifier: VERSION, registry_digest: registryDigest() };",
+  },
+  // #172 / round-235 — the opposite direction, and SEPARATE for the same reason: collapsing the unreadable state into
+  // the absent one leaves identity intact, so the scope check stays green and only the third-state check moves.
+  {
+    id: 'unreadable-construction-collapses-into-no-proof', mustDetect: true, observe: ['conformance'],
+    why: 'the third state, on the anchor axis. Broken, "this build cannot read the proof offered" is reported as "no proof was offered" — the two are repaired by different parties, and only the first is fixed by installing a connector.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "        timeField = { strength: 'unproven', status: a.status ?? 'unavailable', unknown: { reason: a.reason ?? 'unavailable', ...(a.detail ? { detail: a.detail } : {}) } };",
+    to: "        timeField = { strength: 'unproven', status: 'none' };",
+  },
   // #161 — a shortfall that says nothing. The verdict is UNCHANGED by this break (still `provisional`), which is
   // exactly why it needs its own mutant: no verdict-comparing check can see it, and the defect it reproduces sat in
   // the tree until someone read the returned object field by field.

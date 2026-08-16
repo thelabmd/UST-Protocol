@@ -1582,9 +1582,9 @@
       "round": 201,
       "math": "evaluating a construction one was not asked for is not evidence",
       "spec": "A proof DECLARES the construction it was built under, and the declaration BINDS THE READER",
-      "code": "packages/ust-protocol/index.mjs :: verifyAnchorCore reads the declared construction and WITHHOLDS by omitting `inclusion`; verify() maps the omission to INDETERMINATE rather than E-ANCHOR; anchoredByProofs tracks an unread proof so no-fork is not claimed from an unreadable one",
+      "code": "packages/ust-protocol/index.mjs :: verifyAnchorCore reads the declared construction and WITHHOLDS by omitting `inclusion`; verify() maps the omission to INDETERMINATE rather than E-ANCHOR (round-235: to the ANCHOR COORDINATE's unknown, not the document's verdict); anchoredByProofs tracks an unread proof so no-fork is not claimed from an unreadable one",
       "vector": "ai-09-declared-foreign-construction-withheld",
-      "test": "F.9.5-c.5 THROUGH verify(): a foreign construction is INDETERMINATE, never INVALID — inability is not guilt"
+      "test": "packages/ust-protocol/conformance.mjs :: 'F.9.5-c.5 THROUGH verify(): a foreign construction withholds the ANCHOR coordinate and nothing else (round-235)' — RENAMED at round 235, and the rename IS a finding: the check read result === 'INDETERMINATE' over the WHOLE verdict, so its name described a symptom and its assertion began defending it. Round 201's claim survives intact (inability is not guilt: never INVALID, and E-ANCHOR still stands for a readable proof that misses its root); only the SCOPE it pins changed."
     },
     {
       "round": 200,
@@ -1983,6 +1983,15 @@
       "test": {
         "excluded": "The round adds no runnable check, and that is a REAL gap rather than a clean exclusion. A live measurement cannot be a gate: it depends on a third party's server, its network and its current state, so wiring it into CI would buy a flake and sell it as coverage. What holds the behaviour is round-233's pair — conformance.mjs '#169/F.4 an UNREADABLE cadence lands on the RANGE only' (identity asserted by EQUALITY against the 404 run) and cadence-discovery-gate section 4 — both re-run green here, and both proven able to fail in two directions. What no check holds is the round's own finding: that a hermetic proof cannot raise the question it was not asked. That is a procedural rule (§6 of the report), and it has no executor."
       }
+    },
+    {
+      "round": 235,
+      "math": "is a statement about the TIME carrier, and the document's verdict is not that carrier",
+      "spec": "The withheld answer is the ANCHOR COORDINATE's, not the document's",
+      "code": "packages/ust-protocol/index.mjs :: verifyCoreInner's anchor step — the early return on a withheld inclusion answer is replaced by a CARRIED timeField; `status:'unavailable'` plus an `unknown` member naming the reason and the connector that claims the construction, which is unmistakable for the `status:'none'` of a document carrying no proof. The two exceptions are preserved rather than swept: `requireAnchored` still refuses (it sees tier !== TOP and names the unavailable substrate), and a READABLE proof that misses its root is still E-ANCHOR. docs/lib/ust-protocol re-vendored so the page serves the same core.",
+      "vector": "aca-01-foreign-construction-withholds-only-the-anchor",
+      "test": "packages/ust-protocol/conformance.mjs :: 'F.9.5-c.5 THROUGH verify(): a foreign construction withholds the ANCHOR coordinate and nothing else (round-235)' asserts the scope by EQUALITY against the same document with NO proof, so a change to what these documents resolve to cannot leave it green; 'F.9.5-c.5 THROUGH verify(): an UNREADABLE proof is not the same state as NO proof' holds the third-state half. Four checks that pinned the symptom (result === 'INDETERMINATE' over the whole verdict) were re-aimed at the coordinate. Proven able to fail AND to discriminate: restoring the early return reddens 2 registered checks, collapsing unknown into the absent state reddens 1.",
+      "_vector_note": "new kind `anchor-construction-absent`. Unlike #169's transport-shaped subject this one IS bytes. Both legs are pinned because the defect lived in their RELATION: the verdict equals the no-proof run, AND the coordinate does not. The path is deliberately one the reference walk would fail, so a runner that walks a tree it was not asked to walk is caught rather than passing."
     }
   ],
   "first_accounted_round": 76,

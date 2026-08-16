@@ -678,6 +678,10 @@
       "round": 234,
       "issue": 169,
       "content_hash": "sha256:03f0d192bcc4422a44c66b514fd8bc503b72ef6744de87c25fb24d9fe56bb480"
+    },
+    {
+      "round": 235,
+      "no_recap": "Round 235 closes no GitHub issue. It lands five layers of #172 — model, spec, code, vector and test — and the card's own list keeps one checkbox open: the shipped web verifier still passes no inclusionVerify, while ust-cli and ust-mcp both wire one. A recap belongs to the half that CLOSED, and this round's half is open, so the report is owed when the page half lands rather than now. The incident itself is recorded in the version line, which is where a reader meets it."
     }
   ]
 }

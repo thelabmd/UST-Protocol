@@ -374,6 +374,23 @@ for (const v of V.vectors) {
     // executed by `browser-build.test.mjs`, which loads the build whose crypto refuses. Both halves are normative
     // for a port: an implementation lacking Ed25519 must answer INDETERMINATE(unsupported_alg), never INVALID.
     case 'faculty-absent': check(v.id + ' (with faculty)', P.verify(v.doc).result === v.expect_with_faculty); break;
+    // round-235 (#172) — the ANCHOR half of the same shape. Both legs are asserted here because the defect lived in
+    // their RELATION: the verdict must equal the no-proof run (identity untouched) while the coordinate must NOT
+    // equal it (the third state is reported). Asserting either alone passes for a reason its name does not state.
+    case 'anchor-construction-absent': {
+      const bare = P.verify(v.doc);                                    // the reference run: SAME document, no proof
+      const withP = P.verify({ ...v.doc, proof: v.proof });
+      check(v.id + ' (verdict equals the no-proof run — the anchor decides only the anchor)',
+        withP.result === bare.result && withP.error === undefined);
+      check(v.id + ' (the coordinate is reported UNKNOWN, and is not the absent state)',
+        withP.time?.strength === v.expect_without_faculty.time.strength
+        && withP.time?.status === v.expect_without_faculty.time.status
+        && withP.time?.unknown?.reason === v.expect_without_faculty.time.unknown.reason
+        && bare.time?.status === v.expect_no_proof.time.status && bare.time?.unknown === undefined);
+      check(v.id + ' (a foreign construction is never WALKED — no inclusion answer is minted either way)',
+        withP.time?.inclusion === undefined);
+      break;
+    }
     // §7/N6 point admission — the half of the acceptance rule that is OURS. Runs on bytes, so the reference
     // edge-case corpus is finally executable here: a string-shaped entry point could not express it, which is
     // why these twelve had never been run against this implementation.
@@ -542,9 +559,22 @@ check('#5 anchor-missing-path→no-throw', (() => { try { P.verifyAnchor('sha256
     const droot = P.H('ust:node', P.H('ust:leaf', dch) + dsib);
     const withProof = (extra) => P.verify({ ...d, proof: { root: droot, path: [{ dir: 'R', hash: dsib }], ...extra, anchor: { substrate: 'bitcoin-ots' } } }, { context: 'data' });
 
-    check('F.9.5-c.5 THROUGH verify(): a foreign construction is INDETERMINATE, never INVALID — inability is not guilt', (() => {
+    // round-235 (#172) — this check used to assert `result === 'INDETERMINATE'` over the WHOLE verdict, which is the
+    // symptom the round removed: the withheld answer is the ANCHOR coordinate's, not the document's. Both halves are
+    // asserted, and the identity half by EQUALITY against the same document with NO proof, so a change to what these
+    // documents resolve to cannot leave it green (the failure mode round 233 met on the cadence surface).
+    const bare = P.verify(d, { context: 'data' });   // the SAME document, no proof attached — the reference run
+    check('F.9.5-c.5 THROUGH verify(): a foreign construction withholds the ANCHOR coordinate and nothing else (round-235)', (() => {
       const r = withProof({ inclusion: { construction: 'acme-tree-v9' } });
-      return r.result === 'INDETERMINATE' && r.reason === 'unsupported_construction' && r.error === undefined;
+      // SCOPE only. Whether the coordinate is REPORTED is the next check's claim, and asserting it here too would make
+      // one mutant redden both — the pair would duplicate instead of discriminating (the round-233 lesson).
+      return r.result === bare.result && r.error === undefined       // the verdict is untouched — by EQUALITY, not a named value
+        && r.time?.strength === 'unproven';                          // and no time was minted out of an unreadable proof
+    })());
+    check('F.9.5-c.5 THROUGH verify(): an UNREADABLE proof is not the same state as NO proof — the third state is reported, never collapsed', (() => {
+      const r = withProof({ inclusion: { construction: 'acme-tree-v9' } });
+      return bare.time?.status === 'none' && bare.time?.unknown === undefined               // absent: the publisher offers nothing
+        && r.time?.status === 'unavailable' && r.time?.unknown !== undefined;               // unreadable: evidence exists, this build lacks the faculty
     })());
     check('F.9.5-c.4 THROUGH verify(): declaring nothing, and declaring the reference, are the same verdict as before', (() =>
       withProof({}).result === 'VALID:LIGHT' && withProof({ inclusion: { construction: 'ust-merkle-tagged' } }).result === 'VALID:LIGHT')());
@@ -556,16 +586,16 @@ check('#5 anchor-missing-path→no-throw', (() => { try { P.verifyAnchor('sha256
     // The verdict is asserted UNCHANGED in both, which is the half that must never move.
     check('#153 a registered construction routes the reader to the connector that claims it', (() => {
       const r = withProof({ inclusion: { construction: 'rfc6962-raw' } });
-      return r.result === 'INDETERMINATE' && r.reason === 'unsupported_construction'
-        && String(r.detail).includes(P.REGISTRY.inclusionConstructions['rfc6962-raw']);
+      return r.result === bare.result && r.time?.unknown?.reason === 'unsupported_construction'
+        && String(r.time?.unknown?.detail).includes(P.REGISTRY.inclusionConstructions['rfc6962-raw']);
     })());
     check('#153 an UNREGISTERED construction routes to the registry, never a dead end', (() => {
       const r = withProof({ inclusion: { construction: 'acme-tree-v9' } });
-      const d = String(r.detail);
+      const d = String(r.time?.unknown?.detail);
       // asserted on the PROPERTY, not the prose: every registered name is offered, and no claimant is invented
       // for a construction the map does not carry. Pinning the sentence would make an edit to the wording read
       // as a regression, which is how a check starts defending text instead of behaviour (#155).
-      return r.result === 'INDETERMINATE' && r.reason === 'unsupported_construction'
+      return r.result === bare.result && r.time?.unknown?.reason === 'unsupported_construction'
         && Object.keys(P.REGISTRY.inclusionConstructions).every((k) => d.includes(k))
         && !/claimed by/.test(d);
     })());
@@ -573,7 +603,7 @@ check('#5 anchor-missing-path→no-throw', (() => { try { P.verifyAnchor('sha256
     // to the registry without the message learning it is red rather than silently unrouted.
     check('#153 every registered construction is reachable from the refusal it explains', (() =>
       Object.keys(P.REGISTRY.inclusionConstructions).filter((c) => c !== P.REGISTRY.referenceConstruction)
-        .every((c) => String(withProof({ inclusion: { construction: c } }).detail).includes(P.REGISTRY.inclusionConstructions[c])))());
+        .every((c) => String(withProof({ inclusion: { construction: c } }).time?.unknown?.detail).includes(P.REGISTRY.inclusionConstructions[c])))());
   }
 }
 
