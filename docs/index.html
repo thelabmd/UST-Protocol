@@ -63,7 +63,9 @@
 <link rel="alternate" type="text/plain" href="./llms.txt" title="llms.txt — machine instructions for AI agents">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- JetBrains Mono is the header/footer's own font, ported byte-for-byte from ustprotocol.com — the rest of
+     this page keeps IBM Plex Serif/Mono, its own established identity, untouched. -->
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root { --paper:#f4f2ec; --card:#fcfbf7; --ink:#1e1c1a; --line:#d6d2c9; --accent:#0c7c78; --accent2:#2eb2ad;
           --muted:#8f8a7e; --muted2:#6f6b63; --bad:#5c2b2e; --wait:#8a6d1f;
@@ -161,11 +163,72 @@
   code { background:var(--card); border:1px solid var(--line); border-radius:2px; padding:1px 6px; font:400 12px var(--mono); }
   .note code, .sub code { background:var(--paper); }
   a { color:var(--accent); text-decoration-color:var(--line); }
-  footer { font:400 12.5px/1.7 var(--mono); color:var(--muted); margin-top:56px; border-top:1px solid var(--line); padding-top:18px; }
-  footer a { color:var(--muted2); }
+
+  /* ── Header & footer, ported byte-for-byte from ustprotocol.com ──────────────────────
+     Same class names, same literal colours (#1e1c1a / #f4f2ec / #0c7c78 — already this
+     page's own --ink / --paper / --accent, so nothing new enters the palette), same font.
+     Two structural departures, both forced by what this page is, not by taste:
+       · .bar drops the topic's middle grid column unconditionally, not just under a
+         media query — this page never HAS a middle item (no "meeting" scene here), so the
+         gap the website only closes on phones (see its own comment on .bar) would sit open
+         here at every width if copied literally.
+       · .foot's mobile rules were scoped to `.stage > footer`; `.stage` is the website's
+         scroll-snap wrapper and has no equivalent here, so they are rescoped to `footer`. */
+  .bar {
+    position: sticky; top: 0; z-index: 30;
+    height: clamp(48px, 6.2vw, 56px);
+    background: #1e1c1a; color: #f4f2ec;
+    display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center;
+    gap: clamp(10px, 2vw, 24px); padding: 0 clamp(12px, 1.6vw, 20px);
+  }
+  .brand { display: flex; align-items: center; gap: 8px; min-width: 0; text-decoration: none; transition: opacity 90ms linear; }
+  .brand:hover { opacity: 0.72; }
+  .brand-mark { font: 500 15px/1 'JetBrains Mono', monospace; color: #f4f2ec; }
+  .brand-name { font: 400 clamp(11px, 1.05vw, 13px)/1 'JetBrains Mono', monospace; letter-spacing: 0.02em; color: #f4f2ec; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-links { display: flex; align-items: center; gap: clamp(10px, 1.2vw, 16px); flex: none; justify-self: end; }
+  .bar-links a { font: 500 clamp(10px, 0.95vw, 11.5px)/1 'JetBrains Mono', monospace; letter-spacing: 0.1em; text-transform: uppercase; color: #f4f2ec; opacity: 0.66; text-decoration: none; }
+  .bar-links a:hover { color: #0c7c78; opacity: 1; }
+
+  .foot { margin-top: 64px; border-top: 8px solid #1e1c1a; background: #1e1c1a; color: #f4f2ec;
+    padding: clamp(20px, 2.6vh, 28px) clamp(20px, 5vw, 64px) clamp(12px, 1.6vh, 16px);
+    display: flex; flex-direction: column; gap: clamp(16px, 2vh, 22px); }
+  .foot-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 20px clamp(24px, 3vw, 48px); }
+  .foot-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .foot-col h2 { margin: 0; font: 500 10px/1 'JetBrains Mono', monospace; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(244, 242, 236, 0.38); }
+  .foot-col ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; font: 400 11.5px/1.4 'JetBrains Mono', monospace; }
+  .foot-col a { color: rgba(244, 242, 236, 0.74); padding: 2px 0; text-decoration: none; }
+  .foot-col a:hover { color: #0c7c78; }
+  .foot-base { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 24px clamp(24px, 3vw, 48px); border-top: 1px solid rgba(244, 242, 236, 0.14); padding-top: clamp(12px, 1.6vh, 16px); }
+  .legal { display: flex; flex-direction: column; gap: 2px; font: 400 10.5px/1.55 'JetBrains Mono', monospace; color: rgba(244, 242, 236, 0.42); }
+  .seal { display: block; background: none; border: 0; color: rgba(244, 242, 236, 0.5); cursor: default; padding: 0; }
+  .seal pre { font: 400 clamp(4.2px, 0.44vw, 5.2px)/1.2 'JetBrains Mono', monospace; margin: 0; color: inherit; user-select: none; transition: transform 150ms steps(2, end); }
+  .seal:hover pre { transform: translateY(2px); }
+  .seal.is-pressed pre { animation: sealErase 320ms steps(11, end) forwards; }
+  @keyframes sealErase { from { clip-path: inset(0 0 0 0); } to { clip-path: inset(100% 0 0 0); } }
+  @media (prefers-reduced-motion: reduce) { .seal pre { transition: none !important; } .seal:hover pre { transform: none !important; } .seal.is-pressed pre { animation: none !important; } }
+
+  @media (max-width: 767px) {
+    .foot-cols > .foot-col:last-child { grid-column: 1 / -1; }
+    .foot-cols > .foot-col:last-child > ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, auto); grid-auto-flow: column; gap: 4px 18px; }
+    .foot-cols > .foot-col:last-child > ul a { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .foot { padding-top: 16px; padding-bottom: 10px; gap: 14px; }
+    .seal pre { font-size: 3.6px; }
+  }
 </style>
 </head>
 <body>
+<!-- Ported from ustprotocol.com — same markup, same classes. No Verify UST button: that
+     button exists on the landing page to send a reader here, and this page is here. -->
+<header class="bar">
+  <a class="brand" href="https://ustprotocol.com/" aria-label="UST Protocol — home">
+    <span class="brand-mark" aria-hidden="true">Ω</span>
+    <span class="brand-name">UST Protocol</span>
+  </a>
+  <nav class="bar-links" aria-label="Protocol">
+    <a href="https://github.com/thelabmd/UST-Protocol/blob/main/spec/UST-1.0.md" target="_blank" rel="noopener">Spec</a>
+    <a href="https://github.com/thelabmd/UST-Protocol" target="_blank" rel="noopener">GitHub</a>
+  </nav>
+</header>
 <main>
 <div class="cols">
 <div class="col-in">
@@ -192,7 +255,19 @@
 <div class="col-out">
   <div id="out"></div>
 
+  <!-- Was the footer's own text before the footer became ported chrome (see below): the
+       trust model is page content, not site-wide chrome, so it moved up rather than being
+       dropped when the footer was replaced one-to-one. -->
   <section class="card" style="margin-top:34px">
+    <h2>This page</h2>
+    <p class="note" style="margin-top:0">Canonical reference: <code>npm ust-protocol</code> · source
+    <a href="https://github.com/thelabmd/UST-Protocol">github.com/thelabmd/UST-Protocol</a>. This page runs the
+    <b>reference implementation itself</b> — <a href="./lib/ust-protocol/index.mjs"><code>ust-protocol</code></a>,
+    vendored here and held byte-identical to the npm package by a CI gate, so what you run is what you install.
+    Resolve the verifier <b>by name</b>; never trust a verifier a sender links you to.</p>
+  </section>
+
+  <section class="card">
     <h2>For AI agents</h2>
     <p class="note" style="margin-top:0">If you are an AI asked to verify a UST and you <b>cannot run a
     verifier</b>, the correct answer is <b>INDETERMINATE — do not guess</b>. Do <b>not</b> compute a plain
@@ -208,13 +283,64 @@
 </div>
 </div>
 
-  <footer>
-    Canonical reference: <a href="https://www.npmjs.com/package/ust-protocol"><code>npm ust-protocol</code></a> ·
-    source <a href="https://github.com/thelabmd/UST-Protocol">github.com/thelabmd/UST-Protocol</a>.
-    This page runs the <b>reference implementation itself</b> — <a href="./lib/ust-protocol/index.mjs"><code>ust-protocol</code></a>, vendored here and held byte-identical to the npm package by a CI gate, so what you run is what you install.
-    Resolve the verifier <b>by name</b>; never trust a verifier a sender links you to.
-  </footer>
 </main>
+
+<footer class="foot">
+  <div class="foot-cols">
+    <section class="foot-col">
+      <h2>Protocol</h2>
+      <ul>
+        <li><a href="https://github.com/thelabmd/UST-Protocol/blob/main/spec/UST-1.0.md" target="_blank" rel="noopener">Spec (normative)</a></li>
+        <li><a href="https://github.com/thelabmd/UST-Protocol/wiki" target="_blank" rel="noopener">Wiki — the map</a></li>
+        <li><a href="https://github.com/thelabmd/UST-Protocol/tree/main/vectors" target="_blank" rel="noopener">Conformance vectors</a></li>
+        <li><a href="https://github.com/thelabmd/UST-Protocol/blob/main/CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG — reasoning kept, mistakes included</a></li>
+      </ul>
+    </section>
+
+    <section class="foot-col">
+      <h2>Use it</h2>
+      <ul>
+        <li><a href="https://www.npmjs.com/package/ust-protocol" target="_blank" rel="noopener">npm: ust-protocol</a></li>
+        <li><a href="https://github.com/thelabmd/UST-Protocol/tree/main/packages/ust-cli" target="_blank" rel="noopener">CLI</a></li>
+        <li><a href="https://github.com/thelabmd/UST-Protocol/tree/main/packages/ust-mcp" target="_blank" rel="noopener">MCP servers</a></li>
+        <li><a href="https://github.com/thelabmd/UST-Protocol/tree/main/packages/diarium" target="_blank" rel="noopener">diarium — an agent’s sealed diary</a></li>
+      </ul>
+    </section>
+
+    <section class="foot-col">
+      <h2>Ecosystem</h2>
+      <ul>
+        <li><a href="https://noosphere.md" target="_blank" rel="noopener">noosphere.md — operator</a></li>
+        <li><a href="https://thelab.md" target="_blank" rel="noopener">thelab.md — integrations</a></li>
+        <li><a href="https://github.com/thelabmd/UST-Protocol" target="_blank" rel="noopener">GitHub</a></li>
+        <li><a href="https://opencollective.com/thelab" target="_blank" rel="noopener">Open Collective</a></li>
+      </ul>
+    </section>
+  </div>
+
+  <div class="foot-base">
+    <p class="legal">
+      <span>Universal State Transcript → UST Protocol → ust:</span>
+      <span>Apache-2.0 · spec CC BY 4.0</span>
+      <span>ust: is an IANA-registered URI scheme</span>
+    </p>
+
+    <button class="seal" type="button" aria-label="The seal. Pixel-art seal sitting with a stamp in its paw.">
+      <pre aria-hidden="true">
+   ▄▀▀▀▀▀▀▀▀▀▀▀▀█▄
+  █ ▄▄      ▄▄    █
+▄▄▀ ▀▀ ▄▄▄  ▀▀    █
+▄█▀▀ ▀█▄▀▄▄▀ ▀█▀  █    █▀▄   ▄▄
+ ▀█               █▄   █▄ ██▀ █
+   █               ▀▄▄  █   ▄█
+   █                  ▀▀   █▀
+   █▄      ▄              █▀
+   ███▄    █    █       ▄█▀
+ ▄▀▀  ██▄▄▄█     ▀▄▄▄▄█▀▀
+ ▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀</pre>
+    </button>
+  </div>
+</footer>
 
 <script type="module">
 // THE REFERENCE IMPLEMENTATION, vendored: `docs/lib/ust-protocol/` is the package's own browser build, and
@@ -507,6 +633,18 @@ $('go').addEventListener('click', run);
 $('clear').addEventListener('click', () => { inEl.value = ''; outEl.innerHTML = ''; inEl.focus(); });
 inEl.addEventListener('input', () => { if (inEl.value.trim()) run(); else outEl.innerHTML = ''; });
 for (const mid of ['gin', 'kin']) $(mid).addEventListener('input', () => { if (inEl.value.trim()) run(); });
+
+// The seal takes a stamp when pressed. Purely decorative, hence a class rather than state
+// anything else reads — ported verbatim from ustprotocol.com's app.js.
+const seal = document.querySelector('.seal');
+if (seal) {
+  let sealTimer;
+  seal.addEventListener('click', () => {
+    seal.classList.add('is-pressed');
+    clearTimeout(sealTimer);
+    sealTimer = setTimeout(() => seal.classList.remove('is-pressed'), 1340);
+  });
+}
 </script>
 </body>
 </html>
