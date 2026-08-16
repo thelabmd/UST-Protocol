@@ -663,7 +663,8 @@
     },
     {
       "round": 231,
-      "no_recap": "Round 231 closes no GitHub issue BY ITSELF: it measures the last thing #148 was owed and records it in the gate. The card is READY to close, but closing it is the recap ritual's job — one closed issue, one sealed entry, and the diary is written only when invoked. Recorded as no_recap so the round is accounted now and the closing keeps its own entry."
+      "issue": 148,
+      "content_hash": "sha256:3de7c7abad202b7bf7cf90cf6339401363e0d5c12a2eefff16b33d4c5a56e969"
     }
   ]
 }
