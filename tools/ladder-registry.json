@@ -1965,6 +1965,24 @@
         "excluded": "Nothing language-neutral to pin. A vector fixes bytes in and a declared result out; this round's subject is the TRANSPORT's answer — a determinate 404 versus a failure that carries no status — which is not expressible as an input document. The behaviour is held instead by two executable gates that drive a scripted fetch, and the byte-level cadence resolution they sit on is already pinned by the cadence-parity vectors, unchanged here."
       },
       "test": "packages/ust-protocol/conformance.mjs :: '#169/F.4 an UNREADABLE cadence lands on the RANGE only' asserts identity by EQUALITY against the 404 run, so a change to what identity resolves to cannot leave it green; the rewritten '#95/F.4 … reported UNKNOWN' holds the non-substitution half. tools/cadence-discovery-gate.mjs :: section 4 asserts the same pair over 500/503/403/429 plus a fetch REJECTED with no status, the live browser shape. Both proven able to fail in both directions — restoring the early return reddens both; collapsing unknown into null reddens only the substitution check, so the two discriminate rather than duplicate."
+    },
+    {
+      "round": 234,
+      "math": {
+        "excluded": "The round MEASURES the closure rather than moving it. F.4 rev92's disjoint-carrier algebra and round-233's Realization already state that an unknown c_n(t) lands on the RANGE carrier alone; a live run either agrees with that statement or refutes it, and this one agreed. A measurement that confirms a theorem adds no theorem."
+      },
+      "spec": {
+        "excluded": "Nothing normative changed. §20.1 already carries the scope round 233 gave it, and the live publisher turned out to be exactly the case the section describes — cadence signed into the genesis, no log served, a determinate 404. The one spec-shaped finding the run produced (that 404 is unreadable cross-origin, and no serving property requires otherwise) belongs to #168, whose consequence table this round corrects rather than whose rule it writes."
+      },
+      "code": {
+        "excluded": "No source line changed. The round's artifacts are a live A/B across two existing commits, six issue measurements, a version-line row and a sealed diary entry — none of which any verifier reads. The behaviour under test is b383bb0's, unmodified."
+      },
+      "vector": {
+        "excluded": "A vector fixes bytes in and a declared result out, reproducible by a second implementation. This round's subject is a LIVE publisher's transport and stream — a 404 whose CORS header is absent, a hour of slots that will not be re-served identically forever, and a genesis that may be re-rooted. Pinning today's bytes would freeze one operator's current state into the language-neutral corpus and call it the protocol. The behaviour those bytes exercise is already pinned by round-233's two gates, unchanged and green here."
+      },
+      "test": {
+        "excluded": "The round adds no runnable check, and that is a REAL gap rather than a clean exclusion. A live measurement cannot be a gate: it depends on a third party's server, its network and its current state, so wiring it into CI would buy a flake and sell it as coverage. What holds the behaviour is round-233's pair — conformance.mjs '#169/F.4 an UNREADABLE cadence lands on the RANGE only' (identity asserted by EQUALITY against the 404 run) and cadence-discovery-gate section 4 — both re-run green here, and both proven able to fail in two directions. What no check holds is the round's own finding: that a hermetic proof cannot raise the question it was not asked. That is a procedural rule (§6 of the report), and it has no executor."
+      }
     }
   ],
   "first_accounted_round": 76,
