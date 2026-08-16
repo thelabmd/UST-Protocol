@@ -59,9 +59,16 @@ for (const [name, fn] of Object.entries(hostiles)) {
   ok(`hostile connector (${name}) → structured reject, never a host throw`, !threw && r && r.inclusion === false);
 }
 
-// ── async is named honestly rather than silently downgraded
+// ── async is named honestly rather than silently downgraded — and, since round 236 (#173), WITHHELD rather than
+// refused. This asserted `inclusion === false`, which was the defect: a promise is a fact about the CALLER's host
+// (WebCrypto's sha256 is async, so every browser connector is one), never a claim about the proof. Naming stays
+// required; refusing does not. The sync door is the one under test here — the async door pre-resolves the seam.
 const as = P.verifyAnchor(CH, alien, { inclusionVerify: async () => true });
-ok('an async connector is named, not silently treated as unproven', as.inclusion === false && /ASYNC/.test(as.detail || ''));
+ok('an async connector is NAMED and WITHHELD on the sync door, never a refusal of the proof',
+  !('inclusion' in as) && as.time === 'unproven' && /ASYNC/.test(as.detail || ''));
+// the asymmetry the repair must not have swallowed: a connector that RETURNS false has computed and refused
+ok('a connector that RETURNS false still refuses — withholding did not swallow a real refusal',
+  P.verifyAnchor(CH, alien, { inclusionVerify: () => false }).inclusion === false);
 
 // ── and the substrate seam is untouched by any of this
 ok('substrate still delegated separately (inclusion OK, substrate is the caller job)',

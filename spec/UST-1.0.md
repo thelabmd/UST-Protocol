@@ -774,6 +774,18 @@ reported uncertainty, which is precisely the determinism this section rests agre
 UNSIGNED and therefore ROUTES only: it can lower or hold the anchor coordinate and can never raise it, so a
 substituted name buys an adversary nothing a stripped proof would not already buy.
 
+**The connector contract admits BOTH calling modes (round 236).** A verifier exposes a synchronous and an
+asynchronous door, and a connector may be either. A connector that cannot be OBSERVED in the mode the verifier was
+called in has not answered: the inclusion coordinate is `⊘` and the rules above apply unchanged — withheld, never
+`inclusion: false`, and never the reference walk applied to another tree. This matters because it decides a whole
+host family rather than a case: `sha256` is asynchronous in every browser, so every browser realization of every
+construction is asynchronous by construction, and treating that as a refusal would place the tier ceiling of a host
+on an artifact of its calling convention instead of on evidence. An asynchronous verifier entry point MUST resolve
+the connector's answer before deciding, and MUST bind the resolved answer to the `(content_hash, proof)` it was
+obtained for, so a settled answer cannot be replayed against another. **A connector that RETURNS `false` has
+computed and refused** — that is a verdict about the proof and stays one; a connector that throws or returns a
+non-Boolean has violated its contract and is refused as such. Only *cannot be observed here* is withheld.
+
 **The withheld answer is the ANCHOR COORDINATE's, not the document's (round 235).** `INDETERMINATE` above names
 what the verifier may conclude about MEMBERSHIP — it is not a verdict on the transcript. A document carrying a
 proof whose construction the verifier cannot compute MUST still resolve everything the anchor does not decide:

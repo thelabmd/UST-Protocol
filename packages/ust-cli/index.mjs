@@ -1603,7 +1603,7 @@ async function cmdVerify() {
     // opt-in substrate plugins: Bitcoin (ots-verify) + Rekor (rekor-verify), combined via the protocol
     // router. Whichever are installed contribute; none installed → anchor unproven → honest HIGH-pending.
     const plugins = [], incPlugins = [];
-    for (const pkg of ['@ust-protocol/ots-verify', '@ust-protocol/rekor-verify']) {
+    for (const pkg of ['@ust-protocol/ots-verify', '@ust-protocol/rekor-verify', '@ust-protocol/rfc6962-verify']) {
       try { const m = await import(pkg); if (m.substrateVerify) plugins.push(m.substrateVerify); if (m.inclusionVerify) incPlugins.push(m.inclusionVerify); } catch { /* absent */ }
     }
     const substrateVerify = plugins.length ? P.combineSubstrates(plugins) : undefined;
@@ -1989,7 +1989,7 @@ async function cmdForkChoice() {
   // anchor-inclusion is a SUBSTRATE fact — load the same opt-in plugins as `verify`. None installed ⇒ nothing is
   // anchor-included ⇒ honest INDETERMINATE, never a guessed winner.
   const plugins = [], incPlugins = [];
-  if (!offline) for (const pkg of ['@ust-protocol/ots-verify', '@ust-protocol/rekor-verify']) {
+  if (!offline) for (const pkg of ['@ust-protocol/ots-verify', '@ust-protocol/rekor-verify', '@ust-protocol/rfc6962-verify']) {
     try { const m = await import(pkg); if (m.substrateVerify) plugins.push(m.substrateVerify); if (m.inclusionVerify) incPlugins.push(m.inclusionVerify); } catch { /* absent */ }
   }
   const substrateVerify = plugins.length ? P.combineSubstrates(plugins) : undefined;

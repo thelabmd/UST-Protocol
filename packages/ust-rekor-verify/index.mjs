@@ -30,41 +30,16 @@ const hexToBytes = (h) => Buffer.from(h.replace(/^sha256:/, ''), 'hex');
 // RFC 6962 §2.1.1 inclusion-proof verification (canonical, incl. the right-edge while-shift — a naive
 // left/right test is WRONG for a leaf near the tree's right edge, where fn==sn). leaf = SHA256(0x00||entry),
 // interior = SHA256(0x01||left||right).
-export function verifyInclusion(proof) {
-  // totality (round-46 self-audit) — an inclusion proof is UNTRUSTED input: a null/hostile arg, a HOSTILE Proxy (a throwing getter
-  // fires on the destructuring below), or a non-array `hashes` must be a structured `false` (proof does not hold), never a host
-  // throw. Fail-closed (false = not proven). The whole read+recompute is guarded because a getter can throw at any field access.
-  try {
-    if (!proof || typeof proof !== 'object') return false;
-    const { leafHash, index, treeSize, hashes, rootHash } = proof;
-    // TREE INDICES ARE UNBOUNDED NATURALS AND MUST NOT BE NARROWED (rc.67).
-    // RFC 6962 §2.1.1 defines the path over naturals and the wire form is uint64. JavaScript's >> and & coerce to
-    // SIGNED 32-BIT, so any index at or above 2^31 goes NEGATIVE mid-climb. This verifier was correct for the whole
-    // history of the public log and broke the moment that log passed 2,147,483,648 entries. Measured on two live
-    // anchors of the same domain: 2149645490 >> 1 = -1072660903 where the answer is 1074822745, while a proof from
-    // two weeks earlier still verified — so the failure presented as a substrate change rather than an arithmetic one.
-    //
-    // The lesson is not 'use BigInt here'. It is that an index supplied by an EXTERNAL counter we do not control has
-    // no ceiling we may assume, and arithmetic correct only below one is a dated charge with no alarm attached.
-    // number | string | bigint are all accepted: a log serving a uint64 past 2^53 must send it as a string, and
-    // refusing that would reinstate the same ceiling one power higher.
-    if (!Array.isArray(hashes)) return false;
-    let fn, sn;
-    try { fn = BigInt(index); sn = BigInt(treeSize) - 1n; } catch { return false; }
-    if (fn < 0n || sn < 0n || fn > sn) return false;
-    let hash = leafHash;
-    for (const sib of hashes.map(hexToBytes)) {
-    if (fn === sn || (fn & 1n) === 1n) {               // right child, OR at the right edge → sibling on LEFT
-      hash = sha256(Buffer.concat([Buffer.from([0x01]), sib, hash]));
-      while (fn !== 0n && (fn & 1n) === 0n) { fn >>= 1n; sn >>= 1n; }   // climb past the right-edge run
-    } else {                                            // left child → sibling on RIGHT
-      hash = sha256(Buffer.concat([Buffer.from([0x01]), hash, sib]));
-    }
-    fn >>= 1n; sn >>= 1n;
-    }
-    return fn === 0n && hash.equals(hexToBytes(rootHash));
-  } catch { return false; }
-}
+// round-236 (#173) — the RFC 6962 CONSTRUCTION connector moved to `@ust-protocol/rfc6962-verify`. It never had
+// anything to do with rekor: it is SHA-256 and tree arithmetic over bytes the caller holds, and keeping it here
+// made a consumer install a transparency-log client to verify a publisher anchored in BITCOIN. Re-exported so
+// every installed consumer keeps working unchanged — the move is a packaging fix, not an API change.
+// Imported AND re-exported: this package's own substrate check climbs the log's `inclusionProof` with the same
+// RFC 6962 walk, so the function is needed as a local binding here, not only forwarded. That it serves BOTH axes —
+// membership in a publisher's tree and membership in the LOG's tree — is the sharpest argument for it having its
+// own package: it was never rekor's, and it was never only the construction connector's either.
+import { verifyInclusion, inclusionVerify } from '@ust-protocol/rfc6962-verify';
+export { verifyInclusion, inclusionVerify };
 
 // Verify a Sigstore/Go signed-note checkpoint: the log's ECDSA signature over "origin\nsize\nroothash\n"
 // (the note text up to the blank separator), and that the signed root/size match the inclusion proof's.
@@ -190,20 +165,3 @@ export const substrateVerify = makeSubstrateVerify();
 // returns null — "not mine" — and the router falls through to whatever the caller has, ultimately the bundled walk.
 // It NEVER guesses a scheme: a wrong leaf convention would verify a proof for somebody else's entry, which is the
 // proof-substitution hole this repo is built to refuse.
-export function inclusionVerify(contentHash, proof) {
-  try {
-    // Round 204 (F.9.5-c.6) — the body reads from `proof.inclusion`, the NORMATIVE carrier, and the member is
-    // `construction`. Before this it read `proof.anchor.inclusion.scheme`: a name of our own in a place of our own,
-    // inside the SUBSTRATE's Locator, which §11.2 keeps separate from the membership proof on purpose. Nothing
-    // published used that shape — measured across the estate, only this package and the operator's producer
-    // mentioned it — so the move costs no reissue and removes the second place a construction could be declared.
-    const inc = proof?.inclusion;
-    if (!inc || inc.construction !== 'rfc6962-raw') return null;                // not ours — let the next connector try
-    if (typeof contentHash !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(contentHash)) return false;
-    if (typeof proof.root !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(proof.root)) return false;
-    // The leaf is bound to OUR content_hash by construction: leaf = SHA256(0x00 ‖ the 32 raw bytes of content_hash).
-    // That binding is what makes this an inclusion proof FOR THIS DOCUMENT rather than for an arbitrary entry.
-    const leaf = sha256(Buffer.concat([Buffer.from([0x00]), Buffer.from(contentHash.slice(7), 'hex')]));
-    return verifyInclusion({ leafHash: leaf, index: inc.index, treeSize: inc.tree_size, hashes: inc.hashes, rootHash: proof.root.slice(7) });
-  } catch { return false; }                                                     // untrusted input: a hostile getter is a refusal, never a throw
-}

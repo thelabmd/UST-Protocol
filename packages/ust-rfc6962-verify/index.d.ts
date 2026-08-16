@@ -14,11 +14,7 @@
 // The three shapes below are the exception, because a consumer cannot avoid them and because they are
 // MEASURED from real values this suite builds, not read off the specification. A gate rebuilds those
 // values and fails if a declared key is missing, so they cannot drift into being the stale kind.
-// Package: @ust-protocol/rekor-verify
+// Package: @ust-protocol/rfc6962-verify
 
-export function makeSubstrateVerify(arg0?: unknown): unknown;
-export const substrateVerify: unknown;
-export function toVerifiedEvidence(subject: unknown, result: unknown, source_id?: unknown): { proof_kind: unknown; subject: unknown; source_id: unknown; facts: unknown };
-export function verifyCheckpoint(checkpoint: unknown, expectedRootHex: unknown, expectedTreeSize: unknown, pubKey: unknown): string;
-export const inclusionVerify: unknown;
-export const verifyInclusion: unknown;
+export function inclusionVerify(contentHash: unknown, proof: unknown): unknown;
+export function verifyInclusion(proof: unknown): unknown;

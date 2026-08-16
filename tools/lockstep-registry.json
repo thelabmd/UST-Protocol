@@ -576,6 +576,24 @@
       "rev": "round-235",
       "model_locus": "collapsing the third into the first is the mirror error of collapsing it into a withheld verdict",
       "conformance_check": "F.9.5-c.5 THROUGH verify(): an UNREADABLE proof is not the same state as NO proof — the third state is reported, never collapsed"
+    },
+    {
+      "id": "R236-f95c5-async-is-withheld",
+      "rev": "round-236",
+      "model_locus": "the calling MODE rather than the construction",
+      "conformance_check": "#95 an async connector is NAMED and WITHHELD — a promise is the caller's plumbing, never a refusal of the proof"
+    },
+    {
+      "id": "R236-f95c5-async-door-reaches-it",
+      "rev": "round-236",
+      "model_locus": "a connector that RETURNS `false` has computed and refused",
+      "conformance_check": "F.9.5-c.5 the ASYNC door reaches the same answer as the sync one — a promise no longer caps a host (round-236)"
+    },
+    {
+      "id": "R236-f95c5-computed-refusal-stays-a-refusal",
+      "rev": "round-236",
+      "model_locus": "a connector that throws, or returns a non-Boolean, is a not-ours module violating its contract",
+      "conformance_check": "#95 a connector that RETURNS false has computed and refused — the asymmetry survives the async repair"
     }
   ]
 }

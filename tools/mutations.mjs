@@ -294,6 +294,36 @@ export const MUTATIONS = [
     from: "        timeField = { strength: 'unproven', status: a.status ?? 'unavailable', unknown: { reason: a.reason ?? 'unavailable', ...(a.detail ? { detail: a.detail } : {}) } };",
     to: "        timeField = { strength: 'unproven', status: 'none' };",
   },
+  // #173 / round-236 — the SYNC door's answer to a promise. Broken, a connector the caller could not be observed in
+  // this mode is reported as a refusal of the DOCUMENT, and verify() turns that into INVALID: a document called forged
+  // because the reader's own connector was async. Every browser connector is async by construction, so this is a whole
+  // host family, not a case.
+  {
+    id: 'async-connector-refuses-the-document', mustDetect: true, observe: ['conformance'],
+    why: 'inability reported as guilt, on the inclusion seam. Broken, a promise from the caller\'s connector becomes `inclusion: false`, which verify() reads as a proof that does not reach its root — INVALID for a correct document.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "        return { time: 'unproven', status: 'unavailable', reason: 'unsupported_construction', detail: 'inclusion connector is ASYNC and this is the SYNCHRONOUS door",
+    to: "        return { inclusion: false, time: 'unproven', status: 'unavailable', reason: 'unsupported_construction', detail: 'inclusion connector is ASYNC and this is the SYNCHRONOUS door",
+  },
+  // #173 / round-236 — the ASYNC door, and it must be SEPARATE: dropping the pre-resolution leaves the sync door's
+  // withholding intact, so the check above stays green and only the equality-between-doors check moves.
+  {
+    id: 'async-door-does-not-resolve-the-inclusion-seam', mustDetect: true, observe: ['conformance'],
+    why: 'the remedy the refusal names. Broken, verifyAsync stops pre-resolving the inclusion connector, so both doors lead back to the synchronous call and an async connector can never reach `anchored` — the caller is told to use a door that does not open.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "    if (capCH !== undefined) { try { incReceipt = await opts.inclusionVerify(capCH, capP); } catch { incReceipt = null; } }",
+    to: "    /* mutant: the seam is not pre-resolved */",
+  },
+  // #173 / round-236 — the ASYMMETRY the repair must not swallow. Broken, a connector that COMPUTED and returned
+  // `false` is treated as if it had merely been unobservable, so a proof that genuinely misses its root is withheld
+  // instead of refused: the mirror of the defect the round fixed, and the direction that LOSES a real refusal.
+  {
+    id: 'a-computed-refusal-is-treated-as-unobservable', mustDetect: true, observe: ['conformance'],
+    why: 'the asymmetry. Broken, `inclusionVerify` returning false stops being a verdict about the proof and becomes a withheld answer — a document whose path does not reach its root would no longer be refused for it.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "      if (inc === null || inc === undefined) { inclusion = undefined; }",
+    to: "      if (inc === null || inc === undefined || inc === false) { inclusion = undefined; } /* mutant */",
+  },
   // #161 — a shortfall that says nothing. The verdict is UNCHANGED by this break (still `provisional`), which is
   // exactly why it needs its own mutant: no verdict-comparing check can see it, and the defect it reproduces sat in
   // the tree until someone read the returned object field by field.

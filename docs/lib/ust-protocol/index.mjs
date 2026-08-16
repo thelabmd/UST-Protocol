@@ -2329,8 +2329,15 @@ function verifyAnchorCore(contentHash, proof, opts = {}) {
     // total door — identical discipline to the substrate seam below, deliberately not a second pattern.
     try {
       const inc = opts.inclusionVerify(contentHash, proof);
+      // round-236 (#173) — a promise is `⊘`, not `⊥`. This returned `inclusion: false`, which `verify` reads as a path
+      // that does not reach its root, so the document was called INVALID because the READER's connector was async —
+      // inability reported as guilt, the class F.9.5-c.5 exists to forbid. It decides a whole host family rather than a
+      // case: `sha256` is async in every browser, so EVERY browser realization of EVERY construction is a promise, and
+      // under `⊥` no browser could ever admit a foreign construction. Withheld by OMITTING `inclusion`, the same
+      // representation the unsupported-construction branch below uses, and the async door now pre-resolves the seam so
+      // this is a genuine mode mismatch rather than the only door.
       if (inc && typeof inc.then === 'function')
-        return { inclusion: false, time: 'unproven', status: 'unavailable', detail: 'inclusion connector is ASYNC — use verifyAsync() or resolveByDiscovery(), not sync verify()' };
+        return { time: 'unproven', status: 'unavailable', reason: 'unsupported_construction', detail: 'inclusion connector is ASYNC and this is the SYNCHRONOUS door — the answer is WITHHELD, never a refusal of the proof (F.9.5-c.5, round-236). Use verifyAsync() or resolveByDiscovery(), which resolve the connector before deciding.' };
       // A CLOSED, TYPED leaf: strict Boolean only. A truthy non-Boolean ('yes', {}) must never mint inclusion.
       // `null` is the ROUTER's "no installed connector claimed this proof" — distinct from a refusal. Falling through to
       // the bundled walk keeps a composed router safe to pass unconditionally: a caller need not know in advance whether it
@@ -2480,7 +2487,7 @@ export async function verifyAsync(doc, opts = {}) {
   const D = admitDeep(doc);                                      // round-27 (3) — admit ONCE at this public door; below runs verifyCore over the inert snapshot (a getter can't split the substrate await from the sync verify)
   if (D === ADMIT_REJECT) return { result: 'INVALID', error: 'E-MALFORMED', detail: 'document is not an inert record (round-27: the ONE input boundary)' };
   doc = D;
-  if (!doc?.proof || !opts.substrateVerify || opts.offline) return finishVerdict(doc, await verifyCoreWithSignatureFaculty(doc, opts));
+  if (!doc?.proof || (!opts.substrateVerify && !opts.inclusionVerify) || opts.offline) return finishVerdict(doc, await verifyCoreWithSignatureFaculty(doc, opts));
   // round-17 P0-01 — verify an IMMUTABLE SNAPSHOT. The live object could be swapped between the await and the sync
   // verify (TOCTOU): the substrate receipt is obtained for root A, then a mutated document B with root B reuses it and
   // gets VALID:TOP for evidence that was never its own (I4/F.5c: TimeStrength=anchored must be evidence for content_hash(d)).
@@ -2488,8 +2495,26 @@ export async function verifyAsync(doc, opts = {}) {
   // can never claim it.
   let snap; try { snap = JSON.parse(JSON.stringify(doc)); } catch { return finishVerdict(doc, await verifyCoreWithSignatureFaculty(doc, opts)); }
   const capA = snap.proof?.anchor, capR = snap.proof?.root;
-  let receipt; try { receipt = await opts.substrateVerify(capA, capR); } catch { receipt = null; }
-  return finishVerdict(snap, await verifyCoreWithSignatureFaculty(snap, { ...opts, substrateVerify: (a, r) => (a === capA && r === capR ? receipt : null) }));   // verifyCore (NOT verify): no re-clone, so the receipt-identity binding `a === capA` holds across the door
+  let receipt; try { receipt = opts.substrateVerify ? await opts.substrateVerify(capA, capR) : null; } catch { receipt = null; }
+  // round-236 (#173) — the INCLUSION seam gets the treatment the substrate seam has had all along, because the reason is
+  // identical: a connector this host can only compute asynchronously is unobservable at the synchronous core, and until
+  // now that made every browser connector unusable. Resolved ONCE here, then handed to the sync core behind a shim bound
+  // to the (content_hash, proof) it was obtained for — the same TOCTOU defence as `a === capA`: a settled `true` must
+  // never be replayable against a different document or a swapped proof. A connector that throws is `null` (the router's
+  // "unclaimed"), which falls through to the declared-construction check rather than minting an answer.
+  // `contentHash` is computed INSIDE the guard, not above it: this door is reached by malformed input too (the seam
+  // battery drives a bare `{proof}` with no state), and a throw here would be a host throw at a public entry point —
+  // the S1 violation this file spends its totality discipline on. Hoisting it cost exactly that, and the seam gate
+  // caught it. No connector ⇒ nothing to pre-resolve ⇒ the hash is never needed.
+  const capP = snap.proof;
+  let capCH, incReceipt = null;
+  if (opts.inclusionVerify) {
+    try { capCH = contentHash(snap); } catch { capCH = undefined; }
+    if (capCH !== undefined) { try { incReceipt = await opts.inclusionVerify(capCH, capP); } catch { incReceipt = null; } }
+  }
+  const shim = { ...opts, substrateVerify: (a, r) => (a === capA && r === capR ? receipt : null) };
+  if (opts.inclusionVerify && capCH !== undefined) shim.inclusionVerify = (c, p) => (c === capCH && p === capP ? incReceipt : null);
+  return finishVerdict(snap, await verifyCoreWithSignatureFaculty(snap, shim));   // verifyCore (NOT verify): no re-clone, so both receipt-identity bindings hold across the door
 }
 
 // §3.1/F.5c FORK-CHOICE — canonical = anchor-included. One `ust_id` may have several candidate documents with
@@ -3605,7 +3630,7 @@ export const REGISTRY = deepFreeze({   // round-25 P0-04 — DEEP-frozen: the ca
   // message that routes to the registry, never a dead end that reads as *no such thing exists*.
   inclusionConstructions: {
     'ust-merkle-tagged': 'bundled — implemented by this build (§7/§11.2)',
-    'rfc6962-raw': '@ust-protocol/rekor-verify — inject its `inclusionVerify` as the connector',
+    'rfc6962-raw': '@ust-protocol/rfc6962-verify — inject its `inclusionVerify` as the connector (re-exported by @ust-protocol/rekor-verify for consumers installed before round 236)',
   },
   // #42 — the MECHANISM is named here; the AUTHORITY is not, and must not be. Registering a mechanism says how a
   // name-map root is carried and checked, which every implementation must agree on. Registering an authority would

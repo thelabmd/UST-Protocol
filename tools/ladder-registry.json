@@ -1992,6 +1992,16 @@
       "vector": "aca-01-foreign-construction-withholds-only-the-anchor",
       "test": "packages/ust-protocol/conformance.mjs :: 'F.9.5-c.5 THROUGH verify(): a foreign construction withholds the ANCHOR coordinate and nothing else (round-235)' asserts the scope by EQUALITY against the same document with NO proof, so a change to what these documents resolve to cannot leave it green; 'F.9.5-c.5 THROUGH verify(): an UNREADABLE proof is not the same state as NO proof' holds the third-state half. Four checks that pinned the symptom (result === 'INDETERMINATE' over the whole verdict) were re-aimed at the coordinate. Proven able to fail AND to discriminate: restoring the early return reddens 2 registered checks, collapsing unknown into the absent state reddens 1.",
       "_vector_note": "new kind `anchor-construction-absent`. Unlike #169's transport-shaped subject this one IS bytes. Both legs are pinned because the defect lived in their RELATION: the verdict equals the no-proof run, AND the coordinate does not. The path is deliberately one the reference walk would fail, so a runner that walks a tree it was not asked to walk is caught rather than passing."
+    },
+    {
+      "round": 236,
+      "math": "the calling MODE rather than the construction",
+      "spec": "The connector contract admits BOTH calling modes (round 236)",
+      "code": "packages/ust-protocol/index.mjs :: verifyAnchorCore withholds on a promise instead of returning inclusion:false, and verifyAsync pre-resolves the inclusion seam once behind a shim bound to the (content_hash, proof) it was obtained for — the substrate seam's own identity binding, plus the round-17 snapshot so a connector mutating mid-await cannot move the target. packages/ust-rfc6962-verify :: the construction connector lifted VERBATIM out of ust-rekor-verify, which now re-exports it; both plugin loaders and the construction registry learn the name.",
+      "vector": {
+        "excluded": "Nothing language-neutral to pin. A vector fixes bytes in and a declared result out, and this round's subject is the CALLING MODE of a consumer-supplied function — a JavaScript promise versus a value, which is a property of the host and its faculty, not of any document. The bytes on both sides are identical and already pinned; what changed is whether the verifier can observe an answer about them. The behaviour is held by executable checks that drive both doors over the same document."
+      },
+      "test": "packages/ust-protocol/conformance.mjs :: '#95 an async connector is NAMED and WITHHELD — a promise is the caller's plumbing, never a refusal of the proof' (re-aimed from an assertion on inclusion===false, which was the symptom), '#95 a connector that RETURNS false has computed and refused — the asymmetry survives the async repair', 'F.9.5-c.5 the ASYNC door reaches the same answer as the sync one — a promise no longer caps a host (round-236)' asserted by EQUALITY between the two doors, and 'F.9.5-c.5 the inclusion await verifies an IMMUTABLE snapshot'. Proven able to fail and to DISCRIMINATE: the sync-refusal mutant reddens exactly one check, the dropped-pre-resolution mutant reddens exactly the other."
     }
   ],
   "first_accounted_round": 76,

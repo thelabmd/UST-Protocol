@@ -42,5 +42,8 @@
     "directory": "packages/ust-rekor-verify"
   },
   "homepage": "https://github.com/thelabmd/UST-Protocol/tree/main/packages/ust-rekor-verify#readme",
-  "types": "index.d.ts"
+  "types": "index.d.ts",
+  "dependencies": {
+    "@ust-protocol/rfc6962-verify": "^1.0.0-rc.1"
+  }
 }

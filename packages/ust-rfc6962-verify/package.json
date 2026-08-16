@@ -1,0 +1,41 @@
+{
+  "name": "@ust-protocol/rfc6962-verify",
+  "version": "1.0.0-rc.1",
+  "description": "The RFC 6962 CONSTRUCTION connector for UST anchor proofs — answers 'is this content_hash a member of that root?' for the `rfc6962-raw` tree. Zero-dep, no network, no substrate. The other axis (is the ROOT committed, and when?) is a substrate connector's job.",
+  "ust:browser": {
+    "stance": "node-only",
+    "why": "The climb uses node:crypto for SHA-256 and the Buffer global. A browser build is a separate export rather than a port of this one, because in a browser SHA-256 is asynchronous and the connector must therefore be async — which the core's inclusion seam admits as of round 236 (UST-Protocol#173)."
+  },
+  "type": "module",
+  "main": "index.mjs",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.mjs",
+      "default": "./index.mjs"
+    }
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "files": [
+    "index.mjs",
+    "LICENSE",
+    "README.md",
+    "index.d.ts"
+  ],
+  "keywords": [
+    "ust",
+    "rfc6962",
+    "merkle",
+    "inclusion-proof",
+    "transparency"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thelabmd/UST-Protocol.git",
+    "directory": "packages/ust-rekor-verify"
+  }
+}

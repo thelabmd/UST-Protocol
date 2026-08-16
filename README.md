@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 # Universal State Transcript ➝ UST Protocol ➝ ust:
 
-[![CI](https://img.shields.io/github/actions/workflow/status/thelabmd/UST-Protocol/ci.yml?branch=main&label=CI)](https://github.com/thelabmd/UST-Protocol/actions) [![conformance](https://img.shields.io/badge/conformance-1037%20checks%20%C2%B7%20143%20vectors%20%C2%B7%204007%20fuzz-brightgreen)](https://github.com/thelabmd/UST-Protocol/actions/workflows/ci.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/thelabmd/UST-Protocol/ci.yml?branch=main&label=CI)](https://github.com/thelabmd/UST-Protocol/actions) [![conformance](https://img.shields.io/badge/conformance-1040%20checks%20%C2%B7%20143%20vectors%20%C2%B7%204007%20fuzz-brightgreen)](https://github.com/thelabmd/UST-Protocol/actions/workflows/ci.yml)
 [![code license](https://img.shields.io/badge/code-Apache--2.0-blue)](./LICENSE)
 [![docs license](https://img.shields.io/badge/docs-CC--BY--4.0-blue)](./LICENSE-SPEC)
 [![ust-protocol](https://img.shields.io/npm/v/ust-protocol?label=ust-protocol)](https://www.npmjs.com/package/ust-protocol) [![pulls](https://img.shields.io/npm/dt/ust-protocol?label=pulls&color=informational)](https://www.npmjs.com/package/ust-protocol)
@@ -358,7 +358,7 @@ purpose is your policy, not the protocol's coercion. Spec [§19](spec/UST-1.0.md
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/ust-map.svg">
   <source media="(prefers-color-scheme: light)" srcset=".github/ust-map-light.svg">
-  <img alt="Repository map. spec/ holds the normative UST-1.0.md plus a measure-theoretic formal model. vectors/ holds language-neutral conformance vectors and a byte corpus — the cross-implementation arbiter. packages/ holds ust-protocol (the zero-dep reference verifier + producer), ust-cli (the ust command: verify, canon, the HIGH genesis ceremony, witness), ust-mcp (an MCP server so agents verify natively), ust-light (a byte-identical minimal subset), ust-operator is the stateful layer above the stateless base; ust-web-signer (WebCrypto browser signing with non-extractable keys), ust-ots-verify / ust-rekor-verify (opt-in Bitcoin/OTS and Sigstore Rekor anchor substrates), and diarium (agent memory as a verifiable stream — a product built on the protocol). docs/ is the client-side web verifier plus zero-dependency single-file verifiers. tools/ are the drift gates that keep spec = code = vectors = README = these panels in sync." src=".github/ust-map-light.svg">
+  <img alt="Repository map. spec/ holds the normative UST-1.0.md plus a measure-theoretic formal model. vectors/ holds language-neutral conformance vectors and a byte corpus — the cross-implementation arbiter. packages/ holds ust-protocol (the zero-dep reference verifier + producer), ust-cli (the ust command: verify, canon, the HIGH genesis ceremony, witness), ust-mcp (an MCP server so agents verify natively), ust-light (a byte-identical minimal subset), ust-operator is the stateful layer above the stateless base; ust-web-signer (WebCrypto browser signing with non-extractable keys), ust-ots-verify / ust-rekor-verify (opt-in Bitcoin/OTS and Sigstore Rekor anchor substrates) and ust-rfc6962-verify (the RFC 6962 membership construction, the other anchor axis), and diarium (agent memory as a verifiable stream — a product built on the protocol). docs/ is the client-side web verifier plus zero-dependency single-file verifiers. tools/ are the drift gates that keep spec = code = vectors = README = these panels in sync." src=".github/ust-map-light.svg">
 </picture>
 
 | Path | What |
@@ -375,6 +375,7 @@ purpose is your policy, not the protocol's coercion. Spec [§19](spec/UST-1.0.md
 | `packages/ust-light/` | the zero-dependency LIGHT floor — a byte-identical minimal subset ([npm](https://www.npmjs.com/package/ust-light)) |
 | `packages/ust-ots-verify/` | opt-in Bitcoin (OpenTimestamps) anchor-substrate plugin ([npm](https://www.npmjs.com/package/@ust-protocol/ots-verify)) |
 | `packages/ust-rekor-verify/` | opt-in Sigstore Rekor anchor-substrate plugin ([npm](https://www.npmjs.com/package/@ust-protocol/rekor-verify)) |
+| `packages/ust-rfc6962-verify/` | opt-in RFC 6962 anchor-CONSTRUCTION plugin — membership in a root, the axis a substrate does not answer ([npm](https://www.npmjs.com/package/@ust-protocol/rfc6962-verify)) |
 | `packages/diarium/` | agent memory as a verifiable stream — a task closes, the agent writes what it learned, sealed and `prev`-chained ([npm](https://www.npmjs.com/package/diarium)) |
 | `extension/` | "Make it UST" — a demo Chrome extension: sign by selection, verify by selection (LIGHT) |
 | `docs/` | the [web verifier](https://verify.ustprotocol.com/) (client-side, GitHub Pages) + `ust-verify.mjs`, a zero-dependency verifier + `llms.txt` |

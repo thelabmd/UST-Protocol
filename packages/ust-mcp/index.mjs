@@ -53,7 +53,7 @@ export const tools = [
       // `json` (raw text) = the safe conformance boundary — duplicate-key + NFC scan BEFORE parse (F7).
       const ro = { ...o, offline };
       const _plugins = [], _incPlugins = [];
-      for (const pkg of ['@ust-protocol/ots-verify', '@ust-protocol/rekor-verify']) {
+      for (const pkg of ['@ust-protocol/ots-verify', '@ust-protocol/rekor-verify', '@ust-protocol/rfc6962-verify']) {
         try { const m = await import(pkg); if (m.substrateVerify) _plugins.push(m.substrateVerify); if (m.inclusionVerify) _incPlugins.push(m.inclusionVerify); } catch { /* absent */ }
       }
       const substrateVerify = _plugins.length ? P.combineSubstrates(_plugins) : undefined;
@@ -143,7 +143,7 @@ export const tools = [
     inputSchema: { type: 'object', required: ['candidates'], properties: { candidates: { type: 'array', description: 'the competing documents for one ust_id, each with its embedded `proof`' }, genesis: { type: 'object' }, keylog: { type: 'array' }, noForkConfirmed: { type: 'boolean' }, offline: { type: 'boolean' } } },
     handler: async ({ candidates, genesis, keylog, noForkConfirmed, offline }) => {
       const _plugins = [], _incPlugins = [];
-      if (!offline) for (const pkg of ['@ust-protocol/ots-verify', '@ust-protocol/rekor-verify']) {
+      if (!offline) for (const pkg of ['@ust-protocol/ots-verify', '@ust-protocol/rekor-verify', '@ust-protocol/rfc6962-verify']) {
         try { const m = await import(pkg); if (m.substrateVerify) _plugins.push(m.substrateVerify); if (m.inclusionVerify) _incPlugins.push(m.inclusionVerify); } catch { /* absent */ }
       }
       const substrateVerify = _plugins.length ? P.combineSubstrates(_plugins) : undefined;

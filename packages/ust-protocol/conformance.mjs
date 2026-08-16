@@ -630,10 +630,45 @@ check('#95 a hostile connector (throw / revoked Proxy) → structured reject, ne
 })());
 check('#95 an inclusion connector cannot mint anchored TIME — the substrate seam still gates it (C3)', (() =>
   P.verifyAnchor(A_CH, A_ALIEN, { inclusionVerify: () => true }).time === 'unproven')());
-check('#95 an async connector is NAMED, never silently taken as unproven-or-true', (() => {
+// round-236 (#173) — this asserted `inclusion === false`, which is the symptom: a promise from the CALLER's connector
+// was reported as a refusal of the DOCUMENT, so `verify` returned INVALID. Named is still required; refusing is not.
+check('#95 an async connector is NAMED and WITHHELD — a promise is the caller\'s plumbing, never a refusal of the proof', (() => {
   const r = P.verifyAnchor(A_CH, A_ALIEN, { inclusionVerify: async () => true });
-  return r.inclusion === false && /ASYNC/.test(r.detail || '');
+  return !('inclusion' in r) && r.time === 'unproven' && /ASYNC/.test(r.detail || '');
 })());
+// The input is a proof the BUNDLED walk would confirm, so the connector's `false` is the only thing that can refuse
+// it. Aimed there deliberately: over a proof the bundled walk ALSO refuses, this passes whether or not the
+// connector's answer is honoured — the check would be true for a reason its name does not state.
+check('#95 a connector that RETURNS false has computed and refused — the asymmetry survives the async repair', (() => {
+  const sib = 'sha256:' + 'bc'.repeat(32);
+  const good = { path: [{ dir: 'L', hash: sib }], root: P.Hbytes('ust:node', Buffer.from(sib + P.Hbytes('ust:leaf', Buffer.from(A_CH, 'utf8')), 'utf8')), anchor: { substrate: 'rekor' } };
+  return P.verifyAnchor(A_CH, good).inclusion === true                                        // the bundled walk WOULD confirm it
+    && P.verifyAnchor(A_CH, good, { inclusionVerify: () => false }).inclusion === false;      // so only the connector's `false` can refuse
+})());
+// round-236 (#173) — THE CLAIM OF THE ROUND: the async door reaches the same answer the sync door does, so a host that
+// can only compute asynchronously (every browser: WebCrypto's digest is a promise) is no longer capped below it. The
+// pair is asserted by EQUALITY between the two doors rather than against a named verdict.
+{
+  const D = mk({ r: { kind: 'captured', value: { n: '1' } } });
+  const CH = P.contentHash(D), SIB = 'sha256:' + '44'.repeat(32);
+  const PF = { root: P.H('ust:node', P.H('ust:leaf', CH) + SIB), inclusion: { construction: 'acme-tree-v9' }, anchor: { substrate: 'bitcoin-ots' } };
+  const doc = { ...D, proof: PF };
+  const sv = async () => ({ final: true, time: '2027-01-01T00:00:00Z' });
+  const rSync = await P.verifyAsync(doc, { inclusionVerify: (c) => c === CH, substrateVerify: sv });
+  const rAsync = await P.verifyAsync(doc, { inclusionVerify: async (c) => c === CH, substrateVerify: sv });
+  check('F.9.5-c.5 the ASYNC door reaches the same answer as the sync one — a promise no longer caps a host (round-236)',
+    rAsync.result === rSync.result && rAsync.time?.strength === rSync.time?.strength && rAsync.time?.inclusion === true,
+    `sync=${JSON.stringify({ r: rSync.result, t: rSync.time })} async=${JSON.stringify({ r: rAsync.result, t: rAsync.time })}`);
+  // The new await is a new TOCTOU window, so it gets the round-17 P0-01 treatment on ITS axis: a connector that mutates
+  // the live document while the verifier waits for it must not move the verdict target. Aimed at the snapshot, not at
+  // the connector's honesty — a connector that answers `true` for everything is being truthful about nothing.
+  const mDoc = { ...mk({ r: { kind: 'captured', value: { n: '2' } } }), proof: { ...PF } };
+  const origCH = P.contentHash(mDoc);
+  const mutIV = async () => { mDoc.proof.root = 'sha256:' + 'ff'.repeat(32); mDoc.state = { ...mDoc.state, id: { ...mDoc.state.id, ust_id: 'ust:20260628.99' } }; return true; };
+  const rMut = await P.verifyAsync(mDoc, { inclusionVerify: mutIV, substrateVerify: sv });
+  check('F.9.5-c.5 the inclusion await verifies an IMMUTABLE snapshot — a mutation during it cannot swap the target (round-236)',
+    rMut.content_hash === origCH);
+}
 check('#95 with NO connector the bundled walk still refuses a foreign-shape proof (no silent acceptance)',
   P.verifyAnchor(A_CH, A_ALIEN).inclusion === false);
 // §3.1/F.5.0 — the assurance map is TOTAL into AssuranceState ∪ {⊥} and Π is total over it, so a refused DOCUMENT has

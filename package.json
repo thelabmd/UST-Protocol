@@ -12,6 +12,7 @@
     "packages/ust-light",
     "packages/ust-ots-verify",
     "packages/ust-rekor-verify",
+    "packages/ust-rfc6962-verify",
     "packages/diarium",
     "packages/ust-operator"
   ],
