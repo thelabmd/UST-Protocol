@@ -19,8 +19,13 @@ name: release
 #   Repository               : UST-Protocol
 #   Workflow filename        : release.yml      ← must match this file's NAME, not its `name:` above
 #   Environment              : (leave empty)
-# Nine packages: ust-protocol, @ust-protocol/{mcp,web-signer,ots-verify,rekor-verify,operator,cli},
+# Ten packages: ust-protocol, @ust-protocol/{mcp,web-signer,ots-verify,rekor-verify,rfc6962-verify,operator,cli},
 # ust-light, diarium.
+#
+# `@ust-protocol/rfc6962-verify` is NEW (round 238) and its Trusted Publisher has to be added by hand before the
+# first publish — there is no API for it. Until that is done the line fails ON that package, which is the safe
+# direction: it is published BEFORE `rekor-verify`, which now declares a dependency on it, so a half-line can
+# never leave a dependent pointing at a version that does not exist.
 #
 # Deliberately NOT on push. A release is an irreversible act — a version can never be reused — so it is
 # dispatched by a person who decided to make one, and the same pre-publish reads run here as ran by hand.
