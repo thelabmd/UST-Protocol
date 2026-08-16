@@ -115,6 +115,23 @@ for (const p of pkgs) {
 for (const n of expand(svg)) if (/^ust-/.test(n)) ok(`brace form expands to a real package: ${n}`, pkgs.some((p) => p.dir === n),
   'the panel names something that is not a package');
 
+// round 238 — the RELEASE LINE is the fourth enumeration of the same set, and it was the one nobody compared.
+// A publishable package missing from `publish-line.mjs :: ORDER` is not published, and the failure lands on a
+// CONSUMER rather than here: `npm i` resolves a dependent whose declared sibling does not exist on the registry.
+// Measured when `@ust-protocol/rfc6962-verify` was added — README, map and workspaces all refused it until it was
+// listed, and the publish line took it silently.
+{
+  const line = readFileSync(new URL('./publish-line.mjs', import.meta.url), 'utf8');
+  const order = [...line.matchAll(/'packages\/([\w-]+)'/g)].map((m) => m[1]);
+  for (const p of pkgs) {
+    if (p.private) continue;
+    ok(`the publish line ships ${p.dir}`, order.includes(p.dir),
+      'tools/publish-line.mjs :: ORDER omits it — it would never reach the registry, and any sibling declaring it would fail to install');
+  }
+  for (const d of order) ok(`the publish line names a real package: ${d}`, pkgs.some((p) => p.dir === d && !p.private),
+    'ORDER lists something that is not a publishable package');
+}
+
 console.log(`\n  package enumeration (UST-l63)   PASS ${pass}   FAIL ${fail.length}`);
 console.log(`  domain: ${pkgs.length} packages, ${Object.keys(NOT_A_PACKAGE).length} declared non-package(s)`);
 if (fail.length) { fail.forEach((f) => console.log('    ✗ ' + f)); process.exit(1); }

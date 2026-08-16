@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // @assurance 3 canfail:yes — reads each tarball before it is published; refuses on the first discrepancy
 //
-// PUBLISH THE RELEASE LINE — nine packages, topological order, one at a time.
+// PUBLISH THE RELEASE LINE — ten packages, topological order, one at a time.
 //
 // npm publish is IRREVERSIBLE: a version number can never be reused, so the check has to happen before the call
 // and not after it. Every package is packed, the tarball is OPENED, and three things are read out of it rather
@@ -47,6 +47,10 @@ const PROMOTE = process.argv.includes('--promote');
 // package whose dependency does not exist yet.
 const ORDER = [
   'packages/ust-protocol', 'packages/ust-mcp', 'packages/ust-web-signer', 'packages/ust-light',
+  // round 238 — rfc6962-verify BEFORE rekor-verify: the construction connector moved out of the log client in
+  // round 236 and rekor-verify now declares a dependency on it (and imports it, for its own inclusionProof climb).
+  // Published the other way round, `npm i @ust-protocol/rekor-verify` resolves a dependency that does not exist yet.
+  'packages/ust-rfc6962-verify',
   'packages/ust-ots-verify', 'packages/ust-rekor-verify', 'packages/diarium', 'packages/ust-operator',
   'packages/ust-cli',
 ];
