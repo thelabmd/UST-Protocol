@@ -25,7 +25,7 @@ diverse-model adversarial audit → math-first remediation — the **milestones*
 outsider can hold us to. The normative source is the git history plus the conformance vectors; this file is the
 readable map.
 
-## rc.72 line — unpublished
+## rc.72 line
 
 The core moved after rc.70 published, so the version moved with it: a published artifact is immutable, and
 `REGISTRY.partitionKinds` changed `index.mjs` (round 206). It moved again for the same structural reason —
