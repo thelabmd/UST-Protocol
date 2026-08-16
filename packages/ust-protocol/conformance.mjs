@@ -1642,7 +1642,30 @@ console.log('\n═════════════════════�
   // authoritative TIER only when the consumer CONSCIOUSLY honors it (acceptConsumerOverride), and the verdict stays
   // transparent (independently_verified:false) — it never silently claims independent `authoritative`.
   const r1b = await P.resolveByDiscovery(doc, { context: 'data', noForkConfirmed: true, acceptConsumerOverride: true }, { fetchImpl: mk(okLog), substrateVerify: final });
-  check('caller air-gap override (honored) → HIGH, strength consumer-override + not independently verified (#69 B / P0-2)', r1b.verdict.result === 'VALID:HIGH' && r1b.verdict.identity.strength === 'consumer-override' && r1b.verdict.identity.independently_verified === false && r1b.verdict.publisher === 'wit-test.example');
+  // round-237 (#171) — the strength here is the EARNED `corroborated`, not the axiom. Before the round the witness
+  // probe was SKIPPED whenever a caller asserted no-fork, so the only basis left was the assertion and this check
+  // asserted `consumer-override`. That was the defect measured: a consumer adding a TRUE assertion was charged a
+  // LOWER strength than one that said nothing. What must hold is unchanged in substance — a raw axiom never becomes
+  // independent — so `independently_verified: false` is still asserted, beside the earned basis it now rides on.
+  check('caller air-gap override (honored) → HIGH, the EARNED basis is kept and the axiom never becomes independent (#69 B / P0-2, round-237)',
+    r1b.verdict.result === 'VALID:HIGH' && r1b.verdict.identity.strength === 'corroborated'
+    && r1b.verdict.identity.override_liftable === true && r1b.verdict.identity.independently_verified === false
+    && r1b.verdict.publisher === 'wit-test.example');
+  // THE PROPERTY OF THE ROUND: adding a TRUE premise may not lower the answer. Asserted by comparison between two runs
+  // that differ in nothing else — a named-value assertion would pass for a reason this statement does not make.
+  const r1mono = await P.resolveByDiscovery(doc, { context: 'data' }, { fetchImpl: mk(okLog), substrateVerify: final });
+  const r1plus = await P.resolveByDiscovery(doc, { context: 'data', noForkConfirmed: true }, { fetchImpl: mk(okLog), substrateVerify: final });
+  check('#171 an added TRUE assertion never LOWERS the verdict — the axiom adjoins, it does not displace the observation',
+    r1plus.verdict.result === r1mono.verdict.result && r1plus.verdict.identity.strength === r1mono.verdict.identity.strength);
+  // and the observation is still MADE: the witness surface is fetched even when the caller has already asserted it,
+  // which is what keeps the fork refusal reachable at all.
+  {
+    const seen = [];
+    const counting = (u, i) => { seen.push(String(u)); return mk(okLog)(u, i); };
+    await P.resolveByDiscovery(doc, { context: 'data', noForkConfirmed: true }, { fetchImpl: counting, substrateVerify: final });
+    check('#171 the witness probe RUNS under a caller assertion — an axiom is not an answer to the question it asks',
+      seen.some((u) => u.includes('ust-witness')));
+  }
   // and WITHOUT the conscious opt-in, the raw override never earns authority — the overclaim is closed.
   const r1c = await P.resolveByDiscovery(doc, { context: 'data', noForkConfirmed: true }, { fetchImpl: mk(null), substrateVerify: final });
   check('P0-2: raw noForkConfirmed alone on a name-form doc without binding → INDETERMINATE (cannot confirm the domain; a raw override earns no authority — round-53 UST-ybn unified rule)', r1c.verdict.result === 'INDETERMINATE' && r1c.verdict.reason === 'unavailable');

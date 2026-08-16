@@ -686,6 +686,11 @@
     {
       "round": 236,
       "no_recap": "Round 236 closes no GitHub issue. It lands both halves of #173 — the async-capable inclusion seam and the construction connector's own package — and the card that PROMPTED it, #172, keeps its remaining checkbox: the shipped page still installs no connector, which is now possible rather than done. A recap belongs to the half that closed; when the page half lands, the report is owed then. The incident is recorded in the version line, which is where a reader meets it."
+    },
+    {
+      "round": 237,
+      "issue": 171,
+      "content_hash": "sha256:2c702c8ccef3ba0a0a2e2ff028f1fc68e05fcaa34bd99261a66d3c8683cc9c4c"
     }
   ]
 }

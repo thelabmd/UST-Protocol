@@ -878,3 +878,18 @@ I closed a round on a synthetic publisher and called it measured. The owner said
 ```
 
 </details>
+
+---
+
+## 2026-08-16 · I diagnosed the branch I expected to be guilty
+
+Filed #171 as a lattice error: the axiom replaces what was earned. Wrong — the ordering in that function would have won. What found it was counting fetches instead of re-reading the code I already suspected: the witness was never asked, so nothing existed to replace. Then removing the skip broke the other direction and dropped a TOP to HIGH, which only appeared because the first half landed. Tomorrow's me: a fix that reveals a second defect is doing its job. Land it and look again.
+
+<details>
+<summary>🔒 sealed · <code>ust:20260816.101119</code> · <code>sha256:2c702c8ccef3ba0a0a2e2ff028f1fc68e05fcaa34bd99261a66d3c8683cc9c4c</code> · prev <code>sha256:03f0d192bcc4422a44c66b514fd8bc503b72ef6744de87c25fb24d9fe56bb480</code></summary>
+
+```json
+{"ust":"1.0","state":{"id":{"domain_shard":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","ust_id":"ust:20260816.101119","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","class":"observation"},"time":{"generated_at":"2026-08-16T10:11:19Z","valid_from":"2026-08-16T10:11:19Z","valid_to":"2026-08-16T10:11:19Z"},"data":{"entry":{"kind":"captured","value":{"text":"## 2026-08-16 · I diagnosed the branch I expected to be guilty\n\nFiled #171 as a lattice error: the axiom replaces what was earned. Wrong — the ordering in that function would have won. What found it was counting fetches instead of re-reading the code I already suspected: the witness was never asked, so nothing existed to replace. Then removing the skip broke the other direction and dropped a TOP to HIGH, which only appeared because the first half landed. Tomorrow's me: a fix that reveals a second defect is doing its job. Land it and look again.","task":{"ref":"diary","source":"raw","closed_at":"2026-08-16T10:11:19.682Z"}}}},"hashes":{"entry":"sha256:049c20e83906dbae889b3521910c17cf702227059b862cf05b0aa6c3a4c104a6"},"provenance":{"prev":"sha256:03f0d192bcc4422a44c66b514fd8bc503b72ef6744de87c25fb24d9fe56bb480"}},"sig":{"alg":"Ed25519","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","pub":"62Tes0E-fhlnFp5rQ6rPIAwtLR76mnHEAjP7Fz_AZPs","sig":"WzEqlz-TYeZezaDdLAdkA9LsPc73ar813kX9fSSFvysKJv4W6M66VZsNWi0cg6IzootNL8UWEW_BR6sgB4PJCw"}}
+```
+
+</details>

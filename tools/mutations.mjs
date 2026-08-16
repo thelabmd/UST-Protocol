@@ -324,6 +324,25 @@ export const MUTATIONS = [
     from: "      if (inc === null || inc === undefined) { inclusion = undefined; }",
     to: "      if (inc === null || inc === undefined || inc === false) { inclusion = undefined; } /* mutant */",
   },
+  // #171 / round-237 — the SKIP. Broken, a caller assertion suppresses the witness probe again: the observation is
+  // never made, so the earned `corroborated` is unreachable and an added TRUE premise LOWERS the verdict — and the
+  // fork refusal, which lives only on that branch, becomes unreachable with it.
+  {
+    id: 'a-caller-assertion-suppresses-the-witness-probe', mustDetect: true, observe: ['conformance'],
+    why: 'an axiom treated as an answer. Broken, asserting no-fork stops the verifier asking the witness, so a consumer that adds a true premise is charged a lower strength than one that says nothing, and the rival-genesis search it asserted about is switched off.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "  if (!opts.offline) {\n    const w = await witnessNoFork(shard, genesisHash,",
+    to: "  if (!callerNoFork && !opts.offline) {\n    const w = await witnessNoFork(shard, genesisHash,",
+  },
+  // #171 / round-237 — the JOIN, and SEPARATE because it fails the other way: with the probe running, dropping the
+  // axiom from the earned result leaves monotonicity intact and costs the consumer only the lift it asked for.
+  {
+    id: 'the-earned-basis-drops-the-callers-axiom', mustDetect: true, observe: ['conformance'],
+    why: 'the join. Broken, a served-list corroboration reports itself alone and the caller\'s explicit axiom is discarded, so `acceptConsumerOverride` has nothing liftable and a consumer that was ALSO corroborated can no longer reach the tier it consciously opted into.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "      ...((ncf === true || cor === true) ? { override_liftable: true, independently_verified: false, axiom: 'caller-asserted',",
+    to: "      ...(false ? { override_liftable: true, independently_verified: false, axiom: 'caller-asserted',",
+  },
   // #161 — a shortfall that says nothing. The verdict is UNCHANGED by this break (still `provisional`), which is
   // exactly why it needs its own mutant: no verdict-comparing check can see it, and the defect it reproduces sat in
   // the tree until someone read the returned object field by field.

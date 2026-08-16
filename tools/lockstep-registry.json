@@ -594,6 +594,18 @@
       "rev": "round-236",
       "model_locus": "a connector that throws, or returns a non-Boolean, is a not-ours module violating its contract",
       "conformance_check": "#95 a connector that RETURNS false has computed and refused — the asymmetry survives the async repair"
+    },
+    {
+      "id": "R237-f5a1-probe-is-not-suppressed-by-an-axiom",
+      "rev": "round-237",
+      "model_locus": "an axiom is a reason to CONCLUDE more, never a reason to OBSERVE less",
+      "conformance_check": "#171 the witness probe RUNS under a caller assertion — an axiom is not an answer to the question it asks"
+    },
+    {
+      "id": "R237-f5a1-axiom-adjoins-to-the-earned-basis",
+      "rev": "round-237",
+      "model_locus": "A caller axiom that AGREES with the served list costs nothing to keep",
+      "conformance_check": "caller air-gap override (honored) → HIGH, the EARNED basis is kept and the axiom never becomes independent (#69 B / P0-2, round-237)"
     }
   ]
 }

@@ -1248,6 +1248,20 @@ transparent **`consumer-override`** (`independently_verified: false`) that reach
 ONLY when the consumer CONSCIOUSLY honors it (`acceptConsumerOverride`); it is NEVER silently reported as
 `authoritative` (the removed overclaim, the same class as a raw `mapInclusion:true`).
 
+**A caller assertion does not suppress the witness probe (round 237).** What a consumer asserts changes what is
+CONCLUDED from what was observed; it never changes what a verifier looks at. A resolver that reaches
+`/.well-known/ust-witness` MUST still reach it when the caller has supplied `noForkConfirmed` — or any other
+belief about no-fork — and MUST NOT treat the assertion as an answer to the question the probe asks. Only an
+explicit instruction that no request may leave (`offline`) suppresses it. Two reasons, and the second is the
+load-bearing one: an observation the verifier declines to make cannot be climbed back to, so a consumer adding a
+TRUE assertion would be charged a LOWER strength than one that said nothing; and the fork refusal is reachable
+only through that probe, so a caller asserting *no fork* would switch off the verifier's own search for a rival
+genesis — the exact condition the coordinate exists to detect. Where the probe CONFIRMS, the served-list
+observation stands on its own and the assertion rides beside it as the labelled `consumer-override` it always
+was. Where the probe finds a FORK, the refusal stands: an assertion that contradicts an observation makes the
+consumer's information set inconsistent, and the verifier reports the contradiction rather than resolving it.
+
+
 **Strength ladder (normative verdict values).** `self-asserted` (LIGHT) ⊊ `corroborated` (HIGH —
 served-list no-fork) ⊊ `authoritative` (HIGH — INDEPENDENT non-membership: verified no-fork evidence or an
 anchored name-map). A raw caller override surfaces as `consumer-override` (`independently_verified: false`),

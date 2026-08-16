@@ -2002,6 +2002,16 @@
         "excluded": "Nothing language-neutral to pin. A vector fixes bytes in and a declared result out, and this round's subject is the CALLING MODE of a consumer-supplied function — a JavaScript promise versus a value, which is a property of the host and its faculty, not of any document. The bytes on both sides are identical and already pinned; what changed is whether the verifier can observe an answer about them. The behaviour is held by executable checks that drive both doors over the same document."
       },
       "test": "packages/ust-protocol/conformance.mjs :: '#95 an async connector is NAMED and WITHHELD — a promise is the caller's plumbing, never a refusal of the proof' (re-aimed from an assertion on inclusion===false, which was the symptom), '#95 a connector that RETURNS false has computed and refused — the asymmetry survives the async repair', 'F.9.5-c.5 the ASYNC door reaches the same answer as the sync one — a promise no longer caps a host (round-236)' asserted by EQUALITY between the two doors, and 'F.9.5-c.5 the inclusion await verifies an IMMUTABLE snapshot'. Proven able to fail and to DISCRIMINATE: the sync-refusal mutant reddens exactly one check, the dropped-pre-resolution mutant reddens exactly the other."
+    },
+    {
+      "round": 237,
+      "math": "an axiom is a reason to CONCLUDE more, never a reason to OBSERVE less",
+      "spec": "A caller assertion does not suppress the witness probe (round 237)",
+      "code": "packages/ust-protocol/index.mjs :: resolveByDiscovery — the witness probe is gated on `offline` ALONE, never on what a caller asserts; resolveAuthority's served-list branch carries the caller's axiom beside the earned strength (`override_liftable` on `corroborated`, `independently_verified` still false); the nameAuthoritative test and the π_override projection key on LIFTABILITY rather than on the strength that carries it, so a consumer that was also corroborated can still lift.",
+      "vector": {
+        "excluded": "Not expressible as bytes. The subject is whether the verifier MAKES an observation — a network act — and the coordinate that follows rides on an unforgeable token minted only by the code that performed the fetch (`VERIFIED_SERVED`). A vector fixes inputs and a declared result; a caller cannot be handed the token, and a document cannot express 'a probe was run'. Held instead by executable checks that count the surfaces fetched and compare two runs differing only in the assertion."
+      },
+      "test": "packages/ust-protocol/conformance.mjs :: '#171 an added TRUE assertion never LOWERS the verdict' compares two runs differing in nothing else (a named-value assertion would pass for a reason the statement does not make); '#171 the witness probe RUNS under a caller assertion' asserts the observation is still made, which is what keeps the fork refusal reachable; the pre-existing air-gap check is re-aimed at the EARNED basis plus independently_verified:false. Proven able to fail and to discriminate: restoring the skip reddens 2, dropping the axiom from the earned basis reddens 1."
     }
   ],
   "first_accounted_round": 76,

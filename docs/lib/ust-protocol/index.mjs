@@ -1130,7 +1130,13 @@ function verifyCoreInner(doc, opts = {}) {
     // (Pinning authenticates the KEY, not the name.)
     // P0-2 audit — a raw `consumer-override` reaches the name-authoritative TIER only when the consumer CONSCIOUSLY
     // honors its own out-of-band assertion (opts.acceptConsumerOverride); the verdict still carries independently_verified:false.
-    const nameAuthoritative = identity.strength === 'authoritative' || (identity.strength === 'consumer-override' && identity.override_liftable === true && acceptOverride === true && identity.status === 'verified');   // round-42 P1-01 — acceptConsumerOverride raises ONLY a LIFTABLE consumer-override (from an explicit noForkConfirmed/corroborated axiom); a look-alike servedNoFork is override_liftable:false and can never reach authoritative/HIGH
+    // round-237 (#171) — the test is `override_liftable`, not the STRENGTH that carries it. A liftable axiom used to
+    // exist only on a `consumer-override`, because an axiom displaced whatever was earned; now that the witness is
+    // always asked, the same axiom rides on the EARNED `corroborated` — and keying the lift to the strength would
+    // have made a consumer strictly worse off for having ALSO been corroborated. The rest is unchanged: only an
+    // EXPLICIT boolean axiom is liftable (a look-alike servedNoFork is `override_liftable: false` and never reaches
+    // authoritative), the consumer must consciously honour it, and the verdict still carries independently_verified:false.
+    const nameAuthoritative = identity.strength === 'authoritative' || (identity.override_liftable === true && acceptOverride === true && identity.status === 'verified');   // round-42 P1-01 + round-237
     const nameField = nameAuthoritative ? { publisher: st.id.domain_shard } : { publisher_claimed: st.id.domain_shard };
     // (the anchor was verified in phase 1 above; `timeField`/`provenAnchorTime` already carry its proven time.)
     // The verdict CARRIES ITS SCOPE: `VALID:LIGHT|HIGH|TOP`, so a consumer cannot read "valid" without reading
@@ -1145,7 +1151,10 @@ function verifyCoreInner(doc, opts = {}) {
     // P1-03/C3 — ONE assembler: verify() maps the consumer-override π_override projection (an explicit consumer
     // axiom, applied BEFORE assembly — never a hidden boolean inside it) and hands the SEAM VERDICTS to
     // deriveAssurance; the lattice IS the machine (no second inline tier formula).
-    const idVerdict = (identity.strength === 'consumer-override' && nameAuthoritative) ? { ...identity, strength: 'authoritative' } : identity;
+    // round-237 (#171) — the π_override projection follows LIFTABILITY for the same reason the test above does: the
+    // axiom now rides on whatever strength was earned, so gating the projection on `consumer-override` would refuse to
+    // lift exactly the consumer that ALSO got corroborated.
+    const idVerdict = (identity.override_liftable === true && nameAuthoritative && identity.strength !== 'authoritative') ? { ...identity, strength: 'authoritative' } : identity;
     const report = deriveAssurance(sealPredicateGraph(provePredicates({ identity: idVerdict, anchor: doc.proof !== undefined ? { inclusion: timeField.inclusion === true, time: timeField.strength } : undefined })));   // round-25 P0-01: verify() is the ONLY seat that seals the graph — over REAL seam verdicts, never caller labels
     const assurance = report.strength;
     const tier = report.tier;
@@ -2259,7 +2268,14 @@ export function resolveAuthority(doc, opts = {}) {
   // A transcript caller's plain object {confirmed:true, active_genesis:<public hash>} is NOT in the set — the binding
   // hash it holds is public, so without the token it earns nothing beyond a caller assertion.
   if (servedNoFork?.confirmed === true && VERIFIED_SERVED.has(servedNoFork) && servedNoFork.active_genesis === contentHash(genesis))
-    return { strength: 'corroborated', noFork: 'served-list', status: st2, capacity, freshness };
+    // round-237 (#171) — the JOIN, and it is the half the probe repair alone does not give. Once the witness is always
+    // asked, a caller that ALSO asserts no-fork lands here rather than in the override branch below, and returning a
+    // bare `corroborated` would silently drop its axiom — the same information loss in the other direction, now costing
+    // the consumer the lift it consciously asked for (measured: the honored-override case fell from TOP to HIGH). Both
+    // bases are carried: the strength is the EARNED one, and `override_liftable` rides on it so `acceptConsumerOverride`
+    // still reaches `authoritative`. `independently_verified` stays false — a join with an axiom never earns it.
+    return { strength: 'corroborated', noFork: 'served-list', status: st2, capacity, freshness,
+      ...((ncf === true || cor === true) ? { override_liftable: true, independently_verified: false, axiom: 'caller-asserted', detail: 'served-list corroboration AND a caller no-fork axiom — the earned strength is reported, the axiom rides beside it (round-237)' } : {}) };
   // a bare `corroborated`/`noForkConfirmed` boolean OR an unminted `servedNoFork` is a CALLER ASSERTION, not a verified
   // predicate (a STATELESS verifier cannot fetch a served list). Like noForkConfirmed it is consumer-override, NEVER a
   // silent corroborated (self-audit rc.35 — same class as the removed `corroborated:true`/`mapInclusion:true`).
@@ -4445,11 +4461,19 @@ export async function resolveByDiscovery(doc, opts = {}, transport = {}) {
   // #69 B / F.5a — the publisher's OWN served witness list is CORROBORATION, not independent non-membership: a
   // confirmed served list ⇒ `corroborated` (HIGH, honest), NOT `authoritative`. Only a caller air-gap assertion
   // (out-of-band responsibility) or a future anchored map-inclusion reaches `authoritative`. A fork ⇒ E-GENESIS.
-  // P0-2 — a caller-supplied no-fork basis (verified `noForkEvidence`, or the raw `noForkConfirmed` override) skips the
-  // witness auto-query; otherwise the served genesis-log is queried and only ever CORROBORATES (never independent).
+  // round-237 (#171) — the probe is suppressed by `offline` ALONE. It used to be skipped whenever the caller had
+  // spoken (`noForkEvidence !== undefined || noForkConfirmed`), which confused two different relations to `ℐ`:
+  // adjoining an axiom enlarges the CONSUMER's view and says nothing about `σ(observables)`, while declining to look
+  // SHRINKS it. Measured by counting fetched surfaces: with no assertion discovery read genesis/cadence/keylog/WITNESS
+  // and resolved `corroborated`; with `noForkConfirmed: true` it read the first three and resolved `consumer-override`,
+  // so adjoining a TRUE axiom LOWERED the tier and `resolveAuthority`'s served-before-override ordering never applied,
+  // because the observation it ranks was never made. Worse than the tier: `w.status === 'fork' ⇒ E-GENESIS` lives on
+  // this branch and the served list is its only source, so asserting *no fork* switched off the search for a rival
+  // genesis — the exact condition the coordinate exists to detect. What a caller believes changes what is CONCLUDED,
+  // never what is looked at. The served genesis-log still only ever CORROBORATES (never independent).
   let witnessConfirmed = false, noFork = 'unconfirmed', witnessReason;
-  const callerNoFork = opts.noForkEvidence !== undefined || opts.noForkConfirmed;
-  if (!callerNoFork && !opts.offline) {
+  const callerNoFork = opts.noForkEvidence !== undefined || opts.noForkConfirmed;   // still decides how the RESULT is labelled below, no longer whether it is obtained
+  if (!opts.offline) {
     const w = await witnessNoFork(shard, genesisHash, { fetchImpl, substrateVerify, maxWitnessOpMs: opts.maxWitnessOpMs });   // round-26 P1-03 (rev27 E) — thread the verifier's ρ_v.time policy through the PUBLIC entry; the leaf-only budget was unreachable (F.9); round-31 — also the injectable budget clock (resource-limit only)
     if (w.status === 'fork') return { verdict: bad('E-GENESIS', w.detail), resolution: { publisher: shard, fork: true, detail: w.detail } };
     witnessConfirmed = w.status === 'confirmed';
