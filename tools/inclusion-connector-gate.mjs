@@ -70,6 +70,30 @@ ok('an async connector is NAMED and WITHHELD on the sync door, never a refusal o
 ok('a connector that RETURNS false still refuses — withholding did not swallow a real refusal',
   P.verifyAnchor(CH, alien, { inclusionVerify: () => false }).inclusion === false);
 
+// ── round 238 (#172) — the BROWSER connector answers the same as the Node one. Three implementations of one RFC 6962
+// climb now exist (the Node package, the browser walk in ust-resolve.mjs, and the thin binding in
+// inclusion-browser.mjs that turns it into the core's seam); `unbounded-index-gate` already pins the first two
+// against each other above 2^31/2^53, and this pins the SEAM shape — declared-construction routing and the leaf
+// binding — which is what a caller actually passes to the core.
+{
+  const { inclusionVerify: nodeIV } = await import('../packages/ust-rfc6962-verify/index.mjs');
+  const { inclusionVerify: webIV } = await import('../docs/inclusion-browser.mjs');
+  // a real rfc6962-raw proof: leaf = SHA256(0x00 ‖ raw32(content_hash)), one sibling, root = SHA256(0x01 ‖ l ‖ r)
+  const { createHash } = await import('node:crypto');
+  const sha = (b) => createHash('sha256').update(b).digest();
+  const CH2 = 'sha256:' + '5a'.repeat(32), SIB2 = 'ab'.repeat(32);
+  const leaf2 = sha(Buffer.concat([Buffer.from([0x00]), Buffer.from(CH2.slice(7), 'hex')]));
+  const root2 = 'sha256:' + sha(Buffer.concat([Buffer.from([0x01]), leaf2, Buffer.from(SIB2, 'hex')])).toString('hex');
+  const good2 = { root: root2, inclusion: { construction: 'rfc6962-raw', index: 0, tree_size: 2, hashes: [SIB2] }, anchor: { substrate: 'bitcoin-ots' } };
+  const bad2 = { ...good2, root: 'sha256:' + 'cc'.repeat(32) };
+  const alien2 = { ...good2, inclusion: { ...good2.inclusion, construction: 'acme-tree-v9' } };
+  for (const [name, p2] of [['a valid path', good2], ['a wrong root', bad2], ['a foreign construction', alien2]]) {
+    const a = nodeIV(CH2, p2), b = await webIV(CH2, p2);
+    ok(`node and browser inclusion connectors agree on ${name} (${JSON.stringify(a)})`, a === b);
+  }
+  ok('the browser connector CONFIRMS a valid rfc6962-raw path (not merely agreeing on refusals)', (await webIV(CH2, good2)) === true);
+}
+
 // ── and the substrate seam is untouched by any of this
 ok('substrate still delegated separately (inclusion OK, substrate is the caller job)',
   /substrate not verified/.test(P.verifyAnchor(CH, goodProof).detail || ''));

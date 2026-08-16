@@ -224,6 +224,12 @@ import { verifyAsync, resolveByDiscovery } from './lib/ust-protocol/index.mjs';
 // reads a publisher's witness log and can confirm nothing from it — which is exactly what this verifier lost
 // the moment it moved onto the reference build, and what this restores.
 import { substrateVerify } from './substrate-browser.mjs';
+// The CONSTRUCTION is the consumer's OTHER faculty, and the two answer different questions (§11.2): the substrate
+// says whether a ROOT was committed to the outside world, this says whether a content_hash is a MEMBER of it. The
+// core bundles `ust-merkle-tagged` and delegates the rest — and the reference operator anchors `rfc6962-raw`, so
+// without this a live document reaches HIGH and stops. It is async (WebCrypto's digest is), which is why it could
+// not be supplied at all until round 236 taught the inclusion seam to resolve before deciding.
+import { inclusionVerify } from './inclusion-browser.mjs';
 
 const $ = (id) => document.getElementById(id);
 const inEl = $('in'), outEl = $('out');
@@ -384,7 +390,7 @@ async function run() {
       r = await verifyAsync(doc, { context: 'data' });
     }
   } else {
-    const out = await resolveByDiscovery(doc, { context: 'data' }, { substrateVerify });
+    const out = await resolveByDiscovery(doc, { context: 'data', inclusionVerify }, { substrateVerify });   // inclusionVerify is an OPTS member, not a transport capability — passed as transport it is silently ignored
     r = out.verdict; resolution = out.resolution;
   }
   Promise.resolve(r).then((r) => {
