@@ -523,6 +523,56 @@ console.log(JSON.stringify({ sync: sync.result + '/' + (sync.reason || ''), asy:
   }
 }
 
+// ─── 9. #144 in the CLEAN-ROOM verifier — the file `llms.txt` hands to machines ─────────────────────────
+//
+// Section 8 proves the mapped CORE reaches a verdict. This covers the other verifier we publish, and it is the
+// one a machine is told to fetch: `docs/llms.txt` names `ust-verify.mjs` as the zero-dependency file to run. It
+// carried the original #144 collapse long after the core closed it — one `catch` answering `false` both to "bad
+// signature" and to "this engine cannot check Ed25519", which the caller turns into INVALID:E-SIG. A verifier we
+// RECOMMEND, calling honest documents forged on any engine whose WebCrypto lacks Ed25519.
+//
+// The second half is the one that matters: without the faculty the verifier genuinely cannot tell a tampered
+// document from an intact one, so BOTH must answer INDETERMINATE. Getting the tampered one "right" would be luck,
+// and a check that rewarded it would be rewarding a guess.
+{
+  const runner = `
+const L = await import('${join(ROOT, 'packages/ust-light/index.mjs')}');
+const V = await import('${join(ROOT, 'docs/ust-verify.mjs')}');
+const kp = await L.keypair();
+const id = { domain_shard: kp.key_id, ust_id: 'ust:20260715.12', key_id: kp.key_id, class: 'observation' };
+const time = { generated_at: '2026-07-15T12:00:00Z', valid_from: '2026-07-15T12:00:00Z', valid_to: '2026-07-15T13:00:00Z' };
+const doc = await L.seal(await L.buildState(id, time, { t: { kind: 'captured', value: { c: '21.5' } } }), kp.privateKey, kp.pub);
+const bad = JSON.parse(JSON.stringify(doc)); bad.sig.sig = (bad.sig.sig[0] === 'A' ? 'B' : 'A') + bad.sig.sig.slice(1);
+const withGood = (await V.verify(doc, { context: 'data' })).result;
+const withBad  = (await V.verify(bad, { context: 'data' })).result;
+const real = crypto.subtle.importKey.bind(crypto.subtle);
+crypto.subtle.importKey = async (f, k, a, ...r) => {
+  if (a && a.name === 'Ed25519') { const e = new Error('Unrecognized algorithm name'); e.name = 'NotSupportedError'; throw e; }
+  return real(f, k, a, ...r);
+};
+const g = await V.verify(doc, { context: 'data' });
+const b = await V.verify(bad, { context: 'data' });
+console.log(JSON.stringify({ withGood, withBad, noFacGood: g.result + '/' + (g.reason || ''), noFacBad: b.result + '/' + (b.reason || '') }));
+`;
+  let out = null;
+  try {
+    out = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '--eval', runner],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim());
+  } catch (e) {
+    check('#144 the clean-room verifier decides a document', false,
+      String(e.stderr || e.message).split('\n').filter((l) => /Error/.test(l))[0]?.slice(0, 160) ?? 'no output');
+  }
+  if (out) {
+    check('#144 clean-room WITH the faculty is unchanged', out.withGood === 'VALID:LIGHT' && out.withBad === 'INVALID',
+      `got ${out.withGood} / ${out.withBad} — the fix moved a verdict on an engine that HAS Ed25519, and it must not`);
+    check('#144 clean-room WITHOUT the faculty WITHHOLDS on an honest document', out.noFacGood === 'INDETERMINATE/unsupported_alg',
+      `got ${out.noFacGood} — a verifier we recommend to machines is calling an honest document forged`);
+    check('#144 clean-room WITHOUT the faculty withholds on a TAMPERED one too, rather than guessing right',
+      out.noFacBad === 'INDETERMINATE/unsupported_alg',
+      `got ${out.noFacBad} — it did not check the signature, so any verdict about it would be luck`);
+  }
+}
+
 console.log(failures === 0
   ? '\n  browser portability: every package declares a browser stance, each portable one RUNS without Node globals, and each node-only one says so and still means it'
   : `\n  browser portability: ${failures} FAILURE(S)`);

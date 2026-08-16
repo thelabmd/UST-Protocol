@@ -49,9 +49,24 @@ export function canonicalS(sig) {
   for (let i = 0; i < 32; i++) { if (S[i] < L[i]) return true; if (S[i] > L[i]) return false; }
   return false;                                                               // S == L → not < L → reject
 }
+// #144 — THE THIRD OUTCOME IS NOT `false`. A single `catch` here used to answer the same `false` to two
+// unrelated facts: *this signature is bad* and *this browser cannot check Ed25519 at all*. The caller turns
+// `false` into `INVALID:E-SIG`, so on any engine whose WebCrypto lacks Ed25519 every honest document read as
+// FORGED — an accusation against a document that was fine, from a verifier that had not looked. The reference
+// closed this by letting the primitive THROW and routing that to INDETERMINATE; this file kept the collapse
+// while `llms.txt` recommends it to machines as the fetchable verifier.
+//
+// The split follows the DOM spec rather than a guess: an unrecognised algorithm is `NotSupportedError`, while
+// malformed key material is `DataError`. So a missing FACULTY is re-thrown as E-UNSUPPORTED and becomes
+// INDETERMINATE below; a bad INPUT stays `false`, which is what `false` always meant.
 export async function edVerifyRaw(pub, msg, sig) {                             // WebCrypto ONLY (no strict-S) — to observe its behavior
   try { const k = await crypto.subtle.importKey('raw', b64url(pub), { name: 'Ed25519' }, false, ['verify']);
-    return await crypto.subtle.verify({ name: 'Ed25519' }, k, b64url(sig), te(msg)); } catch { return false; }
+    return await crypto.subtle.verify({ name: 'Ed25519' }, k, b64url(sig), te(msg)); }
+  catch (e) {
+    if (e?.name === 'NotSupportedError' || /unrecognized|unsupported|not supported/i.test(String(e?.message || '')))
+      throw { code: 'E-UNSUPPORTED', detail: 'Ed25519 is not available in this build\'s crypto.subtle — the signature was NOT checked' };
+    return false;
+  }
 }
 export const edVerifyStrict = async (pub, msg, sig) => canonicalS(sig) && (await edVerifyRaw(pub, msg, sig));
 
@@ -227,7 +242,13 @@ export async function verify(doc, opts = {}) {
     return { result: 'VALID:LIGHT', tier: 'LIGHT', identity: { strength, status: 'verified', mode: KEYID_FORM.test(id.domain_shard) ? 'key' : 'name' }, publisher_claimed: id.domain_shard, ust_id: id.ust_id, class: id.class, content_hash: ch,
       provenance: provOut,
       completeness: 'not_evaluated' };
-  } catch (e) { return bad(e.code || 'E-MALFORMED', e.detail || String(e)); }
+  // #144 — inability leaves by its OWN door. An E-UNSUPPORTED reaching this catch is the verifier saying it
+  // could not look; answering INVALID would convert that into an accusation, which is the defect this file
+  // carried. Mirrors the reference: INDETERMINATE(unsupported_alg), never a verdict about the document.
+  } catch (e) {
+    if (e?.code === 'E-UNSUPPORTED') return { result: 'INDETERMINATE', reason: 'unsupported_alg', detail: e.detail || String(e) };
+    return bad(e.code || 'E-MALFORMED', e.detail || String(e));
+  }
 }
 
 // §11.3 completeness — verify a RANGE as ONE authority's prev-chained stream (LIGHT per-frame + chain + authority).

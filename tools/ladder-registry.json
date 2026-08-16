@@ -1799,6 +1799,20 @@
       "test": "#42 requireIndependentAuthority: no assigned domain ⇒ INDETERMINATE, never an inferred independence"
     },
     {
+      "round": 230,
+      "math": {
+        "excluded": "No theorem moved. F.5.1 already states that inability is a THIRD reading and may not be reported as a verdict; this round applies that existing rule to a second implementation which had never obeyed it. A model section for 'the other copy should also follow the model' would be bookkeeping, not mathematics."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved. The spec already says a verifier that cannot implement a primitive answers INDETERMINATE(unsupported_alg) rather than guessing — the clean-room was simply not doing what the spec already required."
+      },
+      "code": "docs/ust-verify.mjs :: edVerifyRaw re-throws a missing FACULTY as E-UNSUPPORTED (DOM NotSupportedError) while a bad INPUT stays false, and the outer catch routes it to INDETERMINATE instead of INVALID",
+      "vector": {
+        "excluded": "The language-neutral half is already pinned by `faculty-absent-ed25519`, which fixes an input and its declared result for a build lacking the primitive. What this round adds is that a SECOND implementation obeys it, and 'our other copy also behaves' is not something a porter reproduces — it is a property of this tree, held by a gate."
+      },
+      "test": "tools/browser-portability-gate.mjs :: #144 clean-room WITHOUT the faculty WITHHOLDS on an honest document"
+    },
+    {
       "round": 229,
       "math": {
         "excluded": "No theorem moved. The substrate was always the consumer's faculty and the decision relation always read its receipt; this round supplies that faculty in one more environment. A document earns exactly the verdict it earned before, on the same evidence."

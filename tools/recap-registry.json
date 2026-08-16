@@ -656,6 +656,10 @@
     {
       "round": 229,
       "no_recap": "Round 229 closed no GitHub issue: it restores a capability an earlier round of my own removed and supplies the browser half of #148, but #144 and #129 both stay open on the clean-room's final home. The unit is the CLOSED ISSUE, and an entry for a repair of my own regression would be a diary about my bookkeeping rather than about a card."
+    },
+    {
+      "round": 230,
+      "no_recap": "Round 230 closed no GitHub issue: it removes the last LIVE instance of #144 — the verifier llms.txt hands to machines — but that card's remaining boxes are about the asynchronous surface over immutable bytes and the whole tree following the await, and none of them moved. The unit is the CLOSED ISSUE."
     }
   ]
 }
