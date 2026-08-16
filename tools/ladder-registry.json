@@ -1799,6 +1799,20 @@
       "test": "#42 requireIndependentAuthority: no assigned domain ⇒ INDETERMINATE, never an inferred independence"
     },
     {
+      "round": 231,
+      "math": {
+        "excluded": "No theorem moved. The round measures that two implementations of a CONNECTOR agree on one live anchor; the decision relation reads a receipt and does not care which connector produced it. Agreement between two suppliers of one faculty is an engineering fact about this tree, not a property of the wire."
+      },
+      "spec": {
+        "excluded": "Nothing normative moved. §11.2 keeps the substrate delegated and the receipt shape is unchanged; which connectors exist, and how strong each honestly claims to be, is exactly what the spec leaves to implementations."
+      },
+      "code": "tools/primitive-parity-gate.mjs :: the owed comparison is replaced by the measurement, with the assurance difference named to the word rather than smoothed over",
+      "vector": {
+        "excluded": "A vector fixes an input and a declared result reproducible offline. This claim is about two connectors reaching the same answer over LIVE third-party logs — Rekor and a block explorer — which no offline vector can carry, and which is why the record lives beside the exports rather than in a running leg."
+      },
+      "test": "tools/primitive-parity-gate.mjs :: every shared entry point agrees; the entry-point SET is pinned"
+    },
+    {
       "round": 230,
       "math": {
         "excluded": "No theorem moved. F.5.1 already states that inability is a THIRD reading and may not be reported as a verdict; this round applies that existing rule to a second implementation which had never obeyed it. A model section for 'the other copy should also follow the model' would be bookkeeping, not mathematics."
