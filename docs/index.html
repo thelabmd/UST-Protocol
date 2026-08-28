@@ -36,6 +36,16 @@
   "@context": "https://schema.org",
   "@graph": [
     {
+      "@type": "WebSite",
+      "@id": "https://verify.ustprotocol.com/#website",
+      "name": "UST Verifier",
+      "url": "https://verify.ustprotocol.com/",
+      "inLanguage": "en",
+      "publisher": { "@id": "https://thelab.md/#organization" },
+      "about": { "@id": "https://ustprotocol.com/#protocol" },
+      "hasPart": { "@id": "https://verify.ustprotocol.com/#verifier" }
+    },
+    {
       "@type": "WebApplication",
       "@id": "https://verify.ustprotocol.com/#verifier",
       "name": "UST Verifier",
@@ -45,24 +55,11 @@
       "operatingSystem": "Any (runs in the browser; nothing is uploaded)",
       "description": "The canonical web verifier for UST 1.0 (Universal State Transcript) — paste a transcript, get VALID:LIGHT/HIGH/TOP, INVALID, or INDETERMINATE. Client-side WebCrypto; the only reliable verdict is a conforming verifier's output.",
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-      "isBasedOn": { "@id": "https://github.com/thelabmd/UST-Protocol#repo" },
-      "publisher": { "@id": "https://thelab.md/#org" }
-    },
-    {
-      "@type": "SoftwareSourceCode",
-      "@id": "https://github.com/thelabmd/UST-Protocol#repo",
-      "name": "UST — Universal State Transcript (specification + reference implementations)",
-      "codeRepository": "https://github.com/thelabmd/UST-Protocol",
-      "programmingLanguage": "JavaScript",
-      "license": ["https://www.apache.org/licenses/LICENSE-2.0", "https://creativecommons.org/licenses/by/4.0/"],
-      "sameAs": [
-        "https://www.npmjs.com/package/ust-protocol",
-        "https://www.npmjs.com/package/@ust-protocol/mcp",
-        "https://www.npmjs.com/package/@ust-protocol/web-signer"
-      ],
-      "publisher": { "@id": "https://thelab.md/#org" }
-    },
-    { "@type": "Organization", "@id": "https://thelab.md/#org", "name": "THE LAB", "url": "https://thelab.md" }
+      "isPartOf": { "@id": "https://verify.ustprotocol.com/#website" },
+      "isBasedOn": { "@id": "https://ustprotocol.com/#protocol" },
+      "creator": { "@id": "https://thelab.md/#organization" },
+      "publisher": { "@id": "https://thelab.md/#organization" }
+    }
   ]
 }
 </script>

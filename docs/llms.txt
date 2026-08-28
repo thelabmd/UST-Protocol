@@ -54,6 +54,39 @@ paste channels that normalize whitespace/unicode). Decode the base64 to JSON, th
 - Examples (valid + tampered + recipes): https://github.com/thelabmd/UST-Protocol/tree/main/examples
 - Trademark / naming: https://github.com/thelabmd/UST-Protocol/blob/main/TRADEMARK.md
 
+## Organization
+
+There is one organization: The Lab (https://thelab.md/) — an independent laboratory. Mission: technologies for
+sustainable development. It authors the protocol and publishes this verifier.
+
+Helioradar, MUUUNE and Noosphere are brands of The Lab, not separate organizations:
+
+- Helioradar — https://helioradar.com/
+- MUUUNE — https://muuune.com/
+- Noosphere — https://noosphere.md/
+
+Three engines run on top of this one protocol:
+
+- Noosphere Engine — the planet's own state, sealed every 30 seconds
+- Helioradar Engine — what the universe looks like right now, measured
+- Muuune Engine — time as canon: the sky projected into 14 calendar systems
+
+They are what UST is for in practice: each seals its readings, and anything downstream can check them here
+without trusting the publisher.
+
+## Semantic Graph
+
+Canonical @id values used in the JSON-LD published on this domain:
+
+- https://thelab.md/#organization — ResearchOrganization "The Lab" (defined on thelab.md)
+- https://ustprotocol.com/#protocol — UST Protocol (defined on ustprotocol.com)
+- https://verify.ustprotocol.com/#website — this site
+- https://verify.ustprotocol.com/#verifier — WebApplication, the verifier itself
+
+The verifier stands on the protocol: #verifier isBasedOn #protocol. The Lab and the protocol are defined on
+their own domains and appear here as bare @id references, never restated — this domain is authoritative only
+for the verify.ustprotocol.com entities above.
+
 ## What UST proves — and what it doesn't
 
 UST proves fixation, not truth: this publisher committed to these exact bytes at this claimed time, and nothing
