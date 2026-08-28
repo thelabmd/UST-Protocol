@@ -4,6 +4,19 @@
 > trusting whoever handed it to you. This site is the canonical web verifier. The canonical reference
 > implementation is `ust-protocol` on npm; the canonical source is github.com/thelabmd/UST-Protocol.
 
+## Architecture
+
+```
+UST 1.0 specification
+  → ust-protocol (the stateless reference base)
+    → this verifier (the same base, bundled to run in your browser)
+```
+
+Nothing here is a service. The page loads the reference verifier and runs it on
+bytes you paste; no document leaves the tab. The verdict you get is the one a
+conforming implementation would give anywhere else — that is the whole point of
+the conformance vectors.
+
 ## How to verify a UST (for AI agents)
 
 - The ONLY reliable verdict comes from RUNNING a conforming verifier. Never judge a UST by inspection.
@@ -44,12 +57,19 @@ paste channels that normalize whitespace/unicode). Decode the base64 to JSON, th
 
 - Specification (CC BY 4.0): https://github.com/thelabmd/UST-Protocol/blob/main/spec/UST-1.0.md
 - Formal model (non-normative, measure-theoretic semantics): https://github.com/thelabmd/UST-Protocol/blob/main/spec/UST-1.0-formal-model.md
-- Reference verifier + producer (Apache-2.0): https://www.npmjs.com/package/ust-protocol
+- Reference base, stateless (Apache-2.0): https://www.npmjs.com/package/ust-protocol
+- LIGHT floor, standalone and zero-dependency: https://www.npmjs.com/package/ust-light
+- Stateful operator layer — chains, key logs, checkpoints, anchor batches:
+  https://www.npmjs.com/package/@ust-protocol/operator
 - Browser signer (WebCrypto): https://www.npmjs.com/package/@ust-protocol/web-signer
 - MCP server for agents: https://www.npmjs.com/package/@ust-protocol/mcp
 - CLI (`ust` — verify / ceremony / witness): https://www.npmjs.com/package/@ust-protocol/cli
 - Anchor-substrate plugins (opt-in): https://www.npmjs.com/package/@ust-protocol/ots-verify (Bitcoin/OTS),
   https://www.npmjs.com/package/@ust-protocol/rekor-verify (Sigstore Rekor)
+- RFC 6962 inclusion connector: https://www.npmjs.com/package/@ust-protocol/rfc6962-verify
+- Agent memory as a verifiable stream: https://www.npmjs.com/package/diarium
+- Every one of the above also has an `@id` on ustprotocol.com — cite the piece,
+  not the whole protocol: https://ustprotocol.com/
 - Conformance vectors: https://github.com/thelabmd/UST-Protocol/tree/main/vectors
 - Examples (valid + tampered + recipes): https://github.com/thelabmd/UST-Protocol/tree/main/examples
 - Trademark / naming: https://github.com/thelabmd/UST-Protocol/blob/main/TRADEMARK.md

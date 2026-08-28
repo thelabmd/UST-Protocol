@@ -56,7 +56,10 @@
       "description": "The canonical web verifier for UST 1.0 (Universal State Transcript) — paste a transcript, get VALID:LIGHT/HIGH/TOP, INVALID, or INDETERMINATE. Client-side WebCrypto; the only reliable verdict is a conforming verifier's output.",
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
       "isPartOf": { "@id": "https://verify.ustprotocol.com/#website" },
-      "isBasedOn": { "@id": "https://ustprotocol.com/#protocol" },
+      "isBasedOn": [
+        { "@id": "https://ustprotocol.com/#protocol" },
+        { "@id": "https://ustprotocol.com/#reference-implementation" }
+      ],
       "creator": { "@id": "https://thelab.md/#organization" },
       "publisher": { "@id": "https://thelab.md/#organization" }
     }
