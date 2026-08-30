@@ -16,6 +16,14 @@ heavy process would be theatre.
 
 *Both rules hold today. A newer minor answers `INDETERMINATE(unsupported_minor)`, a different major `INDETERMINATE(unsupported_major)`; `INVALID` is reserved for its one meaning — the verifier applied ITS OWN rules and they were violated.*
 
+## Verification is not gatable
+
+A UST document is **self-contained**: possession of the bytes is enough to check them. Verifying requires no permission, no account, no key and no contact with anyone — not as a concession anyone grants, but because the format leaves nowhere to put such a step. The specification, the conformance vectors and a reference verifier stay openly licensed.
+
+**No future version may introduce a rule that makes a verdict depend on reaching a party.** A check that must call someone is a check that someone can withhold, and this protocol exists precisely so that no one can. That is a MAJOR-level prohibition rather than a preference: it is not a change a minor could make additively, and it is not a change this project will make at all.
+
+This section is about the **protocol**. What any operator does at its own layer — what it stores, serves, charges for or refuses — is that operator's business and not this document's; the two are separable by construction, which is the whole reason the evidence object carries everything a verdict needs.
+
 ## How changes are made
 
 Changes are proposed via **issues and pull requests** against this repository. Discussion happens in the open.

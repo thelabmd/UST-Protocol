@@ -2054,6 +2054,24 @@
         "excluded": "A vector fixes bytes in and a verdict out for an implementation that HAS the faculty. What broke here is whether a surface hands its own faculty to the verifier, which is a property of the caller, not of the wire — and a language-neutral corpus must not pin how a port wires its plugins."
       },
       "test": "tools/connector-delivery-gate.mjs :: the domain is read from the source — every `combine*` the core exports, every assembly site in every shipped package — and each assembled name must appear in the call it precedes. Proven able to fail one site at a time; `P.verify` excluded by name because the synchronous door takes no connector."
+    },
+    {
+      "round": 241,
+      "math": {
+        "excluded": "No statement moved. Self-containment is already the model's premise — a verdict is a function of the document and the verifier's own faculties, with no party in the domain — so the rule adds no obligation the mathematics does not already have. What it adds is a bound on future PROPOSALS, which is a governance object and not a theorem."
+      },
+      "spec": {
+        "excluded": "Deliberately not the spec. The normative text says what a conforming verifier must compute; it does not, and should not, contain a promise about what future versions may be proposed. Putting a self-binding rule in the specification would also make it look like a conformance requirement on implementers, which it is not — it binds this project."
+      },
+      "code": {
+        "excluded": "No code changed and no verdict moves. The property being written down is one the format already has: verification consumes bytes the consumer holds. A code change here would mean the property was NOT already true, which is the opposite of what this round records."
+      },
+      "vector": {
+        "excluded": "A vector pins bytes in and a verdict out. This round adds no rule a document can violate and no verdict a verifier can get wrong — it constrains what may be proposed in future versions, which no corpus can express."
+      },
+      "test": {
+        "excluded": "There is nothing executable to assert: the rule governs proposals, not runs. The only enforcement is a reader holding the text against a future change, and a gate pretending otherwise would be the vacuous kind this repository keeps finding — green because its domain is empty."
+      }
     }
   ],
   "first_accounted_round": 76,
