@@ -697,6 +697,10 @@
       "round": 238,
       "issue": 172,
       "content_hash": "sha256:ad182ee6d426c636a637abae27f8365604fc790a1d47e4c881895ddf4399ff07"
+    },
+    {
+      "round": 239,
+      "no_recap": "Round 239 closes no GitHub issue — the defect was found by the owner in the live page during an unrelated review, filed in the local tracker as UST-mbso, and fixed the same session. The unit of a recap is the CLOSED ISSUE: one closed issue, one recap, one diary entry. There is no recipient here, and an entry written anyway would be an entry written to satisfy this gate. If the finding is later filed publicly, the closing of THAT card earns its own entry rather than back-dating one to this round."
     }
   ]
 }

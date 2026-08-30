@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // ust-protocol — reference implementation of UST 1.0 (the official STATELESS base; the public verification lib) (REV 26), LIGHT floor first.
 // §16: ONE version source — the conformance runner asserts spec/package/vectors all carry the same rc.
-export const VERSION = { wire: '1.0', spec: '1.0.0-rc.72', revision: 94 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
+export const VERSION = { wire: '1.0', spec: '1.0.0-rc.73', revision: 94 };   // #75 P1-09: machine-readable {wire, spec, revision} — Status line & appendix must agree
 // ─── #43 — OUTBOUND REQUESTS CARRY A LABEL. Measured 2026-08-15: nothing here set one, so every call from this
 //     tree left as the runtime's bare default (`node`/`undici`), indistinguishable from any other script on both
 //     our own logs and a provider's. Being identifiable is PROTECTION for a client that behaves: anonymous
@@ -2477,15 +2477,24 @@ const subtleEd25519 = async (pubB64url, msgUtf8, sigB64url) => {
     return await crypto.subtle.verify({ name: 'Ed25519' }, k, fromB64url(sigB64url), utf8(msgUtf8)) === true;
   } catch { return null; }   // NOT `false`: a build without Ed25519 in `crypto.subtle` is INABILITY, and the caller keeps its refusal
 };
-async function verifyCoreWithSignatureFaculty(doc, opts) {
-  const sync = verifyCore(doc, opts);
-  if (!cannotDecide(sync)) return sync;
+// round-239 (UST-mbso) — the faculty is a property of a PURE SYNCHRONOUS CALL, not of `verifyCore`. It was written
+// for one caller and the wrapper stayed there, so every other synchronous consumer of `edVerifyStrict` kept refusing
+// in a browser that HAS the primitive: measured on the live page, `resolveAuthority` answered "genesis not decidable
+// by this build" while `crypto.subtle` Ed25519 was available, and HIGH was unreachable for every name-form document.
+// The replay loop never depended on what it replayed — only on PURITY, which is why the memo lives at the leaf
+// (`edVerifyStrict` → `consultSignature`) and already covered genesis, key-log, cadence and checkpoint signatures.
+// So the loop is generalized over the call, and its precondition is stated where it can be checked: `runSync` MUST
+// be pure and clock-free, because a pass is DISCARDED and re-run. `resolveByDiscovery` is not — it fetches — which
+// is exactly why the wrapper goes around its pure sub-calls and never around the door itself.
+// `memo` is threaded so one discovery resolves each signature ONCE across genesis → cadence → authority.
+async function withSignatureFaculty(runSync, refused, memo = new Map()) {
+  const sync = runSync();
+  if (!refused(sync)) return sync;
   if (typeof crypto === 'undefined' || !crypto?.subtle) return sync;
-  const memo = new Map();
   for (let pass = 0; pass < SIG_RESOLUTION_MAX_PASSES; pass++) {
     let verdict, asked;
     beginSignatureResolution(memo);
-    try { verdict = verifyCore(doc, opts); } finally { asked = unresolvedSignatures(); endSignatureResolution(); }
+    try { verdict = runSync(); } finally { asked = unresolvedSignatures(); endSignatureResolution(); }
     // Nothing new was asked: every question this run put had its REAL answer, so this pass IS the real run.
     if (!asked.length) return verdict;
     for (const t of asked) {
@@ -2496,6 +2505,12 @@ async function verifyCoreWithSignatureFaculty(doc, opts) {
   }
   return sync;
 }
+const verifyCoreWithSignatureFaculty = (doc, opts) => withSignatureFaculty(() => verifyCore(doc, opts), cannotDecide);
+// The two REFUSAL SHAPES, each read from the registry that owns it rather than from a literal spelled here. A §14
+// verdict says `INDETERMINATE(unsupported_alg)`; a resolver returns a record with no verdict to give and fails CLOSED
+// with an E-code held in its OWN set (`REGISTRY.resolverErrorCodes`). Testing the DETAIL STRING instead would pin this
+// wrapper to today's wording and start defending it the day the wording changes.
+const resolverCannotDecide = (r) => REGISTRY.resolverErrorCodes.includes(r?.error);
 
 export async function verifyAsync(doc, opts = {}) {
   opts = admitOpts(opts);                                        // round-19 P1-02 — inert snapshot; a throwing accessor/Proxy trap → null → structured reject (not a host throw)
@@ -4433,8 +4448,12 @@ export async function resolveByDiscovery(doc, opts = {}, transport = {}) {
   // untrusted transcript (I4). JSON.parse silently collapses duplicate members, so the genesis goes through
   // verifyJson and the key-log's raw bytes go through the SAME scanner (scanDuplicateKeys, which descends into
   // every entry) BEFORE parse. A dup-key authority surface is E-CANON — never a silent downgrade to LIGHT.
-  const gv = verifyJson(gRaw, {});
-  if (cannotDecide(gv)) return { verdict: base, resolution: { error: 'E-UNSUPPORTED: published genesis not decidable by this build — ' + gv.detail } };   // #144
+  // round-239 (UST-mbso) — ONE memo for the whole resolution: genesis, cadence and authority ask about overlapping
+  // signatures, and a signature resolved for one is the same fact for the next. Threading it also bounds the cost to
+  // the number of DISTINCT signatures the resolution touches, not to the number of pure calls it makes.
+  const sigMemo = new Map();
+  const gv = await withSignatureFaculty(() => verifyJson(gRaw, {}), cannotDecide, sigMemo);
+  if (cannotDecide(gv)) return { verdict: base, resolution: { error: 'E-UNSUPPORTED: published genesis not decidable by this build — ' + gv.detail } };   // #144 — reached now only when the async faculty is absent TOO
   if (!isValid(gv)) return { verdict: base, resolution: { error: 'published genesis does not VERIFY: ' + (gv.error || gv.result) } };
   genesis = JSON.parse(gRaw); genesisHash = contentHash(genesis);
   if (kRaw !== undefined) {
@@ -4494,10 +4513,10 @@ export async function resolveByDiscovery(doc, opts = {}, transport = {}) {
   // round-233 — with the coordinate UNKNOWN there is nothing to resolve: `resolveCadence(genesis, [], …)` would hand back
   // the GENESIS value as though it were in force, which is precisely the substitution the F.4 closure forbids. Not
   // resolving is the whole point; the unknown is reported instead, below.
-  const cadRes = cadenceUnknown ? null : resolveCadence(genesis, cadenceLog, doc?.state?.id?.ust_id, { keylog });
+  const cadRes = cadenceUnknown ? null : await withSignatureFaculty(() => resolveCadence(genesis, cadenceLog, doc?.state?.id?.ust_id, { keylog }), resolverCannotDecide, sigMemo);
   if (cadRes?.error) return { verdict: base, resolution: { error: cadRes.error + ': published cadence-log does not resolve — ' + (cadRes.detail || '') } };
   const authOpts = { genesis, keylog, noForkConfirmed: opts.noForkConfirmed, noForkEvidence: opts.noForkEvidence, trustRoots: opts.trustRoots, servedNoFork, keylogFreshAsOf };
-  const auth = resolveAuthority(doc, authOpts);
+  const auth = await withSignatureFaculty(() => resolveAuthority(doc, authOpts), resolverCannotDecide, sigMemo);
   if (auth.error) return { verdict: base, resolution: { error: auth.error + (auth.detail ? ' — ' + auth.detail : '') } };
   if (callerNoFork) noFork = auth.independently_verified ? 'accepted-external-witness (authoritative)' : 'caller-asserted (consumer-override)';
   const verdict = await verifyAsync(doc, { ...opts, genesis, keylog, noForkConfirmed: opts.noForkConfirmed, servedNoFork, keylogFreshAsOf, capacity: auth.capacity, substrateVerify });   // #69 E1 — await the doc's own anchor substrate (TOP); carry the EARNED freshness token (round-16 P0-02) into the final verdict

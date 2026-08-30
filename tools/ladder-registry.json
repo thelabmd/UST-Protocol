@@ -2026,6 +2026,20 @@
         "excluded": "A vector fixes bytes in and a declared result out. This round adds no rule and changes no verdict function: it supplies a CONSUMER FACULTY, and which faculties a consumer installs is precisely what a language-neutral vector must not pin. The behaviour that IS language-neutral — the rfc6962-raw membership predicate — is unchanged and already pinned."
       },
       "test": "tools/inclusion-connector-gate.mjs :: the browser and Node connectors are driven over a valid path, a wrong root and a foreign construction and must AGREE on each, plus a confirming case so the pair cannot agree only on refusals. Complements unbounded-index-gate, which pins the underlying climb against the Node connector above 2^31 and 2^53."
+    },
+    {
+      "round": 239,
+      "math": {
+        "excluded": "No statement moved. F-theorem clause 5 already governs this exactly — a verifier holding the inputs and unable to evaluate the function reports INDETERMINATE, never a guessed verdict — and the defect was that one caller reached the faculty while four sites kept the refusal. Supplying a missing INPUT is not a change to the verdict function, and the replay's precondition (a pure, clock-free call) is the invariant this core already states about `verifyCore` rather than a new one."
+      },
+      "spec": {
+        "excluded": "Nothing normative changed. The two refusal shapes are already normative and already separate — INDETERMINATE(unsupported_alg) for a §14 verdict, an E-code in `resolverErrorCodes` for a resolver that has no verdict to give — and this round reads both from those registries instead of restating them. Which primitives a HOST offers is a property of the build, and the spec would be wrong to name one."
+      },
+      "code": "packages/ust-protocol/index.mjs :: `withSignatureFaculty(runSync, refused, memo)` generalizes the #144 replay loop over the CALL rather than over `verifyCore`, and `resolveByDiscovery` applies it to the three PURE signature-bearing calls it makes after its fetches — genesis `verifyJson`, `resolveCadence`, `resolveAuthority` — sharing one memo. The door itself stays unwrapped: it fetches, and replaying it would replay the network.",
+      "vector": {
+        "excluded": "A vector fixes bytes in and a declared verdict out, and this round changes neither: the same document under the same rules gets the same answer, in a build that can now perform a step it previously declined. The language-neutral half is already pinned by `faculty-absent-ed25519`, which states BOTH halves — with the faculty and without it — and stays true unchanged."
+      },
+      "test": "packages/ust-protocol/browser-build.test.mjs :: the browser build is driven through `resolveByDiscovery` over an in-memory transport with a SIGNED cadence entry, and must resolve the publisher, carry the capacity grant and agree with the node build on the same bytes — guarded against vacuity, since two builds that both refuse also agree. Proven able to fail one site at a time: reverting the genesis, cadence or authority wrapper reddens it alone."
     }
   ],
   "first_accounted_round": 76,

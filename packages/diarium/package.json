@@ -1,6 +1,6 @@
 {
   "name": "diarium",
-  "version": "0.2.27",
+  "version": "0.2.28",
   "description": "Agent memory as a verifiable UST stream \u2014 a task closes, the agent writes what it learned, the entry is sealed and prev-chained. Tamper-evident, offline-verifiable, no server.",
   "ust:browser": {
     "stance": "node-only",
@@ -31,7 +31,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "ust-protocol": "^1.0.0-rc.72"
+    "ust-protocol": "^1.0.0-rc.73"
   },
   "repository": {
     "type": "git",

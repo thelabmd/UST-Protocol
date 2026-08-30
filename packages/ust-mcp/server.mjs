@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { listTools, dispatch } from './index.mjs';
 // #43 — ONE seam for this package: every outbound call inherits the label, so a new call site cannot forget it.
-const UA = 'ust/1.0 (ust-mcp/1.0.0-rc.61; +https://github.com/thelabmd/UST-Protocol)';
+const UA = 'ust/1.0 (ust-mcp/1.0.0-rc.62; +https://github.com/thelabmd/UST-Protocol)';
 const ustFetch = (url, init = {}) => fetch(url, { ...init, headers: { ...(init?.headers || {}), 'user-agent': UA } });
 
 // VERSION is read from THIS package's own manifest — never hardcoded (a hardcoded copy silently drifted to rc.7

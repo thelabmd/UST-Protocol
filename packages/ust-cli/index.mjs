@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { createCipheriv, createDecipheriv, scryptSync, randomBytes, createHash, generateKeyPairSync, createPrivateKey, createPublicKey, sign as edsign } from 'node:crypto';
 import * as P from 'ust-protocol';
 // #43 — ONE seam for this package: every outbound call inherits the label, so a new call site cannot forget it.
-const ustFetch = P.labelledFetch('ust-cli', '1.0.0-rc.106');
+const ustFetch = P.labelledFetch('ust-cli', '1.0.0-rc.107');
 import { makeSsrfSafeFetch } from 'ust-protocol/ssrf';   // #71 — the SAME Node SSRF guard the MCP uses (resolve→classify→reject private)
 import * as W from '@ust-protocol/web-signer';
 

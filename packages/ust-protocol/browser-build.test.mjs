@@ -25,6 +25,7 @@ import { mkdtempSync, copyFileSync, readFileSync, readdirSync, rmSync } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { createPrivateKey, createPublicKey } from 'node:crypto';
 import * as NODE_BUILD from './index.mjs';
 
 // The `browser` field in package.json is a BUNDLER instruction; Node does not honour it. To execute the browser
@@ -117,6 +118,67 @@ test('non-canonical S is rejected by ARITHMETIC, not by a borrowed library', () 
 test('the node build agrees on both halves — the strictness did not MOVE, it was ADDED', () => {
   assert.equal(NODE_BUILD.edVerifyStrict(MALLEABLE.pub_b64url, MALLEABLE.signed_content, MALLEABLE.valid_sig), true);
   assert.equal(NODE_BUILD.edVerifyStrict(MALLEABLE.pub_b64url, MALLEABLE.signed_content, MALLEABLE.sig_malleable), false);
+});
+
+// round-239 (UST-mbso) — THE OTHER HALF, and the one that was missing for a month. Everything above asserts what the
+// browser build must REFUSE. Nothing asserted what it must REACH, so a build that refused EVERY name-form document
+// stayed green: #144 wired the async faculty into `verifyAsync` only, while `resolveByDiscovery` reached authority
+// through synchronous resolvers, and `crypto.subtle` — present in every browser this ships to — was never consulted
+// for the genesis, the key log or the cadence. Measured on the live page 2026-08-30: the reference operator's own
+// public stream read INDETERMINATE, and the page said so in the words of a build that "cannot", beside a browser
+// that could.
+//
+// The fixture is built by the NODE build because the browser build cannot sign, and the VERDICT is given by the
+// BROWSER build. No network: `fetchImpl` serves the three well-known surfaces from memory, which is also why this
+// can assert an exact tier — a witness probe would make the result depend on someone else's uptime.
+const kp = (seedHex) => {
+  const priv = createPrivateKey({ key: Buffer.concat([Buffer.from('302e020100300506032b657004220420', 'hex'), Buffer.from(seedHex, 'hex')]), format: 'der', type: 'pkcs8' });
+  const pub = createPublicKey(priv).export({ format: 'der', type: 'spki' }).slice(-32).toString('base64url');
+  return { priv, pubB64: pub, key_id: NODE_BUILD.keyId(pub) };
+};
+
+test('with crypto.subtle present, the browser build RESOLVES a name — HIGH is not gated on the node primitive', async () => {
+  assert.ok(globalThis.crypto?.subtle, 'this runtime has no crypto.subtle — the premise of the test is absent, not satisfied');
+  const ck = kp('d9'.repeat(32));
+  const D = 'browser-faculty.example';
+  const at = (h) => ({ generated_at: `2026-07-26T${h}:00:00Z`, valid_from: `2026-07-26T${h}:00:00Z`, valid_to: `2026-07-26T${h}:00:00Z` });
+  const gen = NODE_BUILD.seal(NODE_BUILD.buildGenesis({ domain_shard: D, ust_id: 'ust:20260726.08', key_id: ck.key_id }, at('08'), ck.pubB64, 512), ck.priv, ck.pubB64);
+  const doc = NODE_BUILD.seal(NODE_BUILD.buildState({ domain_shard: D, ust_id: 'ust:20260726.11', key_id: ck.key_id, class: 'observation' },
+    at('11'), { x: { kind: 'captured', value: { v: '1' } } }, { prev: NODE_BUILD.contentHash(gen) }), ck.priv, ck.pubB64);
+  // A SIGNED cadence entry, not an empty log — and that is the difference between a gate that covers its domain and
+  // one that covers a third of it. Discovery makes THREE pure signature-bearing calls (genesis, cadence, authority);
+  // with `ust-cadence` served as `[]` the middle one verifies nothing, so reverting its wrapper would leave this
+  // green. Each of the three now reddens it on its own.
+  const cadEntry = NODE_BUILD.seal(NODE_BUILD.buildCadenceEntry({ domain_shard: D, ust_id: 'ust:20260726.0900', key_id: ck.key_id },
+    at('09'), '3600', 'ust:20260726.10', NODE_BUILD.contentHash(gen)), ck.priv, ck.pubB64);
+  const ok = (o) => ({ ok: true, status: 200, text: async () => JSON.stringify(o), arrayBuffer: async () => Buffer.from(JSON.stringify(o)) });
+  const fetchImpl = async (url) => url.endsWith('/.well-known/ust-genesis') ? ok(gen)
+    : url.endsWith('/.well-known/ust-keylog') ? ok([])
+    : url.endsWith('/.well-known/ust-cadence') ? ok([cadEntry])
+    : ({ ok: false, status: 404, text: async () => '', arrayBuffer: async () => Buffer.alloc(0) });
+
+  const r = await BROWSER_BUILD.resolveByDiscovery(doc, { noForkConfirmed: true }, { fetchImpl });
+
+  const n = await NODE_BUILD.resolveByDiscovery(doc, { noForkConfirmed: true }, { fetchImpl });
+
+  // ANTI-VACUITY FIRST, and it is not decoration: the load-bearing claim below is that the two builds AGREE, and
+  // two builds that both refuse also agree. So the node run must have actually resolved something before its
+  // agreement is worth asserting. Written after the first draft of this test demanded `VALID:HIGH` and failed —
+  // on the NODE build too. The tier was never the faculty's to give: a caller-asserted no-fork resolves
+  // `consumer-override`, which does not bind the NAME, so LIGHT is correct here and HIGH needs a witness this
+  // fixture deliberately does not serve. The defect was refusal-to-decide; the tier was my own wrong expectation.
+  assert.equal(n.resolution?.error, undefined, 'the node run did not resolve — the agreement asserted below would be vacuous');
+  assert.equal(n.resolution?.publisher, D);
+  assert.ok(n.resolution?.strength, 'the node run produced no identity strength — nothing to compare against');
+
+  assert.doesNotMatch(String(r.resolution?.error ?? ''), /E-UNSUPPORTED/,
+    'the browser build refused to DECIDE with the faculty available — the async signature faculty is not reaching the authority path');
+  assert.equal(r.resolution?.publisher, D, 'authority did not resolve to the publisher the genesis names');
+  assert.equal(r.resolution?.capacity?.maxPartitions, 512,
+    'the capacity grant is the resolution the document needs to exceed the anonymous floor — withheld, a large document reads INDETERMINATE for a reason that is not about it');
+  // The faculty must supply a MISSING INPUT, never a different answer: same bytes, same verdict, same strength.
+  assert.equal(r.verdict?.result, n.verdict?.result, 'the two builds disagree on the same bytes');
+  assert.equal(r.resolution?.strength, n.resolution?.strength, 'the two builds disagree on identity strength');
 });
 
 process.on('exit', () => rmSync(dir, { recursive: true, force: true }));
