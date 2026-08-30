@@ -2040,6 +2040,20 @@
         "excluded": "A vector fixes bytes in and a declared verdict out, and this round changes neither: the same document under the same rules gets the same answer, in a build that can now perform a step it previously declined. The language-neutral half is already pinned by `faculty-absent-ed25519`, which states BOTH halves — with the faculty and without it — and stays true unchanged."
       },
       "test": "packages/ust-protocol/browser-build.test.mjs :: the browser build is driven through `resolveByDiscovery` over an in-memory transport with a SIGNED cadence entry, and must resolve the publisher, carry the capacity grant and agree with the node build on the same bytes — guarded against vacuity, since two builds that both refuse also agree. Proven able to fail one site at a time: reverting the genesis, cadence or authority wrapper reddens it alone."
+    },
+    {
+      "round": 240,
+      "math": {
+        "excluded": "No statement moved. F.9.5-c.5 already governs a connector this host cannot reach, and §11.2 already delegates the construction. A connector that is assembled and not delivered is not a different mathematics — it is the same absent-capability case the model already ranges over, reached by a defect in the caller rather than by the world."
+      },
+      "spec": {
+        "excluded": "Nothing normative changed. The spec states that inclusion is delegable and that a verifier without the faculty reports honestly; it does not, and should not, describe how a particular CLI wires its plugins. Naming a surface's plumbing in the protocol text would be the over-reach the spec-neutrality rule exists to prevent."
+      },
+      "code": "packages/ust-cli/index.mjs :: every site that assembles an optional connector now passes it to the call it was assembled for — 4 assembly sites and 5 calls across this file and packages/ust-mcp/index.mjs, previously zero delivering. Measured before/after on the reference operator's live anchored document: time unproven -> anchored.",
+      "vector": {
+        "excluded": "A vector fixes bytes in and a verdict out for an implementation that HAS the faculty. What broke here is whether a surface hands its own faculty to the verifier, which is a property of the caller, not of the wire — and a language-neutral corpus must not pin how a port wires its plugins."
+      },
+      "test": "tools/connector-delivery-gate.mjs :: the domain is read from the source — every `combine*` the core exports, every assembly site in every shipped package — and each assembled name must appear in the call it precedes. Proven able to fail one site at a time; `P.verify` excluded by name because the synchronous door takes no connector."
     }
   ],
   "first_accounted_round": 76,

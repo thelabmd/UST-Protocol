@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { createCipheriv, createDecipheriv, scryptSync, randomBytes, createHash, generateKeyPairSync, createPrivateKey, createPublicKey, sign as edsign } from 'node:crypto';
 import * as P from 'ust-protocol';
 // #43 — ONE seam for this package: every outbound call inherits the label, so a new call site cannot forget it.
-const ustFetch = P.labelledFetch('ust-cli', '1.0.0-rc.107');
+const ustFetch = P.labelledFetch('ust-cli', '1.0.0-rc.108');
 import { makeSsrfSafeFetch } from 'ust-protocol/ssrf';   // #71 — the SAME Node SSRF guard the MCP uses (resolve→classify→reject private)
 import * as W from '@ust-protocol/web-signer';
 
@@ -1611,7 +1611,12 @@ async function cmdVerify() {
     // #71 — the discovery target comes from an UNTRUSTED document; the SSRF guard (resolve → reject private IPs)
     // wraps the fetch on the CLI too, not only the MCP. Core's lexical isPublicDnsShard is the floor beneath it.
     const guardedFetch = makeSsrfSafeFetch(async (u, init) => { console.error(`  ⏳ resolving identity from ${new URL(u).origin} … (--offline to skip)`); return ustFetch(u, init); });
-    const rd = await P.resolveByDiscovery(doc, { context: opts.context, offline: !!arg('offline', false), noForkConfirmed: noFork, requireAuthoritative: opts.requireAuthoritative, requireAnchored: opts.requireAnchored, requireFreshKeylog: opts.requireFreshKeylog, keylogFreshAsOf: opts.keylogFreshAsOf },
+    // round-240 — `inclusionVerify` travels in OPTS, and it was assembled two lines up and then dropped: the call
+    // took only `substrateVerify`, so a document carrying a valid inclusion proof had its membership left unchecked
+    // and its time reported `unproven` while the anchor beneath it was final in Bitcoin. The loss was SILENT — the
+    // command still printed HIGH — which is the same shape round 238 fixed one level up, where the page passed the
+    // connector as a transport capability and it was ignored there. `forkchoice`, in this same file, passes it.
+    const rd = await P.resolveByDiscovery(doc, { context: opts.context, offline: !!arg('offline', false), noForkConfirmed: noFork, requireAuthoritative: opts.requireAuthoritative, requireAnchored: opts.requireAnchored, requireFreshKeylog: opts.requireFreshKeylog, keylogFreshAsOf: opts.keylogFreshAsOf, inclusionVerify },
       { substrateVerify, fetchImpl: guardedFetch });
     if (!substrateVerify && rd.resolution && String(rd.resolution.noFork || '').startsWith('HIGH pending')) console.error('  ℹ️  anchor not cross-checked — `npm i @ust-protocol/ots-verify @ust-protocol/rekor-verify` for automatic HIGH');
     if (rd.resolution) {
@@ -1995,7 +2000,7 @@ async function cmdForkChoice() {
   const substrateVerify = plugins.length ? P.combineSubstrates(plugins) : undefined;
   const inclusionVerify = incPlugins.length ? P.combineInclusion(incPlugins) : undefined;   // #95 — same plugins, other question
   if (!substrateVerify && !offline) console.error('  ℹ️  no substrate plugin installed — anchor-inclusion cannot be checked → INDETERMINATE. `npm i @ust-protocol/ots-verify` to decide.');
-  const r = await P.forkChoice(candidates, { ...(genesis ? { genesis } : {}), ...(keylog ? { keylog } : {}), noForkConfirmed: noFork, offline, context: 'data', substrateVerify });
+  const r = await P.forkChoice(candidates, { ...(genesis ? { genesis } : {}), ...(keylog ? { keylog } : {}), noForkConfirmed: noFork, offline, context: 'data', substrateVerify, inclusionVerify });
   const ust = r.ust_id ? `  ust_id ${r.ust_id}` : '';
   if (r.result === 'CANONICAL') {
     console.log(`  ✅ CANONICAL${ust}`);

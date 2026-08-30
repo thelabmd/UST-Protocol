@@ -64,6 +64,7 @@
     "test:ustid": "node tools/ustid-tier-gate.mjs",
     "test:attribution": "node tools/verdict-attribution-gate.mjs",
     "test:inclusion": "node tools/inclusion-connector-gate.mjs",
+    "test:connector-delivery": "node tools/connector-delivery-gate.mjs",
     "test:cadence": "node tools/cadence-discovery-gate.mjs",
     "test:serving": "node tools/discovery-serving-gate.mjs",
     "test:consumption": "node tools/stream-consumption-gate.mjs",

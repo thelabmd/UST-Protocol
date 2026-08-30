@@ -1,6 +1,6 @@
 {
   "name": "@ust-protocol/cli",
-  "version": "1.0.0-rc.107",
+  "version": "1.0.0-rc.108",
   "description": "The reference `ust` CLI for UST (Universal State Transcript) 1.0 — verify a transcript, print canonical bytes for cross-language diffing, and run the HIGH genesis ceremony. One entrypoint; the Go binary reproduces this surface.",
   "ust:browser": {
     "stance": "node-only",

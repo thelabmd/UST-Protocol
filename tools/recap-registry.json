@@ -701,6 +701,10 @@
     {
       "round": 239,
       "no_recap": "Round 239 closes no GitHub issue — the defect was found by the owner in the live page during an unrelated review, filed in the local tracker as UST-mbso, and fixed the same session. The unit of a recap is the CLOSED ISSUE: one closed issue, one recap, one diary entry. There is no recipient here, and an entry written anyway would be an entry written to satisfy this gate. If the finding is later filed publicly, the closing of THAT card earns its own entry rather than back-dating one to this round."
+    },
+    {
+      "round": 240,
+      "no_recap": "Round 240 closes no GitHub issue. It came out of writing a public verification walkthrough, was filed in the local tracker, and shipped the same session. The unit of a recap is the CLOSED ISSUE — one closed issue, one recap, one diary entry — and there is no recipient here. An entry written anyway would be an entry written for the gate rather than for a reader."
     }
   ]
 }

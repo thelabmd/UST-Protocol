@@ -14,7 +14,7 @@ import { makeSsrfSafeFetch } from './ssrf-guard.mjs';
 // #43 — this surface supplies its OWN fetchImpl into the core, so it bypasses the core's signed default: a caller
 // that brings its own client is not relabelled, and here the caller is US. Signed at the point it is built, so the
 // SSRF guard and the label travel together and neither can be added without the other.
-const ssrfSafeFetch = P.labelledFetch('ust-mcp', '1.0.0-rc.62', makeSsrfSafeFetch());
+const ssrfSafeFetch = P.labelledFetch('ust-mcp', '1.0.0-rc.63', makeSsrfSafeFetch());
 
 const doc1 = (state) => ({ ust: '1.0', state });
 // build tools return the UNSIGNED state + the exact `signing_input` bytes; the caller (agent/operator) signs
@@ -64,13 +64,13 @@ export const tools = [
         const raw = P.verifyJson(json, o);
         if (offline || genesis !== undefined || !(raw.result === 'VALID:LIGHT' || (raw.result === 'INDETERMINATE' && raw.reason === 'unavailable'))) return gate(raw);
         let parsed; try { parsed = JSON.parse(json); } catch { return gate(raw); }
-        const { verdict, resolution } = await P.resolveByDiscovery(parsed, ro, { substrateVerify, fetchImpl: ssrfSafeFetch });
+        const { verdict, resolution } = await P.resolveByDiscovery(parsed, { ...ro, inclusionVerify }, { substrateVerify, fetchImpl: ssrfSafeFetch });
         return gate(resolution ? { ...verdict, resolution } : verdict);
       }
       // an embedded doc.proof is verified INSIDE verify (present-bad ⇒ E-ANCHOR); a separately-passed proof merges in.
       const d = (proof !== undefined && doc && doc.proof === undefined) ? { ...doc, proof } : doc;
       if (offline || genesis !== undefined) return gate(P.verify(d, o));
-      const { verdict, resolution } = await P.resolveByDiscovery(d, ro, { substrateVerify, fetchImpl: ssrfSafeFetch });
+      const { verdict, resolution } = await P.resolveByDiscovery(d, { ...ro, inclusionVerify }, { substrateVerify, fetchImpl: ssrfSafeFetch });
       return gate(resolution ? { ...verdict, resolution } : verdict);
     },
   },
@@ -150,7 +150,7 @@ export const tools = [
       // #95 — the SAME installed plugins, asked the OTHER question. Safe to pass unconditionally: a router that claims
       // nothing returns null and the seam falls through to the bundled walk, so the caller need not know what it holds.
       const inclusionVerify = _incPlugins.length ? P.combineInclusion(_incPlugins) : undefined;
-      return P.forkChoice(candidates, { genesis, keylog, noForkConfirmed, offline, context: 'data', substrateVerify });
+      return P.forkChoice(candidates, { genesis, keylog, noForkConfirmed, offline, context: 'data', substrateVerify, inclusionVerify });
     },
   },
   {
