@@ -2072,6 +2072,20 @@
       "test": {
         "excluded": "There is nothing executable to assert: the rule governs proposals, not runs. The only enforcement is a reader holding the text against a future change, and a gate pretending otherwise would be the vacuous kind this repository keeps finding — green because its domain is empty."
       }
+    },
+    {
+      "round": 242,
+      "math": {
+        "excluded": "No statement moved. The verdict object and its per-axis strengths are unchanged; what changed is which of them a rendering surface consumes. A display that omits a computed axis is not a different function — it is a caller discarding part of the result, the same shape round 240 closed one layer down."
+      },
+      "spec": {
+        "excluded": "Nothing normative changed — and §14 is the SOURCE this round reads rather than edits: it already names identity / time / completeness, and that sentence is now the gate's domain. Adding a display obligation to the specification would bind every implementer to a UI decision that belongs to each surface."
+      },
+      "code": "docs/index.html :: the page renders the TIME axis it was discarding (strength, status, anchorTime, inclusion, assurance) and completeness beside it; the Proven / Not proven lists are derived from verdict.time and resolution.noFork instead of being literals that contradicted the verdict; content moved last so the axes are above the fold.",
+      "vector": {
+        "excluded": "A vector fixes bytes in and a verdict out. This round changes no verdict — the same document gets the same answer, displayed differently. What a surface renders is not language-neutral and must not be pinned by a corpus every port would then have to satisfy."
+      },
+      "test": "tools/verdict-axis-display-gate.mjs :: the axis list is parsed from §14 of the spec, and each axis must be consumed off the verdict by the page; the tier lists must be assembled rather than literal. Proven able to fail on each axis independently, and its own first draft was vacuous through a substring collision that mutation caught."
     }
   ],
   "first_accounted_round": 76,

@@ -19,6 +19,13 @@
 <!-- Two hosts serve these bytes: the custom domain and the GitHub Pages origin behind it. The page's own
      advice is to resolve the verifier BY NAME, so it must say which name is the one — otherwise it asks of a
      reader a discipline it does not keep itself. -->
+<!-- Icons: the SAME set ustprotocol.com serves, copied here rather than hot-linked — this page must render
+     with no request to another host, which is the property it advertises about verification itself. -->
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<link rel="icon" type="image/png" sizes="96x96" href="/assets/favicon-96x96.png">
+<link rel="shortcut icon" href="/favicon.ico">
+<link rel="apple-touch-icon" sizes="512x512" href="/assets/apple-touch-icon.png">
+<link rel="manifest" href="/assets/site.webmanifest">
 <link rel="canonical" href="https://verify.ustprotocol.com/">
 <meta property="og:url" content="https://verify.ustprotocol.com/">
 <meta property="og:site_name" content="THE LAB">
@@ -523,9 +530,37 @@ async function run() {
 
     let html = `<div class="verdict ${cls}"><span class="dot"></span>${esc(r.result || 'INVALID')}</div>`;
 
+    // The two lists used to be CONSTANTS, and a constant list is a claim nobody checks. Measured on our own
+    // published transcript, whose hour root is final in Bitcoin: the page printed "independently proven time — an
+    // anchor is TOP" under **Not proven** while `verdict.time.strength` read `anchored`, and "the no-fork witness —
+    // you asserted it" while the witness had in fact corroborated. Both are now derived from the verdict, so the
+    // page can no longer contradict the object it is rendering.
+    const tAxis = (r && r.time) || {};
+    const isAnchored = String(tAxis.strength || '') === 'anchored';
+    const witnessCorroborated = /^(served-list|accepted-external-witness)/.test(String((resolution && resolution.noFork) || ''));
+    const provenItems = [
+      'the exact bytes above — unaltered since signing',
+      `<b>publisher ${esc(r.publisher || (resolution && resolution.publisher) || '')}</b> — the key resolves through genesis → key log`,
+      'the claimed capture time, as the publisher wrote it',
+    ];
+    const unprovenItems = [];
+    (isAnchored ? provenItems : unprovenItems).push(isAnchored
+      ? `<b>independently proven time</b> — anchored${tAxis.anchorTime ? ' at ' + esc(String(tAxis.anchorTime)) : ''}${tAxis.assurance ? ' <span class="hint">(' + esc(String(tAxis.assurance)) + ')</span>' : ''}`
+      : 'independently proven time — an anchor is TOP');
+    (witnessCorroborated ? provenItems : unprovenItems).push(witnessCorroborated
+      ? 'the no-fork witness — <b>corroborated</b> by the publisher&rsquo;s served log, not by your assertion'
+      : 'the no-fork witness — <b>you asserted it</b>; the witness exchange is the operator&rsquo;s duty');
+    unprovenItems.push('stream completeness — a RANGE verdict (frames + checkpoint), never one document&rsquo;s');
+
+    // The CONTENT is what a reader scrolls past, not what a reader came for. It used to sit first, so on a
+    // 172-partition document the verdict's own axes were 65 000 px below the fold — measured while filming the
+    // walkthrough. The reasoning and the axes now come first and the payload last; nothing about the verdict
+    // changed, only the order in which it is legible.
+    let contentCard = '';
     if (valid) {
-      html += `<div class="card"><h2>What the signature proves</h2>${renderContent(st.data)}
-        <dl class="kv" style="margin-top:14px">
+      contentCard = `<div class="card"><h2>What the signature proves</h2>${renderContent(st.data)}</div>`;
+      html += `<div class="card"><h2>Verdict</h2>
+        <dl class="kv" style="margin-top:0">
           <dt>signing key</dt><dd>${esc(id.key_id || r.publisher_claimed || '')}</dd>
           <dt>capture time</dt><dd>${esc(st.time && st.time.generated_at || '')}</dd>
           <dt>frame (ust_id)</dt><dd>${esc(id.ust_id || '')}</dd>
@@ -536,19 +571,11 @@ async function run() {
           <div class="tierlists">
             <div>
               <p class="cap">Proven</p>
-              <ul class="proved">
-                <li>the exact bytes above — unaltered since signing</li>
-                <li><b>publisher ${esc(r.publisher || '')}</b> — the key resolves through genesis → key log</li>
-                <li>the claimed capture time, as the publisher wrote it</li>
-              </ul>
+              <ul class="proved">${provenItems.map((x) => '<li>' + x + '</li>').join('')}</ul>
             </div>
             <div>
               <p class="cap">Not proven</p>
-              <ul class="notproved">
-                <li>independently proven time — an anchor is TOP</li>
-                <li>stream completeness — a RANGE verdict (frames + checkpoint), never one document&rsquo;s</li>
-                <li>the no-fork witness — <b>you asserted it</b>; the witness exchange is the operator&rsquo;s duty</li>
-              </ul>
+              <ul class="notproved">${unprovenItems.map((x) => '<li>' + x + '</li>').join('')}</ul>
             </div>
           </div>
         </div>` : `<div class="tierfoot">
@@ -618,6 +645,27 @@ async function run() {
           </p>`}</div>`;
       }
     }
+    // §14 names three per-axis strengths — identity / time / completeness — and this page rendered only the first.
+    // The TIME axis is where a Bitcoin anchor lands, so a document whose hour is final in a block looked exactly like
+    // one carrying no anchor at all: measured on our own published transcript, whose root is in block 964576, the
+    // page showed `VALID:HIGH` and not one character about the anchor. Rendered ALWAYS, including `unproven` —
+    // withholding the weak answer is the same defect pointing the other way, and a reader who cannot see which axis
+    // is weak cannot tell an unanchored document from an anchored one. Every word here is the CORE's: this page
+    // renders a verdict, it does not compose one.
+    {
+      const t = (r && r.time) || {};
+      const strength = String(t.strength || 'unproven');
+      html += `<div class="card"><h2>Time</h2>
+        <dl class="kv" style="margin-top:0">
+          <dt>strength</dt><dd>${esc(strength)}${strength === 'anchored' ? '' : ' — no anchor these bytes could be proven against'}</dd>
+          <dt>status</dt><dd>${esc(String(t.status || 'none'))}</dd>
+          ${t.anchorTime ? `<dt>anchor time</dt><dd>${esc(String(t.anchorTime))}</dd>` : ''}
+          ${t.inclusion !== undefined ? `<dt>inclusion</dt><dd>${t.inclusion ? 'proven — this content hash is a member of the anchored root' : 'not proven'}</dd>` : ''}
+          ${t.assurance ? `<dt>assurance</dt><dd>${esc(String(t.assurance))} — how the substrate was reached, never a claim of trustless finality</dd>` : ''}
+          <dt>completeness</dt><dd>${esc(String((r && r.completeness) || 'not_evaluated'))} — a RANGE property (frames + checkpoint), never one document's</dd>
+        </dl></div>`;
+    }
+    html += contentCard;   // payload last — see the note above the split
     outEl.innerHTML = html;
   }).catch((e) => {
     outEl.innerHTML = `<div class="verdict bad"><span class="dot"></span>ERROR</div><div class="err">${esc(e.message || String(e))}</div>`;

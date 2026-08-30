@@ -709,6 +709,10 @@
     {
       "round": 241,
       "no_recap": "Round 241 closes no GitHub issue — it writes down a property the format already had, prompted by noticing that the commitment existed only in prose outside the repository. The unit of a recap is the closed issue; there is no recipient here, and an entry written anyway would be written for the gate."
+    },
+    {
+      "round": 242,
+      "no_recap": "Round 242 closes no GitHub issue. It came out of a rehearsal for a walkthrough recording — the scene that was supposed to show anchored time turned out to have nothing to point at — and was filed in the local tracker and fixed the same session. The unit of a recap is the closed issue; there is no recipient here."
     }
   ]
 }
