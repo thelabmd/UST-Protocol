@@ -55,16 +55,16 @@ const STANCE = {
 };
 
 const CAPS = {
-  'canon':              { core: ['canon'], mcp: 'ust_canon', cli: 'canon' },
-  'content-address':    { core: ['contentHash', 'signedContent', 'partitionHash', 'seed', 'merkleRoot', 'keyId'], mcp: 'ust_key_id', cli: 'contentHash' },
-  'build-transcript':   { core: ['buildState', 'buildAttestation', 'buildDerivation', 'buildGenesis', 'buildKeyLogEntry', 'buildCheckpoint', 'buildStreamCheckpoint', 'buildGap', 'buildAnchorCommitment'], mcp: 'ust_build_observation', cli: 'buildState' },
-  'sign':               { core: ['seal'], cli: 'seal' },
-  'verify':             { core: ['verify', 'verifyJson', 'verifyAsync', 'isValid', 'cannotDecide', 'admitEd25519Point', 'checkBounds', 'assertValid', 'verifyOrThrow'], mcp: 'ust_verify', cli: 'verifyRaw' },
-  'resolve-authority':  { core: ['resolveAuthority', 'resolveKeys', 'resolveKeysBytes', 'resolveByDiscovery', 'resolveSupersession'], mcp: 'ust_resolve', cli: '--genesis' },
-  'no-fork-evidence':   { core: ['noForkClaim', 'buildNoForkEvidence', 'verifyNoForkEvidence', 'witnessNoFork'], mcp: 'noForkEvidence', cli: '--witness' },
-  'consumer-trust-root':{ core: ['quorumTrustDomains'], mcp: 'trustRoots', cli: '--trust-root' },
-  'anchor-verify':      { core: ['verifyAnchor'], mcp: 'ust_anchor_verify', cli: '--require-anchored' },
-  'fork-choice':        { core: ['forkChoice'], mcp: 'ust_fork_choice' },
+  'canon':              { core: ['canon'], mcp: 'tool:ust_canon', cli: 'cmd:canon' },
+  'content-address':    { core: ['contentHash', 'signedContent', 'partitionHash', 'seed', 'merkleRoot', 'keyId'], mcp: 'tool:ust_key_id', cli: 'cmd:canon' },
+  'build-transcript':   { core: ['buildState', 'buildAttestation', 'buildDerivation', 'buildGenesis', 'buildKeyLogEntry', 'buildCheckpoint', 'buildStreamCheckpoint', 'buildGap', 'buildAnchorCommitment'], mcp: ['tool:ust_build_observation', 'tool:ust_build_genesis', 'tool:ust_build_key_log', 'tool:ust_combine_derivation', 'tool:ust_combine_attestation'], cli: [] },
+  'sign':               { core: ['seal'], cli: [] },
+  'verify':             { core: ['verify', 'verifyJson', 'verifyAsync', 'isValid', 'cannotDecide', 'admitEd25519Point', 'checkBounds', 'assertValid', 'verifyOrThrow'], mcp: 'tool:ust_verify', cli: 'cmd:verify' },
+  'resolve-authority':  { core: ['resolveAuthority', 'resolveKeys', 'resolveKeysBytes', 'resolveByDiscovery', 'resolveSupersession'], mcp: 'tool:ust_resolve', cli: 'flag:genesis' },
+  'no-fork-evidence':   { core: ['noForkClaim', 'buildNoForkEvidence', 'verifyNoForkEvidence', 'witnessNoFork'], mcp: 'arg:ust_verify.noForkEvidence', cli: 'flag:witness' },
+  'consumer-trust-root':{ core: ['quorumTrustDomains'], mcp: 'arg:ust_verify.trustRoots', cli: 'flag:trust-root' },
+  'anchor-verify':      { core: ['verifyAnchor'], mcp: 'tool:ust_anchor_verify', cli: 'flag:require-anchored' },
+  'fork-choice':        { core: ['forkChoice'], mcp: 'tool:ust_fork_choice' },
   // #102 / F.5o — the SERVING axis. A consumer-meaningful act (do the copies a publisher named agree byte for
   // byte?) whose whole discipline is what it REFUSES to answer: independence is not decidable from the bytes,
   // so it is not in this capability and no surface may report it. `ust discovery --mirror` is the CLI face.
@@ -72,15 +72,15 @@ const CAPS = {
   // it reads the DECLARATION the three below are evaluated against. Before it, a copy the publisher named was
   // invisible to this capability and its staleness unmeasurable; the CLI face is now the profile itself, with
   // `--mirror` remaining the CONSUMER's own locator rather than a substitute for it.
-  'byte-agreement':     { core: ['replicationAgreement', 'surfaceVerdict', 'anchorRollup', 'parseProfile'], cli: '--mirror' },
-  'name-obligation':    { core: ['classifyNamed', 'nameSetReport'], cli: 'names' },
+  'byte-agreement':     { core: ['replicationAgreement', 'surfaceVerdict', 'anchorRollup', 'parseProfile'], cli: 'flag:mirror' },
+  'name-obligation':    { core: ['classifyNamed', 'nameSetReport'], cli: 'cmd:names' },
   'commitment-windows': { core: ['commitmentCoverage'] },
   // #137 / F.5.1 + F.5p.2 — REPORTING the ladder is its own capability, not a facet of verification. It answers a
   // different question: not *is this valid for me*, but *what stands between it and the next rung, and whose is
   // that to move*. It is a function OF the decision relation and never an input to it (F.5.1b), so it can never
   // raise a verdict — which is why it is admissible as a capability at all.
   'ladder-report':      { core: ['explainLadder'] },
-  'stream-verify':      { core: ['verifyStream'], mcp: 'ust_verify_stream', cli: 'verifyStream' },
+  'stream-verify':      { core: ['verifyStream'], mcp: 'tool:ust_verify_stream', cli: 'cmd:stream' },
   'typed-evidence':     { core: ['verifiedEvidence', 'evidenceClass', 'evidenceCaps', 'compareEvidenceOrder', 'EVIDENCE_CAPS_UNIVERSE'] },
   // M3 (UST-6vj C2) — provenance-bearing evidence: a SIGNED connector receipt verified against consumer-admitted
   // connectors is the ONLY way external facts reach a strong rung (closes the rc.35 round-2 verifiedEvidence-forge).
@@ -91,21 +91,21 @@ const CAPS = {
   // K4 (UST-znh) — the ONE public authority entrypoint: raw inputs + config in, single verdict + derivation trace out.
   // K4 → Closed Proof Kernel: the ONE public authority verdict is prover ∘ check_C (reference-checker.mjs).
   'authority-bundle':   { core: ['verifyAuthorityBundle', 'buildAuthorityProof', 'checkAuthorityProof', 'checkAuthorityProofBytes'] },
-  'checkpoint-chain':   { core: ['buildAuthorityCheckpoint', 'sealAuthorityCheckpoint', 'authorityCheckpointId', 'verifyAuthorityCheckpointChain', 'resolveCheckpointRoots', 'deriveCheckpointFreshness', 'verifiedGenesisContext', 'genesisEpoch', 'authorityScopeId'], cli: 'buildCeremony' },
+  'checkpoint-chain':   { core: ['buildAuthorityCheckpoint', 'sealAuthorityCheckpoint', 'authorityCheckpointId', 'verifyAuthorityCheckpointChain', 'resolveCheckpointRoots', 'deriveCheckpointFreshness', 'verifiedGenesisContext', 'genesisEpoch', 'authorityScopeId'], cli: 'api:buildCeremony' },
   // §12.1 is 'recovery/supersession' — one section, one capability. witnessSuccessor BUILDS the successor witness
   // log when a name re-roots; witnessNoShrink is the rule it must satisfy, shared with any mirror that ingests it.
   'recovery':           { core: ['checkpointRecoveryClaim', 'buildRecoveryStatement', 'verifyCheckpointRecovery', 'witnessSuccessor', 'witnessNoShrink'] },
   'epoch-transition':   { core: ['epochTransitionClaim', 'buildEpochTransition', 'verifyEpochTransition', 'deriveStreamFloor'] },   // F.5s — the floor is read OFF the epoch chain, so it belongs to the capability that owns the chain, not to a second one
   'uniqueness-attest':  { core: ['checkpointUniquenessClaim', 'buildUniquenessAttestation', 'verifyCheckpointUniqueness'] },
   'verifiable-map':     { core: ['buildVerifiableMap', 'checkpointMapLeaf', 'nameMapLeaf', 'verifyCheckpointMapUniqueness', 'verifyActiveGenesisUniqueness', 'nameMapRootClaim', 'buildNameMapRoot', 'verifyNameMapRoot', 'proveMapRootAnchor'] },   // #42 — the ROOT half of the same capability: carrying, admitting and anchor-proving the root a map proof is checked against
-  'keylog-commitment':  { core: ['keylogLeaf', 'buildKeylogCommitment', 'verifyKeylogTerminality'], cli: 'rotateKeylog' },
-  'cadence-grid':       { core: ['ustGrid', 'resolveCadence', 'resolveCadenceBytes'], mcp: 'ust_resolve_cadence', cli: 'cadence' },
+  'keylog-commitment':  { core: ['keylogLeaf', 'buildKeylogCommitment', 'verifyKeylogTerminality'], cli: 'cmd:rotate' },
+  'cadence-grid':       { core: ['ustGrid', 'resolveCadence', 'resolveCadenceBytes'], mcp: 'tool:ust_resolve_cadence', cli: 'flag:cadence-log' },
   // Split OUT of build-transcript (2026-07-27): that capability bundles eight builders behind ONE representative probe
   // (`ust_build_observation`), so `buildCadenceEntry` having no surface at all read as full. A capability whose probe
   // cannot see its own members is the coarse-probe failure this file's own header warns about.
-  'cadence-declare':    { core: ['buildCadenceEntry'], mcp: 'ust_build_cadence', cli: 'cmdCadence' },
+  'cadence-declare':    { core: ['buildCadenceEntry'], mcp: 'tool:ust_build_cadence', cli: 'cmd:cadence' },
   'substrate-registry': { core: ['combineSubstrates', 'combineInclusion'] },   // #95 — finality AND membership route by substrate name, one pattern
-  'discovery-shard':    { core: ['isPublicDnsShard'], cli: 'attestDiscovery' },
+  'discovery-shard':    { core: ['isPublicDnsShard'], cli: 'cmd:discovery' },
   'disclosure':         { core: ['blindedCommit', 'blindPartition', 'encryptPartition'] },
   'negative-observation':{ core: ['buildAbsence', 'noEventBacking'] },   // #39 — a normative absence assertion + the no-event↔completeness tie; core-only for now, no surface exposes it yet
 };
@@ -160,8 +160,54 @@ const connector = (X) => (cap) => {
 // exposed; `some`-intersection wrongly certified a surface as full when it had ONE of many (GPT round-51: lite declared full for
 // build-transcript with only buildState, missing buildAttestation/…). `full` ⇒ every; a genuine reduced surface declares `subset`.
 const exportIntersect = (X) => (cap, stance) => (stance === 'full' ? CAPS[cap].core.every((n) => n in X) : CAPS[cap].core.some((n) => n in X));
-const mcpProbe = (cap) => { const tok = CAPS[cap].mcp; return !!tok && (mcpTools.has(tok) || mcpSrc.includes(tok)); };
-const cliProbe = (cap) => { const tok = CAPS[cap].cli; return !!tok && cliSrc.includes(tok); };
+// round-246 — THE PROBE MUST ASK THE SURFACE, NOT THE SOURCE TEXT.
+//
+// Measured 2026-08-31 (#177) — CLOSED 2026-08-31 by the typed tokens below and their controls: `cliProbe` was
+// `cliSrc.includes(tok)` and `mcpProbe` fell back to `mcpSrc.includes(tok)`.
+// A substring of the implementation file certified a capability as exposed. So `ust-cli` was declared **full** for
+// `sign` (token `seal`, 18 occurrences — every one inside a ceremony: genesis signs itself, rotation builds a probe
+// document to prove the new key works) and for `build-transcript` (token `buildState`, twice, same place). The user
+// has no command that signs a document at all. Two false declarations, and the mechanism is that the probe could not
+// tell a USER-FACING surface from internal code that happens to mention the same word.
+//
+// A token now DECLARES which surface it belongs to, and the probe checks that surface and nothing else:
+//   cmd:<name>   a command in the CLI's dispatch table — what a user types
+//   flag:<name>  an option the argument parser actually reads
+//   api:<name>   an export of the package — a caller's surface, not a terminal user's
+//   tool:<name>  an MCP tool the server registers
+//   arg:<tool>.<name>  an input property of that tool's schema
+// A token that names none of these resolves to false, so a typo cannot pass as a capability.
+//
+// And the predicate matches `exportIntersect`, which round-51 already fixed for the library surfaces: `full` ⇒ EVERY
+// token present, `subset` ⇒ some. Listing one token where a capability has nine parts is how `full` came to mean
+// "there is at least one of these" on the two surfaces whose probe was never given the same treatment.
+const CLI_CMDS = new Set((cliSrc.match(/const run = \{([^}]*)\}/) || [, ''])[1].split(',').map((x) => x.trim().split(':')[0]).filter(Boolean));
+const CLI_FLAGS = new Set([...cliSrc.matchAll(/\barg\(\s*['"`]([a-z0-9-]+)['"`]/g)].map((m) => m[1]));
+const CLI_EXPORTS = new Set([...cliSrc.matchAll(/export (?:async )?(?:function|const) (\w+)/g)].map((m) => m[1]));
+const MCP_TOOL_ARGS = (() => {
+  const out = new Map();
+  for (const m of mcpSrc.matchAll(/name: '(ust_[a-z_]+)'/g)) {
+    const seg = mcpSrc.slice(m.index, mcpSrc.indexOf('handler:', m.index));
+    out.set(m[1], new Set([...seg.matchAll(/(\w+): \{ type:/g)].map((x) => x[1])));
+  }
+  return out;
+})();
+const resolves = (tok) => {
+  const [what, rest] = String(tok).split(':');
+  if (what === 'cmd') return CLI_CMDS.has(rest);
+  if (what === 'flag') return CLI_FLAGS.has(rest);
+  if (what === 'api') return CLI_EXPORTS.has(rest);
+  if (what === 'tool') return mcpTools.has(rest);
+  if (what === 'arg') { const [tool, prop] = String(rest).split('.'); return !!MCP_TOOL_ARGS.get(tool)?.has(prop); }
+  return false;                                                    // an unrecognised form is NOT a pass
+};
+const tokenProbe = (which) => (cap, stance) => {
+  const toks = [].concat(CAPS[cap][which] ?? []);
+  if (!toks.length) return false;
+  return stance === 'full' ? toks.every(resolves) : toks.some(resolves);
+};
+const mcpProbe = tokenProbe('mcp');
+const cliProbe = tokenProbe('cli');
 
 // ── SURFACES — each surface's DECLARED stance. `full` = exposes the capability; `subset` = a documented reduced form;
 //    everything else defaults to `na` with the surface's `naReason` (a specific override lives in `naSpecific`). This
@@ -176,8 +222,8 @@ const SURFACES = {
   // is deferred to the PLANNED operator MCP over @ust-protocol/operator (key creation, checkpoint/recovery/epoch/uniqueness/map
   // ceremonies) so a human explicitly grants agent rights — NOT 'stays core+CLI forever'. NOTE: no-fork-evidence /
   // anchor-verify are marked full on the CONSUME side; a produce/consume axis split is the honest refinement (UST-<top>).
-  'ust-mcp':          { probe: mcpProbe, full: ['canon', 'content-address', 'build-transcript', 'verify', 'resolve-authority', 'no-fork-evidence', 'consumer-trust-root', 'anchor-verify', 'fork-choice', 'stream-verify', 'cadence-grid', 'cadence-declare'], subset: [], naReason: 'deferred to the planned operator MCP over @ust-protocol/operator (privilege-separation: a human explicitly grants agent rights) — NOT core+CLI-forever; TOP-produce is the one agent touch still to be built for noosphere', naSpecific: { 'sign': 'the agent signs with its OWN key; build tools return signing_input, the MCP never holds a private key', 'negative-observation': 'agent-appropriate (a normal negative observation, NOT operator) — new per #39; an MCP absence verb is planned, not yet built' } },
-  'ust-cli':          { probe: cliProbe, full: ['canon', 'content-address', 'build-transcript', 'sign', 'verify', 'resolve-authority', 'no-fork-evidence', 'consumer-trust-root', 'anchor-verify', 'stream-verify', 'checkpoint-chain', 'keylog-commitment', 'discovery-shard', 'cadence-grid', 'cadence-declare', 'byte-agreement', 'name-obligation'], subset: [], naReason: 'not exposed by the reference operator CLI', naSpecific: { 'negative-observation': 'new per #39; a `ust absence` command is planned, not yet built' } },
+  'ust-mcp':          { probe: mcpProbe, full: ['canon', 'content-address', 'verify', 'resolve-authority', 'no-fork-evidence', 'consumer-trust-root', 'anchor-verify', 'fork-choice', 'stream-verify', 'cadence-grid', 'cadence-declare'], subset: ['build-transcript'], naReason: 'deferred to the planned operator MCP over @ust-protocol/operator (privilege-separation: a human explicitly grants agent rights) — NOT core+CLI-forever; TOP-produce is the one agent touch still to be built for noosphere', naSpecific: { 'sign': 'the agent signs with its OWN key; build tools return signing_input, the MCP never holds a private key', 'negative-observation': 'agent-appropriate (a normal negative observation, NOT operator) — new per #39; an MCP absence verb is planned, not yet built' } },
+  'ust-cli':          { probe: cliProbe, full: ['canon', 'content-address', 'verify', 'resolve-authority', 'no-fork-evidence', 'consumer-trust-root', 'anchor-verify', 'stream-verify', 'checkpoint-chain', 'keylog-commitment', 'discovery-shard', 'cadence-grid', 'cadence-declare', 'byte-agreement', 'name-obligation'], subset: [], naReason: 'not exposed by the reference operator CLI', naSpecific: { 'negative-observation': 'new per #39; a `ust absence` command is planned, not yet built', 'sign': 'MEASURED 2026-08-31 (#177), and previously declared full on a substring: the CLI has NO command that signs a document. Its fifteen commands read (verify/explain/canon/names/stream/forkchoice/discovery), run ceremonies (genesis/key/rotate/cadence/reroot) or publish (publish/mirror/witness). Signing happens INSIDE the ceremonies, over artifacts the ceremony builds — never over a document a user hands it. `ust sign` is planned in #177 and this cell goes green when it exists, not before.', 'build-transcript': 'Same measurement, same cause: `buildState` occurs twice in the CLI, both times inside a ceremony proving a key works. There is no way for a user to turn their own data into a transcript from the terminal — which is why the private-partition modes never reached this surface either, since a partition cannot be hand-written (#177).' } },
 };
 
 const capIds = Object.keys(CAPS);
@@ -211,6 +257,27 @@ else report.push(`  ✓ COVERAGE: all ${Object.keys(P).length} core exports tria
 const phantom = [...covered].filter((n) => !(n in P));
 if (phantom.length) { fail++; report.push(`  ✗ PHANTOM: CAPS reference non-existent core exports: [${phantom.join(', ')}]`); }
 else report.push(`  ✓ PHANTOM: every core name in CAPS resolves to a real ust-protocol export`);
+
+// CONTROLS for the token probe — it must be able to say NO, and it must not accept a mention. Proven here rather
+// than asserted in the comment above, because the defect this replaces was a probe that could only say yes.
+{
+  const ghost = [
+    ['cmd:thisCommandCannotExist', 'a command not in the dispatch table'],
+    ['flag:this-flag-cannot-exist', 'a flag the parser never reads'],
+    ['api:thisExportCannotExist', 'an export the package does not have'],
+    ['tool:ust_this_tool_cannot_exist', 'an MCP tool that is not registered'],
+    ['arg:ust_verify.thisPropertyCannotExist', 'an input property the schema lacks'],
+    ['seal', 'a BARE name — the old substring form, which must no longer resolve at all'],
+    ['buildState', 'the other bare name that produced a false `full` for two years of cells'],
+  ];
+  for (const [tok, why] of ghost) {
+    if (resolves(tok)) { fail++; report.push(`  ✗ CONTROL: the token probe accepted ${tok} — ${why}`); }
+  }
+  // …and it must still say YES to each real form, or every cell above passes for a different wrong reason.
+  const real = ['cmd:verify', 'flag:genesis', 'api:buildCeremony', 'tool:ust_verify', 'arg:ust_verify.disclosures'];
+  for (const tok of real) if (!resolves(tok)) { fail++; report.push(`  ✗ CONTROL: the token probe rejected ${tok}, which IS present — the surfaces were parsed wrong`); }
+  if (!fail) report.push(`  ✓ CONTROL: the probe resolves each surface form and refuses ${ghost.length} tokens that name nothing — including the two bare substrings that produced the false declarations`);
+}
 
 // (3) REALITY — every declared full/subset is genuinely exposed; every na has a reason.
 let cells = 0, drift = 0;

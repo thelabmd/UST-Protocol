@@ -727,6 +727,10 @@
       "round": 245,
       "issue": 176,
       "content_hash": "sha256:8ae695aa42eab20b86a8751ce37fbf51b2a576c432e0d1fd4c69fdf96cabeb03"
+    },
+    {
+      "round": 246,
+      "no_recap": "Round 246 does not close #177 — it repairs the MEASURING INSTRUMENT the card names first, so the sweep that follows is scored by a ruler that can fail. The card's six remaining items (decKeys on ust_verify, the CLI printing what was disclosed, disclosure inputs on the web verifier, `ust sign` with its envelope, private partitions in ust-light, the parity table itself) are untouched. The unit of a recap is the CLOSED ISSUE; this round closes none, and a recap here would report a first step as a conclusion."
     }
   ]
 }

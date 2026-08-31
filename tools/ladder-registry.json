@@ -2116,6 +2116,20 @@
       "code": "packages/ust-protocol/_crypto.mjs :: `AEAD_IMPLEMENTED` — the build's declaration, read before any document is, so `⊥` regains one meaning; `hchacha20` derives the XChaCha subkey from one ChaCha20 keystream block by arithmetic (`working = keystream − initial`), leaving no cipher of our own in the TCB; `xchachaEncrypt`/`xchachaDecrypt` over the IETF AEAD Node ships. `index.mjs` decides `enc.alg ∈ Impl` on the declaration and slices `ct` by the registry's per-algorithm nonce width.",
       "vector": "hchacha20-cfrg-2-2-1",
       "test": "faculty-absent-aead-xchacha: with the faculty present the same document verifies — aead-xchacha20-poly1305"
+    },
+    {
+      "round": 246,
+      "math": {
+        "excluded": "The capability map is a statement about THIS implementation's surfaces, not about the protocol: it says which of our tools expose which act, and a second implementation could expose an entirely different set while conforming perfectly. Nothing here quantifies over documents or verdicts, so there is no theorem to state — and inventing one would put an implementation detail into the model, where the next reader would reasonably take it for an obligation on everyone."
+      },
+      "spec": {
+        "excluded": "For the same reason, one layer down: S16 defines a conforming PRODUCER and VERIFIER, and a command-line tool is neither by virtue of existing. The spec already says what a producer owes; it does not say that our CLI must be one, and it should not — the gap this round exposes is ours to close (#177), not a rule to impose on implementers."
+      },
+      "code": "tools/capability-parity.mjs :: typed tokens (`cmd:` · `flag:` · `api:` · `tool:` · `arg:`) resolved against the CLI dispatch table, the argument parser, the package exports and the MCP tool schemas — never against the source text; `full` requires EVERY token, matching the predicate round 51 gave the library surfaces.",
+      "vector": {
+        "excluded": "A vector is a fixed INPUT and a declared RESULT that any runner reproduces. This gate's input is the source of two of our own packages, so a vector would have to carry our CLI and MCP inside the corpus — pinning this repository's shape into the file a PORT reads to check its protocol conformance. The equivalent guarantee lives where it belongs instead: seven negative tokens, including the two bare substrings that produced the false declarations, are refused inside the gate's own controls."
+      },
+      "test": "tools/capability-parity.mjs :: the gate is a CI step in its own right (`npm run test:parity`), and its controls run on every invocation — each surface form must resolve, and seven tokens naming nothing (among them the bare `seal` and `buildState` that produced the false declarations) must not."
     }
   ],
   "first_accounted_round": 76,
