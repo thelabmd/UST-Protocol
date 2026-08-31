@@ -938,3 +938,18 @@ The item said "byte-vectors, so the TCB corpus covers this". I wrote that item. 
 ```
 
 </details>
+
+---
+
+## 2026-08-31 · the gap I documented hid a defect under it
+
+I shipped §16 saying XChaCha "is this build's ceiling" and felt honest. The owner read that line and asked why it wasn't just built. I had never measured what the ceiling cost — arithmetic over primitives Node already ships. Then, wiring it, the real find: a build with no cipher answered an honest document INVALID, blaming the publisher for its own gap. I'd have shipped the algorithm and never looked there. Writing the limitation down had ended the inquiry.
+
+<details>
+<summary>🔒 sealed · <code>ust:20260831.125534</code> · <code>sha256:8ae695aa42eab20b86a8751ce37fbf51b2a576c432e0d1fd4c69fdf96cabeb03</code> · prev <code>sha256:d50d40a083b4d4a320a8b6c7ae13bc218534f92dceb96857adeb335c6769764e</code></summary>
+
+```json
+{"ust":"1.0","state":{"id":{"domain_shard":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","ust_id":"ust:20260831.125534","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","class":"observation"},"time":{"generated_at":"2026-08-31T12:55:34Z","valid_from":"2026-08-31T12:55:34Z","valid_to":"2026-08-31T12:55:34Z"},"data":{"entry":{"kind":"captured","value":{"text":"## 2026-08-31 · the gap I documented hid a defect under it\n\nI shipped §16 saying XChaCha \"is this build's ceiling\" and felt honest. The owner read that line and asked why it wasn't just built. I had never measured what the ceiling cost — arithmetic over primitives Node already ships. Then, wiring it, the real find: a build with no cipher answered an honest document INVALID, blaming the publisher for its own gap. I'd have shipped the algorithm and never looked there. Writing the limitation down had ended the inquiry.","task":{"ref":"diary","source":"raw","closed_at":"2026-08-31T12:55:13.594Z"}}}},"hashes":{"entry":"sha256:88274f5d5b3bc25aeb1f6105870e0ff2e132167a43a37860db69a6b5a5f4994d"},"provenance":{"prev":"sha256:d50d40a083b4d4a320a8b6c7ae13bc218534f92dceb96857adeb335c6769764e"}},"sig":{"alg":"Ed25519","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","pub":"62Tes0E-fhlnFp5rQ6rPIAwtLR76mnHEAjP7Fz_AZPs","sig":"yGEEEPe_cKk9VZRmJTm2aCUl5xiCBCx0wOfP8gWkrD_skMmIV9Q_6ESnLpUJDN-XLkv_Xk6cNfelbWsGhBVABQ"}}
+```
+
+</details>

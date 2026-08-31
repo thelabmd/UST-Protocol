@@ -109,6 +109,11 @@ jobs:
       # pure parts agreed all along, which is exactly why their agreement stayed green over an accusation.
       - name: the browser build refuses, and a refusal never becomes a verdict (#144)
         run: npm run test:browser-build
+      # #176 — the same class one cipher over: a build with Ed25519 and no AES-GCM answered an honest document
+      # INVALID(E-COMMIT), its own missing primitive rendered as an accusation. The faculty is DECLARED now; this
+      # step runs a build declaring only the MTI, which S17 makes an ordinary conforming configuration.
+      - name: a build that cannot run the cipher says so, and never blames the document (#176)
+        run: npm run test:aead-faculty
       - name: light README panels are DERIVED from the dark originals, never hand-edited
         run: npm run test:artwork
       - name: security regression (external-audit P0/P1 reproductions must stay closed — epic UST-1o6)

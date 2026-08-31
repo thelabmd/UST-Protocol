@@ -1315,9 +1315,13 @@ check('F8 impossible ust_id→E-MALFORMED', P.verify(mk({ r: { kind: 'captured',
   check('key-form shard != key_id → INVALID', P.verify(mk(undefined, { ...ID, domain_shard: 'sha256:' + '12'.repeat(32) }), { context: 'data' }).error === 'E-MALFORMED');
   const nonce = 'n-' + 'a'.repeat(16);
   const commit = P.blindedCommit({ domain_shard: ID.domain_shard, ust_id: ID.ust_id, name: 'e', value: { v: '1' }, nonce });
-  const encDoc = P.seal(P.buildState(ID, T, { e: { kind: 'captured', privacy: 'encrypted', commit, enc: { alg: 'XChaCha20-Poly1305', key_id: 'k1', ct: 'AAAA' } } }), A.priv, A.pubB64);
-  const re = P.verify(encDoc, { context: 'data', disclosures: { e: { nonce, value: { v: '1' } } }, decKeys: { k1: 'AAAA' } });
-  check('OPTIONAL AEAD not implemented → INDETERMINATE(unsupported_alg)', re.result === 'INDETERMINATE' && re.reason === 'unsupported_alg');
+  // Round 245: XChaCha20-Poly1305 is IMPLEMENTED here, so this build can no longer demonstrate "registered but
+  // unimplemented" by naming it. The claim did not stop being normative — it stopped being observable from THIS
+  // build, which is the same shape as `faculty-absent-ed25519`: the without-faculty half runs in
+  // `aead-faculty.test.mjs` against a build declaring only the MTI, and the vector states both halves.
+  const encDoc = P.seal(P.buildState(ID, T, { e: P.encryptPartition('e', { v: '1' }, { domain_shard: ID.domain_shard, ust_id: ID.ust_id, nonce, key_id: 'k1', key: 'A'.repeat(43), alg: 'XChaCha20-Poly1305' }).partition }), A.priv, A.pubB64);
+  const re = P.verify(encDoc, { context: 'data', disclosures: { e: { nonce, value: { v: '1' } } }, decKeys: { k1: 'A'.repeat(43) } });
+  check('XChaCha20-Poly1305 round-trips through the producer and the verifier — the RECOMMENDED mode of §10 is readable, not merely named', re.result === 'VALID:LIGHT', re.result + ' ' + (re.error || re.reason || ''))
   // #175 — the mode had a reader and no writer, so no fixture could exist that was not a description of the
   // verifier. `encryptPartition` is the producer; these two vectors are what it makes checkable, and they are
   // run FROM THE CORPUS so a port can run the same bytes.
@@ -1347,6 +1351,13 @@ check('F8 impossible ust_id→E-MALFORMED', P.verify(mk({ r: { kind: 'captured',
   }
   // The algorithm registry, both halves — they sit one line apart in the implementation and mean opposite things:
   // an unlisted mode is the DOCUMENT's defect, an unimplemented OPTIONAL one is the VERIFIER's inability.
+  // the WITH-faculty half of every faculty-absent vector that carries a key — the WITHOUT half runs in a build
+  // that declares less (`aead-faculty.test.mjs`, `browser-build.test.mjs`), because a claim about a build cannot
+  // be demonstrated from inside the build it denies.
+  for (const vec of V.vectors.filter((x) => x.kind === 'faculty-absent' && x.key && x.disclosure)) {
+    const r = P.verify(vec.doc, { context: 'data', disclosures: { [vec.disclosure.partition]: { nonce: vec.disclosure.nonce, value: vec.disclosure.value } }, decKeys: { [vec.key.key_id]: vec.key.raw } });
+    check(`${vec.id}: with the faculty present the same document verifies — ${vec.absent_faculty}`, r.result === vec.expect_with_faculty, `${r.result} ${r.error || r.reason || ''}`);
+  }
   for (const vec of V.vectors.filter((x) => x.kind === 'privacy-encrypted' && x.expect)) {
     const opts = { context: 'data' };
     if (vec.key) opts.decKeys = { [vec.key.key_id]: vec.key.raw };

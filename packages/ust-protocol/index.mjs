@@ -30,7 +30,8 @@ const ustFetch = labelledFetch('ust-protocol', VERSION.spec);
 // browsers/Workers; same rules.
 // #143: the platform's cryptographic faculty comes from ONE internal module, chosen at BUILD time. It is not
 // an option and not reachable from the data path — see `_crypto.mjs` for why that distinction is load-bearing.
-import { sha256Hex, ed25519Verify, ed25519Sign, aesGcmEncrypt, aesGcmDecrypt } from './_crypto.mjs';
+import { sha256Hex, ed25519Verify, ed25519Sign, aesGcmEncrypt, aesGcmDecrypt,
+  AEAD_IMPLEMENTED, xchachaEncrypt, xchachaDecrypt } from './_crypto.mjs';
 import { utf8, utf8Len, decodeUtf8, concatBytes, toHex, fromHex, toB64url, fromB64url } from './_bytes.mjs';
 import { beginSignatureResolution, endSignatureResolution, unresolvedSignatures, recordSignature, consultSignature } from './_sigmemo.mjs';   // #144 — the async signature faculty is VERIFIER-OWNED and internal, for the same reason the clock is: a caller-supplied answer to "did this verify" is a forgery oracle
 import { witnessNow } from './_clock.mjs';   // rev33 R4 — the witness-budget clock is a VERIFIER-OWNED faculty in an INTERNAL module, never a caller-supplied opts field (round-29 P0-02)
@@ -109,13 +110,19 @@ export function blindPartition(name, value, { domain_shard, ust_id, nonce, kind 
 // so IV uniqueness REDUCES to commitment uniqueness, which §10 already requires of the producer (a fresh unique
 // nonce per commitment). Sealing the identical (frame, name, nonce, value) twice reproduces the same IV and the
 // same ciphertext — which leaks nothing, because it reproduces the same `commit` too.
-export function encryptPartition(name, value, { domain_shard, ust_id, nonce, key_id, key, kind = 'captured' }) {
+export function encryptPartition(name, value, { domain_shard, ust_id, nonce, key_id, key, kind = 'captured', alg = 'AES-256-GCM' }) {
+  const width = nonceWidth(alg);
+  // A producer may not emit an algorithm the registry does not name (the verifier would refuse it as the
+  // DOCUMENT's defect), nor one this build cannot run (it would emit a document it cannot itself read back).
+  if (!width || !AEAD_IMPLEMENTED.includes(alg)) throw new Error('unsupported AEAD for encryptPartition: ' + String(alg));
   const commit = blindedCommit({ domain_shard, ust_id, name, value, nonce });
   const plaintext = canon({ nonce, partition: name, value });          // EXACTLY what §14 step 8 compares against
-  const iv = fromB64url(H('ust:enc-iv', commit).slice(7)).subarray(0, 12);   // strip the `sha256:` prefix
-  const { body, tag } = aesGcmEncrypt(fromB64url(key), iv, utf8(plaintext));
-  const ct = toB64url(new Uint8Array([...iv, ...body, ...tag]));       // iv ‖ body ‖ tag — the layout aeadDecrypt reads
-  return { partition: { kind, privacy: 'encrypted', commit, enc: { alg: 'AES-256-GCM', key_id, ct } }, hash: partitionHash({ commit }) };
+  const iv = fromB64url(H('ust:enc-iv', commit).slice(7)).subarray(0, width);   // strip the `sha256:` prefix
+  const { body, tag } = alg === 'XChaCha20-Poly1305'
+    ? xchachaEncrypt(fromB64url(key), iv, utf8(plaintext))
+    : aesGcmEncrypt(fromB64url(key), iv, utf8(plaintext));
+  const ct = toB64url(new Uint8Array([...iv, ...body, ...tag]));       // nonce ‖ body ‖ tag — the layout aeadDecrypt reads
+  return { partition: { kind, privacy: 'encrypted', commit, enc: { alg, key_id, ct } }, hash: partitionHash({ commit }) };
 }
 
 // §10/§17 encrypted: AEAD-decrypt to recover the committed plaintext canon({nonce,<name>:value}).
@@ -123,11 +130,17 @@ export function encryptPartition(name, value, { domain_shard, ust_id, nonce, key
 // OPTIONAL — a conforming verifier that does not implement it returns INDETERMINATE(unsupported_alg), NEVER a
 // silent null/INVALID (the document may be honest; the verifier just cannot decide). 'unsupported' marks that.
 function aeadDecrypt(enc, keyRawB64url) {
-  if (enc.alg !== 'AES-256-GCM') return 'unsupported';                  // optional alg not implemented here (§17 MTI)
+  // The decision is taken on the build's DECLARATION, before the ciphertext is touched. Calling and catching
+  // cannot work: an absent primitive and an unauthentic tag are the same observation, so one signal would carry
+  // two facts and the verifier would have to guess which — and it guessed E-COMMIT, blaming the publisher for
+  // its own gap (measured 2026-08-31, #176). `AEAD_IMPLEMENTED ⊆ AEAD_ALGS`; an algorithm outside the registry
+  // never reaches here, having been refused as the document's defect at admission.
+  if (!AEAD_IMPLEMENTED.includes(enc.alg)) return 'unsupported';        // this build's limit — INDETERMINATE, never INVALID
   try {
     const raw = fromB64url(enc.ct), key = fromB64url(keyRawB64url);
-    const iv = raw.subarray(0, 12), tag = raw.subarray(raw.length - 16), body = raw.subarray(12, raw.length - 16);
-    const plain = aesGcmDecrypt(key, iv, tag, body);
+    const n = nonceWidth(enc.alg);                                // §17: the nonce is a PREFIX of ct, its width fixed per algorithm
+    const iv = raw.subarray(0, n), tag = raw.subarray(raw.length - 16), body = raw.subarray(n, raw.length - 16);
+    const plain = enc.alg === 'XChaCha20-Poly1305' ? xchachaDecrypt(key, iv, tag, body) : aesGcmDecrypt(key, iv, tag, body);
     // #143: decoded with TextDecoder, not `Buffer.from(plain)`. Two reasons, and both are the point of the
     // round: TextDecoder is portable, and `Buffer.from(<identifier>)` is a raw-byte DOOR the byte-door lint
     // must account for. Sidestepping the door beats allowlisting it — `plain` is ours, but the next such line
@@ -637,7 +650,17 @@ const RES_PARTITION_NAMES = new Set([...RESERVED.transcript, ...RESERVED.state, 
 // non-empty `reason`; publishers MAY use others, but a consumer branches on these three.
 const KINDS = ['captured', 'computed', 'absence'], PRIVACY = ['blinded', 'encrypted'];   // §S4/D1: secret-url is a disclosure CHANNEL (§out-of-scope), not a privacy mode
 const ABSENCE_REASONS = ['unreachable', 'no-event', 'unchanged'];
-const AEAD_ALGS = ['AES-256-GCM', 'XChaCha20-Poly1305'], B64URL = /^[A-Za-z0-9_-]+$/;
+// §17 AEAD registry, and the nonce width each algorithm carries as the PREFIX of `ct` (`nonce ‖ body ‖ tag`).
+// The two are one object, so a registry entry without a stated nonce width is not expressible: the widths differ
+// (96-bit for GCM, 192-bit for XChaCha — the whole reason §10 calls the latter misuse-resistant), and a reader
+// that assumed one width for both would slice the ciphertext wrong and report the DOCUMENT as unauthentic.
+// The widths are STRINGS because the registry is canonicalized into `registry_digest`, and §5's value model is
+// string-only. Writing them as numbers is not a style question: it made `canon` refuse the registry outright and
+// every document verified INVALID(E-CANON) until they were strings — the protocol catching its own registry with
+// the rule it applies to everyone else's data. Read once, here, and never re-parsed downstream.
+const AEAD_NONCE_BYTES = { 'AES-256-GCM': '12', 'XChaCha20-Poly1305': '24' };
+const nonceWidth = (alg) => Number(AEAD_NONCE_BYTES[alg]) || 0;
+const AEAD_ALGS = Object.keys(AEAD_NONCE_BYTES), B64URL = /^[A-Za-z0-9_-]+$/;
 // the verdict is tier-scoped (`VALID:LIGHT|HIGH|TOP`); this is the ONE place code should test "did it verify" —
 // a bare `r.result === 'VALID'` is intentionally no longer valid (it forces callers to face the tier).
 export const isValid = (r) => typeof r?.result === 'string' && r.result.slice(0, 6) === 'VALID:';
@@ -3585,6 +3608,14 @@ export const REGISTRY = deepFreeze({   // round-25 P0-04 — DEEP-frozen: the ca
   purposes: ['ust:name-no-fork', 'ust:authority-checkpoint', 'ust:authority-checkpoint-signature',
     'ust:checkpoint-authority-recovery', 'ust:genesis-epoch-transition', 'ust:checkpoint-uniqueness-attestation',
     'ust:evidence-receipt', 'ust:evidence-receipt-signature', 'ust:name-map-root'],   // #42 — the signed name-map ROOT statement (§12.3.4, F.5a.2)
+  // §17 AEAD registry — the algorithms `enc.alg` may name, each with the nonce width it carries as the PREFIX of
+  // `ct`. Exposed HERE, and not left as a module-private constant, for the reason #154 taught with partition
+  // kinds: a set that only the code knows drifts from the set the spec states, and two clean-room verifiers
+  // implement whichever they can see. The widths are part of the registry because the layout is only readable
+  // if the width is known — a reader slicing 12 bytes off an XChaCha ciphertext recovers nothing and reports the
+  // DOCUMENT as unauthentic, naming the publisher for its own misparse.
+  aeadAlgs: AEAD_ALGS,
+  aeadNonceBytes: AEAD_NONCE_BYTES,
   // PARTITION KINDS (§4.4/§5, F.1.1) — the domain `K` a verifier admits, and the ONLY definition of it. The
   // obligation is EQUALITY: admitting more accepts a tag the standard never defined; admitting fewer returns a
   // false INVALID on a conforming document, and the verdict then names the publisher rather than the verifier.

@@ -2108,6 +2108,14 @@
       },
       "vector": "privacy-encrypted-bytes-wellformed",
       "test": "privacy-encrypted-bytes-enc-not-object: `enc` as a STRING. Carried as BYTES on purpose: a typed decoder (Go struct, serde) meets this before its"
+    },
+    {
+      "round": 245,
+      "math": "*Corollary (the inability must be DECLARED, because a failed call and a failed tag are the same observation).*",
+      "spec": "**`ct` LAYOUT (normative):**",
+      "code": "packages/ust-protocol/_crypto.mjs :: `AEAD_IMPLEMENTED` — the build's declaration, read before any document is, so `⊥` regains one meaning; `hchacha20` derives the XChaCha subkey from one ChaCha20 keystream block by arithmetic (`working = keystream − initial`), leaving no cipher of our own in the TCB; `xchachaEncrypt`/`xchachaDecrypt` over the IETF AEAD Node ships. `index.mjs` decides `enc.alg ∈ Impl` on the declaration and slices `ct` by the registry's per-algorithm nonce width.",
+      "vector": "hchacha20-cfrg-2-2-1",
+      "test": "faculty-absent-aead-xchacha: with the faculty present the same document verifies — aead-xchacha20-poly1305"
     }
   ],
   "first_accounted_round": 76,

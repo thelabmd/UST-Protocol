@@ -92,6 +92,7 @@
     "test:recap-per-issue": "node tools/recap-per-issue-gate.mjs",
     "test:readme-block": "node tools/readme-block-gate.mjs",
     "test:browser-build": "node --test packages/ust-protocol/browser-build.test.mjs",
+    "test:aead-faculty": "node --test packages/ust-protocol/aead-faculty.test.mjs",
     "test:promised": "node tools/promised-artifacts-gate.mjs",
     "test:recap-selfcheck": "node tools/recap-compose-selfcheck.mjs"
   },

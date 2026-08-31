@@ -4095,9 +4095,20 @@ implemented by this build, no plaintext is obtained and the two channels have no
 `INDETERMINATE(unsupported_alg)`, never `INVALID` — F-theorem clause 5 applied to a cipher rather than to a
 signature.
 
+*Corollary (the inability must be DECLARED, because a failed call and a failed tag are the same observation).*
+The clause above is not realizable by attempting the decryption and reading the outcome. An absent primitive and
+an unauthentic ciphertext both yield "no plaintext", so a verifier that discovers its own limits by calling into
+them cannot distinguish `⊥` meaning *I cannot* from `⊥` meaning *this document is defective* — and, having only
+one signal, must pick one, which is a verdict assigned by coin-flip on the axis where being wrong is silently
+dangerous. Therefore the set of algorithms a build can run is part of the build's DECLARATION, fixed before any
+document is read, and the decision `enc.alg ∈ Impl` is taken on that declaration alone. `Impl ⊆ Reg` (§17): a
+build may implement fewer algorithms than the registry names — that is the OPTIONAL tier — and may never claim
+one the registry does not, since an algorithm outside `Reg` is refused as the document's defect at admission
+(`E-MALFORMED`) and never reaches this decision at all.
+
 **Binding: realized** — *"privacy-encrypted-disclosure: the committed {nonce,value} discloses without any key (F.7a.1)"* ·
 *"privacy-encrypted-channels-disagree: a decryption naming another value is E-COMMIT, never a second opinion (F.7a.2)"* ·
-*"privacy-encrypted-alg-optional-unimplemented: S17 MTI / F-theorem clause 5 — a REGISTERED but OPTIONAL algorithm this build does not implement"* ·
+*"faculty-absent-aead-xchacha: with the faculty present the same document verifies — aead-xchacha20-poly1305"* ·
 *"privacy-encrypted-bytes-wellformed: CONTROL, and it is load-bearing: the SAME byte path admits a well-formed encrypted partition. Without it"*.
 Closed by #175: the producer corollary above named what was missing — an operation deriving ciphertext and commitment
 together — and `encryptPartition` is it, so the objects the theorems range over can now be constructed and pinned. The

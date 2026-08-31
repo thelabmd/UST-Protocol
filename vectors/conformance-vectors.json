@@ -19,8 +19,8 @@
     "_": "WHAT A VECTOR MAY PIN — read this before excluding the `vector` layer of a round, and before deciding a case \"cannot be a vector\". Derived from THIS corpus on 2026-08-10, not declared: 228 vectors across 43 kinds.",
     "the_rule": "A vector is a FIXED INPUT and a DECLARED RESULT that a runner must reproduce. The input being a DOCUMENT is one case among several; the result being a VERDICT is one case among several.",
     "measured_2026_08_10": {
-      "total": 268,
-      "kinds": 54,
+      "total": 270,
+      "kinds": 55,
       "input_is_a_document": 56,
       "input_is_a_value_or_string": 160,
       "input_is_a_genesis_plus_log": 49,
@@ -12643,9 +12643,80 @@
       "note": "the load-bearing case: WITHOUT the key this document reads VALID and discloses the committed value, so the divergence is visible only to the key-holder. A port that decrypts without re-deriving the commitment turns a key into an authority to assign the value, and its reader sees the same green verdict either way"
     },
     {
-      "id": "privacy-encrypted-alg-optional-unimplemented",
+      "id": "hchacha20-cfrg-2-2-1",
+      "kind": "hchacha20",
+      "rule": "draft-irtf-cfrg-xchacha S2.2.1 — the XChaCha subkey derivation. This is the ONE piece of cipher arithmetic UST implements itself (the AEAD underneath is the platform`s), so it is pinned against the standard`s own vector and never against our output. A port derives the subkey however its platform allows — a real HChaCha20, or the same subtraction from a ChaCha20 keystream block — and must reach these exact 32 bytes; an implementation that is wrong here produces ciphertexts no other implementation can open, while every one of its own round-trips passes.",
+      "input_hex": {
+        "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+        "nonce16": "000000090000004a0000000031415927"
+      },
+      "expect_hex": "82413b4227b27bfed30e42508a877d73a0f9e4d58a74a853c12ec41326d3ecdc",
+      "note": "The 16 bytes here are the FIRST 16 of a 24-byte XChaCha nonce; the remaining 8 become the IETF nonce behind four zero bytes (S17 `ct` layout)."
+    },
+    {
+      "id": "privacy-encrypted-xchacha-channels-disagree",
       "kind": "privacy-encrypted",
-      "rule": "S17 MTI / F-theorem clause 5 — a REGISTERED but OPTIONAL algorithm this build does not implement yields INDETERMINATE(unsupported_alg), never INVALID",
+      "rule": "F.7a.2 on the 192-bit nonce: the divergence rule is a property of the PROTOCOL, but the path to it is per-algorithm — the verifier must slice the nonce at the width `enc.alg` fixes (24 bytes here, not the MTI's 12) before it can decrypt at all. A reader using one width for every algorithm recovers no plaintext and reports E-COMMIT, reaching the RIGHT verdict here for the WRONG reason — which is why the pair is stated: without the key the divergence is invisible and the document is VALID, with it the two channels disagree and NEITHER value is disclosed.",
+      "key": {
+        "key_id": "k1",
+        "raw": "BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc"
+      },
+      "disclosure": {
+        "partition": "secret",
+        "nonce": "AAAAAAAAAAAAAAAAAAAAAA",
+        "value": {
+          "v": "COMMITTED"
+        }
+      },
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260628.14",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "observation"
+          },
+          "time": {
+            "generated_at": "2026-06-28T14:03:12Z",
+            "valid_from": "2026-06-28T14:00:00Z",
+            "valid_to": "2026-06-28T15:00:00Z"
+          },
+          "data": {
+            "secret": {
+              "kind": "captured",
+              "privacy": "encrypted",
+              "commit": "sha256:1eeb18180426c5204723bd35f9dd6550a7f350ebbdd447ee4f49d0948fdd7f55",
+              "enc": {
+                "alg": "XChaCha20-Poly1305",
+                "key_id": "k1",
+                "ct": "8efa8fbd7925f39be03187692d5dfa00b5D8lUJusaGqjzS-EjOjTosIi46i3tXlAUvDvFKyuCO-chF8A88xvsfHUc7gv1FafpZ4TSBMwVq2lmjRAZIFe22BWRTCpLCOopPnskqSTBHbKGBn4PPCNVjs06VApTqqM9_4l6Od"
+              }
+            }
+          },
+          "hashes": {
+            "secret": "sha256:443d01d0ad97e81cf27e09e8ba63497411a624078e8fb6da4ac13f770df8d34c"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "SNyLZy1YROsSgHm3vz9TU-o5Klrxb9jIxygz8snOHnRMTD8zTvE4tTgd3EUZqWZAqGg-xI4XhA_Noyxk_xkUDg"
+        }
+      },
+      "expect_without_key": "VALID:LIGHT",
+      "expect_with_key": {
+        "result": "INVALID",
+        "error": "E-COMMIT"
+      },
+      "note": "The AES twin is `privacy-encrypted-channels-disagree`. Both are kept because the nonce width differs and the slicing is what a port gets wrong; the RULE is not duplicated — the reachability of it is."
+    },
+    {
+      "id": "faculty-absent-aead-xchacha",
+      "kind": "faculty-absent",
+      "rule": "F clause 5 / §17 OPTIONAL — a verifier that HOLDS the key and the disclosure and cannot run the AEAD named by `enc.alg` MUST answer INDETERMINATE(unsupported_alg). It MUST NOT answer INVALID: an absent cipher is the verifier's limit, and E-COMMIT would accuse the publisher of a divergence nobody observed. The set of algorithms a build can run is DECLARED (F.7a.2, second corollary), never discovered by attempting the decryption — an absent primitive and an unauthentic tag are the same observation. The SAME document under a build implementing the algorithm verifies normally; both halves are normative, and a verifier implementing only the MTI is a conforming configuration, not a broken one.",
+      "absent_faculty": "aead-xchacha20-poly1305",
       "doc": {
         "ust": "1.0",
         "state": {
@@ -12668,7 +12739,7 @@
               "enc": {
                 "alg": "XChaCha20-Poly1305",
                 "key_id": "k1",
-                "ct": "c51558873362fdd8PkEeBrpdfZjkBa3Q1ierF0O_LI1CG0QZ_i7-673lZRnNuoZYQmj8kXl8GGxx654ZM5nBXuUgt9_QB6VQMahSRugvntEeyp8h_RRe_-LFhtviFvZ-fTfiZWIDDSM"
+                "ct": "c51558873362fdd8ad90497c74cc6dcdj4xONfZknG4l_m2eXak8Lb2ZFGULpo0VsGF03yqv8iUU7J8kflLGWx1LrrwbEU-Pu02rGttRtg1DgzU9qGAMEwAtO1MCI-hnKcsIotpm3bcjlVFKEBI6ZXqfvCg"
               }
             }
           },
@@ -12680,7 +12751,7 @@
           "alg": "Ed25519",
           "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
           "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
-          "sig": "9PSVLb078cQsKkAHErMGhM98DyY4UFvsX6w_GBiTUEZs-RUrCP2Vrw4G-FmK3kVHN83eKnsBMQDzKC8bCRgnAg"
+          "sig": "yKYjYh7MXIDJeP_UFYNJS0F8mOsqYq7A9RwCr6QH-NkBSdMwH3GCj-05MMxxtUbSNgeJOqZttvbCHb7CJWNKAg"
         }
       },
       "key": {
@@ -12694,11 +12765,12 @@
           "v": "LONG"
         }
       },
-      "expect": {
+      "expect_without_faculty": {
         "result": "INDETERMINATE",
         "reason": "unsupported_alg"
       },
-      "note": "the pair to the vector above, and they sit one line apart in the implementation: unlisted is the document's fault, unimplemented is the verifier's inability. Conflating them would let a build convict an honest document for its own missing faculty"
+      "expect_with_faculty": "VALID:LIGHT",
+      "note": "The predecessor of this vector (`privacy-encrypted-alg-optional-unimplemented`, round 243) named the algorithm and carried a ciphertext that was not one, because this build could not produce a real one. Round 245 implemented XChaCha20-Poly1305 and the demonstration stopped working — which is the honest signal that it had been pinning a BUILD LIMIT while claiming to pin a protocol rule."
     },
     {
       "id": "privacy-encrypted-bytes-wellformed",

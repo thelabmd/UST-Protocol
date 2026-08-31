@@ -116,6 +116,28 @@ export function ed25519Sign() {
   throw unsupported('signing is not available in the browser build — a signing key does not belong in a page.');
 }
 
+/**
+ * WHICH AEADs THIS BUILD CAN RUN: none, and it says so BEFORE a document is read.
+ *
+ * The refusing stubs below are the second line of defence, not the first. If the core discovered this build's
+ * limits by calling them and catching, "the primitive is absent" and "the tag did not verify" would arrive as one
+ * observation, and the honest `INDETERMINATE(unsupported_alg)` would be indistinguishable from an accusation
+ * against the publisher (F.7a.2, second corollary). The empty declaration means the core never calls at all.
+ *
+ * `AES-256-GCM` is the MTI and is missing here for the same reason Ed25519 is: the browser offers it only through
+ * the asynchronous `crypto.subtle` and this core is synchronous. That is a refusal, not an approximation —
+ * a build that cannot run the cipher reports that it cannot, and judges nothing.
+ */
+export const AEAD_IMPLEMENTED = [];
+
+export function xchachaEncrypt() {
+  throw unsupported('XChaCha20-Poly1305 encryption is not available in the browser build — it is built from ChaCha20, which WebCrypto does not offer at all.');
+}
+
+export function xchachaDecrypt() {
+  throw unsupported('XChaCha20-Poly1305 decryption is not available in the browser build — it is built from ChaCha20, which WebCrypto does not offer at all.');
+}
+
 export function aesGcmEncrypt() {
   throw unsupported('AES-256-GCM encryption is not available in the browser build — the browser offers it only through the asynchronous crypto.subtle, and a page is not where a partition key belongs. Encrypt where the key already lives.');
 }

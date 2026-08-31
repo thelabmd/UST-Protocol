@@ -2125,12 +2125,23 @@ committed to" becomes "this ciphertext is whatever the key-holder says it is", a
   a serde model — meets these before its object model does, and a decoder that zero-values an unexpected field
   would otherwise reach a different verdict from the same wire.
 
-**This build's choices, which are NOT normative:** it implements the MTI `AES-256-GCM` and not the RECOMMENDED
-`XChaCha20-Poly1305`, so on the latter it returns `INDETERMINATE(unsupported_alg)` — a legitimate outcome and its
-own ceiling, not a property of the protocol. The browser build implements neither, and refuses earlier still (no
-synchronous Ed25519), so its `INDETERMINATE` there is about the signature, not the cipher. A PRODUCER helper that
-derives ciphertext and commitment from one operation is REQUIRED to make admissible documents constructible
-(model F.7a.1, producer corollary) but is not part of a conforming verifier.
+**Which algorithms a build runs is a DECLARATION, and the two halves of `⊥` must not be confused.** A verifier
+that discovers its own limits by attempting the decryption cannot tell an absent primitive from a failed
+authentication tag — both yield "no plaintext" — so it holds one signal for two facts and must guess. Measured on
+this implementation before the rule existed: a build with Ed25519 and no AES-GCM answered an honest document
+`INVALID(E-COMMIT)`, its own missing cipher rendered as an accusation against the publisher. The set of
+implementable algorithms is therefore fixed BEFORE any document is read, and `enc.alg ∈ Impl` is decided on that
+declaration alone, with `Impl ⊆ Reg` (§17).
+
+**What is genuinely this build's ceiling, stated because a recommendation nothing implements steers nobody:** the
+reference implementation runs BOTH registered algorithms — the MTI `AES-256-GCM` and the RECOMMENDED
+`XChaCha20-Poly1305`, the latter built from the platform's ChaCha20 primitives rather than a cipher of our own.
+A verifier implementing only the MTI is an ordinary conforming configuration and answers
+`INDETERMINATE(unsupported_alg)` on the other; that is its limit, correctly reported, not a defect. The browser
+build implements neither and refuses earlier still (no synchronous Ed25519), so its `INDETERMINATE` there is about
+the signature, not the cipher. A PRODUCER helper that derives ciphertext and commitment from one operation is
+REQUIRED to make admissible documents constructible (model F.7a.1, producer corollary) but is not part of a
+conforming verifier.
 
 ---
 
@@ -2177,9 +2188,22 @@ derives ciphertext and commitment from one operation is REQUIRED to make admissi
   `encrypted` (both cryptographic — what is HIDDEN in the signed state). A "secret URL" is a DISCLOSURE CHANNEL
   (§out-of-scope, G18), not a privacy mode; removed from the registry in rc.4.
 - **alg (signatures):** `Ed25519` (strict, §7). **hash:** `sha256:` domain-separated (§7). **enc.alg (AEAD):**
-  `AES-256-GCM` (**MTI — mandatory to implement**: every conforming verifier implements it),
+  `AES-256-GCM` (**MTI — mandatory to implement**: every conforming verifier implements it, 96-bit nonce),
   `XChaCha20-Poly1305` (OPTIONAL: a verifier that does not implement it MUST return
-  `INDETERMINATE(unsupported_alg)` for a disclosure it cannot decrypt — never a silent skip, never INVALID). **hash domain tags:** `ust:state` (whole-State `content_hash`) | `ust:shard` (a per-partition hash, §4.4) | `ust:keylog|ust:checkpoint|ust:node|ust:leaf|ust:seed|ust:source`; and the authority-checkpoint family (§12.3): `ust:authority-checkpoint` (authority checkpoint id) | `ust:checkpoint-map-key|ust:checkpoint-map-value` | `ust:name-map-key|ust:name-map-value` | `ust:keylog-empty|ust:keylog-leaf|ust:keylog-node|ust:keylog-commit` (size-bound key-log vector commitment, §12.3.3) | `ust:smt-empty|ust:smt-node|ust:smt-leaf` (sparse-Merkle construction).
+  `INDETERMINATE(unsupported_alg)` for a disclosure it cannot decrypt — never a silent skip, never INVALID;
+  192-bit nonce, which is why §10 calls it misuse-resistant).
+  **`ct` LAYOUT (normative):** `ct = base64url( nonce ‖ ciphertext ‖ tag )` — the nonce is a PREFIX whose width is
+  fixed by `enc.alg` (12 bytes for `AES-256-GCM`, 24 for `XChaCha20-Poly1305`) and the authentication tag is the
+  trailing 16 bytes. Stated because it had not been: while one algorithm was registered, every implementation
+  read 12 bytes from the code rather than from the standard, and a second algorithm makes the omission a
+  divergence — a verifier slicing the wrong width recovers no plaintext and reports the DOCUMENT as unauthentic
+  (`E-COMMIT`), naming the publisher for its own misparse. A conforming verifier MUST NOT infer the width from the
+  ciphertext length.
+  **Which algorithms a build runs is DECLARED, never discovered by attempting the decryption:** an absent
+  primitive and a failed authentication tag are the same observation, so a verifier that learns its limits by
+  calling into them holds one signal for two facts and must guess — and the wrong guess is `E-COMMIT`, an
+  accusation. The implemented set MUST be a subset of this registry (an algorithm outside it is the document's
+  defect, `E-MALFORMED`, refused at admission before any faculty question arises). **hash domain tags:** `ust:state` (whole-State `content_hash`) | `ust:shard` (a per-partition hash, §4.4) | `ust:keylog|ust:checkpoint|ust:node|ust:leaf|ust:seed|ust:source`; and the authority-checkpoint family (§12.3): `ust:authority-checkpoint` (authority checkpoint id) | `ust:checkpoint-map-key|ust:checkpoint-map-value` | `ust:name-map-key|ust:name-map-value` | `ust:keylog-empty|ust:keylog-leaf|ust:keylog-node|ust:keylog-commit` (size-bound key-log vector commitment, §12.3.3) | `ust:smt-empty|ust:smt-node|ust:smt-leaf` (sparse-Merkle construction).
   All algorithm-tagged for agility (§19).
 - **signed purposes (§12.3) — domain-separated `canon` preimages, NEVER interchangeable:** `ust:authority-checkpoint` (a `CheckpointBody`), `ust:authority-checkpoint-signature` (the authority checkpoint SIGNATURE preimage — distinct from the body purpose), `ust:checkpoint-authority-recovery` (a recovery claim), `ust:genesis-epoch-transition` (an epoch hand-off), `ust:checkpoint-uniqueness-attestation` (a witness-quorum claim). A statement of one purpose MUST NOT verify as another.
 - **authority-checkpoint reserved keys (§12.3):** body: `version,purpose,domain_shard,genesis_epoch,sequence,previous_checkpoint,previous_epoch_final_checkpoint,active_genesis,checkpoint_authority,keylog`; `checkpoint_authority`: `current_key_id,next_key_id,next_pub,effective_sequence`; `keylog`: `root,length,head`. The authority checkpoint is its OWN object (not a transcript) — it is verified by §12.3.1, never the §14 data algorithm.
