@@ -106,7 +106,7 @@ const CAPS = {
   'cadence-declare':    { core: ['buildCadenceEntry'], mcp: 'ust_build_cadence', cli: 'cmdCadence' },
   'substrate-registry': { core: ['combineSubstrates', 'combineInclusion'] },   // #95 — finality AND membership route by substrate name, one pattern
   'discovery-shard':    { core: ['isPublicDnsShard'], cli: 'attestDiscovery' },
-  'disclosure':         { core: ['blindedCommit', 'blindPartition'] },
+  'disclosure':         { core: ['blindedCommit', 'blindPartition', 'encryptPartition'] },
   'negative-observation':{ core: ['buildAbsence', 'noEventBacking'] },   // #39 — a normative absence assertion + the no-event↔completeness tie; core-only for now, no surface exposes it yet
 };
 

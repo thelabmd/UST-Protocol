@@ -53,7 +53,7 @@ const bounds = heads.map((h) => h.pos).concat(MODEL.length);
 // section silently LEAVE the domain — renamed to a non-`F.x` heading, it would simply stop being enumerated and this
 // gate would still pass. That is the very defect class this gate exists to close, so the count is exact and any change
 // to the section inventory must be a deliberate edit here.
-const EXPECTED_SECTIONS = 64;   // 63 → 64: F.5s — the stream FLOOR, and the ONE coordinate measured to invert W1.
+const EXPECTED_SECTIONS = 65;   // 64 → 65: F.7a.1 — F.7a said a disclosure is a CONTROLLED enlargement and never said what makes it controlled; the two theorems state it (#175).
 // Root-ness is authenticated non-membership (a genesis carries no predecessor; a transition reads only hashes), so a
 // publisher that withholds its earliest transitions moves a derived floor LATER and every gap before it is
 // reclassified as a period in which nothing was owed — removal IMPROVES the publisher's answer, which holds nowhere

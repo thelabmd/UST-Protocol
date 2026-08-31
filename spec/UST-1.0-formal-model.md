@@ -362,7 +362,7 @@ predicate.
    symmetric. **Totality becomes SETTLING, not returning:** a rejected promise is a second way to fail to be
    total, and it is worse than a throw because it is invisible to a caller's `try`/`catch` when the `await` is
    forgotten. This obligation already exists and is enumerated over the RUNTIME namespace rather than a source
-   list (*"R47 P1-03 (roster completeness — RUNTIME namespace) — EVERY function-typed export of the module (100,
+   list (*"R47 P1-03 (roster completeness — RUNTIME namespace) — EVERY function-typed export of the module (101,
    incl. re-exports + arrow-consts + the byte kernel checkAuthorityProofBytes) is TOTAL on a hostile Proxy UNLESS
    explicitly classified MAY-THROW"*), so widening the async surface widens the obligation automatically rather
    than requiring a new rule — a newly-async export is covered the moment it exists. **Determinism becomes a claim about the WINDOW:** between two suspension points a live
@@ -2092,7 +2092,7 @@ roster is now the RUNTIME MODULE NAMESPACE — every value whose runtime type is
 future callable cannot evade it; each is TOTAL on a hostile Proxy unless explicitly classified MAY-THROW, and the classification
 covers EXACTLY the current throwers (no verdict boundary exempted, no thrower unclassified). No live totality hole hid among the
 36 (they are all producers/primitives/classes/helpers) — the miss was a GATE-completeness gap, now closed at its root
-(*"R47 P1-03 (roster completeness — RUNTIME namespace) — EVERY function-typed export of the module (100, incl. re-exports + arrow-consts + the byte kernel checkAuthorityProofBytes) is TOTAL on a hostile Proxy UNLESS explicitly classified MAY-THROW (producer / byte-string primitive / verdict class / throw-by-contract); a source-regex miss (arrow-const, re-export, future callable) can no longer evade the gate"*).
+(*"R47 P1-03 (roster completeness — RUNTIME namespace) — EVERY function-typed export of the module (101, incl. re-exports + arrow-consts + the byte kernel checkAuthorityProofBytes) is TOTAL on a hostile Proxy UNLESS explicitly classified MAY-THROW (producer / byte-string primitive / verdict class / throw-by-contract); a source-regex miss (arrow-const, re-export, future callable) can no longer evade the gate"*).
 
 **Verification (rev63 — BOUNDED-EXHAUSTIVE model check of the automaton `A`, beyond sampled fuzz).** The Checker Soundness
 theorem is proved BY STRUCTURAL INDUCTION on the proof term `π`. Because totality and determinism are COMPOSITIONAL over a
@@ -4052,6 +4052,53 @@ change; what changes is who holds which generators. A fuller treatment of multi-
 prove membership of which layer to whom) is future work and NOT claimed by this appendix.
 
 **Binding: none — definitional.** A scope note delimiting the private layers; it states no property of the verifier.
+
+## F.7a.1 Disclosure is enlargement BY the commitment, and two channels may not disagree (#175)
+
+F.7a says a disclosure is a controlled enlargement of one consumer's `ℐ`. It does not say what makes it
+*controlled*, and that omission is exactly where a verifier can be got wrong — so the property is stated here.
+
+**Setup.** A private partition fixes `c := H_shard(canon({domain_shard, ust_id, nonce, partition: name, value}))`
+— the commitment, frame-bound by construction, since `domain_shard` and `ust_id` are inside the pre-image. A
+holder may enlarge a consumer's information set through either of two channels: a **direct disclosure**
+`d = (nonce′, value′)`, or, when the partition carries `enc`, a **key** `k` decrypting `ct` to a plaintext `p`.
+
+**Theorem F.7a.1 (the commitment, not the holder, decides what a disclosure may add).** An admissible disclosure
+is one that reproduces the commitment: `d` enlarges `ℐ` by `value′` **iff** `H_shard(canon({domain_shard, ust_id,
+nonce′, partition: name, value′})) = c`. Otherwise `ℐ` is unchanged and the record's verdict is `E-COMMIT`.
+
+*Proof.* `H_shard` is a domain-separated hash and the pre-image carries the frame coordinates, so a pair
+`(nonce′, value′)` reproducing `c` is, up to a collision we may not construct, the pair that was committed.
+Admitting a non-reproducing pair would make the enlargement a function of who speaks rather than of what was
+fixed at `t` — which is the "signed = true" over-read (F.2) relocated from the signature to the disclosure. ∎
+
+**Theorem F.7a.2 (a second channel is a second witness of the same value, never a second opinion).** Let the
+partition carry both `commit = c` and `enc`, and let `k` decrypt `ct` to `p`. The AEAD channel is admissible
+**iff** `p = canon({nonce′, partition: name, value′})` for the disclosed pair — i.e. iff it yields the plaintext
+the commitment was taken over. Where `p` is well-formed but names a different value, the two channels disagree;
+the verdict is `E-COMMIT` and **neither** value enters `ℐ`.
+
+*Proof.* Suppose a decryption naming `value″ ≠ value′` were admitted. Then a party holding `k` could enlarge any
+consumer's `ℐ` by a value of its choosing, at any later time, while the record still verified — the key would be
+an authority to assign the past rather than to read it. That contradicts F.2: a record fixes `Mᵢ,ₜ` at `t`, and
+nothing held afterwards may change what was fixed. Refusing on disagreement is therefore not a strictness
+preference but the only reading under which `enc` is evidence at all. ∎
+
+*Corollary (why the producer must build the plaintext, not merely encrypt something).* By F.7a.2 the admissible
+plaintext is determined by the commitment. A producer that encrypts an arbitrary encoding of the value and a
+commitment taken separately can emit a document no key opens admissibly — well-formed, decryptable, and refused.
+The two must be derived from one operation, which is what makes this a statement about the PRODUCER and not only
+about the verifier.
+
+*Corollary (inability is not disagreement).* Where the algorithm named by `enc.alg` is registered but not
+implemented by this build, no plaintext is obtained and the two channels have not disagreed: the honest report is
+`INDETERMINATE(unsupported_alg)`, never `INVALID` — F-theorem clause 5 applied to a cipher rather than to a
+signature.
+
+**Binding: pending — thelabmd/UST-Protocol#175.** The verifier realizes both theorems today (the commitment
+reproduction and the AEAD↔commit equality are checked, and the unimplemented-algorithm case answers
+`INDETERMINATE`); what is missing is a producer able to construct the object they range over, and therefore any
+vector that pins them. The corpus follows the producer, not the other way around.
 
 ## F.7b Ω, concretely (instantiation note)
 

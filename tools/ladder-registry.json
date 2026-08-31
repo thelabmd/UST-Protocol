@@ -2086,6 +2086,16 @@
         "excluded": "A vector fixes bytes in and a verdict out. This round changes no verdict — the same document gets the same answer, displayed differently. What a surface renders is not language-neutral and must not be pinned by a corpus every port would then have to satisfy."
       },
       "test": "tools/verdict-axis-display-gate.mjs :: the axis list is parsed from §14 of the spec, and each axis must be consumed off the verdict by the page; the tier lists must be assembled rather than literal. Proven able to fail on each axis independently, and its own first draft was vacuous through a substring collision that mutation caught."
+    },
+    {
+      "round": 243,
+      "math": "Theorem F.7a.2 (a second channel is a second witness of the same value, never a second opinion)",
+      "spec": {
+        "excluded": "Nothing normative changed and nothing needed to: §10 already required that `ct` be an AEAD encryption of exactly the committed value, that a key-holder verify the decryption reproduces `{nonce,value}` -> commit with E-COMMIT on mismatch, and that AES-256-GCM be used only with a stated unique-nonce-per-key derivation. The model was the layer that had said nothing; the spec had said it all along. The one spec CHANGE is generated, not authored: the hash-domain list renders from REGISTRY and now carries `ust:enc-iv`."
+      },
+      "code": "packages/ust-protocol/index.mjs :: `encryptPartition` — the producer the mode never had, deriving commitment and ciphertext from ONE `canon` so they cannot drift, with the IV derived as H('ust:enc-iv', commit)[0..12] so IV uniqueness reduces to the commitment uniqueness S10 already demands; `aesGcmEncrypt` in `_crypto.mjs` with a symmetric refusal in the browser build.",
+      "vector": "privacy-encrypted-channels-disagree",
+      "test": "packages/ust-protocol/conformance.mjs :: the two vectors are executed FROM THE CORPUS so a port runs the same bytes, plus the producer's own obligations — determinism of the derived IV, commitment equality with `blindedCommit`, and a producer↔verifier round-trip."
     }
   ],
   "first_accounted_round": 76,

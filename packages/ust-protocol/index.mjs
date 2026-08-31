@@ -30,7 +30,7 @@ const ustFetch = labelledFetch('ust-protocol', VERSION.spec);
 // browsers/Workers; same rules.
 // #143: the platform's cryptographic faculty comes from ONE internal module, chosen at BUILD time. It is not
 // an option and not reachable from the data path — see `_crypto.mjs` for why that distinction is load-bearing.
-import { sha256Hex, ed25519Verify, ed25519Sign, aesGcmDecrypt } from './_crypto.mjs';
+import { sha256Hex, ed25519Verify, ed25519Sign, aesGcmEncrypt, aesGcmDecrypt } from './_crypto.mjs';
 import { utf8, utf8Len, decodeUtf8, concatBytes, toHex, fromHex, toB64url, fromB64url } from './_bytes.mjs';
 import { beginSignatureResolution, endSignatureResolution, unresolvedSignatures, recordSignature, consultSignature } from './_sigmemo.mjs';   // #144 — the async signature faculty is VERIFIER-OWNED and internal, for the same reason the clock is: a caller-supplied answer to "did this verify" is a forgery oracle
 import { witnessNow } from './_clock.mjs';   // rev33 R4 — the witness-budget clock is a VERIFIER-OWNED faculty in an INTERNAL module, never a caller-supplied opts field (round-29 P0-02)
@@ -95,6 +95,29 @@ export function blindPartition(name, value, { domain_shard, ust_id, nonce, kind 
   const commit = blindedCommit({ domain_shard, ust_id, name, value, nonce });
   return { partition: { kind, privacy: 'blinded', commit }, hash: partitionHash({ commit }) };
 }
+// §10 encrypted PRODUCER — the mirror of `blindPartition`, added for #175 (F.7a.2 corollary).
+//
+// WHY THE TWO OUTPUTS COME FROM ONE OPERATION. The model states that the admissible plaintext is DETERMINED by
+// the commitment: a producer that encrypts one encoding of the value while committing to another emits a
+// document that is well-formed, decryptable, and refused — nobody's key opens it admissibly. So the commitment
+// and the ciphertext are derived here in one place, from one `canon`, and cannot drift apart by a caller's
+// mistake. That is the whole reason this is a function rather than a documented recipe.
+//
+// THE IV IS DERIVED, NOT RANDOM, AND THE DERIVATION IS THE POINT. §10 permits AES-256-GCM "only with a stated
+// unique-nonce-per-key derivation", because GCM under a repeated IV is catastrophic. A random 96-bit IV would
+// collide by birthday bound long before a busy publisher's key rotates. Here `iv = H('ust:enc-iv', commit)[0..12]`,
+// so IV uniqueness REDUCES to commitment uniqueness, which §10 already requires of the producer (a fresh unique
+// nonce per commitment). Sealing the identical (frame, name, nonce, value) twice reproduces the same IV and the
+// same ciphertext — which leaks nothing, because it reproduces the same `commit` too.
+export function encryptPartition(name, value, { domain_shard, ust_id, nonce, key_id, key, kind = 'captured' }) {
+  const commit = blindedCommit({ domain_shard, ust_id, name, value, nonce });
+  const plaintext = canon({ nonce, partition: name, value });          // EXACTLY what §14 step 8 compares against
+  const iv = fromB64url(H('ust:enc-iv', commit).slice(7)).subarray(0, 12);   // strip the `sha256:` prefix
+  const { body, tag } = aesGcmEncrypt(fromB64url(key), iv, utf8(plaintext));
+  const ct = toB64url(new Uint8Array([...iv, ...body, ...tag]));       // iv ‖ body ‖ tag — the layout aeadDecrypt reads
+  return { partition: { kind, privacy: 'encrypted', commit, enc: { alg: 'AES-256-GCM', key_id, ct } }, hash: partitionHash({ commit }) };
+}
+
 // §10/§17 encrypted: AEAD-decrypt to recover the committed plaintext canon({nonce,<name>:value}).
 // Registry discipline (MTI): AES-256-GCM is MANDATORY-to-implement (node:crypto, zero-dep); XChaCha20-Poly1305 is
 // OPTIONAL — a conforming verifier that does not implement it returns INDETERMINATE(unsupported_alg), NEVER a
@@ -3557,7 +3580,7 @@ export const REGISTRY = deepFreeze({   // round-25 P0-04 — DEEP-frozen: the ca
   hashDomains: ['ust:state', 'ust:shard', 'ust:seed', 'ust:keylog', 'ust:leaf', 'ust:node',
     'ust:authority-checkpoint', 'ust:checkpoint-map-key', 'ust:checkpoint-map-value', 'ust:name-map-key', 'ust:name-map-value',
     'ust:keylog-empty', 'ust:keylog-leaf', 'ust:keylog-node', 'ust:keylog-commit', 'ust:smt-empty', 'ust:smt-node', 'ust:smt-leaf',
-    'ust:genesis-epoch', 'ust:authority-scope', 'ust:evidence-receipt', 'ust:registry'],
+    'ust:genesis-epoch', 'ust:authority-scope', 'ust:evidence-receipt', 'ust:registry', 'ust:enc-iv'],
   // signed `canon` preimage purposes (§12.1a/§12.3) — domain-separated, never interchangeable.
   purposes: ['ust:name-no-fork', 'ust:authority-checkpoint', 'ust:authority-checkpoint-signature',
     'ust:checkpoint-authority-recovery', 'ust:genesis-epoch-transition', 'ust:checkpoint-uniqueness-attestation',

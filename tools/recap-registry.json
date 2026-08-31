@@ -713,6 +713,10 @@
     {
       "round": 242,
       "no_recap": "Round 242 closes no GitHub issue. It came out of a rehearsal for a walkthrough recording — the scene that was supposed to show anchored time turned out to have nothing to point at — and was filed in the local tracker and fixed the same session. The unit of a recap is the closed issue; there is no recipient here."
+    },
+    {
+      "round": 243,
+      "no_recap": "Round 243 does not close #175 — it delivers the producer and the two vectors the card said had to come first, and the card stays open for the remaining fixtures (algorithm-registry negatives, byte-vectors) and the S4 statement of which verdicts are normative. The unit of a recap is the closed issue; this round closes none."
     }
   ]
 }

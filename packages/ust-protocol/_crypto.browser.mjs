@@ -116,6 +116,10 @@ export function ed25519Sign() {
   throw unsupported('signing is not available in the browser build — a signing key does not belong in a page.');
 }
 
+export function aesGcmEncrypt() {
+  throw unsupported('AES-256-GCM encryption is not available in the browser build — the browser offers it only through the asynchronous crypto.subtle, and a page is not where a partition key belongs. Encrypt where the key already lives.');
+}
+
 export function aesGcmDecrypt() {
   throw unsupported('AES-256-GCM decryption is not available in the browser build — the browser offers it only through the asynchronous crypto.subtle. Encrypted partitions cannot be opened here.');
 }

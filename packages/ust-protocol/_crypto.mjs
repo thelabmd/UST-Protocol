@@ -21,7 +21,7 @@
 // this project cannot afford, so the browser build REFUSES those operations by name instead of approximating
 // them. See `_crypto.browser.mjs`.
 
-import { createHash, sign as edSign, verify as edVerify, createPublicKey, createDecipheriv } from 'node:crypto';
+import { createHash, sign as edSign, verify as edVerify, createPublicKey, createCipheriv, createDecipheriv } from 'node:crypto';
 
 /** Which faculty this build carries. Read by the portability gate, never by the data path. */
 export const CRYPTO_BUILD = 'node';
@@ -55,6 +55,23 @@ export function ed25519Sign(msgBytes, privKeyObj) {
  * AES-256-GCM decrypt. Returns the plaintext bytes, or `null` on an auth-tag failure — a null here is a
  * COMMIT failure, not an unsupported algorithm; the caller distinguishes the two.
  */
+/**
+ * AES-256-GCM encrypt — the producer half of the pair above, added with `encryptPartition` (#175).
+ *
+ * It exists because the format had a reader and no writer: `privacy: "encrypted"` was defined in §10, decided in
+ * four places by the verifier, and constructible by nothing in this tree. A fixture written by hand to fill that
+ * hole would have described the verifier instead of testing it.
+ *
+ * The IV is an ARGUMENT, never generated here. GCM is catastrophic under nonce reuse, and §10 permits it "only
+ * with a stated unique-nonce-per-key derivation" — so the derivation is stated at the one call site that knows
+ * what makes it unique (the frame-bound commitment), and this leaf stays a primitive with no policy in it.
+ */
+export function aesGcmEncrypt(keyBytes, ivBytes, plaintextBytes) {
+  const c = createCipheriv('aes-256-gcm', Buffer.from(keyBytes), Buffer.from(ivBytes));
+  const body = Buffer.concat([c.update(Buffer.from(plaintextBytes)), c.final()]);
+  return { body: new Uint8Array(body), tag: new Uint8Array(c.getAuthTag()) };
+}
+
 export function aesGcmDecrypt(keyBytes, ivBytes, tagBytes, bodyBytes) {
   try {
     const d = createDecipheriv('aes-256-gcm', Buffer.from(keyBytes), Buffer.from(ivBytes));

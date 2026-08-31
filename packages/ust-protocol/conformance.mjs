@@ -12,7 +12,7 @@ const withWitnessClock = async (clock, body) => { __setWitnessClockForConformanc
 // runtime-namespace totality net. Define it ONCE here (used by R47) and cross-check it below against CLASS — MAY_THROW(n) ⟺
 // CLASS[n] !== 'surface', so the two can no longer diverge. (Totality itself is already guaranteed by R34's surface×BATTERY.)
 const MAY_THROW_TOTALITY = (n) => /^(build|seal|make)/.test(n) || /(Claim|Leaf|Id|Epoch)$/.test(n) || /^Ust[A-Z]/.test(n)
-  || ['canon', 'H', 'Hbytes', 'keyId', 'merkleRoot', 'partitionHash', 'contentHash', 'signedContent', 'admitUtf8', 'anyLoneSurrogate', 'ustGrid', 'blindPartition', 'blindedCommit', 'seed', 'axisRank', 'evidenceCaps', 'admitDeep', 'isValid', 'cannotDecide', 'verifiedEvidence', 'replicationAgreement', 'surfaceVerdict', 'anchorRollup'].includes(n)
+  || ['canon', 'H', 'Hbytes', 'keyId', 'merkleRoot', 'partitionHash', 'contentHash', 'signedContent', 'admitUtf8', 'anyLoneSurrogate', 'ustGrid', 'blindPartition', 'encryptPartition', 'blindedCommit', 'seed', 'axisRank', 'evidenceCaps', 'admitDeep', 'isValid', 'cannotDecide', 'verifiedEvidence', 'replicationAgreement', 'surfaceVerdict', 'anchorRollup'].includes(n)
   || ['verifyOrThrow', 'assertValid'].includes(n)
   // #43 — PRODUCER side: these shape OUR outbound request from OUR OWN constants and never read untrusted wire.
   // `userAgent` interpolates two strings the caller controls, and `labelledFetch` spreads a caller-supplied init —
@@ -1318,6 +1318,46 @@ check('F8 impossible ust_id→E-MALFORMED', P.verify(mk({ r: { kind: 'captured',
   const encDoc = P.seal(P.buildState(ID, T, { e: { kind: 'captured', privacy: 'encrypted', commit, enc: { alg: 'XChaCha20-Poly1305', key_id: 'k1', ct: 'AAAA' } } }), A.priv, A.pubB64);
   const re = P.verify(encDoc, { context: 'data', disclosures: { e: { nonce, value: { v: '1' } } }, decKeys: { k1: 'AAAA' } });
   check('OPTIONAL AEAD not implemented → INDETERMINATE(unsupported_alg)', re.result === 'INDETERMINATE' && re.reason === 'unsupported_alg');
+  // #175 — the mode had a reader and no writer, so no fixture could exist that was not a description of the
+  // verifier. `encryptPartition` is the producer; these two vectors are what it makes checkable, and they are
+  // run FROM THE CORPUS so a port can run the same bytes.
+  for (const vec of V.vectors.filter((x) => x.kind === 'privacy-encrypted')) {
+    const disc = { [vec.disclosure.partition]: { nonce: vec.disclosure.nonce, value: vec.disclosure.value } };
+    const keys = { [vec.key.key_id]: vec.key.raw };
+    if (vec.id === 'privacy-encrypted-disclosure') {
+      const opaque = P.verify(vec.doc, { context: 'data' });
+      const shown = P.verify(vec.doc, { context: 'data', disclosures: disc });
+      const both = P.verify(vec.doc, { context: 'data', disclosures: disc, decKeys: keys });
+      check(`${vec.id}: opaque without a disclosure — VALID and nothing disclosed`,
+        opaque.result === vec.expect_opaque && Array.isArray(opaque.disclosed) && opaque.disclosed.length === 0);
+      check(`${vec.id}: the committed {nonce,value} discloses without any key (F.7a.1)`,
+        shown.result === vec.expect_disclosed_no_key && shown.disclosed.includes(vec.disclosure.partition));
+      check(`${vec.id}: with the key too, both channels agree and the VERDICT is unchanged (a disclosure enlarges the reader, not the record)`,
+        both.result === vec.expect_disclosed_with_key && both.disclosed.includes(vec.disclosure.partition));
+    } else {
+      const noKey = P.verify(vec.doc, { context: 'data', disclosures: disc });
+      const withKey = P.verify(vec.doc, { context: 'data', disclosures: disc, decKeys: keys });
+      check(`${vec.id}: WITHOUT the key the divergence is invisible — VALID, and the committed value discloses`,
+        noKey.result === vec.expect_without_key && noKey.disclosed.includes(vec.disclosure.partition));
+      check(`${vec.id}: a decryption naming another value is E-COMMIT, never a second opinion (F.7a.2)`,
+        withKey.result === vec.expect_with_key.result && withKey.error === vec.expect_with_key.error);
+    }
+  }
+  // The producer's own obligation: commitment and ciphertext come from ONE operation, so a caller cannot make
+  // them disagree by accident. Control — swapping in another value's `enc` is exactly what the vector above does.
+  {
+    const n2 = 'n-' + 'b'.repeat(16), k2 = Buffer.alloc(32, 9).toString('base64url');
+    const built = P.encryptPartition('m', { v: 'x' }, { domain_shard: ID.domain_shard, ust_id: ID.ust_id, nonce: n2, key_id: 'k2', key: k2 });
+    const again = P.encryptPartition('m', { v: 'x' }, { domain_shard: ID.domain_shard, ust_id: ID.ust_id, nonce: n2, key_id: 'k2', key: k2 });
+    check('encryptPartition: the IV is DERIVED from the commitment, so identical input reproduces identical bytes (§10 stated derivation, not a random IV)',
+      built.partition.enc.ct === again.partition.enc.ct);
+    check('encryptPartition: commitment matches the blinded commit of the same value — one operation, two outputs',
+      built.partition.commit === P.blindedCommit({ domain_shard: ID.domain_shard, ust_id: ID.ust_id, name: 'm', value: { v: 'x' }, nonce: n2 }));
+    const docP = P.seal(P.buildState(ID, T, { m: built.partition }), A.priv, A.pubB64);
+    const okP = P.verify(docP, { context: 'data', disclosures: { m: { nonce: n2, value: { v: 'x' } } }, decKeys: { k2 } });
+    check('encryptPartition: what it produces verifies under the SAME rules the verifier already applied (producer ↔ verifier round-trip)',
+      okP.result === 'VALID:LIGHT' && okP.disclosed.includes('m'));
+  }
   // P1-2: the result ALWAYS carries an explicit completeness field; a single-document verify never evaluates it.
   check('completeness field explicit: not_evaluated on doc verify', P.verify(mk(), { context: 'data' }).completeness === 'not_evaluated');
   const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
@@ -3251,7 +3291,7 @@ console.log('\n═════════════════════�
   // promise-rejection) UNLESS explicitly classified MAY-THROW; the MAY-THROW predicate covers EXACTLY the current throwers (no
   // verdict boundary exempted, no thrower unclassified — a new unclassified thrower fails HERE). All four round-47 findings
   // reproduced on live code; this closes P1-03 (bd UST-5t8).
-  check('R47 P1-03 (roster completeness — RUNTIME namespace) — EVERY function-typed export of the module (100, incl. re-exports + arrow-consts + the byte kernel checkAuthorityProofBytes) is TOTAL on a hostile Proxy UNLESS explicitly classified MAY-THROW (producer / byte-string primitive / verdict class / throw-by-contract); a source-regex miss (arrow-const, re-export, future callable) can no longer evade the gate', await (async () => {
+  check('R47 P1-03 (roster completeness — RUNTIME namespace) — EVERY function-typed export of the module (101, incl. re-exports + arrow-consts + the byte kernel checkAuthorityProofBytes) is TOTAL on a hostile Proxy UNLESS explicitly classified MAY-THROW (producer / byte-string primitive / verdict class / throw-by-contract); a source-regex miss (arrow-const, re-export, future callable) can no longer evade the gate', await (async () => {
     // MAY-THROW = NOT an untrusted-object verdict boundary: a PRODUCER (build*/seal*/make*/*Claim/*Leaf/*Id/*Epoch) constructs
     // prover data from TRUSTED args; a byte/string PRIMITIVE (a Proxy is not a valid input); a verdict CLASS (Ust*, invoked with
     // `new`); the reduction primitive `admitDeep` (its 2nd arg is an internal `seen` set) + `isValid`/`verifiedEvidence` helpers;
@@ -3733,7 +3773,7 @@ console.log('\n═════════════════════�
     seed: 'primitive', strictB64url: 'primitive', admitUtf8: 'primitive', admitDeep: 'primitive (the door itself; canon-transparent)',
     snapshotBytes: 'primitive (the byte-admission door — exact native Uint8Array → immutable copy, total: a hostile Proxy yields E-BYTES-TYPE, never a throw; round-48 P0-01)',
     anyLoneSurrogate: 'primitive', edVerifyStrict: 'primitive', signedContent: 'primitive', partitionHash: 'primitive',
-    blindedCommit: 'primitive', blindPartition: 'primitive', assuranceLE: 'surface', assuranceState: 'primitive (the assurance door — returns a reject sentinel like admitDeep, never a throw)',
+    blindedCommit: 'primitive', blindPartition: 'primitive', encryptPartition: 'primitive', assuranceLE: 'surface', assuranceState: 'primitive (the assurance door — returns a reject sentinel like admitDeep, never a throw)',
     axisRank: 'primitive', joinAssurance: 'surface', meetAssurance: 'surface', projectTier: 'surface', capAssurance: 'surface',
     evidenceCaps: 'primitive', ustGrid: 'primitive', checkBounds: 'surface', compareEvidenceOrder: 'surface',
     parseProfile: 'surface',   // #135 — reads the profile served by the domain under question; refuses, never throws

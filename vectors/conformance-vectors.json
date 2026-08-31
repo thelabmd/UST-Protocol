@@ -19,11 +19,11 @@
     "_": "WHAT A VECTOR MAY PIN — read this before excluding the `vector` layer of a round, and before deciding a case \"cannot be a vector\". Derived from THIS corpus on 2026-08-10, not declared: 228 vectors across 43 kinds.",
     "the_rule": "A vector is a FIXED INPUT and a DECLARED RESULT that a runner must reproduce. The input being a DOCUMENT is one case among several; the result being a VERDICT is one case among several.",
     "measured_2026_08_10": {
-      "total": 259,
-      "kinds": 51,
-      "input_is_a_document": 45,
-      "input_is_a_value_or_string": 75,
-      "input_is_a_genesis_plus_log": 63,
+      "total": 261,
+      "kinds": 52,
+      "input_is_a_document": 52,
+      "input_is_a_value_or_string": 160,
+      "input_is_a_genesis_plus_log": 49,
       "input_is_raw_bytes": 27,
       "forms": 8,
       "_how_these_were_counted": "THREE of these are re-derived on every run by the UST#147 checks (total, kinds, forms) and cannot drift. `input_is_a_document` counts vectors carrying a `doc` field and `input_is_a_genesis_plus_log` counts those carrying a `genesis` field — both reproduced on 2026-08-10 while adding the round-138/139/142 vectors, which is how the second one moved from 59 to 63. `input_is_a_value_or_string` and `input_is_raw_bytes` are the counts recorded when this definition was first derived, and THEIR FORMULA WAS NEVER WRITTEN DOWN: neither a field scan nor a kind roster reproduces 75 or 27. They were left untouched here rather than quietly re-fitted, because a number adjusted to survive a gate is worse than a number that admits it cannot be re-derived. Note also that a count keyed to a FIELD is not a count keyed to MEANING — the four stream vectors added in round 198 take documents as input and do not appear under `input_is_a_document`, because their documents arrive in `frames`. Making every one of these derivable (a kind → form roster, so a new kind cannot exist outside the definition) is tracked as its own round.",
@@ -105,7 +105,8 @@
       }
     ],
     "when_the_layer_may_be_excluded": "Only when the subject is NOT DETERMINISTIC — a live network, a registry read, wall-clock time, a published state that changes under you. It is NOT enough that the input is awkward to write down as JSON: a vector may NAME a scenario and let the runner build it from fixed seeds (form 8, see fork-visibility, which carries no input field at all). \"There is no document to pin\" is not a reason either — four of the forms above have none. An exclusion asserting impossibility must name WHICH of these forms the subject fails, and an existing kind that covers it refutes the exclusion.",
-    "history": "The formula \"Vectors pin document bytes and the verdicts they must produce\" was used 46 times in tools/ladder-registry.json as a reason the layer could not exist. Measured against this corpus it describes 40 of 228. The two entries that widened the definition — faculty-absent-ed25519 (round 189) and ed25519-point-admission (round 190) — landed after all 46 were written. See UST#147. Round 196 added form 8 after the registry sweep found that several exclusions read \"no fixed input\" where the truth was \"input not serialisable\" — a distinction that decides whether a layer is closable."
+    "history": "The formula \"Vectors pin document bytes and the verdicts they must produce\" was used 46 times in tools/ladder-registry.json as a reason the layer could not exist. Measured against this corpus it describes 40 of 228. The two entries that widened the definition — faculty-absent-ed25519 (round 189) and ed25519-point-admission (round 190) — landed after all 46 were written. See UST#147. Round 196 added form 8 after the registry sweep found that several exclusions read \"no fixed input\" where the truth was \"input not serialisable\" — a distinction that decides whether a layer is closable.",
+    "measured_2026_08_31": "re-measured after #175 added the two privacy-encrypted vectors: the mode finally has a producer, so a fixture can exist that is not a description of the verifier"
   },
   "vectors": [
     {
@@ -12524,6 +12525,122 @@
         }
       },
       "note": "Round 235 (#172). Before this round the whole verdict collapsed to INDETERMINATE, so attaching a CORRECT proof made a document verify WORSE than attaching none — measured on a live publisher whose own inclusion proof is final in Bitcoin. The path here is deliberately one the reference walk would not satisfy: a foreign construction is never walked with the reference tree, so the path must not be consulted at all, and a runner that reports `inclusion:false` here has walked a tree it was not asked to walk."
+    },
+    {
+      "id": "privacy-encrypted-disclosure",
+      "kind": "privacy-encrypted",
+      "rule": "S10 / F.7a.1-2 — a private partition is opaque without a disclosure; with the committed {nonce,value} it discloses, and where a key is also supplied the AEAD plaintext MUST equal canon({nonce,partition,value})",
+      "key": {
+        "key_id": "k1",
+        "raw": "BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc"
+      },
+      "disclosure": {
+        "partition": "secret",
+        "nonce": "AAAAAAAAAAAAAAAAAAAAAA",
+        "value": {
+          "v": "LONG"
+        }
+      },
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260628.14",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "observation"
+          },
+          "time": {
+            "generated_at": "2026-06-28T14:03:12Z",
+            "valid_from": "2026-06-28T14:00:00Z",
+            "valid_to": "2026-06-28T15:00:00Z"
+          },
+          "data": {
+            "secret": {
+              "kind": "captured",
+              "privacy": "encrypted",
+              "commit": "sha256:2b91e1e84aa74ed1ecadc024004b550ad105609417a829e6a90903d8326240d9",
+              "enc": {
+                "alg": "AES-256-GCM",
+                "key_id": "k1",
+                "ct": "c51558873362fdd8PkEeBrpdfZjkBa3Q1ierF0O_LI1CG0QZ_i7-673lZRnNuoZYQmj8kXl8GGxx654ZM5nBXuUgt9_QB6VQMahSRugvntEeyp8h_RRe_-LFhtviFvZ-fTfiZWIDDSM"
+              }
+            }
+          },
+          "hashes": {
+            "secret": "sha256:66e2caacb1e01a35dbd4992f81f9fd03b81c0f435e6c70bc805ae7c7f79bd942"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "HzJT5rEIUHvuSPE-FeFZ2Ro4VuIJ3DHO4Xu7VYgZMu1qdYe333Y4SpAmFay9_pr_fU4u_trVLgeEUszE6AjDBA"
+        }
+      },
+      "expect_opaque": "VALID:LIGHT",
+      "expect_disclosed_no_key": "VALID:LIGHT",
+      "expect_disclosed_with_key": "VALID:LIGHT",
+      "note": "opaque and disclosed are the SAME verdict — a disclosure enlarges what the reader knows, never what the record earns"
+    },
+    {
+      "id": "privacy-encrypted-channels-disagree",
+      "kind": "privacy-encrypted",
+      "rule": "F.7a.2 — commitment and ciphertext are two witnesses of ONE value; a well-formed decryption naming a different value is E-COMMIT, never a second opinion",
+      "key": {
+        "key_id": "k1",
+        "raw": "BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc"
+      },
+      "disclosure": {
+        "partition": "secret",
+        "nonce": "AAAAAAAAAAAAAAAAAAAAAA",
+        "value": {
+          "v": "LONG"
+        }
+      },
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260628.14",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "observation"
+          },
+          "time": {
+            "generated_at": "2026-06-28T14:03:12Z",
+            "valid_from": "2026-06-28T14:00:00Z",
+            "valid_to": "2026-06-28T15:00:00Z"
+          },
+          "data": {
+            "secret": {
+              "kind": "captured",
+              "privacy": "encrypted",
+              "commit": "sha256:2b91e1e84aa74ed1ecadc024004b550ad105609417a829e6a90903d8326240d9",
+              "enc": {
+                "alg": "AES-256-GCM",
+                "key_id": "k1",
+                "ct": "6de2f0ed6b817802GRE0isBGYnzZ005t-09bHFl5fx-c3ew1yxVDD-yi_Cdz5oR7NFM20MHDa2IChjkDMWeCYQ4GbZ-0-HRyK6sySGdjtNJBQw9WIn4Sb2UPIgzHOWyppyBmolqrS_UA"
+              }
+            }
+          },
+          "hashes": {
+            "secret": "sha256:66e2caacb1e01a35dbd4992f81f9fd03b81c0f435e6c70bc805ae7c7f79bd942"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "k41cyBCjC68I0tnGuaG7GIZBJWaGC5ls7iaUmUyYY0HJeY1ecA4eh-OzW3R4ohYbTAWzJWTI0-HuemzyNFvQCQ"
+        }
+      },
+      "expect_without_key": "VALID:LIGHT",
+      "expect_with_key": {
+        "result": "INVALID",
+        "error": "E-COMMIT"
+      },
+      "note": "the load-bearing case: WITHOUT the key this document reads VALID and discloses the committed value, so the divergence is visible only to the key-holder. A port that decrypts without re-deriving the commitment turns a key into an authority to assign the value, and its reader sees the same green verdict either way"
     }
   ]
 }
