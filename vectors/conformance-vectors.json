@@ -19,9 +19,9 @@
     "_": "WHAT A VECTOR MAY PIN — read this before excluding the `vector` layer of a round, and before deciding a case \"cannot be a vector\". Derived from THIS corpus on 2026-08-10, not declared: 228 vectors across 43 kinds.",
     "the_rule": "A vector is a FIXED INPUT and a DECLARED RESULT that a runner must reproduce. The input being a DOCUMENT is one case among several; the result being a VERDICT is one case among several.",
     "measured_2026_08_10": {
-      "total": 261,
-      "kinds": 52,
-      "input_is_a_document": 52,
+      "total": 268,
+      "kinds": 54,
+      "input_is_a_document": 56,
       "input_is_a_value_or_string": 160,
       "input_is_a_genesis_plus_log": 49,
       "input_is_raw_bytes": 27,
@@ -106,7 +106,7 @@
     ],
     "when_the_layer_may_be_excluded": "Only when the subject is NOT DETERMINISTIC — a live network, a registry read, wall-clock time, a published state that changes under you. It is NOT enough that the input is awkward to write down as JSON: a vector may NAME a scenario and let the runner build it from fixed seeds (form 8, see fork-visibility, which carries no input field at all). \"There is no document to pin\" is not a reason either — four of the forms above have none. An exclusion asserting impossibility must name WHICH of these forms the subject fails, and an existing kind that covers it refutes the exclusion.",
     "history": "The formula \"Vectors pin document bytes and the verdicts they must produce\" was used 46 times in tools/ladder-registry.json as a reason the layer could not exist. Measured against this corpus it describes 40 of 228. The two entries that widened the definition — faculty-absent-ed25519 (round 189) and ed25519-point-admission (round 190) — landed after all 46 were written. See UST#147. Round 196 added form 8 after the registry sweep found that several exclusions read \"no fixed input\" where the truth was \"input not serialisable\" — a distinction that decides whether a layer is closable.",
-    "measured_2026_08_31": "re-measured after #175 added the two privacy-encrypted vectors: the mode finally has a producer, so a fixture can exist that is not a description of the verifier"
+    "measured_2026_08_31": "re-measured after #175: the mode gained a producer, then its negatives (algorithm registry, missing enc) and the tier-orthogonality pair"
   },
   "vectors": [
     {
@@ -12641,6 +12641,232 @@
         "error": "E-COMMIT"
       },
       "note": "the load-bearing case: WITHOUT the key this document reads VALID and discloses the committed value, so the divergence is visible only to the key-holder. A port that decrypts without re-deriving the commitment turns a key into an authority to assign the value, and its reader sees the same green verdict either way"
+    },
+    {
+      "id": "privacy-encrypted-alg-optional-unimplemented",
+      "kind": "privacy-encrypted",
+      "rule": "S17 MTI / F-theorem clause 5 — a REGISTERED but OPTIONAL algorithm this build does not implement yields INDETERMINATE(unsupported_alg), never INVALID",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260628.14",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "observation"
+          },
+          "time": {
+            "generated_at": "2026-06-28T14:03:12Z",
+            "valid_from": "2026-06-28T14:00:00Z",
+            "valid_to": "2026-06-28T15:00:00Z"
+          },
+          "data": {
+            "secret": {
+              "kind": "captured",
+              "privacy": "encrypted",
+              "commit": "sha256:2b91e1e84aa74ed1ecadc024004b550ad105609417a829e6a90903d8326240d9",
+              "enc": {
+                "alg": "XChaCha20-Poly1305",
+                "key_id": "k1",
+                "ct": "c51558873362fdd8PkEeBrpdfZjkBa3Q1ierF0O_LI1CG0QZ_i7-673lZRnNuoZYQmj8kXl8GGxx654ZM5nBXuUgt9_QB6VQMahSRugvntEeyp8h_RRe_-LFhtviFvZ-fTfiZWIDDSM"
+              }
+            }
+          },
+          "hashes": {
+            "secret": "sha256:66e2caacb1e01a35dbd4992f81f9fd03b81c0f435e6c70bc805ae7c7f79bd942"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "9PSVLb078cQsKkAHErMGhM98DyY4UFvsX6w_GBiTUEZs-RUrCP2Vrw4G-FmK3kVHN83eKnsBMQDzKC8bCRgnAg"
+        }
+      },
+      "key": {
+        "key_id": "k1",
+        "raw": "BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc"
+      },
+      "disclosure": {
+        "partition": "secret",
+        "nonce": "AAAAAAAAAAAAAAAAAAAAAA",
+        "value": {
+          "v": "LONG"
+        }
+      },
+      "expect": {
+        "result": "INDETERMINATE",
+        "reason": "unsupported_alg"
+      },
+      "note": "the pair to the vector above, and they sit one line apart in the implementation: unlisted is the document's fault, unimplemented is the verifier's inability. Conflating them would let a build convict an honest document for its own missing faculty"
+    },
+    {
+      "id": "privacy-encrypted-bytes-wellformed",
+      "kind": "privacy-encrypted-bytes",
+      "rule": "CONTROL, and it is load-bearing: the SAME byte path admits a well-formed encrypted partition. Without it every refusal below could be the byte door refusing everything, and the four negatives would prove nothing.",
+      "doc_bytes_b64url": "eyJ1c3QiOiIxLjAiLCJzdGF0ZSI6eyJpZCI6eyJkb21haW5fc2hhcmQiOiJzaGEyNTY6NDBkYzZiMGRhZDgxZDhmNWYxN2E5YzNiOTNmZDJiNmI3MDkwYjAxNzBlYmNmNzdhMzQzNGVlOTM3ODdlNWZlYiIsInVzdF9pZCI6InVzdDoyMDI2MDYyOC4xNCIsImtleV9pZCI6InNoYTI1Njo0MGRjNmIwZGFkODFkOGY1ZjE3YTljM2I5M2ZkMmI2YjcwOTBiMDE3MGViY2Y3N2EzNDM0ZWU5Mzc4N2U1ZmViIiwiY2xhc3MiOiJvYnNlcnZhdGlvbiJ9LCJ0aW1lIjp7ImdlbmVyYXRlZF9hdCI6IjIwMjYtMDYtMjhUMTQ6MDM6MTJaIiwidmFsaWRfZnJvbSI6IjIwMjYtMDYtMjhUMTQ6MDA6MDBaIiwidmFsaWRfdG8iOiIyMDI2LTA2LTI4VDE1OjAwOjAwWiJ9LCJkYXRhIjp7InNlY3JldCI6eyJraW5kIjoiY2FwdHVyZWQiLCJwcml2YWN5IjoiZW5jcnlwdGVkIiwiY29tbWl0Ijoic2hhMjU2OjJiOTFlMWU4NGFhNzRlZDFlY2FkYzAyNDAwNGI1NTBhZDEwNTYwOTQxN2E4MjllNmE5MDkwM2Q4MzI2MjQwZDkiLCJlbmMiOnsiYWxnIjoiQUVTLTI1Ni1HQ00iLCJrZXlfaWQiOiJrMSIsImN0IjoiYzUxNTU4ODczMzYyZmRkOFBrRWVCcnBkZlpqa0JhM1ExaWVyRjBPX0xJMUNHMFFaX2k3LTY3M2xaUm5OdW9aWVFtajhrWGw4R0d4eDY1NFpNNW5CWHVVZ3Q5X1FCNlZRTWFoU1J1Z3ZudEVleXA4aF9SUmVfLUxGaHR2aUZ2Wi1mVGZpWldJRERTTSJ9fX0sImhhc2hlcyI6eyJzZWNyZXQiOiJzaGEyNTY6NjZlMmNhYWNiMWUwMWEzNWRiZDQ5OTJmODFmOWZkMDNiODFjMGY0MzVlNmM3MGJjODA1YWU3YzdmNzliZDk0MiJ9fSwic2lnIjp7ImFsZyI6IkVkMjU1MTkiLCJrZXlfaWQiOiJzaGEyNTY6NDBkYzZiMGRhZDgxZDhmNWYxN2E5YzNiOTNmZDJiNmI3MDkwYjAxNzBlYmNmNzdhMzQzNGVlOTM3ODdlNWZlYiIsInB1YiI6IlBNMGtIUF9KczJHQVJMbDlBMjJHRkZrOWl3RjhOQThkN29kek9GVVhaVXMiLCJzaWciOiJIekpUNXJFSVVIdnVTUEUtRmVGWjJSbzRWdUlKM0RITzRYdTdWWWdaTXUxcWRZZTMzM1k0U3BBbUZheTlfcHJfZlU0dV90clZMZ2VFVXN6RTZBakRCQSJ9fQ",
+      "opts": {
+        "context": "data"
+      },
+      "expect": {
+        "result": "VALID:LIGHT"
+      }
+    },
+    {
+      "id": "privacy-encrypted-bytes-enc-missing",
+      "kind": "privacy-encrypted-bytes",
+      "rule": "privacy:\"encrypted\" without an `enc` block is a SHAPE defect: the mode announces a ciphertext channel and supplies none. E-MALFORMED, decided before any key exists.",
+      "doc_bytes_b64url": "eyJ1c3QiOiIxLjAiLCJzdGF0ZSI6eyJpZCI6eyJkb21haW5fc2hhcmQiOiJzaGEyNTY6NDBkYzZiMGRhZDgxZDhmNWYxN2E5YzNiOTNmZDJiNmI3MDkwYjAxNzBlYmNmNzdhMzQzNGVlOTM3ODdlNWZlYiIsInVzdF9pZCI6InVzdDoyMDI2MDYyOC4xNCIsImtleV9pZCI6InNoYTI1Njo0MGRjNmIwZGFkODFkOGY1ZjE3YTljM2I5M2ZkMmI2YjcwOTBiMDE3MGViY2Y3N2EzNDM0ZWU5Mzc4N2U1ZmViIiwiY2xhc3MiOiJvYnNlcnZhdGlvbiJ9LCJ0aW1lIjp7ImdlbmVyYXRlZF9hdCI6IjIwMjYtMDYtMjhUMTQ6MDM6MTJaIiwidmFsaWRfZnJvbSI6IjIwMjYtMDYtMjhUMTQ6MDA6MDBaIiwidmFsaWRfdG8iOiIyMDI2LTA2LTI4VDE1OjAwOjAwWiJ9LCJkYXRhIjp7InNlY3JldCI6eyJraW5kIjoiY2FwdHVyZWQiLCJwcml2YWN5IjoiZW5jcnlwdGVkIiwiY29tbWl0Ijoic2hhMjU2OjJiOTFlMWU4NGFhNzRlZDFlY2FkYzAyNDAwNGI1NTBhZDEwNTYwOTQxN2E4MjllNmE5MDkwM2Q4MzI2MjQwZDkifX0sImhhc2hlcyI6eyJzZWNyZXQiOiJzaGEyNTY6NjZlMmNhYWNiMWUwMWEzNWRiZDQ5OTJmODFmOWZkMDNiODFjMGY0MzVlNmM3MGJjODA1YWU3YzdmNzliZDk0MiJ9fSwic2lnIjp7ImFsZyI6IkVkMjU1MTkiLCJrZXlfaWQiOiJzaGEyNTY6NDBkYzZiMGRhZDgxZDhmNWYxN2E5YzNiOTNmZDJiNmI3MDkwYjAxNzBlYmNmNzdhMzQzNGVlOTM3ODdlNWZlYiIsInB1YiI6IlBNMGtIUF9KczJHQVJMbDlBMjJHRkZrOWl3RjhOQThkN29kek9GVVhaVXMiLCJzaWciOiJIekpUNXJFSVVIdnVTUEUtRmVGWjJSbzRWdUlKM0RITzRYdTdWWWdaTXUxcWRZZTMzM1k0U3BBbUZheTlfcHJfZlU0dV90clZMZ2VFVXN6RTZBakRCQSJ9fQ",
+      "opts": {
+        "context": "data"
+      },
+      "expect": {
+        "result": "INVALID",
+        "error": "E-MALFORMED"
+      }
+    },
+    {
+      "id": "privacy-encrypted-bytes-alg-unregistered",
+      "kind": "privacy-encrypted-bytes",
+      "rule": "An `enc.alg` outside §17 is the DOCUMENT's defect, not the verifier's limit: no conforming verifier may implement it, so the refusal is E-MALFORMED and not INDETERMINATE.",
+      "doc_bytes_b64url": "eyJ1c3QiOiIxLjAiLCJzdGF0ZSI6eyJpZCI6eyJkb21haW5fc2hhcmQiOiJzaGEyNTY6NDBkYzZiMGRhZDgxZDhmNWYxN2E5YzNiOTNmZDJiNmI3MDkwYjAxNzBlYmNmNzdhMzQzNGVlOTM3ODdlNWZlYiIsInVzdF9pZCI6InVzdDoyMDI2MDYyOC4xNCIsImtleV9pZCI6InNoYTI1Njo0MGRjNmIwZGFkODFkOGY1ZjE3YTljM2I5M2ZkMmI2YjcwOTBiMDE3MGViY2Y3N2EzNDM0ZWU5Mzc4N2U1ZmViIiwiY2xhc3MiOiJvYnNlcnZhdGlvbiJ9LCJ0aW1lIjp7ImdlbmVyYXRlZF9hdCI6IjIwMjYtMDYtMjhUMTQ6MDM6MTJaIiwidmFsaWRfZnJvbSI6IjIwMjYtMDYtMjhUMTQ6MDA6MDBaIiwidmFsaWRfdG8iOiIyMDI2LTA2LTI4VDE1OjAwOjAwWiJ9LCJkYXRhIjp7InNlY3JldCI6eyJraW5kIjoiY2FwdHVyZWQiLCJwcml2YWN5IjoiZW5jcnlwdGVkIiwiY29tbWl0Ijoic2hhMjU2OjJiOTFlMWU4NGFhNzRlZDFlY2FkYzAyNDAwNGI1NTBhZDEwNTYwOTQxN2E4MjllNmE5MDkwM2Q4MzI2MjQwZDkiLCJlbmMiOnsiYWxnIjoiQUVTLTI1Ni1DVFIiLCJrZXlfaWQiOiJrMSIsImN0IjoiYzUxNTU4ODczMzYyZmRkOFBrRWVCcnBkZlpqa0JhM1ExaWVyRjBPX0xJMUNHMFFaX2k3LTY3M2xaUm5OdW9aWVFtajhrWGw4R0d4eDY1NFpNNW5CWHVVZ3Q5X1FCNlZRTWFoU1J1Z3ZudEVleXA4aF9SUmVfLUxGaHR2aUZ2Wi1mVGZpWldJRERTTSJ9fX0sImhhc2hlcyI6eyJzZWNyZXQiOiJzaGEyNTY6NjZlMmNhYWNiMWUwMWEzNWRiZDQ5OTJmODFmOWZkMDNiODFjMGY0MzVlNmM3MGJjODA1YWU3YzdmNzliZDk0MiJ9fSwic2lnIjp7ImFsZyI6IkVkMjU1MTkiLCJrZXlfaWQiOiJzaGEyNTY6NDBkYzZiMGRhZDgxZDhmNWYxN2E5YzNiOTNmZDJiNmI3MDkwYjAxNzBlYmNmNzdhMzQzNGVlOTM3ODdlNWZlYiIsInB1YiI6IlBNMGtIUF9KczJHQVJMbDlBMjJHRkZrOWl3RjhOQThkN29kek9GVVhaVXMiLCJzaWciOiJIekpUNXJFSVVIdnVTUEUtRmVGWjJSbzRWdUlKM0RITzRYdTdWWWdaTXUxcWRZZTMzM1k0U3BBbUZheTlfcHJfZlU0dV90clZMZ2VFVXN6RTZBakRCQSJ9fQ",
+      "opts": {
+        "context": "data"
+      },
+      "expect": {
+        "result": "INVALID",
+        "error": "E-MALFORMED"
+      }
+    },
+    {
+      "id": "privacy-encrypted-bytes-ct-not-b64url",
+      "kind": "privacy-encrypted-bytes",
+      "rule": "`enc.ct` is base64url by §5 string-only value model. A ciphertext that is not decodable is refused on FORM — a port that decodes leniently (standard base64, whitespace-tolerant) diverges here.",
+      "doc_bytes_b64url": "eyJ1c3QiOiIxLjAiLCJzdGF0ZSI6eyJpZCI6eyJkb21haW5fc2hhcmQiOiJzaGEyNTY6NDBkYzZiMGRhZDgxZDhmNWYxN2E5YzNiOTNmZDJiNmI3MDkwYjAxNzBlYmNmNzdhMzQzNGVlOTM3ODdlNWZlYiIsInVzdF9pZCI6InVzdDoyMDI2MDYyOC4xNCIsImtleV9pZCI6InNoYTI1Njo0MGRjNmIwZGFkODFkOGY1ZjE3YTljM2I5M2ZkMmI2YjcwOTBiMDE3MGViY2Y3N2EzNDM0ZWU5Mzc4N2U1ZmViIiwiY2xhc3MiOiJvYnNlcnZhdGlvbiJ9LCJ0aW1lIjp7ImdlbmVyYXRlZF9hdCI6IjIwMjYtMDYtMjhUMTQ6MDM6MTJaIiwidmFsaWRfZnJvbSI6IjIwMjYtMDYtMjhUMTQ6MDA6MDBaIiwidmFsaWRfdG8iOiIyMDI2LTA2LTI4VDE1OjAwOjAwWiJ9LCJkYXRhIjp7InNlY3JldCI6eyJraW5kIjoiY2FwdHVyZWQiLCJwcml2YWN5IjoiZW5jcnlwdGVkIiwiY29tbWl0Ijoic2hhMjU2OjJiOTFlMWU4NGFhNzRlZDFlY2FkYzAyNDAwNGI1NTBhZDEwNTYwOTQxN2E4MjllNmE5MDkwM2Q4MzI2MjQwZDkiLCJlbmMiOnsiYWxnIjoiQUVTLTI1Ni1HQ00iLCJrZXlfaWQiOiJrMSIsImN0Ijoibm90IGJhc2U2NHVybCEhIn19fSwiaGFzaGVzIjp7InNlY3JldCI6InNoYTI1Njo2NmUyY2FhY2IxZTAxYTM1ZGJkNDk5MmY4MWY5ZmQwM2I4MWMwZjQzNWU2YzcwYmM4MDVhZTdjN2Y3OWJkOTQyIn19LCJzaWciOnsiYWxnIjoiRWQyNTUxOSIsImtleV9pZCI6InNoYTI1Njo0MGRjNmIwZGFkODFkOGY1ZjE3YTljM2I5M2ZkMmI2YjcwOTBiMDE3MGViY2Y3N2EzNDM0ZWU5Mzc4N2U1ZmViIiwicHViIjoiUE0wa0hQX0pzMkdBUkxsOUEyMkdGRms5aXdGOE5BOGQ3b2R6T0ZVWFpVcyIsInNpZyI6Ikh6SlQ1ckVJVUh2dVNQRS1GZUZaMlJvNFZ1SUozREhPNFh1N1ZZZ1pNdTFxZFllMzMzWTRTcEFtRmF5OV9wcl9mVTR1X3RyVkxnZUVVc3pFNkFqREJBIn19",
+      "opts": {
+        "context": "data"
+      },
+      "expect": {
+        "result": "INVALID",
+        "error": "E-MALFORMED"
+      }
+    },
+    {
+      "id": "privacy-encrypted-bytes-enc-not-object",
+      "kind": "privacy-encrypted-bytes",
+      "rule": "`enc` as a STRING. Carried as BYTES on purpose: a typed decoder (Go struct, serde) meets this before its object model does, and a port that silently zero-values the field would reach a DIFFERENT verdict from the same wire.",
+      "doc_bytes_b64url": "eyJ1c3QiOiIxLjAiLCJzdGF0ZSI6eyJpZCI6eyJkb21haW5fc2hhcmQiOiJzaGEyNTY6NDBkYzZiMGRhZDgxZDhmNWYxN2E5YzNiOTNmZDJiNmI3MDkwYjAxNzBlYmNmNzdhMzQzNGVlOTM3ODdlNWZlYiIsInVzdF9pZCI6InVzdDoyMDI2MDYyOC4xNCIsImtleV9pZCI6InNoYTI1Njo0MGRjNmIwZGFkODFkOGY1ZjE3YTljM2I5M2ZkMmI2YjcwOTBiMDE3MGViY2Y3N2EzNDM0ZWU5Mzc4N2U1ZmViIiwiY2xhc3MiOiJvYnNlcnZhdGlvbiJ9LCJ0aW1lIjp7ImdlbmVyYXRlZF9hdCI6IjIwMjYtMDYtMjhUMTQ6MDM6MTJaIiwidmFsaWRfZnJvbSI6IjIwMjYtMDYtMjhUMTQ6MDA6MDBaIiwidmFsaWRfdG8iOiIyMDI2LTA2LTI4VDE1OjAwOjAwWiJ9LCJkYXRhIjp7InNlY3JldCI6eyJraW5kIjoiY2FwdHVyZWQiLCJwcml2YWN5IjoiZW5jcnlwdGVkIiwiY29tbWl0Ijoic2hhMjU2OjJiOTFlMWU4NGFhNzRlZDFlY2FkYzAyNDAwNGI1NTBhZDEwNTYwOTQxN2E4MjllNmE5MDkwM2Q4MzI2MjQwZDkiLCJlbmMiOiJBRVMtMjU2LUdDTSJ9fSwiaGFzaGVzIjp7InNlY3JldCI6InNoYTI1Njo2NmUyY2FhY2IxZTAxYTM1ZGJkNDk5MmY4MWY5ZmQwM2I4MWMwZjQzNWU2YzcwYmM4MDVhZTdjN2Y3OWJkOTQyIn19LCJzaWciOnsiYWxnIjoiRWQyNTUxOSIsImtleV9pZCI6InNoYTI1Njo0MGRjNmIwZGFkODFkOGY1ZjE3YTljM2I5M2ZkMmI2YjcwOTBiMDE3MGViY2Y3N2EzNDM0ZWU5Mzc4N2U1ZmViIiwicHViIjoiUE0wa0hQX0pzMkdBUkxsOUEyMkdGRms5aXdGOE5BOGQ3b2R6T0ZVWFpVcyIsInNpZyI6Ikh6SlQ1ckVJVUh2dVNQRS1GZUZaMlJvNFZ1SUozREhPNFh1N1ZZZ1pNdTFxZFllMzMzWTRTcEFtRmF5OV9wcl9mVTR1X3RyVkxnZUVVc3pFNkFqREJBIn19",
+      "opts": {
+        "context": "data"
+      },
+      "expect": {
+        "result": "INVALID",
+        "error": "E-MALFORMED"
+      }
+    },
+    {
+      "id": "privacy-tier-orthogonal",
+      "kind": "privacy-tier-orthogonality",
+      "rule": "S3.1/S15 — the tier is composed from identity and time ONLY; privacy is not an input to it",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260628.14",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "observation"
+          },
+          "time": {
+            "generated_at": "2026-06-28T14:03:12Z",
+            "valid_from": "2026-06-28T14:00:00Z",
+            "valid_to": "2026-06-28T15:00:00Z"
+          },
+          "data": {
+            "station": {
+              "kind": "captured",
+              "value": {
+                "id": "A"
+              }
+            },
+            "reading": {
+              "kind": "captured",
+              "value": {
+                "v": "LONG"
+              }
+            },
+            "note": {
+              "kind": "captured",
+              "value": {
+                "t": "x"
+              }
+            }
+          },
+          "hashes": {
+            "station": "sha256:6454331ab080ad227286af1a9b4ca42eee7add173e00566a9f83fd37181798f3",
+            "reading": "sha256:b7d5790f4cc46249687ae848bd6989fc2fdabc9f5f4a696851b4ab0883443ad0",
+            "note": "sha256:da677058ffa861a5507d1fc7be01ed69abae851f250b6c6a7395147219b4f08c"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "MKMbhygB-xaAkwh-lgcqoqCzZU8tVwzNe-wzxNBg_g73S8juhlEsKI5g5aSsDk0pLkkZnAgXkXGh5MG_T7TEAw"
+        }
+      },
+      "twin_doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260628.14",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "observation"
+          },
+          "time": {
+            "generated_at": "2026-06-28T14:03:12Z",
+            "valid_from": "2026-06-28T14:00:00Z",
+            "valid_to": "2026-06-28T15:00:00Z"
+          },
+          "data": {
+            "station": {
+              "kind": "captured",
+              "value": {
+                "id": "A"
+              }
+            },
+            "reading": {
+              "kind": "captured",
+              "privacy": "blinded",
+              "commit": "sha256:c8de7c36806618919548bc8573f60ba28b92d206bbfebaa5207bf1ae9bf878d2"
+            },
+            "note": {
+              "kind": "captured",
+              "privacy": "encrypted",
+              "commit": "sha256:18cd3300c9753de157f373143ace0187c395d596c9367b3f507a395c21002bae",
+              "enc": {
+                "alg": "AES-256-GCM",
+                "key_id": "k1",
+                "ct": "ed0d0f4ea1682f5eBFGK0FdhrLwaTyjJ2xABs3bjOGA4815-HSsWTXHm6_42Pcyy7Zy0dq0kAjLjtv6x6f0ocMmihg0d24P5WQXK7VBoqq3NRX4QyveDSSeTNTv-M22m1AsS"
+              }
+            }
+          },
+          "hashes": {
+            "station": "sha256:6454331ab080ad227286af1a9b4ca42eee7add173e00566a9f83fd37181798f3",
+            "reading": "sha256:566690850f2c67277064a102f30d5df78c8e7bea35d94955907948b843940e95",
+            "note": "sha256:45ac222086a7be4b70eb7c928fe20f5f1b76d80a98650da256dcff244ac848d0"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "BqE8LMWJRX2M9GkdsI1k2QWHjiYNOZDwYzE19xUEIixftaWeXqSQiedOsANv5Osl3c4rIt7IOvI_uD2Xdt6GDA"
+        }
+      },
+      "expect_same_tier": "LIGHT",
+      "note": "same names, same values, same frame and key: one all-public, one carrying blinded AND encrypted. Different bytes, and the verdict must agree on the tier and on all four assurance axes. This exists because the orthogonality currently holds only by nobody having written `privacy` into the tier formula — and the tempting wrong rule (\"a document with undisclosed partitions cannot be TOP\") would let a READER's missing key lower a verdict the PUBLISHER earned"
     }
   ]
 }

@@ -1321,7 +1321,9 @@ check('F8 impossible ust_id→E-MALFORMED', P.verify(mk({ r: { kind: 'captured',
   // #175 — the mode had a reader and no writer, so no fixture could exist that was not a description of the
   // verifier. `encryptPartition` is the producer; these two vectors are what it makes checkable, and they are
   // run FROM THE CORPUS so a port can run the same bytes.
-  for (const vec of V.vectors.filter((x) => x.kind === 'privacy-encrypted')) {
+  // the two-reader vectors describe their outcomes per reader (`expect_*`); the single-outcome negatives below
+  // carry a plain `expect`, so the domain is split on the SHAPE of the expectation, not on a list of ids.
+  for (const vec of V.vectors.filter((x) => x.kind === 'privacy-encrypted' && !x.expect)) {
     const disc = { [vec.disclosure.partition]: { nonce: vec.disclosure.nonce, value: vec.disclosure.value } };
     const keys = { [vec.key.key_id]: vec.key.raw };
     if (vec.id === 'privacy-encrypted-disclosure') {
@@ -1342,6 +1344,45 @@ check('F8 impossible ust_id→E-MALFORMED', P.verify(mk({ r: { kind: 'captured',
       check(`${vec.id}: a decryption naming another value is E-COMMIT, never a second opinion (F.7a.2)`,
         withKey.result === vec.expect_with_key.result && withKey.error === vec.expect_with_key.error);
     }
+  }
+  // The algorithm registry, both halves — they sit one line apart in the implementation and mean opposite things:
+  // an unlisted mode is the DOCUMENT's defect, an unimplemented OPTIONAL one is the VERIFIER's inability.
+  for (const vec of V.vectors.filter((x) => x.kind === 'privacy-encrypted' && x.expect)) {
+    const opts = { context: 'data' };
+    if (vec.key) opts.decKeys = { [vec.key.key_id]: vec.key.raw };
+    if (vec.disclosure) opts.disclosures = { [vec.disclosure.partition]: { nonce: vec.disclosure.nonce, value: vec.disclosure.value } };
+    const r = P.verify(vec.doc, opts);
+    const ok = r.result === vec.expect.result
+      && (vec.expect.error === undefined || r.error === vec.expect.error)
+      && (vec.expect.reason === undefined || r.reason === vec.expect.reason);
+    check(`${vec.id}: ${vec.rule.slice(0, 96)}`, ok, `${r.result} ${r.error || r.reason || ''}`);
+  }
+  // BYTE FORM — the shape refusals, driven through the byte door (`verifyJson`) rather than the object door, because
+  // a shape defect is a property of the RECEIVED BYTES. A port reads doc_bytes_b64url → bytes → verifyJson(bytes, opts)
+  // and compares; nothing here needs a JS object builder. The well-formed control is what stops the set being free:
+  // without it, a byte door that refused everything would satisfy all four negatives.
+  {
+    const byteVecs = V.vectors.filter((x) => x.kind === 'privacy-encrypted-bytes');
+    check('the byte-form corpus carries a well-formed control (four refusals prove nothing if the door refuses everything)',
+      byteVecs.some((x) => x.expect.result.startsWith('VALID')) && byteVecs.filter((x) => x.expect.result === 'INVALID').length >= 3);
+    for (const vec of byteVecs) {
+      const bytes = Buffer.from(vec.doc_bytes_b64url, 'base64url');
+      const r = P.verifyJson(bytes, vec.opts);
+      const ok = (vec.expect.result.startsWith('VALID') ? r.result === vec.expect.result : r.result === vec.expect.result && r.error === vec.expect.error);
+      check(`${vec.id}: ${vec.rule.slice(0, 104)}`, ok, `${r.result} ${r.error || ''}`);
+    }
+  }
+  // The tier is composed from identity and time; privacy is not an input. Pinned as a PAIR because the property
+  // is an EQUALITY between two documents — asserting a single document's tier would pass under a rule that
+  // couples the axes, which is exactly the change this is here to catch.
+  for (const vec of V.vectors.filter((x) => x.kind === 'privacy-tier-orthogonality')) {
+    const a = P.verify(vec.doc, { context: 'data' }), b = P.verify(vec.twin_doc, { context: 'data' });
+    check(`${vec.id}: an all-public document and its blinded+encrypted twin earn the SAME tier`,
+      a.tier === vec.expect_same_tier && b.tier === vec.expect_same_tier, `${a.tier} vs ${b.tier}`);
+    check(`${vec.id}: …and the same value on all four assurance axes — privacy moves what a READER knows, never what the RECORD earned`,
+      JSON.stringify(a.assurance) === JSON.stringify(b.assurance), JSON.stringify(b.assurance));
+    check(`${vec.id}: the two are genuinely different bytes (an equality between identical documents proves nothing)`,
+      a.content_hash !== b.content_hash);
   }
   // The producer's own obligation: commitment and ciphertext come from ONE operation, so a caller cannot make
   // them disagree by accident. Control — swapping in another value's `enc` is exactly what the vector above does.

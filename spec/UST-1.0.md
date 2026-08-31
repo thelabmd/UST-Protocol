@@ -2104,6 +2104,34 @@ stream-genesis + stream checkpoint/omission, pinned Merkle/seed ordering. A veri
 a tier it claims is non-conforming — making verifier disagreement a test failure, not a settlement weapon.
 Independent re-implementation is expected; the vectors make "verify without trusting the publisher's library" real.
 
+**Private partitions — what is NORMATIVE, and what is one build's limit.** `encrypted` is the mode where a wrong
+verifier is silently dangerous rather than merely wrong: mishandled, "this ciphertext is the value the publisher
+committed to" becomes "this ciphertext is whatever the key-holder says it is", and the reader sees an ordinary
+`VALID` either way. So the outcomes are stated, not left to be inferred:
+
+- **A verifier holding NO key still judges the document, and reaches the full tier it would otherwise reach.**
+  Absence of a key is not an inability — §14 step 8 applies *if authorized*, and privacy is not an input to the
+  tier (§3): a blinded/encrypted document and its all-public twin earn the SAME tier and the same per-axis
+  assurance. A verifier that downgrades, or answers `INDETERMINATE`, because a value is opaque to it is
+  non-conforming.
+- **Divergence between the two channels is `E-COMMIT`, and NEITHER value is disclosed.** A decryption that is
+  well-formed but names a different value than the commitment is not a second opinion (model F.7a.2).
+- **`enc.alg` outside the §17 registry is `E-MALFORMED`** — the DOCUMENT's defect, since no conforming verifier
+  may implement it. **Registered but not implemented by this build is `INDETERMINATE(unsupported_alg)`** — the
+  VERIFIER's limit, never `INVALID`. The two are one line apart in an implementation and opposite in meaning.
+- **Shape defects are decided on the RECEIVED BYTES**: a `privacy:"encrypted"` partition with no `enc`, a
+  non-object `enc`, or a `ct` that is not base64url ⇒ `E-MALFORMED`, before any key exists. Pinned in the corpus
+  as bytes (`kind: "privacy-encrypted-bytes"`) rather than as objects, because a port's own decoder — a Go struct,
+  a serde model — meets these before its object model does, and a decoder that zero-values an unexpected field
+  would otherwise reach a different verdict from the same wire.
+
+**This build's choices, which are NOT normative:** it implements the MTI `AES-256-GCM` and not the RECOMMENDED
+`XChaCha20-Poly1305`, so on the latter it returns `INDETERMINATE(unsupported_alg)` — a legitimate outcome and its
+own ceiling, not a property of the protocol. The browser build implements neither, and refuses earlier still (no
+synchronous Ed25519), so its `INDETERMINATE` there is about the signature, not the cipher. A PRODUCER helper that
+derives ciphertext and commitment from one operation is REQUIRED to make admissible documents constructible
+(model F.7a.1, producer corollary) but is not part of a conforming verifier.
+
 ---
 
 ## 17. Registries

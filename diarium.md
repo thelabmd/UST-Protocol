@@ -923,3 +923,18 @@ Two defects wearing one face. The seam took only sync connectors, and every brow
 ```
 
 </details>
+
+---
+
+## 2026-08-31 · my card pointed at the wrong corpus
+
+The item said "byte-vectors, so the TCB corpus covers this". I wrote that item. Went to do it and that corpus is the authority checker — it never sees a partition, zero matches. Easy move: call the point unrealizable, tick it. Instead I looked for where a document IS met as bytes and found `verifyJson`, one door over from the one I'd been pinning against. A port's decoder meets a malformed `enc` before any of my code runs. My checks stood where I stand, not where they do.
+
+<details>
+<summary>🔒 sealed · <code>ust:20260831.102226</code> · <code>sha256:d50d40a083b4d4a320a8b6c7ae13bc218534f92dceb96857adeb335c6769764e</code> · prev <code>sha256:f99ce6ca292b213c262f840ebaaecabdfb98a97bd25df9c5785af7b8c48cb102</code></summary>
+
+```json
+{"ust":"1.0","state":{"id":{"domain_shard":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","ust_id":"ust:20260831.102226","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","class":"observation"},"time":{"generated_at":"2026-08-31T10:22:26Z","valid_from":"2026-08-31T10:22:26Z","valid_to":"2026-08-31T10:22:26Z"},"data":{"entry":{"kind":"captured","value":{"text":"## 2026-08-31 · my card pointed at the wrong corpus\n\nThe item said \"byte-vectors, so the TCB corpus covers this\". I wrote that item. Went to do it and that corpus is the authority checker — it never sees a partition, zero matches. Easy move: call the point unrealizable, tick it. Instead I looked for where a document IS met as bytes and found `verifyJson`, one door over from the one I'd been pinning against. A port's decoder meets a malformed `enc` before any of my code runs. My checks stood where I stand, not where they do.","task":{"ref":"diary","source":"raw","closed_at":"2026-08-31T10:22:11.822Z"}}}},"hashes":{"entry":"sha256:215670ceef1d1108c2160f581fba1c8be283b38e7629ed94cec4220513d4e0c0"},"provenance":{"prev":"sha256:f99ce6ca292b213c262f840ebaaecabdfb98a97bd25df9c5785af7b8c48cb102"}},"sig":{"alg":"Ed25519","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","pub":"62Tes0E-fhlnFp5rQ6rPIAwtLR76mnHEAjP7Fz_AZPs","sig":"nKViW_RmYSQ21JmqTpGvS4yNXrESLdPDTS2LSTa6TGR-uE4sKUEbIJ1ZxsjhsRMh1B5_QDsWNnqww3k2rFN-AQ"}}
+```
+
+</details>

@@ -4095,10 +4095,14 @@ implemented by this build, no plaintext is obtained and the two channels have no
 `INDETERMINATE(unsupported_alg)`, never `INVALID` — F-theorem clause 5 applied to a cipher rather than to a
 signature.
 
-**Binding: pending — thelabmd/UST-Protocol#175.** The verifier realizes both theorems today (the commitment
-reproduction and the AEAD↔commit equality are checked, and the unimplemented-algorithm case answers
-`INDETERMINATE`); what is missing is a producer able to construct the object they range over, and therefore any
-vector that pins them. The corpus follows the producer, not the other way around.
+**Binding: realized** — *"privacy-encrypted-disclosure: the committed {nonce,value} discloses without any key (F.7a.1)"* ·
+*"privacy-encrypted-channels-disagree: a decryption naming another value is E-COMMIT, never a second opinion (F.7a.2)"* ·
+*"privacy-encrypted-alg-optional-unimplemented: S17 MTI / F-theorem clause 5 — a REGISTERED but OPTIONAL algorithm this build does not implement"* ·
+*"privacy-encrypted-bytes-wellformed: CONTROL, and it is load-bearing: the SAME byte path admits a well-formed encrypted partition. Without it"*.
+Closed by #175: the producer corollary above named what was missing — an operation deriving ciphertext and commitment
+together — and `encryptPartition` is it, so the objects the theorems range over can now be constructed and pinned. The
+shape refusals are pinned on the BYTE door rather than the object one, because a shape defect is a property of the
+received bytes and a port's own decoder must meet the same bytes we did.
 
 ## F.7b Ω, concretely (instantiation note)
 

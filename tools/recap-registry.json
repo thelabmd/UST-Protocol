@@ -717,6 +717,11 @@
     {
       "round": 243,
       "no_recap": "Round 243 does not close #175 — it delivers the producer and the two vectors the card said had to come first, and the card stays open for the remaining fixtures (algorithm-registry negatives, byte-vectors) and the S4 statement of which verdicts are normative. The unit of a recap is the closed issue; this round closes none."
+    },
+    {
+      "round": 244,
+      "issue": 175,
+      "content_hash": "sha256:d50d40a083b4d4a320a8b6c7ae13bc218534f92dceb96857adeb335c6769764e"
     }
   ]
 }

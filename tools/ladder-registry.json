@@ -2096,6 +2096,18 @@
       "code": "packages/ust-protocol/index.mjs :: `encryptPartition` — the producer the mode never had, deriving commitment and ciphertext from ONE `canon` so they cannot drift, with the IV derived as H('ust:enc-iv', commit)[0..12] so IV uniqueness reduces to the commitment uniqueness S10 already demands; `aesGcmEncrypt` in `_crypto.mjs` with a symmetric refusal in the browser build.",
       "vector": "privacy-encrypted-channels-disagree",
       "test": "packages/ust-protocol/conformance.mjs :: the two vectors are executed FROM THE CORPUS so a port runs the same bytes, plus the producer's own obligations — determinism of the derived IV, commitment equality with `blindedCommit`, and a producer↔verifier round-trip."
+    },
+    {
+      "round": 244,
+      "math": {
+        "excluded": "No theorem changed and none needed to: F.7a.1/F.7a.2 already fixed the admissible disclosure and the two-channel rule. What moved is the BINDING line — #175 had deferred it for want of a producer able to construct the objects the theorems range over, and round 243 built one, so the deferral had no subject left. A binding is an accounting of realization, not a mathematical claim; recording it as this round's math would let a bookkeeping edit stand in for a proof."
+      },
+      "spec": "**Private partitions — what is NORMATIVE, and what is one build's limit.**",
+      "code": {
+        "excluded": "No implementation changed, and the round exists BECAUSE none needed to: the four refusals were already correct through both doors. What was wrong was where the corpus stood to watch them — on the object door, which a porting implementation never enters. A round that fixes the observation rather than the behaviour has no code layer, and inventing one would misreport what was repaired."
+      },
+      "vector": "privacy-encrypted-bytes-wellformed",
+      "test": "privacy-encrypted-bytes-enc-not-object: `enc` as a STRING. Carried as BYTES on purpose: a typed decoder (Go struct, serde) meets this before its"
     }
   ],
   "first_accounted_round": 76,
