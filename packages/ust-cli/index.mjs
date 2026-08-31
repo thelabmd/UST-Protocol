@@ -1616,7 +1616,13 @@ async function cmdVerify() {
     // and its time reported `unproven` while the anchor beneath it was final in Bitcoin. The loss was SILENT — the
     // command still printed HIGH — which is the same shape round 238 fixed one level up, where the page passed the
     // connector as a transport capability and it was ignored there. `forkchoice`, in this same file, passes it.
-    const rd = await P.resolveByDiscovery(doc, { context: opts.context, offline: !!arg('offline', false), noForkConfirmed: noFork, requireAuthoritative: opts.requireAuthoritative, requireAnchored: opts.requireAnchored, requireFreshKeylog: opts.requireFreshKeylog, keylogFreshAsOf: opts.keylogFreshAsOf, inclusionVerify },
+    // #177 — the consumer's OWN envelope is FORWARDED, not re-listed. This call used to hand-copy seven fields,
+    // and a hand-written list falls behind the thing it copies: `disclosures` and `decKeys` were absent, so
+    // `r = rd.verdict` below overwrote a verdict that HAD opened the private partitions with one that had not.
+    // Silent, and byte-identical output either way. Exactly the shape the comment above describes for the
+    // connector in this same call — one argument over, the second time in this line. Spreading `opts` also
+    // carries the resource envelope (maxInputBytes / maxSupportedBytes), which the list had dropped too.
+    const rd = await P.resolveByDiscovery(doc, { ...opts, offline: !!arg('offline', false), noForkConfirmed: noFork, inclusionVerify },
       { substrateVerify, fetchImpl: guardedFetch });
     if (!substrateVerify && rd.resolution && String(rd.resolution.noFork || '').startsWith('HIGH pending')) console.error('  ℹ️  anchor not cross-checked — `npm i @ust-protocol/ots-verify @ust-protocol/rekor-verify` for automatic HIGH');
     if (rd.resolution) {
@@ -1647,6 +1653,23 @@ async function cmdVerify() {
     console.log('  time     : ' + r.time.strength + '/' + r.time.status + '   completeness: ' + r.completeness);
     console.log('  ust_id   : ' + r.ust_id + '   class ' + r.class + '   content_hash ' + r.content_hash);
     if (r.provenance) console.log('  lineage  : declared' + (r.provenance.referents ? `, referents ${r.provenance.referents}` : '') + (r.provenance.depth !== undefined ? ` (walk depth ${r.provenance.depth})` : '') + ' — a declaration is not a verified derivation');
+    // §10 privacy — MEASURED 2026-08-31 (#177), CLOSED 2026-08-31 by this block and the forwarded envelope below: verifying the same document with and without
+    // `--disclosures`/`--dec-keys` produced BYTE-IDENTICAL output while the core returned `disclosed: []` against
+    // `disclosed: ["position","reading"]`. A key-holder could not tell a successful disclosure from having passed
+    // no files at all. The line prints what OPENED and, in the same breath, what stayed closed — the negative half
+    // is the one a reader cannot reconstruct, since a private partition looks identical either way on the wire.
+    {
+      const priv = Object.entries((doc && doc.state && doc.state.data) || {}).filter(([, p]) => p && p.privacy);
+      if (priv.length) {
+        const opened = new Set(r.disclosed || []);
+        const shut = priv.filter(([n]) => !opened.has(n));
+        console.log('  private  : ' + priv.length + ' partition(s) — '
+          + (opened.size ? 'opened ' + [...opened].join(', ') : 'none opened')
+          + (shut.length ? '; still closed ' + shut.map(([n, p]) => n + ' (' + p.privacy + ')').join(', ') : ''));
+        if (shut.length && !opts.disclosures) console.log('     supply --disclosures {partition:{nonce,value}} to open them; the commitment decides, so a wrong pair cannot forge — only fail to reveal');
+        if (shut.some(([, p]) => p.privacy === 'encrypted') && !opts.decKeys) console.log('     an encrypted partition also accepts --dec-keys {key_id:key}, which checks the ciphertext AGAINST the commitment (E-COMMIT if they disagree)');
+      }
+    }
     console.log('  tier     : ' + ['LIGHT', 'HIGH', 'TOP'].map((t) => (t === tier ? `[${t}]` : ` ${t} `)).join('→'));
     if (tier === 'LIGHT' && resolution && !resolution.error && !noFork) {
       console.log('\n  ℹ️  the name RESOLVED (key belongs to its chain, capacity admitted) but stays provisional');

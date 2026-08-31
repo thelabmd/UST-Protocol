@@ -61,6 +61,29 @@ const sb = P.seal(P.buildState({ domain_shard: 'helioradar.com', ust_id: 'ust:20
 check('live:fork_choice mixed ust_id → E-MALFORMED', (await call(client, 'ust_fork_choice', { candidates: [fr0, fr1], offline: true })).error === 'E-MALFORMED');
 check('live:fork_choice same ust_id, no substrate → INDETERMINATE', (await call(client, 'ust_fork_choice', { candidates: [sa, sb], offline: true })).result === 'INDETERMINATE');
 
+// #177 — BOTH privacy modes reachable in ONE call, asserted OVER THE WIRE. Measured 2026-08-31, CLOSED 2026-08-31 by `decKeys` on `ust_verify`: the tool declared seventeen properties, `disclosures` among them and
+// `decKeys` absent, so an agent could open a `blinded` partition and had no way to check an `encrypted` one at
+// all. Half of §10 unreachable through the interface we give agents, while our own position is that an agent is
+// a first-class publisher. The vectors drive it — the claim is normative, so it is not a fixture chosen here.
+{
+  const { readFileSync } = await import('node:fs');
+  const V = JSON.parse(readFileSync(new URL('../../vectors/conformance-vectors.json', import.meta.url), 'utf8'));
+  const ok = V.vectors.find((v) => v.id === 'privacy-encrypted-disclosure');
+  const dis = V.vectors.find((v) => v.id === 'privacy-encrypted-channels-disagree');
+  const ask = (v, withKey) => call(client, 'ust_verify', { doc: v.doc, offline: true, soft: true,
+    disclosures: { [v.disclosure.partition]: { nonce: v.disclosure.nonce, value: v.disclosure.value } },
+    ...(withKey ? { decKeys: { [v.key.key_id]: v.key.raw } } : {}) });
+  const opened = await ask(ok, true);
+  check('live:decKeys — an agent reaches the ENCRYPTED mode in one ust_verify call and the partition opens',
+    opened.result === 'VALID:LIGHT' && (opened.disclosed || []).includes(ok.disclosure.partition), JSON.stringify(opened.result));
+  // The load-bearing half: the key must be USED, not accepted and dropped. A surface that swallowed the argument
+  // would answer VALID here and be indistinguishable from a correct one on every honest document.
+  const caught = await ask(dis, true);
+  check('live:decKeys is genuinely USED — channels that disagree give the agent E-COMMIT, not VALID', caught.error === 'E-COMMIT', JSON.stringify(caught.error));
+  const blind = await ask(dis, false);
+  check('live:without the key that same document verifies — the divergence is invisible, which is WHY the key must travel (F.7a.2)', blind.result === 'VALID:LIGHT', JSON.stringify(blind.result));
+}
+
 await client.close();
 console.log('\n════════════════════════════════════════════');
 console.log('  ust-mcp LIVE (real stdio transport)   PASS ' + pass + '   FAIL ' + fail);

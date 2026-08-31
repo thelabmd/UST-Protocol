@@ -2130,6 +2130,18 @@
         "excluded": "A vector is a fixed INPUT and a declared RESULT that any runner reproduces. This gate's input is the source of two of our own packages, so a vector would have to carry our CLI and MCP inside the corpus — pinning this repository's shape into the file a PORT reads to check its protocol conformance. The equivalent guarantee lives where it belongs instead: seven negative tokens, including the two bare substrings that produced the false declarations, are refused inside the gate's own controls."
       },
       "test": "tools/capability-parity.mjs :: the gate is a CI step in its own right (`npm run test:parity`), and its controls run on every invocation — each surface form must resolve, and seven tokens naming nothing (among them the bare `seal` and `buildState` that produced the false declarations) must not."
+    },
+    {
+      "round": 247,
+      "math": {
+        "excluded": "F.7a already fixes what a disclosure is and F.7a.2 what two channels owe each other; this round moves that reach out to two surfaces and changes no theorem. The one thing here that WOULD be a model question — whether a verdict must report which channels it was able to check — is a defect this round FOUND and deliberately did not fix, since it changes the verdict shape for every implementation. It is recorded on #177 rather than smuggled into a surface round."
+      },
+      "spec": {
+        "excluded": "§14 step 8 states the obligation ('if authorized: reproduce its commit … and for encrypted verify AEAD-Decrypt') and §17 states the inputs. Neither says which of OUR tools must accept them — nor should it: the spec binds conforming producers and verifiers, and a CLI flag or an MCP schema property is this implementation's business. The gap was ours to close, not a rule to impose on implementers."
+      },
+      "code": "packages/ust-mcp/index.mjs :: `decKeys` on `ust_verify` — schema, handler signature and the options object, so ONE call reaches both privacy modes; packages/ust-cli/index.mjs :: a `private` line naming what opened AND what stayed closed (the negative half is the one a reader cannot reconstruct), and `resolveByDiscovery` now receives the consumer's envelope by SPREAD instead of a hand-copied field list that had silently dropped it.",
+      "vector": "privacy-encrypted-channels-disagree",
+      "test": "packages/ust-mcp/live-test.mjs :: live:decKeys is genuinely USED — channels that disagree give the agent E-COMMIT, not VALID"
     }
   ],
   "first_accounted_round": 76,

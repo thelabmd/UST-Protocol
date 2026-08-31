@@ -731,6 +731,10 @@
     {
       "round": 246,
       "no_recap": "Round 246 does not close #177 — it repairs the MEASURING INSTRUMENT the card names first, so the sweep that follows is scored by a ruler that can fail. The card's six remaining items (decKeys on ust_verify, the CLI printing what was disclosed, disclosure inputs on the web verifier, `ust sign` with its envelope, private partitions in ust-light, the parity table itself) are untouched. The unit of a recap is the CLOSED ISSUE; this round closes none, and a recap here would report a first step as a conclusion."
+    },
+    {
+      "round": 247,
+      "no_recap": "Round 247 does not close #177 — it delivers two of the card's six remaining items (decKeys on ust_verify, the CLI printing what opened and what did not) and leaves four: the web verifier's inputs, `ust sign` with its disclosure envelope, private partitions in ust-light, and the parity table's own split of PRODUCE from CONSUME. The unit of a recap is the CLOSED ISSUE; this round closes none."
     }
   ]
 }
