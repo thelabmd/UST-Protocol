@@ -314,8 +314,10 @@ that were signed — no glyph substitution hides inside a U-label.
 live ONLY under `data`, cannot collide with identity). Count ≤ 64 (§13). Each partition is an envelope:
 ```
 Partition := { "kind":"captured"|"computed"|"absence", "value": { <string leaves> } }       // PUBLIC
-            | { "kind":"captured"|"computed"|"absence", "privacy":"blinded"|"encrypted",
-                "commit": ContentHash [, "enc": {"alg":string,"key_id":string,"ct":b64url}] }  // PRIVATE
+            | { "kind":"captured"|"computed"|"absence", "privacy":"blinded",
+                "commit": ContentHash }                                                        // PRIVATE, one channel
+            | { "kind":"captured"|"computed"|"absence", "privacy":"encrypted",
+                "commit": ContentHash, "enc": {"alg":string,"key_id":string,"ct":b64url} }      // PRIVATE, two channels
 ```
 **Absence (`kind:"absence"`, #39 — the notary's other half).** A `captured` partition records what WAS read; an
 `absence` partition records a NON-occurrence or unavailability — *"source S was unreachable"*, *"no alert fired"*,
@@ -420,6 +422,17 @@ following REQUIRED tightenings. A value violating any rule is malformed (E-CANON
    occur (§5).
 2. **Strings** (names and leaves): MUST be Unicode NFC (non-NFC ⇒ E-CANON). Escaped per RFC 8259 §7 minimal
    escaping (control chars, `"`, `\`; no gratuitous escapes).
+   **IDENTIFIERS carry a further restriction, and VALUES do not.** A partition name and an `enc.key_id` travel
+   INTO the verdict, because a consumer must be able to match a verdict back to the artifact it judges — so the
+   publisher writes part of what the reader sees. Such an identifier MUST NOT contain a character a renderer
+   reads as STRUCTURE: C0/C1 controls (`U+0000`–`U+001F`, `U+007F`–`U+009F`), the line/paragraph separators
+   (`U+2028`, `U+2029`), or the bidirectional overrides (`U+202A`–`U+202E`, `U+2066`–`U+2069`). A violation is
+   `E-MALFORMED`. Same disposition and same stated reason as the name-form A-label rule (§4.3a): a string that
+   deceives a human reading the verdict. Measured 2026-09-01, CLOSED 2026-09-01 by this rule and by both verifiers implementing it — a signed document whose
+   `enc.key_id` contained a newline made the reference CLI print a fabricated `tier : [TOP] anchored in Bitcoin`
+   line above the real `[LIGHT]` one, from its own report. **VALUES are deliberately exempt**: a value is content
+   the reader asked to see, and escaping content is a renderer's ordinary duty, not a protocol obligation
+   (model F.7a.2, identifier-as-structure corollary).
 3. **Arrays:** `[` items in order joined by `,` `]`. Item order is significant and is part of the meaning.
 4. **Leaves:** strings only (§5). Encountering a JSON number/boolean/null leaf ⇒ E-CANON.
 5. **Depth/size:** within §13 bounds; exceeding ⇒ E-BOUNDS.
@@ -630,6 +643,16 @@ WEAKEST → strongest (do NOT conflate — E5):
   a repeated nonce makes two commits to the SAME value EQUAL, leaking value-repeats, Z2), disclosed only to
   authorized parties, who reproduce `commit`. Public parties get existence+time only and CANNOT brute-force
   low-entropy values (I6). (A verifier cannot detect cross-document nonce reuse — it is a producer MUST.)
+The two private alternatives are SEPARATE productions, and `enc` belongs to exactly one of them: a partition
+declared `blinded` carrying an `enc` block MUST be refused (`E-MALFORMED`). The mode declares which channels a
+partition has, and a verifier's obligations are stated per mode — so a ciphertext under a `blinded` declaration
+falls under no obligation at all: signed, published, and examined by nobody, while the verdict truthfully reports
+that every channel the mode declares was checked. Measured 2026-09-01, CLOSED 2026-09-01 by splitting the productions — with the two written as one
+production carrying an unconditionally-optional `enc`, such a document verified `VALID` with the partition
+reported fully disclosed, and a key-holder decrypting out of band recovered a DIFFERENT value from the one the
+commitment binds — two values fixed at `t` with the record accountable for one (model F.7a.2, unexaminable-channel
+corollary).
+
 - **encrypted (cryptographic)** — `commit` as for blinded, PLUS an authenticated-encryption block `enc` binding the ciphertext
   to the SAME plaintext: `ct` MUST be an AEAD encryption of exactly the `value` that `commit` commits to, under
   the key named by `enc.key_id`. A key-holder MUST verify `AEAD-Decrypt(ct)` reproduces the committed

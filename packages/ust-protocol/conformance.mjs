@@ -1367,6 +1367,45 @@ check('F8 impossible ust_id→E-MALFORMED', P.verify(mk({ r: { kind: 'captured',
   // `bad()` returns a bare `{result:'VALID'}` — it threw. A throw kills the whole suite before any verdict is
   // collected, so the battery saw NOTHING go red and reported a detectable mutant as decorative. A check that
   // crashes is a check that cannot fail: it does not merely miss its own claim, it hides every claim behind it.
+  // §6 — an identifier the verdict QUOTES may not forge structure. Driven from the corpus, and the control is
+  // what makes the two negatives mean anything: without it an implementation refusing every encrypted partition
+  // would satisfy both. The positive direction also matters — a VALUE carrying the same characters must still
+  // verify, or the rule has quietly become "the protocol refuses control characters", which it is not.
+  for (const vec of V.vectors.filter((x) => x.kind === 'identifier-structure')) {
+    // the disclosure is what carries the NAME into `disclosed`. Without it the "no field forges structure" check
+    // below holds because the field is absent, not because it is safe — measured 2026-09-01 under the mutant,
+    // where it stayed green while the forged name was being admitted.
+    const opts = { context: 'data', ...(vec.disclosure ? { disclosures: { [vec.disclosure.partition]: { nonce: vec.disclosure.nonce, value: vec.disclosure.value } } } : {}) };
+    const r = P.verify(vec.doc, opts);
+    const ok = vec.expect.result.startsWith('VALID')
+      ? r.result === vec.expect.result
+      : r.result === vec.expect.result && r.error === vec.expect.error;
+    check(`${vec.id}: ${vec.rule.slice(0, 110)}`, ok, `${r.result} ${r.error || ''}`);
+    // no verdict field may carry a character that forges structure — checked on the WHOLE verdict, not on the
+    // field this vector happens to attack, so a third leak elsewhere is caught by the same assertion.
+    const walk = (o) => typeof o === 'string' ? /[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]/.test(o)
+      : (o && typeof o === 'object') ? Object.values(o).some(walk) : false;
+    check(`${vec.id}: and NO field of the verdict carries such a character — including the diagnostic that quotes the rejected value`, !walk(r));
+  }
+  // §4.4 — the shape a mode does not declare is refused at ADMISSION. Driven from the corpus: the document is
+  // genuine in every other respect, so an implementation that refuses it for a different reason has diverged, and
+  // one that ADMITS it re-opens a working exploit rather than a theoretical one.
+  {
+    const vec = V.vectors.find((x) => x.id === 'privacy-blinded-carrying-enc');
+    const r = P.verify(vec.doc, { context: 'data', disclosures: { [vec.disclosure.partition]: { nonce: vec.disclosure.nonce, value: vec.disclosure.value } }, decKeys: { [vec.key.key_id]: vec.key.raw } });
+    check(`${vec.id}: a blinded partition carrying an enc block is E-MALFORMED at admission — a channel no rule reaches may not be signed`,
+      r.result === vec.expect.result && r.error === vec.expect.error, `${r.result} ${r.error || ''}`);
+    // CONTROL — strip the stray block and RE-SIGN, so the document differs from the hostile one in exactly one
+    // field and nothing else. My first draft deleted `enc` without re-signing and accepted `E-SIG` as a pass:
+    // that control could never fail for the reason it claimed, since removing a field breaks the signature by
+    // construction. The refusal has to be shown to name the SHAPE, and a broken signature says nothing about shape.
+    const cleanState = JSON.parse(JSON.stringify(vec.doc.state));
+    delete cleanState.data[vec.disclosure.partition].enc;
+    const resigned = P.seal(cleanState, A.priv, A.pubB64);
+    const r2 = P.verify(resigned, { context: 'data', disclosures: { [vec.disclosure.partition]: { nonce: vec.disclosure.nonce, value: vec.disclosure.value } } });
+    check(`${vec.id}: CONTROL — the same partition WITHOUT the stray enc verifies and discloses, so the refusal names the shape and not the commitment, the signature or the disclosure`,
+      r2.result === 'VALID:LIGHT' && (r2.disclosed || []).includes(vec.disclosure.partition), `${r2.result} ${r2.error || ''}`);
+  }
   // The per-channel expectation, driven FROM THE CORPUS so a port runs the same assertion on the same bytes. The
   // checks above pin this build's behaviour by hand; this loop pins it as a normative claim any implementation owes.
   for (const vec of V.vectors.filter((x) => x.expect_channels_without_key)) {

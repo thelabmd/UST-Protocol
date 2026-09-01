@@ -358,8 +358,22 @@ export const MUTATIONS = [
     id: 'verifier-stops-refusing', mustDetect: true, observe: ['conformance'],
     why: 'the single seam that constructs a refusal. Broken, the verifier accepts everything it should reject — every check whose evidence is "the attack is refused" must go red.',
     file: 'packages/ust-protocol/index.mjs',
-    from: "function bad(code, detail, fields) { return { result: 'INVALID', error: code, detail, ...(fields || null) }; }",
+    from: "function bad(code, detail, fields) { return { result: 'INVALID', error: code, detail: quoteSafe(detail), ...(fields || null) }; }",
     to: "function bad(code, detail, fields) { return { result: 'VALID', tier: 'LIGHT' }; }",
+  },
+  {
+    id: 'identifier-may-forge-structure', mustDetect: true, observe: ['conformance'],
+    why: 'the §6 identifier seam. A partition name and an `enc.key_id` travel INTO the verdict, so a publisher writes part of what the reader sees. Broken, a newline in either composes a line of the verifier\'s own report — measured 2026-09-01 as a fabricated `tier : [TOP] anchored in Bitcoin` printed above the real `[LIGHT]` one, and CLOSED 2026-09-01 by the admission rule this mutant removes. Every check whose evidence is "an identifier the verdict quotes cannot forge structure" must go red.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "      if (FORGES_STRUCTURE.test(name)) return bad('E-MALFORMED', 'partition name carries a control or bidi-override character",
+    to: "      if (false) return bad('E-MALFORMED', 'partition name carries a control or bidi-override character",
+  },
+  {
+    id: 'blinded-may-carry-a-ciphertext', mustDetect: true, observe: ['conformance'],
+    why: 'the admission seam for §4.4\'s two private productions. Broken, a partition declared `blinded` may ship an `enc` block, and the AEAD branch — keyed on the MODE — never runs: the ciphertext is signed, published and examined by nobody while the verdict says every declared channel was checked. Measured as a working exploit on 2026-09-01 before this refusal existed. Every check whose evidence is "a channel outside the declared mode is refused" must go red.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "        if (part.privacy === 'blinded' && part.enc !== undefined)",
+    to: "        if (false)   /* mutant: the pre-fix grammar — `enc` optional for BOTH private modes */",
   },
   {
     id: 'partial-disclosure-reported-as-whole', mustDetect: true, observe: ['conformance'],

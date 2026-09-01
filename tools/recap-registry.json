@@ -739,6 +739,10 @@
     {
       "round": 248,
       "no_recap": "Round 248 does not close #177 — it delivers the per-channel item and leaves four: the web verifier's disclosure inputs, `ust sign` with its envelope, private partitions in ust-light, and the parity table's split of PRODUCE from CONSUME. The unit of a recap is the CLOSED ISSUE; this round closes none."
+    },
+    {
+      "round": 249,
+      "no_recap": "Round 249 does not close #177 — it is the adversarial pass over rounds 243-248 that the owner asked for before continuing, and it leaves the card's four surface items untouched: the web verifier's disclosure inputs, `ust sign` with its envelope, private partitions in ust-light, and the parity table's split of PRODUCE from CONSUME. The unit of a recap is the CLOSED ISSUE; this round closes none."
     }
   ]
 }

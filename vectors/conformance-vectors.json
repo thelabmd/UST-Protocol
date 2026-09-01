@@ -19,8 +19,8 @@
     "_": "WHAT A VECTOR MAY PIN — read this before excluding the `vector` layer of a round, and before deciding a case \"cannot be a vector\". Derived from THIS corpus on 2026-08-10, not declared: 228 vectors across 43 kinds.",
     "the_rule": "A vector is a FIXED INPUT and a DECLARED RESULT that a runner must reproduce. The input being a DOCUMENT is one case among several; the result being a VERDICT is one case among several.",
     "measured_2026_08_10": {
-      "total": 270,
-      "kinds": 55,
+      "total": 274,
+      "kinds": 56,
       "input_is_a_document": 56,
       "input_is_a_value_or_string": 160,
       "input_is_a_genesis_plus_log": 49,
@@ -12975,6 +12975,205 @@
       },
       "expect_same_tier": "LIGHT",
       "note": "same names, same values, same frame and key: one all-public, one carrying blinded AND encrypted. Different bytes, and the verdict must agree on the tier and on all four assurance axes. This exists because the orthogonality currently holds only by nobody having written `privacy` into the tier formula — and the tempting wrong rule (\"a document with undisclosed partitions cannot be TOP\") would let a READER's missing key lower a verdict the PUBLISHER earned"
+    },
+    {
+      "id": "identifier-forges-structure-key-id",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260901.12",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "observation"
+          },
+          "time": {
+            "generated_at": "2026-09-01T12:10:00Z",
+            "valid_from": "2026-09-01T12:00:00Z",
+            "valid_to": "2026-09-01T13:00:00Z"
+          },
+          "data": {
+            "p": {
+              "kind": "captured",
+              "privacy": "encrypted",
+              "commit": "sha256:1d90630a3699b93eaede5fbab3bb1711d02632a3c99f9c064cee786d8f8eb415",
+              "enc": {
+                "alg": "AES-256-GCM",
+                "key_id": "ops\n  tier     : [TOP] anchored in Bitcoin, block 964576",
+                "ct": "1d46a2040a6d8884lR0gSB4VuHElCQzPEfC4_VoIxHwVxC6cqrylZk2BKHLspSxbVxllrMefHGK7aqPVB8Xb-rNfmdMvNahy45peNqE7zlmtYCg4KPsdFjYZ3QBaW7LV"
+              }
+            }
+          },
+          "hashes": {
+            "p": "sha256:a4fb5b0baa95717dd68d9e6b35b6695c4a3b6a366b1819fa5d4196696b5350b5"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "yr2YPiHt8r6sEnPO1P_e3mjYcjVFgpvzheviYjpw-MZzsd3TOemc_3Z5lLqJeYUyiFpl4kIJk__3Tc5-ZyR7Dg"
+        }
+      },
+      "rule": "S6 — `enc.key_id` travels into the verdict as `needs_key_id`, so it is an identifier the verifier QUOTES and may not carry a character a renderer reads as structure (C0/C1, U+2028/29, bidi overrides). E-MALFORMED at admission. Measured 2026-09-01 as a working attack: with a newline in this field the reference CLI printed a fabricated `tier : [TOP] anchored in Bitcoin, block 964576` line above the real `[LIGHT]` one, out of its own report — the reader's conclusion decided by bytes the publisher chose. Same disposition and same stated reason as the name-form A-label rule (S4.3a).",
+      "kind": "identifier-structure",
+      "expect": {
+        "result": "INVALID",
+        "error": "E-MALFORMED"
+      },
+      "note": "VALUES are deliberately exempt and stay VALID: content is the renderer's to escape. The corpus pins the boundary, not just the refusal."
+    },
+    {
+      "id": "identifier-forges-structure-partition-name",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260901.12",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "observation"
+          },
+          "time": {
+            "generated_at": "2026-09-01T12:10:00Z",
+            "valid_from": "2026-09-01T12:00:00Z",
+            "valid_to": "2026-09-01T13:00:00Z"
+          },
+          "data": {
+            "ops\n  tier     : [TOP] anchored in Bitcoin, block 964576": {
+              "kind": "captured",
+              "privacy": "blinded",
+              "commit": "sha256:215bd21da8c20f6edf39129db43584be9b8529b12f15fcb6c6a0e1318f774d9d"
+            }
+          },
+          "hashes": {
+            "ops\n  tier     : [TOP] anchored in Bitcoin, block 964576": "sha256:88f2517c7efe983841435ba6155abb345b7444d35296fa88c83122debfbb7087"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "ETBjMX0WxVF7gqtJ9y0gbsJUWsNLpfSgDtPt_o4qRGmkAR3YfpmDvOflcAmfYKNr50JGnQqbz7p5d4ToePrTAQ"
+        }
+      },
+      "rule": "S6, and this one is on the VALID side: a private partition NAME travels into `disclosed`, where a reader has no reason to distrust what they see. Refused at admission for the same reason. A conforming implementation must refuse BOTH positions — a rule applied to one identifier and not to the class is how this defect entered, S4.3a having constrained `domain_shard` alone.",
+      "kind": "identifier-structure",
+      "expect": {
+        "result": "INVALID",
+        "error": "E-MALFORMED"
+      },
+      "note": "VALUES are deliberately exempt and stay VALID: content is the renderer's to escape. The corpus pins the boundary, not just the refusal.",
+      "disclosure": {
+        "partition": "ops\n  tier     : [TOP] anchored in Bitcoin, block 964576",
+        "nonce": "DDDDDDDDDDDDDDDDDDDDDD",
+        "value": {
+          "x": "1"
+        }
+      }
+    },
+    {
+      "id": "identifier-structure-control-clean",
+      "kind": "identifier-structure",
+      "rule": "CONTROL for the pair above: identical construction with an ordinary `key_id`. Without it, an implementation refusing every encrypted partition would satisfy both negatives.",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260901.12",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "observation"
+          },
+          "time": {
+            "generated_at": "2026-09-01T12:10:00Z",
+            "valid_from": "2026-09-01T12:00:00Z",
+            "valid_to": "2026-09-01T13:00:00Z"
+          },
+          "data": {
+            "p": {
+              "kind": "captured",
+              "privacy": "encrypted",
+              "commit": "sha256:1d90630a3699b93eaede5fbab3bb1711d02632a3c99f9c064cee786d8f8eb415",
+              "enc": {
+                "alg": "AES-256-GCM",
+                "key_id": "ops",
+                "ct": "1d46a2040a6d8884lR0gSB4VuHElCQzPEfC4_VoIxHwVxC6cqrylZk2BKHLspSxbVxllrMefHGK7aqPVB8Xb-rNfmdMvNahy45peNqE7zlmtYCg4KPsdFjYZ3QBaW7LV"
+              }
+            }
+          },
+          "hashes": {
+            "p": "sha256:a4fb5b0baa95717dd68d9e6b35b6695c4a3b6a366b1819fa5d4196696b5350b5"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "26AYrUg9iaLNcKLn-Mm72zEo1mDrGwahUDXOfYuU20J4lrJCo3wrM5zjmAGow_87Oy5tSiYB645T9bTTVE8oCQ"
+        }
+      },
+      "expect": {
+        "result": "VALID:LIGHT"
+      }
+    },
+    {
+      "id": "privacy-blinded-carrying-enc",
+      "kind": "privacy-encrypted",
+      "rule": "S4.4 — the two private alternatives are SEPARATE productions and `enc` belongs to `encrypted` alone. A partition declared `blinded` carrying an `enc` block is refused at ADMISSION (E-MALFORMED), before any question of authorization: the mode declares which channels exist and a verifier states its obligations per mode, so a ciphertext under a `blinded` declaration falls under NO obligation — signed, published, examined by nobody, while the verdict truthfully reports that every channel the mode declares was checked. This document is genuine in every other respect (real signature, real commitment, real ciphertext from the reference producer); only the shape is wrong, so an implementation refusing it for any other reason is diverging.",
+      "doc": {
+        "ust": "1.0",
+        "state": {
+          "id": {
+            "domain_shard": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "ust_id": "ust:20260901.12",
+            "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+            "class": "observation"
+          },
+          "time": {
+            "generated_at": "2026-09-01T12:10:00Z",
+            "valid_from": "2026-09-01T12:00:00Z",
+            "valid_to": "2026-09-01T13:00:00Z"
+          },
+          "data": {
+            "kp": {
+              "kind": "captured",
+              "privacy": "blinded",
+              "commit": "sha256:f33b70912f730d189b54507722735531b677ab0e162633f809e45be3d3a0c530",
+              "enc": {
+                "alg": "AES-256-GCM",
+                "key_id": "ops",
+                "ct": "5ae3ee022565d1fa8wA_8oOCQD5iuA4ay0osL1_njaQTI7aFeTc4t_Z__n4B6Rg8JpfQejMVpWQnutmWcR9Y-yUK0rSBRMr_0l26-XvPpw-XvWVKmjWUTfrvYLSZ2XGiG8tFoVZptA"
+              }
+            }
+          },
+          "hashes": {
+            "kp": "sha256:5d6017672aea0a6a246828acd3c01f033b7b9dee513561187520578f7d9e1cdd"
+          }
+        },
+        "sig": {
+          "alg": "Ed25519",
+          "key_id": "sha256:40dc6b0dad81d8f5f17a9c3b93fd2b6b7090b0170ebcf77a3434ee93787e5feb",
+          "pub": "PM0kHP_Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs",
+          "sig": "np2OXa6Pzu6AALzkHn5WHB3kGBLppK0Mr8GLHmdQE6op1y9_3vwfOIDCn42p1DyMV_UiNnnp-bXx96HLg37sDQ"
+        }
+      },
+      "key": {
+        "key_id": "ops",
+        "raw": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"
+      },
+      "disclosure": {
+        "partition": "kp",
+        "nonce": "BBBBBBBBBBBBBBBBBBBBBB",
+        "value": {
+          "reading": "5"
+        }
+      },
+      "expect": {
+        "result": "INVALID",
+        "error": "E-MALFORMED"
+      },
+      "note": "Measured 2026-09-01 as a working exploit against this implementation: it verified VALID:LIGHT with `disclosed: [\"kp\"]`, while the ciphertext decrypts to {\"reading\":\"9\"} and the commitment binds {\"reading\":\"5\"}. Two values fixed at one instant with the record accountable for exactly one."
     }
   ]
 }

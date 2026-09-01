@@ -148,14 +148,24 @@ export async function verify(doc, opts = {}) {
     if (dk.length === 0) return bad('E-MALFORMED', 'no partitions');
     if (dk.length !== hk.length || !dk.every((k) => k in st.hashes)) return bad('E-MALFORMED', 'data⇄hashes bijection broken');
     const HASH = /^sha256:[0-9a-f]{64}$/, B64URL = /^[A-Za-z0-9_-]+$/, AEAD = ['AES-256-GCM', 'XChaCha20-Poly1305'];
+    // §6 — an identifier the verdict QUOTES may not carry a character a renderer reads as structure. Implemented
+    // HERE independently: this file is a clean-room second verifier, so the reference's fix does not reach it, and
+    // the parity gate showed both attacks landing here after the core was already safe. Tester without `/g` on
+    // purpose — a `/g` regex keeps `lastIndex` across calls and answers FALSE on its third invocation.
+    const FORGES = /[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]/;
     for (const name of dk) {
       if (RES_NAMES.has(name)) return bad('E-MALFORMED', 'reserved partition name: ' + name);
+      if (FORGES.test(name)) return bad('E-MALFORMED', 'partition name carries a control or bidi-override character (§6)');
       const part = st.data[name];
       if (!KINDS.includes(part.kind)) return bad('E-MALFORMED', 'unknown partition kind: ' + name + '.' + part.kind);
       if (part.privacy === undefined) { if (part.value === undefined) return bad('E-MALFORMED', 'public partition without value: ' + name); }
       else {
         if (!PRIVACY.includes(part.privacy)) return bad('E-MALFORMED', 'unknown privacy: ' + name);
         if (!HASH.test(part.commit || '')) return bad('E-MALFORMED', 'private commit not sha256:hex: ' + name);       // F5
+        // §4.4 — the two private alternatives are SEPARATE productions: `enc` belongs to `encrypted` alone. A
+        // ciphertext under a `blinded` declaration falls under no obligation and is examined by nobody.
+        if (part.privacy === 'blinded' && part.enc !== undefined) return bad('E-MALFORMED', 'blinded partition carries an enc block — a channel its mode does not declare (§4.4)');
+        if (part.privacy === 'encrypted' && typeof part.enc?.key_id === 'string' && FORGES.test(part.enc.key_id)) return bad('E-MALFORMED', 'enc.key_id carries a control or bidi-override character (§6)');
         if (part.privacy === 'encrypted') { const e = part.enc; if (!e || !AEAD.includes(e.alg) || typeof e.key_id !== 'string' || !B64URL.test(e.ct || '')) return bad('E-MALFORMED', 'encrypted missing/invalid enc: ' + name); }
       }
       const want = await partitionHash({ domain_shard: id.domain_shard, ust_id: id.ust_id, name, value: part.value, commit: part.commit });

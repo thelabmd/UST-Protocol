@@ -975,12 +975,29 @@ function verifyCoreInner(doc, opts = {}) {
     if (!CLASSES.includes(st.id.class)) return bad('E-MALFORMED', 'unknown class ' + st.id.class);
     if (dk.length < 1) return bad('E-MALFORMED', 'no partition');
     const HASH = /^sha256:[0-9a-f]{64}$/;
+    // §6 — a partition NAME travels into `disclosed`, so it is an identifier the verdict carries and may not hold
+    // a character a renderer reads as structure. Measured 2026-09-01: a private partition named with an embedded
+    // newline put a forged line into the reference CLI's own output on a VALID verdict — where a reader has no
+    // reason to distrust what they see. Values stay exempt: content is the renderer's to escape.
+    for (const name of dk) {
+      if (FORGES_STRUCTURE.test(name)) return bad('E-MALFORMED', 'partition name carries a control or bidi-override character — an identifier the verdict quotes may not forge structure (§6)');
+    }
     for (const name of dk) {                                            // §S4/F5 — private partition schema
       const part = st.data[name];
       if (part.privacy !== undefined) {
         if (!HASH.test(part.commit || '')) return bad('E-MALFORMED', 'private partition commit not sha256:hex: ' + name);
+        // §4.4 — the two private alternatives are SEPARATE productions, and `enc` belongs to exactly one. Measured
+        // 2026-09-01 (#177) — CLOSED here: the grammar carried `enc` as unconditionally optional, so a partition
+        // declared `blinded` could ship a ciphertext, and the AEAD branch below — keyed on the MODE — never ran.
+        // The document verified VALID with the partition reported fully disclosed, while a key-holder decrypting
+        // out of band recovered a DIFFERENT value from the one the commitment binds. Two values fixed at t, and
+        // the record accountable for one. A channel the mode does not declare is examinable by nobody, so it is
+        // refused at admission rather than checked (model F.7a.2, unexaminable-channel corollary).
+        if (part.privacy === 'blinded' && part.enc !== undefined)
+          return bad('E-MALFORMED', 'blinded partition carries an `enc` block — a channel its mode does not declare, which no rule reaches: ' + name);
         if (part.privacy === 'encrypted') {                             // encrypted MUST carry a well-formed AEAD block
           const e = part.enc;
+          if (typeof e?.key_id === 'string' && FORGES_STRUCTURE.test(e.key_id)) return bad('E-MALFORMED', 'enc.key_id carries a control or bidi-override character — the verdict quotes it as `needs_key_id`, and an identifier may not forge structure (§6): ' + name);
           if (!e || !AEAD_ALGS.includes(e.alg) || typeof e.key_id !== 'string' || !B64URL.test(e.ct || '')) return bad('E-MALFORMED', 'encrypted partition missing/invalid enc{alg,key_id,ct}: ' + name);
         }
       } else if (part.value === undefined) return bad('E-MALFORMED', 'public partition without value: ' + name);
@@ -4633,7 +4650,20 @@ function err(code, detail) { const e = new Error(code); e.code = code; e.detail 
 // Stamped at the document DOORS, not inside bad(): bad() also serves verifyEvidenceReceipt, whose subject is a receipt
 // and has no document assurance state to rank.
 const floorTier = (v) => (v && v.result === 'INVALID' && v.tier === undefined ? { ...v, tier: 'NONE' } : v);
-function bad(code, detail, fields) { return { result: 'INVALID', error: code, detail, ...(fields || null) }; }
+// §6 identifier rule / model F.7a.2 identifier-as-structure corollary. A verdict is READ — by a person on a
+// terminal, an agent parsing a report, a page composing a line — and its `detail` quotes strings taken from the
+// document at 37 call sites. Measured 2026-09-01 (#177): a signed document whose `enc.key_id` carried a newline
+// made the reference CLI print a fabricated `tier : [TOP] anchored in Bitcoin` line above the real `[LIGHT]` one,
+// out of its own report. CLOSED 2026-09-01 here rather than at those 37 sites: editing each would leave the
+// thirty-eighth exposed the day it is written, and the quotation is the VERIFIER's act, so the escaping is the
+// verifier's duty. A rejected value never passed admission and cannot be constrained — only quoted safely.
+// TWO constants, and the split is load-bearing: a `/g` regex carries `lastIndex` ACROSS calls, so `.test()` on the
+// same string returns true, true, FALSE. A security predicate that answers differently on its third invocation is
+// worse than none — it passes exactly when it has been used most. The tester has no `g`; only the replacer does.
+const FORGES_STRUCTURE = /[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]/;
+const FORGES_STRUCTURE_G = new RegExp(FORGES_STRUCTURE.source, 'g');
+const quoteSafe = (s) => (typeof s === 'string' ? s.replace(FORGES_STRUCTURE_G, (c) => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0')) : s);
+function bad(code, detail, fields) { return { result: 'INVALID', error: code, detail: quoteSafe(detail), ...(fields || null) }; }
 // F.5.1d — a SUPPLY remedy is a PROMISE: provide `input` and the coordinate rises. A call that already HOLDS it
 // has produced the verdict it yields, so the clause is refuted by the very call that printed it. The helper is
 // given `opts` rather than trusting a branch condition, because a literal obeys the invariant only when the guard

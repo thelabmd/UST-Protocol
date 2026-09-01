@@ -612,6 +612,18 @@
       "rev": "round-248",
       "model_locus": "A verifier reporting such a partition as fully disclosed therefore states more than it established.",
       "conformance_check": "privacy-encrypted-channels-disagree: WITHOUT the key the divergence is invisible — VALID, and the value is reported as PARTIAL, never as disclosed"
+    },
+    {
+      "id": "L177-unexaminable-channel",
+      "rev": "round-249",
+      "model_locus": "not declare MUST be refused at admission (`E-MALFORMED`), before any question of authorization arises.",
+      "conformance_check": "privacy-blinded-carrying-enc: a blinded partition carrying an enc block is E-MALFORMED at admission — a channel no rule reaches may not be signed"
+    },
+    {
+      "id": "L177-identifier-as-structure",
+      "rev": "round-249",
+      "model_locus": "into a verdict a consumer will match against the document, so it must be constrained at admission and refused",
+      "conformance_check": "identifier-forges-structure-partition-name: and NO field of the verdict carries such a character — including the diagnostic that quotes the rejected value"
     }
   ]
 }

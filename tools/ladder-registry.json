@@ -2150,6 +2150,14 @@
       "code": "packages/ust-protocol/index.mjs :: step 8 splits the two channels — a partition whose AEAD could not be examined goes to `disclosed_partial` with `checked`/`unchecked`/`needs_key_id` instead of being pushed into `disclosed`; packages/ust-cli/index.mjs shows the three resulting states; packages/ust-mcp/live-test.mjs asserts the distinction reaches an agent over the wire.",
       "vector": "privacy-encrypted-channels-disagree",
       "test": "privacy-encrypted-channels-disagree: WITHOUT the key the divergence is invisible — VALID, and the value is reported as PARTIAL, never as disclosed"
+    },
+    {
+      "round": 249,
+      "math": "*Corollary (an identifier the verdict carries is STRUCTURE, and structure a publisher writes may not forge it).*",
+      "spec": "**IDENTIFIERS carry a further restriction, and VALUES do not.**",
+      "code": "packages/ust-protocol/index.mjs :: §4.4 splits the two private productions (a `blinded` partition carrying `enc` is E-MALFORMED at admission) and §6 constrains the identifiers the verdict quotes — partition names and `enc.key_id` — against control and bidi-override characters, with `quoteSafe` inside `bad()` covering all 37 diagnostic quotations in one place. The same two rules re-implemented independently in `docs/ust-verify.mjs` (clean-room) and synced byte-for-byte to `extension/lib/ust-verify.mjs`.",
+      "vector": "identifier-forges-structure-partition-name",
+      "test": "identifier-forges-structure-partition-name: and NO field of the verdict carries such a character — including the diagnostic that quotes the rejected value"
     }
   ],
   "first_accounted_round": 76,

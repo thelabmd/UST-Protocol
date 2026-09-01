@@ -4106,6 +4106,39 @@ build may implement fewer algorithms than the registry names — that is the OPT
 one the registry does not, since an algorithm outside `Reg` is refused as the document's defect at admission
 (`E-MALFORMED`) and never reaches this decision at all.
 
+*Corollary (an identifier the verdict carries is STRUCTURE, and structure a publisher writes may not forge it).*
+A verifier's output is read — by a person on a terminal, by an agent parsing a report, by a page composing a
+line. Some fields of that output are the verifier's own words; others are identifiers copied from the document,
+because a consumer must be able to match a verdict back to the artifact it judges. The publisher therefore writes
+part of what the reader sees.
+
+If such an identifier may contain a character that a renderer interprets as STRUCTURE — a line break, a cursor
+control, a bidirectional override — then a publisher can compose lines of the verifier's own report. The reader's
+conclusion then depends on bytes the publisher chose rather than on the judgment the verifier reached, which is
+the R3 controller condition (`the output does not read the input`) defeated at the display boundary rather than
+inside the derivation.
+
+Two dispositions follow, and they differ because the situations differ. An identifier that is ADMITTED travels
+into a verdict a consumer will match against the document, so it must be constrained at admission and refused
+otherwise (`E-MALFORMED`) — the same disposition §4.3a already takes for a name-form `domain_shard`, and for the
+same stated reason: a string that deceives a human reading the verdict. A value that is REJECTED never passed
+admission, so it cannot be constrained; where a diagnostic quotes it, the quotation is the verifier's own act and
+the verifier owes the escaping. VALUES are exempt in both cases: a value is content the reader asked to see, and
+escaping content is the renderer's ordinary duty, not a protocol obligation. ∎
+
+*Corollary (a channel outside the declared mode is unexaminable, therefore inadmissible).* The MODE declares which
+channels a partition has: `blinded` has one, `encrypted` two. A verifier's obligations are stated per mode, so a
+ciphertext carried by a partition declared `blinded` falls under no obligation — no rule reaches it, and by the
+per-channel corollary below there is not even a partial report to make, since the report enumerates the channels
+the MODE says exist. Such a channel is therefore signed, published, and examinable by nobody, while the verdict
+correctly states that every channel the mode declares was checked.
+
+That is F.2 defeated by construction rather than by disagreement: the publisher has fixed two values at `t` — one
+in the commitment, one in the ciphertext — and the record is only accountable for the first. A holder of the
+decryption key reads the second and can attribute it to a signature that never covered a check of it. The
+admissible shapes are therefore exactly those the modes define, and a partition carrying a channel its mode does
+not declare MUST be refused at admission (`E-MALFORMED`), before any question of authorization arises. ∎
+
 *Corollary (authorization is per-CHANNEL, so a partial disclosure may not be reported as a whole one).* F.7a.2
 gives an `encrypted` partition two channels, and the two are opened by DIFFERENT secrets: the commitment by
 `(nonce′, value′)`, the AEAD by the key `k`. A party may hold either without the other. So the antecedent "if
