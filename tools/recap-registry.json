@@ -735,6 +735,10 @@
     {
       "round": 247,
       "no_recap": "Round 247 does not close #177 — it delivers two of the card's six remaining items (decKeys on ust_verify, the CLI printing what opened and what did not) and leaves four: the web verifier's inputs, `ust sign` with its disclosure envelope, private partitions in ust-light, and the parity table's own split of PRODUCE from CONSUME. The unit of a recap is the CLOSED ISSUE; this round closes none."
+    },
+    {
+      "round": 248,
+      "no_recap": "Round 248 does not close #177 — it delivers the per-channel item and leaves four: the web verifier's disclosure inputs, `ust sign` with its envelope, private partitions in ust-light, and the parity table's split of PRODUCE from CONSUME. The unit of a recap is the CLOSED ISSUE; this round closes none."
     }
   ]
 }

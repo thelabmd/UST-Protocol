@@ -606,6 +606,12 @@
       "rev": "round-237",
       "model_locus": "A caller axiom that AGREES with the served list costs nothing to keep",
       "conformance_check": "caller air-gap override (honored) → HIGH, the EARNED basis is kept and the axiom never becomes independent (#69 B / P0-2, round-237)"
+    },
+    {
+      "id": "L177-per-channel-disclosure",
+      "rev": "round-248",
+      "model_locus": "A verifier reporting such a partition as fully disclosed therefore states more than it established.",
+      "conformance_check": "privacy-encrypted-channels-disagree: WITHOUT the key the divergence is invisible — VALID, and the value is reported as PARTIAL, never as disclosed"
     }
   ]
 }

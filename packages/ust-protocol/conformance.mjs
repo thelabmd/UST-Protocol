@@ -1336,18 +1336,51 @@ check('F8 impossible ust_id→E-MALFORMED', P.verify(mk({ r: { kind: 'captured',
       const both = P.verify(vec.doc, { context: 'data', disclosures: disc, decKeys: keys });
       check(`${vec.id}: opaque without a disclosure — VALID and nothing disclosed`,
         opaque.result === vec.expect_opaque && Array.isArray(opaque.disclosed) && opaque.disclosed.length === 0);
-      check(`${vec.id}: the committed {nonce,value} discloses without any key (F.7a.1)`,
-        shown.result === vec.expect_disclosed_no_key && shown.disclosed.includes(vec.disclosure.partition));
-      check(`${vec.id}: with the key too, both channels agree and the VERDICT is unchanged (a disclosure enlarges the reader, not the record)`,
-        both.result === vec.expect_disclosed_with_key && both.disclosed.includes(vec.disclosure.partition));
+      // The claim these two make CHANGED with the per-channel rule, so they are rewritten rather than re-pointed:
+      // the value does become known from the commitment alone — that never stopped being true — but naming that
+      // state `disclosed` claimed a check nobody performed. The pair now pins WHICH channels were examined.
+      const partOf = (r) => (r.disclosed_partial || []).find((x) => x.partition === vec.disclosure.partition);
+      check(`${vec.id}: the committed {nonce,value} is admitted without any key — and lands in disclosed_PARTIAL, naming the AEAD channel nobody could look at (F.7a.1 per-channel)`,
+        shown.result === vec.expect_disclosed_no_key && !(shown.disclosed || []).includes(vec.disclosure.partition)
+        && partOf(shown)?.checked === 'commit' && partOf(shown)?.unchecked === 'aead');
+      check(`${vec.id}: the partial report names the key a reader would need — a gap a consumer cannot act on is a gap barely reported`,
+        partOf(shown)?.needs_key_id === vec.doc.state.data[vec.disclosure.partition].enc.key_id);
+      check(`${vec.id}: with the key BOTH channels are checked, so it moves into disclosed and the partial report is gone entirely`,
+        both.result === vec.expect_disclosed_with_key && (both.disclosed || []).includes(vec.disclosure.partition) && both.disclosed_partial === undefined);
+      check(`${vec.id}: and the VERDICT itself is unchanged across all three — a disclosure enlarges the READER, never the record (tier orthogonality)`,
+        opaque.result === shown.result && shown.result === both.result && opaque.tier === both.tier);
     } else {
       const noKey = P.verify(vec.doc, { context: 'data', disclosures: disc });
       const withKey = P.verify(vec.doc, { context: 'data', disclosures: disc, decKeys: keys });
-      check(`${vec.id}: WITHOUT the key the divergence is invisible — VALID, and the committed value discloses`,
-        noKey.result === vec.expect_without_key && noKey.disclosed.includes(vec.disclosure.partition));
+      // Same rewrite, and here it is load-bearing rather than cosmetic: this document's channels CONTRADICT each
+      // other, so a reader without the key must not be handed a word that means "every channel agreed". The old
+      // assertion required exactly that, which is how a defect gets locked in by the check that watches it.
+      check(`${vec.id}: WITHOUT the key the divergence is invisible — VALID, and the value is reported as PARTIAL, never as disclosed`,
+        noKey.result === vec.expect_without_key && !(noKey.disclosed || []).includes(vec.disclosure.partition)
+        && (noKey.disclosed_partial || []).some((x) => x.partition === vec.disclosure.partition && x.unchecked === 'aead'));
       check(`${vec.id}: a decryption naming another value is E-COMMIT, never a second opinion (F.7a.2)`,
         withKey.result === vec.expect_with_key.result && withKey.error === vec.expect_with_key.error);
     }
+  }
+  // EVERY field access below is shape-guarded, and that is not defensive style. Measured 2026-09-01, CLOSED 2026-09-01 by the guards themselves: the first
+  // draft read `withKey.disclosed.includes(…)` directly, and under the `verifier-stops-refusing` mutant — where
+  // `bad()` returns a bare `{result:'VALID'}` — it threw. A throw kills the whole suite before any verdict is
+  // collected, so the battery saw NOTHING go red and reported a detectable mutant as decorative. A check that
+  // crashes is a check that cannot fail: it does not merely miss its own claim, it hides every claim behind it.
+  // The per-channel expectation, driven FROM THE CORPUS so a port runs the same assertion on the same bytes. The
+  // checks above pin this build's behaviour by hand; this loop pins it as a normative claim any implementation owes.
+  for (const vec of V.vectors.filter((x) => x.expect_channels_without_key)) {
+    const disc = { [vec.disclosure.partition]: { nonce: vec.disclosure.nonce, value: vec.disclosure.value } };
+    const noKey = P.verify(vec.doc, { context: 'data', disclosures: disc });
+    const withKey = P.verify(vec.doc, { context: 'data', disclosures: disc, decKeys: { [vec.key.key_id]: vec.key.raw } });
+    const w = vec.expect_channels_without_key, got = (noKey.disclosed_partial || []).find((x) => x.partition === vec.disclosure.partition);
+    check(`${vec.id}: [corpus] without the key — disclosed=${w.disclosed}, partial names ${w.partial.checked}/${w.partial.unchecked}`,
+      (noKey.disclosed || []).includes(vec.disclosure.partition) === w.disclosed
+      && got?.checked === w.partial.checked && got?.unchecked === w.partial.unchecked && got?.needs_key_id === w.partial.needs_key_id,
+      JSON.stringify(got));
+    // the with-key half only applies where the document is honest; a divergent one is INVALID and discloses nothing
+    if (withKey.result.startsWith('VALID')) check(`${vec.id}: [corpus] with the key — disclosed=${vec.expect_channels_with_key.disclosed}, no partial report remains`,
+      (withKey.disclosed || []).includes(vec.disclosure.partition) === vec.expect_channels_with_key.disclosed && withKey.disclosed_partial === undefined);
   }
   // The algorithm registry, both halves — they sit one line apart in the implementation and mean opposite things:
   // an unlisted mode is the DOCUMENT's defect, an unimplemented OPTIONAL one is the VERIFIER's inability.

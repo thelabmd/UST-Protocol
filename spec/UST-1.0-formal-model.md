@@ -4106,7 +4106,22 @@ build may implement fewer algorithms than the registry names — that is the OPT
 one the registry does not, since an algorithm outside `Reg` is refused as the document's defect at admission
 (`E-MALFORMED`) and never reaches this decision at all.
 
-**Binding: realized** — *"privacy-encrypted-disclosure: the committed {nonce,value} discloses without any key (F.7a.1)"* ·
+*Corollary (authorization is per-CHANNEL, so a partial disclosure may not be reported as a whole one).* F.7a.2
+gives an `encrypted` partition two channels, and the two are opened by DIFFERENT secrets: the commitment by
+`(nonce′, value′)`, the AEAD by the key `k`. A party may hold either without the other. So the antecedent "if
+authorized" is not one condition but two, and a party holding only the disclosure has enlarged `ℐ` by `value′` —
+bound by the commitment, hence genuine — while learning nothing about whether the second channel agrees. By
+F.7a.2 that silence is not evidence of agreement: the divergent document is precisely the one whose divergence is
+invisible from this position.
+
+A verifier reporting such a partition as fully disclosed therefore states more than it established. The report
+must distinguish the two outcomes, and the distinction belongs on the POSITIVE side: "disclosed" names the
+partitions for which every channel the publisher provided was checked, and one whose second channel could not be
+examined is reported apart, with the capability that was missing. Placing it only in an auxiliary field would
+leave the plain reading — a name appears in the disclosed list — true of a state nobody verified, and a consumer
+is entitled to read a verdict at face value. ∎
+
+**Binding: realized** — *"privacy-encrypted-disclosure: the committed {nonce,value} is admitted without any key — and lands in disclosed_PARTIAL, naming the AEAD channel nobody could look at (F.7a.1 per-channel)"* ·
 *"privacy-encrypted-channels-disagree: a decryption naming another value is E-COMMIT, never a second opinion (F.7a.2)"* ·
 *"faculty-absent-aead-xchacha: with the faculty present the same document verifies — aead-xchacha20-poly1305"* ·
 *"privacy-encrypted-bytes-wellformed: CONTROL, and it is load-bearing: the SAME byte path admits a well-formed encrypted partition. Without it"*.

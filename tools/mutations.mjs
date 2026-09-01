@@ -362,6 +362,13 @@ export const MUTATIONS = [
     to: "function bad(code, detail, fields) { return { result: 'VALID', tier: 'LIGHT' }; }",
   },
   {
+    id: 'partial-disclosure-reported-as-whole', mustDetect: true, observe: ['conformance'],
+    why: 'the per-channel seam (§14.8, model F.7a.1 per-channel corollary). An `encrypted` partition has two channels opened by different secrets; a reader holding only the disclosure checked ONE. Broken, that reader is handed the same word as one who checked both — and on the divergence vectors, where the two channels contradict each other, "disclosed" would name a state nobody verified. Every check whose evidence is "the report does not outrun the check" must go red.',
+    file: 'packages/ust-protocol/index.mjs',
+    from: "          disclosedPartial.push({ partition: name, checked: 'commit', unchecked: 'aead', needs_key_id: part.enc.key_id });",
+    to: "          disclosed.push(name);   /* mutant: the pre-#177 behaviour — one channel reported as all of them */",
+  },
+  {
     id: 'signature-always-verifies', mustDetect: true, observe: ['conformance'],
     why: 'the Ed25519 leaf. Broken, every forged or tampered signature passes — checks whose evidence is "a bad signature is refused" must go red.',
     file: 'packages/ust-protocol/index.mjs',

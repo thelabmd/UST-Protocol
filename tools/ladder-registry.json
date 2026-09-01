@@ -2142,6 +2142,14 @@
       "code": "packages/ust-mcp/index.mjs :: `decKeys` on `ust_verify` — schema, handler signature and the options object, so ONE call reaches both privacy modes; packages/ust-cli/index.mjs :: a `private` line naming what opened AND what stayed closed (the negative half is the one a reader cannot reconstruct), and `resolveByDiscovery` now receives the consumer's envelope by SPREAD instead of a hand-copied field list that had silently dropped it.",
       "vector": "privacy-encrypted-channels-disagree",
       "test": "packages/ust-mcp/live-test.mjs :: live:decKeys is genuinely USED — channels that disagree give the agent E-COMMIT, not VALID"
+    },
+    {
+      "round": 248,
+      "math": "*Corollary (authorization is per-CHANNEL, so a partial disclosure may not be reported as a whole one).*",
+      "spec": "**Authorization is PER-CHANNEL, and a partial check MUST NOT be reported as a whole one.**",
+      "code": "packages/ust-protocol/index.mjs :: step 8 splits the two channels — a partition whose AEAD could not be examined goes to `disclosed_partial` with `checked`/`unchecked`/`needs_key_id` instead of being pushed into `disclosed`; packages/ust-cli/index.mjs shows the three resulting states; packages/ust-mcp/live-test.mjs asserts the distinction reaches an agent over the wire.",
+      "vector": "privacy-encrypted-channels-disagree",
+      "test": "privacy-encrypted-channels-disagree: WITHOUT the key the divergence is invisible — VALID, and the value is reported as PARTIAL, never as disclosed"
     }
   ],
   "first_accounted_round": 76,

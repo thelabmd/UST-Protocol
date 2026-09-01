@@ -1661,11 +1661,17 @@ async function cmdVerify() {
     {
       const priv = Object.entries((doc && doc.state && doc.state.data) || {}).filter(([, p]) => p && p.privacy);
       if (priv.length) {
+        // THREE states, not two (§14.8 per-channel): fully checked · value known but one channel unexamined ·
+        // untouched. Collapsing the middle one into either neighbour is the defect this line exists for — calling
+        // it `opened` claims a check nobody ran, calling it `closed` denies the reader a value they already hold.
         const opened = new Set(r.disclosed || []);
-        const shut = priv.filter(([n]) => !opened.has(n));
+        const partial = new Map((r.disclosed_partial || []).map((x) => [x.partition, x]));
+        const shut = priv.filter(([n]) => !opened.has(n) && !partial.has(n));
         console.log('  private  : ' + priv.length + ' partition(s) — '
           + (opened.size ? 'opened ' + [...opened].join(', ') : 'none opened')
+          + (partial.size ? '; PARTIAL ' + [...partial.values()].map((x) => x.partition + ' (value known from the commitment; its ' + x.unchecked + ' channel unchecked — needs key ' + x.needs_key_id + ')').join(', ') : '')
           + (shut.length ? '; still closed ' + shut.map(([n, p]) => n + ' (' + p.privacy + ')').join(', ') : ''));
+        if (partial.size) console.log('     a PARTIAL value is bound by the commitment and is genuine — what is unknown is whether the publisher\'s ciphertext says the same, which only the key settles');
         if (shut.length && !opts.disclosures) console.log('     supply --disclosures {partition:{nonce,value}} to open them; the commitment decides, so a wrong pair cannot forge — only fail to reveal');
         if (shut.some(([, p]) => p.privacy === 'encrypted') && !opts.decKeys) console.log('     an encrypted partition also accepts --dec-keys {key_id:key}, which checks the ciphertext AGAINST the commitment (E-COMMIT if they disagree)');
       }

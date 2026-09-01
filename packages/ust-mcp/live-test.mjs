@@ -82,6 +82,15 @@ check('live:fork_choice same ust_id, no substrate → INDETERMINATE', (await cal
   check('live:decKeys is genuinely USED — channels that disagree give the agent E-COMMIT, not VALID', caught.error === 'E-COMMIT', JSON.stringify(caught.error));
   const blind = await ask(dis, false);
   check('live:without the key that same document verifies — the divergence is invisible, which is WHY the key must travel (F.7a.2)', blind.result === 'VALID:LIGHT', JSON.stringify(blind.result));
+  // §14.8 per-channel: an agent holding only the disclosure completed ONE channel of two, and must be told so. On
+  // THIS document the two channels contradict each other, so a surface reporting it as fully disclosed would hand
+  // an agent a word meaning "every channel agreed" about a record where none did.
+  check('live:a one-channel result reaches the agent as PARTIAL, never as disclosed — the word must not outrun the check',
+    !(blind.disclosed || []).includes(dis.disclosure.partition)
+    && (blind.disclosed_partial || []).some((x) => x.partition === dis.disclosure.partition && x.checked === 'commit' && x.unchecked === 'aead'),
+    JSON.stringify({ disclosed: blind.disclosed, partial: blind.disclosed_partial }));
+  check('live:and the partial report names the key the agent would need to finish the check',
+    (blind.disclosed_partial || [])[0]?.needs_key_id === dis.doc.state.data[dis.disclosure.partition].enc.key_id);
 }
 
 await client.close();

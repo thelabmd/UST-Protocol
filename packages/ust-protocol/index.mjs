@@ -1119,7 +1119,17 @@ function verifyCoreInner(doc, opts = {}) {
         + (suppliedInput(opts, 'keylogHeadAnchor') ? ' — the keylogHeadAnchor supplied did not establish freshness (§12.2a)' : '') };
     // step 8 — privacy (§14.8/§10): if the caller discloses {nonce,value}, REPRODUCE the commit; for
     // `encrypted`, AEAD-decrypt must reproduce the SAME committed plaintext (E-COMMIT on mismatch). Never brute-force.
-    const disclosed = [];
+    // AUTHORIZATION IS PER-CHANNEL (§14.8, model F.7a.1 per-channel corollary). An `encrypted` partition has two
+    // channels opened by DIFFERENT secrets, and a party may hold either without the other. Measured 2026-08-31
+    // (#177) — CLOSED 2026-09-01 by this branch: a partition disclosed WITHOUT its key was pushed into `disclosed`
+    // exactly like one whose ciphertext had been checked, and the two verdicts compared equal field by field. On
+    // the divergence vector that is the same `disclosed: ["secret"]` for a document whose channels agree and one
+    // whose channels contradict each other — the verifier stating more than it established.
+    // The distinction sits on the POSITIVE side on purpose: `disclosed` means EVERY channel the publisher provided
+    // was checked. A partition opened by commitment alone lands in `disclosed_partial` naming the channel that was
+    // not examined, so the simplest reading of a verdict — a name appears in `disclosed` — is never true of a state
+    // nobody verified. An auxiliary flag would have left that reading intact and merely documented the trap.
+    const disclosed = [], disclosedPartial = [];
     for (const name of dk) {
       const part = st.data[name];
       if (part.privacy === undefined) continue;
@@ -1127,7 +1137,11 @@ function verifyCoreInner(doc, opts = {}) {
       if (!disc) continue;                                                // not authorized — commit stands, opaque
       const reproduced = blindedCommit({ domain_shard: st.id.domain_shard, ust_id: st.id.ust_id, name, value: disc.value, nonce: disc.nonce });
       if (reproduced !== part.commit) return bad('E-COMMIT', 'blinded commit mismatch: ' + name);
-      if (part.privacy === 'encrypted' && part.enc && opts.decKeys?.[part.enc.key_id]) {
+      if (part.privacy === 'encrypted' && part.enc) {
+        if (!opts.decKeys?.[part.enc.key_id]) {                            // the second channel exists and is CLOSED to this reader
+          disclosedPartial.push({ partition: name, checked: 'commit', unchecked: 'aead', needs_key_id: part.enc.key_id });
+          continue;
+        }
         const pt = aeadDecrypt(part.enc, opts.decKeys[part.enc.key_id]);  // → canon({nonce,<p>:value}) plaintext
         if (pt === 'unsupported')                                          // §17 MTI: optional alg ⇒ cannot decide, NOT invalid
           return { result: 'INDETERMINATE', reason: 'unsupported_alg', detail: 'AEAD ' + part.enc.alg + ' is OPTIONAL and not implemented by this verifier: ' + name };
@@ -1241,7 +1255,7 @@ function verifyCoreInner(doc, opts = {}) {
     // A verdict that does not say WHO judged it cannot be re-checked later. `verifier` + `registry_digest` bind this
     // result to the rules that produced it: pin the pair and the same verdict is reproducible after the protocol has
     // moved on, which is what lets the rules keep changing without redefining verdicts already handed out.
-    return { result: 'VALID:' + tier, tier, assurance, identity: { ...identity, mode: shardMode }, disclosed, sources, ...nameField,
+    return { result: 'VALID:' + tier, tier, assurance, identity: { ...identity, mode: shardMode }, disclosed, ...(disclosedPartial.length ? { disclosed_partial: disclosedPartial } : {}), sources, ...nameField,
       ...(identity.noFork ? { no_fork: identity.noFork } : {}),
       ust_id: st.id.ust_id, class: st.id.class, content_hash: ch, time: timeField, provenance: provenanceReport,
       completeness: 'not_evaluated', verifier: VERSION, registry_digest: registryDigest() };

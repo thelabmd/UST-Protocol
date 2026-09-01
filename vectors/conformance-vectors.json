@@ -12581,7 +12581,19 @@
       "expect_opaque": "VALID:LIGHT",
       "expect_disclosed_no_key": "VALID:LIGHT",
       "expect_disclosed_with_key": "VALID:LIGHT",
-      "note": "opaque and disclosed are the SAME verdict — a disclosure enlarges what the reader knows, never what the record earns"
+      "note": "opaque and disclosed are the SAME verdict — a disclosure enlarges what the reader knows, never what the record earns",
+      "expect_channels_without_key": {
+        "disclosed": false,
+        "partial": {
+          "checked": "commit",
+          "unchecked": "aead",
+          "needs_key_id": "k1"
+        }
+      },
+      "expect_channels_with_key": {
+        "disclosed": true,
+        "partial": null
+      }
     },
     {
       "id": "privacy-encrypted-channels-disagree",
@@ -12640,7 +12652,19 @@
         "result": "INVALID",
         "error": "E-COMMIT"
       },
-      "note": "the load-bearing case: WITHOUT the key this document reads VALID and discloses the committed value, so the divergence is visible only to the key-holder. A port that decrypts without re-deriving the commitment turns a key into an authority to assign the value, and its reader sees the same green verdict either way"
+      "note": "the load-bearing case: WITHOUT the key this document reads VALID and discloses the committed value, so the divergence is visible only to the key-holder. A port that decrypts without re-deriving the commitment turns a key into an authority to assign the value, and its reader sees the same green verdict either way",
+      "expect_channels_without_key": {
+        "disclosed": false,
+        "partial": {
+          "checked": "commit",
+          "unchecked": "aead",
+          "needs_key_id": "k1"
+        }
+      },
+      "expect_channels_with_key": {
+        "disclosed": true,
+        "partial": null
+      }
     },
     {
       "id": "hchacha20-cfrg-2-2-1",
@@ -12710,7 +12734,19 @@
         "result": "INVALID",
         "error": "E-COMMIT"
       },
-      "note": "The AES twin is `privacy-encrypted-channels-disagree`. Both are kept because the nonce width differs and the slicing is what a port gets wrong; the RULE is not duplicated — the reachability of it is."
+      "note": "The AES twin is `privacy-encrypted-channels-disagree`. Both are kept because the nonce width differs and the slicing is what a port gets wrong; the RULE is not duplicated — the reachability of it is.",
+      "expect_channels_without_key": {
+        "disclosed": false,
+        "partial": {
+          "checked": "commit",
+          "unchecked": "aead",
+          "needs_key_id": "k1"
+        }
+      },
+      "expect_channels_with_key": {
+        "disclosed": true,
+        "partial": null
+      }
     },
     {
       "id": "faculty-absent-aead-xchacha",

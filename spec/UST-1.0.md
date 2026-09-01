@@ -1863,6 +1863,14 @@ unresolved dependency ⇒ the corresponding error (never `VALID`).
    from the disclosed `{nonce,value}` + the document's `domain_shard`/`ust_id` (frame-bound, G23), and for `encrypted` verify `AEAD-Decrypt(enc.ct)` reproduces exactly that
    `{nonce,value}` → `commit` (E-COMMIT on mismatch). (A non-guessable delivery URL is an out-of-band channel, not a verified mode.) The
    layer seed (§9.5/§10a). Never brute-force.
+   **Authorization is PER-CHANNEL, and a partial check MUST NOT be reported as a whole one.** An `encrypted`
+   partition has two channels opened by different secrets — the commitment by `{nonce,value}`, the AEAD by the
+   decryption key — and a party may hold either without the other. A verifier given only the disclosure learns
+   the value (the commitment binds it) and learns NOTHING about whether the ciphertext agrees: by §10 that
+   divergence is invisible from this position, which is exactly why silence here is not evidence of agreement.
+   Such a partition is therefore NOT reported among those fully disclosed; a verifier reports it apart, naming
+   the channel it could not examine. Putting the distinction only in an auxiliary field would leave the simplest
+   reading of a verdict true of a state that was never verified (model F.7a.1, per-channel corollary).
 9. **Provenance — the OBLIGATIONS TABLE (§14a).** Every commitment-bearing provenance member carries a
    RECOMPUTE obligation; a member may never be present-but-unchecked (the checked-root/unchecked-seed asymmetry
    class is abolished):
