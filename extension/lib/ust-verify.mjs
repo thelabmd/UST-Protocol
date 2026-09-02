@@ -158,6 +158,14 @@ export async function verify(doc, opts = {}) {
       if (FORGES.test(name)) return bad('E-MALFORMED', 'partition name carries a control or bidi-override character (§6)');
       const part = st.data[name];
       if (!KINDS.includes(part.kind)) return bad('E-MALFORMED', 'unknown partition kind: ' + name + '.' + part.kind);
+      // §4.4 — the envelope is CLOSED per shape: a member the shape does not declare falls under no obligation,
+      // so nothing ever examines it. Measured 2026-09-01 (#177) — CLOSED here: this file admitted 39 of 42
+      // foreign-member cells that the reference refuses, the worst being a `blinded` partition carrying a
+      // plaintext `value` contradicting its own commitment, which verified VALID on the public page while a
+      // consumer reading `part.value` got the value the commitment does NOT bind.
+      const DECLARED = part.privacy === undefined ? ['kind', 'value']
+        : part.privacy === 'encrypted' ? ['kind', 'privacy', 'commit', 'enc'] : ['kind', 'privacy', 'commit'];
+      for (const k of Object.keys(part)) if (!DECLARED.includes(k)) return bad('E-MALFORMED', 'partition carries a member its shape does not declare (§4.4): ' + name + '.' + k);
       if (part.privacy === undefined) { if (part.value === undefined) return bad('E-MALFORMED', 'public partition without value: ' + name); }
       else {
         if (!PRIVACY.includes(part.privacy)) return bad('E-MALFORMED', 'unknown privacy: ' + name);

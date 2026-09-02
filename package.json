@@ -29,6 +29,7 @@
     "test:vectors": "node packages/ust-protocol/gen-arc-vectors.mjs && git diff --exit-code vectors/arc-vectors.json && node packages/ust-protocol/run-arc-vectors.mjs",
     "test:spec-sync": "node tools/gen-spec-registry.mjs && node tools/gen-readme-version.mjs && node tools/gen-status-svg.mjs && node tools/gen-readme-panels.mjs && node tools/gen-conformance-badge.mjs && git diff --exit-code spec/UST-1.0.md README.md package.json .github/status.svg '.github/ust-*.svg' && node tools/spec-code-sync.mjs",
     "test:parity": "node tools/capability-parity.mjs",
+    "test:envelope-domain": "node tools/envelope-domain-gate.mjs",
     "test:docs-parity": "node tools/docs-verifier-parity.mjs",
     "test:light": "node packages/ust-light/test.mjs",
     "test:artwork": "node tools/gen-light-svgs.mjs && node tools/light-variant-gate.mjs",

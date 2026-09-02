@@ -46,3 +46,4 @@
 {"2":50,"3":9,"4":9,"steps":83,"1a":10,"1b":5,"canfail":68,"quadrant":["connector receipts (OTS + Rekor)","the browser build refuses, and a refusal never becomes a verdict (#144)"]}
 {"2":51,"3":9,"4":9,"steps":84,"1a":10,"1b":5,"canfail":69,"quadrant":["connector receipts (OTS + Rekor)","the browser build refuses, and a refusal never becomes a verdict (#144)"]}
 {"2":51,"3":9,"4":10,"steps":85,"1a":10,"1b":5,"canfail":69,"quadrant":["a build that cannot run the cipher says so, and never blames the document (#176)","connector receipts (OTS + Rekor)","the browser build refuses, and a refusal never becomes a verdict (#144)"]}
+{"2":51,"3":9,"4":10,"steps":86,"1a":10,"1b":6,"canfail":70,"quadrant":["a build that cannot run the cipher says so, and never blames the document (#176)","connector receipts (OTS + Rekor)","the browser build refuses, and a refusal never becomes a verdict (#144)"]}

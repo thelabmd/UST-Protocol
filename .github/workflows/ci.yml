@@ -114,6 +114,12 @@ jobs:
       # step runs a build declaring only the MTI, which S17 makes an ordinary conforming configuration.
       - name: a build that cannot run the cipher says so, and never blames the document (#176)
         run: npm run test:aead-faculty
+      # #177 — the partition envelope is a PRODUCT and was sampled, not enumerated. A `blinded` partition could
+      # carry an `enc` block: a member no rule reaches, examined by nobody, in a document that verified VALID.
+      # This step re-derives every cell each run, so a new kind or privacy mode enters the domain on the day it
+      # is registered rather than the day somebody remembers to write vectors for its combinations.
+      - name: every cell of the partition-envelope product is decided (#177)
+        run: npm run test:envelope-domain
       - name: light README panels are DERIVED from the dark originals, never hand-edited
         run: npm run test:artwork
       - name: security regression (external-audit P0/P1 reproductions must stay closed — epic UST-1o6)

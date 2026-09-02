@@ -2158,6 +2158,18 @@
       "code": "packages/ust-protocol/index.mjs :: §4.4 splits the two private productions (a `blinded` partition carrying `enc` is E-MALFORMED at admission) and §6 constrains the identifiers the verdict quotes — partition names and `enc.key_id` — against control and bidi-override characters, with `quoteSafe` inside `bad()` covering all 37 diagnostic quotations in one place. The same two rules re-implemented independently in `docs/ust-verify.mjs` (clean-room) and synced byte-for-byte to `extension/lib/ust-verify.mjs`.",
       "vector": "identifier-forges-structure-partition-name",
       "test": "identifier-forges-structure-partition-name: and NO field of the verdict carries such a character — including the diagnostic that quotes the rejected value"
+    },
+    {
+      "round": 250,
+      "math": {
+        "excluded": "The rule this gate enforces is already a theorem — F.7a.2's unexaminable-channel corollary, stated and bound in round 249. What changed is the DETECTOR: from a vector that pins one case to an enumeration that decides every cell of the product. A change in how thoroughly a stated claim is checked is not itself a claim, and inventing a theorem for it would put a testing decision into the model, where a reader would take it for an obligation on implementers."
+      },
+      "spec": {
+        "excluded": "Same reason one layer down: §4.4 already states the closed envelope per shape and §6 the identifier rule — both written in round 249. A conforming implementation owes those rules; it does not owe our method of checking that it meets them. Writing the enumeration into the spec would confuse a normative obligation with a repository practice."
+      },
+      "code": "tools/envelope-domain-gate.mjs :: the (kind × privacy × foreign-member) product rebuilt, signed and verified every run against BOTH the reference and the clean-room verifier, with bases read from REGISTRY.partitionKinds; docs/ust-verify.mjs gains the closed envelope it never had (39 of 42 cells diverged on the first cross-implementation run), synced byte-for-byte to extension/lib/ust-verify.mjs.",
+      "vector": "privacy-blinded-carrying-enc",
+      "test": "tools/envelope-domain-gate.mjs :: the gate is a CI step in its own right (`npm run test:envelope-domain`), and carries its own controls — a legal encrypted partition must be admitted and the exact #177 shape must be refused, so a build refusing everything cannot pass it."
     }
   ],
   "first_accounted_round": 76,
