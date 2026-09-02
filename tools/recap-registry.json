@@ -792,6 +792,10 @@
     {
       "round": 261,
       "no_recap": "Round 261 does not close #178 — it delivers the key-holder split, leaving the debt: twelve lagging capabilities plus the verify halves of five authority capabilities that round 259 found unreachable. The unit of a recap is the CLOSED ISSUE; this round closes none."
+    },
+    {
+      "round": 262,
+      "no_recap": "Round 262 does not close #178 — it replaces a two-way classification with the owner's three and records that six of round 256's deferrals were wrong, but the debt itself is untouched and now stands at thirteen. The unit of a recap is the CLOSED ISSUE; this round closes none."
     }
   ]
 }

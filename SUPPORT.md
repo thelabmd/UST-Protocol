@@ -80,20 +80,29 @@ is an inconvenience on one surface and a wall on the other.
 Every absence from `mcp` is classified, by one question — *would this still need a human if we trusted the agent
 completely?*
 
-**Deferred — yes, and the requirement is a property of the ACT** (6). No amount of trust removes the person,
-because the act IS the human decision. Each carries its claim in `tools/capability-parity.mjs`.
+**Ceremony — the act is a human decision, and stays one** (0). No amount of trust in an agent removes the
+person. This is a property of an operator WORKFLOW, not of a core function: computing an artifact is not deciding
+to stand behind it, and the count being 0 says the capability map is over functions.
 
+_(none — see above)_
+
+**Key-bound — the signing half only** (7). A private key may not cross into an agent's context, so the
+function that signs stays outside. This is not a wall: the agent produces what is signed and assembles what comes
+back, and both key-free halves are on its surface.
+
+- `sign`
+- `disclosure-produce`
 - `checkpoint-chain`
 - `recovery`
 - `epoch-transition`
 - `uniqueness-attest`
 - `verifiable-map`
-- `keylog-commitment`
 
-**Lagging — no** (12). Our own unfinished work, sitting where the principal audience reaches for it. These
+**Lagging — debt** (13). Our own unfinished work, sitting where the principal audience reaches for it. These
 carry no justification, because none exists; the gate refuses one written under them. The count is pinned and may
-only shrink, so a capability landing on the CLI and not on MCP raises it and fails the build.
+only shrink.
 
+- `keylog-commitment` — **reachable from the CLI today**
 - `byte-agreement` — **reachable from the CLI today**
 - `name-obligation` — **reachable from the CLI today**
 - `discovery-shard` — **reachable from the CLI today**
@@ -107,4 +116,4 @@ only shrink, so a capability landing on the CLI and not on MCP raises it and fai
 - `authority-bundle`
 - `substrate-registry`
 
-3 of the 12 are on the human surface already. That is the inversion the rule exists to close.
+4 of the 13 are on the human surface already. That is the inversion the rule exists to close.

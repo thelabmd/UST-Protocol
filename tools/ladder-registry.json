@@ -2316,6 +2316,20 @@
       "code": "packages/ust-protocol/index.mjs :: `sealingRequest` returns the commitment, the canonical plaintext and the derived IV with no key involved, and `attachEncryption` assembles a sealed block while REFUSING a ciphertext whose nonce prefix is not the one the commitment implies; packages/ust-mcp/index.mjs exposes both, and `withPrivacy` now tells a declaration from a built partition by shape rather than by mode.",
       "vector": "privacy-encrypted-disclosure",
       "test": "packages/ust-mcp/live-test.mjs :: the split played out over the real transport — the request carries no key, the assembled output is byte-identical to `encryptPartition`, a sealer using its own IV is caught by a caller with no key, and the assembled partition passes through the builder untouched."
+    },
+    {
+      "round": 262,
+      "math": {
+        "excluded": "The subject is why one of OUR surfaces lacks one of OUR capabilities — three reasons that differ in what they oblige and how long they last. Nothing about documents or verdicts moved, and a second implementation would owe none of it. A theorem here would put a maintenance taxonomy where implementers read obligations."
+      },
+      "spec": {
+        "excluded": "Same reason: §16 binds conforming producers and verifiers and says nothing about how an implementation staffs its tool surfaces. The distinction between a ceremony, a key boundary and unfinished work is ours to keep, not a rule to impose."
+      },
+      "code": "tools/capability-parity.mjs :: `MCP_DISPOSITION` carries three classifications with different obligations — `ceremony` (a claim about the act, permanent), `key-bound` (names the function holding key material, and is refutable by measurement), `lagging` (nothing but the count) — enforced by the ordering axis with a fourth-word check and controls in both registers; tools/gen-support-matrix.mjs renders all three by name.",
+      "vector": {
+        "excluded": "A vector is a fixed input and a declared RESULT a port reproduces. This is a taxonomy of absences in this repository's tooling; pinning it in the corpus would ask a stranger to reproduce our staffing decisions rather than the protocol's behaviour."
+      },
+      "test": "tools/capability-parity.mjs :: a CI step (`npm run test:parity`), verified by four mutations — an unclassified absence, a thin claim, a fourth category, and a `key-bound` claim on a capability whose functions take no key each redden their own message."
     }
   ],
   "first_accounted_round": 76,

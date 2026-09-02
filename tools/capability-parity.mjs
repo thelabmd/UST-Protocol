@@ -235,16 +235,43 @@ const cliProbe = tokenProbe('cli');
 // Writing a rationale under a `lagging` cell is the defect this whole classification exists to stop: absence
 // wearing the vocabulary of intent, which is how `disclosure-produce` sat unowned for two months behind a
 // sentence that defended a risk that was not present.
+// THREE classifications, not two (owner, 2026-09-03: "человек" is wider than "signs" — merging them would sew
+// distinct things together, and we would lose the difference later).
+//
+// The two-way split of round 256 was wrong twice over, and the measurement says how:
+//   · every genuinely key-bound function in the six I called `deferred` SIGNS — `sealAuthorityCheckpoint`,
+//     `buildRecoveryStatement`, `buildEpochTransition`, `buildUniquenessAttestation`, `buildNameMapRoot`;
+//   · `keylog-commitment` has NO key-bound function at all — all three of its exports only compute;
+//   · and NONE of those eight functions is called by the CLI either. They are not a human-first inversion; they
+//     are exposed by no surface at all.
+// So a capability can be absent from the agent surface for three unrelated reasons, and one word for all three
+// hides which. The three obligations differ, and that difference is the point:
+//
+//   'ceremony'  — the act is a HUMAN DECISION and stays one however much an agent is trusted. This is a property
+//                 of an operator WORKFLOW (the CLI carries 34 interactive prompts), never of a core function:
+//                 `buildAuthorityCheckpoint` computes an artifact, and what needs a person is deciding to stand
+//                 behind it. Owes a claim about the act. PERMANENT.
+//   'key-bound' — the function SIGNS, and a private key may not cross into an agent's context. NOT a wall: the
+//                 split (rounds 258, 261) is how an agent participates — it produces what is signed and assembles
+//                 what comes back. Owes the signing function's name. SOLVED SHAPE.
+//   'lagging'   — nobody built the surface. Owes NOTHING but its place in the count, because a justification
+//                 written under debt is absence wearing the vocabulary of intent. DEBT.
 const MCP_DISPOSITION = {
-  // ── DEFERRED: the act needs a person by definition, and the planned operator MCP is where a human grants it
-  'checkpoint-chain':   ['deferred', 'minting and sealing an authority checkpoint is the operator asserting, with the checkpoint-authority key, that a chain state is theirs. Trusting the agent completely does not remove the person: the act IS the human decision about what the operator now stands behind.'],
-  'recovery':           ['deferred', 'checkpoint recovery re-roots authority after a loss. It is the operator deciding which history to continue from — a judgment about their own past that nobody can make on their behalf, however trusted.'],
-  'epoch-transition':   ['deferred', 'a genesis epoch transition retires one root and installs the next. The act is a human committing an identity forward; delegating it would mean an agent could decide who the publisher becomes.'],
-  'uniqueness-attest':  ['deferred', 'attesting that a checkpoint is unique is the operator swearing to a fact about their own published set. An agent can CHECK such an attestation (that half is lagging under `verify`); issuing one is a person putting their name to it.'],
-  'verifiable-map':     ['deferred', 'building a name/checkpoint map publishes an authoritative statement of what the operator serves. The verification half is pure and belongs on the agent surface; the BUILD half is a person declaring their own namespace.'],
-  'keylog-commitment':  ['deferred', 'a key-log terminality commitment closes what the operator will ever say with a key. Irreversible and identity-defining — the shape of act this boundary exists for.'],
+  // ── key-bound: the signing half stays outside; the agent reaches the rest through the split
+  'sign':               ['key-bound', 'seal signs. `attachSignature` — the assembly half — is on the agent surface as `ust_seal` (round 258).'],
+  'disclosure-produce': ['key-bound', 'encryptPartition seals. `sealingRequest` and `attachEncryption` — both key-free halves — are on the agent surface (round 261).'],
+  'checkpoint-chain':   ['key-bound', 'sealAuthorityCheckpoint signs; its eight other functions only compute. The computing half is LAGGING and is counted as such below — this entry names only why the signing one is out.'],
+  'recovery':           ['key-bound', 'buildRecoveryStatement signs. Its four reading functions are lagging.'],
+  'epoch-transition':   ['key-bound', 'buildEpochTransition signs. Its three reading functions are lagging.'],
+  'uniqueness-attest':  ['key-bound', 'buildUniquenessAttestation signs. Round 256 already said an agent may CHECK such an attestation, then withheld the checking half with the swearing one.'],
+  'verifiable-map':     ['key-bound', 'buildNameMapRoot signs. `checkpointMapLeaf` and `nameMapLeaf` only compute — they RETURN a map key, which an earlier probe misread as taking one.'],
 
-  // ── LAGGING: debt. No justification is written here on purpose; a `lagging` cell states only that it is owed.
+  // ── ceremony: nothing here yet, and that is a finding rather than an omission. Ceremony is a property of a
+  // WORKFLOW — `ust genesis`, `ust reroot` walk an operator through DNS, publication and confirmation — and the
+  // capability map is over core FUNCTIONS, which compute artifacts that are inert until someone signs them.
+
+  // ── lagging: debt, and nothing is written under any of them
+  'keylog-commitment':  ['lagging'],
   'byte-agreement':     ['lagging'],
   'name-obligation':    ['lagging'],
   'discovery-shard':    ['lagging'],
@@ -258,10 +285,7 @@ const MCP_DISPOSITION = {
   'authority-bundle':   ['lagging'],
   'substrate-registry': ['lagging'],
 };
-// The debt is PINNED and may only shrink — the same ratchet the vacuity residual uses. A new capability that
-// lands on the CLI and not on MCP raises this number and fails the build, which is the ordering rule made
-// mechanical: not "parity eventually", but "the agent surface does not fall further behind".
-const PINNED_LAGGING = 12;   // 14 → 13 (round 257, `disclosure-produce`) → 12 (round 258, `sign`: the ASSEMBLY half reached the agent surface, and the signing half stays outside because a key in an argument list is a claim about the ACT, not about agents)
+const PINNED_LAGGING = 13;   // 12 → 13 (round 262): `keylog-commitment` moved OUT of a false deferral into debt — none of its three functions takes a key or asks a person, so the claim that kept it out was never true of it   // 14 → 13 (round 257, `disclosure-produce`) → 12 (round 258, `sign`: the ASSEMBLY half reached the agent surface, and the signing half stays outside because a key in an argument list is a claim about the ACT, not about agents)
 
 // ── SURFACES — each surface's DECLARED stance. `full` = exposes the capability; `subset` = a documented reduced form;
 //    everything else defaults to `na` with the surface's `naReason` (a specific override lives in `naSpecific`). This
@@ -348,6 +372,19 @@ for (const s of surfaceIds) {
 }
 if (!drift) report.push(`  ✓ REALITY: all ${cells} surface×capability cells match what the surface actually exposes`);
 
+// Reads the PARAMETER LIST, not the first line. Measured 2026-09-03 (#178), CLOSED 2026-09-03 by this form: the first-line version counted
+// `checkpointMapLeaf` and `nameMapLeaf` as key-bound because an arrow function's BODY is on that line and both
+// RETURN `{ key: … }` — a map key, not key material. A probe that cannot tell what a function takes from what it
+// returns inflates the very set this axis exists to bound.
+const takesKey = (fn) => {
+  const f = P[fn];
+  if (typeof f !== 'function') return false;
+  const src = f.toString();
+  const open = src.indexOf('('), close = (() => { let d = 0; for (let i = open; i < src.length; i++) { if (src[i] === '(') d++; else if (src[i] === ')' && --d === 0) return i; } return -1; })();
+  const params = (open < 0 || close < 0 ? '' : src.slice(open + 1, close)).replace(/key_id/g, '');   // key_id is a NAME
+  return /\bkey\b|\bpriv|privKeyObj|decKeys/.test(params);
+};
+
 // (4) THE ORDERING AXIS (#178) — every absence on the PRINCIPAL surface is classified, and the debt may only shrink.
 {
   const mcpNa = capIds.filter((c) => stanceOf('ust-mcp', c) === 'na');
@@ -357,8 +394,22 @@ if (!drift) report.push(`  ✓ REALITY: all ${cells} surface×capability cells m
   // A `deferred` cell owes a CLAIM ABOUT THE ACT; a `lagging` cell owes nothing but the count. Enforcing the
   // reason on `deferred` only is the point: requiring one on `lagging` would invite exactly the rationalisation
   // this classification exists to stop.
-  const thin = mcpNa.filter((c) => MCP_DISPOSITION[c]?.[0] === 'deferred' && String(MCP_DISPOSITION[c][1] ?? '').trim().length < MIN_REASON);
-  if (thin.length) { fail++; report.push(`  ✗ ORDERING: deferred without a claim about the act (under ${MIN_REASON} chars): ${thin.join(', ')} — "it needs a human" is the conclusion, not the argument`); }
+  const KINDS = ['ceremony', 'key-bound', 'lagging'];
+  const wrongKind = mcpNa.filter((c) => MCP_DISPOSITION[c] && !KINDS.includes(MCP_DISPOSITION[c][0]));
+  if (wrongKind.length) { fail++; report.push(`  ✗ ORDERING: unknown classification on [${wrongKind.join(', ')}] — the three are ${KINDS.join(' / ')}, and a fourth word would be a category nobody agreed to`); }
+  // `ceremony` and `key-bound` each owe an argument; they differ in WHAT they argue, and both are checked for
+  // presence rather than for truth. `lagging` owes nothing — see below.
+  const thin = mcpNa.filter((c) => ['ceremony', 'key-bound'].includes(MCP_DISPOSITION[c]?.[0]) && String(MCP_DISPOSITION[c][1] ?? '').trim().length < MIN_REASON);
+  if (thin.length) { fail++; report.push(`  ✗ ORDERING: ${thin.join(', ')} classified without an argument (under ${MIN_REASON} chars) — "it needs a human" and "it holds a key" are conclusions, not arguments`); }
+  // A `key-bound` claim is REFUTABLE by measurement, and refuting it is the whole reason this classification is
+  // separate: if no function of the capability signs, the claim is about something that is not there.
+  // The predicate is TAKES KEY MATERIAL, not "signs" — and the distinction cost two false readings in one probe.
+  // A first version matched `sign(`, which also matches `Object.assign(`, so `byte-agreement` would have passed a
+  // key-bound claim it has no basis for. And it refuted `disclosure-produce`, whose hazard is a SYMMETRIC key:
+  // `encryptPartition` seals with AEAD and signs nothing. One word over two mechanisms, in the detector written
+  // to catch exactly that — the third time today. `takesKey` reads the parameter list and covers both.
+  const unfounded = mcpNa.filter((c) => MCP_DISPOSITION[c]?.[0] === 'key-bound' && !(CAPS[c]?.core ?? []).some(takesKey));
+  if (unfounded.length) { fail++; report.push(`  ✗ ORDERING: [${unfounded.join(', ')}] claim key-bound and NO function of theirs signs — that is how \`keylog-commitment\` sat outside on a claim about a key it never touches`); }
   const rationalised = mcpNa.filter((c) => MCP_DISPOSITION[c]?.[0] === 'lagging' && MCP_DISPOSITION[c].length > 1);
   if (rationalised.length) { fail++; report.push(`  ✗ ORDERING: a LAGGING cell carries a justification: ${rationalised.join(', ')} — debt owes a date, never a reason; a reason here is absence wearing the vocabulary of intent`); }
 
@@ -366,12 +417,14 @@ if (!drift) report.push(`  ✓ REALITY: all ${cells} surface×capability cells m
   const inverted = lagging.filter((c) => stanceOf('ust-cli', c) !== 'na');
   if (lagging.length > PINNED_LAGGING) { fail++; report.push(`  ✗ ORDERING: the agent surface fell FURTHER behind — ${lagging.length} lagging capabilities, pinned at ${PINNED_LAGGING}. A capability reaching the human surface first is the rule this axis exists to hold: not "parity eventually", but "no wider than today"`); }
   else if (lagging.length < PINNED_LAGGING) { fail++; report.push(`  ✗ ORDERING: the debt SHRANK to ${lagging.length} (pinned ${PINNED_LAGGING}) — lower the pin in the same commit, so the improvement is recorded rather than absorbed`); }
-  else report.push(`  ✓ ORDERING: every absence on the agent surface is classified — ${mcpNa.length - lagging.length} deferred (the act needs a person), ${lagging.length} lagging (debt, pinned, ${inverted.length} of them reachable from the CLI today)`);
+  else { const cer = mcpNa.filter((c) => MCP_DISPOSITION[c]?.[0] === 'ceremony').length, kb = mcpNa.filter((c) => MCP_DISPOSITION[c]?.[0] === 'key-bound').length;
+    report.push(`  ✓ ORDERING: every absence on the agent surface is classified — ${cer} ceremony (a human decision, permanent), ${kb} key-bound (the signing half only; the split is how an agent takes part), ${lagging.length} lagging (debt, pinned, ${inverted.length} of them reachable from the CLI today)`); }
 
   // CONTROL — the classifier must be able to say NO in both registers, proven rather than asserted.
   const probe = { ...MCP_DISPOSITION, __ghost: ['lagging'] };
   if (!Object.keys(probe).filter((c) => probe[c][0] === 'lagging').includes('__ghost')) { fail++; report.push('  ✗ CONTROL: the lagging counter cannot see a new entry — the ratchet would never trip'); }
-  if (MCP_DISPOSITION['checkpoint-chain']?.[0] !== 'deferred') { fail++; report.push('  ✗ CONTROL: a ceremony is not classified deferred — the two registers have collapsed into one'); }
+  if (MCP_DISPOSITION['checkpoint-chain']?.[0] !== 'key-bound') { fail++; report.push('  ✗ CONTROL: the signing capability is not classified key-bound — the registers have collapsed'); }
+  if (MCP_DISPOSITION['byte-agreement']?.[0] !== 'lagging') { fail++; report.push('  ✗ CONTROL: a pure-function capability is not classified lagging — debt is being dressed as a boundary'); }
 }
 
 // (5) A CAPABILITY WHOSE PARTS SPLIT ON KEY-TAKING MUST BE ACKNOWLEDGED AS TWO (#178, owner 2026-09-02).
@@ -405,12 +458,6 @@ if (!drift) report.push(`  ✓ REALITY: all ${cells} surface×capability cells m
 // A mixed capability scored `na` withholds its key-free half on the strength of the other's risk, whatever the
 // reason says. So the set of mixed capabilities is PINNED: a new one fails the build until it is split, or
 // acknowledged here with what its halves are.
-const takesKey = (fn) => {
-  const f = P[fn];
-  if (typeof f !== 'function') return false;
-  const sig = f.toString().split('\n')[0].replace(/key_id/g, '');   // key_id is a NAME, never key material
-  return /\bkey\b|\bpriv|privKeyObj|decKeys/.test(sig);
-};
 // Seven, not the two I knew about — and FIVE of them are capabilities I classified `deferred` in round 256 on a
 // claim about the ACT. The claim was true of the key-bound function and false of the rest: `checkpoint-chain` is
 // ONE key-bound `sealAuthorityCheckpoint` against EIGHT key-free ones including `verifyAuthorityCheckpointChain`,

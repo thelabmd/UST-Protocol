@@ -29,10 +29,11 @@ function list(s) { return [...s.matchAll(/'([a-z0-9-]+)'/g)].map((m) => m[1]); }
 
 // #178 — the agent-surface classification, read from the same file for the same reason as everything else here:
 // a count typed into prose is a promise, and this page exists because a promise had already gone stale once.
-const disp = [...src.matchAll(/^ {2}'([a-z0-9-]+)':\s*\['(deferred|lagging)'/gm)].map((m) => ({ cap: m[1], kind: m[2] }));
-const deferred = disp.filter((d) => d.kind === 'deferred');
+const disp = [...src.matchAll(/^ {2}'([a-z0-9-]+)':\s*\['(ceremony|key-bound|lagging)'/gm)].map((m) => ({ cap: m[1], kind: m[2] }));
+const ceremony = disp.filter((d) => d.kind === 'ceremony');
+const keyBound = disp.filter((d) => d.kind === 'key-bound');
 const lagging = disp.filter((d) => d.kind === 'lagging');
-if (!deferred.length || !lagging.length) {
+if (!keyBound.length || !lagging.length) {
   console.error('  ✗ parsed no agent-surface dispositions from the gate — the shape moved, and a page claiming "0 deferred" would read as an answer');
   process.exit(1);
 }
@@ -103,14 +104,21 @@ is an inconvenience on one surface and a wall on the other.
 Every absence from \`mcp\` is classified, by one question — *would this still need a human if we trusted the agent
 completely?*
 
-**Deferred — yes, and the requirement is a property of the ACT** (${deferred.length}). No amount of trust removes the person,
-because the act IS the human decision. Each carries its claim in \`tools/capability-parity.mjs\`.
+**Ceremony — the act is a human decision, and stays one** (${ceremony.length}). No amount of trust in an agent removes the
+person. This is a property of an operator WORKFLOW, not of a core function: computing an artifact is not deciding
+to stand behind it, and the count being ${ceremony.length} says the capability map is over functions.
 
-${deferred.map((d) => '- \`' + d.cap + '\`').join('\n')}
+${ceremony.length ? ceremony.map((d) => '- \`' + d.cap + '\`').join('\n') : '_(none — see above)_'}
 
-**Lagging — no** (${lagging.length}). Our own unfinished work, sitting where the principal audience reaches for it. These
+**Key-bound — the signing half only** (${keyBound.length}). A private key may not cross into an agent's context, so the
+function that signs stays outside. This is not a wall: the agent produces what is signed and assembles what comes
+back, and both key-free halves are on its surface.
+
+${keyBound.map((d) => '- \`' + d.cap + '\`').join('\n')}
+
+**Lagging — debt** (${lagging.length}). Our own unfinished work, sitting where the principal audience reaches for it. These
 carry no justification, because none exists; the gate refuses one written under them. The count is pinned and may
-only shrink, so a capability landing on the CLI and not on MCP raises it and fails the build.
+only shrink.
 
 ${lagging.map((d) => '- \`' + d.cap + '\`' + (cliHas(d.cap) ? ' — **reachable from the CLI today**' : '')).join('\n')}
 
