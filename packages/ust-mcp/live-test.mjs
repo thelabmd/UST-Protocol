@@ -24,7 +24,7 @@ const client = new Client({ name: 'ust-live-test', version: '1' }, { capabilitie
 await client.connect(transport);
 
 const tools = await client.listTools();
-check('live:tools/list = 14', tools.tools.length === 14, 'got ' + tools.tools.length);
+check('live:tools/list = 15', tools.tools.length === 15, 'got ' + tools.tools.length);
 check('live:key_id over the wire', (await call(client, 'ust_key_id', { pub: A.pubB64 })).key_id === A.key_id);
 
 // THE agent flow, entirely over MCP: build → sign with own key → verify
@@ -110,7 +110,12 @@ check('live:fork_choice same ust_id, no substrate → INDETERMINATE', (await cal
     built.state.data.position.commit?.startsWith('sha256:') && built.state.data.position.value === undefined);
 
   const sg = edSign(null, Buffer.from(built.signing_input, 'utf8'), B.priv).toString('base64url');
-  const doc = { ust: '1.0', state: built.state, sig: { alg: 'Ed25519', key_id: B.key_id, pub: B.pubB64, sig: sg } };
+  // #178 — assembled BY THE SURFACE now, not by hand. The private key stayed outside; what came back inside is
+  // the check that the parts verify, which nothing in this flow performed before.
+  const sealed = await call(client, 'ust_seal', { state: built.state, pub: B.pubB64, sig: sg });
+  check('live:#178 ust_seal assembles and DERIVES key_id from pub — a caller can no longer state one that disagrees',
+    sealed.doc?.sig?.key_id === B.key_id && sealed.doc.sig.pub === B.pubB64, JSON.stringify(sealed.doc?.sig || {}).slice(0, 90));
+  const doc = sealed.doc;
   const opened = await call(client, 'ust_verify', { doc, offline: true, soft: true, disclosures: built.disclosures });
   check('live:#178 the agent reads its OWN document back with the envelope it was handed — the round trip closes on this surface',
     opened.result === 'VALID:LIGHT' && (opened.disclosed || []).includes('position'), `${opened.result} ${JSON.stringify(opened.disclosed)}`);
@@ -120,6 +125,20 @@ check('live:fork_choice same ust_id, no substrate → INDETERMINATE', (await cal
     disclosures: { position: { nonce: built.disclosures.position.nonce, value: { lat: 'ELSEWHERE' } } } });
   check('live:#178 a different value against the same nonce is E-COMMIT — the commitment binds, so the envelope is evidence rather than decoration',
     forged.error === 'E-COMMIT', `${forged.result} ${forged.error || ''}`);
+}
+
+// #178 — the load-bearing half of `ust_seal`: it must REFUSE. A tool that assembles whatever it is handed is a
+// convenience; one that will not return a document a reader would reject is a check the flow did not have.
+{
+  const C = kp('cc'.repeat(32));
+  const b = await call(client, 'ust_build_observation', { domain_shard: C.key_id, ust_id: 'ust:20260902.23', key_id: C.key_id, time: t, data: { y: { kind: 'captured', value: { v: '2' } } } });
+  const good = edSign(null, Buffer.from(b.signing_input, 'utf8'), C.priv).toString('base64url');
+  const bad = await rawCall(client, 'ust_seal', { state: b.state, pub: C.pubB64, sig: good.slice(0, -4) + 'AAAA' });
+  check('live:#178 ust_seal REFUSES a signature that does not verify — it will not hand back a document a reader would reject',
+    bad.isError === true, JSON.stringify(bad.body || {}).slice(0, 90));
+  const ok = await call(client, 'ust_seal', { state: b.state, pub: C.pubB64, sig: good });
+  check('live:#178 CONTROL — the same call with the real signature returns a document that verifies',
+    (await call(client, 'ust_verify', { doc: ok.doc, offline: true })).result === 'VALID:LIGHT');
 }
 
 await client.close();

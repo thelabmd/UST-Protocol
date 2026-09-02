@@ -115,6 +115,17 @@ export const tools = [
     handler: ({ domain_shard, ust_id, key_id, time, data }) => { const w = withPrivacy(data, domain_shard, ust_id); return { ...buildResult(P.buildState({ domain_shard, ust_id, key_id, class: 'observation' }, time, w.data)), ...(Object.keys(w.disclosures).length ? { disclosures: w.disclosures } : {}) }; },
   },
   {
+    name: 'ust_seal',
+    description: 'ASSEMBLE a signed transcript from a signature you made yourself. Pass the state you built, your base64url `pub`, and the signature over `signing_input`. The PRIVATE KEY NEVER TRAVELS — this tool derives key_id from pub, assembles the envelope and VERIFIES it, refusing to hand back a document a reader would reject.',
+    inputSchema: { type: 'object', required: ['state', 'pub', 'sig'], properties: { state: { type: 'object' }, pub: { type: 'string', description: 'base64url raw Ed25519 public key — key_id is DERIVED from it, never supplied' }, sig: { type: 'string', description: 'base64url Ed25519 signature over the `signing_input` a build tool returned' } } },
+    // #178 — the signing key is the one secret that must never reach an agent's argument list, and it does not
+    // here: this is the ASSEMBLY half of `seal`, which needs no key at all. The half that does stays outside,
+    // exactly where it already was. What changes is that the surface now takes something BACK — before this,
+    // `signing_input` went out and nothing returned, so nowhere in the flow was "the parts you assembled actually
+    // verify" ever checked. An agent that skipped its own verification published documents every reader refuses.
+    handler: ({ state, pub, sig }) => { const doc = P.attachSignature(state, { pub, sig }); return { doc, content_hash: P.contentHash(doc) }; },
+  },
+  {
     name: 'ust_combine_derivation',
     description: 'COMBINE: build (unsigned) a derivation that chains to other records by content_hash (based_on) with an auto-computed order-bearing seed.',
     inputSchema: { type: 'object', required: ['domain_shard', 'ust_id', 'key_id', 'time', 'data', 'based_on'], properties: { domain_shard: { type: 'string' }, ust_id: { type: 'string' }, key_id: { type: 'string' }, time: { type: 'object' }, data: { type: 'object' }, based_on: { type: 'array' } } },

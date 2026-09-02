@@ -39,6 +39,7 @@ export function assertValid(verdict: unknown): unknown;
 export const ASSURANCE_AXES: unknown;
 export function assuranceLE(a: unknown, b: unknown): unknown;
 export function assuranceState(s?: unknown): unknown;
+export function attachSignature(state: unknown, arg1?: unknown): unknown;
 export function authorityCheckpointId(cp: unknown): string;
 export function authorityScopeId(activeGenesis: unknown): string;
 export function axisRank(axis: unknown, v: unknown): unknown;

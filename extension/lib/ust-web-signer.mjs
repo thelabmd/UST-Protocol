@@ -75,7 +75,12 @@ export async function seal(state, signer) {
   const input = signedContent({ ust: '1.0', state });
   const sigBuf = await crypto.subtle.sign({ name: 'Ed25519' }, signer.privateKey, te(input));
   const sig = bytesToB64url(new Uint8Array(sigBuf));
-  return { ust: '1.0', state, sig: { alg: 'Ed25519', key_id: state.id.key_id, pub: signer.pub, sig } };
+  // #178 — `key_id` is DERIVED from the signing key, not copied from the state. This line used to take it from
+  // `state.id.key_id` while `pub` came from the SIGNER, so a state built for one identity and signed by another
+  // produced a document that fails E-SIG at a reader and nowhere earlier. The core gained `attachSignature` for
+  // exactly this; THIS package is standalone by design and imports nothing, so the rule is re-implemented rather
+  // than shared — which is what a clean-room package owes anyway, and what the parity gates compare.
+  return { ust: '1.0', state, sig: { alg: 'Ed25519', key_id: await keyId(signer.pub), pub: signer.pub, sig } };
 }
 
 // ─── convenience: build + sign a LIGHT observation. Identity = the KEY (domain_shard := key_id, self-certifying);

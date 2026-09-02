@@ -341,7 +341,7 @@
       "id": "R59-totality-roster",
       "rev": "rev59",
       "model_locus": "roster is now the RUNTIME MODULE NAMESPACE",
-      "conformance_check": "R47 P1-03 (roster completeness — RUNTIME namespace) — EVERY function-typed export of the module (101, incl. re-exports + arrow-consts + the byte kernel checkAuthorityProofBytes) is TOTAL on a hostile Proxy UNLESS explicitly classified MAY-THROW (producer / byte-string primitive / verdict class / throw-by-contract); a source-regex miss (arrow-const, re-export, future callable) can no longer evade the gate"
+      "conformance_check": "R47 P1-03 (roster completeness — RUNTIME namespace) — EVERY function-typed export of the module (102, incl. re-exports + arrow-consts + the byte kernel checkAuthorityProofBytes) is TOTAL on a hostile Proxy UNLESS explicitly classified MAY-THROW (producer / byte-string primitive / verdict class / throw-by-contract); a source-regex miss (arrow-const, re-export, future callable) can no longer evade the gate"
     },
     {
       "id": "R69-bytes-in-boundary-export",

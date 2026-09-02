@@ -362,7 +362,7 @@ predicate.
    symmetric. **Totality becomes SETTLING, not returning:** a rejected promise is a second way to fail to be
    total, and it is worse than a throw because it is invisible to a caller's `try`/`catch` when the `await` is
    forgotten. This obligation already exists and is enumerated over the RUNTIME namespace rather than a source
-   list (*"R47 P1-03 (roster completeness — RUNTIME namespace) — EVERY function-typed export of the module (101,
+   list (*"R47 P1-03 (roster completeness — RUNTIME namespace) — EVERY function-typed export of the module (102,
    incl. re-exports + arrow-consts + the byte kernel checkAuthorityProofBytes) is TOTAL on a hostile Proxy UNLESS
    explicitly classified MAY-THROW"*), so widening the async surface widens the obligation automatically rather
    than requiring a new rule — a newly-async export is covered the moment it exists. **Determinism becomes a claim about the WINDOW:** between two suspension points a live
@@ -2092,7 +2092,7 @@ roster is now the RUNTIME MODULE NAMESPACE — every value whose runtime type is
 future callable cannot evade it; each is TOTAL on a hostile Proxy unless explicitly classified MAY-THROW, and the classification
 covers EXACTLY the current throwers (no verdict boundary exempted, no thrower unclassified). No live totality hole hid among the
 36 (they are all producers/primitives/classes/helpers) — the miss was a GATE-completeness gap, now closed at its root
-(*"R47 P1-03 (roster completeness — RUNTIME namespace) — EVERY function-typed export of the module (101, incl. re-exports + arrow-consts + the byte kernel checkAuthorityProofBytes) is TOTAL on a hostile Proxy UNLESS explicitly classified MAY-THROW (producer / byte-string primitive / verdict class / throw-by-contract); a source-regex miss (arrow-const, re-export, future callable) can no longer evade the gate"*).
+(*"R47 P1-03 (roster completeness — RUNTIME namespace) — EVERY function-typed export of the module (102, incl. re-exports + arrow-consts + the byte kernel checkAuthorityProofBytes) is TOTAL on a hostile Proxy UNLESS explicitly classified MAY-THROW (producer / byte-string primitive / verdict class / throw-by-contract); a source-regex miss (arrow-const, re-export, future callable) can no longer evade the gate"*).
 
 **Verification (rev63 — BOUNDED-EXHAUSTIVE model check of the automaton `A`, beyond sampled fuzz).** The Checker Soundness
 theorem is proved BY STRUCTURAL INDUCTION on the proof term `π`. Because totality and determinism are COMPOSITIONAL over a

@@ -16,7 +16,7 @@ This page is rendered from those declarations, so it cannot drift from what the 
 | `canon` | ✅ | ✅ | · | · | ✅ | ✅ |
 | `content-address` | ◐ | ◐ | · | · | ✅ | ✅ |
 | `build-transcript` | ◐ | ◐ | · | · | ◐ | ◐ |
-| `sign` | ✅ | ✅ | · | · | · | ✅ |
+| `sign` | ◐ | ◐ | · | · | ◐ | ✅ |
 | `verify` | ◐ | · | · | · | ✅ | ✅ |
 | `resolve-authority` | · | · | · | · | ✅ | ✅ |
 | `no-fork-evidence` | · | · | · | · | ✅ | ✅ |
@@ -90,11 +90,10 @@ because the act IS the human decision. Each carries its claim in `tools/capabili
 - `verifiable-map`
 - `keylog-commitment`
 
-**Lagging — no** (13). Our own unfinished work, sitting where the principal audience reaches for it. These
+**Lagging — no** (12). Our own unfinished work, sitting where the principal audience reaches for it. These
 carry no justification, because none exists; the gate refuses one written under them. The count is pinned and may
 only shrink, so a capability landing on the CLI and not on MCP raises it and fails the build.
 
-- `sign` — **reachable from the CLI today**
 - `byte-agreement` — **reachable from the CLI today**
 - `name-obligation` — **reachable from the CLI today**
 - `discovery-shard` — **reachable from the CLI today**
@@ -108,4 +107,4 @@ only shrink, so a capability landing on the CLI and not on MCP raises it and fai
 - `authority-bundle`
 - `substrate-registry`
 
-4 of the 13 are on the human surface already. That is the inversion the rule exists to close.
+3 of the 12 are on the human surface already. That is the inversion the rule exists to close.

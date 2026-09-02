@@ -2264,6 +2264,20 @@
         "excluded": "The claim is about what a TOOL SURFACE offers, not about a document: the partitions this produces are byte-identical to the core's and are already pinned by the privacy vectors. A vector here would pin our MCP schema into the corpus a stranger runs to check their own conformance."
       },
       "test": "packages/ust-mcp/live-test.mjs :: the agent round trip over the real stdio transport — the envelope returns with the state, the wire carries a commitment and no value, the agent reads its own document back, and a different value against the same nonce is E-COMMIT so the envelope is evidence rather than decoration."
+    },
+    {
+      "round": 258,
+      "math": {
+        "excluded": "Nothing about what a verifier decides moved: the signature obligation is §7's and unchanged, and `attachSignature` produces exactly the bytes `seal` already produced. What changed is WHERE assembly happens and that it is checked — a property of our tooling, not of documents, and a conforming implementation may assemble however it likes."
+      },
+      "spec": {
+        "excluded": "§7 already fixes the signed content and §12.2 already defines `key_id` as `H(\"ust:keylog\", raw_pub)` — which is precisely why deriving it rather than accepting it is a repair to our surfaces and not a new rule. The standard binds the bytes; it does not describe which of our functions assembles them."
+      },
+      "code": "packages/ust-protocol/index.mjs :: `attachSignature(state, {pub, sig})` — the ASSEMBLY half of `seal`, needing no key, deriving `key_id` from `pub` so a mismatch is not expressible, and verifying before it returns; packages/ust-mcp/index.mjs exposes it as `ust_seal`; packages/ust-web-signer/index.mjs re-implements the derivation locally (standalone by design, so the rule is duplicated rather than imported).",
+      "vector": {
+        "excluded": "The bytes are unchanged — `attachSignature` produces what `seal` produces, and every signature vector in the corpus already pins them. A vector here would assert that a particular FUNCTION exists in our package, which is an inventory of this tree rather than a claim a port reproduces."
+      },
+      "test": "packages/ust-mcp/live-test.mjs :: over the real stdio transport — `ust_seal` derives key_id from pub, REFUSES a signature that does not verify, and the control confirms the same call with the real signature returns a document that verifies."
     }
   ],
   "first_accounted_round": 76,

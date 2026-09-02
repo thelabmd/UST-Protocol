@@ -472,6 +472,31 @@ const ABSENT_SELECTOR = Symbol('absent-selector');
 const admitOptionalKeylog = (x) => { if (x === undefined || x === null) return ABSENT_SELECTOR; try { return Array.isArray(x) ? admitArray(x) : null; } catch { return null; } };   // round-52 S1 — Array.isArray THROWS on a revoked Proxy; total door (the class round-51 closed at admitArray/reducePackage)
 
 // ─── producer: §7 seal — sign canon({ust,state}) with an Ed25519 private key ─────────────────────────
+// DETACHED SIGNING — assemble a transcript from a signature made ELSEWHERE (#178).
+//
+// `seal` does two things: it signs, and it assembles. A caller that cannot hand over a private key can still do
+// the second half, and several already do — an agent over MCP receives `signing_input`, signs with its own key
+// and assembles by hand; `ust-web-signer` assembles by hand too, taking `key_id` from the STATE while `pub` comes
+// from the signer, so the two can disagree and the document fails E-SIG at a reader. Three hand-written
+// assemblers, three ways to mismatch the same two fields.
+//
+// `key_id` is DERIVED from `pub` here, never accepted: §12.2 defines it as `H("ust:keylog", raw_pub)`, so a
+// caller supplying both is being asked to restate something computable, and the only thing that can come of it
+// is disagreement. One class of malformed document stops being expressible.
+//
+// AND IT VERIFIES WHAT IT ASSEMBLED before returning it. That is not belt-and-braces: the whole reason to bring
+// assembly inside is that the surface handing out `signing_input` today takes nothing back, so there is no place
+// where "the parts you put together actually verify" is ever checked. An agent that skips its own verification
+// publishes a document every reader refuses, and hears about it from the reader or never.
+export function attachSignature(state, { pub, sig, alg = 'Ed25519' }) {
+  if (typeof pub !== 'string' || typeof sig !== 'string') throw err('E-MALFORMED', 'attachSignature needs a base64url `pub` and `sig`');
+  const doc = { ust: '1.0', state, sig: { alg, key_id: keyId(pub), pub, sig } };   // §19 wire, as `seal` writes it
+  const v = verify(doc, { context: 'data' });
+  if (!isValid(v) && v.error === 'E-SIG')
+    throw err('E-SIG', 'the signature does not verify against this state and key — refusing to return a document a reader would reject; sign `signedContent({ust,state})`, not the state alone');
+  return doc;
+}
+
 export function seal(state, privKeyObj, pubB64url) {
   // final protocol-law check (rc.12): a sealed transcript may NEVER exceed the ABS — fail closed
   // at the producer, not only at verifiers.

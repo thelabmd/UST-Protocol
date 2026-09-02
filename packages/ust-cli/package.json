@@ -31,7 +31,7 @@
   },
   "dependencies": {
     "@ust-protocol/rekor-verify": "^1.0.0-rc.30",
-    "@ust-protocol/web-signer": "^1.0.0-rc.26",
+    "@ust-protocol/web-signer": "^1.0.0-rc.27",
     "ust-protocol": "^1.0.0-rc.73",
     "@ust-protocol/ots-verify": "^1.0.0-rc.35"
   },

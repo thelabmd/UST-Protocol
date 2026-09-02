@@ -64,6 +64,7 @@ Or in any MCP client config:
 
 | Tool | Does |
 |------|------|
+| `ust_seal` | ASSEMBLE a signed transcript from a signature you made yourself: pass the state, your base64url `pub` and the signature over `signing_input`. **The private key never travels** — this is the assembly half of `seal`, which needs no key. `key_id` is DERIVED from `pub`, so a caller cannot state one that disagrees, and the tool VERIFIES what it assembled, refusing to hand back a document a reader would reject. |
 | `ust_verify` | Verify a document — ONE call, resolution included: auto-fetches the publisher's discovery + witness surfaces, cross-checks witness anchors against their substrate (Rekor/Bitcoin), and reaches `VALID:HIGH` automatically when the no-fork evidence confirms (`resolution.noFork`: witness-confirmed / caller-asserted / unconfirmed). `offline:true` forbids the network (supply `genesis`+`keylog` yourself); `proof` adds anchored time |
 | `ust_build_observation` | Build (unsigned) an observation; returns `state` + `content_hash` + `signing_input` |
 | `ust_combine_derivation` | Build a derivation chained to other records by content-hash (auto seed) |
