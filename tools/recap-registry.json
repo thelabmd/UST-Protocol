@@ -804,6 +804,10 @@
     {
       "round": 264,
       "no_recap": "Round 264 does not close #178 — it repairs the support grid's columns and their order after the owner read it, and hardens the generator against silently rendering fewer columns than the gate scores. The debt stands at thirteen. The unit of a recap is the CLOSED ISSUE; this round closes none."
+    },
+    {
+      "round": 265,
+      "no_recap": "Round 265 does not close #178 — it makes the support page's prose branch on the values it describes, after the owner noticed a sentence that would go stale while its number stayed right. The debt stands at thirteen. The unit of a recap is the CLOSED ISSUE; this round closes none."
     }
   ]
 }

@@ -90,14 +90,17 @@ Every absence from `mcp` is classified, by one question — *would this still ne
 completely?*
 
 **Ceremony — the act is a human decision, and stays one** (0). No amount of trust in an agent removes the
-person. This is a property of an operator WORKFLOW, not of a core function: computing an artifact is not deciding
-to stand behind it, and the count being 0 says the capability map is over functions.
+person, so this classification is permanent.
+_None today, and that is a finding rather than an omission._ Ceremony is a property of an operator WORKFLOW —
+the CLI walks a person through DNS, publication and confirmation — while this map is over core FUNCTIONS, which
+compute artifacts that are inert until someone signs them. `buildAuthorityCheckpoint` computes; what needs a
+person is deciding to stand behind the result. The category is real and permanent; it does not apply at this
+granularity, and an entry appearing here would mean the map had grown to cover workflows.
 
-_(none — see above)_
-
-**Key-bound — the signing half only** (7). A private key may not cross into an agent's context, so the
-function that signs stays outside. This is not a wall: the agent produces what is signed and assembles what comes
-back, and both key-free halves are on its surface.
+**Key-bound — the key does not cross into an agent's context** (7). The function holding key material stays
+outside; this is not a wall, because the agent produces what is signed and assembles what comes back, and every
+key-free half is on its surface. A claim here is refutable by measurement: if no function of the capability takes
+key material, the gate refuses the classification.
 
 - `sign`
 - `disclosure-produce`
@@ -108,13 +111,13 @@ back, and both key-free halves are on its surface.
 - `verifiable-map`
 
 **Lagging — debt** (13). Our own unfinished work, sitting where the principal audience reaches for it. These
-carry no justification, because none exists; the gate refuses one written under them. The count is pinned and may
-only shrink.
+carry no justification, because none exists — the gate refuses one written under them. The count is pinned and
+may only shrink.
 
-- `keylog-commitment` — **reachable from the CLI today**
-- `byte-agreement` — **reachable from the CLI today**
-- `name-obligation` — **reachable from the CLI today**
-- `discovery-shard` — **reachable from the CLI today**
+- `keylog-commitment` — also on the CLI
+- `byte-agreement` — also on the CLI
+- `name-obligation` — also on the CLI
+- `discovery-shard` — also on the CLI
 - `negative-observation`
 - `commitment-windows`
 - `ladder-report`
@@ -125,4 +128,5 @@ only shrink.
 - `authority-bundle`
 - `substrate-registry`
 
-4 of the 13 are on the human surface already. That is the inversion the rule exists to close.
+4 of the 13 are on the human surface already, and those are the inversion the rule exists to close: reachable by a person with a terminal and by nobody with a tool.
+

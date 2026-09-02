@@ -2358,6 +2358,20 @@
         "excluded": "A vector is a fixed input and a declared RESULT a port reproduces. The subject is our own column layout; pinning it would put this repository's presentation into a stranger's conformance run."
       },
       "test": "tools/gen-support-matrix.mjs :: a CI step (`npm run test:support-matrix`) that regenerates and diffs the page, and now refuses to render when the surfaces it parsed are fewer than the surfaces declared — naming the ones it missed."
+    },
+    {
+      "round": 265,
+      "math": {
+        "excluded": "How one of our own pages phrases what it renders is a presentation decision about this repository's inventory; nothing about documents, verdicts or obligations moved."
+      },
+      "spec": {
+        "excluded": "The standard binds conforming producers and verifiers and says nothing about our support page. A rule about generating prose from counts would be an obligation nobody outside this tree could meet."
+      },
+      "code": "tools/gen-support-matrix.mjs :: every sentence that asserts a state is generated from that state — the ceremony paragraph branches on whether the category is populated, the debt closer branches on whether any lagging capability is human-only, and the annotation drops the dating word since the fact is re-measured on each render.",
+      "vector": {
+        "excluded": "A vector is a fixed input and a declared RESULT a port reproduces. The subject is the wording of our own page; pinning it would make this repository's prose part of a stranger's conformance run."
+      },
+      "test": "tools/gen-support-matrix.mjs :: a CI step (`npm run test:support-matrix`) regenerating and diffing the page, and both new branches were exercised by hand — a hypothetical ceremony entry renders the list form, a stubbed `cliHas` renders the uniform-debt form."
     }
   ],
   "first_accounted_round": 76,

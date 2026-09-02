@@ -148,24 +148,33 @@ Every absence from \`mcp\` is classified, by one question — *would this still 
 completely?*
 
 **Ceremony — the act is a human decision, and stays one** (${ceremony.length}). No amount of trust in an agent removes the
-person. This is a property of an operator WORKFLOW, not of a core function: computing an artifact is not deciding
-to stand behind it, and the count being ${ceremony.length} says the capability map is over functions.
+person, so this classification is permanent.
+${ceremony.length
+  ? ceremony.map((d) => '- \`' + d.cap + '\`').join('\n')
+  : `_None today, and that is a finding rather than an omission._ Ceremony is a property of an operator WORKFLOW —
+the CLI walks a person through DNS, publication and confirmation — while this map is over core FUNCTIONS, which
+compute artifacts that are inert until someone signs them. \`buildAuthorityCheckpoint\` computes; what needs a
+person is deciding to stand behind the result. The category is real and permanent; it does not apply at this
+granularity, and an entry appearing here would mean the map had grown to cover workflows.`}
 
-${ceremony.length ? ceremony.map((d) => '- \`' + d.cap + '\`').join('\n') : '_(none — see above)_'}
-
-**Key-bound — the signing half only** (${keyBound.length}). A private key may not cross into an agent's context, so the
-function that signs stays outside. This is not a wall: the agent produces what is signed and assembles what comes
-back, and both key-free halves are on its surface.
+**Key-bound — the key does not cross into an agent's context** (${keyBound.length}). The function holding key material stays
+outside; this is not a wall, because the agent produces what is signed and assembles what comes back, and every
+key-free half is on its surface. A claim here is refutable by measurement: if no function of the capability takes
+key material, the gate refuses the classification.
 
 ${keyBound.map((d) => '- \`' + d.cap + '\`').join('\n')}
 
 **Lagging — debt** (${lagging.length}). Our own unfinished work, sitting where the principal audience reaches for it. These
-carry no justification, because none exists; the gate refuses one written under them. The count is pinned and may
-only shrink.
+carry no justification, because none exists — the gate refuses one written under them. The count is pinned and
+may only shrink.
 
-${lagging.map((d) => '- \`' + d.cap + '\`' + (cliHas(d.cap) ? ' — **reachable from the CLI today**' : '')).join('\n')}
+${lagging.map((d) => '- \`' + d.cap + '\`' + (cliHas(d.cap) ? ' — also on the CLI' : '')).join('\n')}
 
-${lagging.filter((d) => cliHas(d.cap)).length} of the ${lagging.length} are on the human surface already. That is the inversion the rule exists to close.
+${(() => { const n = lagging.filter((d) => cliHas(d.cap)).length;
+  return n === 0
+    ? 'None of these is on the human surface either, so the debt is uniform: nobody can reach them. The rule still binds — whichever surface receives one first, the agent surface may not receive it later.'
+    : `${n} of the ${lagging.length} ${n === 1 ? 'is' : 'are'} on the human surface already, and ${n === 1 ? 'that one is' : 'those are'} the inversion the rule exists to close: reachable by a person with a terminal and by nobody with a tool.`; })()}
+
 `;
 
 const path = ROOT + 'SUPPORT.md';
