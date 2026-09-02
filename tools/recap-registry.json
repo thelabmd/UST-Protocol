@@ -747,6 +747,10 @@
     {
       "round": 250,
       "no_recap": "Round 250 does not close #177 — it turns the round-249 probe into a standing gate and closes the third exploit that gate found on its first run. The card's four surface items are untouched. The unit of a recap is the CLOSED ISSUE; this round closes none."
+    },
+    {
+      "round": 251,
+      "no_recap": "Round 251 does not close #177 — it delivers the web-verifier item and leaves three: `ust sign` with its disclosure envelope, private partitions in ust-light, and the parity table's split of PRODUCE from CONSUME. The unit of a recap is the CLOSED ISSUE; this round closes none."
     }
   ]
 }

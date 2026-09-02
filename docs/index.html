@@ -123,6 +123,18 @@
   .ok { color:var(--accent); } .ok .dot { background:var(--accent2); box-shadow:0 0 0 3px rgba(46,178,173,.18); }
   .bad { color:var(--bad); } .bad .dot { background:var(--bad); box-shadow:0 0 0 3px rgba(92,43,46,.14); }
   .wait { color:var(--wait); } .wait .dot { background:var(--wait); box-shadow:0 0 0 3px rgba(138,109,31,.14); }
+  /* private partitions: two channels drawn as rows, so the shape §14.8 decides is the shape you see */
+  .chan { display:flex; gap:10px; align-items:baseline; padding:5px 0; border-bottom:1px dotted var(--line); }
+  .chan:last-of-type { border-bottom:none; }
+  .chanlabel { flex:0 0 84px; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted); }
+  .chanbody { flex:1 1 auto; min-width:0; overflow-wrap:anywhere; }
+  .chan.shut .chanbody { color:var(--muted2); }
+  .sealed { letter-spacing:0.18em; opacity:0.55; user-select:none; }
+  .chanote { margin:9px 0 0; font-size:12px; line-height:1.55; color:var(--muted2); }
+  .pstate { font-size:11px; letter-spacing:0.06em; text-transform:uppercase; padding:1px 6px; border:1px solid var(--line); border-radius:2px; }
+  .pstate.opened { color:var(--accent); border-color:var(--accent); }
+  .pstate.partial { color:var(--warn, #b8791f); border-color:var(--warn, #b8791f); }
+  .pstate.shut { color:var(--muted); }
   .card { background:var(--card); border:1px solid var(--line); border-radius:2px; padding:20px 22px; margin-top:18px; }
   .card h2 { font:500 11px/1 var(--mono); text-transform:uppercase; letter-spacing:0.18em; color:var(--muted); margin:0 0 14px; }
   .kv { display:grid; grid-template-columns:130px 1fr; gap:7px 16px; font:400 12.5px/1.5 var(--mono); }
@@ -266,6 +278,12 @@
     <textarea id="gin" spellcheck="false" style="min-height:70px;margin-top:8px" placeholder='{"ust":"1.0","state":{"id":{"class":"genesis",…   (/.well-known/ust-genesis)'></textarea>
     <textarea id="kin" spellcheck="false" style="min-height:70px;margin-top:8px" placeholder='[ {…key-log entry…} ]   (/.well-known/ust-keylog — the JSON array)'></textarea>
     <textarea id="cin" spellcheck="false" style="min-height:70px;margin-top:8px" placeholder='[ {…cadence entry…} ]   (/.well-known/ust-cadence — the JSON array; only if the publisher CHANGED its cadence)'></textarea>
+  </details>
+
+  <details id="private" style="margin-top:10px">
+    <summary class="hint" style="cursor:pointer">Open private partitions (offline) — paste the disclosure envelope, and the keys if you hold them</summary>
+    <textarea id="din" spellcheck="false" style="min-height:70px;margin-top:8px" placeholder='{"position": {"nonce":"…", "value": {…}}}   (the {nonce,value} pairs the publisher disclosed to you)'></textarea>
+    <textarea id="kdin" spellcheck="false" style="min-height:70px;margin-top:8px" placeholder='{"ops-2026-08": "base64url-key"}   (only for `encrypted` partitions — without it the AEAD channel stays unchecked)'></textarea>
   </details>
 </div>
 
@@ -447,9 +465,16 @@ function valueMd(v) {
   return scalarMd(v);
 }
 function objectMd(v) { return valueMd(v); }
-function rawOf(entry) { return entry.kind === 'text' ? entry.v : JSON.stringify(entry.v, null, 2); }
-function mdOf(entry) { return entry.kind === 'text' ? mdSafe(entry.v) : objectMd(entry.v); }
-function renderContent(data) {
+function rawOf(entry) { return entry.kind === 'private' ? JSON.stringify(entry.v.part, null, 2) : entry.kind === 'text' ? entry.v : JSON.stringify(entry.v, null, 2); }
+function mdOf(entry) { return entry.kind === 'private' ? privateMd(entry.v) : entry.kind === 'text' ? mdSafe(entry.v) : objectMd(entry.v); }
+// `verdict` is passed so a private partition can be drawn in the state the VERIFIER reached, not in the state the
+// document's shape suggests. §14.8 gives three (per-channel corollary): fully checked · value known from the
+// commitment with a second channel unexamined · untouched. Collapsing the middle one is the defect the CLI had —
+// calling it opened claims a check nobody ran, calling it closed denies the reader a value they hold.
+const discOf = (name) => { try { return (JSON.parse($('din')?.value.trim() || '{}')[name] || {}).value; } catch { return undefined; } };
+function renderContent(data, verdict) {
+  const opened = new Set((verdict && verdict.disclosed) || []);
+  const partial = new Map(((verdict && verdict.disclosed_partial) || []).map((x) => [x.partition, x]));
   partVals.length = 0;
   const parts = Object.entries(data || {}).map(([name, part]) => {
     if (part && part.value !== undefined) {
@@ -463,9 +488,44 @@ function renderContent(data) {
         : '';
       return `<div class="pblock"><div class="phead"><span class="plabel">${esc(name)}${part.kind ? ' · ' + esc(part.kind) : ''}</span>${toggle}</div><div class="content mdview md" data-ci="${i}">${mdOf(entry)}</div></div>`;
     }
-    return `<div class="pblock"><div class="phead"><span class="plabel">${esc(name)} · ${esc(part && part.privacy || 'private')}</span></div><div class="content">${esc(part && part.commit || '(private — committed, not revealed)')}</div></div>`;
+    // A private partition gets the SAME md ⇄ raw toggle a public one has, because it has the same two things to
+    // show: what the bytes are (raw — the commitment and, for `encrypted`, the AEAD block) and what they MEAN
+    // (md). It had neither before; it printed a hash and nothing else.
+    const pa = partial.get(name);
+    const state = opened.has(name) ? 'opened' : pa ? 'partial' : 'shut';
+    const entry = { kind: 'private', v: { name, part, state, pa, value: discOf(name) } };
+    const i = partVals.push(entry) - 1;
+    const toggle = `<span class="viewtoggle" data-ci="${i}"><button class="vt on" data-mode="md">md</button><button class="vt" data-mode="raw">raw</button></span>`;
+    return `<div class="pblock"><div class="phead"><span class="plabel">${esc(name)} · ${esc(part && part.privacy || 'private')} · <span class="pstate ${state}">${state === 'shut' ? 'sealed' : state}</span></span>${toggle}</div><div class="content mdview md" data-ci="${i}">${privateMd(entry.v)}</div></div>`;
   });
   return parts.join('');
+}
+// U+25AE runs stand for what the commitment withholds. The count is CONSTANT and says so: a run whose length
+// tracked the hidden value would leak its size — the one thing a public reader is not supposed to learn, since
+// §10 gives them existence and time and nothing else. Six blocks mean "hidden", never "six of something".
+// TWO glyphs, because the two modes hide differently and a reader should see which at a glance. `#` for
+// `blinded` — the value is behind a HASH, and the run reads like one. U+25AE for `encrypted` — solid blocks for
+// opaque bytes. Owner's distinction, 2026-09-02; the semantics were already there, the render just said one word
+// for both. Both runs are the same FIXED length, for the reason above.
+const SEAL = { blinded: '#'.repeat(6), encrypted: '\u25ae'.repeat(6) };
+function privateMd({ part, state, pa, value }) {
+  const enc = part && part.enc;
+  const SEALED = SEAL[part && part.privacy] || SEAL.encrypted;
+  const chan = (label, body, cls) => `<div class="chan ${cls}"><span class="chanlabel">${esc(label)}</span><span class="chanbody">${body}</span></div>`;
+  const shown = value === undefined ? `<span class="sealed">${SEALED}</span>` : objectMd(value);
+  if (state === 'shut') {
+    return chan('commitment', `<span class="sealed">${SEALED}</span>`, 'shut')
+      + (enc ? chan('ciphertext', `<span class="sealed">${SEALED}</span>`, 'shut') : '')
+      + `<p class="chanote">Sealed to you. The document proves this partition EXISTED at its instant and was signed with everything else — its value is the one thing it withholds. Paste the publisher\u2019s <code>{nonce,value}</code> above to open it${enc ? ', and the key to check the ciphertext agrees' : ''}.</p>`;
+  }
+  if (state === 'partial') {
+    return chan('commitment', shown, 'open')
+      + chan('ciphertext', `<span class="sealed">${SEALED}</span>`, 'shut')
+      + `<p class="chanote">One channel of two. The value above is bound by the commitment, so it is genuine — what is unknown is whether the publisher\u2019s ciphertext says the same, and only key <code>${esc(pa && pa.needs_key_id || '')}</code> settles that. Until it does, this page will not call the partition disclosed.</p>`;
+  }
+  return chan('commitment', shown, 'open')
+    + (enc ? chan('ciphertext', shown, 'open') : '')
+    + `<p class="chanote">${enc ? 'Both channels checked: the ciphertext decrypts to exactly what the commitment binds.' : 'Checked against the commitment \u2014 a wrong pair could not have reproduced it.'}</p>`;
 }
 // raw ⇄ md toggle (display-only; the verified bytes never change)
 outEl.addEventListener('click', (e) => {
@@ -500,6 +560,15 @@ async function run() {
   // page decides NOTHING about a verdict any more; it renders one. That is not tidiness: every verdict this page
   // used to assemble by hand was a place where it could disagree with the implementation it tells you to install.
   let resolution = null, r;
+  // §10 private partitions. Read ONCE and spread into whichever path runs: the CLI lost these by hand-copying
+  // its option list into one of two call paths, and the loss was silent (#177, round 247). Bad JSON here must not
+  // decide a verdict, so it degrades to "not supplied" and is reported beside the partitions it failed to open.
+  let privOpts = {}, privErr = null;
+  {
+    const dTxt = $('din')?.value.trim(), kdTxt = $('kdin')?.value.trim();
+    try { if (dTxt) privOpts.disclosures = JSON.parse(dTxt); } catch (e) { privErr = 'the disclosure envelope is not valid JSON: ' + e.message; }
+    try { if (kdTxt) privOpts.decKeys = JSON.parse(kdTxt); } catch (e) { privErr = (privErr ? privErr + ' · ' : '') + 'the key map is not valid JSON: ' + e.message; }
+  }
   const gTxt = $('gin')?.value.trim(), kTxt = $('kin')?.value.trim();
   if (gTxt) {
     // Offline path: the reader supplied the identity, so discovery is neither attempted nor needed.
@@ -509,16 +578,16 @@ async function run() {
       // It grants HIGH on that basis only when the consumer also ACCEPTS overrides — and the box IS that
       // acceptance, made by a human, in the open. Passing one without the other is why this path sat at the
       // LIGHT floor with an override nobody had agreed to honour.
-      r = await verifyAsync(doc, { context: 'data', genesis, keylog });
+      r = await verifyAsync(doc, { context: 'data', genesis, keylog, ...privOpts });
       resolution = { publisher: r.publisher ?? (doc.state?.id?.domain_shard || ''), strength: r.identity?.strength,
         noFork: 'unconfirmed — offline, so no witness was read',
         source: 'pasted by you (offline) — no request left this page' };
     } catch (e) {
       resolution = { error: 'the pasted genesis / key log is not valid JSON: ' + e.message, source: 'pasted by you (offline)' };
-      r = await verifyAsync(doc, { context: 'data' });
+      r = await verifyAsync(doc, { context: 'data', ...privOpts });
     }
   } else {
-    const out = await resolveByDiscovery(doc, { context: 'data', inclusionVerify }, { substrateVerify });   // inclusionVerify is an OPTS member, not a transport capability — passed as transport it is silently ignored
+    const out = await resolveByDiscovery(doc, { context: 'data', inclusionVerify, ...privOpts }, { substrateVerify });   // inclusionVerify is an OPTS member, not a transport capability — passed as transport it is silently ignored
     r = out.verdict; resolution = out.resolution;
   }
   Promise.resolve(r).then((r) => {
@@ -558,7 +627,7 @@ async function run() {
     // changed, only the order in which it is legible.
     let contentCard = '';
     if (valid) {
-      contentCard = `<div class="card"><h2>What the signature proves</h2>${renderContent(st.data)}</div>`;
+      contentCard = `<div class="card"><h2>What the signature proves</h2>${renderContent(st.data, r)}</div>`;
       html += `<div class="card"><h2>Verdict</h2>
         <dl class="kv" style="margin-top:0">
           <dt>signing key</dt><dd>${esc(id.key_id || r.publisher_claimed || '')}</dd>
@@ -675,7 +744,7 @@ async function run() {
 $('go').addEventListener('click', run);
 $('clear').addEventListener('click', () => { inEl.value = ''; outEl.innerHTML = ''; inEl.focus(); });
 inEl.addEventListener('input', () => { if (inEl.value.trim()) run(); else outEl.innerHTML = ''; });
-for (const mid of ['gin', 'kin']) $(mid).addEventListener('input', () => { if (inEl.value.trim()) run(); });
+for (const mid of ['gin', 'kin', 'din', 'kdin']) $(mid).addEventListener('input', () => { if (inEl.value.trim()) run(); });
 </script>
 </body>
 </html>

@@ -2170,6 +2170,20 @@
       "code": "tools/envelope-domain-gate.mjs :: the (kind × privacy × foreign-member) product rebuilt, signed and verified every run against BOTH the reference and the clean-room verifier, with bases read from REGISTRY.partitionKinds; docs/ust-verify.mjs gains the closed envelope it never had (39 of 42 cells diverged on the first cross-implementation run), synced byte-for-byte to extension/lib/ust-verify.mjs.",
       "vector": "privacy-blinded-carrying-enc",
       "test": "tools/envelope-domain-gate.mjs :: the gate is a CI step in its own right (`npm run test:envelope-domain`), and carries its own controls — a legal encrypted partition must be admitted and the exact #177 shape must be refused, so a build refusing everything cannot pass it."
+    },
+    {
+      "round": 251,
+      "math": {
+        "excluded": "The three states this page now draws are F.7a.1's per-channel corollary, stated and bound in round 248; nothing here changes what a verifier must decide. A rendering decision is not a claim about documents, and putting one in the model would read to an implementer as an obligation on their own surfaces — which it is not: a conforming verifier owes the DISTINCTION, never a particular glyph."
+      },
+      "spec": {
+        "excluded": "Same reason: §14.8 already requires the distinction to be reported and §16 already states which outcomes bind a conforming verifier. How a surface DRAWS it is this implementation's business, and the spec deliberately does not describe our page."
+      },
+      "code": "docs/index.html :: the disclosure envelope and key map as offline inputs, spread into all three call paths; `privateMd` draws the two §14.8 channels with a fixed-length seal (`#` for blinded, U+25AE for encrypted) so the render cannot leak the hidden value's size; the md/raw toggle extended to private partitions, where raw is the on-wire envelope.",
+      "vector": {
+        "excluded": "A vector is a fixed input and a declared RESULT a runner reproduces. This round changes no verdict — measured: the same document yields the same verdict, tier and disclosure fields before and after. What changed is what a human SEES, which no runner can assert and which the corpus would be wrong to pin: a port owes the distinction, never our glyphs."
+      },
+      "test": "tools/docs-verifier-parity.mjs :: the page's verifier is checked against the reference on every vector in the corpus, so a rendering change that quietly altered a verdict would be caught there; the render itself was measured in a browser, which is where layout is true."
     }
   ],
   "first_accounted_round": 76,
