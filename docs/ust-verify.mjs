@@ -93,6 +93,19 @@ const RES_NAMES = new Set(['ust', 'state', 'sig', 'proof', 'id', 'time', 'data',
 const KINDS = ['captured', 'computed', 'absence'], PRIVACY = ['blinded', 'encrypted'];
 
 // §14 LIGHT floor verify (from the spec). Async. Returns {result, identity, publisher, ust_id, class, content_hash}.
+// AES-256-GCM through WebCrypto, which is what a browser actually has. `ct` is `nonce ‖ body ‖ tag` with the
+// nonce width fixed per algorithm (§17); `XChaCha20-Poly1305` is REGISTERED and not implemented here — WebCrypto
+// offers no ChaCha — so it is reported as the verifier's own limit and never as the document's defect.
+const AEAD_NONCE = { 'AES-256-GCM': 12, 'XChaCha20-Poly1305': 24 };
+async function aeadOpen(enc, keyB64url) {
+  if (enc.alg !== 'AES-256-GCM') return 'unsupported';
+  try {
+    const raw = b64url(enc.ct), n = AEAD_NONCE[enc.alg];
+    const k = await crypto.subtle.importKey('raw', b64url(keyB64url), { name: 'AES-GCM' }, false, ['decrypt']);
+    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: raw.subarray(0, n) }, k, raw.subarray(n));
+    return new TextDecoder().decode(pt);
+  } catch { return null; }                                  // authentication failure — the DOCUMENT's defect
+}
 export async function verify(doc, opts = {}) {
   try {
     if (!doc || typeof doc !== 'object') return bad('E-MALFORMED', 'not an object');
@@ -153,6 +166,7 @@ export async function verify(doc, opts = {}) {
     // the parity gate showed both attacks landing here after the core was already safe. Tester without `/g` on
     // purpose — a `/g` regex keeps `lastIndex` across calls and answers FALSE on its third invocation.
     const FORGES = /[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]/;
+    const disclosedOut = [], partialOut = [];   // §14.8 per-channel: `disclosed` = every declared channel checked
     for (const name of dk) {
       if (RES_NAMES.has(name)) return bad('E-MALFORMED', 'reserved partition name: ' + name);
       if (FORGES.test(name)) return bad('E-MALFORMED', 'partition name carries a control or bidi-override character (§6)');
@@ -178,6 +192,29 @@ export async function verify(doc, opts = {}) {
       }
       const want = await partitionHash({ domain_shard: id.domain_shard, ust_id: id.ust_id, name, value: part.value, commit: part.commit });
       if (want !== st.hashes[name]) return bad('E-MALFORMED', 'partition hash mismatch: ' + name);
+
+      // §14 step 8 — PRIVACY. Measured 2026-09-02 (#177), CLOSED 2026-09-02 by this block and by the parity gate now threading the inputs: this file had no step 8 at all. Zero
+      // occurrences of `disclosures`, and the consequence was not a missing feature but a missing REFUSAL — an
+      // authorized reader supplying a WRONG {nonce,value} pair got VALID, so the commitment binding that is the
+      // entire point of §10 was never enforced on this surface. The parity gate could not see it, because it
+      // called both verifiers without the auxiliary inputs the check needs to act on.
+      // Authorization is per-CHANNEL: the commitment is opened by the pair, the AEAD by the key, and a reader may
+      // hold either. `disclosed` therefore means EVERY channel the publisher declared was checked.
+      const disc = opts.disclosures?.[name];
+      if (part.privacy !== undefined && disc) {
+        const reproduced = await digest('ust:shard', te(canon({ domain_shard: id.domain_shard, ust_id: id.ust_id, nonce: disc.nonce, partition: name, value: disc.value })));
+        if (reproduced !== part.commit) return bad('E-COMMIT', 'blinded commit mismatch: ' + name);
+        if (part.privacy === 'encrypted') {
+          const key = opts.decKeys?.[part.enc.key_id];
+          if (!key) partialOut.push({ partition: name, checked: 'commit', unchecked: 'aead', needs_key_id: part.enc.key_id });
+          else {
+            const pt = await aeadOpen(part.enc, key);
+            if (pt === 'unsupported') return { result: 'INDETERMINATE', reason: 'unsupported_alg', detail: 'AEAD ' + part.enc.alg + ' is not implemented by this build: ' + name };
+            if (pt === null || pt !== canon({ nonce: disc.nonce, partition: name, value: disc.value })) return bad('E-COMMIT', 'AEAD↔commit mismatch: ' + name);
+            disclosedOut.push(name);
+          }
+        } else disclosedOut.push(name);
+      }
     }
     // §S4/F4 — class ↔ provenance consistency (signed gap record = the only attestation with empty constituents)
     const pr = st.provenance;
@@ -247,7 +284,7 @@ export async function verify(doc, opts = {}) {
     // lifts the tier — the NAME becomes the verified publisher. Without it: §Y3, claimed label only.
     const provOut = { depth: 0, referents: (pr?.based_on?.length || pr?.constituents?.length) ? 'unverified' : 'none' };
     if (opts.authority && opts.authority.publisher === id.domain_shard) {
-      return { result: 'VALID:HIGH', tier: 'HIGH', identity: { strength: 'authoritative', status: 'verified', mode: 'name' }, publisher: id.domain_shard, ust_id: id.ust_id, class: id.class, content_hash: ch,
+      return { result: 'VALID:HIGH', tier: 'HIGH', disclosed: disclosedOut, ...(partialOut.length ? { disclosed_partial: partialOut } : {}), identity: { strength: 'authoritative', status: 'verified', mode: 'name' }, publisher: id.domain_shard, ust_id: id.ust_id, class: id.class, content_hash: ch,
         provenance: provOut, completeness: 'not_evaluated' };
     }
     // round-53 (UST-ybn) — PARITY with ust-protocol: at the LIGHT floor (no authority above) a NAME-FORM domain_shard is a
@@ -257,7 +294,7 @@ export async function verify(doc, opts = {}) {
     if (!KEYID_FORM.test(id.domain_shard) && id.class !== 'genesis' && id.class !== 'key' && id.class !== 'cadence')
       return { result: 'INDETERMINATE', reason: 'unavailable', identity: { strength, status: 'verified', mode: 'name' }, ust_id: id.ust_id, class: id.class, content_hash: ch,
         detail: 'name-form domain_shard is a domain claim the LIGHT floor cannot confirm — supply genesis to bind the name (→ HIGH), or use key-form domain_shard = key_id for a key-identity document (→ VALID:LIGHT). "cannot confirm" ⇒ INDETERMINATE (UST-ybn)', provenance: provOut, completeness: 'not_evaluated' };
-    return { result: 'VALID:LIGHT', tier: 'LIGHT', identity: { strength, status: 'verified', mode: KEYID_FORM.test(id.domain_shard) ? 'key' : 'name' }, publisher_claimed: id.domain_shard, ust_id: id.ust_id, class: id.class, content_hash: ch,
+    return { result: 'VALID:LIGHT', tier: 'LIGHT', disclosed: disclosedOut, ...(partialOut.length ? { disclosed_partial: partialOut } : {}), identity: { strength, status: 'verified', mode: KEYID_FORM.test(id.domain_shard) ? 'key' : 'name' }, publisher_claimed: id.domain_shard, ust_id: id.ust_id, class: id.class, content_hash: ch,
       provenance: provOut,
       completeness: 'not_evaluated' };
   // #144 — inability leaves by its OWN door. An E-UNSUPPORTED reaching this catch is the verifier saying it

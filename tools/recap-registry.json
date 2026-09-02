@@ -755,6 +755,10 @@
     {
       "round": 252,
       "no_recap": "Round 252 does not close #177 — it refines the seal render delivered in round 251 and leaves the card's three remaining items untouched. The unit of a recap is the CLOSED ISSUE; this round closes none."
+    },
+    {
+      "round": 253,
+      "no_recap": "Round 253 does not close #177 — it delivers `ust sign` and closes the fourth defect the work uncovered, leaving two items: private partitions in ust-light, and the parity table's split of PRODUCE from CONSUME. The unit of a recap is the CLOSED ISSUE; this round closes none."
     }
   ]
 }

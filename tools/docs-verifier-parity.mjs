@@ -64,14 +64,34 @@ const battery = [
 // only version of this gate that cannot go blind again. The hand battery stays because it holds cases the
 // corpus does not (context pairs, tolerated shapes); it is now the supplement, not the population.
 const V = JSON.parse(readFileSync(new URL('../vectors/conformance-vectors.json', import.meta.url), 'utf8')).vectors;
+// A vector's AUXILIARY INPUTS travel with it. Measured 2026-09-02 (#177), CLOSED 2026-09-02 by threading them below: this gate called both verifiers with
+// `{context}` alone, so every check that only ACTS when a disclosure or key is supplied was compared in a
+// configuration where it could not act. The clean-room verifier had no §14 step 8 at all — an authorized reader
+// passing a WRONG {nonce,value} got VALID from it — and this gate reported agreement for months, because neither
+// side was ever handed the pair. A comparison run where the subject is inert is not a comparison.
 const fromCorpus = V.filter((v) => v && v.doc && v.doc.state && v.doc.sig)
-  .map((v) => [`vector:${v.kind}/${v.id}`, v.doc, v.role ?? 'data']);
+  .map((v) => [`vector:${v.kind}/${v.id}`, v.doc, v.role ?? 'data', {
+    ...(v.disclosure ? { disclosures: { [v.disclosure.partition]: { nonce: v.disclosure.nonce, value: v.disclosure.value } } } : {}),
+    ...(v.key ? { decKeys: { [v.key.key_id]: v.key.raw } } : {}),
+  }]);
 
-let fail = 0;
-for (const [name, doc, context] of [...battery, ...fromCorpus]) {
-  const p = P.verify(doc, { context }), w = await web(doc, { context });
+let fail = 0, withAux = 0; const capability = [];
+for (const [name, doc, context, aux] of [...battery, ...fromCorpus]) {
+  const extra = aux || {};
+  if (Object.keys(extra).length) withAux++;
+  const p = P.verify(doc, { context, ...extra }), w = await web(doc, { context, ...extra });
   const pv = p.result || p.error || '?', wv = w.result || w.error || '?';
+  // A build reporting its OWN LIMIT is declining to answer, not disagreeing (F clause 5, §16): the clean-room
+  // runs on WebCrypto, which offers no ChaCha, so `XChaCha20-Poly1305` reaches it as
+  // `INDETERMINATE(unsupported_alg)` — the honest verdict §17 REQUIRES of a verifier that implements only the
+  // MTI. Counting that as divergence would demand the two implementations have identical capabilities, which is
+  // the opposite of what a registry with an OPTIONAL tier means.
+  // It is not a hole: only `unsupported_alg` qualifies, only in that direction, and every instance is printed
+  // with the algorithm named. A build could not dodge a comparison this way without saying, in the gate's own
+  // output, which primitive it lacks.
+  const declined = w.result === 'INDETERMINATE' && w.reason === 'unsupported_alg' && p.result !== 'INDETERMINATE';
   const agree = pv === wv;
+  if (declined) { capability.push(`${name} — the clean-room implements only the MTI: ${String(w.detail || w.reason)}`); continue; }
   if (!agree) fail++;
   if (!agree || !name.startsWith('vector:')) console.log((agree ? '  ✓ ' : '  ✗ DIVERGE ') + name + '  — ref:' + pv + '  web:' + wv);
 }
@@ -79,6 +99,10 @@ for (const [name, doc, context] of [...battery, ...fromCorpus]) {
 // while carrying zero `absence` partitions, so the two implementations were compared on every kind EXCEPT the one
 // they disagreed about — and the disagreement shipped, refusing every live document of the reference operator.
 // A population large enough to look thorough is still silent about what it never contains.
+// The aux count is PRINTED: if a refactor ever stops threading disclosures again, the number falls to zero in
+// plain sight instead of the gate quietly comparing inert subjects.
+for (const c of capability) console.log('  ◦ capability boundary (NOT a divergence): ' + c);
+console.log(`  · ${withAux} vector(s) carried a disclosure or key into BOTH verifiers — the checks that only act when one is supplied`);
 {
   const carried = new Set(fromCorpus.flatMap(([, doc]) => Object.values(doc.state?.data ?? {}).map((part) => part?.kind)));
   const unexercised = P.REGISTRY.partitionKinds.filter((k) => !carried.has(k));

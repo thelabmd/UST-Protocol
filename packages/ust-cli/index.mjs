@@ -1698,6 +1698,135 @@ async function cmdVerify() {
 }
 
 // ─── ust canon <file|-> — the DX diagnostic (#41): print the canonical string + hash so any-language devs diff ─
+// §4.4/§10 — TURN YOUR OWN DATA INTO A SIGNED TRANSCRIPT, private partitions included. Measured 2026-08-31 (#177)
+// — CLOSED 2026-09-02 by this command: the CLI had fifteen commands and none of them signed a document. It read,
+// it ran ceremonies, it published; a publisher who wanted to emit a transcript wrote JavaScript, always. The
+// capability map declared `sign` and `build-transcript` FULL on the strength of `seal` occurring inside ceremony
+// internals, which is how the gap survived unnoticed until the probe asked what a user can actually type.
+//
+// PRIVACY IS DECLARED IN THE DATA, not in a flag. A flag would apply to the document; privacy is a property of a
+// PARTITION, and a shard mixing open and closed members is the ordinary case (§10). So the input carries
+// `privacy` beside `kind`, exactly as the wire does, and this command is a translator rather than a policy.
+//
+// THE ENVELOPE IS AN OBLIGATION, NOT AN OPTION. The nonce is generated HERE: it must be fresh, unique, and never
+// derived from the value (§10, Z2). A tool that generates it and does not hand it back leaves the publisher
+// holding a commitment they can never open — the value is theirs and they can no longer disclose it to anyone.
+// So `--disclosures-out` is REQUIRED the moment any partition is private, and refusing without it is the only
+// honest default: the alternative is a command that silently destroys what it was asked to protect.
+async function cmdSign() {
+  const src = process.argv[3];
+  const usage = 'usage: ust sign <data.json | - > --key <file> [--pass-stdin] --ust-id <ust:YYYYMMDD.HH> --domain <shard>\n'
+    + '                 [--class observation|derivation] [--valid-from <iso> --valid-to <iso>]\n'
+    + '                 [--disclosures-out <file>]  [--aead-keys <file>]  [--out <file>]\n\n'
+    + '  data.json declares privacy PER PARTITION, exactly as the wire does:\n'
+    + '    { "station":  { "kind":"captured", "value": { "name":"Baltic-1" } },\n'
+    + '      "position": { "kind":"captured", "privacy":"blinded",   "value": { "lat":"54.71" } },\n'
+    + '      "reading":  { "kind":"captured", "privacy":"encrypted", "value": { "kp":"5.8" }, "key_id":"ops-2026-09" } }\n\n'
+    + '  A private partition MAKES --disclosures-out mandatory: the nonce is generated here, and a tool that\n'
+    + '  keeps it leaves you holding a commitment you can never open.';
+  if (!src) die(usage);
+
+  const raw = src === '-' ? readFileSync(0, 'utf8') : readFileSync(String(src), 'utf8');
+  const dup = scanDupes(rawTextOf(raw));
+  if (dup) die('E-CANON: ' + dup + '  (duplicate members are rejected at the RAW boundary — §6)');
+  let data; try { data = JSON.parse(rawTextOf(raw)); } catch (e) { die('not JSON: ' + e.message); }
+  if (!data || typeof data !== 'object' || Array.isArray(data)) die('the data file must be an OBJECT of partitions keyed by name');
+
+  const ustId = arg('ust-id', null);
+  if (!ustId || ustId === true) die('--ust-id is required — a transcript is ADDRESSED (§8), and this tool will not invent the instant you are describing');
+  const keyFile = arg('key', null);
+  if (!keyFile || keyFile === true) die('--key <file> is required (the same encrypted key file the ceremonies write)');
+
+  // The signer, read exactly as every ceremony reads one — same file shape, same passphrase prompt, so an
+  // operator's existing key works here without a second format to learn.
+  let pass = null;
+  if (arg('pass-stdin', false)) pass = readFileSync(0, 'utf8').trim();
+  else if (!/^[A-Za-z0-9+/]+=*$/.test(readFileSync(String(keyFile), 'utf8').trim())) pass = null;
+  const keyRaw = readFileSync(String(keyFile), 'utf8').trim();
+  let signer;
+  try {
+    const bytes = pass ? decryptKey(keyRaw, pass) : Buffer.from(keyRaw, 'base64');
+    const b = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes);
+    const der = (b.length === 48 && b[0] === 0x30) ? b : Buffer.from(b.toString('utf8').trim(), 'base64');
+    const priv = createPrivateKey({ key: der, format: 'der', type: 'pkcs8' });
+    const pub = createPublicKey(priv).export({ format: 'der', type: 'spki' }).subarray(-32).toString('base64url');
+    signer = { priv, pub };
+  } catch (e) { die('could not read the signing key from ' + keyFile + ': ' + e.message + (pass ? '' : '  (encrypted? add --pass-stdin)')); }
+
+  // §4.3 — the shard is the publisher's, never this tool's guess. Default to the KEY form, which is
+  // self-certifying and needs no genesis; a name-form publisher passes --domain and owns what that claims.
+  const domain = (() => { const d = arg('domain', null); return d && d !== true ? String(d) : P.keyId(signer.pub); })();
+  const now = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
+  const vf = (() => { const v = arg('valid-from', null); return v && v !== true ? String(v) : now; })();
+  const vt = (() => { const v = arg('valid-to', null); return v && v !== true ? String(v) : new Date(Date.parse(vf) + 3600_000).toISOString().replace(/\.\d+Z$/, 'Z'); })();
+  const cls = (() => { const c = arg('class', null); return c && c !== true ? String(c) : 'observation'; })();
+  const ID = { domain_shard: domain, ust_id: String(ustId), key_id: P.keyId(signer.pub), class: cls };
+  const T = { generated_at: now, valid_from: vf, valid_to: vt };
+
+  const aeadKeys = (() => {
+    const f = arg('aead-keys', null);
+    if (!f || f === true) return null;
+    try { return JSON.parse(readFileSync(String(f), 'utf8')); } catch (e) { die('could not read --aead-keys ' + f + ': ' + e.message); }
+  })();
+
+  // ── translate the declarations into partitions, generating one fresh nonce per private member
+  const built = {}, envelope = {};
+  for (const [name, decl] of Object.entries(data)) {
+    if (!decl || typeof decl !== 'object') die(`partition \`${name}\` is not an object`);
+    const kind = decl.kind || 'captured';
+    if (decl.privacy === undefined) { built[name] = { kind, value: decl.value }; continue; }
+    if (decl.value === undefined) die(`private partition \`${name}\` has no \`value\` — this command commits to a value you supply; it cannot commit to nothing`);
+    const nonce = randomBytes(16).toString('base64url');          // §10: freshly random, unique, never value-derived
+    if (decl.privacy === 'blinded') {
+      built[name] = P.blindPartition(name, decl.value, { domain_shard: ID.domain_shard, ust_id: ID.ust_id, nonce, kind }).partition;
+    } else if (decl.privacy === 'encrypted') {
+      const kid = decl.key_id;
+      if (typeof kid !== 'string' || !kid) die(`encrypted partition \`${name}\` must name a \`key_id\` — §10 leaves key management to you, so this tool will not choose one`);
+      const k = aeadKeys && aeadKeys[kid];
+      if (!k) die(`no AEAD key for \`${kid}\` — supply --aead-keys {"${kid}":"<base64url 32 bytes>"}. This tool does not GENERATE the key: a key it invented and wrote to disk would be a key you did not choose and cannot rotate (§10, key management is out of protocol scope)`);
+      const alg = decl.alg || 'AES-256-GCM';
+      built[name] = P.encryptPartition(name, decl.value, { domain_shard: ID.domain_shard, ust_id: ID.ust_id, nonce, key_id: kid, key: k, kind, alg }).partition;
+    } else {
+      die(`partition \`${name}\` declares privacy \`${decl.privacy}\` — §10 has two modes: blinded, encrypted`);
+    }
+    envelope[name] = { nonce, value: decl.value };
+  }
+
+  const outFile = (() => { const o = arg('disclosures-out', null); return o && o !== true ? String(o) : null; })();
+  if (Object.keys(envelope).length && !outFile)
+    die(`${Object.keys(envelope).length} private partition(s) and no --disclosures-out.\n`
+      + '  The nonce was generated here and is NOT recoverable from the document — without the envelope you would\n'
+      + '  hold a commitment you can never open, and could never disclose the value to anyone. Refusing rather than\n'
+      + '  writing a document that quietly destroys what it was asked to protect.');
+
+  let doc;
+  try { doc = P.seal(P.buildState(ID, T, built), signer.priv, signer.pub); }
+  catch (e) { die('could not build the transcript: ' + (e.detail || e.message)); }
+
+  // PROVE IT BEFORE HANDING IT OVER — the ceremonies' own rule (`proveWrittenKey`): a tool verifies what it
+  // WROTE, not what it held. Every private partition is re-opened from the envelope this command is about to
+  // write, so a mismatch between the two is caught here rather than by the reader who cannot fix it.
+  const back = P.verify(doc, { context: 'data', disclosures: envelope, ...(aeadKeys ? { decKeys: aeadKeys } : {}) });
+  if (!P.isValid(back)) die('the document this command built does not verify: ' + back.result + ' ' + (back.error || back.reason || '') + (back.detail ? ' — ' + back.detail : ''));
+  const owed = Object.keys(envelope);
+  const got = new Set([...(back.disclosed || []), ...(back.disclosed_partial || []).map((x) => x.partition)]);
+  const missing = owed.filter((n) => !got.has(n));
+  if (missing.length) die('the envelope does not open every private partition it should — ' + missing.join(', ') + ' stayed closed against the very pairs just written');
+
+  if (outFile) { writeFileSync(outFile, JSON.stringify(envelope, null, 2) + '\n', { mode: 0o600 }); }
+  const docOut = (() => { const o = arg('out', null); return o && o !== true ? String(o) : null; })();
+  if (docOut) writeFileSync(docOut, JSON.stringify(doc, null, 2) + '\n');
+  else console.log(JSON.stringify(doc, null, 2));
+
+  console.error('\n  ✓ signed ' + Object.keys(built).length + ' partition(s) as ' + ID.ust_id + '  ·  ' + back.result);
+  console.error('    content_hash ' + P.contentHash(doc));
+  if (outFile) {
+    console.error('    disclosures  ' + outFile + '  (mode 0600 — ' + owed.length + ' nonce/value pair(s))');
+    console.error('    KEEP IT. The nonces are in that file and nowhere else: lose it and the commitments can never be opened,');
+    console.error('    by you or by anyone. It is also what you hand a reader to disclose a partition to them.');
+  }
+}
+
 async function cmdCanon() {
   const src = process.argv[3];
   if (!src) die('usage: ust canon <file | - for stdin>   # prints canonical bytes + hash to diff cross-language');
@@ -3399,7 +3528,7 @@ const isMain = (() => { try { return process.argv[1] && realpathSync(process.arg
 if (isMain) {
   const cmd = process.argv[2];
 
-  const run = { verify: cmdVerify, explain: cmdExplain, canon: cmdCanon, names: cmdNames, genesis: cmdGenesis, key: cmdKey, rotate: cmdRotate, cadence: cmdCadence, reroot: cmdReroot, discovery: cmdDiscovery, publish: cmdPublish, mirror: cmdMirror, stream: cmdStream, forkchoice: cmdForkChoice, witness: cmdWitness }[cmd];
+  const run = { verify: cmdVerify, sign: cmdSign, explain: cmdExplain, canon: cmdCanon, names: cmdNames, genesis: cmdGenesis, key: cmdKey, rotate: cmdRotate, cadence: cmdCadence, reroot: cmdReroot, discovery: cmdDiscovery, publish: cmdPublish, mirror: cmdMirror, stream: cmdStream, forkchoice: cmdForkChoice, witness: cmdWitness }[cmd];
   if (!run) { const b = banner(); console.error(b + (b ? '' : 'ust — verify machine-readable state\n\n') + "\n  READ & VERDICT — safe, touches nothing\n  ✓ ust verify <file|->        verify a transcript — exit 0 = VALID, 1 = not (--require-anchored demands proven time)\n  ≡ ust canon  <file|->        print canonical bytes + hash — diff another language's implementation against this\n  … ust stream <frames…>       a verdict about a RANGE, not one document: chain · forks · completeness\n                               (--checkpoint is what makes completeness answerable at all)\n  ⑂ ust forkchoice <docs…>     pick the CANONICAL document among candidates for ONE ust_id — the anchor decides,\n                               never the candidates themselves\n  ◇ ust discovery <domain>     probe a domain's serving surface and report an honest verdict — any infrastructure\n  ⌗ ust names <dir|file…>      point the NAME rule at YOUR OWN published set: an artifact either IS a document\n                               of this protocol or does not wear its name (offline; F.5t)\n\n  CEREMONY — touches your identity, needs the root key\n  ◉ ust genesis --domain <d>   run the HIGH genesis ceremony (add --publish cf for one-click serving)\n  + ust key add --domain <d> --root <enc> --role <data|issuance>   ADD a key BESIDE the current one (never replaces it)\n  ↻ ust rotate  --domain <d> --root <enc>   APPEND a key rotation to the served log\n                               (never re-mints — documents signed by the old key stay valid)\n  ~ ust cadence --domain <d> --root <enc> --seconds <n> --effective-from <slot>\n                               DECLARE the signed grid your stream follows — what completeness is measured against\n  ⟳ ust reroot  --domain <d> --ca-key <enc>   RE-ROOT onto a new genesis, crossing EVERY genesis-rooted\n                               structure you run — key-log, authority chain, witness log (the NAME), cadence.\n                               Writes artifacts; publishes nothing. Your writer must cross the last axis itself.\n\n  PUBLISH — writes to the world\n  ▲ ust publish <cf|self> --domain <d> --genesis <f>   serve an existing genesis: cf deploys the adapter,\n                               self writes the four artifacts for YOUR stack (asked if omitted)\n  ▣ ust mirror <domain>        publish and attest a SECOND-vendor copy, so your identity does not rest\n                               on one provider\n  † ust witness rekor --domain <d>   log the genesis in a public transparency log, so a second published\n                               history cannot go unnoticed\n"); process.exit(cmd ? 1 : 0); }
   run().catch((e) => die(e.message || String(e)));
 }

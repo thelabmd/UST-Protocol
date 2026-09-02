@@ -2198,6 +2198,18 @@
         "excluded": "A vector pins an input and a declared RESULT a port reproduces. No verdict changed — measured on the same document before and after this edit. Pinning a glyph count into the corpus a stranger runs would make our typography part of their conformance, which is exactly backwards."
       },
       "test": "tools/docs-verifier-parity.mjs :: the page's verifier is checked against the reference on every corpus vector, so a render edit that altered a verdict would be caught; the width itself was measured in the browser, where layout is true — label 10, run 10, on all five channel rows."
+    },
+    {
+      "round": 253,
+      "math": {
+        "excluded": "No theorem moved. `ust sign` builds what F.7a.1's producer corollary already required to exist, and the clean-room's step 8 implements §14.8, stated and bound in round 248. A second implementation catching up to a rule is evidence the rule was reachable, never a new claim — recording it as math would let an implementation gap masquerade as a discovery."
+      },
+      "spec": {
+        "excluded": "§10 already states the nonce obligation (fresh, unique, never value-derived) and leaves key management to the operator; §14.8 already requires the commitment reproduction this file was missing. The spec binds conforming producers and verifiers — it does not describe our CLI's flags, and writing `--disclosures-out` into it would make one tool's ergonomics an implementer's obligation."
+      },
+      "code": "packages/ust-cli/index.mjs :: `cmdSign` — privacy declared per partition in the input, one fresh nonce per private member, `--disclosures-out` refused-if-absent, no key invented, and the output re-opened from the envelope before either is written; docs/ust-verify.mjs :: §14 step 8 (commitment reproduction + AES-GCM through WebCrypto, XChaCha honestly reported as this build's limit), synced byte-for-byte to the extension; tools/docs-verifier-parity.mjs :: vectors carry their disclosures and keys into BOTH verifiers, with capability boundaries separated from divergence.",
+      "vector": "privacy-encrypted-channels-disagree",
+      "test": "tools/docs-verifier-parity.mjs :: the gate is a CI step (`npm run test:docs-parity`) and now prints how many vectors carried an auxiliary input, so a refactor that stopped threading them would show as zero rather than as silent agreement."
     }
   ],
   "first_accounted_round": 76,

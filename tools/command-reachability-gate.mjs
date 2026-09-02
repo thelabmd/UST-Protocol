@@ -41,6 +41,8 @@ check(COMMANDS.length >= 8, `only ${COMMANDS.length} commands found — the prob
 // packet leaves the machine, a road argument where the command requires one, and a file path that cannot be read.
 const ARGS = {
   verify: ['/nonexistent-file-for-the-gate.json'],
+  sign: ['/nonexistent-file-for-the-gate.json', '--key', '/nonexistent-key-for-the-gate'],   // the body is entered; the data file is what is unreadable
+
   explain: ['/nonexistent-file-for-the-gate.json'],   // #137 — same first refusal as verify: the body is entered, the file is not readable
   canon: ['/nonexistent-file-for-the-gate.json'],
   names: ['/nonexistent-directory-for-the-gate'],   // F.5t-a — the body IS entered: an unreadable path yields NOTHING EXAMINED, which the command refuses rather than passing
