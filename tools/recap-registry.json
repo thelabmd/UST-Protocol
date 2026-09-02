@@ -772,6 +772,10 @@
     {
       "round": 256,
       "no_recap": "Round 256 does not close #178 — it delivers the classification and the ordering axis, and leaves the debt itself: 14 lagging capabilities, five of them reachable from the CLI today. The unit of a recap is the CLOSED ISSUE; this round closes none."
+    },
+    {
+      "round": 257,
+      "no_recap": "Round 257 does not close #178 — it delivers blinded production for agents and lowers the debt ratchet to 13, leaving the encrypted split, the signing question and thirteen lagging capabilities. The unit of a recap is the CLOSED ISSUE; this round closes none."
     }
   ]
 }

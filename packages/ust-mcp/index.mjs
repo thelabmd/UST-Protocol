@@ -7,6 +7,7 @@
 // engine/deploy wires around `listTools()` + `dispatch(name, args)`.
 import * as P from 'ust-protocol';
 import { makeSsrfSafeFetch } from './ssrf-guard.mjs';
+import { randomBytes } from 'node:crypto';
 
 // #69 E4 — the MCP takes UNTRUSTED documents from agents and auto-fetches their domain_shard, so the discovery
 // egress is resolution-guarded (a public NAME resolving to a private ADDRESS is refused) on top of the core's
@@ -20,6 +21,39 @@ const doc1 = (state) => ({ ust: '1.0', state });
 // build tools return the UNSIGNED state + the exact `signing_input` bytes; the caller (agent/operator) signs
 // with its OWN Ed25519 key and assembles { ust, state, sig:{alg:'Ed25519', key_id, pub, sig} }. No key here.
 const buildResult = (state) => ({ state, content_hash: P.contentHash(doc1(state)), signing_input: P.signedContent(doc1(state)) });
+
+// §10 PRIVATE PARTITIONS FOR AGENTS (#178). The agent is the protocol's PRINCIPAL audience, and `blinded` is the
+// mode it needs most: publish existence, time and integrity WITHOUT the value — prove what you did without
+// disclosing what it was. It needs no key at all, only a nonce, so the reason that kept it off this surface
+// ("key material does not belong in an agent's argument list") was true of `encrypted` and simply false here.
+//
+// PRIVACY IS DECLARED IN THE DATA, exactly as `ust sign` takes it and exactly as the wire carries it: a shard
+// mixing open and closed members is the ordinary case, so a flag over the whole document would be the wrong
+// shape. This is a translator, not a policy.
+//
+// THE ENVELOPE COMES BACK IN THE SAME OBJECT, and that is the structural form of an obligation the CLI can only
+// state. §10 requires the nonce be freshly random, unique and never derived from the value; it is generated HERE,
+// so a tool that returned the state without it would leave the agent holding a commitment nobody can ever open —
+// not the reader, not itself. An agent cannot receive the one without the other, so the obligation cannot be
+// declined rather than merely being documented.
+//
+// `encrypted` is NOT produced here, and the reason is a claim about the ACT rather than about agents: the key
+// would travel as a tool argument, hence through the model's context and into every transcript that records it.
+// The owner's split is the answer and it is a separate piece of work — the agent computes the commitment and the
+// canonical plaintext, a key-holder seals that exact string, and the key never enters the agent's context.
+const withPrivacy = (data, domain_shard, ust_id) => {
+  const out = {}, disclosures = {};
+  for (const [name, decl] of Object.entries(data || {})) {
+    if (!decl || typeof decl !== 'object' || decl.privacy === undefined) { out[name] = decl; continue; }
+    if (decl.privacy !== 'blinded')
+      throw Object.assign(new Error(`partition \`${name}\` declares privacy \`${decl.privacy}\` — this surface produces \`blinded\` only. An \`encrypted\` partition needs an AEAD key, and a key passed as a tool argument travels through the agent's context; use the key-holder split (#178) or build it with ust-protocol directly.`), { code: 'E-UNSUPPORTED' });
+    if (decl.value === undefined) throw new Error(`private partition \`${name}\` has no \`value\` — this tool commits to a value you supply; it cannot commit to nothing`);
+    const nonce = randomBytes(16).toString('base64url');            // §10: freshly random, unique, never value-derived
+    out[name] = P.blindPartition(name, decl.value, { domain_shard, ust_id, nonce, kind: decl.kind || 'captured' }).partition;
+    disclosures[name] = { nonce, value: decl.value };
+  }
+  return { data: out, disclosures };
+};
 
 // ─── PROTOCOL MCP tools (universal) ──────────────────────────────────────────────────────────────────
 
@@ -78,19 +112,19 @@ export const tools = [
     name: 'ust_build_observation',
     description: 'CREATE (build, unsigned) an observation State from partitions; returns state + content_hash + signing_input to sign with your own Ed25519 key.',
     inputSchema: { type: 'object', required: ['domain_shard', 'ust_id', 'key_id', 'time', 'data'], properties: { domain_shard: { type: 'string' }, ust_id: { type: 'string' }, key_id: { type: 'string' }, time: { type: 'object' }, data: { type: 'object' } } },
-    handler: ({ domain_shard, ust_id, key_id, time, data }) => buildResult(P.buildState({ domain_shard, ust_id, key_id, class: 'observation' }, time, data)),
+    handler: ({ domain_shard, ust_id, key_id, time, data }) => { const w = withPrivacy(data, domain_shard, ust_id); return { ...buildResult(P.buildState({ domain_shard, ust_id, key_id, class: 'observation' }, time, w.data)), ...(Object.keys(w.disclosures).length ? { disclosures: w.disclosures } : {}) }; },
   },
   {
     name: 'ust_combine_derivation',
     description: 'COMBINE: build (unsigned) a derivation that chains to other records by content_hash (based_on) with an auto-computed order-bearing seed.',
     inputSchema: { type: 'object', required: ['domain_shard', 'ust_id', 'key_id', 'time', 'data', 'based_on'], properties: { domain_shard: { type: 'string' }, ust_id: { type: 'string' }, key_id: { type: 'string' }, time: { type: 'object' }, data: { type: 'object' }, based_on: { type: 'array' } } },
-    handler: ({ domain_shard, ust_id, key_id, time, data, based_on }) => buildResult(P.buildDerivation({ domain_shard, ust_id, key_id }, time, data, based_on)),
+    handler: ({ domain_shard, ust_id, key_id, time, data, based_on }) => { const w = withPrivacy(data, domain_shard, ust_id); return { ...buildResult(P.buildDerivation({ domain_shard, ust_id, key_id }, time, w.data, based_on)), ...(Object.keys(w.disclosures).length ? { disclosures: w.disclosures } : {}) }; },
   },
   {
     name: 'ust_combine_attestation',
     description: 'COMBINE: build (unsigned) an attestation over N constituent content_hashes with an auto-computed Merkle root.',
     inputSchema: { type: 'object', required: ['domain_shard', 'ust_id', 'key_id', 'time', 'data', 'constituents'], properties: { domain_shard: { type: 'string' }, ust_id: { type: 'string' }, key_id: { type: 'string' }, time: { type: 'object' }, data: { type: 'object' }, constituents: { type: 'array' } } },
-    handler: ({ domain_shard, ust_id, key_id, time, data, constituents }) => buildResult(P.buildAttestation({ domain_shard, ust_id, key_id }, time, data, constituents)),
+    handler: ({ domain_shard, ust_id, key_id, time, data, constituents }) => { const w = withPrivacy(data, domain_shard, ust_id); return { ...buildResult(P.buildAttestation({ domain_shard, ust_id, key_id }, time, w.data, constituents)), ...(Object.keys(w.disclosures).length ? { disclosures: w.disclosures } : {}) }; },
   },
   {
     name: 'ust_build_genesis',

@@ -2250,6 +2250,20 @@
         "excluded": "A vector is a fixed input and a declared RESULT any runner reproduces. The subject here is which of our packages exposes which function — an inventory of this tree, not a claim a port could reproduce or would want to. Pinning it in the corpus would make our tool surface part of a stranger's conformance."
       },
       "test": "tools/capability-parity.mjs :: the gate is a CI step (`npm run test:parity`) and carries its own controls — the lagging counter must see a newly added entry, and a ceremony must classify as deferred, so the two registers cannot collapse into one unnoticed."
+    },
+    {
+      "round": 257,
+      "math": {
+        "excluded": "F.7a.1 already fixes what a commitment binds and what a disclosure may add; nothing about the mode changed. What moved is which surface can construct one — an inventory of our tooling, not a property of documents, and a second implementation exposing it differently would conform just as well."
+      },
+      "spec": {
+        "excluded": "§10 already requires the nonce be freshly random, unique and never value-derived, and already leaves delivery of `{nonce,value}` to the operator as an out-of-scope channel. That a particular tool returns the envelope in the same object is how WE discharge that requirement; the standard neither asks for it nor should."
+      },
+      "code": "packages/ust-mcp/index.mjs :: `withPrivacy` translates a `privacy` declaration in the data into a blinded partition with a freshly generated nonce, across ust_build_observation / ust_combine_derivation / ust_combine_attestation, and returns the envelope in the same result object so it cannot be declined; `encrypted` is refused with a claim about the act, pointing at the key-holder split.",
+      "vector": {
+        "excluded": "The claim is about what a TOOL SURFACE offers, not about a document: the partitions this produces are byte-identical to the core's and are already pinned by the privacy vectors. A vector here would pin our MCP schema into the corpus a stranger runs to check their own conformance."
+      },
+      "test": "packages/ust-mcp/live-test.mjs :: the agent round trip over the real stdio transport — the envelope returns with the state, the wire carries a commitment and no value, the agent reads its own document back, and a different value against the same nonce is E-COMMIT so the envelope is evidence rather than decoration."
     }
   ],
   "first_accounted_round": 76,

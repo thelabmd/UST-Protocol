@@ -93,6 +93,35 @@ check('live:fork_choice same ust_id, no substrate → INDETERMINATE', (await cal
     (blind.disclosed_partial || [])[0]?.needs_key_id === dis.doc.state.data[dis.disclosure.partition].enc.key_id);
 }
 
+// #178 — the AGENT round trip for a private partition, over the real transport. Measured 2026-09-02 and CLOSED 2026-09-02 by the three builders taking `privacy` in their data: `blinded` is the mode the principal audience needs most — publish existence, time and integrity
+// WITHOUT the value — and it needs no key at all, so the reason that kept it off this surface was true of
+// `encrypted` and false here. The envelope returns in the SAME object as the state: an agent cannot receive one
+// without the other, which is the structural form of an obligation the CLI can only state in a flag.
+{
+  const B = kp('bb'.repeat(32));
+  const ID = { domain_shard: B.key_id, ust_id: 'ust:20260902.21', key_id: B.key_id };
+  const built = await call(client, 'ust_build_observation', { ...ID, time: t, data: {
+    station:  { kind: 'captured', value: { name: 'Baltic-1' } },
+    position: { kind: 'captured', privacy: 'blinded', value: { lat: '54.71' } },
+  } });
+  check('live:#178 the envelope comes back WITH the state — an agent cannot take one without the other',
+    !!built.disclosures?.position?.nonce && built.disclosures.position.value.lat === '54.71', JSON.stringify(Object.keys(built.disclosures || {})));
+  check('live:#178 the wire carries a commitment and no value — existence and time without the value, which is the whole point',
+    built.state.data.position.commit?.startsWith('sha256:') && built.state.data.position.value === undefined);
+
+  const sg = edSign(null, Buffer.from(built.signing_input, 'utf8'), B.priv).toString('base64url');
+  const doc = { ust: '1.0', state: built.state, sig: { alg: 'Ed25519', key_id: B.key_id, pub: B.pubB64, sig: sg } };
+  const opened = await call(client, 'ust_verify', { doc, offline: true, soft: true, disclosures: built.disclosures });
+  check('live:#178 the agent reads its OWN document back with the envelope it was handed — the round trip closes on this surface',
+    opened.result === 'VALID:LIGHT' && (opened.disclosed || []).includes('position'), `${opened.result} ${JSON.stringify(opened.disclosed)}`);
+  // the load-bearing negative: a nonce the tool did NOT generate must not open the commitment, or the envelope
+  // would be decoration and any value could be claimed as the disclosed one.
+  const forged = await call(client, 'ust_verify', { doc, offline: true, soft: true,
+    disclosures: { position: { nonce: built.disclosures.position.nonce, value: { lat: 'ELSEWHERE' } } } });
+  check('live:#178 a different value against the same nonce is E-COMMIT — the commitment binds, so the envelope is evidence rather than decoration',
+    forged.error === 'E-COMMIT', `${forged.result} ${forged.error || ''}`);
+}
+
 await client.close();
 console.log('\n════════════════════════════════════════════');
 console.log('  ust-mcp LIVE (real stdio transport)   PASS ' + pass + '   FAIL ' + fail);

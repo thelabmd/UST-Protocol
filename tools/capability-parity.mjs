@@ -111,7 +111,7 @@ const CAPS = {
   // false of MAKING one: `encryptPartition` works on exactly the data a publisher does hold. One sentence covered
   // two operations, so the produce half stayed unowned until `ust sign` was written (#177). CONSUMPTION is not a
   // separate capability: it is `verify` with `disclosures`/`decKeys`, and it is scored there.
-  'disclosure-produce': { core: ['blindedCommit', 'blindPartition', 'encryptPartition'], cli: 'cmd:sign' },
+  'disclosure-produce': { core: ['blindedCommit', 'blindPartition', 'encryptPartition'], cli: 'cmd:sign', mcp: 'arg:ust_build_observation.data' },
   'negative-observation':{ core: ['buildAbsence', 'noEventBacking'] },   // #39 — a normative absence assertion + the no-event↔completeness tie; core-only for now, no surface exposes it yet
 };
 
@@ -242,7 +242,6 @@ const MCP_DISPOSITION = {
 
   // ── LAGGING: debt. No justification is written here on purpose; a `lagging` cell states only that it is owed.
   'sign':               ['lagging'],
-  'disclosure-produce': ['lagging'],
   'byte-agreement':     ['lagging'],
   'name-obligation':    ['lagging'],
   'discovery-shard':    ['lagging'],
@@ -259,7 +258,7 @@ const MCP_DISPOSITION = {
 // The debt is PINNED and may only shrink — the same ratchet the vacuity residual uses. A new capability that
 // lands on the CLI and not on MCP raises this number and fails the build, which is the ordering rule made
 // mechanical: not "parity eventually", but "the agent surface does not fall further behind".
-const PINNED_LAGGING = 14;
+const PINNED_LAGGING = 13;   // 14 → 13 (round 257): `disclosure-produce` reached the agent surface
 
 // ── SURFACES — each surface's DECLARED stance. `full` = exposes the capability; `subset` = a documented reduced form;
 //    everything else defaults to `na` with the surface's `naReason` (a specific override lives in `naSpecific`). This
@@ -274,7 +273,7 @@ const SURFACES = {
   // is deferred to the PLANNED operator MCP over @ust-protocol/operator (key creation, checkpoint/recovery/epoch/uniqueness/map
   // ceremonies) so a human explicitly grants agent rights — NOT 'stays core+CLI forever'. NOTE: no-fork-evidence /
   // anchor-verify are marked full on the CONSUME side; a produce/consume axis split is the honest refinement (UST-<top>).
-  'ust-mcp':          { probe: mcpProbe, full: ['canon', 'content-address', 'verify', 'resolve-authority', 'no-fork-evidence', 'consumer-trust-root', 'anchor-verify', 'fork-choice', 'stream-verify', 'cadence-grid', 'cadence-declare'], subset: ['build-transcript'], naReason: 'deferred to the planned operator MCP over @ust-protocol/operator (privilege-separation: a human explicitly grants agent rights) — NOT core+CLI-forever; TOP-produce is the one agent touch still to be built for noosphere', naSpecific: { 'sign': 'the agent signs with its OWN key; build tools return signing_input, the MCP never holds a private key', 'negative-observation': 'agent-appropriate (a normal negative observation, NOT operator) — new per #39; an MCP absence verb is planned, not yet built' } },
+  'ust-mcp':          { probe: mcpProbe, full: ['canon', 'content-address', 'verify', 'resolve-authority', 'no-fork-evidence', 'consumer-trust-root', 'anchor-verify', 'fork-choice', 'stream-verify', 'cadence-grid', 'cadence-declare'], subset: ['build-transcript', 'disclosure-produce'], naReason: 'deferred to the planned operator MCP over @ust-protocol/operator (privilege-separation: a human explicitly grants agent rights) — NOT core+CLI-forever; TOP-produce is the one agent touch still to be built for noosphere', naSpecific: { 'sign': 'the agent signs with its OWN key; build tools return signing_input, the MCP never holds a private key', 'negative-observation': 'agent-appropriate (a normal negative observation, NOT operator) — new per #39; an MCP absence verb is planned, not yet built' } },
   'ust-cli':          { probe: cliProbe, full: ['canon', 'content-address', 'verify', 'resolve-authority', 'no-fork-evidence', 'consumer-trust-root', 'anchor-verify', 'stream-verify', 'checkpoint-chain', 'keylog-commitment', 'discovery-shard', 'cadence-grid', 'cadence-declare', 'byte-agreement', 'name-obligation', 'sign', 'disclosure-produce'], subset: ['build-transcript'], naReason: 'not exposed by the reference operator CLI', naSpecific: { 'negative-observation': 'new per #39; a `ust absence` command is planned, not yet built', 'build-transcript': 'CLOSED 2026-09-02 by `ust sign` (#177) — but SUBSET, not full: this surface builds a STATE (`ust sign`) and a genesis/key-log (the ceremonies), and nothing here builds an attestation, a derivation, a checkpoint, a gap or an anchor commitment. Declaring full would be the same overclaim round 246 removed, one command later.' } },
 };
 
