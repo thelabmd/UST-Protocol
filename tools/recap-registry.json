@@ -766,7 +766,8 @@
     },
     {
       "round": 255,
-      "no_recap": "Round 255 delivers the last WORK item of #177 (private partitions at the floor) but does not itself close the card: the closing report and the checkbox sweep are a separate act, and the owner calls the diary. The unit of a recap is the CLOSED ISSUE; this round closes none."
+      "issue": 177,
+      "content_hash": "sha256:f84256c6c54a1671d22f6546cb8ada6438e2f71f22d7ab4e531c1a9311b6f6aa"
     }
   ]
 }
