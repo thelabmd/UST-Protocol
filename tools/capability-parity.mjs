@@ -386,6 +386,16 @@ if (!drift) report.push(`  ✓ REALITY: all ${cells} surface×capability cells m
 // descriptive aside, not the justification. That version read a WORD as an INTENT, which is precisely the error
 // it was written to catch. Prose cannot be judged here honestly, so this axis judges no prose at all.
 //
+// THE RULE, stated because a mechanism is not a rule: **a capability whose name is a VERB is worth splitting
+// before it is scored — a surface not owed all of it may still owe part.** A stance is placed on a NAME, so when
+// one verb covers two operations with different access costs, any reason about the expensive half silently
+// withholds the cheap one, and the reason reads as true because it IS true — just not of everything it covers.
+//
+// WHAT THIS AXIS MECHANISES, AND WHAT IT DOES NOT. It knows ONE split axis: key-taking. That catches
+// `disclosure-produce` and `sign`, and it does NOT catch `build-transcript`, whose nine functions are all
+// key-free and which split on a different axis entirely — what a human ceremony owns. The rule is broader than
+// its detector, and pretending otherwise would be the third version of the same mistake in one round.
+//
 // THE STRUCTURAL FACT INSTEAD. Partition a capability's core functions by whether they take key material. If both
 // halves are non-empty the capability is MIXED — one name over two operations, only one of which is key-bound —
 // and every recorded instance of this repository's most repeated surface defect has that shape:

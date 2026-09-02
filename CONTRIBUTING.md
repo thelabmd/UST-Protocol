@@ -48,6 +48,16 @@ disagreement.
   the value model and the vector arbiter.
 - **Structural, not point-wise.** We fix a whole class, not one case (unify a duplicated path, harden the boundary,
   size to the norm) — no patches that leave the same footgun one call away.
+- **A capability whose name is a VERB gets split before it is scored.** A stance — full, subset, absent — is placed
+  on a NAME, so when one verb covers two operations with different access costs, any reason about the expensive
+  half silently withholds the cheap one. The reason reads as true because it *is* true, only not of everything it
+  covers. Measured four times in this tree: `disclosure` (produce ↔ consume) kept `blinded` off the agent surface
+  for two months behind a claim about a key that mode does not use; `build-transcript` (state ↔ ceremonies) was
+  declared complete on a substring; `sign` (sign ↔ assemble) had agents publishing off-surface; and five authority
+  capabilities were deferred on a claim about *issuing* that was applied to *reading* — `checkpoint-chain` is one
+  key-bound function against eight key-free ones. Ask of each OPERATION, never of the name: what does this one
+  actually require? `tools/capability-parity.mjs` mechanises one split axis (key-taking) and pins the set that
+  splits; it does not see the others, so the rule is wider than its gate.
 - **Spec / model changes are issue-first.** Open an issue before a PR that touches `spec/` or the formal model:
   the model and the code move in lockstep, and a claim the model asserts but the code does not realize is a bug.
 

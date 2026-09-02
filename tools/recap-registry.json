@@ -784,6 +784,10 @@
     {
       "round": 259,
       "no_recap": "Round 259 does not close #178 — it adds the mixed-capability axis the owner's question led to and records that five of round 256's deferrals over-covered. Splitting those capabilities properly is debt the card now carries. The unit of a recap is the CLOSED ISSUE; this round closes none."
+    },
+    {
+      "round": 260,
+      "no_recap": "Round 260 does not close #178 — it writes the verb-capability rule where contributors read it, and states the boundary of its detector. The card's debt is untouched. The unit of a recap is the CLOSED ISSUE; this round closes none."
     }
   ]
 }

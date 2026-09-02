@@ -2292,6 +2292,20 @@
         "excluded": "A vector is a fixed input and a declared RESULT a port reproduces. This axis reads the signatures of our own exports; pinning it in the corpus would ask a stranger to reproduce the shape of our module rather than the behaviour of the protocol."
       },
       "test": "tools/capability-parity.mjs :: a CI step (`npm run test:parity`) carrying its own controls, and verified by three mutations — an unacknowledged mixed capability, an acknowledgement that is no longer true, and a key-probe that sees nothing each redden their own message."
+    },
+    {
+      "round": 260,
+      "math": {
+        "excluded": "The subject is how this repository groups and scores its own capability inventory — a working discipline, not a property of documents or verdicts. A conforming implementation may group its surface however it likes, so a theorem here would turn our maintenance habit into an obligation on implementers."
+      },
+      "spec": {
+        "excluded": "Same reason one layer down: the standard defines a conforming producer and verifier and says nothing about how an implementation files its exports. The rule belongs where contributors read it, and that is CONTRIBUTING.md, which the spec deliberately is not."
+      },
+      "code": "CONTRIBUTING.md :: the rule stated beside `structural, not point-wise`, with its four measured instances and the explicit boundary that `tools/capability-parity.mjs` mechanises only the key-taking split; tools/capability-parity.mjs :: the same boundary stated where the axis is implemented, so the gate cannot be mistaken for the whole rule.",
+      "vector": {
+        "excluded": "A vector is a fixed input and a declared RESULT a port reproduces. A contribution rule is addressed to people working in THIS tree; putting it in the corpus a stranger runs would ask them to reproduce our process rather than the protocol's behaviour."
+      },
+      "test": "tools/capability-parity.mjs :: the CI step (`npm run test:parity`) that pins the nine mixed capabilities and carries both controls — the probe must read `seal`/`attachSignature` correctly and must not report key material in a pure function."
     }
   ],
   "first_accounted_round": 76,
