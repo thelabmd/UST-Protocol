@@ -763,6 +763,10 @@
     {
       "round": 254,
       "no_recap": "Round 254 does not close #177 — it delivers the support page the owner asked for and the PRODUCE/CONSUME split, leaving one item: private partitions in ust-light. The unit of a recap is the CLOSED ISSUE; this round closes none."
+    },
+    {
+      "round": 255,
+      "no_recap": "Round 255 delivers the last WORK item of #177 (private partitions at the floor) but does not itself close the card: the closing report and the checkbox sweep are a separate act, and the owner calls the diary. The unit of a recap is the CLOSED ISSUE; this round closes none."
     }
   ]
 }

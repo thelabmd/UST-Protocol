@@ -262,6 +262,37 @@ const unvaried = STATE_MEMBERS.filter((m) => !varied.has(m));
 ok(`UST-jls axis totality: every member of RESERVED.state (${STATE_MEMBERS.join(', ')}) is varied by the differential`, STATE_MEMBERS.length > 0 && unvaried.length === 0);
 if (unvaried.length) F.push('AXIS NEVER VARIED: ' + unvaried.join(', ') + ' — an obligation under it can never be reached');
 
+// ── THE CORPUS, and it is the leg that was missing. Measured 2026-09-02 (#177), CLOSED 2026-09-02 by this block:
+// this file read SIX `class-role` vectors and nothing else, so a population that looked like corpus coverage was
+// a single slice of it. Three rules the other two implementations already enforced — the closed private
+// production, the identifier restriction, the blinded-carrying-a-ciphertext refusal — were absent here and no
+// test could see it. The same blindness `docs-verifier-parity` had until its own corpus leg was added.
+//
+// Auxiliary inputs travel WITH the vector, for the reason that gate also learned: a check that only acts when a
+// disclosure is supplied, compared without one, is compared where it cannot act.
+{
+  const ALL = JSON.parse(readFileSync(new URL('../../vectors/conformance-vectors.json', import.meta.url), 'utf8')).vectors;
+  const docs = ALL.filter((v) => v && v.doc && v.doc.state && v.doc.sig && (v.role ?? 'data') === 'data');
+  let agree = 0, boundary = 0;
+  for (const v of docs) {
+    const aux = {
+      ...(v.disclosure ? { disclosures: { [v.disclosure.partition]: { nonce: v.disclosure.nonce, value: v.disclosure.value } } } : {}),
+      ...(v.key ? { decKeys: { [v.key.key_id]: v.key.raw } } : {}),
+    };
+    const ref = full.verify(v.doc, { context: 'data', ...aux });
+    let got; try { got = await lite.verify(v.doc, aux); } catch (e) { got = { result: 'THREW', error: String(e.code || e.message).slice(0, 40) }; }
+    // A floor answering INDETERMINATE about a tier it does not implement, or an algorithm it does not carry, is
+    // declining rather than disagreeing — the same distinction §16 draws and the parity gate makes explicit.
+    if (got.result === 'INDETERMINATE' && ref.result !== 'INDETERMINATE') { boundary++; continue; }
+    const same = String(ref.result).startsWith('VALID') === String(got.result).startsWith('VALID');
+    if (same) agree++;
+    else F.push(`CORPUS DIVERGENCE ${v.kind}/${v.id} — core:${ref.result}${ref.error ? ' ' + ref.error : ''}  lite:${got.result}${got.error ? ' ' + got.error : ''}`);
+  }
+  ok(`round-255 corpus: ust-light agrees with the core on ${agree} document-bearing vector(s), ${boundary} declined as this floor's own limit`, agree > 30 && !F.some((x) => x.startsWith('CORPUS DIVERGENCE')));
+  // the population must be a POPULATION — a slice that shrank to nothing would report perfect agreement
+  ok(`round-255 corpus: the comparison ran over ${docs.length} vectors, not a hand-picked slice (this leg replaced one that read six)`, docs.length >= 40);
+}
+
 console.log(`\n  ust-light validity vs full ust-protocol   PASS ${pass}   FAIL ${fail}`);
 if (F.length) { F.forEach((f) => console.log('    ✗ ' + f)); process.exit(1); }
 console.log('  ✓ a ust-light document IS a valid UST document — byte-identical, cross-verified both ways, AND lite VALID ⇒ core VALID over adversarial shapes (round-49 P0-01 differential)');

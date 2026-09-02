@@ -2224,6 +2224,18 @@
         "excluded": "A vector is an input and a declared RESULT a port reproduces. This page is an inventory of THIS implementation, and pinning it in the corpus a stranger runs would make our tool surface part of their conformance — the precise inversion the page's own header warns against."
       },
       "test": "tools/gen-support-matrix.mjs :: a CI step in its own right (`npm run test:support-matrix`), which regenerates and `git diff --exit-code`s the page, so a hand edit or a drifted declaration fails the build rather than shipping a promise."
+    },
+    {
+      "round": 255,
+      "math": {
+        "excluded": "Every rule this round brings to the floor is already a theorem or a stated obligation: F.7a.1's per-channel corollary, F.7a.2's unexaminable-channel corollary, §13's breadth bound, §4.4's kind domain. A third implementation catching up to them is evidence they were reachable, never a new claim — and recording it as math would let an implementation gap read as a discovery."
+      },
+      "spec": {
+        "excluded": "§10 already defines both privacy modes and leaves key management to the operator; §4.4 already registers three kinds; §13 already bounds breadth per node. The spec binds any conforming implementation, and `ust-light` was simply not yet one of them on these axes. Nothing here is a rule the standard lacked."
+      },
+      "code": "packages/ust-light/index.mjs :: `blindPartition` and `encryptPartition` at the MTI (WebCrypto AES-GCM, IV derived from the commitment), §14 step 8 with per-channel reporting, the `absence` kind, §13's breadth bound, the closed private production and the §6 identifier restriction; packages/ust-light/test.mjs :: a corpus leg comparing every document-bearing vector against the core, auxiliary inputs travelling with each.",
+      "vector": "partition-kind-absence-admitted",
+      "test": "packages/ust-light/test.mjs :: a CI step in its own right (`npm run test:light`), whose corpus leg compares EVERY document-bearing vector against the core with each vector's auxiliary inputs, and asserts the population is a population — a slice that shrank to nothing would report perfect agreement."
     }
   ],
   "first_accounted_round": 76,

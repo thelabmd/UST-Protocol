@@ -86,7 +86,15 @@ const RESERVED = { transcript: ['ust', 'state', 'sig', 'proof'], state: ['id', '
   id: ['domain_shard', 'ust_id', 'key_id', 'class', 'parent_ust'], envelope: ['kind', 'value', 'privacy', 'commit', 'enc'] };
 const RES_PARTITION = new Set([...RESERVED.transcript, ...RESERVED.state, ...RESERVED.id, ...RESERVED.envelope,
   'partition', 'nonce', '__proto__', 'constructor', 'prototype']);
-const KINDS = ['captured', 'computed'], PRIVACY = ['blinded', 'encrypted'];
+// §4.4 registers THREE kinds, and this floor carried two. Measured 2026-09-02 (#177) — CLOSED 2026-09-02: an
+// `absence` partition — the notary's other half, a signed NON-occurrence — was refused here as an unknown kind,
+// so an honest document of the reference operator would not verify at the floor. This is #154 recurring in the
+// implementation that round did not sweep: it added `absence` to the browser verifier and the extension and
+// left this one, and no test could see the gap because the light corpus leg did not exist until now.
+// The list is duplicated rather than imported ON PURPOSE — this package is zero-dependency and standalone —
+// so the corpus comparison in `test.mjs` is what keeps it equal to `REGISTRY.partitionKinds`.
+const KINDS = ['captured', 'computed', 'absence'], PRIVACY = ['blinded', 'encrypted'];
+const FORGES_STRUCTURE = /[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]/;
 const CLASSES = ['observation', 'attestation', 'derivation', 'genesis', 'key', 'cadence'];
 // #142 — TWO AXES, and conflating them is the defect this replaces. `genesis`/`key`/`cadence` are the
 // AUTHORITY layer: excluding them from a floor with no key log is principled, there is nothing here that could
@@ -107,7 +115,7 @@ const ustIdCalOk = (u) => calOk(u.slice(4, 8), u.slice(8, 10), u.slice(10, 12));
 // core-INVALID (GPT round-50: an omitted-schema partition + a raw-Unicode domain read VALID:LIGHT in lite / INVALID in core).
 // Kept BYTE-IDENTICAL to core (§4.4 closed envelope XOR, §4.3a A-label homograph guard, AEAD enc block); the differential pins it.
 const AEAD_ALGS = ['AES-256-GCM', 'XChaCha20-Poly1305'], B64URL = /^[A-Za-z0-9_-]+$/, HASH = /^sha256:[0-9a-f]{64}$/;
-const FLOOR = { partitions: 64, sizeBytes: 1048576 };   // §13 anonymous LIGHT floor (full UST raises these via a genesis grant)
+const FLOOR = { partitions: 64, sizeBytes: 1048576, breadth: 64 };   // §13 anonymous LIGHT floor (full UST raises these via a genesis grant)
 
 // ─── producer: keypair → buildState (auto per-partition hashes) → seal (sign the carried key) ─────────
 export async function keypair() {
@@ -115,6 +123,36 @@ export async function keypair() {
   const pub = b64uTo(new Uint8Array(await crypto.subtle.exportKey('raw', publicKey)));
   return { privateKey, pub, key_id: await keyId(pub) };
 }
+// §10 PRIVATE PARTITIONS — the floor can now MAKE one, not only refuse a malformed one. Measured 2026-09-02
+// (#177), CLOSED 2026-09-02 by the two producers below and step 8 in `verify`: this package validated the `enc`
+// SHAPE and had no producer and no step 8, so every fixture it could
+// hold described its own verifier. A mode with a reader and no writer cannot be attacked by its own tests.
+//
+// WHY THIS BELONGS AT THE FLOOR. §10's privacy is per-PARTITION and needs no genesis, no anchor and no lattice —
+// it is LIGHT by construction. Keeping it out would have made "the floor" mean "the parts of the floor that
+// happen to be synchronous", which is the shape #143 already removed from this file once.
+export async function blindPartition(name, value, { domain_shard, ust_id, nonce, kind = 'captured' }) {
+  const commit = await H('ust:shard', canon({ domain_shard, ust_id, nonce, partition: name, value }));
+  return { partition: { kind, privacy: 'blinded', commit }, hash: await partitionHash({ commit }) };
+}
+
+// AES-256-GCM only, and that is a CEILING honestly reported rather than a gap: WebCrypto offers no ChaCha, and
+// this floor will not hand-roll a cipher (the rule that keeps a hand-written Ed25519 out of the browser core).
+// `XChaCha20-Poly1305` stays registered and unimplemented here — §17's OPTIONAL tier is exactly this situation.
+//
+// The IV is DERIVED, never random: `H('ust:enc-iv', commit)[0..12]`, so IV uniqueness reduces to commitment
+// uniqueness, which §10 already demands of the producer. A random 96-bit IV would collide by birthday bound long
+// before a busy publisher's key rotates, and GCM under a repeated IV is catastrophic.
+export async function encryptPartition(name, value, { domain_shard, ust_id, nonce, key_id, key, kind = 'captured' }) {
+  const commit = await H('ust:shard', canon({ domain_shard, ust_id, nonce, partition: name, value }));
+  const plaintext = canon({ nonce, partition: name, value });          // EXACTLY what step 8 compares against
+  const iv = b64uFrom((await H('ust:enc-iv', commit)).slice(7)).subarray(0, 12);
+  const k = await crypto.subtle.importKey('raw', b64uFrom(key), { name: 'AES-GCM' }, false, ['encrypt']);
+  const sealed = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, k, utf8(plaintext)));
+  const ct = b64uTo(cat([iv, sealed]));                                  // nonce ‖ body ‖ tag (§17 layout)
+  return { partition: { kind, privacy: 'encrypted', commit, enc: { alg: 'AES-256-GCM', key_id, ct } }, hash: await partitionHash({ commit }) };
+}
+
 export async function buildState(id, time, data, provenance) {
   if (id.class !== undefined && id.class !== 'observation') throw err('E-MALFORMED', 'ust-light builds class:"observation" only — use ust-protocol for attestation/derivation/genesis/key/cadence');
   id = { ...id, class: 'observation' };   // round-49 P0-01 — class is REQUIRED (the verifier now rejects an absent class); ust-light always stamps observation
@@ -151,7 +189,7 @@ export async function seal(state, privateKey, pubB64url) {
 
 // ─── verifier — the LIGHT floor (§14 steps 1,2,4,5). VALID:LIGHT (integrity + a CLAIMED key), or a §15 error.
 //     LIGHT does NOT resolve name authority or time — those are HIGH/TOP (full UST). Identity is `self-asserted`.
-export async function verify(doc) {
+export async function verify(doc, opts = {}) {
   const bad = (error, detail) => ({ result: 'INVALID', error, detail });
   // totality (round-46 self-audit) — snapshot the doc ONCE into an inert record BEFORE any field read: a hostile getter/Proxy
   // would otherwise throw a host exception at the first `doc.ust` access (or split a two-face payload across the reads below).
@@ -169,6 +207,9 @@ export async function verify(doc) {
   if (Object.keys(st.data).length < 1) return bad('E-MALFORMED', 'no partition');
   for (const [name, part] of Object.entries(st.data)) {
     if (RES_PARTITION.has(name)) return bad('E-MALFORMED', 'reserved partition name: ' + name);
+    // §6 — a partition NAME travels into `disclosed`, so it is an identifier the verdict quotes. Tester without
+    // `/g`: a global regex keeps `lastIndex` between calls and answers FALSE on its third invocation.
+    if (FORGES_STRUCTURE.test(name)) return bad('E-MALFORMED', 'partition name carries a control or bidi-override character (§6)');
     if (!part || typeof part !== 'object') return bad('E-MALFORMED', 'partition not an object: ' + name);
     for (const k of Object.keys(part)) if (!RESERVED.envelope.includes(k)) return bad('E-MALFORMED', 'reserved-key: data.' + name + '.' + k);
     if (!KINDS.includes(part.kind)) return bad('E-MALFORMED', 'unknown partition kind: ' + name);
@@ -183,6 +224,13 @@ export async function verify(doc) {
       if (part.commit === undefined) return bad('E-MALFORMED', 'private partition requires commit (§4.4): ' + name);
       if (!HASH.test(part.commit)) return bad('E-MALFORMED', 'private partition commit not sha256:hex (§4.4): ' + name);   // round-51 P0-01 — TYPE the commitment (core does); a non-hash commit was lite-VALID/core-INVALID
       if (part.value !== undefined) return bad('E-MALFORMED', 'private partition must not carry a plaintext value (§4.4): ' + name);
+      // §4.4 — the two private alternatives are SEPARATE productions, and `enc` belongs to `encrypted` alone.
+      // Measured 2026-09-02 (#177) — CLOSED here: this floor is the THIRD implementation of the rule, and it
+      // admitted the shape after both others refused it. A ciphertext under a `blinded` declaration falls under
+      // no obligation: the AEAD branch is keyed on the MODE, so nothing ever examines it.
+      if (part.privacy === 'blinded' && part.enc !== undefined) return bad('E-MALFORMED', 'blinded partition carries an enc block — a channel its mode does not declare (§4.4): ' + name);
+      if (part.privacy === 'encrypted' && typeof part.enc?.key_id === 'string' && FORGES_STRUCTURE.test(part.enc.key_id))
+        return bad('E-MALFORMED', 'enc.key_id carries a control or bidi-override character — an identifier the verdict quotes may not forge structure (§6): ' + name);
       if (part.privacy === 'encrypted') { const e = part.enc; if (!e || typeof e !== 'object' || !AEAD_ALGS.includes(e.alg) || typeof e.key_id !== 'string' || !B64URL.test(e.ct || '')) return bad('E-MALFORMED', 'encrypted partition missing/invalid enc{alg,key_id,ct} (§4.4): ' + name); }
     }
   }
@@ -218,6 +266,13 @@ export async function verify(doc) {
     return bad('E-MALFORMED', 'observation MUST NOT carry constituents/root');
   if (st.id.class === 'derivation' && (pr?.based_on === undefined || pr?.seed === undefined))
     return bad('E-MALFORMED', 'derivation MUST carry based_on + seed');
+  // §13 breadth — `based_on` / `constituents` are bounded per node at 64, and this one is STRUCTURAL: no
+  // declaration raises it (F.9.5), so it is not a tier question and the floor owes it exactly as the core does.
+  // Measured 2026-09-02 (#177), CLOSED 2026-09-02 by the loop below: this floor accepted a document the core
+  // refuses with E-BOUNDS, and the corpus comparison that found it did not exist before this round.
+  for (const member of ['based_on', 'constituents'])
+    if (Array.isArray(pr?.[member]) && pr[member].length > FLOOR.breadth)
+      return bad('E-BOUNDS', `${member} ${pr[member].length} > ${FLOOR.breadth} per node (§13, a structural bound no declaration raises)`);
   if (st.id.class === 'attestation') {
     // §11.3 C2 — the subtype is a NAMED DATA PARTITION, never a shape: a prev-only attestation carrying no named
     // partition COLLIDES a checkpoint with a gap record. And the root FOLLOWS the subtype in BOTH directions,
@@ -260,6 +315,34 @@ export async function verify(doc) {
   // binding capability (no genesis/key-log), so it CANNOT confirm a name-form DOMAIN CLAIM ⇒ "cannot confirm ⇒
   // INDETERMINATE", never a bare VALID (the forgery-misread). A self-asserted KEY-IDENTITY uses key-form domain_shard.
   if (!shardKeyForm) return { result: 'INDETERMINATE', reason: 'unavailable', ust_id: st.id.ust_id, key_id: st.id.key_id, content_hash: await contentHash(doc), detail: 'name-form domain_shard is a domain claim ust-light cannot confirm (no binding): use key-form domain_shard = key_id for a self-asserted key-identity document (→ VALID:LIGHT), or verify with genesis+key-log via ust-protocol (→ HIGH). "cannot confirm" ⇒ INDETERMINATE (UST-ybn)' };
+  // §14 step 8 — PRIVACY, and authorization is per-CHANNEL. A `blinded` partition has ONE channel (the
+  // commitment, opened by `{nonce,value}`); an `encrypted` one has TWO (that, plus the AEAD opened by the key),
+  // and a reader may hold either. `disclosed` therefore means EVERY channel the publisher declared was checked;
+  // a partition opened by the commitment alone is reported apart, so the plain reading of a verdict is never
+  // true of a state nobody verified. Measured 2026-09-02 (#177) — CLOSED here: this floor had no step 8 at all,
+  // so a WRONG pair would have been accepted in silence had anyone thought to pass one.
+  const disclosed = [], disclosedPartial = [];
+  for (const [name, part] of Object.entries(st.data)) {
+    const d = opts.disclosures?.[name];
+    if (part.privacy === undefined || !d) continue;
+    const reproduced = await H('ust:shard', canon({ domain_shard: st.id.domain_shard, ust_id: st.id.ust_id, nonce: d.nonce, partition: name, value: d.value }));
+    if (reproduced !== part.commit) return bad('E-COMMIT', 'blinded commit mismatch: ' + name);
+    if (part.privacy === 'encrypted') {
+      const key = opts.decKeys?.[part.enc.key_id];
+      if (!key) { disclosedPartial.push({ partition: name, checked: 'commit', unchecked: 'aead', needs_key_id: part.enc.key_id }); continue; }
+      if (part.enc.alg !== 'AES-256-GCM')   // §17 OPTIONAL: this build's limit, never the document's defect
+        return { result: 'INDETERMINATE', reason: 'unsupported_alg', detail: 'AEAD ' + part.enc.alg + ' is not implemented by ust-light (WebCrypto offers no ChaCha): ' + name };
+      let pt = null;
+      try {
+        const raw = b64uFrom(part.enc.ct);
+        const k = await crypto.subtle.importKey('raw', b64uFrom(key), { name: 'AES-GCM' }, false, ['decrypt']);
+        pt = new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: raw.subarray(0, 12) }, k, raw.subarray(12)));
+      } catch { pt = null; }               // authentication failure — the DOCUMENT's defect
+      if (pt === null || pt !== canon({ nonce: d.nonce, partition: name, value: d.value })) return bad('E-COMMIT', 'AEAD↔commit mismatch: ' + name);
+    }
+    disclosed.push(name);
+  }
   return { result: 'VALID:LIGHT', tier: 'LIGHT', identity: 'self-asserted', publisher_claimed: st.id.domain_shard,
+    disclosed, ...(disclosedPartial.length ? { disclosed_partial: disclosedPartial } : {}),
     ust_id: st.id.ust_id, key_id: st.id.key_id, content_hash: await contentHash(doc), completeness: 'not_evaluated' };
 }

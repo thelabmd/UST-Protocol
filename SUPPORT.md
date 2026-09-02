@@ -43,7 +43,7 @@ This page is rendered from those declarations, so it cannot drift from what the 
 | `cadence-declare` | · | · | · | · | ✅ | ✅ |
 | `substrate-registry` | · | · | · | ✅ | · | · |
 | `discovery-shard` | · | · | · | · | · | ✅ |
-| `disclosure-produce` | · | · | · | · | · | ✅ |
+| `disclosure-produce` | ◐ | · | · | · | · | ✅ |
 | `negative-observation` | · | · | · | · | · | · |
 
 ## Private partitions, end to end

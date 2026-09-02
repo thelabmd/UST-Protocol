@@ -16,9 +16,11 @@
 // values and fails if a declared key is missing, so they cannot drift into being the stale kind.
 // Package: ust-light
 
+export function blindPartition(name: unknown, value: unknown, arg2?: unknown): Promise<{ partition: unknown; hash: unknown }>;
 export function buildState(id: unknown, time: unknown, data: unknown, provenance: unknown): Promise<unknown>;
 export function canon(v: unknown): string;
 export function contentHash(doc: unknown): string;
+export function encryptPartition(name: unknown, value: unknown, arg2?: unknown): Promise<{ partition: unknown; hash: unknown }>;
 export function H(tag: unknown, str: unknown): unknown;
 export function keyId(pubB64url: unknown): unknown;
 export function keypair(): Promise<{ privateKey: unknown; pub: unknown; key_id: unknown }>;
@@ -26,4 +28,4 @@ export function merkleRoot(contentHashes: unknown): Promise<unknown>;
 export function seal(state: unknown, privateKey: unknown, pubB64url: unknown): Promise<{ ust: unknown; state: unknown; sig: unknown }>;
 export function seed(contentHashes: unknown): string;
 export function signedContent(doc: unknown): string;
-export function verify(doc: unknown): Promise<unknown>;
+export function verify(doc: unknown, opts?: unknown): Promise<unknown>;
