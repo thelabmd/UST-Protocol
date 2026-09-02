@@ -500,27 +500,31 @@ function renderContent(data, verdict) {
   });
   return parts.join('');
 }
-// U+25AE runs stand for what the commitment withholds. The count is CONSTANT and says so: a run whose length
-// tracked the hidden value would leak its size — the one thing a public reader is not supposed to learn, since
-// §10 gives them existence and time and nothing else. Six blocks mean "hidden", never "six of something".
-// TWO glyphs, because the two modes hide differently and a reader should see which at a glance. `#` for
-// `blinded` — the value is behind a HASH, and the run reads like one. U+25AE for `encrypted` — solid blocks for
-// opaque bytes. Owner's distinction, 2026-09-02; the semantics were already there, the render just said one word
-// for both. Both runs are the same FIXED length, for the reason above.
-const SEAL = { blinded: '#'.repeat(6), encrypted: '\u25ae'.repeat(6) };
+// A seal run stands for what the commitment withholds, and its LENGTH IS THE LABEL'S — `commitment` and
+// `ciphertext` are both ten characters, so the run sits exactly as wide as the word naming it. That is not a
+// typographic flourish: a run whose length tracked the hidden VALUE would leak its size, which is the one thing
+// §10 withholds from a public reader (they are given existence and time, nothing else). Deriving the count from
+// our own vocabulary makes the independence structural rather than promised — the number cannot encode anything
+// about the value, because it is a property of the word above it. A third channel gets its own width for free.
+// TWO glyphs, because the two modes hide differently and a reader should see which at a glance: `#` for
+// `blinded`, where the value sits behind a HASH and the run reads like one, and U+25AE for `encrypted`, where it
+// sits behind opaque bytes. Owner's distinction, 2026-09-02 — the semantics were there, the render said one word
+// for both.
+const SEAL_GLYPH = { blinded: '#', encrypted: '\u25ae' };
+const sealFor = (privacy, label) => (SEAL_GLYPH[privacy] || SEAL_GLYPH.encrypted).repeat(label.length);
 function privateMd({ part, state, pa, value }) {
   const enc = part && part.enc;
-  const SEALED = SEAL[part && part.privacy] || SEAL.encrypted;
-  const chan = (label, body, cls) => `<div class="chan ${cls}"><span class="chanlabel">${esc(label)}</span><span class="chanbody">${body}</span></div>`;
-  const shown = value === undefined ? `<span class="sealed">${SEALED}</span>` : objectMd(value);
+  const seal = (label) => `<span class="sealed">${sealFor(part && part.privacy, label)}</span>`;
+  const chan = (label, body, cls) => `<div class="chan ${cls}"><span class="chanlabel">${esc(label)}</span><span class="chanbody">${typeof body === 'function' ? body(label) : body}</span></div>`;
+  const shown = value === undefined ? seal : objectMd(value);
   if (state === 'shut') {
-    return chan('commitment', `<span class="sealed">${SEALED}</span>`, 'shut')
-      + (enc ? chan('ciphertext', `<span class="sealed">${SEALED}</span>`, 'shut') : '')
+    return chan('commitment', seal, 'shut')
+      + (enc ? chan('ciphertext', seal, 'shut') : '')
       + `<p class="chanote">Sealed to you. The document proves this partition EXISTED at its instant and was signed with everything else — its value is the one thing it withholds. Paste the publisher\u2019s <code>{nonce,value}</code> above to open it${enc ? ', and the key to check the ciphertext agrees' : ''}.</p>`;
   }
   if (state === 'partial') {
     return chan('commitment', shown, 'open')
-      + chan('ciphertext', `<span class="sealed">${SEALED}</span>`, 'shut')
+      + chan('ciphertext', seal, 'shut')
       + `<p class="chanote">One channel of two. The value above is bound by the commitment, so it is genuine — what is unknown is whether the publisher\u2019s ciphertext says the same, and only key <code>${esc(pa && pa.needs_key_id || '')}</code> settles that. Until it does, this page will not call the partition disclosed.</p>`;
   }
   return chan('commitment', shown, 'open')

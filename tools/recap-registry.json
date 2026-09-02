@@ -751,6 +751,10 @@
     {
       "round": 251,
       "no_recap": "Round 251 does not close #177 — it delivers the web-verifier item and leaves three: `ust sign` with its disclosure envelope, private partitions in ust-light, and the parity table's split of PRODUCE from CONSUME. The unit of a recap is the CLOSED ISSUE; this round closes none."
+    },
+    {
+      "round": 252,
+      "no_recap": "Round 252 does not close #177 — it refines the seal render delivered in round 251 and leaves the card's three remaining items untouched. The unit of a recap is the CLOSED ISSUE; this round closes none."
     }
   ]
 }

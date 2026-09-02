@@ -2184,6 +2184,20 @@
         "excluded": "A vector is a fixed input and a declared RESULT a runner reproduces. This round changes no verdict — measured: the same document yields the same verdict, tier and disclosure fields before and after. What changed is what a human SEES, which no runner can assert and which the corpus would be wrong to pin: a port owes the distinction, never our glyphs."
       },
       "test": "tools/docs-verifier-parity.mjs :: the page's verifier is checked against the reference on every vector in the corpus, so a rendering change that quietly altered a verdict would be caught there; the render itself was measured in a browser, which is where layout is true."
+    },
+    {
+      "round": 252,
+      "math": {
+        "excluded": "Nothing about what a verifier decides changed, and nothing about what a document means. The claim underneath — that a public reader learns existence and time and NOT size — is §10's, stated long before this render existed. What moved is whether our own constant can be checked against that claim rather than trusted: a property of this page's source, not of the protocol."
+      },
+      "spec": {
+        "excluded": "Same reason. §10 already withholds the value's size from a public reader; §14.8 already requires the per-channel distinction. Neither says how wide a glyph run should be, and neither should — a conforming implementation owes the distinction, never our typography."
+      },
+      "code": "docs/index.html :: `sealFor(privacy, label)` repeats the mode's glyph `label.length` times, so the seal is exactly as wide as the word naming its channel; the count is derived from this page's own vocabulary and cannot encode anything about the hidden value.",
+      "vector": {
+        "excluded": "A vector pins an input and a declared RESULT a port reproduces. No verdict changed — measured on the same document before and after this edit. Pinning a glyph count into the corpus a stranger runs would make our typography part of their conformance, which is exactly backwards."
+      },
+      "test": "tools/docs-verifier-parity.mjs :: the page's verifier is checked against the reference on every corpus vector, so a render edit that altered a verdict would be caught; the width itself was measured in the browser, where layout is true — label 10, run 10, on all five channel rows."
     }
   ],
   "first_accounted_round": 76,
