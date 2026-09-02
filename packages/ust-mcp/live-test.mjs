@@ -24,7 +24,7 @@ const client = new Client({ name: 'ust-live-test', version: '1' }, { capabilitie
 await client.connect(transport);
 
 const tools = await client.listTools();
-check('live:tools/list = 17', tools.tools.length === 17, 'got ' + tools.tools.length);
+check('live:tools/list = 18', tools.tools.length === 18, 'got ' + tools.tools.length);
 check('live:key_id over the wire', (await call(client, 'ust_key_id', { pub: A.pubB64 })).key_id === A.key_id);
 
 // THE agent flow, entirely over MCP: build → sign with own key → verify
@@ -175,6 +175,24 @@ check('live:fork_choice same ust_id, no substrate → INDETERMINATE', (await cal
   const st = await call(client, 'ust_build_observation', { ...ID, key_id: D.key_id, time: t, data: { reading: built.partition } });
   check('live:#178 an assembled encrypted partition passes THROUGH the builder — a built result is not a declaration to rebuild',
     st.state?.data?.reading?.commit === req.commit);
+}
+
+// #178 debt — `ust_explain`. The CLI has had this since round 137; the agent had nothing, and the capability map
+// said NEITHER surface had it because `ladder-report` declared no token at all. An inversion inside a cell that
+// read as a universal absence, found by asking which lagging capabilities the CLI actually CALLS.
+{
+  const E = kp('ee'.repeat(32));
+  const b = await call(client, 'ust_build_observation', { domain_shard: E.key_id, ust_id: 'ust:20260903.14', key_id: E.key_id, time: t, data: { z: { kind: 'captured', value: { v: '3' } } } });
+  const sg = edSign(null, Buffer.from(b.signing_input, 'utf8'), E.priv).toString('base64url');
+  const sealed = await call(client, 'ust_seal', { state: b.state, pub: E.pubB64, sig: sg });
+  const led = await call(client, 'ust_explain', { doc: sealed.doc });
+  check('live:#178 ust_explain answers with a LADDER, not a verdict — the rung reached and the rungs above it',
+    !!led && typeof led === 'object' && JSON.stringify(led).length > 40, JSON.stringify(led).slice(0, 100));
+  // the load-bearing property: it must distinguish an input NOT ATTEMPTED from one refused, which is the whole
+  // reason an agent needs it — a verdict alone leaves that difference to be guessed.
+  const flat = JSON.stringify(led);
+  check('live:#178 …and it names what was not supplied, so an agent need not guess why a rung was not reached',
+    /genesis|keylog|anchor|witness|not/i.test(flat), flat.slice(0, 120));
 }
 
 await client.close();

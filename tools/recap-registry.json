@@ -808,6 +808,10 @@
     {
       "round": 265,
       "no_recap": "Round 265 does not close #178 — it makes the support page's prose branch on the values it describes, after the owner noticed a sentence that would go stale while its number stayed right. The debt stands at thirteen. The unit of a recap is the CLOSED ISSUE; this round closes none."
+    },
+    {
+      "round": 266,
+      "no_recap": "Round 266 does not close #178 — it starts paying the debt and finds two of it was mis-declared rather than owed. Eleven remain. The unit of a recap is the CLOSED ISSUE; this round closes none."
     }
   ]
 }

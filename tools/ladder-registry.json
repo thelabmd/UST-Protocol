@@ -2372,6 +2372,20 @@
         "excluded": "A vector is a fixed input and a declared RESULT a port reproduces. The subject is the wording of our own page; pinning it would make this repository's prose part of a stranger's conformance run."
       },
       "test": "tools/gen-support-matrix.mjs :: a CI step (`npm run test:support-matrix`) regenerating and diffing the page, and both new branches were exercised by hand — a hypothetical ceremony entry renders the list form, a stubbed `cliHas` renders the uniform-debt form."
+    },
+    {
+      "round": 266,
+      "math": {
+        "excluded": "Which of our surfaces exposes `explainLadder` is an inventory fact about this tree. The ladder itself — what a verdict reaches and what the next rung requires — is §3 and F.5b, stated long before this tool existed and unchanged by it."
+      },
+      "spec": {
+        "excluded": "§14 defines the verdict and §3 the tiers; neither says which of our packages must offer a report about them. The tool is this implementation's answer to a question the standard leaves to implementers."
+      },
+      "code": "packages/ust-mcp/index.mjs :: `ust_explain` exposes `explainLadder` to the agent surface; tools/capability-parity.mjs :: `ladder-report` and `substrate-registry` gain the surface tokens they always had in fact — the CLI calls both, and the MCP composes substrates — so two entries leave the debt as corrections rather than as work.",
+      "vector": {
+        "excluded": "A vector is a fixed input and a declared RESULT a port reproduces. `explainLadder`'s behaviour is already pinned by the `ladder` vectors; what changed is which of our surfaces calls it, which is not a claim a port could reproduce."
+      },
+      "test": "packages/ust-mcp/live-test.mjs :: over the real transport — `ust_explain` returns a ladder rather than a verdict, and names what was not supplied, which is the distinction an agent would otherwise have to guess."
     }
   ],
   "first_accounted_round": 76,

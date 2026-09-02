@@ -123,6 +123,20 @@ export const tools = [
     handler: ({ domain_shard, ust_id, key_id, time, data }) => { const w = withPrivacy(data, domain_shard, ust_id); return { ...buildResult(P.buildState({ domain_shard, ust_id, key_id, class: 'observation' }, time, w.data)), ...(Object.keys(w.disclosures).length ? { disclosures: w.disclosures } : {}) }; },
   },
   {
+    name: 'ust_explain',
+    description: 'The LADDER, not the verdict: where this document sits, and for every input the verifier did NOT receive, who could supply it and what it would buy. Answers "why am I not seeing HIGH" without guessing — the distinction between not-attempted and refused is the whole point.',
+    inputSchema: { type: 'object', required: ['doc'], properties: { doc: { type: 'object' }, context: { type: 'string' }, genesis: { type: 'object' }, keylog: { type: 'array' }, proof: { type: 'object' }, disclosures: { type: 'object' }, decKeys: { type: 'object' } } },
+    // #178 — the CLI has had `ust explain` since round 137 and the agent had nothing, while the capability map
+    // said NEITHER had it: `ladder-report` declared no surface token at all, so an inversion sat inside a cell
+    // that read as an absence everywhere. Found by asking which lagging capabilities the CLI actually CALLS.
+    //
+    // This is the tool an agent needs most after `ust_verify`, and for the reason the ladder exists: a verdict
+    // says what was reached, and a ladder says what the next rung would cost and WHO can pay it. An agent that
+    // receives LIGHT and cannot tell "no genesis was fetched" from "the genesis was fetched and refused" has to
+    // guess, and guessing about authority is the thing this protocol is against.
+    handler: ({ doc, context, ...rest }) => P.explainLadder(doc, { context: context ?? 'data', ...rest }),
+  },
+  {
     name: 'ust_sealing_request',
     description: 'PREPARE an `encrypted` partition WITHOUT holding a key: returns the commitment, the exact plaintext a key-holder must seal, and the IV that commitment implies. Hand the request to whoever owns the key, then pass their {alg,key_id,ct} back through `ust_attach_encryption`. The nonce is generated here and returned — keep it, or the commitment can never be opened.',
     inputSchema: { type: 'object', required: ['name', 'value', 'domain_shard', 'ust_id'], properties: { name: { type: 'string' }, value: { type: 'object' }, domain_shard: { type: 'string' }, ust_id: { type: 'string' }, nonce: { type: 'string', description: 'optional — generated here when absent, and returned either way' }, alg: { type: 'string' } } },

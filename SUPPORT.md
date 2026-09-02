@@ -26,7 +26,7 @@ This page is rendered from those declarations, so it cannot drift from what the 
 | `byte-agreement` | ✅ | · | ✅ | · | · | · | · | · |
 | `name-obligation` | ✅ | · | ✅ | · | · | · | · | · |
 | `commitment-windows` | ✅ | · | · | · | · | · | · | · |
-| `ladder-report` | ✅ | · | · | · | · | · | · | · |
+| `ladder-report` | ✅ | ✅ | ✅ | · | · | · | · | · |
 | `stream-verify` | ✅ | ✅ | ✅ | · | · | · | · | · |
 | `typed-evidence` | ✅ | · | · | · | · | ✅ | ✅ | · |
 | `evidence-receipt` | ✅ | · | · | · | · | · | · | · |
@@ -41,7 +41,7 @@ This page is rendered from those declarations, so it cannot drift from what the 
 | `keylog-commitment` | ✅ | · | ✅ | · | · | · | · | · |
 | `cadence-grid` | ✅ | ✅ | ✅ | · | · | · | · | · |
 | `cadence-declare` | ✅ | ✅ | ✅ | · | · | · | · | · |
-| `substrate-registry` | ✅ | · | · | · | · | · | ✅ | · |
+| `substrate-registry` | ✅ | ✅ | ✅ | · | · | · | ✅ | · |
 | `discovery-shard` | ✅ | · | ✅ | · | · | · | · | · |
 | `disclosure-produce` | ✅ | ◐ | ✅ | ◐ | · | · | · | · |
 | `negative-observation` | ✅ | · | · | · | · | · | · | · |
@@ -110,7 +110,7 @@ key material, the gate refuses the classification.
 - `uniqueness-attest`
 - `verifiable-map`
 
-**Lagging — debt** (13). Our own unfinished work, sitting where the principal audience reaches for it. These
+**Lagging — debt** (11). Our own unfinished work, sitting where the principal audience reaches for it. These
 carry no justification, because none exists — the gate refuses one written under them. The count is pinned and
 may only shrink.
 
@@ -120,13 +120,11 @@ may only shrink.
 - `discovery-shard` — also on the CLI
 - `negative-observation`
 - `commitment-windows`
-- `ladder-report`
 - `typed-evidence`
 - `evidence-receipt`
 - `assurance-lattice`
 - `verified-handle`
 - `authority-bundle`
-- `substrate-registry`
 
-4 of the 13 are on the human surface already, and those are the inversion the rule exists to close: reachable by a person with a terminal and by nobody with a tool.
+4 of the 11 are on the human surface already, and those are the inversion the rule exists to close: reachable by a person with a terminal and by nobody with a tool.
 

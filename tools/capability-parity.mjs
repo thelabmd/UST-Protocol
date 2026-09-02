@@ -84,7 +84,7 @@ const CAPS = {
   // different question: not *is this valid for me*, but *what stands between it and the next rung, and whose is
   // that to move*. It is a function OF the decision relation and never an input to it (F.5.1b), so it can never
   // raise a verdict — which is why it is admissible as a capability at all.
-  'ladder-report':      { core: ['explainLadder'] },
+  'ladder-report':      { core: ['explainLadder'], cli: 'cmd:explain', mcp: 'tool:ust_explain' },
   'stream-verify':      { core: ['verifyStream'], mcp: 'tool:ust_verify_stream', cli: 'cmd:stream' },
   'typed-evidence':     { core: ['verifiedEvidence', 'evidenceClass', 'evidenceCaps', 'compareEvidenceOrder', 'EVIDENCE_CAPS_UNIVERSE'] },
   // M3 (UST-6vj C2) — provenance-bearing evidence: a SIGNED connector receipt verified against consumer-admitted
@@ -109,7 +109,7 @@ const CAPS = {
   // (`ust_build_observation`), so `buildCadenceEntry` having no surface at all read as full. A capability whose probe
   // cannot see its own members is the coarse-probe failure this file's own header warns about.
   'cadence-declare':    { core: ['buildCadenceEntry'], mcp: 'tool:ust_build_cadence', cli: 'cmd:cadence' },
-  'substrate-registry': { core: ['combineSubstrates', 'combineInclusion'] },   // #95 — finality AND membership route by substrate name, one pattern
+  'substrate-registry': { core: ['combineSubstrates', 'combineInclusion'], cli: 'flag:require-anchored', mcp: 'arg:ust_verify.proof' },   // #95 — finality AND membership route by substrate name, one pattern
   'discovery-shard':    { core: ['isPublicDnsShard'], cli: 'cmd:discovery' },
   // PRODUCE, and the name now says so. Its core set is three PRODUCERS, and the blanket reason that kept it `na`
   // everywhere — "a publisher-side act on data the tool never holds" — was true of CONSUMING a disclosure and
@@ -278,15 +278,13 @@ const MCP_DISPOSITION = {
   'discovery-shard':    ['lagging'],
   'negative-observation': ['lagging'],
   'commitment-windows': ['lagging'],
-  'ladder-report':      ['lagging'],
   'typed-evidence':     ['lagging'],
   'evidence-receipt':   ['lagging'],
   'assurance-lattice':  ['lagging'],
   'verified-handle':    ['lagging'],
   'authority-bundle':   ['lagging'],
-  'substrate-registry': ['lagging'],
 };
-const PINNED_LAGGING = 13;   // 12 → 13 (round 262): `keylog-commitment` moved OUT of a false deferral into debt — none of its three functions takes a key or asks a person, so the claim that kept it out was never true of it   // 14 → 13 (round 257, `disclosure-produce`) → 12 (round 258, `sign`: the ASSEMBLY half reached the agent surface, and the signing half stays outside because a key in an argument list is a claim about the ACT, not about agents)
+const PINNED_LAGGING = 11;   // 12 → 13 (round 262): `keylog-commitment` moved OUT of a false deferral into debt — none of its three functions takes a key or asks a person, so the claim that kept it out was never true of it   // 14 → 13 (round 257, `disclosure-produce`) → 12 (round 258, `sign`: the ASSEMBLY half reached the agent surface, and the signing half stays outside because a key in an argument list is a claim about the ACT, not about agents)
 
 // ── SURFACES — each surface's DECLARED stance. `full` = exposes the capability; `subset` = a documented reduced form;
 //    everything else defaults to `na` with the surface's `naReason` (a specific override lives in `naSpecific`). This
@@ -300,8 +298,8 @@ const SURFACES = {
   // `ust-protocol` is itself a column now. Without it the grid showed six exposures of a set nobody could see,
   // and `ust-rfc6962-verify` — a real published package — was in no column at all.
   'ust-protocol':     { probe: exportIntersect(P), full: Object.keys(CAPS), subset: [], naReason: 'the reference implementation defines the capability set; a cell that is not full here means the capability names an export the core does not have, which the PHANTOM check already refuses' },
-  'ust-mcp':          { probe: mcpProbe, full: ['canon', 'content-address', 'verify', 'resolve-authority', 'no-fork-evidence', 'consumer-trust-root', 'anchor-verify', 'fork-choice', 'stream-verify', 'cadence-grid', 'cadence-declare'], subset: ['build-transcript', 'disclosure-produce', 'sign'], naReason: 'deferred to the planned operator MCP over @ust-protocol/operator (privilege-separation: a human explicitly grants agent rights) — NOT core+CLI-forever; TOP-produce is the one agent touch still to be built for noosphere', naSpecific: { 'sign': 'the agent signs with its OWN key; build tools return signing_input, the MCP never holds a private key', 'negative-observation': 'agent-appropriate (a normal negative observation, NOT operator) — new per #39; an MCP absence verb is planned, not yet built' } },
-  'ust-cli':          { probe: cliProbe, full: ['canon', 'content-address', 'verify', 'resolve-authority', 'no-fork-evidence', 'consumer-trust-root', 'anchor-verify', 'stream-verify', 'checkpoint-chain', 'keylog-commitment', 'discovery-shard', 'cadence-grid', 'cadence-declare', 'byte-agreement', 'name-obligation', 'sign', 'disclosure-produce'], subset: ['build-transcript'], naReason: 'not exposed by the reference operator CLI', naSpecific: { 'negative-observation': 'new per #39; a `ust absence` command is planned, not yet built', 'build-transcript': 'CLOSED 2026-09-02 by `ust sign` (#177) — but SUBSET, not full: this surface builds a STATE (`ust sign`) and a genesis/key-log (the ceremonies), and nothing here builds an attestation, a derivation, a checkpoint, a gap or an anchor commitment. Declaring full would be the same overclaim round 246 removed, one command later.' } },
+  'ust-mcp':          { probe: mcpProbe, full: ['canon', 'content-address', 'verify', 'resolve-authority', 'no-fork-evidence', 'consumer-trust-root', 'anchor-verify', 'fork-choice', 'stream-verify', 'cadence-grid', 'cadence-declare', 'substrate-registry', 'ladder-report'], subset: ['build-transcript', 'disclosure-produce', 'sign'], naReason: 'deferred to the planned operator MCP over @ust-protocol/operator (privilege-separation: a human explicitly grants agent rights) — NOT core+CLI-forever; TOP-produce is the one agent touch still to be built for noosphere', naSpecific: { 'sign': 'the agent signs with its OWN key; build tools return signing_input, the MCP never holds a private key', 'negative-observation': 'agent-appropriate (a normal negative observation, NOT operator) — new per #39; an MCP absence verb is planned, not yet built' } },
+  'ust-cli':          { probe: cliProbe, full: ['canon', 'content-address', 'verify', 'resolve-authority', 'no-fork-evidence', 'consumer-trust-root', 'anchor-verify', 'stream-verify', 'checkpoint-chain', 'keylog-commitment', 'discovery-shard', 'cadence-grid', 'cadence-declare', 'byte-agreement', 'name-obligation', 'sign', 'disclosure-produce', 'ladder-report', 'substrate-registry'], subset: ['build-transcript'], naReason: 'not exposed by the reference operator CLI', naSpecific: { 'negative-observation': 'new per #39; a `ust absence` command is planned, not yet built', 'build-transcript': 'CLOSED 2026-09-02 by `ust sign` (#177) — but SUBSET, not full: this surface builds a STATE (`ust sign`) and a genesis/key-log (the ceremonies), and nothing here builds an attestation, a derivation, a checkpoint, a gap or an anchor commitment. Declaring full would be the same overclaim round 246 removed, one command later.' } },
   'ust-light':         { probe: exportIntersect(LITE), full: ['canon'], subset: ['content-address', 'build-transcript', 'verify', 'disclosure-produce', 'sign'], naReason: 'outside the standalone zero-dependency LIGHT floor — lite is a documented SUBSET (round-51 P1-03: build-transcript = buildState/seal for class:observation, WITH provenance (prev/based_on+seed) since UST-jls, but not the full builder family; verify = the WHOLE LIGHT floor including every §14a provenance obligation — UST-jls closed 14 lite-VALID/core-INVALID shapes — but not the HIGH/TOP verifiers; content-address = the partition/content/seed hashes it needs)' },
   'ust-web-signer':   { probe: exportIntersect(WEB), full: ['canon'], subset: ['content-address', 'build-transcript', 'sign'], naReason: 'producer-only surface — a documented SUBSET (round-51 P1-03: browser signer builds+signs a state, not the full builder family)', naSpecific: { 'verify': 'by design: the private key never enters a verifier — verification is ust-protocol / ust-light (README)' } },
   // Agent MCP TARGET (owner, 2026-07-15) = full for EVERY non-operator capability + the single conditionally-operator
