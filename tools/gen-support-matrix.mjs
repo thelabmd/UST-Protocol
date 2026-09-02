@@ -23,9 +23,35 @@ const src = readFileSync(ROOT + 'tools/capability-parity.mjs', 'utf8');
 // (it verifies and exits), so the shapes are parsed out — and the parse is checked below, because a regex that
 // silently matched nothing would render an empty table that looked like an answer.
 const capIds = [...src.matchAll(/^ {2}'([a-z0-9-]+)':\s*\{ core:/gm)].map((m) => m[1]);
-const surfaces = [...src.matchAll(/^ {2}'(ust-[a-z-]+)':\s*\{ probe: [^,]+, full: \[([^\]]*)\], subset: \[([^\]]*)\]/gm)]
-  .map((m) => ({ id: m[1], full: list(m[2]), subset: list(m[3]) }));
-function list(s) { return [...s.matchAll(/'([a-z0-9-]+)'/g)].map((m) => m[1]); }
+const surfaces = [...src.matchAll(/^ {2}'(ust-[a-z0-9-]+)':\s*\{ probe: [^,]+, full: (\[[^\]]*\]|Object\.keys\(CAPS\)), subset: \[([^\]]*)\]/gm)]
+  .map((m) => ({ id: m[1], full: m[2] === 'Object.keys(CAPS)' ? 'ALL' : list(m[2]), subset: list(m[3]) }));
+
+// THE COUNT IS CROSS-CHECKED, because under-parsing is silent and looks like an answer. Measured 2026-09-03, CLOSED 2026-09-03 by the check below
+// (#178): the pattern above required `full: [ … ]`, so the core's `Object.keys(CAPS)` did not match and the page
+// rendered SIX columns while the gate scored EIGHT — the page disagreeing with the file it is rendered from,
+// which is the one thing it exists not to do. A cheap independent count catches that; a minimum threshold did not.
+const declared = [...src.matchAll(/^ {2}'(ust-[a-z0-9-]+)':\s*\{ probe:/gm)].map((m) => m[1]);
+if (declared.length !== surfaces.length) {
+  console.error(`  ✗ parsed ${surfaces.length} surface(s) but ${declared.length} are declared — missing [${declared.filter((d) => !surfaces.some((s2) => s2.id === d)).join(', ')}]. A page with fewer columns than the gate scores is a page disagreeing with its own source.`);
+  process.exit(1);
+}
+function list(s) { return [...s.matchAll(/'([a-z0-9-]+)'/g)].map((m) => m[1]); }        // capability IDs — kebab-case
+// Function names are camelCase, and `list` is lowercase-only: reusing it here returned ["blinded","mmit",…]
+// and rendered an EMPTY cell for the core, which is the row this table exists for. One parser, two shapes.
+const idents = (s) => [...s.matchAll(/'([A-Za-z][A-Za-z0-9_]*)'/g)].map((m) => m[1]);
+
+// cli/mcp tokens per capability — read from the gate, never re-typed
+const CAPS_TOKENS = {};
+for (const m of src.matchAll(/^ {2}'([a-z0-9-]+)':\s*\{ core: \[[^\]]*\]([^}]*)\}/gm)) {
+  const tail = m[2], one = {};
+  for (const surf of ['cli', 'mcp']) {
+    const arr = new RegExp(surf + ":\\s*\\[([^\\]]*)\\]").exec(tail);
+    const single = new RegExp(surf + ":\\s*'([^']+)'").exec(tail);
+    if (arr) one[surf] = [...arr[1].matchAll(/'([^']+)'/g)].map((x) => x[1]);
+    else if (single) one[surf] = [single[1]];
+  }
+  CAPS_TOKENS[m[1]] = one;
+}
 
 // #178 — the agent-surface classification, read from the same file for the same reason as everything else here:
 // a count typed into prose is a promise, and this page exists because a promise had already gone stale once.
@@ -43,14 +69,23 @@ if (capIds.length < 20 || surfaces.length < 5) {
   process.exit(1);
 }
 
+const CAPS_CORE = Object.fromEntries([...src.matchAll(/^ {2}'([a-z0-9-]+)':\s*\{ core: \[([^\]]*)\]/gm)].map((m) => [m[1], idents(m[2])]));
 const VERSION = JSON.parse(readFileSync(ROOT + 'package.json', 'utf8')).version;
-const stance = (s, cap) => s.full.includes(cap) ? '✅' : s.subset.includes(cap) ? '◐' : '·';
+const stance = (s, cap) => (s.full === 'ALL' || s.full.includes(cap)) ? '✅' : s.subset.includes(cap) ? '◐' : '·';
 const short = (s) => s.replace('ust-', '');
 
 // The privacy story the card was about, called out by name — a reader looking for "can I make a private
 // partition and can my tool read it" should not have to infer it from a grid.
 const cli = surfaces.find((s) => s.id === 'ust-cli');
-const cliHas = (cap) => !!cli && (cli.full.includes(cap) || cli.subset.includes(cap));
+// What a surface offers for a capability is RENDERED from the tokens the parity probe resolves against that
+// surface — `cmd:sign` is checked to be a command, `tool:ust_seal` to be a registered tool. Writing them as prose
+// is what let this page claim for five rounds that an agent could not make a private partition; a token that
+// stopped resolving would fail the gate, and a token that resolves prints itself here.
+const tokensFor = (cap, surface) => {
+  const raw = CAPS_TOKENS[cap]?.[surface];
+  return [].concat(raw ?? []).map((t) => t.replace(/^cmd:/, 'ust ').replace(/^tool:/, '').replace(/^flag:/, '--').replace(/^api:/, '').replace(/^arg:/, ''));
+};
+const cliHas = (cap) => !!cli && (cli.full === 'ALL' || cli.full.includes(cap) || cli.subset.includes(cap));
 const rows = capIds.map((c) => `| \`${c}\` | ` + surfaces.map((s) => stance(s, c)).join(' | ') + ' |').join('\n');
 
 const page = `# What UST supports, per surface
@@ -77,11 +112,19 @@ per-PARTITION: one shard mixes open and closed members freely.
 
 | | make one | read one back |
 |---|---|---|
-| **core** \`ust-protocol\` | \`blindPartition\` · \`encryptPartition\` (AES-256-GCM and XChaCha20-Poly1305) | \`disclosures\` + \`decKeys\`; the verdict carries \`disclosed\` and \`disclosed_partial\` |
-| **\`ust\` CLI** | \`ust sign <data.json>\` — privacy declared per partition in the data | \`--disclosures\` · \`--dec-keys\`; prints opened / PARTIAL / sealed |
-| **\`ust-mcp\`** (agents) | — | \`disclosures\` + \`decKeys\` on \`ust_verify\`, both modes in ONE call |
-| **web verifier** | — | paste the envelope and keys; draws both channels per partition |
-| **\`ust-light\`** | — | validates the shape; does not open |
+| **core** \`ust-protocol\` | ${CAPS_CORE['disclosure-produce'].map((n) => '\`' + n + '\`').join(' · ')} | \`disclosures\` + \`decKeys\` |
+${surfaces.map((sf) => {
+  const key = sf.id === 'ust-cli' ? 'cli' : sf.id === 'ust-mcp' ? 'mcp' : null;
+  const makes = stance(sf, 'disclosure-produce'), reads = stance(sf, 'verify');
+  const note = (cap) => { const t = (key ? tokensFor(cap, key) : []).map((x) => '\`' + x + '\`').join(' · '); return t ? ' ' + t : ''; };
+  const cell = (st, cap) => st === '·' ? '—' : st + note(cap);
+  return '| **\`' + sf.id + '\`** | ' + cell(makes, 'disclosure-produce') + ' | ' + cell(reads, 'verify') + ' |';
+}).join('\n')}
+
+Both columns are the \`disclosure-produce\` and \`verify\` stances, rendered — **not a hand-kept summary.** Measured
+2026-09-03: the table that stood here WAS hand-kept, and had drifted by five rounds for \`ust-mcp\` (it said an
+agent cannot make a private partition, five rounds after it could) and by seven for \`ust-light\`. A prose summary
+inside a generated page is the very defect the page exists to prevent, and it happened here.
 
 **Two channels, and they are opened by different secrets.** A \`blinded\` partition has one: the commitment, opened
 by \`{nonce,value}\`. An \`encrypted\` partition has two: that commitment, plus the AEAD, opened by the key. A reader

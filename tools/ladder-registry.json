@@ -2330,6 +2330,34 @@
         "excluded": "A vector is a fixed input and a declared RESULT a port reproduces. This is a taxonomy of absences in this repository's tooling; pinning it in the corpus would ask a stranger to reproduce our staffing decisions rather than the protocol's behaviour."
       },
       "test": "tools/capability-parity.mjs :: a CI step (`npm run test:parity`), verified by four mutations — an unclassified absence, a thin claim, a fourth category, and a `key-bound` claim on a capability whose functions take no key each redden their own message."
+    },
+    {
+      "round": 263,
+      "math": {
+        "excluded": "The subject is how one page of ours is produced — rendered rather than typed. No claim about documents, verdicts or obligations moved, and no implementation owes anything by it."
+      },
+      "spec": {
+        "excluded": "Same reason: the standard does not describe our support page, and a rule about how we generate it would be an obligation nobody outside this tree could meet or would want to."
+      },
+      "code": "tools/gen-support-matrix.mjs :: the private-partition table renders both columns from the `disclosure-produce` and `verify` stances and annotates them with the capability's own probe tokens; the core row is rendered from the core set through a camelCase-aware parser, `list()` being kebab-case only and having silently emptied that cell.",
+      "vector": {
+        "excluded": "A vector is a fixed input and a declared RESULT a port reproduces. The subject here is the rendering of one of our own documents; pinning it would put our page's shape into a stranger's conformance run."
+      },
+      "test": "tools/gen-support-matrix.mjs :: a CI step (`npm run test:support-matrix`) that regenerates and `git diff --exit-code`s the page, so a hand edit or a drifted declaration fails the build; the generator also refuses to render at all when its parse of the declarations comes back short."
+    },
+    {
+      "round": 264,
+      "math": {
+        "excluded": "Which of our packages appears in which column of our own page, and in what order, is a presentation decision about this repository's inventory. No property of documents or verdicts moved."
+      },
+      "spec": {
+        "excluded": "The standard describes conforming producers and verifiers, not our package list or the order we print it in. A rule here would be an obligation no implementer could meet or would want to."
+      },
+      "code": "tools/capability-parity.mjs :: `ust-protocol` and `ust-rfc6962-verify` become surfaces and the declaration order encodes the column order — core, agent, human, standalone, connectors last; tools/gen-support-matrix.mjs :: the surface parser accepts the core's computed `full` and CROSS-CHECKS its count against an independent scan, because under-parsing renders a page that disagrees with its source while looking complete.",
+      "vector": {
+        "excluded": "A vector is a fixed input and a declared RESULT a port reproduces. The subject is our own column layout; pinning it would put this repository's presentation into a stranger's conformance run."
+      },
+      "test": "tools/gen-support-matrix.mjs :: a CI step (`npm run test:support-matrix`) that regenerates and diffs the page, and now refuses to render when the surfaces it parsed are fewer than the surfaces declared — naming the ones it missed."
     }
   ],
   "first_accounted_round": 76,

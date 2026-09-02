@@ -11,40 +11,40 @@ A cell is not a promise. `tools/capability-parity.mjs` probes each surface for r
 argument parser, the MCP tool schemas, a package's exports — and CI fails if a declaration and the probe disagree.
 This page is rendered from those declarations, so it cannot drift from what the gate checks.
 
-| capability | light | web-signer | ots-verify | rekor-verify | mcp | cli |
-|---|---|---|---|---|---|---|
-| `canon` | ✅ | ✅ | · | · | ✅ | ✅ |
-| `content-address` | ◐ | ◐ | · | · | ✅ | ✅ |
-| `build-transcript` | ◐ | ◐ | · | · | ◐ | ◐ |
-| `sign` | ◐ | ◐ | · | · | ◐ | ✅ |
-| `verify` | ◐ | · | · | · | ✅ | ✅ |
-| `resolve-authority` | · | · | · | · | ✅ | ✅ |
-| `no-fork-evidence` | · | · | · | · | ✅ | ✅ |
-| `consumer-trust-root` | · | · | · | · | ✅ | ✅ |
-| `anchor-verify` | · | · | ✅ | ✅ | ✅ | ✅ |
-| `fork-choice` | · | · | · | · | ✅ | · |
-| `byte-agreement` | · | · | · | · | · | ✅ |
-| `name-obligation` | · | · | · | · | · | ✅ |
-| `commitment-windows` | · | · | · | · | · | · |
-| `ladder-report` | · | · | · | · | · | · |
-| `stream-verify` | · | · | · | · | ✅ | ✅ |
-| `typed-evidence` | · | · | ✅ | ✅ | · | · |
-| `evidence-receipt` | · | · | · | · | · | · |
-| `assurance-lattice` | · | · | · | · | · | · |
-| `verified-handle` | · | · | · | · | · | · |
-| `authority-bundle` | · | · | · | · | · | · |
-| `checkpoint-chain` | · | · | · | · | · | ✅ |
-| `recovery` | · | · | · | · | · | · |
-| `epoch-transition` | · | · | · | · | · | · |
-| `uniqueness-attest` | · | · | · | · | · | · |
-| `verifiable-map` | · | · | · | · | · | · |
-| `keylog-commitment` | · | · | · | · | · | ✅ |
-| `cadence-grid` | · | · | · | · | ✅ | ✅ |
-| `cadence-declare` | · | · | · | · | ✅ | ✅ |
-| `substrate-registry` | · | · | · | ✅ | · | · |
-| `discovery-shard` | · | · | · | · | · | ✅ |
-| `disclosure-produce` | ◐ | · | · | · | ◐ | ✅ |
-| `negative-observation` | · | · | · | · | · | · |
+| capability | protocol | mcp | cli | light | web-signer | ots-verify | rekor-verify | rfc6962-verify |
+|---|---|---|---|---|---|---|---|---|
+| `canon` | ✅ | ✅ | ✅ | ✅ | ✅ | · | · | · |
+| `content-address` | ✅ | ✅ | ✅ | ◐ | ◐ | · | · | · |
+| `build-transcript` | ✅ | ◐ | ◐ | ◐ | ◐ | · | · | · |
+| `sign` | ✅ | ◐ | ✅ | ◐ | ◐ | · | · | · |
+| `verify` | ✅ | ✅ | ✅ | ◐ | · | · | · | · |
+| `resolve-authority` | ✅ | ✅ | ✅ | · | · | · | · | · |
+| `no-fork-evidence` | ✅ | ✅ | ✅ | · | · | · | · | · |
+| `consumer-trust-root` | ✅ | ✅ | ✅ | · | · | · | · | · |
+| `anchor-verify` | ✅ | ✅ | ✅ | · | · | ✅ | ✅ | · |
+| `fork-choice` | ✅ | ✅ | · | · | · | · | · | · |
+| `byte-agreement` | ✅ | · | ✅ | · | · | · | · | · |
+| `name-obligation` | ✅ | · | ✅ | · | · | · | · | · |
+| `commitment-windows` | ✅ | · | · | · | · | · | · | · |
+| `ladder-report` | ✅ | · | · | · | · | · | · | · |
+| `stream-verify` | ✅ | ✅ | ✅ | · | · | · | · | · |
+| `typed-evidence` | ✅ | · | · | · | · | ✅ | ✅ | · |
+| `evidence-receipt` | ✅ | · | · | · | · | · | · | · |
+| `assurance-lattice` | ✅ | · | · | · | · | · | · | · |
+| `verified-handle` | ✅ | · | · | · | · | · | · | · |
+| `authority-bundle` | ✅ | · | · | · | · | · | · | · |
+| `checkpoint-chain` | ✅ | · | ✅ | · | · | · | · | · |
+| `recovery` | ✅ | · | · | · | · | · | · | · |
+| `epoch-transition` | ✅ | · | · | · | · | · | · | · |
+| `uniqueness-attest` | ✅ | · | · | · | · | · | · | · |
+| `verifiable-map` | ✅ | · | · | · | · | · | · | · |
+| `keylog-commitment` | ✅ | · | ✅ | · | · | · | · | · |
+| `cadence-grid` | ✅ | ✅ | ✅ | · | · | · | · | · |
+| `cadence-declare` | ✅ | ✅ | ✅ | · | · | · | · | · |
+| `substrate-registry` | ✅ | · | · | · | · | · | ✅ | · |
+| `discovery-shard` | ✅ | · | ✅ | · | · | · | · | · |
+| `disclosure-produce` | ✅ | ◐ | ✅ | ◐ | · | · | · | · |
+| `negative-observation` | ✅ | · | · | · | · | · | · | · |
 
 ## Private partitions, end to end
 
@@ -53,11 +53,20 @@ per-PARTITION: one shard mixes open and closed members freely.
 
 | | make one | read one back |
 |---|---|---|
-| **core** `ust-protocol` | `blindPartition` · `encryptPartition` (AES-256-GCM and XChaCha20-Poly1305) | `disclosures` + `decKeys`; the verdict carries `disclosed` and `disclosed_partial` |
-| **`ust` CLI** | `ust sign <data.json>` — privacy declared per partition in the data | `--disclosures` · `--dec-keys`; prints opened / PARTIAL / sealed |
-| **`ust-mcp`** (agents) | — | `disclosures` + `decKeys` on `ust_verify`, both modes in ONE call |
-| **web verifier** | — | paste the envelope and keys; draws both channels per partition |
-| **`ust-light`** | — | validates the shape; does not open |
+| **core** `ust-protocol` | `blindedCommit` · `blindPartition` · `encryptPartition` · `sealingRequest` · `attachEncryption` | `disclosures` + `decKeys` |
+| **`ust-protocol`** | ✅ | ✅ |
+| **`ust-mcp`** | ◐ `ust_build_observation.data` · `ust_sealing_request` · `ust_attach_encryption` | ✅ `ust_verify` |
+| **`ust-cli`** | ✅ `ust sign` | ✅ `ust verify` |
+| **`ust-light`** | ◐ | ◐ |
+| **`ust-web-signer`** | — | — |
+| **`ust-ots-verify`** | — | — |
+| **`ust-rekor-verify`** | — | — |
+| **`ust-rfc6962-verify`** | — | — |
+
+Both columns are the `disclosure-produce` and `verify` stances, rendered — **not a hand-kept summary.** Measured
+2026-09-03: the table that stood here WAS hand-kept, and had drifted by five rounds for `ust-mcp` (it said an
+agent cannot make a private partition, five rounds after it could) and by seven for `ust-light`. A prose summary
+inside a generated page is the very defect the page exists to prevent, and it happened here.
 
 **Two channels, and they are opened by different secrets.** A `blinded` partition has one: the commitment, opened
 by `{nonce,value}`. An `encrypted` partition has two: that commitment, plus the AEAD, opened by the key. A reader
