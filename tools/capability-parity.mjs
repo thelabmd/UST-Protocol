@@ -214,6 +214,53 @@ const tokenProbe = (which) => (cap, stance) => {
 const mcpProbe = tokenProbe('mcp');
 const cliProbe = tokenProbe('cli');
 
+// ── THE AGENT SURFACE IS THE PRINCIPAL ONE, so its absences are classified rather than merely reasoned (#178).
+//
+// Owner, 2026-09-02: the agent is not a first-class publisher among others — it is the protocol's principal
+// audience. A human at a terminal has a shell, a filesystem and the package; when a tool lacks something they
+// write six lines. An agent has EXACTLY what is exposed as a tool. So the same absence is an inconvenience on
+// one surface and a wall on the other, and the two may not be recorded in the same words.
+//
+// THE TEST, and it is the owner's: **would this still need a human if we trusted the agent completely?**
+//   YES ⇒ `deferred` — the requirement is a property of the ACT, not a restriction we impose. Minting an
+//         identity, rotating a root key, re-rooting a chain: no amount of trust removes the person, because the
+//         act IS a human decision. A deferred cell owes a claim about the act, checkable by reading it.
+//   NO  ⇒ `lagging` — our own unfinished work, sitting where the principal audience reaches for it. It owes NO
+//         justification, because none exists. It is counted, and the count may only shrink.
+//
+// Writing a rationale under a `lagging` cell is the defect this whole classification exists to stop: absence
+// wearing the vocabulary of intent, which is how `disclosure-produce` sat unowned for two months behind a
+// sentence that defended a risk that was not present.
+const MCP_DISPOSITION = {
+  // ── DEFERRED: the act needs a person by definition, and the planned operator MCP is where a human grants it
+  'checkpoint-chain':   ['deferred', 'minting and sealing an authority checkpoint is the operator asserting, with the checkpoint-authority key, that a chain state is theirs. Trusting the agent completely does not remove the person: the act IS the human decision about what the operator now stands behind.'],
+  'recovery':           ['deferred', 'checkpoint recovery re-roots authority after a loss. It is the operator deciding which history to continue from — a judgment about their own past that nobody can make on their behalf, however trusted.'],
+  'epoch-transition':   ['deferred', 'a genesis epoch transition retires one root and installs the next. The act is a human committing an identity forward; delegating it would mean an agent could decide who the publisher becomes.'],
+  'uniqueness-attest':  ['deferred', 'attesting that a checkpoint is unique is the operator swearing to a fact about their own published set. An agent can CHECK such an attestation (that half is lagging under `verify`); issuing one is a person putting their name to it.'],
+  'verifiable-map':     ['deferred', 'building a name/checkpoint map publishes an authoritative statement of what the operator serves. The verification half is pure and belongs on the agent surface; the BUILD half is a person declaring their own namespace.'],
+  'keylog-commitment':  ['deferred', 'a key-log terminality commitment closes what the operator will ever say with a key. Irreversible and identity-defining — the shape of act this boundary exists for.'],
+
+  // ── LAGGING: debt. No justification is written here on purpose; a `lagging` cell states only that it is owed.
+  'sign':               ['lagging'],
+  'disclosure-produce': ['lagging'],
+  'byte-agreement':     ['lagging'],
+  'name-obligation':    ['lagging'],
+  'discovery-shard':    ['lagging'],
+  'negative-observation': ['lagging'],
+  'commitment-windows': ['lagging'],
+  'ladder-report':      ['lagging'],
+  'typed-evidence':     ['lagging'],
+  'evidence-receipt':   ['lagging'],
+  'assurance-lattice':  ['lagging'],
+  'verified-handle':    ['lagging'],
+  'authority-bundle':   ['lagging'],
+  'substrate-registry': ['lagging'],
+};
+// The debt is PINNED and may only shrink — the same ratchet the vacuity residual uses. A new capability that
+// lands on the CLI and not on MCP raises this number and fails the build, which is the ordering rule made
+// mechanical: not "parity eventually", but "the agent surface does not fall further behind".
+const PINNED_LAGGING = 14;
+
 // ── SURFACES — each surface's DECLARED stance. `full` = exposes the capability; `subset` = a documented reduced form;
 //    everything else defaults to `na` with the surface's `naReason` (a specific override lives in `naSpecific`). This
 //    encodes the owner's decisions: cli grows to full authoritative; mcp stays agent-facing (operator caps na).
@@ -298,6 +345,32 @@ for (const s of surfaceIds) {
   }
 }
 if (!drift) report.push(`  ✓ REALITY: all ${cells} surface×capability cells match what the surface actually exposes`);
+
+// (4) THE ORDERING AXIS (#178) — every absence on the PRINCIPAL surface is classified, and the debt may only shrink.
+{
+  const mcpNa = capIds.filter((c) => stanceOf('ust-mcp', c) === 'na');
+  const undecided = mcpNa.filter((c) => !MCP_DISPOSITION[c]);
+  if (undecided.length) { fail++; report.push(`  ✗ ORDERING: ${undecided.length} capability(ies) absent from the agent surface with NO disposition: [${undecided.join(', ')}] — an unclassified absence is how one sat unowned behind a sentence that defended a risk that was not present (#177)`); }
+
+  // A `deferred` cell owes a CLAIM ABOUT THE ACT; a `lagging` cell owes nothing but the count. Enforcing the
+  // reason on `deferred` only is the point: requiring one on `lagging` would invite exactly the rationalisation
+  // this classification exists to stop.
+  const thin = mcpNa.filter((c) => MCP_DISPOSITION[c]?.[0] === 'deferred' && String(MCP_DISPOSITION[c][1] ?? '').trim().length < MIN_REASON);
+  if (thin.length) { fail++; report.push(`  ✗ ORDERING: deferred without a claim about the act (under ${MIN_REASON} chars): ${thin.join(', ')} — "it needs a human" is the conclusion, not the argument`); }
+  const rationalised = mcpNa.filter((c) => MCP_DISPOSITION[c]?.[0] === 'lagging' && MCP_DISPOSITION[c].length > 1);
+  if (rationalised.length) { fail++; report.push(`  ✗ ORDERING: a LAGGING cell carries a justification: ${rationalised.join(', ')} — debt owes a date, never a reason; a reason here is absence wearing the vocabulary of intent`); }
+
+  const lagging = mcpNa.filter((c) => MCP_DISPOSITION[c]?.[0] === 'lagging');
+  const inverted = lagging.filter((c) => stanceOf('ust-cli', c) !== 'na');
+  if (lagging.length > PINNED_LAGGING) { fail++; report.push(`  ✗ ORDERING: the agent surface fell FURTHER behind — ${lagging.length} lagging capabilities, pinned at ${PINNED_LAGGING}. A capability reaching the human surface first is the rule this axis exists to hold: not "parity eventually", but "no wider than today"`); }
+  else if (lagging.length < PINNED_LAGGING) { fail++; report.push(`  ✗ ORDERING: the debt SHRANK to ${lagging.length} (pinned ${PINNED_LAGGING}) — lower the pin in the same commit, so the improvement is recorded rather than absorbed`); }
+  else report.push(`  ✓ ORDERING: every absence on the agent surface is classified — ${mcpNa.length - lagging.length} deferred (the act needs a person), ${lagging.length} lagging (debt, pinned, ${inverted.length} of them reachable from the CLI today)`);
+
+  // CONTROL — the classifier must be able to say NO in both registers, proven rather than asserted.
+  const probe = { ...MCP_DISPOSITION, __ghost: ['lagging'] };
+  if (!Object.keys(probe).filter((c) => probe[c][0] === 'lagging').includes('__ghost')) { fail++; report.push('  ✗ CONTROL: the lagging counter cannot see a new entry — the ratchet would never trip'); }
+  if (MCP_DISPOSITION['checkpoint-chain']?.[0] !== 'deferred') { fail++; report.push('  ✗ CONTROL: a ceremony is not classified deferred — the two registers have collapsed into one'); }
+}
 
 // ── human-readable matrix
 const mark = { full: ' ✅', subset: ' 🟅', na: ' ·' };

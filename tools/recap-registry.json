@@ -768,6 +768,10 @@
       "round": 255,
       "issue": 177,
       "content_hash": "sha256:f84256c6c54a1671d22f6546cb8ada6438e2f71f22d7ab4e531c1a9311b6f6aa"
+    },
+    {
+      "round": 256,
+      "no_recap": "Round 256 does not close #178 — it delivers the classification and the ordering axis, and leaves the debt itself: 14 lagging capabilities, five of them reachable from the CLI today. The unit of a recap is the CLOSED ISSUE; this round closes none."
     }
   ]
 }

@@ -27,6 +27,16 @@ const surfaces = [...src.matchAll(/^ {2}'(ust-[a-z-]+)':\s*\{ probe: [^,]+, full
   .map((m) => ({ id: m[1], full: list(m[2]), subset: list(m[3]) }));
 function list(s) { return [...s.matchAll(/'([a-z0-9-]+)'/g)].map((m) => m[1]); }
 
+// #178 — the agent-surface classification, read from the same file for the same reason as everything else here:
+// a count typed into prose is a promise, and this page exists because a promise had already gone stale once.
+const disp = [...src.matchAll(/^ {2}'([a-z0-9-]+)':\s*\['(deferred|lagging)'/gm)].map((m) => ({ cap: m[1], kind: m[2] }));
+const deferred = disp.filter((d) => d.kind === 'deferred');
+const lagging = disp.filter((d) => d.kind === 'lagging');
+if (!deferred.length || !lagging.length) {
+  console.error('  ✗ parsed no agent-surface dispositions from the gate — the shape moved, and a page claiming "0 deferred" would read as an answer');
+  process.exit(1);
+}
+
 if (capIds.length < 20 || surfaces.length < 5) {
   console.error(`  ✗ parsed ${capIds.length} capabilities and ${surfaces.length} surfaces from the gate — the declaration shapes moved, and rendering a table from a failed parse would print an empty page as if it were an answer`);
   process.exit(1);
@@ -39,6 +49,7 @@ const short = (s) => s.replace('ust-', '');
 // The privacy story the card was about, called out by name — a reader looking for "can I make a private
 // partition and can my tool read it" should not have to infer it from a grid.
 const cli = surfaces.find((s) => s.id === 'ust-cli');
+const cliHas = (cap) => !!cli && (cli.full.includes(cap) || cli.subset.includes(cap));
 const rows = capIds.map((c) => `| \`${c}\` | ` + surfaces.map((s) => stance(s, c)).join(' | ') + ' |').join('\n');
 
 const page = `# What UST supports, per surface
@@ -81,11 +92,29 @@ mandatory: a tool that generated it and did not hand it back would leave you hol
 open, including you. It also refuses to invent an AEAD key — §10 leaves key management to the operator, and an
 invented key is one you cannot rotate.
 
-## What is deliberately absent
+## The agent surface, and the rule that governs it
 
-Three surfaces cannot produce a private partition, and that is a decision rather than a gap: \`ust-mcp\` is
-agent-facing and key material does not belong in an agent's argument list; the web verifier is a VERIFIER; and
-\`ust-light\` is the standalone floor. The core and the CLI are where a publisher works.
+The agent is the protocol's **principal** audience (owner, 2026-09-02). A human at a terminal has a shell and the
+package: a missing tool costs them six lines. An agent has exactly what is exposed as a tool, so the same absence
+is an inconvenience on one surface and a wall on the other.
+
+> **Any capability the protocol gives a publisher appears on the agent surface not later than on the human one.**
+
+Every absence from \`mcp\` is classified, by one question — *would this still need a human if we trusted the agent
+completely?*
+
+**Deferred — yes, and the requirement is a property of the ACT** (${deferred.length}). No amount of trust removes the person,
+because the act IS the human decision. Each carries its claim in \`tools/capability-parity.mjs\`.
+
+${deferred.map((d) => '- \`' + d.cap + '\`').join('\n')}
+
+**Lagging — no** (${lagging.length}). Our own unfinished work, sitting where the principal audience reaches for it. These
+carry no justification, because none exists; the gate refuses one written under them. The count is pinned and may
+only shrink, so a capability landing on the CLI and not on MCP raises it and fails the build.
+
+${lagging.map((d) => '- \`' + d.cap + '\`' + (cliHas(d.cap) ? ' — **reachable from the CLI today**' : '')).join('\n')}
+
+${lagging.filter((d) => cliHas(d.cap)).length} of the ${lagging.length} are on the human surface already. That is the inversion the rule exists to close.
 `;
 
 const path = ROOT + 'SUPPORT.md';

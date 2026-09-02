@@ -69,8 +69,44 @@ mandatory: a tool that generated it and did not hand it back would leave you hol
 open, including you. It also refuses to invent an AEAD key — §10 leaves key management to the operator, and an
 invented key is one you cannot rotate.
 
-## What is deliberately absent
+## The agent surface, and the rule that governs it
 
-Three surfaces cannot produce a private partition, and that is a decision rather than a gap: `ust-mcp` is
-agent-facing and key material does not belong in an agent's argument list; the web verifier is a VERIFIER; and
-`ust-light` is the standalone floor. The core and the CLI are where a publisher works.
+The agent is the protocol's **principal** audience (owner, 2026-09-02). A human at a terminal has a shell and the
+package: a missing tool costs them six lines. An agent has exactly what is exposed as a tool, so the same absence
+is an inconvenience on one surface and a wall on the other.
+
+> **Any capability the protocol gives a publisher appears on the agent surface not later than on the human one.**
+
+Every absence from `mcp` is classified, by one question — *would this still need a human if we trusted the agent
+completely?*
+
+**Deferred — yes, and the requirement is a property of the ACT** (6). No amount of trust removes the person,
+because the act IS the human decision. Each carries its claim in `tools/capability-parity.mjs`.
+
+- `checkpoint-chain`
+- `recovery`
+- `epoch-transition`
+- `uniqueness-attest`
+- `verifiable-map`
+- `keylog-commitment`
+
+**Lagging — no** (14). Our own unfinished work, sitting where the principal audience reaches for it. These
+carry no justification, because none exists; the gate refuses one written under them. The count is pinned and may
+only shrink, so a capability landing on the CLI and not on MCP raises it and fails the build.
+
+- `sign` — **reachable from the CLI today**
+- `disclosure-produce` — **reachable from the CLI today**
+- `byte-agreement` — **reachable from the CLI today**
+- `name-obligation` — **reachable from the CLI today**
+- `discovery-shard` — **reachable from the CLI today**
+- `negative-observation`
+- `commitment-windows`
+- `ladder-report`
+- `typed-evidence`
+- `evidence-receipt`
+- `assurance-lattice`
+- `verified-handle`
+- `authority-bundle`
+- `substrate-registry`
+
+5 of the 14 are on the human surface already. That is the inversion the rule exists to close.

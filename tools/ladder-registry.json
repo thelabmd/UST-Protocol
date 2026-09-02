@@ -2236,6 +2236,20 @@
       "code": "packages/ust-light/index.mjs :: `blindPartition` and `encryptPartition` at the MTI (WebCrypto AES-GCM, IV derived from the commitment), §14 step 8 with per-channel reporting, the `absence` kind, §13's breadth bound, the closed private production and the §6 identifier restriction; packages/ust-light/test.mjs :: a corpus leg comparing every document-bearing vector against the core, auxiliary inputs travelling with each.",
       "vector": "partition-kind-absence-admitted",
       "test": "packages/ust-light/test.mjs :: a CI step in its own right (`npm run test:light`), whose corpus leg compares EVERY document-bearing vector against the core with each vector's auxiliary inputs, and asserts the population is a population — a slice that shrank to nothing would report perfect agreement."
+    },
+    {
+      "round": 256,
+      "math": {
+        "excluded": "Which of OUR surfaces exposes which act is not a property of the protocol: a conforming implementation may expose any subset it likes, and two of them could share no tooling at all. The classification quantifies over this repository's packages, so stating it in the model would turn an inventory of ours into an obligation on implementers — the same inversion the support page's own header warns about."
+      },
+      "spec": {
+        "excluded": "§16 defines a conforming producer and verifier; it deliberately does not describe our CLI, our MCP server or the boundary between them. The rule recorded here — the agent surface does not fall behind the human one — binds US, and a reader of the standard would be right to ignore it."
+      },
+      "code": "tools/capability-parity.mjs :: `MCP_DISPOSITION` classifies all 20 agent-surface absences as `deferred` (with a claim about the act) or `lagging` (with nothing, by design), and a fourth gate axis enforces the split — unclassified absence fails, a thin deferred claim fails, a justification written under a lagging cell fails, and `PINNED_LAGGING` ratchets the debt so it may only shrink; tools/gen-support-matrix.mjs renders both lists and the CLI-reachable subset from those declarations rather than from typed counts.",
+      "vector": {
+        "excluded": "A vector is a fixed input and a declared RESULT any runner reproduces. The subject here is which of our packages exposes which function — an inventory of this tree, not a claim a port could reproduce or would want to. Pinning it in the corpus would make our tool surface part of a stranger's conformance."
+      },
+      "test": "tools/capability-parity.mjs :: the gate is a CI step (`npm run test:parity`) and carries its own controls — the lagging counter must see a newly added entry, and a ceremony must classify as deferred, so the two registers cannot collapse into one unnoticed."
     }
   ],
   "first_accounted_round": 76,
