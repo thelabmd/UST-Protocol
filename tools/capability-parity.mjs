@@ -374,6 +374,67 @@ if (!drift) report.push(`  ✓ REALITY: all ${cells} surface×capability cells m
   if (MCP_DISPOSITION['checkpoint-chain']?.[0] !== 'deferred') { fail++; report.push('  ✗ CONTROL: a ceremony is not classified deferred — the two registers have collapsed into one'); }
 }
 
+// (5) A CAPABILITY WHOSE PARTS SPLIT ON KEY-TAKING MUST BE ACKNOWLEDGED AS TWO (#178, owner 2026-09-02).
+//
+// The owner proposed a gate asking "is the hazard even present on this surface?". Measured before building it:
+// that question PASSES the defect it was aimed at — `ust_verify` has carried `decKeys` since round 247, so
+// "key material does not belong in an agent's argument list" is TRUE of the MCP interface today, and it was still
+// the wrong reason for `disclosure-produce`.
+//
+// My first replacement scanned reasons for a hazard word and required every core function to carry that hazard.
+// It fired on `verify` at `ust-web-signer` — "the private key never enters a verifier" — where the hazard is a
+// descriptive aside, not the justification. That version read a WORD as an INTENT, which is precisely the error
+// it was written to catch. Prose cannot be judged here honestly, so this axis judges no prose at all.
+//
+// THE STRUCTURAL FACT INSTEAD. Partition a capability's core functions by whether they take key material. If both
+// halves are non-empty the capability is MIXED — one name over two operations, only one of which is key-bound —
+// and every recorded instance of this repository's most repeated surface defect has that shape:
+//   `disclosure-produce`  blindedCommit·blindPartition (no key) + encryptPartition (key)   → two months unowned
+//   `sign`                attachSignature (no key)   + seal (key)                          → agents publishing off-surface
+//   `build-transcript`    buildState (no key)        + ceremonies                          → declared full on a substring
+// A mixed capability scored `na` withholds its key-free half on the strength of the other's risk, whatever the
+// reason says. So the set of mixed capabilities is PINNED: a new one fails the build until it is split, or
+// acknowledged here with what its halves are.
+const takesKey = (fn) => {
+  const f = P[fn];
+  if (typeof f !== 'function') return false;
+  const sig = f.toString().split('\n')[0].replace(/key_id/g, '');   // key_id is a NAME, never key material
+  return /\bkey\b|\bpriv|privKeyObj|decKeys/.test(sig);
+};
+// Seven, not the two I knew about — and FIVE of them are capabilities I classified `deferred` in round 256 on a
+// claim about the ACT. The claim was true of the key-bound function and false of the rest: `checkpoint-chain` is
+// ONE key-bound `sealAuthorityCheckpoint` against EIGHT key-free ones including `verifyAuthorityCheckpointChain`,
+// which needs no human by any reading. I applied the owner's test to the capability's NAME instead of to each
+// operation, and the name covers both — the same mistake, one level deeper than the one it was meant to fix.
+// Each entry below states the halves and what the key-free half is owed; splitting them properly is debt on #178.
+const ACKNOWLEDGED_MIXED = {
+  'sign': 'seal SIGNS (key) · attachSignature ASSEMBLES (none). A surface that must never hold a key owns the second half honestly — `ust-mcp` scores subset here, not na (round 258).',
+  'disclosure-produce': 'encryptPartition needs a key · blindedCommit and blindPartition need none. `blinded` reached the agent surface (round 257); `encrypted` waits for the key-holder split.',
+  'no-fork-evidence': 'buildNoForkEvidence issues (key) · noForkClaim, verifyNoForkEvidence, witnessNoFork read (none). CONSUMING no-fork evidence is already on the agent surface; the issuing half is the operator\'s.',
+  'evidence-receipt': 'buildEvidenceReceipt issues (key) · evidenceReceiptClaim, evidenceReceiptId, verifyEvidenceReceipt read (none). The reading half is owed to the agent surface and is currently withheld with it.',
+  'checkpoint-chain': 'sealAuthorityCheckpoint mints (key) · EIGHT key-free functions read, including verifyAuthorityCheckpointChain and deriveCheckpointFreshness. The deferral in round 256 was argued about MINTING and applied to reading — the reading half needs no human at all.',
+  'recovery': 'buildRecoveryStatement asserts (key) · checkpointRecoveryClaim, verifyCheckpointRecovery, witnessSuccessor, witnessNoShrink read (none). Same over-coverage as checkpoint-chain.',
+  'epoch-transition': 'buildEpochTransition commits an identity forward (key) · epochTransitionClaim, verifyEpochTransition, deriveStreamFloor read (none). The deferral holds for the first and not the rest.',
+  'uniqueness-attest': 'buildUniquenessAttestation swears (key) · checkpointUniquenessClaim, verifyCheckpointUniqueness read (none). Round 256 already said an agent may CHECK such an attestation — and then withheld the checking half with the swearing one.',
+  'verifiable-map': 'checkpointMapLeaf, nameMapLeaf, buildNameMapRoot publish (key) · buildVerifiableMap, verifyCheckpointMapUniqueness, verifyActiveGenesisUniqueness, nameMapRootClaim, verifyNameMapRoot, proveMapRootAnchor read (none).',
+};
+{
+  const mixed = capIds.filter((c) => {
+    const core = CAPS[c]?.core ?? [];
+    const withKey = core.filter(takesKey), without = core.filter((n) => !takesKey(n));
+    return withKey.length && without.length;
+  });
+  const unacknowledged = mixed.filter((c) => !ACKNOWLEDGED_MIXED[c]);
+  if (unacknowledged.length) { fail++; report.push(`  ✗ MIXED: ${unacknowledged.length} capability(ies) split on key-taking and are recorded as one: [${unacknowledged.join(', ')}]. A surface scoring such a capability \`na\` withholds its key-free half on the strength of the other half's risk — split it, or acknowledge the halves here. Three instances of this shape have already cost this repository a defect each.`); }
+  const stale = Object.keys(ACKNOWLEDGED_MIXED).filter((c) => !mixed.includes(c));
+  if (stale.length) { fail++; report.push(`  ✗ MIXED: acknowledged but no longer mixed: [${stale.join(', ')}] — the split happened, so remove the acknowledgement rather than leaving a note nobody re-derived`); }
+  if (!unacknowledged.length && !stale.length) report.push(`  ✓ MIXED: ${mixed.length} capability(ies) split on key-taking, each acknowledged with what its halves are — the shape that cost three defects is now pinned`);
+
+  // CONTROLS — both directions, because a detector that cannot see the historical cases is watching nothing.
+  if (!takesKey('seal') || takesKey('attachSignature')) { fail++; report.push('  ✗ CONTROL: the key-taking probe misreads `seal`/`attachSignature` — the one pair this axis was built from'); }
+  if (takesKey('canon') || takesKey('contentHash')) { fail++; report.push('  ✗ CONTROL: the probe reports key material in a pure function — every capability would read as mixed'); }
+}
+
 // ── human-readable matrix
 const mark = { full: ' ✅', subset: ' 🟅', na: ' ·' };
 const short = (s) => s.replace('ust-', '');

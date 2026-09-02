@@ -2278,6 +2278,20 @@
         "excluded": "The bytes are unchanged — `attachSignature` produces what `seal` produces, and every signature vector in the corpus already pins them. A vector here would assert that a particular FUNCTION exists in our package, which is an inventory of this tree rather than a claim a port reproduces."
       },
       "test": "packages/ust-mcp/live-test.mjs :: over the real stdio transport — `ust_seal` derives key_id from pub, REFUSES a signature that does not verify, and the control confirms the same call with the real signature returns a document that verifies."
+    },
+    {
+      "round": 259,
+      "math": {
+        "excluded": "The subject is how OUR capability inventory is grouped — which functions we file under one name. Nothing about documents, verdicts or obligations moved, and a second implementation grouping its own surface differently would conform exactly as well. A theorem here would make our filing system an obligation on implementers."
+      },
+      "spec": {
+        "excluded": "Same reason: §16 defines a conforming producer and verifier and deliberately says nothing about how an implementation names or groups its exports. The rule recorded here binds this repository's map, not the standard."
+      },
+      "code": "tools/capability-parity.mjs :: a fifth axis partitions each capability's core functions by whether they take key material and PINS the set that splits, with both controls (the probe must read `seal`/`attachSignature` correctly and must not report key material in a pure function); nine mixed capabilities acknowledged with their halves, including the five that round 256 deferred on a claim true of only their key-bound function.",
+      "vector": {
+        "excluded": "A vector is a fixed input and a declared RESULT a port reproduces. This axis reads the signatures of our own exports; pinning it in the corpus would ask a stranger to reproduce the shape of our module rather than the behaviour of the protocol."
+      },
+      "test": "tools/capability-parity.mjs :: a CI step (`npm run test:parity`) carrying its own controls, and verified by three mutations — an unacknowledged mixed capability, an acknowledgement that is no longer true, and a key-probe that sees nothing each redden their own message."
     }
   ],
   "first_accounted_round": 76,

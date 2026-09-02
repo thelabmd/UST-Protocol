@@ -780,6 +780,10 @@
     {
       "round": 258,
       "no_recap": "Round 258 does not close #178 — it answers the signing question (the split stays; the assembly half comes inside) and lowers the ratchet to 12, leaving the encrypted split and twelve lagging capabilities. The unit of a recap is the CLOSED ISSUE; this round closes none."
+    },
+    {
+      "round": 259,
+      "no_recap": "Round 259 does not close #178 — it adds the mixed-capability axis the owner's question led to and records that five of round 256's deferrals over-covered. Splitting those capabilities properly is debt the card now carries. The unit of a recap is the CLOSED ISSUE; this round closes none."
     }
   ]
 }
