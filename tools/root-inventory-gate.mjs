@@ -49,6 +49,7 @@ const DECLARED = {
   'NOTICE': 'attribution required by Apache-2.0',
   'TRADEMARK.md': 'the name is not covered by the code licence',
   'PORTING.md': 'what an independent implementation must reproduce',
+  'SUPPORT.md': 'what each surface actually does — GENERATED from the declarations the parity gate probes, so the page cannot promise what no command runs (#177)',
   'DONOTREADME.md': 'the owner\'s joke, kept deliberately — 42 blank lines and a punchline',
   'diarium.md': 'the diary, a generated view of the sealed store in diarium/',
   'package.json': 'the workspace root',

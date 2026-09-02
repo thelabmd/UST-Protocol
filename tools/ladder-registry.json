@@ -2210,6 +2210,20 @@
       "code": "packages/ust-cli/index.mjs :: `cmdSign` — privacy declared per partition in the input, one fresh nonce per private member, `--disclosures-out` refused-if-absent, no key invented, and the output re-opened from the envelope before either is written; docs/ust-verify.mjs :: §14 step 8 (commitment reproduction + AES-GCM through WebCrypto, XChaCha honestly reported as this build's limit), synced byte-for-byte to the extension; tools/docs-verifier-parity.mjs :: vectors carry their disclosures and keys into BOTH verifiers, with capability boundaries separated from divergence.",
       "vector": "privacy-encrypted-channels-disagree",
       "test": "tools/docs-verifier-parity.mjs :: the gate is a CI step (`npm run test:docs-parity`) and now prints how many vectors carried an auxiliary input, so a refactor that stopped threading them would show as zero rather than as silent agreement."
+    },
+    {
+      "round": 254,
+      "math": {
+        "excluded": "A support page states which of OUR tools expose which act. It quantifies over this repository's surfaces, not over documents or verdicts, so there is no property of the protocol to state — and a second implementation could expose an entirely different set while conforming perfectly. Putting it in the model would turn an inventory into an obligation."
+      },
+      "spec": {
+        "excluded": "Same reason one layer down: §16 defines a conforming PRODUCER and VERIFIER, and neither our CLI nor our page is one by virtue of existing. The spec deliberately does not describe this implementation's surfaces, and SUPPORT.md deliberately does not describe the protocol."
+      },
+      "code": "tools/gen-support-matrix.mjs :: renders SUPPORT.md from the CAPS/SURFACES declarations in capability-parity.mjs — refusing to render at all if its parse of those shapes comes back short, since an empty table would print as an answer; tools/capability-parity.mjs :: `disclosure` renamed `disclosure-produce` and owned by the CLI, `sign` promoted to full and `build-transcript` demoted to subset, each against a live probe.",
+      "vector": {
+        "excluded": "A vector is an input and a declared RESULT a port reproduces. This page is an inventory of THIS implementation, and pinning it in the corpus a stranger runs would make our tool surface part of their conformance — the precise inversion the page's own header warns against."
+      },
+      "test": "tools/gen-support-matrix.mjs :: a CI step in its own right (`npm run test:support-matrix`), which regenerates and `git diff --exit-code`s the page, so a hand edit or a drifted declaration fails the build rather than shipping a promise."
     }
   ],
   "first_accounted_round": 76,

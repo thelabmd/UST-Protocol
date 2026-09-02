@@ -120,6 +120,11 @@ jobs:
       # is registered rather than the day somebody remembers to write vectors for its combinations.
       - name: every cell of the partition-envelope product is decided (#177)
         run: npm run test:envelope-domain
+      # #177 — a hand-written support table is a promise, and this repo has paid for one: the capability map
+      # declared `sign` FULL while no command signed a document. SUPPORT.md is RENDERED from the declarations
+      # the parity gate verifies against live probes, so the page cannot drift from what is checked.
+      - name: SUPPORT.md is rendered from the verified declarations, never hand-kept (#177)
+        run: npm run test:support-matrix
       - name: light README panels are DERIVED from the dark originals, never hand-edited
         run: npm run test:artwork
       - name: security regression (external-audit P0/P1 reproductions must stay closed — epic UST-1o6)
