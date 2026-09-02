@@ -24,7 +24,7 @@ const client = new Client({ name: 'ust-live-test', version: '1' }, { capabilitie
 await client.connect(transport);
 
 const tools = await client.listTools();
-check('live:tools/list = 15', tools.tools.length === 15, 'got ' + tools.tools.length);
+check('live:tools/list = 17', tools.tools.length === 17, 'got ' + tools.tools.length);
 check('live:key_id over the wire', (await call(client, 'ust_key_id', { pub: A.pubB64 })).key_id === A.key_id);
 
 // THE agent flow, entirely over MCP: build → sign with own key → verify
@@ -139,6 +139,42 @@ check('live:fork_choice same ust_id, no substrate → INDETERMINATE', (await cal
   const ok = await call(client, 'ust_seal', { state: b.state, pub: C.pubB64, sig: good });
   check('live:#178 CONTROL — the same call with the real signature returns a document that verifies',
     (await call(client, 'ust_verify', { doc: ok.doc, offline: true })).result === 'VALID:LIGHT');
+}
+
+// #178 — THE KEY-HOLDER SPLIT, played out over the wire. The agent holds no key at any point: it asks for the
+// sealing request, an external holder seals exactly the string it was handed, and the agent assembles. The
+// load-bearing assertions are that the result is BYTE-IDENTICAL to the all-in-one producer (one derivation, two
+// processes — F.7a.2's corollary demands the first, not the second) and that a sealer working from its own
+// derivation is caught by a caller with no key at all.
+{
+  const { createCipheriv, randomBytes } = await import('node:crypto');
+  const KEY = randomBytes(32), KEY_B64 = KEY.toString('base64url');
+  const D = kp('dd'.repeat(32));
+  const ID = { domain_shard: D.key_id, ust_id: 'ust:20260903.13' };
+  const value = { kp: '5.8' };
+
+  const req = await call(client, 'ust_sealing_request', { name: 'reading', value, ...ID });
+  check('live:#178 the sealing request carries the commitment, the plaintext and the IV — and NO key travelled',
+    req.commit?.startsWith('sha256:') && typeof req.plaintext === 'string' && typeof req.iv === 'string' && req.disclosures?.reading?.nonce === req.nonce);
+
+  const sealWith = (iv) => { const b = Buffer.from(iv, 'base64url');
+    const c = createCipheriv('aes-256-gcm', KEY, b);
+    const body = Buffer.concat([c.update(Buffer.from(req.plaintext, 'utf8')), c.final()]);
+    return Buffer.concat([b, body, c.getAuthTag()]).toString('base64url'); };
+
+  const built = await call(client, 'ust_attach_encryption', { name: 'reading', commit: req.commit, key_id: 'ops-2026-09', ct: sealWith(req.iv) });
+  const direct = P.encryptPartition('reading', value, { ...ID, nonce: req.nonce, key_id: 'ops-2026-09', key: KEY_B64 }).partition;
+  check('live:#178 the split output is BYTE-IDENTICAL to encryptPartition — one derivation, two processes',
+    JSON.stringify(built.partition) === JSON.stringify(direct), JSON.stringify(built.partition).slice(0, 90));
+
+  const wrong = await rawCall(client, 'ust_attach_encryption', { name: 'reading', commit: req.commit, key_id: 'ops-2026-09', ct: sealWith(randomBytes(12).toString('base64url')) });
+  check('live:#178 a sealer that used its OWN IV is caught by a caller holding no key — the seam is checked, not trusted',
+    wrong.isError === true, JSON.stringify(wrong.body || {}).slice(0, 80));
+
+  // and the assembled partition goes back into a builder untouched — a result is not a declaration
+  const st = await call(client, 'ust_build_observation', { ...ID, key_id: D.key_id, time: t, data: { reading: built.partition } });
+  check('live:#178 an assembled encrypted partition passes THROUGH the builder — a built result is not a declaration to rebuild',
+    st.state?.data?.reading?.commit === req.commit);
 }
 
 await client.close();

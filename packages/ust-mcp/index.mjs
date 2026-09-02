@@ -37,7 +37,9 @@ const buildResult = (state) => ({ state, content_hash: P.contentHash(doc1(state)
 // not the reader, not itself. An agent cannot receive the one without the other, so the obligation cannot be
 // declined rather than merely being documented.
 //
-// `encrypted` is NOT produced here, and the reason is a claim about the ACT rather than about agents: the key
+// `encrypted` is not produced by THIS branch, and the reason is a claim about the ACT rather than about agents:
+// CLOSED 2026-09-03 by `ust_sealing_request` + `ust_attach_encryption`, which give the agent both key-free
+// halves and leave only the sealing with whoever owns the key. Historically the whole mode was withheld: the key
 // would travel as a tool argument, hence through the model's context and into every transcript that records it.
 // The owner's split is the answer and it is a separate piece of work — the agent computes the commitment and the
 // canonical plaintext, a key-holder seals that exact string, and the key never enters the agent's context.
@@ -45,6 +47,12 @@ const withPrivacy = (data, domain_shard, ust_id) => {
   const out = {}, disclosures = {};
   for (const [name, decl] of Object.entries(data || {})) {
     if (!decl || typeof decl !== 'object' || decl.privacy === undefined) { out[name] = decl; continue; }
+    // A DECLARATION carries `value` and asks to be turned into a partition; a partition already built — by the
+    // key-holder split, or by any producer — carries `commit` and no plaintext, and passes through untouched.
+    // Measured 2026-09-03 (#178) — CLOSED here: the round-257 branch keyed on the MODE alone, so a partition
+    // assembled through the split was refused by the very builder it was assembled for. Telling a declaration
+    // from a result by the mode is the same "one word, two mechanisms" the rule two rounds ago is about.
+    if (decl.value === undefined && decl.commit !== undefined) { out[name] = decl; continue; }
     if (decl.privacy !== 'blinded')
       throw Object.assign(new Error(`partition \`${name}\` declares privacy \`${decl.privacy}\` — this surface produces \`blinded\` only. An \`encrypted\` partition needs an AEAD key, and a key passed as a tool argument travels through the agent's context; use the key-holder split (#178) or build it with ust-protocol directly.`), { code: 'E-UNSUPPORTED' });
     if (decl.value === undefined) throw new Error(`private partition \`${name}\` has no \`value\` — this tool commits to a value you supply; it cannot commit to nothing`);
@@ -113,6 +121,32 @@ export const tools = [
     description: 'CREATE (build, unsigned) an observation State from partitions; returns state + content_hash + signing_input to sign with your own Ed25519 key.',
     inputSchema: { type: 'object', required: ['domain_shard', 'ust_id', 'key_id', 'time', 'data'], properties: { domain_shard: { type: 'string' }, ust_id: { type: 'string' }, key_id: { type: 'string' }, time: { type: 'object' }, data: { type: 'object' } } },
     handler: ({ domain_shard, ust_id, key_id, time, data }) => { const w = withPrivacy(data, domain_shard, ust_id); return { ...buildResult(P.buildState({ domain_shard, ust_id, key_id, class: 'observation' }, time, w.data)), ...(Object.keys(w.disclosures).length ? { disclosures: w.disclosures } : {}) }; },
+  },
+  {
+    name: 'ust_sealing_request',
+    description: 'PREPARE an `encrypted` partition WITHOUT holding a key: returns the commitment, the exact plaintext a key-holder must seal, and the IV that commitment implies. Hand the request to whoever owns the key, then pass their {alg,key_id,ct} back through `ust_attach_encryption`. The nonce is generated here and returned — keep it, or the commitment can never be opened.',
+    inputSchema: { type: 'object', required: ['name', 'value', 'domain_shard', 'ust_id'], properties: { name: { type: 'string' }, value: { type: 'object' }, domain_shard: { type: 'string' }, ust_id: { type: 'string' }, nonce: { type: 'string', description: 'optional — generated here when absent, and returned either way' }, alg: { type: 'string' } } },
+    // #178 — the owner's split. `encryptPartition` derives what must be sealed AND seals it; only the second half
+    // needs a key, and a key passed as a tool argument travels through the model's context into every transcript
+    // recording it. So the agent does the first half and the key-holder does the second.
+    //
+    // F.7a.2's producer corollary demands ONE derivation, not one process: the sealer receives exactly the string
+    // the commitment was taken over, so the two channels cannot drift — measured, the split's output is
+    // BYTE-IDENTICAL to `encryptPartition`'s.
+    //
+    // The key-holder receives the PLAINTEXT. Inherent — they are the party entitled to read it — but when the
+    // key-holder is a third party rather than the publisher's own operator, the value travels somewhere it did
+    // not before. Choose the key-holder accordingly.
+    handler: ({ name, value, domain_shard, ust_id, nonce, alg }) => {
+      const n = typeof nonce === 'string' && nonce ? nonce : randomBytes(16).toString('base64url');
+      return { ...P.sealingRequest(name, value, { domain_shard, ust_id, nonce: n, ...(alg ? { alg } : {}) }), nonce: n, disclosures: { [name]: { nonce: n, value } } };
+    },
+  },
+  {
+    name: 'ust_attach_encryption',
+    description: 'ASSEMBLE an `encrypted` partition from a block a key-holder sealed. No key here and none needed — and it CHECKS the seam: the ciphertext must carry the IV the commitment implies, so a sealer that worked from its own derivation is caught by a caller holding no key.',
+    inputSchema: { type: 'object', required: ['name', 'commit', 'key_id', 'ct'], properties: { name: { type: 'string' }, commit: { type: 'string' }, key_id: { type: 'string' }, ct: { type: 'string' }, alg: { type: 'string' }, kind: { type: 'string' } } },
+    handler: ({ name, commit, key_id, ct, alg, kind }) => P.attachEncryption(name, { commit, key_id, ct, ...(alg ? { alg } : {}), ...(kind ? { kind } : {}) }),
   },
   {
     name: 'ust_seal',

@@ -115,7 +115,7 @@ const CAPS = {
   // false of MAKING one: `encryptPartition` works on exactly the data a publisher does hold. One sentence covered
   // two operations, so the produce half stayed unowned until `ust sign` was written (#177). CONSUMPTION is not a
   // separate capability: it is `verify` with `disclosures`/`decKeys`, and it is scored there.
-  'disclosure-produce': { core: ['blindedCommit', 'blindPartition', 'encryptPartition'], cli: 'cmd:sign', mcp: 'arg:ust_build_observation.data' },
+  'disclosure-produce': { core: ['blindedCommit', 'blindPartition', 'encryptPartition', 'sealingRequest', 'attachEncryption'], cli: 'cmd:sign', mcp: ['arg:ust_build_observation.data', 'tool:ust_sealing_request', 'tool:ust_attach_encryption'] },
   'negative-observation':{ core: ['buildAbsence', 'noEventBacking'] },   // #39 — a normative absence assertion + the no-event↔completeness tie; core-only for now, no surface exposes it yet
 };
 
@@ -419,7 +419,7 @@ const takesKey = (fn) => {
 // Each entry below states the halves and what the key-free half is owed; splitting them properly is debt on #178.
 const ACKNOWLEDGED_MIXED = {
   'sign': 'seal SIGNS (key) · attachSignature ASSEMBLES (none). A surface that must never hold a key owns the second half honestly — `ust-mcp` scores subset here, not na (round 258).',
-  'disclosure-produce': 'encryptPartition needs a key · blindedCommit and blindPartition need none. `blinded` reached the agent surface (round 257); `encrypted` waits for the key-holder split.',
+  'disclosure-produce': 'encryptPartition needs a key · blindedCommit, blindPartition, sealingRequest and attachEncryption need none. Both `blinded` and the two key-free halves of `encrypted` are on the agent surface (rounds 257, 261); only the sealing itself stays with whoever owns the key.',
   'no-fork-evidence': 'buildNoForkEvidence issues (key) · noForkClaim, verifyNoForkEvidence, witnessNoFork read (none). CONSUMING no-fork evidence is already on the agent surface; the issuing half is the operator\'s.',
   'evidence-receipt': 'buildEvidenceReceipt issues (key) · evidenceReceiptClaim, evidenceReceiptId, verifyEvidenceReceipt read (none). The reading half is owed to the agent surface and is currently withheld with it.',
   'checkpoint-chain': 'sealAuthorityCheckpoint mints (key) · EIGHT key-free functions read, including verifyAuthorityCheckpointChain and deriveCheckpointFreshness. The deferral in round 256 was argued about MINTING and applied to reading — the reading half needs no human at all.',

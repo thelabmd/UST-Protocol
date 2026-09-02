@@ -2306,6 +2306,16 @@
         "excluded": "A vector is a fixed input and a declared RESULT a port reproduces. A contribution rule is addressed to people working in THIS tree; putting it in the corpus a stranger runs would ask them to reproduce our process rather than the protocol's behaviour."
       },
       "test": "tools/capability-parity.mjs :: the CI step (`npm run test:parity`) that pins the nine mixed capabilities and carries both controls — the probe must read `seal`/`attachSignature` correctly and must not report key material in a pure function."
+    },
+    {
+      "round": 261,
+      "math": "*Corollary (why the producer must build the plaintext, not merely encrypt something).*",
+      "spec": {
+        "excluded": "§10 already requires the ciphertext be an AEAD encryption of exactly the committed value and already places key management out of scope; §17 already fixes the `ct` layout and the per-algorithm nonce width, which is what makes the IV check possible at all. Nothing normative moved — the split is an arrangement of WHO computes which half, and a conforming implementation may keep both halves in one process."
+      },
+      "code": "packages/ust-protocol/index.mjs :: `sealingRequest` returns the commitment, the canonical plaintext and the derived IV with no key involved, and `attachEncryption` assembles a sealed block while REFUSING a ciphertext whose nonce prefix is not the one the commitment implies; packages/ust-mcp/index.mjs exposes both, and `withPrivacy` now tells a declaration from a built partition by shape rather than by mode.",
+      "vector": "privacy-encrypted-disclosure",
+      "test": "packages/ust-mcp/live-test.mjs :: the split played out over the real transport — the request carries no key, the assembled output is byte-identical to `encryptPartition`, a sealer using its own IV is caught by a caller with no key, and the assembled partition passes through the builder untouched."
     }
   ],
   "first_accounted_round": 76,

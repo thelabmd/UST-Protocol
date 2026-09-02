@@ -12,7 +12,7 @@ const withWitnessClock = async (clock, body) => { __setWitnessClockForConformanc
 // runtime-namespace totality net. Define it ONCE here (used by R47) and cross-check it below against CLASS — MAY_THROW(n) ⟺
 // CLASS[n] !== 'surface', so the two can no longer diverge. (Totality itself is already guaranteed by R34's surface×BATTERY.)
 const MAY_THROW_TOTALITY = (n) => /^(build|seal|make)/.test(n) || /(Claim|Leaf|Id|Epoch)$/.test(n) || /^Ust[A-Z]/.test(n)
-  || ['canon', 'H', 'Hbytes', 'keyId', 'merkleRoot', 'partitionHash', 'contentHash', 'signedContent', 'admitUtf8', 'anyLoneSurrogate', 'ustGrid', 'attachSignature', 'blindPartition', 'encryptPartition', 'blindedCommit', 'seed', 'axisRank', 'evidenceCaps', 'admitDeep', 'isValid', 'cannotDecide', 'verifiedEvidence', 'replicationAgreement', 'surfaceVerdict', 'anchorRollup'].includes(n)
+  || ['canon', 'H', 'Hbytes', 'keyId', 'merkleRoot', 'partitionHash', 'contentHash', 'signedContent', 'admitUtf8', 'anyLoneSurrogate', 'ustGrid', 'attachSignature', 'sealingRequest', 'attachEncryption', 'blindPartition', 'encryptPartition', 'blindedCommit', 'seed', 'axisRank', 'evidenceCaps', 'admitDeep', 'isValid', 'cannotDecide', 'verifiedEvidence', 'replicationAgreement', 'surfaceVerdict', 'anchorRollup'].includes(n)
   || ['verifyOrThrow', 'assertValid'].includes(n)
   // #43 — PRODUCER side: these shape OUR outbound request from OUR OWN constants and never read untrusted wire.
   // `userAgent` interpolates two strings the caller controls, and `labelledFetch` spreads a caller-supplied init —
@@ -3415,7 +3415,7 @@ console.log('\n═════════════════════�
   // promise-rejection) UNLESS explicitly classified MAY-THROW; the MAY-THROW predicate covers EXACTLY the current throwers (no
   // verdict boundary exempted, no thrower unclassified — a new unclassified thrower fails HERE). All four round-47 findings
   // reproduced on live code; this closes P1-03 (bd UST-5t8).
-  check('R47 P1-03 (roster completeness — RUNTIME namespace) — EVERY function-typed export of the module (102, incl. re-exports + arrow-consts + the byte kernel checkAuthorityProofBytes) is TOTAL on a hostile Proxy UNLESS explicitly classified MAY-THROW (producer / byte-string primitive / verdict class / throw-by-contract); a source-regex miss (arrow-const, re-export, future callable) can no longer evade the gate', await (async () => {
+  check('R47 P1-03 (roster completeness — RUNTIME namespace) — EVERY function-typed export of the module (104, incl. re-exports + arrow-consts + the byte kernel checkAuthorityProofBytes) is TOTAL on a hostile Proxy UNLESS explicitly classified MAY-THROW (producer / byte-string primitive / verdict class / throw-by-contract); a source-regex miss (arrow-const, re-export, future callable) can no longer evade the gate', await (async () => {
     // MAY-THROW = NOT an untrusted-object verdict boundary: a PRODUCER (build*/seal*/make*/*Claim/*Leaf/*Id/*Epoch) constructs
     // prover data from TRUSTED args; a byte/string PRIMITIVE (a Proxy is not a valid input); a verdict CLASS (Ust*, invoked with
     // `new`); the reduction primitive `admitDeep` (its 2nd arg is an internal `seen` set) + `isValid`/`verifiedEvidence` helpers;
@@ -3897,7 +3897,7 @@ console.log('\n═════════════════════�
     seed: 'primitive', strictB64url: 'primitive', admitUtf8: 'primitive', admitDeep: 'primitive (the door itself; canon-transparent)',
     snapshotBytes: 'primitive (the byte-admission door — exact native Uint8Array → immutable copy, total: a hostile Proxy yields E-BYTES-TYPE, never a throw; round-48 P0-01)',
     anyLoneSurrogate: 'primitive', edVerifyStrict: 'primitive', signedContent: 'primitive', partitionHash: 'primitive',
-    blindedCommit: 'primitive', blindPartition: 'primitive', encryptPartition: 'primitive', attachSignature: 'primitive', assuranceLE: 'surface', assuranceState: 'primitive (the assurance door — returns a reject sentinel like admitDeep, never a throw)',
+    blindedCommit: 'primitive', blindPartition: 'primitive', encryptPartition: 'primitive', attachSignature: 'primitive', sealingRequest: 'primitive', attachEncryption: 'primitive', assuranceLE: 'surface', assuranceState: 'primitive (the assurance door — returns a reject sentinel like admitDeep, never a throw)',
     axisRank: 'primitive', joinAssurance: 'surface', meetAssurance: 'surface', projectTier: 'surface', capAssurance: 'surface',
     evidenceCaps: 'primitive', ustGrid: 'primitive', checkBounds: 'surface', compareEvidenceOrder: 'surface',
     parseProfile: 'surface',   // #135 — reads the profile served by the domain under question; refuses, never throws

@@ -39,6 +39,7 @@ export function assertValid(verdict: unknown): unknown;
 export const ASSURANCE_AXES: unknown;
 export function assuranceLE(a: unknown, b: unknown): unknown;
 export function assuranceState(s?: unknown): unknown;
+export function attachEncryption(name: unknown, arg1?: unknown): { partition: unknown; hash: unknown };
 export function attachSignature(state: unknown, arg1?: unknown): unknown;
 export function authorityCheckpointId(cp: unknown): string;
 export function authorityScopeId(activeGenesis: unknown): string;
@@ -137,6 +138,7 @@ export const ROLE_CLASSES: Readonly<{ 'name-binding-root': readonly ['genesis', 
 export const RULE_CONTRACTS: unknown;
 export function seal(state: unknown, privKeyObj: unknown, pubB64url: unknown): UstDocument;
 export function sealAuthorityCheckpoint(body: unknown, privKeyObj: unknown, pubB64url: unknown): { body: unknown; sig: unknown };
+export function sealingRequest(name: unknown, value: unknown, arg2?: unknown): { commit: unknown; plaintext: unknown; alg: unknown };
 export function seed(contentHashes: unknown): string;
 export function signedContent(doc: unknown): string;
 export function snapshotBytes(input: unknown, maxBytes?: unknown, sizeErr?: unknown): unknown;

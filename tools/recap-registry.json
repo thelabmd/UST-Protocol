@@ -788,6 +788,10 @@
     {
       "round": 260,
       "no_recap": "Round 260 does not close #178 — it writes the verb-capability rule where contributors read it, and states the boundary of its detector. The card's debt is untouched. The unit of a recap is the CLOSED ISSUE; this round closes none."
+    },
+    {
+      "round": 261,
+      "no_recap": "Round 261 does not close #178 — it delivers the key-holder split, leaving the debt: twelve lagging capabilities plus the verify halves of five authority capabilities that round 259 found unreachable. The unit of a recap is the CLOSED ISSUE; this round closes none."
     }
   ]
 }

@@ -64,6 +64,8 @@ Or in any MCP client config:
 
 | Tool | Does |
 |------|------|
+| `ust_sealing_request` | PREPARE an `encrypted` partition **without holding a key**: returns the commitment, the exact plaintext a key-holder must seal, and the IV that commitment implies. The nonce is generated here and returned — keep it, or the commitment can never be opened. The key-holder sees the plaintext by construction; choose the key-holder accordingly. |
+| `ust_attach_encryption` | ASSEMBLE the partition from the `{alg,key_id,ct}` a key-holder returned. No key here and none needed — and it CHECKS the seam: the ciphertext must carry the IV the commitment implies, so a sealer working from its own derivation is caught by a caller holding no key. |
 | `ust_seal` | ASSEMBLE a signed transcript from a signature you made yourself: pass the state, your base64url `pub` and the signature over `signing_input`. **The private key never travels** — this is the assembly half of `seal`, which needs no key. `key_id` is DERIVED from `pub`, so a caller cannot state one that disagrees, and the tool VERIFIES what it assembled, refusing to hand back a document a reader would reject. |
 | `ust_verify` | Verify a document — ONE call, resolution included: auto-fetches the publisher's discovery + witness surfaces, cross-checks witness anchors against their substrate (Rekor/Bitcoin), and reaches `VALID:HIGH` automatically when the no-fork evidence confirms (`resolution.noFork`: witness-confirmed / caller-asserted / unconfirmed). `offline:true` forbids the network (supply `genesis`+`keylog` yourself); `proof` adds anchored time |
 | `ust_build_observation` | Build (unsigned) an observation; returns `state` + `content_hash` + `signing_input` |

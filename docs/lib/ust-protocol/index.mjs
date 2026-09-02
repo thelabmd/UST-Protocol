@@ -96,6 +96,50 @@ export function blindPartition(name, value, { domain_shard, ust_id, nonce, kind 
   const commit = blindedCommit({ domain_shard, ust_id, name, value, nonce });
   return { partition: { kind, privacy: 'blinded', commit }, hash: partitionHash({ commit }) };
 }
+// §10 encrypted, SPLIT so the key never crosses into a caller that must not hold one (#178, owner 2026-09-02).
+//
+// `encryptPartition` does two things: it derives what must be sealed, and it seals it. Only the second needs a
+// key. A publisher that must not hold one — an agent, whose tool arguments travel through a model's context and
+// into every transcript recording them — can do the first half itself and hand the result to whoever owns the key.
+//
+// The producer corollary (F.7a.2) demands ONE derivation, not one process: if the sealer receives exactly the
+// string the commitment was taken over, the two channels cannot drift, because there is only one plaintext in
+// existence. `sealingRequest` produces that string and nothing else invents another.
+//
+// AND THE SEAM IS CHECKED. The IV is `H('ust:enc-iv', commit)[0..width]`, so the ciphertext's nonce prefix is
+// DETERMINED by a commitment any key-free party can recompute. `attachEncryption` therefore verifies that the
+// sealer used the IV the commitment implies — one axis of the key-holder's work, checked by a caller holding no
+// key. What it cannot check is the AEAD binding itself; that needs the key, and §14 step 8 is where it happens.
+//
+// HONEST BOUNDARY, and an integrator must be told rather than left to find it: the key-holder receives the
+// PLAINTEXT. That is inherent — they are the party entitled to read it, and would decrypt it anyway — but when
+// the key-holder is a third party rather than the publisher's own operator, the value now travels somewhere it
+// did not before. **The key-holder sees plaintext by construction; choose the key-holder accordingly.**
+export function sealingRequest(name, value, { domain_shard, ust_id, nonce, alg = 'AES-256-GCM' }) {
+  const width = nonceWidth(alg);
+  if (!width) throw err('E-MALFORMED', 'unregistered AEAD for sealingRequest: ' + String(alg));
+  const commit = blindedCommit({ domain_shard, ust_id, name, value, nonce });
+  return {
+    commit,
+    plaintext: canon({ nonce, partition: name, value }),          // EXACTLY what §14 step 8 compares against
+    iv: toB64url(fromB64url(H('ust:enc-iv', commit).slice(7)).subarray(0, width)),
+    alg,
+  };
+}
+
+// Assemble the partition from a block a key-holder sealed. No key here, and none needed.
+export function attachEncryption(name, { commit, alg = 'AES-256-GCM', key_id, ct, kind = 'captured' }) {
+  const width = nonceWidth(alg);
+  if (!width) throw err('E-MALFORMED', 'unregistered AEAD for attachEncryption: ' + String(alg));
+  if (!KEYID_FORM.test(commit || '')) throw err('E-MALFORMED', 'attachEncryption needs the sha256: commit from the sealing request');
+  if (typeof key_id !== 'string' || !key_id || typeof ct !== 'string') throw err('E-MALFORMED', 'attachEncryption needs `key_id` and a base64url `ct`');
+  const want = fromB64url(H('ust:enc-iv', commit).slice(7)).subarray(0, width);
+  const got = fromB64url(ct).subarray(0, width);
+  if (toB64url(want) !== toB64url(got))
+    throw err('E-COMMIT', 'the ciphertext does not carry the IV this commitment implies — the sealer worked from a different derivation, and no key is needed to see it: ' + name);
+  return { partition: { kind, privacy: 'encrypted', commit, enc: { alg, key_id, ct } }, hash: partitionHash({ commit }) };
+}
+
 // §10 encrypted PRODUCER — the mirror of `blindPartition`, added for #175 (F.7a.2 corollary).
 //
 // WHY THE TWO OUTPUTS COME FROM ONE OPERATION. The model states that the admissible plaintext is DETERMINED by
