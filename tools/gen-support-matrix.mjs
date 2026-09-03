@@ -183,8 +183,7 @@ may only shrink.`
 absence wearing the vocabulary of intent — so an empty list is the only honest form of it, and the pin now holds
 at zero: an entry may still appear, but only by being built somewhere else first.`}
 
-${lagging.map((d) => '- \`' + d.cap + '\`' + (holders(d.cap).length ? ' — reachable on ' + holders(d.cap).join(', ') : '')).join('\n')}
-
+${lagging.length ? lagging.map((d) => '- \`' + d.cap + '\`' + (holders(d.cap).length ? ' — reachable on ' + holders(d.cap).join(', ') : '')).join('\n') + '\n' : ''}
 ${(() => {
   // EVERY entry in this domain has a holder — that is what puts it here — so the old empty-domain branch, written
   // when the axis counted capabilities nobody exposed, can no longer be reached and is gone rather than kept as a

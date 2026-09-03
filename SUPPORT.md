@@ -112,5 +112,4 @@ absence wearing the vocabulary of intent — so an empty list is the only honest
 at zero: an entry may still appear, but only by being built somewhere else first.
 
 
-
 Nothing is owed on this axis: every capability another surface exposes is on the agent surface too. The rule still binds — whichever surface receives the next one first, the agent surface may not be later.
