@@ -24,7 +24,7 @@ const client = new Client({ name: 'ust-live-test', version: '1' }, { capabilitie
 await client.connect(transport);
 
 const tools = await client.listTools();
-check('live:tools/list = 19', tools.tools.length === 19, 'got ' + tools.tools.length);
+check('live:tools/list = 22', tools.tools.length === 22, 'got ' + tools.tools.length);
 check('live:key_id over the wire', (await call(client, 'ust_key_id', { pub: A.pubB64 })).key_id === A.key_id);
 
 // THE agent flow, entirely over MCP: build → sign with own key → verify
@@ -226,6 +226,42 @@ check('live:fork_choice same ust_id, no substrate → INDETERMINATE', (await cal
   const nothing = await rawCall(client, 'ust_name_report', { artifacts: [] });
   check('live:#178 …and an empty set is a question never asked, never a clean report',
     nothing.isError === true && /NOTHING EXAMINED/.test(JSON.stringify(nothing.body)), JSON.stringify(nothing.body).slice(0, 90));
+}
+
+// #178 debt — `ust_keylog_commitment`, `ust_keylog_terminality`, `ust_shard_check`. Every function of both
+// capabilities is PURE: no key, no filesystem, no network. Nothing was ever decided against the agent surface;
+// nobody built it, which is exactly what `lagging` means in the ordering register.
+{
+  const hashes = ['sha256:' + 'aa'.repeat(32), 'sha256:' + 'bb'.repeat(32), 'sha256:' + 'cc'.repeat(32)];
+  const c = await call(client, 'ust_keylog_commitment', { entry_hashes: hashes, prove: [1] });
+  check('live:#178 ust_keylog_commitment commits the log — root, length, head and the head inclusion proof',
+    c.length === '3' && c.head === hashes[2] && /^sha256:[0-9a-f]{64}$/.test(c.root) && !!c.headProof,
+    JSON.stringify(c).slice(0, 110));
+  // THE SEAM: the library hands back `prove` as a FUNCTION, which cannot cross a JSON wire. Dropping it silently
+  // would give the agent a strictly weaker artifact than the library and never say so.
+  check('live:#178 …and a requested inclusion proof arrives as DATA, since a function cannot cross the wire',
+    !!c.proofs && !!c.proofs['1'] && Array.isArray(c.proofs['1'].siblings) && typeof c.prove === 'undefined',
+    JSON.stringify(c.proofs || null).slice(0, 100));
+
+  const term = await call(client, 'ust_keylog_terminality', { head: { root: c.root, length: c.length, head: c.head }, proof: c.headProof });
+  check('live:#178 ust_keylog_terminality — the committed head IS the end of the log', term.terminal === true, JSON.stringify(term));
+  // …and it must be able to say NO, or the check above passes for a build that proves nothing.
+  const notTerm = await call(client, 'ust_keylog_terminality', { head: { root: c.root, length: '9', head: c.head }, proof: c.headProof });
+  check('live:#178 …and a head whose length does not match the proof is NOT terminal',
+    notTerm.terminal === false && typeof notTerm.detail === 'string', JSON.stringify(notTerm).slice(0, 110));
+
+  const empty = await rawCall(client, 'ust_keylog_commitment', { entry_hashes: [] });
+  check('live:#178 …and an empty log is refused rather than committed — there is no head to commit',
+    empty.isError === true, JSON.stringify(empty.body).slice(0, 90));
+
+  const named = await call(client, 'ust_shard_check', { shard: 'muuune.com' });
+  const keyed = await call(client, 'ust_shard_check', { shard: 'sha256:' + 'ab'.repeat(32) });
+  check('live:#178 ust_shard_check — a dns-name shard is discoverable, a key-form shard is not',
+    named.public_dns === true && keyed.public_dns === false, JSON.stringify([named.public_dns, keyed.public_dns]));
+  // The consequence, not a re-derived reason: a false answer says /.well-known is not the route, never that the
+  // identity is weaker. An agent reading only the boolean would draw the wrong conclusion from it.
+  check('live:#178 …and the FALSE answer names the consequence — not the route, rather than a weaker identity',
+    /explicit channel/.test(keyed.discovery) && /reachable/.test(named.discovery), keyed.discovery.slice(0, 90));
 }
 
 await client.close();

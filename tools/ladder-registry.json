@@ -2450,6 +2450,20 @@
         "excluded": "A vector is a fixed input and a declared result a second implementation reproduces. `nameSetReport`'s behaviour is already pinned in the core suite; which of OUR surfaces calls it is not something a port could reproduce."
       },
       "test": "packages/ust-mcp/live-test.mjs :: four checks over the real stdio transport — a real document in the set is COMPLIANT (the case my first draft got wrong), a named non-document is an isError an agent must acknowledge, a PARSED document is refused rather than judged, and an empty set is a question never asked rather than a clean report."
+    },
+    {
+      "round": 272,
+      "math": {
+        "excluded": "§12.2's key-log commitment and §20.1's dns-name scope are already stated and unchanged. What moved is which of our surfaces can ask; no relation over documents was touched."
+      },
+      "spec": {
+        "excluded": "The standard defines the commitment and the discovery scope, never which of an implementation's tools exposes them. A conforming port may ship no MCP server at all."
+      },
+      "code": "packages/ust-mcp/index.mjs :: `ust_keylog_commitment` (materializing the `prove` function as requested data, because a function cannot cross a JSON wire), `ust_keylog_terminality` (a CHECK, kept a separate act from the build), `ust_shard_check` (the predicate plus the consequence, never a re-derived reason); tools/capability-parity.mjs :: both capabilities gain mcp tokens and PINNED_LAGGING ratchets 10 → 8.",
+      "vector": {
+        "excluded": "A vector is a fixed input and a declared result a second implementation reproduces. Both capabilities' behaviour is already pinned in the core suite; which of OUR surfaces calls them is not something a port could reproduce."
+      },
+      "test": "packages/ust-mcp/live-test.mjs :: seven checks over the real stdio transport — the commitment's shape, the requested proof arriving as DATA with `prove` absent, terminality true AND false (a build proving nothing would pass the first alone), an empty log refused, both shard forms, and the FALSE answer naming the consequence rather than a weaker identity."
     }
   ],
   "first_accounted_round": 76,

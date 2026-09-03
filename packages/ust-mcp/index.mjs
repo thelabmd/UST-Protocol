@@ -293,6 +293,58 @@ export const tools = [
     handler: ({ pub }) => ({ key_id: P.keyId(pub) }),
   },
   {
+    name: 'ust_keylog_commitment',
+    description: '§12.2 — commit a key log: the Merkle root over its entry hashes, its length, its head, and the inclusion proof for the head. What a publisher ANCHORS so a later log cannot quietly drop an entry. Pure: no key, no network. Pass entry hashes in CHAIN ORDER — the order is the claim.',
+    inputSchema: { type: 'object', required: ['entry_hashes'], properties: {
+      entry_hashes: { type: 'array', items: { type: 'string' }, description: 'content hashes of the key-log entry transcripts, in chain order' },
+      prove: { type: 'array', items: { type: 'number' }, description: 'indices to materialize inclusion proofs for. The library returns a `prove(index)` FUNCTION, which cannot cross a JSON wire — ask for the indices you need and they come back as data.' },
+    } },
+    // #178 debt. Every function of this capability is PURE — no key, no filesystem, no network — so nothing ever
+    // decided against the agent surface; nobody built it. `keylogLeaf` is delivered THROUGH this call, the same way
+    // `quorumTrustDomains` is delivered through `verify`: it is the leaf `buildKeylogCommitment` computes.
+    //
+    // THE SEAM THAT NEEDED A HANDLER: the core returns `prove` as a FUNCTION. A library caller closes over the
+    // layers and asks for any index later; an agent over stdio cannot hold a function, and dropping it silently
+    // would hand the agent a strictly weaker artifact than the library gives — without saying so. So the indices
+    // are requested and the proofs come back as data.
+    handler: ({ entry_hashes, prove }) => {
+      if (!Array.isArray(entry_hashes) || !entry_hashes.length) throw new Error('entry_hashes must be a non-empty array of content hashes in CHAIN ORDER — an empty log has no head to commit');
+      if (!entry_hashes.every((h) => typeof h === 'string' && h)) throw new Error('every entry hash must be a string — a key log is committed over the hashes of its entry transcripts, not over the entries');
+      const c = P.buildKeylogCommitment(entry_hashes);
+      const { prove: proveFn, ...data } = c;
+      const asked = Array.isArray(prove) ? prove : [];
+      for (const i of asked) if (!Number.isInteger(i) || i < 0 || i >= entry_hashes.length) throw new Error('prove index ' + JSON.stringify(i) + ' is outside the log (0..' + (entry_hashes.length - 1) + ')');
+      return asked.length ? { ...data, proofs: Object.fromEntries(asked.map((i) => [String(i), proveFn(i)])) } : data;
+    },
+  },
+  {
+    name: 'ust_keylog_terminality',
+    description: '§12.2 — is this head the LAST entry of the committed log, or is there more the publisher is not showing? Checks the head inclusion proof against the committed root and length. Answers {terminal} with a `detail` naming what failed. A CHECK, never a build: it takes what a publisher published and asks whether it is complete.',
+    inputSchema: { type: 'object', required: ['head'], properties: {
+      head: { type: 'object', description: 'the committed head record { root, length, head } as `ust_keylog_commitment` returns it' },
+      proof: { type: 'object', description: 'the head inclusion proof { index, siblings } — `headProof` from the commitment' },
+    } },
+    // BUILD and CHECK are different acts and stay different tools. Merging them behind a mode flag would be a
+    // dispatcher wearing a capability's name, and the consumer of this one is not the publisher: it is whoever
+    // received a key log and wants to know whether the head they were shown is the end of it.
+    handler: ({ head, proof }) => P.verifyKeylogTerminality(head, proof ?? {}),
+  },
+  {
+    name: 'ust_shard_check',
+    description: 'Is this `domain_shard` a name a verifier will DISCOVER under? §20.1 applies to dns-name shards only — a key-form shard is self-certifying and has no name to serve a genesis under (§4.3a). Ask BEFORE publishing: a false answer does not mean the identity is weaker, it means /.well-known is not the route to it and the genesis has to be handed over directly.',
+    inputSchema: { type: 'object', required: ['shard'], properties: { shard: { type: 'string', description: 'the domain_shard to test' } } },
+    // The whole capability is one predicate, and the tool returns the predicate plus the CONSEQUENCE — never a
+    // re-derived reason. Naming which rule rejected the shard would be a second implementation of `isPublicDnsShard`
+    // living at the surface, and a second implementation is the drift this repo keeps finding. The consequence is
+    // not derived: it is what §20.1 and the core's own SSRF guard already say happens.
+    handler: ({ shard }) => {
+      const ok = P.isPublicDnsShard(shard);
+      return { shard, public_dns: ok, discovery: ok
+        ? 'reachable — a verifier may fetch /.well-known/ust-genesis under this name'
+        : 'refused — a verifier discovery skips this shard (SSRF floor), so the genesis must reach a consumer by an explicit channel' };
+    },
+  },
+  {
     name: 'ust_canon',
     description: 'Canonicalize a JSON value (JCS tightened): the exact bytes UST hashes/signs. Utility for building your own signer.',
     inputSchema: { type: 'object', required: ['value'], properties: { value: {} } },
