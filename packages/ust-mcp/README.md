@@ -64,6 +64,10 @@ Or in any MCP client config:
 
 | Tool | Does |
 |------|------|
+| `ust_profile_declares` | **§20.1 / F.5p.1** — what does a publisher's operator profile BIND? The CLOSED half only: `{serves, substrates, copies, commitment_rhythm}`. Prose is dropped by POSITION, never by a naming convention, so an added line of operator text can never start binding. A malformed declaration is an **error**, not a weaker profile. |
+| `ust_replication_agreement` | **§20.1 / F.5o** — do the copies a publisher NAMED agree byte for byte? `attested` only when there was something to compare *and* nothing disagreed. What it **refuses** is the point: `independent`, `trust_domain`, `vendor`, `assurance`, `strength` are rejected — independence is not decidable from bytes and may not ride in on a locator list. |
+| `ust_serving_verdict` | **§20.1** — the 2×2 for one served surface: declared-and-absent is a promise **not kept**; undeclared-and-absent is `not-offered`; observing a surface attests it whether or not it was declared. |
+| `ust_anchor_rollup` | **§20.1** — the same 2×2 rolled over declared substrates: `printing`, `partial`, `dark`, or `unknown` when nothing was declared and there is no universal claim to judge. |
 | `ust_keylog_commitment` | **§12.2** — commit a key log: the Merkle root over its entry hashes, its length, its head, and the head's inclusion proof. What a publisher ANCHORS so a later log cannot quietly drop an entry. The library returns `prove` as a *function*; over the wire you ask for the indices you need and the proofs come back as data. |
 | `ust_keylog_terminality` | **§12.2** — is the head you were shown the LAST entry of the committed log, or is there more the publisher is not showing? A check, never a build. |
 | `ust_shard_check` | Is this `domain_shard` a name a verifier will DISCOVER under? A key-form shard is self-certifying and has no name to serve a genesis under (§4.3a, §20.1) — a false answer means `/.well-known` is not the route to you, never that the identity is weaker. |

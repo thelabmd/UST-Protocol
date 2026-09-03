@@ -23,7 +23,7 @@ This page is rendered from those declarations, so it cannot drift from what the 
 | `consumer-trust-root` | ✅ | ✅ | ✅ | · | · | · | · | · |
 | `anchor-verify` | ✅ | ✅ | ✅ | · | · | ✅ | ✅ | · |
 | `fork-choice` | ✅ | ✅ | · | · | · | · | · | · |
-| `byte-agreement` | ✅ | · | ✅ | · | · | · | · | · |
+| `byte-agreement` | ✅ | ✅ | ✅ | · | · | · | · | · |
 | `name-obligation` | ✅ | ✅ | ✅ | · | · | · | · | · |
 | `commitment-windows` | ✅ | · | · | · | · | · | · | · |
 | `ladder-report` | ✅ | ✅ | ✅ | · | · | · | · | · |
@@ -108,11 +108,10 @@ key material, the gate refuses the classification.
 - `uniqueness-attest`
 - `verifiable-map`
 
-**Lagging — debt** (8). Our own unfinished work, sitting where the principal audience reaches for it. These
+**Lagging — debt** (7). Our own unfinished work, sitting where the principal audience reaches for it. These
 carry no justification, because none exists — the gate refuses one written under them. The count is pinned and
 may only shrink.
 
-- `byte-agreement` — also on the CLI
 - `negative-observation`
 - `commitment-windows`
 - `typed-evidence`
@@ -121,5 +120,5 @@ may only shrink.
 - `verified-handle`
 - `authority-bundle`
 
-1 of the 8 is on the human surface already, and that one is the inversion the rule exists to close: reachable by a person with a terminal and by nobody with a tool.
+None of these is on the human surface either, so the debt is uniform: nobody can reach them. The rule still binds — whichever surface receives one first, the agent surface may not receive it later.
 

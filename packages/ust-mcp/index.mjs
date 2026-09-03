@@ -345,6 +345,64 @@ export const tools = [
     },
   },
   {
+    name: 'ust_profile_declares',
+    description: '§20.1 / F.5p.1 — what does a publisher operator profile BIND? Returns the CLOSED half and nothing else: {serves, substrates, copies, commitment_rhythm}. Prose is dropped by POSITION, never by a naming convention, so an added line of operator text can never start binding. A malformed declaration is an ERROR, not a weaker profile: an unreadable rhythm is a served statement a verifier cannot honour, which is not the same as promising nothing.',
+    inputSchema: { type: 'object', required: ['profile'], properties: {
+      profile: { type: 'object', description: 'the fetched profile document' },
+      soft: { type: 'boolean', description: 'true = return {error, detail} as data instead of an error response' },
+    } },
+    // TWO ERROR STYLES AT ONE SEAM. `replicationAgreement` and `anchorRollup` THROW with a code; `parseProfile`
+    // RETURNS {error, detail}. Handing an agent a returned error as a data field is the #44 footgun exactly — a
+    // field is skippable, and an agent that skips this one proceeds against a profile it never parsed. So it takes
+    // the same treatment a non-VALID verdict takes in `ust_verify`, with the same opt-out.
+    handler: ({ profile, soft = false }) => {
+      const d = P.parseProfile(profile);
+      if (!soft && d && d.error) throw Object.assign(new Error('profile refused: ' + d.error + (d.detail ? ' — ' + d.detail : '')), { detail: d });
+      return d;
+    },
+  },
+  {
+    name: 'ust_replication_agreement',
+    description: '§20.1 / F.5o — do the copies a publisher NAMED agree byte for byte? Give the expected content hash and the copies as {locator, hash}. `attested` is true only when there was something to compare AND nothing disagreed: an empty list is not agreement, and silence must never read as a pass. What this REFUSES is the point — independence is not decidable from bytes, so a copy carrying `independent`, `trust_domain`, `vendor`, `assurance` or `strength` is rejected rather than accepted and ignored.',
+    inputSchema: { type: 'object', required: ['expected', 'copies'], properties: {
+      expected: { type: 'string', description: 'the content hash every copy must carry' },
+      copies: { type: 'array', items: { type: 'object', properties: { locator: { type: 'string' }, hash: { type: 'string' } } }, description: 'what you FETCHED: each copy names where it came from and what hash it had' },
+    } },
+    // The refusal is the capability. A surface that quietly accepted an independence field would let a publisher's
+    // own claim about its vendors ride into a consumer's reasoning — the exact thing F.5o exists to stop — and it
+    // would do so while looking more permissive, which is how such a field survives review. The core throws; the
+    // tool does not catch, so the refusal reaches the agent as an error it must acknowledge.
+    //
+    // THE ARGUMENTS ARE FORWARDED WHOLE, and the first draft of this handler did not. It destructured
+    // `{ expected, copies }` and rebuilt the call — so `independent: true` passed by a caller was dropped by MY
+    // destructuring before the core could refuse it, and the tool answered `attested` where the library throws.
+    // A surface MORE PERMISSIVE than the core it wraps, reproducing at the wire exactly the defect the capability
+    // exists to prevent: a coordinate accepted and ignored. Found by running the refusal rather than assuming it.
+    handler: (args) => {
+      if (!Array.isArray(args?.copies)) throw new Error('copies must be an array of { locator, hash } — what you fetched, from where');
+      return P.replicationAgreement(args);
+    },
+  },
+  {
+    name: 'ust_serving_verdict',
+    description: '§20.1 — the 2x2 for ONE served surface: was it DECLARED, and did you OBSERVE it? Answers {surface, status, reason} where status is attested | failed | not-offered. Declared-and-absent is a FAILURE (a promise not kept); undeclared-and-absent is not-offered (nothing was promised); observing a surface attests it whether or not it was declared, because evidence never consults the declaration.',
+    inputSchema: { type: 'object', required: ['surface', 'observed'], properties: {
+      surface: { type: 'string', description: 'the surface name — genesis, keylog, witness, cadence…' },
+      declared: { type: 'boolean', description: 'did the publisher profile declare this surface?' },
+      observed: { type: 'string', enum: ['present', 'absent'], description: "what you found. Exactly 'present' or 'absent' — a third state would decide the 2x2 by falling through it" },
+    } },
+    handler: ({ surface, declared = false, observed }) => P.surfaceVerdict({ surface, declared, observed }),
+  },
+  {
+    name: 'ust_anchor_rollup',
+    description: '§20.1 — the same 2x2 rolled over the SUBSTRATES a publisher declared: is the chain printing, partial, dark, or is there no claim to judge? `unknown` means nothing was declared, so no universal claim exists; `dark` means every substrate it promised is silent. A substrate you observed but it never declared still supplies evidence — the anchored row does not consult the declaration.',
+    inputSchema: { type: 'object', properties: {
+      declared: { type: 'array', items: { type: 'string' }, description: 'substrate names the profile declared — the universal claim quantifies over this' },
+      observed: { type: 'object', description: "substrate name -> 'anchored' for the ones you actually saw an anchor on. Any other value counts as not observed." },
+    } },
+    handler: ({ declared = [], observed = {} }) => P.anchorRollup({ declared, observed }),
+  },
+  {
     name: 'ust_canon',
     description: 'Canonicalize a JSON value (JCS tightened): the exact bytes UST hashes/signs. Utility for building your own signer.',
     inputSchema: { type: 'object', required: ['value'], properties: { value: {} } },

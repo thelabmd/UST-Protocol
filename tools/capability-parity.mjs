@@ -85,7 +85,7 @@ const CAPS = {
   // it reads the DECLARATION the three below are evaluated against. Before it, a copy the publisher named was
   // invisible to this capability and its staleness unmeasurable; the CLI face is now the profile itself, with
   // `--mirror` remaining the CONSUMER's own locator rather than a substitute for it.
-  'byte-agreement':     { core: ['replicationAgreement', 'surfaceVerdict', 'anchorRollup', 'parseProfile'], cli: 'flag:mirror' },
+  'byte-agreement':     { core: ['replicationAgreement', 'surfaceVerdict', 'anchorRollup', 'parseProfile'], cli: 'flag:mirror', mcp: ['tool:ust_profile_declares', 'tool:ust_replication_agreement', 'tool:ust_serving_verdict', 'tool:ust_anchor_rollup'] },   // #178 round 273 — the last inversion; the F.5o refusals travel with it
   'name-obligation':    { core: ['classifyNamed', 'nameSetReport'], cli: 'cmd:names', mcp: 'tool:ust_name_report' },   // #178 round 271 — the agent hands the set as an ARRAY; the filesystem sweep was how the CLI COLLECTS it, never what the capability is
   'commitment-windows': { core: ['commitmentCoverage'] },
   // #137 / F.5.1 + F.5p.2 — REPORTING the ladder is its own capability, not a facet of verification. It answers a
@@ -317,7 +317,6 @@ const MCP_DISPOSITION = {
   // capability map is over core FUNCTIONS, which compute artifacts that are inert until someone signs them.
 
   // ── lagging: debt, and nothing is written under any of them
-  'byte-agreement':     ['lagging'],
   'negative-observation': ['lagging'],
   'commitment-windows': ['lagging'],
   'typed-evidence':     ['lagging'],
@@ -326,7 +325,7 @@ const MCP_DISPOSITION = {
   'verified-handle':    ['lagging'],
   'authority-bundle':   ['lagging'],
 };
-const PINNED_LAGGING = 8;   // 10 → 8 (round 272): `keylog-commitment` and `discovery-shard` reached the agent surface. Every function of both is PURE — no key, no filesystem, no network — which is what `lagging` means: nobody decided against them, nobody built them   // 11 → 10 (round 271): `name-obligation` reached the agent surface as `ust_name_report`. Paid, not reclassified — the register it left is the one that owes no justification   // 12 → 13 (round 262): `keylog-commitment` moved OUT of a false deferral into debt — none of its three functions takes a key or asks a person, so the claim that kept it out was never true of it   // 14 → 13 (round 257, `disclosure-produce`) → 12 (round 258, `sign`: the ASSEMBLY half reached the agent surface, and the signing half stays outside because a key in an argument list is a claim about the ACT, not about agents)
+const PINNED_LAGGING = 7;   // 8 → 7 (round 273): `byte-agreement` reached the agent surface WITH its refusals — a surface that softened F.5o would let a publisher's own independence claim ride into a consumer's reasoning   // 10 → 8 (round 272): `keylog-commitment` and `discovery-shard` reached the agent surface. Every function of both is PURE — no key, no filesystem, no network — which is what `lagging` means: nobody decided against them, nobody built them   // 11 → 10 (round 271): `name-obligation` reached the agent surface as `ust_name_report`. Paid, not reclassified — the register it left is the one that owes no justification   // 12 → 13 (round 262): `keylog-commitment` moved OUT of a false deferral into debt — none of its three functions takes a key or asks a person, so the claim that kept it out was never true of it   // 14 → 13 (round 257, `disclosure-produce`) → 12 (round 258, `sign`: the ASSEMBLY half reached the agent surface, and the signing half stays outside because a key in an argument list is a claim about the ACT, not about agents)
 
 // ── SURFACES — each surface's DECLARED stance. `full` = exposes the capability; `subset` = a documented reduced form;
 //    everything else defaults to `na` with the surface's `naReason` (a specific override lives in `naSpecific`). This
@@ -340,7 +339,7 @@ const SURFACES = {
   // `ust-protocol` is itself a column now. Without it the grid showed six exposures of a set nobody could see,
   // and `ust-rfc6962-verify` — a real published package — was in no column at all.
   'ust-protocol':     { probe: exportIntersect(P), full: Object.keys(CAPS), subset: [], naReason: 'the reference implementation defines the capability set; a cell that is not full here means the capability names an export the core does not have, which the PHANTOM check already refuses' },
-  'ust-mcp':          { probe: mcpProbe, full: ['canon', 'content-address', 'verify', 'resolve-authority', 'no-fork-evidence', 'consumer-trust-root', 'anchor-verify', 'fork-choice', 'stream-verify', 'cadence-grid', 'cadence-declare', 'substrate-registry', 'ladder-report', 'name-obligation', 'keylog-commitment', 'discovery-shard'], subset: ['build-transcript', 'disclosure-produce', 'sign'], naReason: 'deferred to the planned operator MCP over @ust-protocol/operator (privilege-separation: a human explicitly grants agent rights) — NOT core+CLI-forever; TOP-produce is the one agent touch still to be built for noosphere', naSpecific: { 'sign': 'the agent signs with its OWN key; build tools return signing_input, the MCP never holds a private key', 'negative-observation': 'agent-appropriate (a normal negative observation, NOT operator) — new per #39; an MCP absence verb is planned, not yet built' } },
+  'ust-mcp':          { probe: mcpProbe, full: ['canon', 'content-address', 'verify', 'resolve-authority', 'no-fork-evidence', 'consumer-trust-root', 'anchor-verify', 'fork-choice', 'stream-verify', 'cadence-grid', 'cadence-declare', 'substrate-registry', 'ladder-report', 'name-obligation', 'keylog-commitment', 'discovery-shard', 'byte-agreement'], subset: ['build-transcript', 'disclosure-produce', 'sign'], naReason: 'deferred to the planned operator MCP over @ust-protocol/operator (privilege-separation: a human explicitly grants agent rights) — NOT core+CLI-forever; TOP-produce is the one agent touch still to be built for noosphere', naSpecific: { 'sign': 'the agent signs with its OWN key; build tools return signing_input, the MCP never holds a private key', 'negative-observation': 'agent-appropriate (a normal negative observation, NOT operator) — new per #39; an MCP absence verb is planned, not yet built' } },
   'ust-cli':          { probe: cliProbe, full: ['canon', 'content-address', 'verify', 'resolve-authority', 'no-fork-evidence', 'consumer-trust-root', 'anchor-verify', 'stream-verify', 'checkpoint-chain', 'keylog-commitment', 'discovery-shard', 'cadence-grid', 'cadence-declare', 'byte-agreement', 'name-obligation', 'sign', 'disclosure-produce', 'ladder-report', 'substrate-registry'], subset: ['build-transcript'], naReason: 'not exposed by the reference operator CLI', naSpecific: { 'negative-observation': 'new per #39; a `ust absence` command is planned, not yet built', 'build-transcript': 'CLOSED 2026-09-02 by `ust sign` (#177) — but SUBSET, not full: this surface builds a STATE (`ust sign`) and a genesis/key-log (the ceremonies), and nothing here builds an attestation, a derivation, a checkpoint, a gap or an anchor commitment. Declaring full would be the same overclaim round 246 removed, one command later.' } },
   'ust-light':         { probe: exportIntersect(LITE), full: ['canon'], subset: ['content-address', 'build-transcript', 'verify', 'disclosure-produce', 'sign'], naReason: 'outside the standalone zero-dependency LIGHT floor — lite is a documented SUBSET (round-51 P1-03: build-transcript = buildState/seal for class:observation, WITH provenance (prev/based_on+seed) since UST-jls, but not the full builder family; verify = the WHOLE LIGHT floor including every §14a provenance obligation — UST-jls closed 14 lite-VALID/core-INVALID shapes — but not the HIGH/TOP verifiers; content-address = the partition/content/seed hashes it needs)' },
   'ust-web-signer':   { probe: exportIntersect(WEB), full: ['canon'], subset: ['content-address', 'build-transcript', 'sign'], naReason: 'producer-only surface — a documented SUBSET (round-51 P1-03: browser signer builds+signs a state, not the full builder family)', naSpecific: { 'verify': 'by design: the private key never enters a verifier — verification is ust-protocol / ust-light (README)' } },
@@ -497,7 +496,17 @@ const takesKey = (fn) => {
   const probe = { ...MCP_DISPOSITION, __ghost: ['lagging'] };
   if (!Object.keys(probe).filter((c) => probe[c][0] === 'lagging').includes('__ghost')) { fail++; report.push('  ✗ CONTROL: the lagging counter cannot see a new entry — the ratchet would never trip'); }
   if (MCP_DISPOSITION['checkpoint-chain']?.[0] !== 'key-bound') { fail++; report.push('  ✗ CONTROL: the signing capability is not classified key-bound — the registers have collapsed'); }
-  if (MCP_DISPOSITION['byte-agreement']?.[0] !== 'lagging') { fail++; report.push('  ✗ CONTROL: a pure-function capability is not classified lagging — debt is being dressed as a boundary'); }
+  // THE CONTROL NAMED AN INSTANCE AND THE INSTANCE GOT PAID. It read `MCP_DISPOSITION['byte-agreement'] ===
+  // 'lagging'`, so round 273 — which put byte-agreement ON the agent surface, exactly what the register exists to
+  // encourage — turned the control red. A check pinned to a literal defends the defect it was written against and
+  // fails at the moment it succeeds. Stated as a PROPERTY instead, it now covers every pure capability rather than
+  // the one I happened to be looking at, and it survives being satisfied.
+  const pureAbsent = mcpNa.filter((c) => (CAPS[c]?.core ?? []).length && CAPS[c].core.every((n) => !takesKey(n)));
+  const misdressed = pureAbsent.filter((c) => MCP_DISPOSITION[c]?.[0] !== 'lagging');
+  if (misdressed.length) { fail++; report.push(`  ✗ CONTROL: [${misdressed.join(', ')}] hold no key material and are absent from the agent surface, yet are not classified lagging — debt dressed as a boundary`); }
+  // …and the domain is REPORTED, because a control over an empty set passes for free and reads as coverage. When
+  // the debt is finally cleared this line will say 0, which is a fact worth seeing rather than a silence.
+  else report.push(`  ✓ CONTROL: all ${pureAbsent.length} key-free capability(ies) absent from the agent surface are classified lagging — no debt is wearing the vocabulary of a boundary`);
 }
 
 // (5) A CAPABILITY WHOSE PARTS SPLIT ON KEY-TAKING MUST BE ACKNOWLEDGED AS TWO (#178, owner 2026-09-02).

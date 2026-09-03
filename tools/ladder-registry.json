@@ -2464,6 +2464,20 @@
         "excluded": "A vector is a fixed input and a declared result a second implementation reproduces. Both capabilities' behaviour is already pinned in the core suite; which of OUR surfaces calls them is not something a port could reproduce."
       },
       "test": "packages/ust-mcp/live-test.mjs :: seven checks over the real stdio transport — the commitment's shape, the requested proof arriving as DATA with `prove` absent, terminality true AND false (a build proving nothing would pass the first alone), an empty log refused, both shard forms, and the FALSE answer naming the consequence rather than a weaker identity."
+    },
+    {
+      "round": 273,
+      "math": {
+        "excluded": "F.5o already states that byte-agreement is decidable from bytes and independence is not, and §20.1 already fixes the serving contract. Nothing about the relation moved; what moved is which of our surfaces can ask."
+      },
+      "spec": {
+        "excluded": "The standard defines the serving properties and their refusals, never which of an implementation's tools exposes them. A conforming port may ship no agent surface at all."
+      },
+      "code": "packages/ust-mcp/index.mjs :: `ust_profile_declares` (the closed half, with a RETURNED error promoted to isError), `ust_replication_agreement` (arguments forwarded WHOLE so the core's F.5o refusal reaches the caller), `ust_serving_verdict` and `ust_anchor_rollup` (the 2×2 at both scales); tools/capability-parity.mjs :: byte-agreement gains four mcp tokens, PINNED_LAGGING ratchets 8 → 7, and the pure-function control is restated as a property over its whole domain instead of a literal capability name.",
+      "vector": {
+        "excluded": "A vector is a fixed input and a declared result a second implementation reproduces. All four functions are already pinned in the core suite; which of OUR surfaces calls them is not something a port could reproduce."
+      },
+      "test": "packages/ust-mcp/live-test.mjs :: eleven checks over the real stdio transport — the closed half with prose dropped, a malformed rhythm arriving as isError rather than a skippable field, attestation and the empty-list non-attestation, ALL FIVE F.5o fields refused, the promise-not-kept vs promise-never-made distinction, and printing/partial/dark/unknown as four different answers."
     }
   ],
   "first_accounted_round": 76,

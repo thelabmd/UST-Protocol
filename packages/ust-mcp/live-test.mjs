@@ -24,7 +24,7 @@ const client = new Client({ name: 'ust-live-test', version: '1' }, { capabilitie
 await client.connect(transport);
 
 const tools = await client.listTools();
-check('live:tools/list = 22', tools.tools.length === 22, 'got ' + tools.tools.length);
+check('live:tools/list = 26', tools.tools.length === 26, 'got ' + tools.tools.length);
 check('live:key_id over the wire', (await call(client, 'ust_key_id', { pub: A.pubB64 })).key_id === A.key_id);
 
 // THE agent flow, entirely over MCP: build → sign with own key → verify
@@ -262,6 +262,50 @@ check('live:fork_choice same ust_id, no substrate → INDETERMINATE', (await cal
   // identity is weaker. An agent reading only the boolean would draw the wrong conclusion from it.
   check('live:#178 …and the FALSE answer names the consequence — not the route, rather than a weaker identity',
     /explicit channel/.test(keyed.discovery) && /reachable/.test(named.discovery), keyed.discovery.slice(0, 90));
+}
+
+// #178 — the LAST inversion. `byte-agreement` carries the F.5o discipline, so what matters over the wire is not
+// that the four questions can be asked but that the REFUSALS travel with them: byte-agreement is decidable from
+// bytes, independence is not, and a surface that softened that would let a publisher's own claim about its vendors
+// ride into a consumer's reasoning.
+{
+  const prof = { declares: { serves: ['genesis', 'keylog'], substrates: ['ots'], copies: [{ artifact: 'genesis', url: 'https://m1.example/g' }], commitment_rhythm: '3600' }, prose: 'dropped by POSITION, never by naming convention' };
+  const d = await call(client, 'ust_profile_declares', { profile: prof });
+  check('live:#178 ust_profile_declares returns the CLOSED half and drops prose by position',
+    JSON.stringify(d.serves) === '["genesis","keylog"]' && d.commitment_rhythm === '3600' && !('prose' in d), JSON.stringify(d).slice(0, 110));
+  // A malformed declaration is an ERROR, not a weaker profile — and it arrives as isError rather than as a data
+  // field, because the core RETURNS this one instead of throwing and a returned error is skippable.
+  const badProf = await rawCall(client, 'ust_profile_declares', { profile: { declares: { commitment_rhythm: 'hourly' } } });
+  check('live:#178 …and an unreadable rhythm is an ERROR an agent must acknowledge, not a field it may skip',
+    badProf.isError === true && /commitment_rhythm/.test(JSON.stringify(badProf.body)), JSON.stringify(badProf.body).slice(0, 100));
+
+  const agree = await call(client, 'ust_replication_agreement', { expected: 'sha256:' + 'aa'.repeat(32), copies: [{ locator: 'm1', hash: 'sha256:' + 'aa'.repeat(32) }] });
+  check('live:#178 ust_replication_agreement attests when every named copy carries the expected hash',
+    agree.attested === true && agree.agreed.length === 1, JSON.stringify(agree).slice(0, 100));
+  // Silence is not agreement. An empty list must NOT attest, or a publisher naming no copies passes the property.
+  const none = await call(client, 'ust_replication_agreement', { expected: 'sha256:' + 'aa'.repeat(32), copies: [] });
+  check('live:#178 …and an EMPTY copy list is not agreement — silence must never read as a pass', none.attested === false, JSON.stringify(none).slice(0, 90));
+  // THE REFUSAL IS THE CAPABILITY. Every field F.5o names, over the wire — the first draft of this handler
+  // destructured its arguments and dropped them before the core could refuse, so the tool answered `attested`
+  // where the library throws: a surface more permissive than the core it wraps.
+  for (const k of ['independent', 'trust_domain', 'vendor', 'assurance', 'strength']) {
+    const r = await rawCall(client, 'ust_replication_agreement', { expected: 'sha256:aa', copies: [], [k]: 'x' });
+    check('live:#178 …and `' + k + '` is REFUSED — independence is not decidable from bytes (F.5o)',
+      r.isError === true && /E-REPLICATION/.test(JSON.stringify(r.body)), JSON.stringify(r.body).slice(0, 80));
+  }
+
+  const failed = await call(client, 'ust_serving_verdict', { surface: 'keylog', declared: true, observed: 'absent' });
+  const notOffered = await call(client, 'ust_serving_verdict', { surface: 'keylog', declared: false, observed: 'absent' });
+  check('live:#178 ust_serving_verdict separates a promise NOT KEPT from a promise never made',
+    failed.status === 'failed' && failed.reason === 'declared-and-absent' && notOffered.status === 'not-offered',
+    JSON.stringify([failed.status, notOffered.status]));
+
+  const partial = await call(client, 'ust_anchor_rollup', { declared: ['ots', 'rekor'], observed: { ots: 'anchored' } });
+  const dark = await call(client, 'ust_anchor_rollup', { declared: ['ots'], observed: {} });
+  const unknown = await call(client, 'ust_anchor_rollup', { declared: [], observed: {} });
+  check('live:#178 ust_anchor_rollup — printing, partial, dark and unknown are four different answers',
+    partial.status === 'partial' && dark.status === 'dark' && unknown.status === 'unknown' && JSON.stringify(partial.silent) === '["rekor"]',
+    JSON.stringify([partial.status, dark.status, unknown.status]));
 }
 
 await client.close();
