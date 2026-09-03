@@ -64,6 +64,7 @@ Or in any MCP client config:
 
 | Tool | Does |
 |------|------|
+| `ust_name_report` | **F.5t** — does anything you PUBLISH wear the protocol name without being a document of it? An artifact that says `ust` instructs a machine to verify it; if it is not a document, every consumer that tries gets `E-MALFORMED` — the signal of a *damaged* document — for something that was never one. Hand the set as `[{id, raw}]` with `raw` the exact SERVED TEXT: the question is about the bytes a consumer fetches, so a parsed document is refused rather than judged. |
 | `ust_explain` | The LADDER, not the verdict: where a document sits, and for every input the verifier did NOT receive, who could supply it and what it would buy. Answers *why am I not seeing HIGH* without guessing — the difference between **not attempted** and **refused** is the whole point, and a verdict alone leaves it to be inferred. |
 | `ust_sealing_request` | PREPARE an `encrypted` partition **without holding a key**: returns the commitment, the exact plaintext a key-holder must seal, and the IV that commitment implies. The nonce is generated here and returned — keep it, or the commitment can never be opened. The key-holder sees the plaintext by construction; choose the key-holder accordingly. |
 | `ust_attach_encryption` | ASSEMBLE the partition from the `{alg,key_id,ct}` a key-holder returned. No key here and none needed — and it CHECKS the seam: the ciphertext must carry the IV the commitment implies, so a sealer working from its own derivation is caught by a caller holding no key. |

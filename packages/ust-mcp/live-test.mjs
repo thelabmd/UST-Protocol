@@ -24,7 +24,7 @@ const client = new Client({ name: 'ust-live-test', version: '1' }, { capabilitie
 await client.connect(transport);
 
 const tools = await client.listTools();
-check('live:tools/list = 18', tools.tools.length === 18, 'got ' + tools.tools.length);
+check('live:tools/list = 19', tools.tools.length === 19, 'got ' + tools.tools.length);
 check('live:key_id over the wire', (await call(client, 'ust_key_id', { pub: A.pubB64 })).key_id === A.key_id);
 
 // THE agent flow, entirely over MCP: build → sign with own key → verify
@@ -193,6 +193,39 @@ check('live:fork_choice same ust_id, no substrate → INDETERMINATE', (await cal
   const flat = JSON.stringify(led);
   check('live:#178 …and it names what was not supplied, so an agent need not guess why a rung was not reached',
     /genesis|keylog|anchor|witness|not/i.test(flat), flat.slice(0, 120));
+}
+
+// #178 debt — `ust_name_report`. On the CLI as `ust names` and nowhere else, while TWO registers disagreed about
+// why: a stance called the agent absence deliberate (a filesystem sweep is a capability about the HOST), the
+// ordering register called it debt. The stance lost on its own premise — the core takes DOCUMENTS, so an agent
+// hands the array and no filesystem is involved. Over the real transport, because the guard that makes this safe
+// (refusing a parsed object) lives in the handler and a direct call would prove nothing about the wire.
+{
+  const N = kp('a5'.repeat(32));
+  const nb = await call(client, 'ust_build_observation', { domain_shard: N.key_id, ust_id: 'ust:20260903.15', key_id: N.key_id, time: t, data: { q: { kind: 'captured', value: { v: '1' } } } });
+  const ns = edSign(null, Buffer.from(nb.signing_input, 'utf8'), N.priv).toString('base64url');
+  const nsealed = await call(client, 'ust_seal', { state: nb.state, pub: N.pubB64, sig: ns });
+
+  const clean = await call(client, 'ust_name_report', { artifacts: [{ id: 'served.json', raw: JSON.stringify(nsealed.doc) }] });
+  check('live:#178 ust_name_report — a real document in the set is COMPLIANT, not a violation',
+    clean?.outcome === 'COMPLIANT' && clean.named === 1 && clean.documents === 1, JSON.stringify(clean));
+
+  // The outcome literals were the trap: the first draft named a passing outcome from memory and a set holding a
+  // REAL document threw with "0 artifact(s) wear the protocol name" — a sentence its own number refutes.
+  const dirty = await rawCall(client, 'ust_name_report', { artifacts: [{ id: 'brochure.json', raw: '{"ust":"1.0"}' }] });
+  check('live:#178 …and an artifact wearing the name without being a document is an ERROR an agent must acknowledge',
+    dirty.isError === true && /wear the protocol name/.test(JSON.stringify(dirty.body)), JSON.stringify(dirty.body).slice(0, 110));
+
+  // The guard the CLI never needs, because a filesystem hands it bytes: a PARSED document decodes to
+  // `[object Object]` and would be reported as an unreadable artifact wearing the name.
+  const objish = await rawCall(client, 'ust_name_report', { artifacts: [{ id: 'parsed', raw: { ust: '1.0' } }] });
+  check('live:#178 …and a PARSED document is refused rather than judged — F.5t asks about bytes a consumer fetches',
+    objish.isError === true && /SERVED TEXT/.test(JSON.stringify(objish.body)), JSON.stringify(objish.body).slice(0, 110));
+
+  // Examining nothing is not a pass. The CLI dies on it for the same reason.
+  const nothing = await rawCall(client, 'ust_name_report', { artifacts: [] });
+  check('live:#178 …and an empty set is a question never asked, never a clean report',
+    nothing.isError === true && /NOTHING EXAMINED/.test(JSON.stringify(nothing.body)), JSON.stringify(nothing.body).slice(0, 90));
 }
 
 await client.close();

@@ -137,6 +137,46 @@ export const tools = [
     handler: ({ doc, context, ...rest }) => P.explainLadder(doc, { context: context ?? 'data', ...rest }),
   },
   {
+    name: 'ust_name_report',
+    description: 'F.5t — does anything you PUBLISH wear the protocol name without being a document of it? An artifact that says `ust` instructs a machine to verify it; if it is not a document, every consumer that tries gets E-MALFORMED, the signal of a DAMAGED document, for something that was never one. Offline, and about the NAME rather than validity: a clean report says nothing about whether any of these verify. Hand the artifacts as {id, raw} where `raw` is the exact TEXT a consumer would fetch. VIOLATIONS and NOTHING_EXAMINED are returned as errors you must acknowledge; set soft:true for the advisory path.',
+    inputSchema: { type: 'object', required: ['artifacts'], properties: {
+      artifacts: { type: 'array', description: 'the published set, as [{ id, raw }] — `id` is how the report names it back to you (a URL, a path, anything), `raw` is the SERVED TEXT', items: { type: 'object', required: ['raw'], properties: { id: { type: 'string' }, raw: { type: 'string', description: 'the exact bytes a consumer fetches, as text — NOT a parsed document' } } } },
+      soft: { type: 'boolean', description: 'true = return the report as data instead of an error. Default false: a set you never examined and a set with violations are both answers an agent must not skip past.' },
+    } },
+    // #178 — this capability was on the CLI (`ust names`) and nowhere else, and TWO registers disagreed about why:
+    // a stance called the agent absence deliberate ("a filesystem sweep of arbitrary paths is a capability about
+    // the host") while the ordering register called it debt. The stance lost on its own premise — `nameSetReport`
+    // takes DOCUMENTS. The sweep is how the CLI COLLECTS the set; it is not what the capability is. An agent hands
+    // the array and no filesystem is involved at any point.
+    //
+    // THE ONE GUARD WORTH THE LINES. `classifyNamed` judges a PARSED artifact from its top level and falls back to
+    // a byte scan only when there is no top level to read. Hand it an object and the decode throws, the fallback
+    // stringifies it to `[object Object]`, and a perfectly good document is reported as an unreadable artifact
+    // wearing the name. The CLI never meets this because a filesystem hands it bytes. So the tool refuses an
+    // object rather than answering about one — and the refusal states the reason, because the reason is the
+    // capability: this question is about the bytes a consumer FETCHES, and a re-serialized document is bytes
+    // nobody serves.
+    handler: ({ artifacts, soft = false }) => {
+      if (!Array.isArray(artifacts)) throw new Error('artifacts must be an array of { id, raw } — the published set is the caller\'s to enumerate');
+      artifacts.forEach((a, i) => {
+        const raw = a && typeof a === 'object' ? a.raw : a;
+        if (typeof raw !== 'string') throw new Error(`artifacts[${i}].raw must be the SERVED TEXT, not a ${raw === null ? 'null' : typeof raw}. F.5t asks what a consumer FETCHES; a parsed document re-serialized here is bytes nobody serves, and an object would be judged unreadable rather than judged at all.`);
+      });
+      const report = P.nameSetReport(artifacts);
+      // The CLEAN set is named, not the dirty one. My first draft listed the passing outcomes from memory and
+      // invented `ALL_NAMED_ARE_DOCUMENTS`; the real one is `COMPLIANT`, so a set containing a REAL document
+      // threw with "0 artifact(s) wear the protocol name" — a sentence whose own number refutes it. Enumerated
+      // from the core: NOTHING_EXAMINED | VIOLATIONS | NONE_WEAR_THE_NAME | COMPLIANT.
+      const CLEAN = ['NONE_WEAR_THE_NAME', 'COMPLIANT'];
+      if (!soft && !CLEAN.includes(report.outcome)) {
+        throw Object.assign(new Error(report.outcome === 'NOTHING_EXAMINED'
+          ? 'NOTHING EXAMINED — no artifact was readable. This is not a pass; it is a question that was never asked.'
+          : `${report.violations.length} artifact(s) wear the protocol name without being documents of it (F.5t) — a consumer applying the verifier gets E-MALFORMED for something that is not a damaged document but not a document at all`), { report });
+      }
+      return report;
+    },
+  },
+  {
     name: 'ust_sealing_request',
     description: 'PREPARE an `encrypted` partition WITHOUT holding a key: returns the commitment, the exact plaintext a key-holder must seal, and the IV that commitment implies. Hand the request to whoever owns the key, then pass their {alg,key_id,ct} back through `ust_attach_encryption`. The nonce is generated here and returned — keep it, or the commitment can never be opened.',
     inputSchema: { type: 'object', required: ['name', 'value', 'domain_shard', 'ust_id'], properties: { name: { type: 'string' }, value: { type: 'object' }, domain_shard: { type: 'string' }, ust_id: { type: 'string' }, nonce: { type: 'string', description: 'optional — generated here when absent, and returned either way' }, alg: { type: 'string' } } },

@@ -828,6 +828,10 @@
     {
       "round": 270,
       "no_recap": "Round 270 closes no issue. It repairs two registers and the leg that was supposed to watch one of them; #178's debt is unchanged at 11."
+    },
+    {
+      "round": 271,
+      "no_recap": "Round 271 pays one of #178's four inversions and does not close the issue; ten remain in the register."
     }
   ]
 }

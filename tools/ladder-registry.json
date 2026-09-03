@@ -2436,6 +2436,20 @@
         "excluded": "A vector is a fixed input and a declared result a second implementation reproduces. These registers describe this repository's own surfaces; there is nothing here for a port to reproduce."
       },
       "test": "tools/capability-parity.mjs :: each new leg proven in BOTH directions against real mutated input — a synthetic disposition over `verify` must fail, a synthetic stance over `verify` must fail, and loosening the tautology filter must re-empty the domain and be caught by the size assertion."
+    },
+    {
+      "round": 271,
+      "math": {
+        "excluded": "F.5t already states the obligation and F.5t-a already fixes that it quantifies over an OPERATOR's published set rather than over one document. Nothing about the relation moved; what moved is which of our surfaces can ask the question."
+      },
+      "spec": {
+        "excluded": "The spec defines the obligation, not which of an implementation's tools exposes it. A conforming port may ship no tooling at all and still honour F.5t."
+      },
+      "code": "packages/ust-mcp/index.mjs :: `ust_name_report` takes the published set as an ARRAY of {id, raw}, refuses a parsed document with the reason (F.5t is about the bytes a consumer fetches), and rides the #44 isError path for VIOLATIONS and NOTHING_EXAMINED; tools/capability-parity.mjs :: `name-obligation` gains `tool:ust_name_report`, leaves the lagging register, and PINNED_LAGGING ratchets 11 → 10.",
+      "vector": {
+        "excluded": "A vector is a fixed input and a declared result a second implementation reproduces. `nameSetReport`'s behaviour is already pinned in the core suite; which of OUR surfaces calls it is not something a port could reproduce."
+      },
+      "test": "packages/ust-mcp/live-test.mjs :: four checks over the real stdio transport — a real document in the set is COMPLIANT (the case my first draft got wrong), a named non-document is an isError an agent must acknowledge, a PARSED document is refused rather than judged, and an empty set is a question never asked rather than a clean report."
     }
   ],
   "first_accounted_round": 76,

@@ -24,7 +24,7 @@ This page is rendered from those declarations, so it cannot drift from what the 
 | `anchor-verify` | ✅ | ✅ | ✅ | · | · | ✅ | ✅ | · |
 | `fork-choice` | ✅ | ✅ | · | · | · | · | · | · |
 | `byte-agreement` | ✅ | · | ✅ | · | · | · | · | · |
-| `name-obligation` | ✅ | · | ✅ | · | · | · | · | · |
+| `name-obligation` | ✅ | ✅ | ✅ | · | · | · | · | · |
 | `commitment-windows` | ✅ | · | · | · | · | · | · | · |
 | `ladder-report` | ✅ | ✅ | ✅ | · | · | · | · | · |
 | `stream-verify` | ✅ | ✅ | ✅ | · | · | · | · | · |
@@ -108,13 +108,12 @@ key material, the gate refuses the classification.
 - `uniqueness-attest`
 - `verifiable-map`
 
-**Lagging — debt** (11). Our own unfinished work, sitting where the principal audience reaches for it. These
+**Lagging — debt** (10). Our own unfinished work, sitting where the principal audience reaches for it. These
 carry no justification, because none exists — the gate refuses one written under them. The count is pinned and
 may only shrink.
 
 - `keylog-commitment` — also on the CLI
 - `byte-agreement` — also on the CLI
-- `name-obligation` — also on the CLI
 - `discovery-shard` — also on the CLI
 - `negative-observation`
 - `commitment-windows`
@@ -124,5 +123,5 @@ may only shrink.
 - `verified-handle`
 - `authority-bundle`
 
-4 of the 11 are on the human surface already, and those are the inversion the rule exists to close: reachable by a person with a terminal and by nobody with a tool.
+3 of the 10 are on the human surface already, and those are the inversion the rule exists to close: reachable by a person with a terminal and by nobody with a tool.
 
