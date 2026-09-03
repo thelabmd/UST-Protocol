@@ -2534,6 +2534,20 @@
         "excluded": "A vector is a fixed input and a declared result a second implementation reproduces. This is our own surface bookkeeping; a port has none of it."
       },
       "test": "tools/capability-parity.mjs :: the ratchet proven by deleting `keylog-commitment` from the agent surface — exit 0 before the fix, exit 1 naming it after; the retired token form moved from the control's REAL list to its GHOST list, so a real export that is no longer admissible must be refused. tools/gen-support-matrix.mjs :: both arms of the header's asymmetry clause rendered, the populated one by pushing a capability into the computed list."
+    },
+    {
+      "round": 278,
+      "math": {
+        "excluded": "§11.2 already separates the substrate and construction axes, and round 277's admission-relation derivation is about this tree's probes. Nothing about the relation over documents moved; what moved is what the page renders of it."
+      },
+      "spec": {
+        "excluded": "The standard defines the two anchor axes and says nothing about how an implementation reports its own packages. A conforming port publishes whatever surfaces it likes."
+      },
+      "code": "tools/gen-support-matrix.mjs :: a Surfaces table rendering each surface's admission relation and its declared reason; a guard refusing to render when a surface carries no capability and no reason, and another when a probe kind the page cannot name appears; four identifiers left behind by removed sections deleted with their reason named rather than quietly dropped.",
+      "vector": {
+        "excluded": "A vector is a fixed input and a declared result a second implementation reproduces. This is our own surface reporting; a port has none of it."
+      },
+      "test": "tools/gen-support-matrix.mjs :: both guards proven against real mutated input — stripping `ust-rfc6962-verify`'s reason refuses to render, and giving `ust-light` a probe kind the page has no wording for refuses to render. The second control had to be run twice: the first mutation silently did not apply, and a control that did not mutate anything passes for free."
     }
   ],
   "first_accounted_round": 76,

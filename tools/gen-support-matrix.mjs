@@ -14,7 +14,6 @@
 // file imports nothing of its own. Two artifacts, one source, and the gate between them.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { execFileSync } from 'node:child_process';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const src = readFileSync(ROOT + 'tools/capability-parity.mjs', 'utf8');
@@ -30,6 +29,25 @@ const surfaces = [...src.matchAll(/^ {2}'(ust-[a-z0-9-]+)':\s*\{ probe: [^,]+, f
 // (#178): the pattern above required `full: [ … ]`, so the core's `Object.keys(CAPS)` did not match and the page
 // rendered SIX columns while the gate scored EIGHT — the page disagreeing with the file it is rendered from,
 // which is the one thing it exists not to do. A cheap independent count catches that; a minimum threshold did not.
+// #180 — the PROBE and the surface's own reason, parsed for the same purpose everything else here is: a surface
+// whose every cell is `·` renders a row of dots, and the gate has held the sentence that says what it does since
+// it was written. `ust-rfc6962-verify` is the specimen — a published RFC 6962 inclusion verifier whose declaration
+// reads "it carries the `substrate-registry` membership half through `inclusionVerify`" while the page said nothing
+// at all. A report that omits the reason asserts a falsehood by silence.
+const ADMISSION = { exportIntersect: 'import', mcpProbe: 'named request', cliProbe: 'named request', connector: 'connector object' };
+// ONE LINE PER SURFACE, then the two fields off that line. The first draft put both in a single pattern with the
+// reason optional behind a LAZY quantifier — which matches the shortest thing that works, so it skipped every
+// reason and reported the one surface that has one as having none. A lazy optional capture is a capture that
+// never fires.
+for (const line of src.split('\n')) {
+  const head = /^ {2}'(ust-[a-z0-9-]+)':\s*\{ probe: ([A-Za-z]+)/.exec(line);
+  if (!head) continue;
+  const sf = surfaces.find((x) => x.id === head[1]);
+  if (!sf) continue;
+  sf.probe = head[2];
+  const why = /naReason: '((?:[^'\\]|\\.)*)'/.exec(line);
+  sf.naReason = why ? why[1].replace(/\\'/g, "'") : '';
+}
 const declared = [...src.matchAll(/^ {2}'(ust-[a-z0-9-]+)':\s*\{ probe:/gm)].map((m) => m[1]);
 if (declared.length !== surfaces.length) {
   console.error(`  ✗ parsed ${surfaces.length} surface(s) but ${declared.length} are declared — missing [${declared.filter((d) => !surfaces.some((s2) => s2.id === d)).join(', ')}]. A page with fewer columns than the gate scores is a page disagreeing with its own source.`);
@@ -40,18 +58,6 @@ function list(s) { return [...s.matchAll(/'([a-z0-9-]+)'/g)].map((m) => m[1]); }
 // and rendered an EMPTY cell for the core, which is the row this table exists for. One parser, two shapes.
 const idents = (s) => [...s.matchAll(/'([A-Za-z][A-Za-z0-9_]*)'/g)].map((m) => m[1]);
 
-// cli/mcp tokens per capability — read from the gate, never re-typed
-const CAPS_TOKENS = {};
-for (const m of src.matchAll(/^ {2}'([a-z0-9-]+)':\s*\{ core: \[[^\]]*\]([^}]*)\}/gm)) {
-  const tail = m[2], one = {};
-  for (const surf of ['cli', 'mcp']) {
-    const arr = new RegExp(surf + ":\\s*\\[([^\\]]*)\\]").exec(tail);
-    const single = new RegExp(surf + ":\\s*'([^']+)'").exec(tail);
-    if (arr) one[surf] = [...arr[1].matchAll(/'([^']+)'/g)].map((x) => x[1]);
-    else if (single) one[surf] = [single[1]];
-  }
-  CAPS_TOKENS[m[1]] = one;
-}
 
 // #180 — CAPABILITY STATE, read from the same file for the same reason as everything else here: a count typed
 // into prose is a promise, and this page exists because a promise had already gone stale once. Delivery is
@@ -77,22 +83,11 @@ const stance = (s, cap) => (s.full === 'ALL' || s.full.includes(cap)) ? '✅' : 
 const short = (s) => s.replace('ust-', '');
 
 // The privacy story the card was about, called out by name — a reader looking for "can I make a private
-// partition and can my tool read it" should not have to infer it from a grid.
-const cli = surfaces.find((s) => s.id === 'ust-cli');
-// What a surface offers for a capability is RENDERED from the tokens the parity probe resolves against that
-// surface — `cmd:sign` is checked to be a command, `tool:ust_seal` to be a registered tool. Writing them as prose
-// is what let this page claim for five rounds that an agent could not make a private partition; a token that
-// stopped resolving would fail the gate, and a token that resolves prints itself here.
-const tokensFor = (cap, surface) => {
-  const raw = CAPS_TOKENS[cap]?.[surface];
-  return [].concat(raw ?? []).map((t) => t.replace(/^cmd:/, 'ust ').replace(/^tool:/, '').replace(/^flag:/, '--').replace(/^api:/, '').replace(/^arg:/, ''));
-};
-const cliHas = (cap) => !!cli && (cli.full === 'ALL' || cli.full.includes(cap) || cli.subset.includes(cap));
-// WHICH surface has it, once the domain is the ASYMMETRY (round 274). `cliHas` answered only about the CLI, so a
-// capability living on a connector rendered as "nobody has it" — the sentence that had to be replaced below.
-const holders = (cap) => surfaces.filter((sf) => sf.id !== 'ust-mcp' && sf.id !== 'ust-protocol'
-  && (sf.full === 'ALL' || sf.full.includes(cap) || sf.subset.includes(cap))).map((sf) => sf.id.replace('ust-', ''));
-const rows = capIds.map((c) => `| \`${c}\` | ` + surfaces.map((s) => stance(s, c)).join(' | ') + ' |').join('\n');
+// DEAD WEIGHT, removed in round 278 and named rather than quietly deleted: `tokensFor` rendered the private-partition
+// section (gone in 276), `holders` named which surface held a lagging capability (gone in 277 with the Ordering
+// section), `cliHas` and `rows` predate both. Each was live when written and became unreachable when the section it
+// served was removed — the generator's own instance of a record outliving its subject, which is the defect this page
+// has now found in three registers and in itself.
 
 const CUSTODY = [...(/^const CUSTODY = \[([^\]]*)\];/m.exec(src) || [, ''])[1].matchAll(/'([a-z-]+)'/g)].map((m) => m[1]);
 if (CUSTODY.length < 3) { console.error('  ✗ parsed no custody vocabulary from the gate — the legend would name words nobody defined'); process.exit(1); }
@@ -105,6 +100,11 @@ const CUSTODY_MEANS = {
 };
 const missingMeaning = CUSTODY.filter((w) => !CUSTODY_MEANS[w]);
 if (missingMeaning.length) { console.error(`  ✗ the gate defines custody [${missingMeaning.join(', ')}] and this page has no wording for them`); process.exit(1); }
+
+const unnamed = surfaces.filter((sf) => !ADMISSION[sf.probe]);
+if (unnamed.length) { console.error(`  ✗ ${unnamed.length} surface(s) use a probe this page cannot name: [${unnamed.map((sf) => sf.id + ':' + sf.probe).join(', ')}]`); process.exit(1); }
+const silent = surfaces.filter((sf) => capIds.every((c) => stance(sf, c) === '·') && !sf.naReason);
+if (silent.length) { console.error(`  ✗ ${silent.length} surface(s) carry no capability and no reason: [${silent.map((sf) => sf.id).join(', ')}] — a column of dots with nothing beside it says the package does nothing`); process.exit(1); }
 
 const anySurface = (cap) => surfaces.some((sf) => sf.id !== 'ust-protocol' && (sf.full === 'ALL' || sf.full.includes(cap) || sf.subset.includes(cap)));
 const delivery = (cap) => STATE[cap].via ? `via \`${STATE[cap].via}\`` : (CAPS_CORE[cap].length === 0 ? 'spec-ahead' : (anySurface(cap) ? 'shipped' : 'core-only'));
@@ -127,6 +127,16 @@ Reference implementation \`${VERSION}\` · ${capIds.length} capabilities · ${co
 | capability | delivery | custody | ${surfaces.map((s) => short(s.id)).join(' | ')} |
 |---|---|---|${surfaces.map(() => '---').join('|')}|
 ${capIds.map((c) => `| \`${c}\` | ${delivery(c)} | \`${STATE[c].custody}\` | ` + surfaces.map((s) => stance(s, c)).join(' | ') + ' |').join('\n')}
+
+## Surfaces
+
+A surface's ADMISSION RELATION is how a caller reaches it, and it fixes what counts as evidence that the surface
+exposes a capability: an \`import\` surface is scored on its exports, a \`named request\` surface on the commands
+and tools it answers, a \`connector object\` on the interface it satisfies.
+
+| surface | admission | capabilities | what it is |
+|---|---|---|---|
+${surfaces.map((sf) => `| \`${short(sf.id)}\` | ${ADMISSION[sf.probe] ?? sf.probe} | ${capIds.filter((c) => stance(sf, c) !== '·').length} | ${(sf.naReason || '—').replace(/\|/g, '\\|')} |`).join('\n')}
 
 ## What would change it
 

@@ -856,6 +856,10 @@
     {
       "round": 277,
       "no_recap": "Round 277 repairs what round 276 dropped and settles the `api:` question #180 left open; it closes no issue."
+    },
+    {
+      "round": 278,
+      "no_recap": "Round 278 audits the rendered report before #180 is closed and closes no issue itself."
     }
   ]
 }

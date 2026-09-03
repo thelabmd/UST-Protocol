@@ -46,6 +46,23 @@ Reference implementation `1.0.0-rc.73` · 33 capabilities · 21 shipped, 11 core
 | `absence-transcript` | via `build-transcript` | `open` | ✅ | · | · | · | · | · | · | · |
 | `absence-backing` | core-only | `open` | ✅ | · | · | · | · | · | · | · |
 
+## Surfaces
+
+A surface's ADMISSION RELATION is how a caller reaches it, and it fixes what counts as evidence that the surface
+exposes a capability: an `import` surface is scored on its exports, a `named request` surface on the commands
+and tools it answers, a `connector object` on the interface it satisfies.
+
+| surface | admission | capabilities | what it is |
+|---|---|---|---|
+| `protocol` | import | 33 | the reference implementation defines the capability set; a cell that is not full here means the capability names an export the core does not have, which the PHANTOM check already refuses |
+| `mcp` | named request | 21 | deferred to the planned operator MCP over @ust-protocol/operator (privilege-separation: a human explicitly grants agent rights) — NOT core+CLI-forever; TOP-produce is the one agent touch still to be built for noosphere |
+| `cli` | named request | 19 | not exposed by the reference operator CLI |
+| `light` | import | 6 | outside the standalone zero-dependency LIGHT floor — lite is a documented SUBSET (round-51 P1-03: build-transcript = buildState/seal for class:observation, WITH provenance (prev/based_on+seed) since UST-jls, but not the full builder family; verify = the WHOLE LIGHT floor including every §14a provenance obligation — UST-jls closed 14 lite-VALID/core-INVALID shapes — but not the HIGH/TOP verifiers; content-address = the partition/content/seed hashes it needs) |
+| `web-signer` | import | 4 | producer-only surface — a documented SUBSET (round-51 P1-03: browser signer builds+signs a state, not the full builder family) |
+| `ots-verify` | connector object | 2 | CLOSED 2026-08-10 (round 194). substrate-registry is NA here, not subset: its core set is combineSubstrates (finality) AND combineInclusion (membership), and this connector implements finality only — it has no inclusionVerify, because an OTS timestamp proves a root existed by a time, never that a leaf is in that root. Rekor carries the membership half. Measured 2026-08-10, round 193. Originally: a Bitcoin/OTS substrate connector (plugs into verifyAnchor via substrateVerify), not a general surface |
+| `rekor-verify` | connector object | 3 | a Rekor transparency-log substrate connector, not a general surface |
+| `rfc6962-verify` | connector object | 0 | an RFC 6962 inclusion verifier — it answers membership in a Merkle tree and nothing else, so it carries the `substrate-registry` membership half through `inclusionVerify` and no protocol capability of its own |
+
 ## What would change it
 
 Every capability that is not plain `shipped` + `open` states the condition that moves it. `unbuilt` means nothing
