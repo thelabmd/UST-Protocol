@@ -819,7 +819,8 @@
     },
     {
       "round": 268,
-      "no_recap": "Round 268 opens #179 and does the work; it does not close it — closing is the owner's call, and the recap follows the closing, not the round."
+      "no_recap": "Closed 2026-09-03 on the owner's call. The closing report is on the issue; the diary belongs to the #178 arc this card is part of, and one diary per arc rather than one per card is the difference between a record and a retelling.",
+      "issue": 179
     },
     {
       "round": 269,
@@ -859,7 +860,8 @@
     },
     {
       "round": 278,
-      "no_recap": "Round 278 audits the rendered report before #180 is closed and closes no issue itself."
+      "no_recap": "Closed 2026-09-03 on the owner's call. The closing report is on the issue; the diary belongs to the #178 arc, whose registers this card's vocabulary replaced.",
+      "issue": 180
     }
   ]
 }
