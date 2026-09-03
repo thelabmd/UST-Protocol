@@ -848,6 +848,10 @@
     {
       "round": 275,
       "no_recap": "Round 275 clears the ordering axis and does not close #178 — closing is the owner's call, and the classification vocabulary he deferred is still open."
+    },
+    {
+      "round": 276,
+      "no_recap": "Round 276 implements the vocabulary #180 records and does not close it; the page and the register are in place, and what remains on that issue is review."
     }
   ]
 }

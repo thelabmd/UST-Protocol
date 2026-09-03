@@ -53,26 +53,24 @@ for (const m of src.matchAll(/^ {2}'([a-z0-9-]+)':\s*\{ core: \[[^\]]*\]([^}]*)\
   CAPS_TOKENS[m[1]] = one;
 }
 
-// #178 — the agent-surface classification, read from the same file for the same reason as everything else here:
-// a count typed into prose is a promise, and this page exists because a promise had already gone stale once.
-const disp = [...src.matchAll(/^ {2}'([a-z0-9-]+)':\s*\['(ceremony|key-bound|lagging)'/gm)].map((m) => ({ cap: m[1], kind: m[2] }));
-const ceremony = disp.filter((d) => d.kind === 'ceremony');
-const keyBound = disp.filter((d) => d.kind === 'key-bound');
-const lagging = disp.filter((d) => d.kind === 'lagging');
-// The guard asserts the PARSE, not a category. It used to demand `lagging` be non-empty, which was right while the
-// axis counted every absence — a zero there could only mean the shape had moved. Once the domain became the
-// asymmetry (round 274) an empty `lagging` means THE DEBT IS PAID, which is the goal, and the page would have
-// refused to render on the day it succeeded — the same shape as the control that named its own subject.
-if (!disp.length) {
-  console.error('  ✗ parsed no agent-surface dispositions from the gate — the shape moved, and a page claiming "0 deferred" would read as an answer');
+// #180 — CAPABILITY STATE, read from the same file for the same reason as everything else here: a count typed
+// into prose is a promise, and this page exists because a promise had already gone stale once. Delivery is
+// COMPUTED from the surfaces below, exactly as the gate computes it, so the two cannot disagree about a fact
+// either could derive; custody and the note are declared and are read verbatim.
+const stateRe = /^ {2}'([a-z0-9-]+)':\s*\['(open|key|operator|manual|sealed)'(?:,\s*(?:'((?:[^'\\]|\\.)*)'|UNBUILT))?(?:,\s*'((?:[^'\\]|\\.)*)')?\],$/gm;
+const STATE = {};
+for (const m of src.matchAll(stateRe)) {
+  const note = m[3] !== undefined ? m[3] : (/,\s*UNBUILT/.test(m[0]) ? 'unbuilt' : '');
+  STATE[m[1]] = { custody: m[2], note: note.replace(/\\'/g, "'"), via: (m[4] || '').startsWith('via ') ? (m[4] || '').slice(4).trim() : null };
+}
+// THE PARSE IS CROSS-CHECKED against the capability roster, because an under-parse renders an empty answer that
+// reads like an answer — the defect this file already paid for once, when six surface columns rendered where the
+// gate scored eight.
+const unstated = capIds.filter((c) => !STATE[c]);
+if (unstated.length) {
+  console.error(`  ✗ parsed no state for ${unstated.length} of ${capIds.length} capabilities — the declaration shape moved: [${unstated.join(', ')}]`);
   process.exit(1);
 }
-
-if (capIds.length < 20 || surfaces.length < 5) {
-  console.error(`  ✗ parsed ${capIds.length} capabilities and ${surfaces.length} surfaces from the gate — the declaration shapes moved, and rendering a table from a failed parse would print an empty page as if it were an answer`);
-  process.exit(1);
-}
-
 const CAPS_CORE = Object.fromEntries([...src.matchAll(/^ {2}'([a-z0-9-]+)':\s*\{ core: \[([^\]]*)\]/gm)].map((m) => [m[1], idents(m[2])]));
 const VERSION = JSON.parse(readFileSync(ROOT + 'package.json', 'utf8')).version;
 const stance = (s, cap) => (s.full === 'ALL' || s.full.includes(cap)) ? '✅' : s.subset.includes(cap) ? '◐' : '·';
@@ -96,106 +94,55 @@ const holders = (cap) => surfaces.filter((sf) => sf.id !== 'ust-mcp' && sf.id !=
   && (sf.full === 'ALL' || sf.full.includes(cap) || sf.subset.includes(cap))).map((sf) => sf.id.replace('ust-', ''));
 const rows = capIds.map((c) => `| \`${c}\` | ` + surfaces.map((s) => stance(s, c)).join(' | ') + ' |').join('\n');
 
-const page = `# What UST supports, per surface
+const CUSTODY = [...(/^const CUSTODY = \[([^\]]*)\];/m.exec(src) || [, ''])[1].matchAll(/'([a-z-]+)'/g)].map((m) => m[1]);
+if (CUSTODY.length < 3) { console.error('  ✗ parsed no custody vocabulary from the gate — the legend would name words nobody defined'); process.exit(1); }
+const CUSTODY_MEANS = {
+  open: 'safely delegable to any caller, an agent included',
+  key: 'needs key material; delegable through the producer/assembler split',
+  operator: 'a deployment position — what is offered, to whom, at what tier',
+  manual: 'under manual control today; a state, revisable',
+  sealed: 'exposing it IS the vulnerability; permanent by construction',
+};
+const missingMeaning = CUSTODY.filter((w) => !CUSTODY_MEANS[w]);
+if (missingMeaning.length) { console.error(`  ✗ the gate defines custody [${missingMeaning.join(', ')}] and this page has no wording for them`); process.exit(1); }
+
+const anySurface = (cap) => surfaces.some((sf) => sf.id !== 'ust-protocol' && (sf.full === 'ALL' || sf.full.includes(cap) || sf.subset.includes(cap)));
+const delivery = (cap) => STATE[cap].via ? `via \`${STATE[cap].via}\`` : (CAPS_CORE[cap].length === 0 ? 'spec-ahead' : (anySurface(cap) ? 'shipped' : 'core-only'));
+const owesNote = (cap) => delivery(cap) !== 'shipped' || ['operator', 'manual', 'sealed'].includes(STATE[cap].custody);
+const asymmetry = capIds.filter((c) => anySurface(c) && !surfaces.some((sf) => sf.id === 'ust-mcp' && (sf.full === 'ALL' || sf.full.includes(c) || sf.subset.includes(c))));
+const count = (d) => capIds.filter((c) => delivery(c).startsWith(d)).length;
+
+const page = `# UST capability report
 
 <!-- GENERATED by tools/gen-support-matrix.mjs from the declarations in tools/capability-parity.mjs — do not edit.
      Those declarations are checked against live probes by \`npm run test:parity\` on every CI run, so a cell here
      is true because the gate would go red otherwise. Regenerate: node tools/gen-support-matrix.mjs -->
 
-Reference implementation \`${VERSION}\`. **✅ full** — every core export of the capability is exposed · **◐ subset**
-— a documented reduced form · **·** — not on this surface, with a stated reason in \`tools/capability-parity.mjs\`.
+Reference implementation \`${VERSION}\` · ${capIds.length} capabilities · ${count('shipped')} shipped, ${count('core-only')} core-only, ${count('via')} via another capability, ${count('spec-ahead')} spec-ahead.
 
-A cell is not a promise. \`tools/capability-parity.mjs\` probes each surface for real — the CLI's dispatch table and
-argument parser, the MCP tool schemas, a package's exports — and CI fails if a declaration and the probe disagree.
-This page is rendered from those declarations, so it cannot drift from what the gate checks.
+**Surface** ✅ every core export exposed · ◐ a documented reduced form · · not on this surface.
+**Delivery** \`shipped\` on at least one surface · \`via X\` reachable through another capability · \`core-only\` in core, no surface · \`spec-ahead\` in the spec, not in core.
+**Custody** ${CUSTODY.map((w) => '`' + w + '` ' + CUSTODY_MEANS[w]).join(' · ')}.
 
-| capability | ${surfaces.map((s) => short(s.id)).join(' | ')} |
-|---|${surfaces.map(() => '---').join('|')}|
-${rows}
+| capability | delivery | custody | ${surfaces.map((s) => short(s.id)).join(' | ')} |
+|---|---|---|${surfaces.map(() => '---').join('|')}|
+${capIds.map((c) => `| \`${c}\` | ${delivery(c)} | \`${STATE[c].custody}\` | ` + surfaces.map((s) => stance(s, c)).join(' | ') + ' |').join('\n')}
 
-## Private partitions, end to end
+## What would change it
 
-The question the matrix answers least directly, so it is answered here. §10 gives two privacy modes and they are
-per-PARTITION: one shard mixes open and closed members freely.
+Every capability that is not plain \`shipped\` + \`open\` states the condition that moves it. \`unbuilt\` means nothing
+but the work itself stands in the way — the one value that carries no prose, so it cannot be rationalised.
 
-| | make one | read one back |
-|---|---|---|
-| **core** \`ust-protocol\` | ${CAPS_CORE['disclosure-produce'].map((n) => '\`' + n + '\`').join(' · ')} | \`disclosures\` + \`decKeys\` |
-${surfaces.map((sf) => {
-  const key = sf.id === 'ust-cli' ? 'cli' : sf.id === 'ust-mcp' ? 'mcp' : null;
-  const makes = stance(sf, 'disclosure-produce'), reads = stance(sf, 'verify');
-  const note = (cap) => { const t = (key ? tokensFor(cap, key) : []).map((x) => '\`' + x + '\`').join(' · '); return t ? ' ' + t : ''; };
-  const cell = (st, cap) => st === '·' ? '—' : st + note(cap);
-  return '| **\`' + sf.id + '\`** | ' + cell(makes, 'disclosure-produce') + ' | ' + cell(reads, 'verify') + ' |';
-}).join('\n')}
+| capability | condition |
+|---|---|
+${capIds.filter(owesNote).map((c) => `| \`${c}\` | ${STATE[c].note === 'unbuilt' ? '`unbuilt`' : STATE[c].note} |`).join('\n')}
 
-Both columns are the \`disclosure-produce\` and \`verify\` stances, rendered — **not a hand-kept summary.** Measured
-2026-09-03: the table that stood here WAS hand-kept, and had drifted by five rounds for \`ust-mcp\` (it said an
-agent cannot make a private partition, five rounds after it could) and by seven for \`ust-light\`. A prose summary
-inside a generated page is the very defect the page exists to prevent, and it happened here.
+## Ordering
 
-**Two channels, and they are opened by different secrets.** A \`blinded\` partition has one: the commitment, opened
-by \`{nonce,value}\`. An \`encrypted\` partition has two: that commitment, plus the AEAD, opened by the key. A reader
-holding only the pair has checked ONE of two, and every surface above says so rather than calling the partition
-disclosed — \`disclosed\` means every channel the publisher declared was checked (§14.8).
-
-**Producing one obliges you to keep the envelope.** \`ust sign\` generates the nonce, so \`--disclosures-out\` is
-mandatory: a tool that generated it and did not hand it back would leave you holding a commitment nobody can ever
-open, including you. It also refuses to invent an AEAD key — §10 leaves key management to the operator, and an
-invented key is one you cannot rotate.
-
-## The agent surface, and the rule that governs it
-
-The agent is the protocol's **principal** audience (owner, 2026-09-02). A human at a terminal has a shell and the
-package: a missing tool costs them six lines. An agent has exactly what is exposed as a tool, so the same absence
-is an inconvenience on one surface and a wall on the other.
-
-> **Any capability the protocol gives a publisher appears on the agent surface not later than on the human one.**
-
-This axis is about an ASYMMETRY, so its domain is exactly that: a capability some other surface exposes while the
-agent surface does not. A capability **no** surface exposes has no ordering to be judged by — the rule has no
-second term for it — and it is answered in \`tools/capability-parity.mjs\` by its stance, which says why it is on
-no surface at all. Each entry below is classified by one question: *would this still need a human if we trusted
-the agent completely?*
-
-**Ceremony — the act is a human decision, and stays one** (${ceremony.length}). No amount of trust in an agent removes the
-person, so this classification is permanent.
-${ceremony.length
-  ? ceremony.map((d) => '- \`' + d.cap + '\`').join('\n')
-  : `_None today, and that is a finding rather than an omission._ Ceremony is a property of an operator WORKFLOW —
-the CLI walks a person through DNS, publication and confirmation — while this map is over core FUNCTIONS, which
-compute artifacts that are inert until someone signs them. \`buildAuthorityCheckpoint\` computes; what needs a
-person is deciding to stand behind the result. The category is real and permanent; it does not apply at this
-granularity, and an entry appearing here would mean the map had grown to cover workflows.`}
-
-**Key-bound — the key does not cross into an agent's context** (${keyBound.length}). The function holding key material stays
-outside; this is not a wall, because the agent produces what is signed and assembles what comes back, and every
-key-free half is on its surface. A claim here is refutable by measurement: if no function of the capability takes
-key material, the gate refuses the classification.
-
-${keyBound.map((d) => '- \`' + d.cap + '\`').join('\n')}
-
-**Lagging — debt** (${lagging.length}). ${lagging.length
-  ? `Our own unfinished work, sitting where the principal audience reaches for it. These
-carry no justification, because none exists — the gate refuses one written under them. The count is pinned and
-may only shrink.`
-  : `Nothing is unfinished here. This category takes no justification by design — a reason written under debt is
-absence wearing the vocabulary of intent — so an empty list is the only honest form of it, and the pin now holds
-at zero: an entry may still appear, but only by being built somewhere else first.`}
-
-${lagging.length ? lagging.map((d) => '- \`' + d.cap + '\`' + (holders(d.cap).length ? ' — reachable on ' + holders(d.cap).join(', ') : '')).join('\n') + '\n' : ''}
-${(() => {
-  // EVERY entry in this domain has a holder — that is what puts it here — so the old empty-domain branch, written
-  // when the axis counted capabilities nobody exposed, can no longer be reached and is gone rather than kept as a
-  // sentence waiting to be wrong. What varies is WHICH surfaces hold them, and a terminal is not the only one:
-  // `typed-evidence` lives on connector packages, so "reachable by a person with a terminal" was already false the
-  // day the domain narrowed.
-  if (!lagging.length) return 'Nothing is owed on this axis: every capability another surface exposes is on the agent surface too. The rule still binds — whichever surface receives the next one first, the agent surface may not be later.';
-  const all = [...new Set(lagging.flatMap((d) => holders(d.cap)))];
-  return `Each is already reachable somewhere else — ${all.map((h) => '\`' + h + '\`').join(', ')} — and nowhere by an agent. That is the inversion the rule exists to close, and it is the whole of what this axis measures: a capability no surface exposes is not owed here, it is answered by its stance.`;
-})()}
+${asymmetry.length
+  ? `${asymmetry.length === 1 ? 'One capability is' : asymmetry.length + ' capabilities are'} on another surface and not on \`mcp\`: ${asymmetry.map((c) => '`' + c + '` (' + STATE[c].custody + ')').join(', ')}.`
+  : `No capability is on another surface and absent from \`mcp\`.`} A capability arriving on any surface is expected on \`mcp\` not later, and \`npm run test:parity\` fails otherwise.
 `;
-
 const path = ROOT + 'SUPPORT.md';
 const before = (() => { try { return readFileSync(path, 'utf8'); } catch { return null; } })();
 writeFileSync(path, page);

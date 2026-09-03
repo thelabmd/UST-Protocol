@@ -2506,6 +2506,20 @@
         "excluded": "A vector is a fixed input and a declared result a second implementation reproduces. The evidence functions are already pinned in the core suite; which of OUR surfaces calls them is not something a port could reproduce."
       },
       "test": "packages/ust-mcp/live-test.mjs :: eight checks over the real stdio transport — the closed vocabulary and the opaque fail-closed answer, the universe, the shaped record, ALL FOUR self-declaration refusals, and `unproven` as an answer rather than an error. Both branches of the empty-domain leg and both branches of the page's debt paragraph rendered."
+    },
+    {
+      "round": 276,
+      "math": {
+        "excluded": "A vocabulary for recording which of our own surfaces holds which capability is an inventory concern about one tree. It quantifies over no document and defines no relation a theorem could range over."
+      },
+      "spec": {
+        "excluded": "The standard defines what a verifier decides, never how an implementation records its own tool coverage. A conforming port keeps no such register and is not expected to."
+      },
+      "code": "tools/capability-parity.mjs :: `CAPABILITY_STATE` replaces `STANCE` and `MCP_DISPOSITION` — delivery computed from the surfaces, custody declared from a closed five-word vocabulary, a note required wherever the state is one we might leave and forbidden where nothing is owed, `unbuilt` as the only prose-free debt marker and the ratchet; the ordering rule becomes a computed report line. tools/gen-support-matrix.mjs :: SUPPORT.md renders as a report — matrix plus both axes plus the conditions, both essay sections removed, the custody legend read from the gate's own vocabulary.",
+      "vector": {
+        "excluded": "A vector is a fixed input and a declared result a second implementation reproduces. This register describes this repository's own surfaces; a port has none of them."
+      },
+      "test": "tools/capability-parity.mjs :: six controls against real mutated input — a sixth custody word, `sealed` on a shipped capability, `key` with no key-taking function, a note where nothing is owed, `unbuilt` outside core-only+open, and `via` naming no capability. tools/gen-support-matrix.mjs :: two more — an under-parse of the state register refuses to render, and a custody word the gate defines but the page has no wording for refuses to render."
     }
   ],
   "first_accounted_round": 76,

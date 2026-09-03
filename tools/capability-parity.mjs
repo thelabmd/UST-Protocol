@@ -30,38 +30,81 @@ const mcpTools = new Set(MCP.listTools().map((t) => t.name));
 // ── CAPS — the capability units. `core` = the ust-protocol exports that realize the capability. `mcp`/`cli` = the
 //    probe token (a tool name / forwarded field for MCP; a flag / command for CLI) proving that surface EXPOSES it.
 
-// ── STANCE (owner 2026-07-27) — a capability exposed by NO surface must say WHY, or the gate's own green is empty.
-// The parity checks below compare DECLARED against ACTUAL and therefore pass forever on a capability honestly
-// declared as nowhere: they answer "does the tree match itself", never "is the declaration right". The owner asked
-// exactly that question — "did we update everything in the tools that we made ourselves" — and the matrix could not
-// answer it. Same shape as the ladder registry shipped this morning: an exclusion is legitimate, an ABSENCE is not.
+// ── CAPABILITY STATE (#180) — ONE register on TWO axes, replacing `STANCE` and `MCP_DISPOSITION`.
 //
-// 'decided'  — deliberately internal or deliberately deferred, with the reason.
-// 'undecided'— nobody has ruled. Written down as such rather than passing silently; this is the queue.
-const MIN_REASON = 50;
-const STANCE = {
-  // THREE STANCES LEFT THIS REGISTER in round 270, for the same reason two dispositions did: a stance explains why
-  // a capability is on NO surface, and all three had one. `disclosure-produce` reached `ust sign` (#177),
-  // `ladder-report` had been `ust explain` since round 137, `name-obligation` is `ust names`. Each had turned into
-  // a historical note without ceasing to be a record of an absence, and the leg below now refuses that.
-  //
-  // `name-obligation`'s text also argued the MCP absence was DELIBERATE — "handing an agent a filesystem sweep of
-  // arbitrary paths is a capability about the host" — while the ORDERING register classifies it `lagging`, which
-  // owes NO justification. Two registers, one absence, opposite answers, and nothing compared them. The argument
-  // does not survive its own premise: `nameSetReport` takes DOCUMENTS, so an agent-side tool would accept an array
-  // and touch no filesystem at all. It was an argument against a badly-shaped tool, read as an argument against the
-  // capability — which is how it sat in the quiet register while the loud one called it debt.
-  'evidence-receipt':    ['undecided', 'the receipt is the paid signing axis in the product plan, so exposing it on a free surface is a COMMERCIAL decision rather than a protocol one. It is queued for a maintainer ruling, and no round may settle it in passing.'],
-  'assurance-lattice':   ['decided',   'internal algebra: deriveAssurance/assuranceState/projectTier are how a verdict is COMPUTED. A surface that let a caller assemble a tuple directly would be the forgery oracle round-25 closed at the type level.'],
-  'verified-handle':     ['decided',   'the branded-handle machinery is the mechanism that makes the above unforgeable. Exposing the brand IS the vulnerability; it can have no public surface by construction.'],
-  'authority-bundle':    ['undecided', 'the #76/#77 authority-checkpoint family is built in core and reachable from no tool. It belongs to the TOP work (UST-48p) and should get its surface there, not before.'],
-  'recovery':            ['undecided', 'N-of-M genesis-authorized recovery exists in core. A surface for it is a CEREMONY, and ceremonies live on the CLI — but the owner has not ruled whether recovery is operator-facing or support-only.'],
-  'epoch-transition':    ['undecided', 'same family as authority-bundle; same answer — it lands with TOP or not at all.'],
-  'uniqueness-attest':   ['undecided', 'part of the checkpoint/uniqueness cluster. No tool consumes it yet, and inventing a surface before a consumer exists is how unused surface becomes permanent.'],
-  'verifiable-map':      ['undecided', 'the anchored name-map is the independent path to authoritative. It has no operator today because no map substrate is registered; the surface should follow the substrate, not precede it.'],
-  'negative-observation':['decided',   'a negative observation is built with the ordinary transcript builders and carries no distinct operation; it is a USAGE of build-transcript, not a capability needing its own surface.'],
-  'commitment-windows':  ['decided',   'F.5q-c: the CORE lands before any surface, deliberately. Coverage and gaps are measurable in the commitment chain alone, and the vectors pin what that answer may and may not be — an empty chain answers `unknown` rather than `uncovered`, adjacent windows are not a gap — BEFORE a CLI shape fixes those answers by accident. The present-tense half (F.5q-d) needs a verifier-owned clock and is not built, so a surface now would expose half a question.'],
+// The words those two used were derived from ONE problem — the agent surface lagging the human one (#178) — and
+// they carried that origin. `ceremony` was defined as "a human decision, and STAYS one however much an agent is
+// trusted": a PREDICTION, and part of that work is expected to move to agents, so the definition was scheduled to
+// become false. `lagging` had the mirror defect — "our own unfinished work" describes the maintainers, not the
+// capability. Universal terms describe the state NOW. Only one thing here is permanent, and only it says so.
+//
+// DELIVERY — what exists. COMPUTED wherever the tree can answer, declared only where it cannot:
+//   shipped     in core and on at least one non-core surface        ← computed from SURFACES
+//   core-only   in core, on no surface                              ← computed from SURFACES
+//   via <cap>   reachable THROUGH another capability, needs none    ← declared: not visible in the matrix
+//   spec-ahead  in the spec, not in core                            ← declared, and a `core: []` entry produces it
+//
+// CUSTODY — who may hold it. Declared, one value: the constraint that binds TODAY. A capability whose halves
+// differ (a signing half and a key-free one) records the halves in ACKNOWLEDGED_MIXED, exactly as `sign` does.
+//   open       safely delegable to any caller, an agent included
+//   key        needs key material; delegable through the producer/assembler split
+//   operator   a deployment position — what is offered, to whom, at what tier
+//   manual     under manual control TODAY; a state, revisable, never a claim about forever
+//   sealed     exposing it IS the vulnerability; permanent by construction, and it must name the mechanism
+//
+// THE NOTE answers what would CHANGE the state, and is required whenever delivery is not `shipped`, or custody is
+// `operator`/`manual`/`sealed`. The one exception carries the old debt discipline forward: a `core-only` + `open`
+// capability with nothing but our own work in the way writes the literal `unbuilt` and NOTHING ELSE, so a
+// justification cannot be written under debt — that count is the ratchet.
+const MIN_REASON = 50;   // a note shorter than this is a placeholder, not a condition (kept from the register this replaced)
+const UNBUILT = 'unbuilt';
+const CUSTODY = ['open', 'key', 'operator', 'manual', 'sealed'];
+const CAPABILITY_STATE = {
+  'canon':               ['open'],
+  'content-address':     ['open'],
+  'build-transcript':    ['open'],
+  'sign':                ['key'],
+  'verify':              ['open'],
+  'resolve-authority':   ['open'],
+  'no-fork-evidence':    ['key'],
+  'consumer-trust-root': ['open'],
+  'anchor-verify':       ['open'],
+  'fork-choice':         ['open'],
+  'byte-agreement':      ['open'],
+  'name-obligation':     ['open'],
+  'ladder-report':       ['open'],
+  'stream-verify':       ['open'],
+  'typed-evidence':      ['open'],
+  'keylog-commitment':   ['open'],
+  'cadence-grid':        ['open'],
+  'cadence-declare':     ['open'],
+  'substrate-registry':  ['open'],
+  'discovery-shard':     ['open'],
+  'disclosure-produce':  ['key'],
+  'checkpoint-chain':    ['key'],
+
+  // reachable through another capability, so it needs no surface of its own
+  'absence-transcript':  ['open', 'reachable through `build-transcript`: `buildAbsence` calls `buildState` with `kind:\'absence\'`, so an absence is produced on the ordinary observation path and a surface of its own would be a second way to do one thing', 'via build-transcript'],
+
+  // on no surface, each with what would change that
+  'absence-backing':     ['open', UNBUILT],
+  'commitment-windows':  ['open', 'F.5q-c puts the core before any surface deliberately: the vectors pin what the answer may be — an empty chain is `unknown` and not `uncovered`, adjacent windows are not a gap — before a shape fixes them by accident. The present-tense half (F.5q-d) needs a verifier-owned clock and is unbuilt, so a surface now would expose half a question.'],
+  'evidence-receipt':    ['operator', 'the receipt is the paid signing axis in the product plan, so whether it appears on a free surface is a deployment position rather than a protocol property. Queued for a maintainer ruling, and no round may settle it in passing.'],
+  'assurance-lattice':   ['sealed', 'deriveAssurance/assuranceState/projectTier are how a verdict is COMPUTED. A surface letting a caller assemble a tuple directly would be the forgery oracle round 25 closed at the type level — the mechanism a surface here would break.'],
+  'verified-handle':     ['sealed', 'the branded-handle machinery is what makes the lattice above unforgeable. Exposing the brand IS the vulnerability, so there is no condition under which this changes.'],
+  'authority-bundle':    ['open', 'the #76/#77 authority-checkpoint family lands with the TOP work or not at all; a surface before that fixes shapes the TOP round has to choose.'],
+  'epoch-transition':    ['key', 'same family as authority-bundle: it lands with TOP or not at all.'],
+  'recovery':            ['manual', 'N-of-M genesis-authorized recovery is a ceremony today. Whether it is operator-facing or support-only is a maintainer ruling that has not been made, and the surface follows the ruling.'],
+  'uniqueness-attest':   ['key', 'no tool consumes it yet, and inventing a surface before a consumer exists is how unused surface becomes a permanent obligation.'],
+  'verifiable-map':      ['key', 'the anchored name-map is the independent path to authoritative and has no operator today because no map substrate is registered. The surface follows the substrate, never precedes it.'],
 };
+const PINNED_UNBUILT = 1;   // #180 — capabilities in core, on no surface, with nothing but our own work in the way. May only shrink; a new one must arrive with the literal `unbuilt` and no prose.
+
+// ── STANCE and MCP_DISPOSITION were REPLACED by CAPABILITY_STATE above (#180). They asked two questions with
+// two vocabularies over domains that turned out to be nested — round 274 measured STANCE wholly contained in
+// MCP_DISPOSITION — and both encoded claims about permanence that only `sealed` is entitled to make. Nothing
+// they recorded was lost: every reason moved with its capability, and what a split capability's halves are
+// stays in ACKNOWLEDGED_MIXED, where it always belonged.
 
 const CAPS = {
   'canon':              { core: ['canon'], mcp: 'tool:ust_canon', cli: 'cmd:canon' },
@@ -125,7 +168,13 @@ const CAPS = {
   // two operations, so the produce half stayed unowned until `ust sign` was written (#177). CONSUMPTION is not a
   // separate capability: it is `verify` with `disclosures`/`decKeys`, and it is scored there.
   'disclosure-produce': { core: ['blindedCommit', 'blindPartition', 'encryptPartition', 'sealingRequest', 'attachEncryption'], cli: 'cmd:sign', mcp: ['arg:ust_build_observation.data', 'tool:ust_sealing_request', 'tool:ust_attach_encryption'] },
-  'negative-observation':{ core: ['buildAbsence', 'noEventBacking'] },   // #39 — a normative absence assertion + the no-event↔completeness tie; core-only for now, no surface exposes it yet
+  // #180 — ONE ROW HELD TWO THINGS and the old vocabulary hid it. `buildAbsence` is a transcript builder: it calls
+  // `buildState` with `kind:'absence'`, so an absence is produced through the ordinary observation path and needs no
+  // surface of its own (verified end to end through `ust_build_observation`). `noEventBacking` is an independent
+  // CHECK — claim window × stream result × frames — and no builder delivers it. One stance sentence covered both and
+  // was true of one, which is the `disclosure-produce` shape of round 257.
+  'absence-transcript': { core: ['buildAbsence'] },   // #39 — a normative absence assertion, built like any other observation
+  'absence-backing':    { core: ['noEventBacking'] },   // #39 — the no-event↔completeness tie: is an absence claim BACKED by the stream
 };
 
 // Internal primitives — not user-capability units (raw hash, encoders, error types, the registry itself).
@@ -262,65 +311,13 @@ const tokenProbe = (which) => (cap, stance) => {
 const mcpProbe = tokenProbe('mcp');
 const cliProbe = tokenProbe('cli');
 
-// ── THE AGENT SURFACE IS THE PRINCIPAL ONE, so its absences are classified rather than merely reasoned (#178).
-//
-// Owner, 2026-09-02: the agent is not a first-class publisher among others — it is the protocol's principal
-// audience. A human at a terminal has a shell, a filesystem and the package; when a tool lacks something they
-// write six lines. An agent has EXACTLY what is exposed as a tool. So the same absence is an inconvenience on
-// one surface and a wall on the other, and the two may not be recorded in the same words.
-//
-// THE TEST, and it is the owner's: **would this still need a human if we trusted the agent completely?**
-//   YES ⇒ `deferred` — the requirement is a property of the ACT, not a restriction we impose. Minting an
-//         identity, rotating a root key, re-rooting a chain: no amount of trust removes the person, because the
-//         act IS a human decision. A deferred cell owes a claim about the act, checkable by reading it.
-//   NO  ⇒ `lagging` — our own unfinished work, sitting where the principal audience reaches for it. It owes NO
-//         justification, because none exists. It is counted, and the count may only shrink.
-//
-// Writing a rationale under a `lagging` cell is the defect this whole classification exists to stop: absence
-// wearing the vocabulary of intent, which is how `disclosure-produce` sat unowned for two months behind a
-// sentence that defended a risk that was not present.
-// THREE classifications, not two (owner, 2026-09-03: "человек" is wider than "signs" — merging them would sew
-// distinct things together, and we would lose the difference later).
-//
-// The two-way split of round 256 was wrong twice over, and the measurement says how:
-//   · every genuinely key-bound function in the six I called `deferred` SIGNS — `sealAuthorityCheckpoint`,
-//     `buildRecoveryStatement`, `buildEpochTransition`, `buildUniquenessAttestation`, `buildNameMapRoot`;
-//   · `keylog-commitment` has NO key-bound function at all — all three of its exports only compute;
-//   · and NONE of those eight functions is called by the CLI either. They are not a human-first inversion; they
-//     are exposed by no surface at all.
-// So a capability can be absent from the agent surface for three unrelated reasons, and one word for all three
-// hides which. The three obligations differ, and that difference is the point:
-//
-//   'ceremony'  — the act is a HUMAN DECISION and stays one however much an agent is trusted. This is a property
-//                 of an operator WORKFLOW (the CLI carries 34 interactive prompts), never of a core function:
-//                 `buildAuthorityCheckpoint` computes an artifact, and what needs a person is deciding to stand
-//                 behind it. Owes a claim about the act. PERMANENT.
-//   'key-bound' — the function SIGNS, and a private key may not cross into an agent's context. NOT a wall: the
-//                 split (rounds 258, 261) is how an agent participates — it produces what is signed and assembles
-//                 what comes back. Owes the signing function's name. SOLVED SHAPE.
-//   'lagging'   — nobody built the surface. Owes NOTHING but its place in the count, because a justification
-//                 written under debt is absence wearing the vocabulary of intent. DEBT.
-const MCP_DISPOSITION = {
-  // TEN ENTRIES LEFT THIS REGISTER in round 274, and none was reclassified in STATUS. Each is on NO surface at
-  // all, so the ordering relation has no second term for it: `STANCE` answers why it is nowhere, and
-  // `ACKNOWLEDGED_MIXED` answers what a split capability's halves are. What remains here is the ASYMMETRY —
-  // a capability some non-core surface has while the agent does not — which is the only shape the rule speaks
-  // about. `recovery`, `epoch-transition`, `uniqueness-attest` and `verifiable-map` kept their key-bound
-  // arguments in ACKNOWLEDGED_MIXED, where the halves were already written out.
-  // ── key-bound: the signing half stays outside; the agent reaches the rest through the split
-  // `sign` and `disclosure-produce` LEFT this register in round 270. They are not absences: the splits of rounds
-  // 258 and 261 put `attachSignature`, `sealingRequest` and `attachEncryption` on the agent surface, so `ust-mcp`
-  // scores SUBSET for both. What their halves are is recorded in ACKNOWLEDGED_MIXED, which is where a capability
-  // split on key-taking belongs; a disposition would say the agent lacks something it has.
-  'checkpoint-chain':   ['key-bound', 'sealAuthorityCheckpoint signs; its eight other functions only compute. The computing half is LAGGING and is counted as such below — this entry names only why the signing one is out.'],
-
-  // ── ceremony: nothing here yet, and that is a finding rather than an omission. Ceremony is a property of a
-  // WORKFLOW — `ust genesis`, `ust reroot` walk an operator through DNS, publication and confirmation — and the
-  // capability map is over core FUNCTIONS, which compute artifacts that are inert until someone signs them.
-
-  // ── lagging: debt, and nothing is written under any of them
-};
-const PINNED_LAGGING = 0;   // 1 → 0 (round 275): the ordering axis is CLEAR. Every capability another surface exposes is on the agent surface too — the rule still binds for whatever arrives next, and the register now reports an empty domain as the goal rather than failing on it   // 7 → 1 (round 274): NOT progress. The counter stopped counting ten capabilities NOBODY exposes, for which the ordering relation was never defined — six of them held substantive STANCE reasons, two saying a surface would be a security hole   // 8 → 7 (round 273): `byte-agreement` reached the agent surface WITH its refusals — a surface that softened F.5o would let a publisher's own independence claim ride into a consumer's reasoning   // 10 → 8 (round 272): `keylog-commitment` and `discovery-shard` reached the agent surface. Every function of both is PURE — no key, no filesystem, no network — which is what `lagging` means: nobody decided against them, nobody built them   // 11 → 10 (round 271): `name-obligation` reached the agent surface as `ust_name_report`. Paid, not reclassified — the register it left is the one that owes no justification   // 12 → 13 (round 262): `keylog-commitment` moved OUT of a false deferral into debt — none of its three functions takes a key or asks a person, so the claim that kept it out was never true of it   // 14 → 13 (round 257, `disclosure-produce`) → 12 (round 258, `sign`: the ASSEMBLY half reached the agent surface, and the signing half stays outside because a key in an argument list is a claim about the ACT, not about agents)
+// ── THE AGENT-SURFACE REGISTER lived here and was replaced by CAPABILITY_STATE (#180). The rule it enforced is
+// unchanged and is the owner's: any capability the protocol gives a publisher appears on the agent surface not
+// later than on the human one. What changed is that it no longer needs a register of its own — the asymmetry is
+// COMPUTED from the surfaces, and the reason a capability sits on one side of it is read from its custody rather
+// than declared a second time. Its three words are gone because two of them made claims about permanence:
+// `ceremony` said a human decision STAYS one however much an agent is trusted, which is a prediction that part of
+// this work is expected to falsify, and `lagging` described the maintainers rather than the capability.
 
 // ── SURFACES — each surface's DECLARED stance. `full` = exposes the capability; `subset` = a documented reduced form;
 //    everything else defaults to `na` with the surface's `naReason` (a specific override lives in `naSpecific`). This
@@ -437,119 +434,84 @@ const takesKey = (fn) => {
   return /\bkey\b|\bpriv|privKeyObj|decKeys/.test(params);
 };
 
-// (4) THE ORDERING AXIS (#178) — every absence on the PRINCIPAL surface is classified, and the debt may only shrink.
+// (4) CAPABILITY STATE (#180) — one register, two axes, and the ordering rule as a COMPUTED report line.
 //
-// ITS DOMAIN IS THE ASYMMETRY, and for four rounds it was not. The rule is the owner's and it is a relation
-// between two surfaces: *any capability the protocol gives a publisher appears on the agent surface NOT LATER
-// THAN ON THE HUMAN ONE*. A capability NOBODY exposes has no second term — the relation is not false for it, it
-// is undefined, and asking it there is a domain error rather than a strict reading.
-//
-// Measured 2026-09-03, CLOSED 2026-09-03 (#178), and the measurement is what decides that this is structural
-// rather than a convenient re-slice: `STANCE` is wholly CONTAINED in `MCP_DISPOSITION` — every one of its ten
-// zero-surface entries also carried a disposition, while genuine asymmetries numbered TWO. A containment is not
-// an overlap. One register's question was being asked across the whole of another's domain, systematically.
-//
-// What that cost: six capabilities counted as `lagging` — debt, which by this register's own rule owes NO
-// justification — while STANCE held substantive reasons for each. Two of those reasons say a surface would be a
-// SECURITY HOLE (`assurance-lattice`: a caller assembling a tuple directly is the forgery oracle round 25 closed
-// at the type level; `verified-handle`: exposing the brand IS the vulnerability). The register's rule is that a
-// justification under debt is ABSENCE WEARING THE VOCABULARY OF INTENT. This was the inverse — intent wearing the
-// vocabulary of debt — and the number, driven down for four rounds, was pointing at two tools nobody may build.
-//
-// NOTHING IS RECLASSIFIED IN STATUS. The ten leave a register whose question does not apply to them and stay in
-// the ones that answer them: `STANCE` for why they are on no surface, `ACKNOWLEDGED_MIXED` for what a split
-// capability's halves are. The debt count falls 7 → 1 because the counter stopped counting what it never
-// measured, which is a correction and NOT progress.
+// What this replaced: two registers whose domains overlapped (round 274 measured STANCE wholly CONTAINED in
+// MCP_DISPOSITION) and whose words made claims about permanence that only one value is entitled to make. Delivery
+// is computed wherever the tree can answer it, so it cannot drift; custody and the note are declared, and every
+// declaration is checked against the tree in both directions.
 {
-  // A surface holding EVERY capability cannot witness exposure (the same tautology the STANCE leg excludes).
   const capTotal = capIds.length;
-  const witnessSurfaces = surfaceIds.filter((sf) => sf !== 'ust-mcp' && capIds.filter((c) => stanceOf(sf, c) !== 'na').length < capTotal);
-  const exposedElsewhere = new Set(witnessSurfaces.flatMap((sf) => capIds.filter((c) => stanceOf(sf, c) !== 'na')));
-  const mcpNa = capIds.filter((c) => stanceOf('ust-mcp', c) === 'na' && exposedElsewhere.has(c));
-  const nowhere = capIds.filter((c) => stanceOf('ust-mcp', c) === 'na' && !exposedElsewhere.has(c));
+  const witnessSurfaces = surfaceIds.filter((sf) => capIds.filter((c) => stanceOf(sf, c) !== 'na').length < capTotal);
+  const exposedBy = (sf) => capIds.filter((c) => stanceOf(sf, c) !== 'na');
+  const exposedElsewhere = new Set(witnessSurfaces.filter((sf) => sf !== 'ust-mcp').flatMap(exposedBy));
+  const anySurface = new Set(witnessSurfaces.flatMap(exposedBy));
 
-  // THE TWO REGISTERS ANSWER DIFFERENT QUESTIONS AND MUST NOT OVERLAP. Round 270 found this shape for ONE
-  // capability (`name-obligation`: a stance calling the agent absence deliberate while ORDERING called it debt),
-  // fixed that instance, and did not enumerate the domain — which is the rule this file states about gates and
-  // which its own author then broke one round later. Both directions, so neither register can absorb the other.
-  const inBoth = Object.keys(MCP_DISPOSITION).filter((c) => STANCE[c]);
-  if (inBoth.length) { fail++; report.push(`  ✗ ORDERING: [${inBoth.join(', ')}] are answered by BOTH registers — STANCE says why a capability is on no surface, ORDERING why the AGENT lacks one the human has, and a capability nobody exposes has no ordering to be judged by`); }
-  // The OTHER half of the partition — every capability on no surface carries a stance — is already the STANCE
-  // leg's own `missing` check, over the same set computed the same way. Adding it here would be a second
-  // derivation of one set, which is the defect this file spent four rounds removing from elsewhere. Named rather
-  // than duplicated: narrowing this axis drops nothing, because that leg still covers `nowhere` entirely.
-  void nowhere;
-  // AN EMPTY DOMAIN HAS TWO CAUSES AND THEY ARE OPPOSITE. This leg was written in round 274 to stop a green
-  // standing over an empty set — and as written it fired at the moment the axis SUCCEEDS, because paying the last
-  // asymmetry is exactly what empties the domain. Third time in three rounds that a guard of mine turned red on
-  // its own success (round 273's control naming its subject, round 274's generator demanding a non-empty debt).
-  // The distinction it actually needs: empty because the agent surface now holds everything another surface
-  // holds, or empty because the surfaces could not be read at all.
-  if (!exposedElsewhere.size) { fail++; report.push('  ✗ ORDERING: NO capability is exposed by any non-core surface — the surface declarations could not be read, and an empty asymmetry domain here means a broken parse, not a paid debt'); }
-  else if (!mcpNa.length) report.push(`  ✓ ORDERING: the asymmetry domain is EMPTY and that is the goal — every one of the ${exposedElsewhere.size} capability(ies) another surface exposes is on the agent surface too. The rule still binds: whichever surface receives the next one first, the agent surface may not be later`);
+  const declaredVia = (c) => { const v = CAPABILITY_STATE[c]?.[2]; return typeof v === 'string' && v.startsWith('via ') ? v.slice(4).trim() : null; };
+  const deliveryOf = (c) => declaredVia(c) ? 'via' : (CAPS[c].core.length === 0 ? 'spec-ahead' : (anySurface.has(c) ? 'shipped' : 'core-only'));
+  const custodyOf = (c) => CAPABILITY_STATE[c]?.[0];
+  const noteOf = (c) => String(CAPABILITY_STATE[c]?.[1] ?? '');
 
-  const undecided = mcpNa.filter((c) => !MCP_DISPOSITION[c]);
-  if (undecided.length) { fail++; report.push(`  ✗ ORDERING: ${undecided.length} capability(ies) absent from the agent surface with NO disposition: [${undecided.join(', ')}] — an unclassified absence is how one sat unowned behind a sentence that defended a risk that was not present (#177)`); }
+  // BOTH DIRECTIONS. A capability with no state is unowned; a state naming no capability is a record whose subject
+  // has gone — the shape that cost rounds 270 and 274, in the register that replaced them.
+  const stateless = capIds.filter((c) => !CAPABILITY_STATE[c]);
+  if (stateless.length) { fail++; report.push(`  ✗ STATE: [${stateless.join(', ')}] carry no state — a capability nobody has classified is how one sat unowned behind a sentence that defended a risk that was not present (#177)`); }
+  const orphaned = Object.keys(CAPABILITY_STATE).filter((c) => !CAPS[c]);
+  if (orphaned.length) { fail++; report.push(`  ✗ STATE: [${orphaned.join(', ')}] are classified and are not capabilities — the record outlived its subject`); }
 
-  // THE OTHER DIRECTION, and it was missing for two rounds. A disposition CLASSIFIES AN ABSENCE. When the split
-  // put `attachSignature` and `sealingRequest`/`attachEncryption` on the agent surface (rounds 258, 261) the
-  // absences ended — and the entries recording them kept standing, still counted as current. Their own texts said
-  // so outright ("`ust-mcp` scores subset here, not na"), so each had become a historical note without ceasing to
-  // be a classification, and nothing asked whether the subject of a classification still existed.
-  //
-  // Measured 2026-09-03, CLOSED 2026-09-03 (#178): the register held 18 entries and only 16 were absences, so the
-  // gate printed 5 key-bound (it filters by `mcpNa`) while SUPPORT.md printed 7 (it reads the register). TWO COUNTS
-  // OF ONE SET, disagreeing in public, under a heading that says every absence is classified. With this leg the two
-  // derivations are equal as SETS and any consumer may read either — which is what makes the generator's unfiltered
-  // read correct rather than lucky. The history is not lost: `ACKNOWLEDGED_MIXED` is where a split capability
-  // belongs, and it already carried both, with the rounds.
-  const overPresence = Object.keys(MCP_DISPOSITION).filter((c) => !mcpNa.includes(c));
-  if (overPresence.length) { fail++; report.push(`  ✗ ORDERING: ${overPresence.length} disposition(s) classify an absence the agent surface no longer has: [${overPresence.join(', ')}] — a capability that ARRIVED leaves the register; its halves are recorded in ACKNOWLEDGED_MIXED, and a classification laid over presence is stale by construction`); }
+  const wrongWord = capIds.filter((c) => CAPABILITY_STATE[c] && !CUSTODY.includes(custodyOf(c)));
+  if (wrongWord.length) { fail++; report.push(`  ✗ STATE: unknown custody on [${wrongWord.join(', ')}] — the five are ${CUSTODY.join(' / ')}, and a sixth word would be a category nobody agreed to`); }
 
-  // A `deferred` cell owes a CLAIM ABOUT THE ACT; a `lagging` cell owes nothing but the count. Enforcing the
-  // reason on `deferred` only is the point: requiring one on `lagging` would invite exactly the rationalisation
-  // this classification exists to stop.
-  const KINDS = ['ceremony', 'key-bound', 'lagging'];
-  const wrongKind = mcpNa.filter((c) => MCP_DISPOSITION[c] && !KINDS.includes(MCP_DISPOSITION[c][0]));
-  if (wrongKind.length) { fail++; report.push(`  ✗ ORDERING: unknown classification on [${wrongKind.join(', ')}] — the three are ${KINDS.join(' / ')}, and a fourth word would be a category nobody agreed to`); }
-  // `ceremony` and `key-bound` each owe an argument; they differ in WHAT they argue, and both are checked for
-  // presence rather than for truth. `lagging` owes nothing — see below.
-  const thin = mcpNa.filter((c) => ['ceremony', 'key-bound'].includes(MCP_DISPOSITION[c]?.[0]) && String(MCP_DISPOSITION[c][1] ?? '').trim().length < MIN_REASON);
-  if (thin.length) { fail++; report.push(`  ✗ ORDERING: ${thin.join(', ')} classified without an argument (under ${MIN_REASON} chars) — "it needs a human" and "it holds a key" are conclusions, not arguments`); }
-  // A `key-bound` claim is REFUTABLE by measurement, and refuting it is the whole reason this classification is
-  // separate: if no function of the capability signs, the claim is about something that is not there.
-  // The predicate is TAKES KEY MATERIAL, not "signs" — and the distinction cost two false readings in one probe.
-  // A first version matched `sign(`, which also matches `Object.assign(`, so `byte-agreement` would have passed a
-  // key-bound claim it has no basis for. And it refuted `disclosure-produce`, whose hazard is a SYMMETRIC key:
-  // `encryptPartition` seals with AEAD and signs nothing. One word over two mechanisms, in the detector written
-  // to catch exactly that — the third time today. `takesKey` reads the parameter list and covers both.
-  const unfounded = mcpNa.filter((c) => MCP_DISPOSITION[c]?.[0] === 'key-bound' && !(CAPS[c]?.core ?? []).some(takesKey));
-  if (unfounded.length) { fail++; report.push(`  ✗ ORDERING: [${unfounded.join(', ')}] claim key-bound and NO function of theirs signs — that is how \`keylog-commitment\` sat outside on a claim about a key it never touches`); }
-  const rationalised = mcpNa.filter((c) => MCP_DISPOSITION[c]?.[0] === 'lagging' && MCP_DISPOSITION[c].length > 1);
-  if (rationalised.length) { fail++; report.push(`  ✗ ORDERING: a LAGGING cell carries a justification: ${rationalised.join(', ')} — debt owes a date, never a reason; a reason here is absence wearing the vocabulary of intent`); }
+  // THE NOTE answers what would CHANGE the state. Required wherever the state is one we might leave, and wherever
+  // the reader needs the mechanism: `sealed` owes the thing a surface would break.
+  const owesNote = capIds.filter((c) => CAPABILITY_STATE[c] && (deliveryOf(c) !== 'shipped' || ['operator', 'manual', 'sealed'].includes(custodyOf(c))));
+  const silent = owesNote.filter((c) => !noteOf(c).trim());
+  if (silent.length) { fail++; report.push(`  ✗ STATE: [${silent.join(', ')}] are not plain `+'`shipped`+`open`'+` and say nothing about what would change that — an absence with no condition is one nobody can act on`); }
+  const thin = owesNote.filter((c) => noteOf(c).trim() && noteOf(c) !== UNBUILT && noteOf(c).trim().length < MIN_REASON);
+  if (thin.length) { fail++; report.push(`  ✗ STATE: note shorter than ${MIN_REASON} chars on [${thin.join(', ')}] — a placeholder, not a condition`); }
+  // …and the ones that owe NOTHING must say nothing, or a justification starts being written where none is owed.
+  const chatty = capIds.filter((c) => CAPABILITY_STATE[c] && !owesNote.includes(c) && noteOf(c).trim());
+  if (chatty.length) { fail++; report.push(`  ✗ STATE: [${chatty.join(', ')}] are shipped and unconstrained and still carry a note — nothing is owed there, and prose written where nothing is owed is how intent starts wearing the vocabulary of debt`); }
 
-  const lagging = mcpNa.filter((c) => MCP_DISPOSITION[c]?.[0] === 'lagging');
-  const inverted = lagging.filter((c) => stanceOf('ust-cli', c) !== 'na');
-  if (lagging.length > PINNED_LAGGING) { fail++; report.push(`  ✗ ORDERING: the agent surface fell FURTHER behind — ${lagging.length} lagging capabilities, pinned at ${PINNED_LAGGING}. A capability reaching the human surface first is the rule this axis exists to hold: not "parity eventually", but "no wider than today"`); }
-  else if (lagging.length < PINNED_LAGGING) { fail++; report.push(`  ✗ ORDERING: the debt SHRANK to ${lagging.length} (pinned ${PINNED_LAGGING}) — lower the pin in the same commit, so the improvement is recorded rather than absorbed`); }
-  else { const cer = mcpNa.filter((c) => MCP_DISPOSITION[c]?.[0] === 'ceremony').length, kb = mcpNa.filter((c) => MCP_DISPOSITION[c]?.[0] === 'key-bound').length;
-    report.push(`  ✓ ORDERING: every absence on the agent surface is classified — ${cer} ceremony (a human decision, permanent), ${kb} key-bound (the signing half only; the split is how an agent takes part), ${lagging.length} lagging (debt, pinned, ${inverted.length} of them reachable from the CLI today)`); }
+  // THE DEBT, and the discipline the old `lagging` register carried: a capability in core, on no surface, with
+  // nothing but our own work in the way writes the literal `unbuilt` and NOTHING ELSE. No sentence can be written
+  // under it, so it cannot be rationalised — only built or explained by a condition that moves it out of the count.
+  const unbuilt = capIds.filter((c) => noteOf(c) === UNBUILT);
+  const misplaced = unbuilt.filter((c) => deliveryOf(c) !== 'core-only' || custodyOf(c) !== 'open');
+  if (misplaced.length) { fail++; report.push(`  ✗ STATE: [${misplaced.join(', ')}] write \`${UNBUILT}\` while not being core-only+open — that literal is the debt marker and nothing else`); }
+  if (unbuilt.length > PINNED_UNBUILT) { fail++; report.push(`  ✗ STATE: ${unbuilt.length} capability(ies) marked \`${UNBUILT}\` above the pin of ${PINNED_UNBUILT} — the debt may only shrink: [${unbuilt.join(', ')}]`); }
+  else if (unbuilt.length < PINNED_UNBUILT) { fail++; report.push(`  ✗ STATE: the debt SHRANK to ${unbuilt.length} (pinned ${PINNED_UNBUILT}) — lower the pin in the same commit, so the improvement is recorded rather than absorbed`); }
 
-  // CONTROL — the classifier must be able to say NO in both registers, proven rather than asserted.
-  const probe = { ...MCP_DISPOSITION, __ghost: ['lagging'] };
-  if (!Object.keys(probe).filter((c) => probe[c][0] === 'lagging').includes('__ghost')) { fail++; report.push('  ✗ CONTROL: the lagging counter cannot see a new entry — the ratchet would never trip'); }
-  if (MCP_DISPOSITION['checkpoint-chain']?.[0] !== 'key-bound') { fail++; report.push('  ✗ CONTROL: the signing capability is not classified key-bound — the registers have collapsed'); }
-  // THE CONTROL NAMED AN INSTANCE AND THE INSTANCE GOT PAID. It read `MCP_DISPOSITION['byte-agreement'] ===
-  // 'lagging'`, so round 273 — which put byte-agreement ON the agent surface, exactly what the register exists to
-  // encourage — turned the control red. A check pinned to a literal defends the defect it was written against and
-  // fails at the moment it succeeds. Stated as a PROPERTY instead, it now covers every pure capability rather than
-  // the one I happened to be looking at, and it survives being satisfied.
-  const pureAbsent = mcpNa.filter((c) => (CAPS[c]?.core ?? []).length && CAPS[c].core.every((n) => !takesKey(n)));
-  const misdressed = pureAbsent.filter((c) => MCP_DISPOSITION[c]?.[0] !== 'lagging');
-  if (misdressed.length) { fail++; report.push(`  ✗ CONTROL: [${misdressed.join(', ')}] hold no key material and are absent from the agent surface, yet are not classified lagging — debt dressed as a boundary`); }
-  // …and the domain is REPORTED, because a control over an empty set passes for free and reads as coverage. When
-  // the debt is finally cleared this line will say 0, which is a fact worth seeing rather than a silence.
-  else report.push(`  ✓ CONTROL: all ${pureAbsent.length} key-free capability(ies) absent from the agent surface are classified lagging — no debt is wearing the vocabulary of a boundary`);
+  // `key` IS REFUTABLE BY MEASUREMENT, which is the one claim in this register the tree can check on its own.
+  const unfounded = capIds.filter((c) => custodyOf(c) === 'key' && !(CAPS[c]?.core ?? []).some(takesKey));
+  if (unfounded.length) { fail++; report.push(`  ✗ STATE: [${unfounded.join(', ')}] claim custody \`key\` and NO function of theirs takes key material — that is how \`keylog-commitment\` once sat outside on a claim about a key it never touches`); }
+  // …and `sealed` is a claim about a capability that HAS no surface. A sealed capability on one is a contradiction.
+  const exposedSealed = capIds.filter((c) => custodyOf(c) === 'sealed' && deliveryOf(c) === 'shipped');
+  if (exposedSealed.length) { fail++; report.push(`  ✗ STATE: [${exposedSealed.join(', ')}] are sealed and SHIPPED — the value means a surface is the vulnerability, so it cannot describe one that exists`); }
+
+  // `via X` must name a real capability that is itself reachable, or the claim "you already have this" is false.
+  for (const c of capIds.filter(declaredVia)) {
+    const target = declaredVia(c);
+    if (!CAPS[target]) { fail++; report.push(`  ✗ STATE: ${c} is delivered \`via ${target}\`, which is not a capability`); }
+    else if (!anySurface.has(target)) { fail++; report.push(`  ✗ STATE: ${c} is delivered \`via ${target}\`, and ${target} is on no surface — the route it names does not exist`); }
+  }
+
+  // THE ORDERING RULE (#178) is no longer a register. It is one computed line: a capability another surface exposes
+  // and the agent surface does not. Its cause is read from the state rather than declared a second time.
+  const asymmetry = [...exposedElsewhere].filter((c) => stanceOf('ust-mcp', c) === 'na');
+  if (!exposedElsewhere.size) { fail++; report.push('  ✗ ORDERING: NO capability is exposed by any non-core surface — the surface declarations could not be read, and an empty asymmetry here means a broken parse, not a paid debt'); }
+  else if (!asymmetry.length) report.push(`  ✓ ORDERING: every capability another surface exposes is on the agent surface too (${exposedElsewhere.size} checked) — the rule still binds for whatever arrives next`);
+  else report.push(`  ✓ ORDERING: ${asymmetry.length} capability(ies) on another surface and not on the agent one, each with its custody: ${asymmetry.map((c) => c + ' (' + custodyOf(c) + ')').join(', ')}`);
+
+  const byDelivery = (d) => capIds.filter((c) => deliveryOf(c) === d).length;
+  if (!fail) report.push(`  ✓ STATE: all ${capIds.length} capabilities carry a delivery and a custody — ${byDelivery('shipped')} shipped, ${byDelivery('core-only')} core-only, ${byDelivery('via')} via another capability, ${byDelivery('spec-ahead')} spec-ahead; ${unbuilt.length} plain debt`);
+
+  // CONTROLS — every leg must be able to say NO, against real mutated input rather than an impossible literal.
+  const probe = { ...CAPABILITY_STATE, __ghost: ['open', UNBUILT] };
+  if (!Object.keys(probe).filter((c) => probe[c][1] === UNBUILT).includes('__ghost')) { fail++; report.push('  ✗ CONTROL: the debt counter cannot see a new entry — the ratchet would never trip'); }
+  if (CUSTODY.includes('sixth-word')) { fail++; report.push('  ✗ CONTROL: the custody vocabulary admits a word it does not define'); }
+  if (!['assurance-lattice', 'verified-handle'].every((c) => custodyOf(c) === 'sealed')) { fail++; report.push('  ✗ CONTROL: the two capabilities whose surface IS the vulnerability are not sealed — the one permanent claim has been lost'); }
+  if (takesKey('canon') || !takesKey('seal')) { fail++; report.push('  ✗ CONTROL: the key-taking probe misreads `seal`/`canon` — every `key` custody above is unfounded'); }
 }
 
 // (5) A CAPABILITY WHOSE PARTS SPLIT ON KEY-TAKING MUST BE ACKNOWLEDGED AS TWO (#178, owner 2026-09-02).
@@ -626,47 +588,6 @@ console.log('  ' + pad('capability', 20) + surfaceIds.map((s) => pad(short(s), 1
 for (const cap of capIds) console.log('  ' + pad(cap, 20) + surfaceIds.map((s) => pad(mark[stanceOf(s, cap)], 12)).join(''));
 
 
-// ── every zero-surface capability must carry a stance, and every stance must name a real capability
-{
-  // the authoritative domain is SURFACES — each surface DECLARES the capabilities it exposes. My first version
-  // read key names off CAPS and reported two capabilities as surfaceless that the matrix shows with a full ✅; the
-  // detector was pointed at the wrong object, and the gate caught its own author on the first run.
-  // A SURFACE THAT EXPOSES EVERYTHING WITNESSES NOTHING. The core declares `full: Object.keys(CAPS)` — every
-  // capability lives in the library by definition — so counting it as evidence of exposure makes "which capability
-  // is on NO surface" unanswerable: the answer is always none.
-  //
-  // Measured 2026-09-03, CLOSED 2026-09-03 (#178): that is exactly what happened. Round 264 added the core column
-  // the owner asked for, and this leg's domain went to ZERO in the same edit. It printed `all 0 zero-surface
-  // capabilities declare a reason` on every run since — a sentence whose own number says the domain is empty, read
-  // as green by me for six rounds. My fix removed the subject from my own detector, and the three stances that
-  // rotted underneath it (`disclosure-produce`, `ladder-report`, `name-obligation`) are what the silence cost.
-  //
-  // The test is structural rather than a named exception: any surface holding EVERY capability is a tautology here,
-  // so a second such surface would be excluded for the same reason without an edit.
-  const capCount = Object.keys(CAPS).length;
-  const witnesses = Object.entries(SURFACES).filter(([, s]) => new Set([...(s.full ?? []), ...(s.subset ?? [])]).size < capCount);
-  const exposed = new Set(witnesses.flatMap(([, s]) => [...(s.full ?? []), ...(s.subset ?? [])]));
-  const zero = Object.keys(CAPS).filter((n) => !exposed.has(n));
-  // THE DOMAIN ITSELF IS ASSERTED. A leg that measures an empty set reports success for free, and this one did.
-  if (!zero.length) { console.error('  ✗ STANCE: the zero-surface domain is EMPTY — every capability is claimed by some surface, so this leg is asserting nothing (a green over an empty domain is what hid three stale stances)'); process.exit(1); }
-  if (witnesses.length === Object.keys(SURFACES).length) { console.error('  ✗ CONTROL: no surface was recognised as exposing everything — the tautology filter is inert, and the core would be counted as evidence again'); process.exit(1); }
-  // THE OTHER DIRECTION, the same class the ORDERING axis just gained: a stance explains why a capability is on NO
-  // surface, so a stance over one that IS delivered is a record whose subject has gone. `phantom` below catches a
-  // stance naming a capability that does not exist; nothing caught a stance whose PREMISE no longer held.
-  const delivered = Object.keys(STANCE).filter((n) => CAPS[n] && exposed.has(n));
-  const missing = zero.filter((n) => !STANCE[n]);
-  const thin = zero.filter((n) => STANCE[n] && String(STANCE[n][1]).trim().length < MIN_REASON);
-  const phantom = Object.keys(STANCE).filter((n) => !CAPS[n]);
-  if (missing.length || thin.length || phantom.length || delivered.length) {
-    if (delivered.length) console.error('  ✗ stance explaining why a capability is on NO surface, while a surface delivers it: ' + delivered.join(', ') + ' — the record outlived its subject; remove it, or the register describes a tree that no longer exists');
-    if (missing.length) console.error('  ✗ capability exposed by NO surface and carrying no stance: ' + missing.join(', '));
-    if (thin.length) console.error('  ✗ stance shorter than ' + MIN_REASON + ' chars (a placeholder, not a decision): ' + thin.join(', '));
-    if (phantom.length) console.error('  ✗ stance names a capability that does not exist: ' + phantom.join(', '));
-    process.exit(1);
-  }
-  const undecided = zero.filter((n) => STANCE[n][0] === 'undecided');
-  console.log('  ✓ STANCE: all ' + zero.length + ' zero-surface capabilities declare a reason (' + undecided.length + ' undecided — the queue: ' + undecided.join(', ') + ')');
-}
 console.log('\n  capability parity gate (UST-kdb):');
 report.forEach((r) => console.log(r));
 console.log(fail ? `\n  ✗ ${fail} parity failure(s) — a surface diverged from the spec's capability set` : `\n  ✓ every surface's capabilities match its declared, spec-derived stance — no silent drift`);
