@@ -51,7 +51,7 @@ const STANCE = {
   // does not survive its own premise: `nameSetReport` takes DOCUMENTS, so an agent-side tool would accept an array
   // and touch no filesystem at all. It was an argument against a badly-shaped tool, read as an argument against the
   // capability — which is how it sat in the quiet register while the loud one called it debt.
-  'evidence-receipt':    ['undecided', 'the receipt is the paid signing axis in the product plan, so exposing it on a free surface is a COMMERCIAL decision and not mine to make. Queued for the owner.'],
+  'evidence-receipt':    ['undecided', 'the receipt is the paid signing axis in the product plan, so exposing it on a free surface is a COMMERCIAL decision rather than a protocol one. It is queued for a maintainer ruling, and no round may settle it in passing.'],
   'assurance-lattice':   ['decided',   'internal algebra: deriveAssurance/assuranceState/projectTier are how a verdict is COMPUTED. A surface that let a caller assemble a tuple directly would be the forgery oracle round-25 closed at the type level.'],
   'verified-handle':     ['decided',   'the branded-handle machinery is the mechanism that makes the above unforgeable. Exposing the brand IS the vulnerability; it can have no public surface by construction.'],
   'authority-bundle':    ['undecided', 'the #76/#77 authority-checkpoint family is built in core and reachable from no tool. It belongs to the TOP work (UST-48p) and should get its surface there, not before.'],

@@ -100,9 +100,9 @@ check(lineHeads.length >= 1, 'no `## … rc.N line` section found — versions h
   // AT MOST ONE UNPUBLISHED LINE. A version line is opened by a PUBLICATION — the header of every published one
   // says so ("Opened because rc.N is PUBLISHED and a published version is immutable") — and a round that lands
   // while the line is still open belongs in that line as another ROW. MEASURED 2026-07-31: three stacked
-  // `## rc.NN line — unpublished` headers, rc.49 / rc.50 / rc.51, each opened by a round and each carrying a
-  // sentence I wrote to justify opening it. The owner read them and said it had become a system. It had: this is
-  // the duplicate-rc.46 shape again — satisfying a surface by ADDING structure instead of using what is there.
+  // `## rc.NN line — unpublished` headers, rc.49 / rc.50 / rc.51, each opened by a round and each carrying its own
+  // justification for being opened. Review found the justifications had become a system in their own right, which
+  // is the duplicate-rc.46 shape again — satisfying a surface by ADDING structure instead of using what is there.
 //
 // CLOSED 2026-07-31 by `5239b28b` — types(rev69): the union I called untypeable, and the third stacked
 // unpublished line. In this tree a narration is written in the commit that fixes what it describes, and
