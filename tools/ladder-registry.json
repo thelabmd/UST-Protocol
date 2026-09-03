@@ -2422,6 +2422,20 @@
         "excluded": "A vector is a fixed input and a declared result a second implementation reproduces. No port has this repository's lockfile, so there is nothing here for one to reproduce."
       },
       "test": "tools/lockfile-record-gate.mjs :: the gate IS the executed artifact, and it carries its own controls — a stale version and an orphaned entry are each mutated in memory and the comparison must see them. Proven against the real historical state as well: 9 failures on the pre-fix lock, 0 after."
+    },
+    {
+      "round": 270,
+      "math": {
+        "excluded": "Which of our surfaces holds which capability, and which register records an absence, are inventory facts about one tree. No relation over documents changed and no port shares these registers."
+      },
+      "spec": {
+        "excluded": "The standard defines what a verifier decides, never which of an implementation's packages must offer what. A conforming port ships whatever surfaces it likes; this is our bookkeeping about ours."
+      },
+      "code": "tools/capability-parity.mjs :: ORDERING gains the reverse leg (a disposition over a capability the agent surface now has is stale by construction) and two entries leave the register; STANCE's zero-surface domain is restored by excluding any surface that holds EVERY capability as a tautology, the domain size is asserted so an empty set cannot read as green, a stance over a delivered capability fails, and three rotted stances are removed.",
+      "vector": {
+        "excluded": "A vector is a fixed input and a declared result a second implementation reproduces. These registers describe this repository's own surfaces; there is nothing here for a port to reproduce."
+      },
+      "test": "tools/capability-parity.mjs :: each new leg proven in BOTH directions against real mutated input — a synthetic disposition over `verify` must fail, a synthetic stance over `verify` must fail, and loosening the tautology filter must re-empty the domain and be caught by the size assertion."
     }
   ],
   "first_accounted_round": 76,

@@ -40,6 +40,17 @@ const mcpTools = new Set(MCP.listTools().map((t) => t.name));
 // 'undecided'— nobody has ruled. Written down as such rather than passing silently; this is the queue.
 const MIN_REASON = 50;
 const STANCE = {
+  // THREE STANCES LEFT THIS REGISTER in round 270, for the same reason two dispositions did: a stance explains why
+  // a capability is on NO surface, and all three had one. `disclosure-produce` reached `ust sign` (#177),
+  // `ladder-report` had been `ust explain` since round 137, `name-obligation` is `ust names`. Each had turned into
+  // a historical note without ceasing to be a record of an absence, and the leg below now refuses that.
+  //
+  // `name-obligation`'s text also argued the MCP absence was DELIBERATE — "handing an agent a filesystem sweep of
+  // arbitrary paths is a capability about the host" — while the ORDERING register classifies it `lagging`, which
+  // owes NO justification. Two registers, one absence, opposite answers, and nothing compared them. The argument
+  // does not survive its own premise: `nameSetReport` takes DOCUMENTS, so an agent-side tool would accept an array
+  // and touch no filesystem at all. It was an argument against a badly-shaped tool, read as an argument against the
+  // capability — which is how it sat in the quiet register while the loud one called it debt.
   'evidence-receipt':    ['undecided', 'the receipt is the paid signing axis in the product plan, so exposing it on a free surface is a COMMERCIAL decision and not mine to make. Queued for the owner.'],
   'assurance-lattice':   ['decided',   'internal algebra: deriveAssurance/assuranceState/projectTier are how a verdict is COMPUTED. A surface that let a caller assemble a tuple directly would be the forgery oracle round-25 closed at the type level.'],
   'verified-handle':     ['decided',   'the branded-handle machinery is the mechanism that makes the above unforgeable. Exposing the brand IS the vulnerability; it can have no public surface by construction.'],
@@ -48,11 +59,8 @@ const STANCE = {
   'epoch-transition':    ['undecided', 'same family as authority-bundle; same answer — it lands with TOP or not at all.'],
   'uniqueness-attest':   ['undecided', 'part of the checkpoint/uniqueness cluster. No tool consumes it yet, and inventing a surface before a consumer exists is how unused surface becomes permanent.'],
   'verifiable-map':      ['undecided', 'the anchored name-map is the independent path to authoritative. It has no operator today because no map substrate is registered; the surface should follow the substrate, not precede it.'],
-  'disclosure-produce': ['decided',   'REVISED 2026-09-02 (#177). The old blanket reason — "a publisher-side act on data the tool never holds" — covered TWO operations and was true of only one: a verifier never holds the pair, but a PUBLISHER holds exactly the data `encryptPartition` takes. `ust sign` owns the produce half on the CLI now; the core has owned it since round 243. Consumption is `verify` with `disclosures`/`decKeys` and is scored under `verify`, not here.'],
-  'ladder-report':       ['decided',   'the CORE lands before the surface deliberately (#137): the vectors pin what the report may and may not say — not-attempted distinguishable from met, a consumer faculty never attributed to the publisher — BEFORE a CLI shape fixes those answers by accident. The operator-facing surface is the remaining work of that issue, not an omission here.'],
   'negative-observation':['decided',   'a negative observation is built with the ordinary transcript builders and carries no distinct operation; it is a USAGE of build-transcript, not a capability needing its own surface.'],
   'commitment-windows':  ['decided',   'F.5q-c: the CORE lands before any surface, deliberately. Coverage and gaps are measurable in the commitment chain alone, and the vectors pin what that answer may and may not be — an empty chain answers `unknown` rather than `uncovered`, adjacent windows are not a gap — BEFORE a CLI shape fixes those answers by accident. The present-tense half (F.5q-d) needs a verifier-owned clock and is not built, so a surface now would expose half a question.'],
-  'name-obligation':     ['decided',   'F.5t-a: the obligation quantifies over an OPERATOR\'s published set while a verifier is a function of ONE document, so the surface has to be one an operator points at its own artifacts — a consumer-side check cannot establish it at any sample size. It lands on the CLI (`ust names`) and deliberately NOT on the MCP: handing an agent a filesystem sweep of arbitrary paths is a capability about the host, not about the protocol.'],
 };
 
 const CAPS = {
@@ -294,8 +302,10 @@ const cliProbe = tokenProbe('cli');
 //                 written under debt is absence wearing the vocabulary of intent. DEBT.
 const MCP_DISPOSITION = {
   // ── key-bound: the signing half stays outside; the agent reaches the rest through the split
-  'sign':               ['key-bound', 'seal signs. `attachSignature` — the assembly half — is on the agent surface as `ust_seal` (round 258).'],
-  'disclosure-produce': ['key-bound', 'encryptPartition seals. `sealingRequest` and `attachEncryption` — both key-free halves — are on the agent surface (round 261).'],
+  // `sign` and `disclosure-produce` LEFT this register in round 270. They are not absences: the splits of rounds
+  // 258 and 261 put `attachSignature`, `sealingRequest` and `attachEncryption` on the agent surface, so `ust-mcp`
+  // scores SUBSET for both. What their halves are is recorded in ACKNOWLEDGED_MIXED, which is where a capability
+  // split on key-taking belongs; a disposition would say the agent lacks something it has.
   'checkpoint-chain':   ['key-bound', 'sealAuthorityCheckpoint signs; its eight other functions only compute. The computing half is LAGGING and is counted as such below — this entry names only why the signing one is out.'],
   'recovery':           ['key-bound', 'buildRecoveryStatement signs. Its four reading functions are lagging.'],
   'epoch-transition':   ['key-bound', 'buildEpochTransition signs. Its three reading functions are lagging.'],
@@ -442,6 +452,21 @@ const takesKey = (fn) => {
   const undecided = mcpNa.filter((c) => !MCP_DISPOSITION[c]);
   if (undecided.length) { fail++; report.push(`  ✗ ORDERING: ${undecided.length} capability(ies) absent from the agent surface with NO disposition: [${undecided.join(', ')}] — an unclassified absence is how one sat unowned behind a sentence that defended a risk that was not present (#177)`); }
 
+  // THE OTHER DIRECTION, and it was missing for two rounds. A disposition CLASSIFIES AN ABSENCE. When the split
+  // put `attachSignature` and `sealingRequest`/`attachEncryption` on the agent surface (rounds 258, 261) the
+  // absences ended — and the entries recording them kept standing, still counted as current. Their own texts said
+  // so outright ("`ust-mcp` scores subset here, not na"), so each had become a historical note without ceasing to
+  // be a classification, and nothing asked whether the subject of a classification still existed.
+  //
+  // Measured 2026-09-03, CLOSED 2026-09-03 (#178): the register held 18 entries and only 16 were absences, so the
+  // gate printed 5 key-bound (it filters by `mcpNa`) while SUPPORT.md printed 7 (it reads the register). TWO COUNTS
+  // OF ONE SET, disagreeing in public, under a heading that says every absence is classified. With this leg the two
+  // derivations are equal as SETS and any consumer may read either — which is what makes the generator's unfiltered
+  // read correct rather than lucky. The history is not lost: `ACKNOWLEDGED_MIXED` is where a split capability
+  // belongs, and it already carried both, with the rounds.
+  const overPresence = Object.keys(MCP_DISPOSITION).filter((c) => !mcpNa.includes(c));
+  if (overPresence.length) { fail++; report.push(`  ✗ ORDERING: ${overPresence.length} disposition(s) classify an absence the agent surface no longer has: [${overPresence.join(', ')}] — a capability that ARRIVED leaves the register; its halves are recorded in ACKNOWLEDGED_MIXED, and a classification laid over presence is stale by construction`); }
+
   // A `deferred` cell owes a CLAIM ABOUT THE ACT; a `lagging` cell owes nothing but the count. Enforcing the
   // reason on `deferred` only is the point: requiring one on `lagging` would invite exactly the rationalisation
   // this classification exists to stop.
@@ -557,12 +582,34 @@ for (const cap of capIds) console.log('  ' + pad(cap, 20) + surfaceIds.map((s) =
   // the authoritative domain is SURFACES — each surface DECLARES the capabilities it exposes. My first version
   // read key names off CAPS and reported two capabilities as surfaceless that the matrix shows with a full ✅; the
   // detector was pointed at the wrong object, and the gate caught its own author on the first run.
-  const exposed = new Set(Object.values(SURFACES).flatMap((s) => [...(s.full ?? []), ...(s.subset ?? [])]));
+  // A SURFACE THAT EXPOSES EVERYTHING WITNESSES NOTHING. The core declares `full: Object.keys(CAPS)` — every
+  // capability lives in the library by definition — so counting it as evidence of exposure makes "which capability
+  // is on NO surface" unanswerable: the answer is always none.
+  //
+  // Measured 2026-09-03, CLOSED 2026-09-03 (#178): that is exactly what happened. Round 264 added the core column
+  // the owner asked for, and this leg's domain went to ZERO in the same edit. It printed `all 0 zero-surface
+  // capabilities declare a reason` on every run since — a sentence whose own number says the domain is empty, read
+  // as green by me for six rounds. My fix removed the subject from my own detector, and the three stances that
+  // rotted underneath it (`disclosure-produce`, `ladder-report`, `name-obligation`) are what the silence cost.
+  //
+  // The test is structural rather than a named exception: any surface holding EVERY capability is a tautology here,
+  // so a second such surface would be excluded for the same reason without an edit.
+  const capCount = Object.keys(CAPS).length;
+  const witnesses = Object.entries(SURFACES).filter(([, s]) => new Set([...(s.full ?? []), ...(s.subset ?? [])]).size < capCount);
+  const exposed = new Set(witnesses.flatMap(([, s]) => [...(s.full ?? []), ...(s.subset ?? [])]));
   const zero = Object.keys(CAPS).filter((n) => !exposed.has(n));
+  // THE DOMAIN ITSELF IS ASSERTED. A leg that measures an empty set reports success for free, and this one did.
+  if (!zero.length) { console.error('  ✗ STANCE: the zero-surface domain is EMPTY — every capability is claimed by some surface, so this leg is asserting nothing (a green over an empty domain is what hid three stale stances)'); process.exit(1); }
+  if (witnesses.length === Object.keys(SURFACES).length) { console.error('  ✗ CONTROL: no surface was recognised as exposing everything — the tautology filter is inert, and the core would be counted as evidence again'); process.exit(1); }
+  // THE OTHER DIRECTION, the same class the ORDERING axis just gained: a stance explains why a capability is on NO
+  // surface, so a stance over one that IS delivered is a record whose subject has gone. `phantom` below catches a
+  // stance naming a capability that does not exist; nothing caught a stance whose PREMISE no longer held.
+  const delivered = Object.keys(STANCE).filter((n) => CAPS[n] && exposed.has(n));
   const missing = zero.filter((n) => !STANCE[n]);
   const thin = zero.filter((n) => STANCE[n] && String(STANCE[n][1]).trim().length < MIN_REASON);
   const phantom = Object.keys(STANCE).filter((n) => !CAPS[n]);
-  if (missing.length || thin.length || phantom.length) {
+  if (missing.length || thin.length || phantom.length || delivered.length) {
+    if (delivered.length) console.error('  ✗ stance explaining why a capability is on NO surface, while a surface delivers it: ' + delivered.join(', ') + ' — the record outlived its subject; remove it, or the register describes a tree that no longer exists');
     if (missing.length) console.error('  ✗ capability exposed by NO surface and carrying no stance: ' + missing.join(', '));
     if (thin.length) console.error('  ✗ stance shorter than ' + MIN_REASON + ' chars (a placeholder, not a decision): ' + thin.join(', '));
     if (phantom.length) console.error('  ✗ stance names a capability that does not exist: ' + phantom.join(', '));

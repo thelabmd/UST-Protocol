@@ -824,6 +824,10 @@
     {
       "round": 269,
       "no_recap": "Round 269 closes no issue. It adds the gate for a record defect found while answering a dependency alert on #179's push; #179 itself remains open for review."
+    },
+    {
+      "round": 270,
+      "no_recap": "Round 270 closes no issue. It repairs two registers and the leg that was supposed to watch one of them; #178's debt is unchanged at 11."
     }
   ]
 }

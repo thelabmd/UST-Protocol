@@ -97,13 +97,11 @@ compute artifacts that are inert until someone signs them. `buildAuthorityCheckp
 person is deciding to stand behind the result. The category is real and permanent; it does not apply at this
 granularity, and an entry appearing here would mean the map had grown to cover workflows.
 
-**Key-bound — the key does not cross into an agent's context** (7). The function holding key material stays
+**Key-bound — the key does not cross into an agent's context** (5). The function holding key material stays
 outside; this is not a wall, because the agent produces what is signed and assembles what comes back, and every
 key-free half is on its surface. A claim here is refutable by measurement: if no function of the capability takes
 key material, the gate refuses the classification.
 
-- `sign`
-- `disclosure-produce`
 - `checkpoint-chain`
 - `recovery`
 - `epoch-transition`
