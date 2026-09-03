@@ -173,6 +173,19 @@ const mkCf = ({ existing, dohConfirms, genHash }) => {
   const full = await C.attestDiscovery({ domain: DOMAIN, mirrors: ['https://mirror.example/g'], fetchImpl: mkPub({ txtHash: g.genHash, mirrorBytes: bytes }) });
   check('discovery_full_attests', full.verdict === 'ATTESTED' && full.hash === g.genHash);
 
+  // A shard §20.1 does not reach: the answer must come from the PROTOCOL's predicate, before any fetch, and it
+  // must say discovery is not the route rather than that the serving is broken. The network is a throwing stub
+  // here on purpose — reaching it at all would mean the guard ran too late to be the guard.
+  const boom = async () => { throw new Error('the network was touched for a shard discovery refuses'); };
+  for (const [what, shard] of [['key-form', 'sha256:' + 'ab'.repeat(32)], ['loopback', 'localhost'], ['IP literal', '127.0.0.1'], ['private TLD', 'box.internal']]) {
+    const r = await C.attestDiscovery({ domain: shard, fetchImpl: boom });
+    check('discovery_refuses_' + what.replace(/\W+/g, '_'), r.verdict === 'FAILED' && r.hash === null
+      && r.checks.length === 1 && r.checks[0].id.startsWith('shard is a public DNS name')
+      && /not a public DNS name/.test(r.checks[0].detail));
+  }
+  // …and the same guard must not refuse the name it exists to admit, or every case above passes by refusing all.
+  check('discovery_admits_a_public_name', (await C.attestDiscovery({ domain: DOMAIN, mirrors: ['https://mirror.example/g'], fetchImpl: mkPub({ txtHash: g.genHash, mirrorBytes: bytes }) })).verdict === 'ATTESTED');
+
   // query-bust: bytes vary with an unknown ?param ⇒ FAILED (the §20.1 property is a real gate)
   const bust = await C.attestDiscovery({ domain: DOMAIN, fetchImpl: mkPub({ txtHash: g.genHash, busted: true }) });
   check('discovery_query_bust_fails', bust.verdict === 'FAILED' && bust.checks.some((c) => c.id.startsWith('query-robustness') && c.status === 'fail'));

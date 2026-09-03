@@ -2386,6 +2386,20 @@
         "excluded": "A vector is a fixed input and a declared RESULT a port reproduces. `explainLadder`'s behaviour is already pinned by the `ladder` vectors; what changed is which of our surfaces calls it, which is not a claim a port could reproduce."
       },
       "test": "packages/ust-mcp/live-test.mjs :: over the real transport — `ust_explain` returns a ladder rather than a verdict, and names what was not supplied, which is the distinction an agent would otherwise have to guess."
+    },
+    {
+      "round": 267,
+      "math": {
+        "excluded": "Which of our commands performs which capability is an inventory fact about this tree, not a relation over documents. The scope rule it enforces is §20.1's own and predates this round."
+      },
+      "spec": {
+        "excluded": "§20.1 ALREADY states that the serving contract applies to dns-name shards only, and §4.3a says a key-form identity has no name to discover under. Nothing was added upstream — the defect was that no executor applied a rule the spec had stated, so the round is realization, not amendment."
+      },
+      "code": "packages/ust-cli/index.mjs :: `attestDiscovery` answers §20.1 applicability with `P.isPublicDnsShard` before any fetch, distinguishing 'discovery is not the route to you' from 'your serving is broken'; tools/capability-parity.mjs :: a `cmd:`/`tool:` token must be EXERCISED — the surface calls a core export of the capability — read from code with comments stripped.",
+      "vector": {
+        "excluded": "A vector pins wire behaviour a second implementation must reproduce. A discovery-attestation command is not wire behaviour: a conforming port need not ship one, so there is nothing here for a port to reproduce."
+      },
+      "test": "packages/ust-cli/regression.mjs :: four shard forms §20.1 does not reach (key-form, loopback, IP literal, private TLD) are refused with the protocol's own reason and a THROWING network stub, so touching the network at all fails the test; plus the admit case, or every refusal passes by refusing everything. tools/capability-parity.mjs :: the exercise probe is controlled in both directions, and the code view is fed real comment text rather than asserted against an impossible literal."
     }
   ],
   "first_accounted_round": 76,

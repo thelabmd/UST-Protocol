@@ -211,9 +211,44 @@ const resolves = (tok) => {
   if (what === 'arg') { const [tool, prop] = String(rest).split('.'); return !!MCP_TOOL_ARGS.get(tool)?.has(prop); }
   return false;                                                    // an unrecognised form is NOT a pass
 };
+// round-267 — A TOKEN NAMED THE RIGHT SURFACE AND THE WRONG CAPABILITY, and `resolves` cannot see the difference.
+//
+// Measured 2026-09-03 (#178) — CLOSED 2026-09-03 by `exercises` below. `discovery-shard` declared `cmd:discovery`. The token
+// RESOLVES: `ust discovery` is a real command in the dispatch table. The command never called `isPublicDnsShard`,
+// the one export the capability is made of — it built `https://${domain}/…` from argv and fetched. So the grid
+// reported the capability present on the CLI for two months on the strength of a command that does not perform it.
+//
+// Why that is worse than an ordinary miscount: the ORDERING axis (#178) measures the human/agent inversion THROUGH
+// these tokens. A token that resolves while doing nothing is FALSE PRESENCE on the human side, and a real inversion
+// then reads as a two-sided absence — the quietest cell on the grid, the one nobody audits. Round 266 found exactly
+// that shape hiding `ladder-report` for 129 rounds. One idle token can manufacture it.
+//
+// THE RULE IS PER TOKEN KIND, and the distinction is not decoration:
+//   cmd: / tool:  the surface PERFORMS the capability ⇒ it must CALL one of the capability's core exports.
+//   flag: / arg:  the surface FEEDS the capability into another core call ⇒ the value is consumed inside the core
+//                 and no direct call exists or should. `--trust-root` reaches `quorumTrustDomains` through
+//                 `P.verify`; demanding a direct call here would be demanding the surface duplicate the core.
+//   api:          the export IS the surface.
+//
+// That split was MEASURED, not assumed, and it is the correction of my own first probe: requiring a direct call of
+// every kind flagged SIX declarations, and five were my harness being wrong — `no-fork-evidence`, `consumer-trust-root`
+// and `anchor-verify` all forward their flag into `P.resolveAuthority`/`P.verify` opts, which is the honest shape for
+// a consumer faculty. Reading only the first result would have "fixed" three correct declarations.
+//
+// Domain, not sample: all 25 cmd/tool declarations across both surfaces are checked, and exactly one was idle.
+// The probe reads CODE, never prose. Without this it would repeat the defect it exists to catch one level up: a
+// file that DISCUSSES `P.isPublicDnsShard` in a comment would certify the command as performing it, which is the
+// mention-for-use substitution that made `cliSrc.includes(tok)` wrong in round 246. Full-line and block comments
+// are dropped; a trailing `//` is left alone because a line's code precedes it.
+const codeOf = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n');
+const CODE = { cli: codeOf(cliSrc), mcp: codeOf(mcpSrc) };
+const exercisesCore = (which, core) => core.some((fn) => new RegExp('P\\.' + fn + '\\b').test(CODE[which]));
+const exercises = (which) => (cap) => exercisesCore(which, CAPS[cap].core);
 const tokenProbe = (which) => (cap, stance) => {
   const toks = [].concat(CAPS[cap][which] ?? []);
   if (!toks.length) return false;
+  const acts = toks.filter((t) => t.startsWith('cmd:') || t.startsWith('tool:'));
+  if (acts.length && !exercises(which)(cap)) return false;          // the surface names the act and does not perform it
   return stance === 'full' ? toks.every(resolves) : toks.some(resolves);
 };
 const mcpProbe = tokenProbe('mcp');
@@ -362,7 +397,15 @@ else report.push(`  ✓ PHANTOM: every core name in CAPS resolves to a real ust-
   // …and it must still say YES to each real form, or every cell above passes for a different wrong reason.
   const real = ['cmd:verify', 'flag:genesis', 'api:buildCeremony', 'tool:ust_verify', 'arg:ust_verify.disclosures'];
   for (const tok of real) if (!resolves(tok)) { fail++; report.push(`  ✗ CONTROL: the token probe rejected ${tok}, which IS present — the surfaces were parsed wrong`); }
-  if (!fail) report.push(`  ✓ CONTROL: the probe resolves each surface form and refuses ${ghost.length} tokens that name nothing — including the two bare substrings that produced the false declarations`);
+  // …and the EXERCISE half, which is the round-267 addition: a command that names an act it does not perform must
+  // be refused, and prose must not stand in for the act. Both directions, because a detector that can only say yes
+  // is what let `cmd:discovery` certify a capability the command never called.
+  if (exercisesCore('cli', ['thisCoreExportCannotExist'])) { fail++; report.push('  ✗ CONTROL: the exercise probe accepted a core name that does not exist — an idle declaration would pass'); }
+  if (exercisesCore('cli', ['keyId']) === false) { fail++; report.push('  ✗ CONTROL: the exercise probe missed a call the CLI plainly makes — the source was parsed wrong'); }
+  // Fed a REAL input rather than asserted against an impossible literal, which would pass for free (vacuity).
+  if (/P\.x\b/.test(codeOf('// P.x is discussed here\n/* and P.x here */\nconst y = 1;'))) { fail++; report.push('  ✗ CONTROL: comment text survives into the code view — prose about a call would certify the act'); }
+  if (!/P\.x\b/.test(codeOf('const z = P.x(1);   // trailing prose'))) { fail++; report.push('  ✗ CONTROL: the code view dropped a real call — every exercise verdict below is unfounded'); }
+  if (!fail) report.push(`  ✓ CONTROL: the probe resolves each surface form and refuses ${ghost.length} tokens that name nothing, and a cmd/tool token must be EXERCISED — prose about a call is not a call`);
 }
 
 // (3) REALITY — every declared full/subset is genuinely exposed; every na has a reason.

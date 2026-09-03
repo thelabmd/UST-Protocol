@@ -895,6 +895,17 @@ export async function cfPublish({ domain, genesisText, keylogText = null, witnes
 // reported as `skip` (NOT ATTESTED), never silently passed. fetchImpl injected — testable without a network.
 export async function attestDiscovery({ domain, mirrors = [], expectHash = null, fetchImpl = ustFetch }) {
   const checks = [];
+  // (0) IS DISCOVERY EVEN DEFINED FOR THIS SHARD? The protocol answers with `isPublicDnsShard`, and the answer
+  // is the same one the core gives a verifier resolving an UNTRUSTED document — one predicate, so a publisher
+  // attesting its own serving learns the same thing a stranger's verifier would, rather than a fetch error.
+  // A key-form or private shard is not a serving FAILURE: there is no name to serve under, so §20.1 does not
+  // apply. Saying that here is the difference between "your discovery is broken" and "discovery is not the
+  // route to you" — and only the second is true.
+  if (!P.isPublicDnsShard(domain)) {
+    checks.push({ id: 'shard is a public DNS name (§20.1 applies at all)', status: 'fail',
+      detail: `${domain} is not a public DNS name — a verifier's discovery refuses it (SSRF floor), so no serving property is attestable. A key-form shard is reached by handing its genesis over, never by /.well-known.` });
+    return { hash: null, checks, verdict: verdictOf(checks) };
+  }
   const url = `https://${domain}/.well-known/ust-genesis`;
   const get = (u, init) => fetchImpl(u, { ...init, signal: AbortSignal.timeout(10000) });
 
