@@ -820,6 +820,10 @@
     {
       "round": 268,
       "no_recap": "Round 268 opens #179 and does the work; it does not close it — closing is the owner's call, and the recap follows the closing, not the round."
+    },
+    {
+      "round": 269,
+      "no_recap": "Round 269 closes no issue. It adds the gate for a record defect found while answering a dependency alert on #179's push; #179 itself remains open for review."
     }
   ]
 }

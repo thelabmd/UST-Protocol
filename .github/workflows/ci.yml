@@ -202,6 +202,8 @@ jobs:
         run: node packages/ust-operator/conformance.mjs
       - name: types integrity (every shipped .d.ts COMPILES and declares exactly what its module exports)
         run: node tools/types-integrity-gate.mjs
+      - name: lockfile record (the lock's account of our OWN packages matches the manifests)
+        run: node tools/lockfile-record-gate.mjs
       - name: npm-drift gate (a published version is immutable)
         run: node tools/npm-drift-check.mjs
       - name: CHANGELOG rev-ladder gate (a checker rev bump records itself)

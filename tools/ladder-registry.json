@@ -2408,6 +2408,20 @@
       "code": "packages/ust-protocol/index.mjs :: `absentInputs(O, doc)` — both callers (the refusal seam and `explainLadder`) share the one derivation, so the refusal and the report cannot disagree about which inputs are live; `R2_SETTLED_HINT` refuses rather than instructs.",
       "vector": "ladder-08-a-live-input-is-not-settled",
       "test": "packages/ust-protocol/conformance.mjs :: the four F.5.1g checks the model cites, including the PREMISE measured rather than assumed (supplying a settled input leaves the verdict identical) and the control that refuses the cheap pass of settling everything. Mutation-proven in three directions."
+    },
+    {
+      "round": 269,
+      "math": {
+        "excluded": "A lockfile's account of this repository's own package versions is an inventory fact about one tree. It quantifies over no document, defines no relation, and a second implementation shares none of it — there is nothing here a theorem could range over."
+      },
+      "spec": {
+        "excluded": "The standard says nothing about how an implementation's repository records its own package versions, and must not: a conforming port need not be an npm workspace, or use npm at all. Putting a packaging convention in the spec would bind every implementer to ours."
+      },
+      "code": "tools/lockfile-record-gate.mjs :: enumerates (declared workspace × lock entry) in BOTH directions — the root version in both places the lock keeps it, every declared workspace's version and link entry, and every `packages/` entry no workspace claims; wired into .github/workflows/ci.yml before the npm-drift step and exposed as `npm run test:lockfile-record`.",
+      "vector": {
+        "excluded": "A vector is a fixed input and a declared result a second implementation reproduces. No port has this repository's lockfile, so there is nothing here for one to reproduce."
+      },
+      "test": "tools/lockfile-record-gate.mjs :: the gate IS the executed artifact, and it carries its own controls — a stale version and an orphaned entry are each mutated in memory and the comparison must see them. Proven against the real historical state as well: 9 failures on the pre-fix lock, 0 after."
     }
   ],
   "first_accounted_round": 76,
