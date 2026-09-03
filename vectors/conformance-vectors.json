@@ -19,7 +19,7 @@
     "_": "WHAT A VECTOR MAY PIN — read this before excluding the `vector` layer of a round, and before deciding a case \"cannot be a vector\". Derived from THIS corpus on 2026-08-10, not declared: 228 vectors across 43 kinds.",
     "the_rule": "A vector is a FIXED INPUT and a DECLARED RESULT that a runner must reproduce. The input being a DOCUMENT is one case among several; the result being a VERDICT is one case among several.",
     "measured_2026_08_10": {
-      "total": 274,
+      "total": 275,
       "kinds": 56,
       "input_is_a_document": 56,
       "input_is_a_value_or_string": 160,
@@ -31,7 +31,8 @@
       "_round_216": "#42 added 2 `map-currency` vectors — a form whose input is a DOCUMENT plus a consumer trust CONFIGURATION and whose declared result is a coordinate ON the identity resolution rather than a tier. It is recorded because the currency basis is decided at the admission door and at no primitive below it, so a porter reproducing only the map primitives would reproduce none of it; and because the second vector's `expect_absent` is what makes the pair non-vacuous — asserting a strength alone stays green on a build that dropped the coordinate.",
       "_round_217": "#151 added 2 `refusal-shape` vectors — a form whose declared result is the SET OF FIELDS a verdict carries rather than its value. Recorded because both halves are normative and a one-directional check is satisfied by a refusal that simply became an answer: one vector names what MUST be present, its twin names what MUST NOT.",
       "_round_219": "#160 added 2 `stream-floor` vectors — a form whose declared result COMPARES TWO CALLS rather than fixing one: the point is that withholding evidence moves the answer, so a single call cannot state it. Recorded because the definition exists to stop \"this cannot be a vector\" from being asserted, and a differential between two information sets is exactly what the earlier derivation had no instance of.",
-      "_round_220": "#42 added 2 `map-root-anchor` vectors — the first form in this corpus whose runner is ASYNC and whose declared result is a MINT rather than a verdict. The minted token itself cannot be a vector: its whole property is identity (only the function that ran both checks produces one), and a serialized look-alike would test the opposite. So the vector pins the MINTING from serializable inputs, and the identity property is pinned by a conformance check plus its mutant."
+      "_round_220": "#42 added 2 `map-root-anchor` vectors — the first form in this corpus whose runner is ASYNC and whose declared result is a MINT rather than a verdict. The minted token itself cannot be a vector: its whole property is identity (only the function that ran both checks produces one), and a serialized look-alike would test the opposite. So the vector pins the MINTING from serializable inputs, and the identity property is pinned by a conformance check plus its mutant.",
+      "_round_268": "#179 added ladder-08: the CONTROL for F.5.1g. The corpus had seven ladder vectors and all seven ran against the key-form document the global builder makes, so the settled case was pinned seven times and the live case never — an asymmetry invisible while every expectation passed. A vector now names the document FORM it is about."
     },
     "forms": [
       {
@@ -10381,14 +10382,16 @@
     {
       "id": "ladder-05-key-form-identity-is-nobodys-to-raise",
       "kind": "ladder",
-      "rule": "S14.1/F.5.1c a rung NOBODY can move is not a rung merely unmet: a key-form document binds its name by construction, so no input from either party raises the identity axis — the report must not list one as if it would",
+      "rule": "S14.1/F.5.1c+F.5.1g a rung NOBODY can move is not a rung merely unmet: a key-form document binds its name by construction, so no input from either party raises the identity axis — the report must not list one as if it would, and the hint must say why nothing moves rather than name an act",
       "input": {
         "opts": {}
       },
       "expect": {
         "identity_self_asserted": true,
         "identity_mode": "key",
-        "verdict_matches_verify": true
+        "verdict_matches_verify": true,
+        "genesis_settled": true,
+        "settled_hint_refuses": true
       }
     },
     {
@@ -10396,7 +10399,8 @@
       "kind": "ladder",
       "rule": "S14.1/F.5.1a a hint on a CONSUMER-faculty input must refuse rather than instruct: telling a publisher to supply one invites it to believe a tier no consumer will see — signed-not-true arriving through a help message",
       "input": {
-        "opts": {}
+        "opts": {},
+        "shard": "name"
       },
       "expect": {
         "consumer_hints_refuse": true,
@@ -10472,6 +10476,20 @@
       "expect": {
         "witness_party_exists": true,
         "nofork_not_publisher": true
+      }
+    },
+    {
+      "id": "ladder-08-a-live-input-is-not-settled",
+      "kind": "ladder",
+      "rule": "S14.1/F.5.1g the settled shape is not the default: for a NAME-form document the genesis is a live rung, movable by the publisher and carrying an act — without this control the corollary is satisfied by settling everything",
+      "input": {
+        "shard": "name",
+        "opts": {}
+      },
+      "expect": {
+        "genesis_settled": false,
+        "publisher_hints_actionable": true,
+        "absent_has_genesis": true
       }
     },
     {

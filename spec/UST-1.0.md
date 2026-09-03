@@ -161,6 +161,14 @@ refusal caused by an absent faculty (`unsupported_alg`) is entirely a statement 
 is the only coordinate separating *the document does not support the claim* from *this build could not evaluate
 it* (formal model F.5.1f).
 
+**An input that CANNOT move for this document is `settled`, and says so.** Whether an input is live is a
+property of the DOCUMENT, not of the call: a key-form `domain_shard` binds its identity by construction
+(§4.3a), so no genesis and no key log raise its identity axis — supplying one leaves the verdict identical.
+Such an entry carries `settled: true` with `movable: false`, and its hint says why nothing moves instead of
+naming an act. A settled input reported as merely not-brought tells a publisher to perform something it is
+structurally barred from performing — here, to serve `/.well-known/ust-genesis` under a shard that is a hash
+and has no name to serve under (formal model F.5.1c, F.5.1g).
+
 - **LIGHT — trust in a minute (THE FLOOR).** A signed, canonical, addressable state document. *Publish* =
   generate a keypair, sign your canonical JSON, serve it (the pubkey travels in `sig.pub`). *Verify* = recompute
   the canonical + per-partition hashes (integrity) + strict-Ed25519-verify the signature against the carried

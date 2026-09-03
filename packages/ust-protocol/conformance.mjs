@@ -187,7 +187,13 @@ for (const v of V.vectors) {
       break;
     }
     case 'ladder': {
-      const r = P.explainLadder(mk(), v.input.opts ?? {});
+      // The document FORM is now part of the vector's input, because F.5.1g makes the report a function of it:
+      // the global `mk()` is key-form, so every ladder vector silently pinned the settled case and none pinned
+      // the live one. A vector that cannot name its subject cannot control for it.
+      const ldoc = v.input.shard === 'name'
+        ? P.seal(P.buildState({ ...ID, domain_shard: 'ladder.example' }, T, { sw: { kind: 'captured', value: { kp: '4.33' } } }), A.priv, A.pubB64)
+        : mk();
+      const r = P.explainLadder(ldoc, v.input.opts ?? {});
       const consumerTerms = (r.absent ?? []).filter((a) => a.term.startsWith('ℐ_v')).length;
       const hasNoFork = (r.absent ?? []).some((a) => a.input === 'noForkConfirmed');
       const hasGenesis = (r.absent ?? []).some((a) => a.input === 'genesis');
@@ -201,7 +207,9 @@ for (const v of V.vectors) {
       if (e.identity_self_asserted !== undefined) ok = ok && (r.coordinates?.identity?.strength === 'self-asserted') === e.identity_self_asserted;
       if (e.identity_mode !== undefined) ok = ok && r.coordinates?.identity?.mode === e.identity_mode;
       if (e.consumer_hints_refuse !== undefined) {
-        const con = (r.absent ?? []).filter((a) => !a.movable);
+        // by PARTY, not by `movable`. The two coincided until F.5.1g, and reading the proxy would now sweep a
+        // SETTLED publisher input into the consumer bucket and demand it carry a consumer's refusal.
+        const con = (r.absent ?? []).filter((a) => a.party !== 'publisher');
         ok = ok && con.length > 0 && con.every((a) => /NOT yours/.test(a.hint)) === e.consumer_hints_refuse;
       }
       if (e.witness_party_exists !== undefined)
@@ -211,10 +219,18 @@ for (const v of V.vectors) {
         ok = ok && !!nf && (nf.party !== 'publisher') === e.nofork_not_publisher;
       }
       if (e.publisher_hints_actionable !== undefined) {
-        const pub = (r.absent ?? []).filter((a) => a.movable);
+        const pub = (r.absent ?? []).filter((a) => a.party === 'publisher' && !a.settled);
         ok = ok && pub.length > 0 && pub.every((a) => !/NOT yours/.test(a.hint)) === e.publisher_hints_actionable;
       }
-      if (e.verdict_matches_verify !== undefined) ok = ok && r.verdict === P.verify(mk(), v.input.opts ?? {}).result;
+      if (e.genesis_settled !== undefined) {
+        const g = (r.absent ?? []).find((a) => a.input === 'genesis');
+        ok = ok && !!g && g.settled === e.genesis_settled && g.movable === !e.genesis_settled;
+      }
+      if (e.settled_hint_refuses !== undefined) {
+        const st = (r.absent ?? []).filter((a) => a.settled);
+        ok = ok && (st.length > 0) === e.settled_hint_refuses && st.every((a) => /^NOTHING/.test(a.hint));
+      }
+      if (e.verdict_matches_verify !== undefined) ok = ok && r.verdict === P.verify(ldoc, v.input.opts ?? {}).result;
       check(v.id, ok);
       break;
     }
@@ -2957,6 +2973,39 @@ console.log('\n═════════════════════�
   // disjunct never ran and the check asserted nothing. The early exits ARE reachable — `unsupported_alg` needs a
   // build lacking the primitive, which is the browser corpus, not this one — so the coverage belongs where that
   // build is exercised. A check that cannot fail is worse than an absent one: it reads as coverage.
+}
+
+// ─── F.5.1g A SUPPLY REMEDY MUST BE CAPABLE OF BEING TRUE FOR THIS DOCUMENT. F.5.1d fixes the condition over the
+//     CALL (an input the call already holds cannot be advised); this is its dual over the DOCUMENT. A key-form
+//     `domain_shard` binds identity by construction, so genesis and keylog are SETTLED for it — finished, not
+//     unmet — and F.5.1c fixes the shape a finished input owes.
+//
+//     Measured 2026-09-03, CLOSED 2026-09-03: the report handed a key-form document the name-form hint BYTE FOR BYTE — publish
+//     `/.well-known/ust-genesis` … every consumer gains the same — for a shard with no name to serve under. The
+//     vector that names this very rule checked three neighbouring facts and never the listing its own sentence
+//     forbids, so the model stated it, a vector cited it, and nothing executed it.
+{
+  const GK = kp('5e'.repeat(32));
+  const gdoc = (shard) => P.seal(P.buildState({ domain_shard: shard, ust_id: 'ust:20260628.14', key_id: GK.key_id, class: 'observation' }, T, { x: { kind: 'captured', value: { v: '1' } } }), GK.priv, GK.pubB64);
+  const keyForm = gdoc(GK.key_id), nameForm = gdoc('settled.example');
+  const entry = (d, name) => P.explainLadder(d, { context: 'data' }).absent.find((a) => a.input === name);
+  const kg = entry(keyForm, 'genesis'), kl = entry(keyForm, 'keylog'), ng = entry(nameForm, 'genesis');
+
+  check('F.5.1g a key-form document\'s genesis is SETTLED, not merely unmet',
+    !!kg && kg.settled === true && kg.movable === false && !!kl && kl.settled === true && kl.movable === false);
+  // The hint must REFUSE. A settled entry that still names an act is the defect wearing the new field: the
+  // reader acts on the sentence, not on the boolean beside it.
+  check('F.5.1g a settled input\'s hint names why nothing moves, never an act',
+    !!kg && /^NOTHING/.test(kg.hint) && !/publish `\/\.well-known/.test(kg.hint) && !!kl && /^NOTHING/.test(kl.hint));
+  // The control, without which the rule is satisfied by settling EVERYTHING — the cheapest way to pass a check
+  // about what may not be advised is to advise nothing.
+  check('F.5.1g a name-form document\'s genesis stays movable — the settled shape is not the default',
+    !!ng && ng.settled === false && ng.movable === true && /publish `\/\.well-known\/ust-genesis`/.test(ng.hint));
+  // The PREMISE, measured rather than assumed: `settled` claims no richer call differs. If supplying the input
+  // moved the verdict, the whole corollary would be false and these three checks would be pinning a lie.
+  const gen = P.seal(P.buildGenesis({ domain_shard: GK.key_id, ust_id: 'ust:20260628.13', key_id: GK.key_id }, T, { active_keys: [{ key_id: GK.key_id, pub: GK.pubB64 }] }), GK.priv, GK.pubB64);
+  check('F.5.1g supplying a settled input leaves the verdict identical',
+    P.verify(keyForm, { context: 'data' }).result === P.verify(keyForm, { context: 'data', genesis: gen }).result);
 }
 
 // ─── #42 / F.5a.2 — THE ANCHORED-AUTHORITY BASIS. The per-epoch coordinate moves from `C` into `Fₜ`: the consumer

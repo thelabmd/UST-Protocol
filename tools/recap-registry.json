@@ -816,6 +816,10 @@
     {
       "round": 267,
       "no_recap": "Round 267 closes no issue. It repairs the instrument #178 is measured with and realizes a §20.1 rule the spec already carried; the debt itself is unchanged at 11. The unit of a recap is the CLOSED ISSUE."
+    },
+    {
+      "round": 268,
+      "no_recap": "Round 268 opens #179 and does the work; it does not close it — closing is the owner's call, and the recap follows the closing, not the round."
     }
   ]
 }

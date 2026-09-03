@@ -2400,6 +2400,14 @@
         "excluded": "A vector pins wire behaviour a second implementation must reproduce. A discovery-attestation command is not wire behaviour: a conforming port need not ship one, so there is nothing here for a port to reproduce."
       },
       "test": "packages/ust-cli/regression.mjs :: four shard forms §20.1 does not reach (key-form, loopback, IP literal, private TLD) are refused with the protocol's own reason and a THROWING network stub, so touching the network at all fails the test; plus the admit case, or every refusal passes by refusing everything. tools/capability-parity.mjs :: the exercise probe is controlled in both directions, and the code view is fed real comment text rather than asserted against an impossible literal."
+    },
+    {
+      "round": 268,
+      "math": "**Corollary F.5.1g (a supply remedy must be capable of being true FOR THIS DOCUMENT, not merely for this call).**",
+      "spec": "**An input that CANNOT move for this document is `settled`, and says so.**",
+      "code": "packages/ust-protocol/index.mjs :: `absentInputs(O, doc)` — both callers (the refusal seam and `explainLadder`) share the one derivation, so the refusal and the report cannot disagree about which inputs are live; `R2_SETTLED_HINT` refuses rather than instructs.",
+      "vector": "ladder-08-a-live-input-is-not-settled",
+      "test": "packages/ust-protocol/conformance.mjs :: the four F.5.1g checks the model cites, including the PREMISE measured rather than assumed (supplying a settled input leaves the verdict identical) and the control that refuses the cheap pass of settling everything. Mutation-proven in three directions."
     }
   ],
   "first_accounted_round": 76,

@@ -888,7 +888,7 @@ function verifyCore(doc, opts = {}) {
   const v = verifyCoreInner(doc, opts);
   if (v?.result !== 'INDETERMINATE') return v;
   const { tier: _dropped, ...facts } = v;
-  return { ...facts, absent: absentInputs(opts), verifier: VERSION, registry_digest: registryDigest() };
+  return { ...facts, absent: absentInputs(opts, doc), verifier: VERSION, registry_digest: registryDigest() };
 }
 function verifyCoreInner(doc, opts = {}) {
   try {
@@ -1838,8 +1838,27 @@ const R2_TERM = deepFreeze(Object.assign(Object.create(null), {
 // it through `verify`; the refusal path needs the same array and cannot call `explainLadder` without recursion.
 // Extracting it is what keeps F.5.1b honest — a second copy is how a report and a verdict come to disagree about
 // the same bytes, and here they would be two answers to the question `what did this call not bring`.
-const absentInputs = (O) => {
+// F.5.1g — WHICH INPUTS ARE SETTLED FOR THIS DOCUMENT, which is a question about `d` and therefore unanswerable
+// from `o`. A key-form `domain_shard` binds its identity by construction (§4.3a, §12.1): the axis is
+// self-asserted and no neighbourhood input moves it — measured, the same document verifies VALID:LIGHT with and
+// without its genesis. So `genesis`/`keylog` are not unmet rungs here, they are FINISHED ones, and F.5.1c fixes
+// the shape a finished input owes. Read TOTALLY: a hostile document must not turn a report into a throw.
+const SETTLED_BY_KEY_FORM = deepFreeze(['genesis', 'keylog']);
+const settledInputs = (doc) => {
+  let shard; try { shard = doc?.state?.id?.domain_shard; } catch { shard = undefined; }
+  return (typeof shard === 'string' && KEYID_FORM.test(shard)) ? SETTLED_BY_KEY_FORM : [];
+};
+// The hint on a settled input REFUSES rather than instructs — the same discipline F.5.1a already imposes on a
+// consumer faculty, for the same reason: an act named in a hint is an act the reader will perform. Following the
+// old one was worse than inert. It moved `status` from `verified` to `unavailable` and pointed the publisher at
+// no-fork evidence for a name it never claimed.
+const R2_SETTLED_HINT = deepFreeze(Object.assign(Object.create(null), {
+  genesis: 'NOTHING to publish and nothing to move: a key-form `domain_shard` IS the key, so identity is self-asserted by construction (§4.3a) and no genesis raises it. There is no name to serve one under. To be name-bound, publish under a dns-name shard instead — a different identity, not a repair of this one',
+  keylog:  'NOTHING to move: rotation is meaningful for a NAME whose binding outlives the key. A key-form shard is derived from the key, so a new key is a new identity and a key log raises nothing here',
+}));
+const absentInputs = (O, doc) => {
   const absent = [];
+  const settled = settledInputs(doc);
   for (const name of Object.keys(R2_TERM)) {
     let brought; try { brought = O?.[name] !== undefined; } catch { brought = false; }   // TOTAL: a hostile getter must not turn a refusal into a malformed verdict
     if (!brought) {
@@ -1847,7 +1866,9 @@ const absentInputs = (O) => {
       // WHO may move it — three named parties and a residual, not a boolean. A boolean collapsed the witness
       // into the publisher and told an operator to produce what it is structurally barred from producing.
       const party = term.startsWith('x̂') ? 'publisher' : term.startsWith('WITNESS') ? 'witness' : 'consumer';
-      absent.push(deepFreeze({ input: name, term, hint: R2_HINT[name], party, movable: party === 'publisher' }));
+      const isSettled = settled.includes(name);
+      absent.push(deepFreeze({ input: name, term, hint: isSettled ? R2_SETTLED_HINT[name] : R2_HINT[name],
+        party, movable: party === 'publisher' && !isSettled, settled: isSettled }));
     }
   }
   return deepFreeze(absent);
@@ -1875,7 +1896,7 @@ export function explainLadder(doc, opts = {}) {
       : null;
     // ABSENT inputs, classified. Read from the CALL, not from a rule table — so nothing here can disagree with
     // what the relation actually saw.
-    const absent = absentInputs(O);
+    const absent = absentInputs(O, doc);
     return deepFreeze({
       verdict: v.result,
       reason: v.reason ?? null,

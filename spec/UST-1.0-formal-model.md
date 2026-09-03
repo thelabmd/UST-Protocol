@@ -3774,6 +3774,55 @@ computes, each entry naming its `party` and whether it is `movable`), `verifier`
 - attribution on a refusal: *"F.5.1f a refusal names the vocabulary that refused (verifier + registry_digest)"*.
 - one computation, not two (F.5.1b): *"F.5.1f the refusal's absent[] is what explainLadder computes, not a second derivation"*.
 
+**Corollary F.5.1g (a supply remedy must be capable of being true FOR THIS DOCUMENT, not merely for this call).**
+F.5.1d fixes one necessary condition on the promise *supplying `i` raises the coordinate*: `i` must be absent
+from the call, or the call itself refutes it. That condition ranges over `o`. There is a second, and it ranges
+over `d`.
+
+Let `R(d, o)` be as in F.5.1d. For the promise attached to `i` to be capable of being true, some richer call
+must actually differ:
+
+> **∀ d, o, i ∈ R(d, o). ∃ o′ ⊇ o, i ∈ dom(o′) : π(𝓡(d, o′)) ≠ π(𝓡(d, o))**
+
+Where no such `o′` exists, the input is **settled for this document** — not unmet, finished — and F.5.1c fixes
+what the report owes it: the settled shape, never the not-brought one. The two conditions are duals and both
+are necessary: F.5.1d catches a clause the CALL refutes, F.5.1g one the DOCUMENT refutes.
+
+**Measured 2026-09-03, and the corollary it realizes was written a month earlier.** A key-form `domain_shard`
+binds its identity by construction (§4.3a, §12.1) — the axis is `self-asserted` and no neighbourhood input
+moves it. Verified directly: the same key-form document verifies `VALID:LIGHT` with and without its genesis,
+so `π` is constant over the very input the report advises. `explainLadder` nevertheless returned
+`{input: genesis, party: publisher, movable: true}` with the hint *publish `/.well-known/ust-genesis` … every
+consumer gains the same*, **byte-identical to the hint given a name-form document**. There is no name to
+publish under, and no consumer gains anything. Following it is worse than inert: supplying the genesis moves
+the identity coordinate's `status` from `verified` to `unavailable` with `authority pending, retry`, so the
+advice degrades the reading it promised to raise, and points the publisher at no-fork evidence for a name it
+never claimed.
+
+**This is the third time the same failure has appeared, and the invariant across all three is the shape of the
+record rather than the code.** F.5.1's own 2026-08-05 paragraph closed the WITNESS case: a party column of
+publisher/consumer/nobody **silently tells an operator to do something it is structurally barred from doing**.
+The party is right here; the ROUTE is impossible. And the vector that names this exact rule —
+`ladder-05-key-form-identity-is-nobodys-to-raise`, whose rule text reads **the report must not list one as if
+it would** — checked three neighbouring facts (`identity_self_asserted`, `identity_mode`,
+`verdict_matches_verify`) and never the listing its own sentence forbids. **A vector whose expectations sit
+beside its rule is a corollary with no executor**, and it reads as coverage from every direction: the model
+states it, a vector names it, the suite is green. **CLOSED 2026-09-03.**
+
+**Realization.** `absentInputs` takes the DOCUMENT as well as the call — a clause quantifying over `d` cannot
+be derived from `o` alone, which is the mechanical reason this survived. Where an input is settled for the
+document, the entry carries `settled: true` and `movable: false` with a hint that REFUSES rather than instructs,
+the same discipline F.5.1a already imposes on consumer-faculty inputs. The flag is stated rather than left to be
+inferred from the `(party, movable)` pair, because F.5.1c's distinction is what a reader ACTS on and an
+inference is not a statement. Both callers share the one derivation (F.5.1b), so the
+refusal and the report cannot disagree about which inputs are live.
+
+**Conformance.**
+- the settled input is not advertised as movable: *"F.5.1g a key-form document's genesis is SETTLED, not merely unmet"*.
+- and the hint refuses rather than instructs: *"F.5.1g a settled input's hint names why nothing moves, never an act"*.
+- the name-form control, or the rule would be satisfied by refusing everything: *"F.5.1g a name-form document's genesis stays movable — the settled shape is not the default"*.
+- the premise is measured, not assumed: *"F.5.1g supplying a settled input leaves the verdict identical"*.
+
 ## F.5x Authorization reads the DOCUMENT, so `class` is not one axis among several — it is the only one there is (#130)
 
 Round 149 stated the class-sets for `admits(k, c)` and an operator immediately asked the reasonable question:
