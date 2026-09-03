@@ -2520,6 +2520,20 @@
         "excluded": "A vector is a fixed input and a declared result a second implementation reproduces. This register describes this repository's own surfaces; a port has none of them."
       },
       "test": "tools/capability-parity.mjs :: six controls against real mutated input — a sixth custody word, `sealed` on a shipped capability, `key` with no key-taking function, a note where nothing is owed, `unbuilt` outside core-only+open, and `via` naming no capability. tools/gen-support-matrix.mjs :: two more — an under-parse of the state register refuses to render, and a custody word the gate defines but the page has no wording for refuses to render."
+    },
+    {
+      "round": 277,
+      "math": {
+        "excluded": "The derivation that settled `api:` is about THIS tree's probes — a surface's admission relation and what counts as evidence in it. It quantifies over our packages, not over documents, and no port shares them, so it belongs in the tool that enforces it rather than in the formal model."
+      },
+      "spec": {
+        "excluded": "The standard says nothing about how an implementation scores its own surfaces. A conforming port ships whatever it likes and keeps no such matrix."
+      },
+      "code": "tools/capability-parity.mjs :: `PINNED_ASYMMETRY` restores the ratchet the ordering rule lost when round 276 made it a computed line; `api:` retires because a token must be evidence in the admission relation its surface's probe defines, and `checkpoint-chain` becomes core-only with its condition stated. tools/gen-support-matrix.mjs :: the `Ordering` section is removed and its number moves into the header line.",
+      "vector": {
+        "excluded": "A vector is a fixed input and a declared result a second implementation reproduces. This is our own surface bookkeeping; a port has none of it."
+      },
+      "test": "tools/capability-parity.mjs :: the ratchet proven by deleting `keylog-commitment` from the agent surface — exit 0 before the fix, exit 1 naming it after; the retired token form moved from the control's REAL list to its GHOST list, so a real export that is no longer admissible must be refused. tools/gen-support-matrix.mjs :: both arms of the header's asymmetry clause rendered, the populated one by pushing a capability into the computed list."
     }
   ],
   "first_accounted_round": 76,

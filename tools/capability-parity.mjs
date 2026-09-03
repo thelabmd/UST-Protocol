@@ -81,7 +81,7 @@ const CAPABILITY_STATE = {
   'substrate-registry':  ['open'],
   'discovery-shard':     ['open'],
   'disclosure-produce':  ['key'],
-  'checkpoint-chain':    ['key'],
+  'checkpoint-chain':    ['key', 'the ceremony core is EXPORTED by `ust-cli` (`buildCeremony`) for callers that import the package, and no command answers a named request for it — so it is reachable by code, not by a person or an agent. A surface follows the ruling on whether the checkpoint family is operator-facing at all (#48).'],
 
   // reachable through another capability, so it needs no surface of its own
   'absence-transcript':  ['open', 'reachable through `build-transcript`: `buildAbsence` calls `buildState` with `kind:\'absence\'`, so an absence is produced on the ordinary observation path and a surface of its own would be a second way to do one thing', 'via build-transcript'],
@@ -98,6 +98,7 @@ const CAPABILITY_STATE = {
   'uniqueness-attest':   ['key', 'no tool consumes it yet, and inventing a surface before a consumer exists is how unused surface becomes a permanent obligation.'],
   'verifiable-map':      ['key', 'the anchored name-map is the independent path to authoritative and has no operator today because no map substrate is registered. The surface follows the substrate, never precedes it.'],
 };
+const PINNED_ASYMMETRY = 0;   // #178 — capabilities another surface exposes and the agent surface does not. May only shrink: a capability reaches the agent surface NOT LATER than any other, so a new one is a violation and today's one is the known state (`checkpoint-chain`, key).
 const PINNED_UNBUILT = 1;   // #180 — capabilities in core, on no surface, with nothing but our own work in the way. May only shrink; a new one must arrive with the literal `unbuilt` and no prose.
 
 // ── STANCE and MCP_DISPOSITION were REPLACED by CAPABILITY_STATE above (#180). They asked two questions with
@@ -147,7 +148,7 @@ const CAPS = {
   // K4 (UST-znh) — the ONE public authority entrypoint: raw inputs + config in, single verdict + derivation trace out.
   // K4 → Closed Proof Kernel: the ONE public authority verdict is prover ∘ check_C (reference-checker.mjs).
   'authority-bundle':   { core: ['verifyAuthorityBundle', 'buildAuthorityProof', 'checkAuthorityProof', 'checkAuthorityProofBytes'] },
-  'checkpoint-chain':   { core: ['buildAuthorityCheckpoint', 'sealAuthorityCheckpoint', 'authorityCheckpointId', 'verifyAuthorityCheckpointChain', 'resolveCheckpointRoots', 'deriveCheckpointFreshness', 'verifiedGenesisContext', 'genesisEpoch', 'authorityScopeId'], cli: 'api:buildCeremony' },
+  'checkpoint-chain':   { core: ['buildAuthorityCheckpoint', 'sealAuthorityCheckpoint', 'authorityCheckpointId', 'verifyAuthorityCheckpointChain', 'resolveCheckpointRoots', 'deriveCheckpointFreshness', 'verifiedGenesisContext', 'genesisEpoch', 'authorityScopeId'] },   // #180 — no invocation token: `buildCeremony` is a CLI EXPORT, not a command, so no surface answers a named request for this capability
   // §12.1 is 'recovery/supersession' — one section, one capability. witnessSuccessor BUILDS the successor witness
   // log when a name re-roots; witnessNoShrink is the rule it must satisfy, shared with any mirror that ingests it.
   'recovery':           { core: ['checkpointRecoveryClaim', 'buildRecoveryStatement', 'verifyCheckpointRecovery', 'witnessSuccessor', 'witnessNoShrink'] },
@@ -263,7 +264,16 @@ const resolves = (tok) => {
   const [what, rest] = String(tok).split(':');
   if (what === 'cmd') return CLI_CMDS.has(rest);
   if (what === 'flag') return CLI_FLAGS.has(rest);
-  if (what === 'api') return CLI_EXPORTS.has(rest);
+  // `api:` RETIRED (#180). A surface's PROBE fixes its admission relation — how a caller reaches it — and evidence
+  // that the surface exposes a capability has to be evidence IN that relation. Three relations exist here, one per
+  // probe: `exportIntersect` (the caller IMPORTS the package; exposure is the export set meeting the capability),
+  // `tokenProbe` (the caller sends a NAMED request the surface answers), `connector` (the caller supplies an object
+  // satisfying the interface). `api:X` said "import this package and call X" — an exportIntersect claim, carried as
+  // a token on a tokenProbe surface. Not weaker evidence: evidence in a DIFFERENT relation, about a different
+  // surface than the cell it scored. Measured: it had exactly one instance, `api:buildCeremony` on `ust-cli`, and
+  // `ust-cli` re-exports nothing of the core — its exports are the ceremony's own internals, which is why a person
+  // cannot type it and only code importing the package can call it.
+  if (what === 'api') return false;
   if (what === 'tool') return mcpTools.has(rest);
   if (what === 'arg') { const [tool, prop] = String(rest).split('.'); return !!MCP_TOOL_ARGS.get(tool)?.has(prop); }
   return false;                                                    // an unrecognised form is NOT a pass
@@ -332,7 +342,7 @@ const SURFACES = {
   // and `ust-rfc6962-verify` — a real published package — was in no column at all.
   'ust-protocol':     { probe: exportIntersect(P), full: Object.keys(CAPS), subset: [], naReason: 'the reference implementation defines the capability set; a cell that is not full here means the capability names an export the core does not have, which the PHANTOM check already refuses' },
   'ust-mcp':          { probe: mcpProbe, full: ['canon', 'content-address', 'verify', 'resolve-authority', 'no-fork-evidence', 'consumer-trust-root', 'anchor-verify', 'fork-choice', 'stream-verify', 'cadence-grid', 'cadence-declare', 'substrate-registry', 'ladder-report', 'name-obligation', 'keylog-commitment', 'discovery-shard', 'byte-agreement', 'typed-evidence'], subset: ['build-transcript', 'disclosure-produce', 'sign'], naReason: 'deferred to the planned operator MCP over @ust-protocol/operator (privilege-separation: a human explicitly grants agent rights) — NOT core+CLI-forever; TOP-produce is the one agent touch still to be built for noosphere', naSpecific: { 'sign': 'the agent signs with its OWN key; build tools return signing_input, the MCP never holds a private key', 'negative-observation': 'agent-appropriate (a normal negative observation, NOT operator) — new per #39; an MCP absence verb is planned, not yet built' } },
-  'ust-cli':          { probe: cliProbe, full: ['canon', 'content-address', 'verify', 'resolve-authority', 'no-fork-evidence', 'consumer-trust-root', 'anchor-verify', 'stream-verify', 'checkpoint-chain', 'keylog-commitment', 'discovery-shard', 'cadence-grid', 'cadence-declare', 'byte-agreement', 'name-obligation', 'sign', 'disclosure-produce', 'ladder-report', 'substrate-registry'], subset: ['build-transcript'], naReason: 'not exposed by the reference operator CLI', naSpecific: { 'negative-observation': 'new per #39; a `ust absence` command is planned, not yet built', 'build-transcript': 'CLOSED 2026-09-02 by `ust sign` (#177) — but SUBSET, not full: this surface builds a STATE (`ust sign`) and a genesis/key-log (the ceremonies), and nothing here builds an attestation, a derivation, a checkpoint, a gap or an anchor commitment. Declaring full would be the same overclaim round 246 removed, one command later.' } },
+  'ust-cli':          { probe: cliProbe, full: ['canon', 'content-address', 'verify', 'resolve-authority', 'no-fork-evidence', 'consumer-trust-root', 'anchor-verify', 'stream-verify', 'keylog-commitment', 'discovery-shard', 'cadence-grid', 'cadence-declare', 'byte-agreement', 'name-obligation', 'sign', 'disclosure-produce', 'ladder-report', 'substrate-registry'], subset: ['build-transcript'], naReason: 'not exposed by the reference operator CLI', naSpecific: { 'negative-observation': 'new per #39; a `ust absence` command is planned, not yet built', 'build-transcript': 'CLOSED 2026-09-02 by `ust sign` (#177) — but SUBSET, not full: this surface builds a STATE (`ust sign`) and a genesis/key-log (the ceremonies), and nothing here builds an attestation, a derivation, a checkpoint, a gap or an anchor commitment. Declaring full would be the same overclaim round 246 removed, one command later.' } },
   'ust-light':         { probe: exportIntersect(LITE), full: ['canon'], subset: ['content-address', 'build-transcript', 'verify', 'disclosure-produce', 'sign'], naReason: 'outside the standalone zero-dependency LIGHT floor — lite is a documented SUBSET (round-51 P1-03: build-transcript = buildState/seal for class:observation, WITH provenance (prev/based_on+seed) since UST-jls, but not the full builder family; verify = the WHOLE LIGHT floor including every §14a provenance obligation — UST-jls closed 14 lite-VALID/core-INVALID shapes — but not the HIGH/TOP verifiers; content-address = the partition/content/seed hashes it needs)' },
   'ust-web-signer':   { probe: exportIntersect(WEB), full: ['canon'], subset: ['content-address', 'build-transcript', 'sign'], naReason: 'producer-only surface — a documented SUBSET (round-51 P1-03: browser signer builds+signs a state, not the full builder family)', naSpecific: { 'verify': 'by design: the private key never enters a verifier — verification is ust-protocol / ust-light (README)' } },
   // Agent MCP TARGET (owner, 2026-07-15) = full for EVERY non-operator capability + the single conditionally-operator
@@ -383,7 +393,7 @@ else report.push(`  ✓ PHANTOM: every core name in CAPS resolves to a real ust-
   const ghost = [
     ['cmd:thisCommandCannotExist', 'a command not in the dispatch table'],
     ['flag:this-flag-cannot-exist', 'a flag the parser never reads'],
-    ['api:thisExportCannotExist', 'an export the package does not have'],
+    ['api:buildCeremony', 'the RETIRED form — a real export of `ust-cli`, and still not admissible: importing a package is not the relation a command surface is scored in'],
     ['tool:ust_this_tool_cannot_exist', 'an MCP tool that is not registered'],
     ['arg:ust_verify.thisPropertyCannotExist', 'an input property the schema lacks'],
     ['seal', 'a BARE name — the old substring form, which must no longer resolve at all'],
@@ -393,7 +403,7 @@ else report.push(`  ✓ PHANTOM: every core name in CAPS resolves to a real ust-
     if (resolves(tok)) { fail++; report.push(`  ✗ CONTROL: the token probe accepted ${tok} — ${why}`); }
   }
   // …and it must still say YES to each real form, or every cell above passes for a different wrong reason.
-  const real = ['cmd:verify', 'flag:genesis', 'api:buildCeremony', 'tool:ust_verify', 'arg:ust_verify.disclosures'];
+  const real = ['cmd:verify', 'flag:genesis', 'tool:ust_verify', 'arg:ust_verify.disclosures'];
   for (const tok of real) if (!resolves(tok)) { fail++; report.push(`  ✗ CONTROL: the token probe rejected ${tok}, which IS present — the surfaces were parsed wrong`); }
   // …and the EXERCISE half, which is the round-267 addition: a command that names an act it does not perform must
   // be refused, and prose must not stand in for the act. Both directions, because a detector that can only say yes
@@ -500,8 +510,16 @@ const takesKey = (fn) => {
   // and the agent surface does not. Its cause is read from the state rather than declared a second time.
   const asymmetry = [...exposedElsewhere].filter((c) => stanceOf('ust-mcp', c) === 'na');
   if (!exposedElsewhere.size) { fail++; report.push('  ✗ ORDERING: NO capability is exposed by any non-core surface — the surface declarations could not be read, and an empty asymmetry here means a broken parse, not a paid debt'); }
+  // THE RULE NEEDS AN EXECUTOR, AND FOR ONE ROUND IT HAD NONE. Round 276 turned this axis from a register into a
+  // computed line and did not carry the ratchet over: `PINNED_LAGGING` had made a new absence fail, and afterwards
+  // a capability removed from the agent surface entirely was REPORTED with a ✓ and exit 0 — measured 2026-09-03 by
+  // deleting `keylog-commitment` from `ust-mcp`, CLOSED 2026-09-03 by the pin below. The sentence survived on the
+  // rendered page while its enforcement did not, which is the exact defect rounds 267, 268 and 269 each closed
+  // somewhere else in this tree: a rule stated with nobody executing it.
+  else if (asymmetry.length > PINNED_ASYMMETRY) { fail++; report.push(`  ✗ ORDERING: ${asymmetry.length} capability(ies) on another surface and not on the agent one, above the pin of ${PINNED_ASYMMETRY}: [${asymmetry.map((c) => c + ' (' + custodyOf(c) + ')').join(', ')}] — a capability arriving on any surface reaches the agent surface NOT LATER, and this is the leg that says so`); }
+  else if (asymmetry.length < PINNED_ASYMMETRY) { fail++; report.push(`  ✗ ORDERING: the asymmetry SHRANK to ${asymmetry.length} (pinned ${PINNED_ASYMMETRY}) — lower the pin in the same commit, so the improvement is recorded rather than absorbed`); }
   else if (!asymmetry.length) report.push(`  ✓ ORDERING: every capability another surface exposes is on the agent surface too (${exposedElsewhere.size} checked) — the rule still binds for whatever arrives next`);
-  else report.push(`  ✓ ORDERING: ${asymmetry.length} capability(ies) on another surface and not on the agent one, each with its custody: ${asymmetry.map((c) => c + ' (' + custodyOf(c) + ')').join(', ')}`);
+  else report.push(`  ✓ ORDERING: ${asymmetry.length} capability(ies) on another surface and not on the agent one, at the pin, each with its custody: ${asymmetry.map((c) => c + ' (' + custodyOf(c) + ')').join(', ')}`);
 
   const byDelivery = (d) => capIds.filter((c) => deliveryOf(c) === d).length;
   if (!fail) report.push(`  ✓ STATE: all ${capIds.length} capabilities carry a delivery and a custody — ${byDelivery('shipped')} shipped, ${byDelivery('core-only')} core-only, ${byDelivery('via')} via another capability, ${byDelivery('spec-ahead')} spec-ahead; ${unbuilt.length} plain debt`);

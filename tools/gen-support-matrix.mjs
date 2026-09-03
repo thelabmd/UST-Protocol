@@ -118,7 +118,7 @@ const page = `# UST capability report
      Those declarations are checked against live probes by \`npm run test:parity\` on every CI run, so a cell here
      is true because the gate would go red otherwise. Regenerate: node tools/gen-support-matrix.mjs -->
 
-Reference implementation \`${VERSION}\` · ${capIds.length} capabilities · ${count('shipped')} shipped, ${count('core-only')} core-only, ${count('via')} via another capability, ${count('spec-ahead')} spec-ahead.
+Reference implementation \`${VERSION}\` · ${capIds.length} capabilities · ${count('shipped')} shipped, ${count('core-only')} core-only, ${count('via')} via another capability, ${count('spec-ahead')} spec-ahead · ${asymmetry.length} on another surface and not on \`mcp\`${asymmetry.length ? ' (' + asymmetry.map((c) => '`' + c + '`').join(', ') + ')' : ''}.
 
 **Surface** ✅ every core export exposed · ◐ a documented reduced form · · not on this surface.
 **Delivery** \`shipped\` on at least one surface · \`via X\` reachable through another capability · \`core-only\` in core, no surface · \`spec-ahead\` in the spec, not in core.
@@ -136,12 +136,6 @@ but the work itself stands in the way — the one value that carries no prose, s
 | capability | condition |
 |---|---|
 ${capIds.filter(owesNote).map((c) => `| \`${c}\` | ${STATE[c].note === 'unbuilt' ? '`unbuilt`' : STATE[c].note} |`).join('\n')}
-
-## Ordering
-
-${asymmetry.length
-  ? `${asymmetry.length === 1 ? 'One capability is' : asymmetry.length + ' capabilities are'} on another surface and not on \`mcp\`: ${asymmetry.map((c) => '`' + c + '` (' + STATE[c].custody + ')').join(', ')}.`
-  : `No capability is on another surface and absent from \`mcp\`.`} A capability arriving on any surface is expected on \`mcp\` not later, and \`npm run test:parity\` fails otherwise.
 `;
 const path = ROOT + 'SUPPORT.md';
 const before = (() => { try { return readFileSync(path, 'utf8'); } catch { return null; } })();

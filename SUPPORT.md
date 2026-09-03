@@ -4,7 +4,7 @@
      Those declarations are checked against live probes by `npm run test:parity` on every CI run, so a cell here
      is true because the gate would go red otherwise. Regenerate: node tools/gen-support-matrix.mjs -->
 
-Reference implementation `1.0.0-rc.73` · 33 capabilities · 22 shipped, 10 core-only, 1 via another capability, 0 spec-ahead.
+Reference implementation `1.0.0-rc.73` · 33 capabilities · 21 shipped, 11 core-only, 1 via another capability, 0 spec-ahead · 0 on another surface and not on `mcp`.
 
 **Surface** ✅ every core export exposed · ◐ a documented reduced form · · not on this surface.
 **Delivery** `shipped` on at least one surface · `via X` reachable through another capability · `core-only` in core, no surface · `spec-ahead` in the spec, not in core.
@@ -32,7 +32,7 @@ Reference implementation `1.0.0-rc.73` · 33 capabilities · 22 shipped, 10 core
 | `assurance-lattice` | core-only | `sealed` | ✅ | · | · | · | · | · | · | · |
 | `verified-handle` | core-only | `sealed` | ✅ | · | · | · | · | · | · | · |
 | `authority-bundle` | core-only | `open` | ✅ | · | · | · | · | · | · | · |
-| `checkpoint-chain` | shipped | `key` | ✅ | · | ✅ | · | · | · | · | · |
+| `checkpoint-chain` | core-only | `key` | ✅ | · | · | · | · | · | · | · |
 | `recovery` | core-only | `manual` | ✅ | · | · | · | · | · | · | · |
 | `epoch-transition` | core-only | `key` | ✅ | · | · | · | · | · | · | · |
 | `uniqueness-attest` | core-only | `key` | ✅ | · | · | · | · | · | · | · |
@@ -58,13 +58,10 @@ but the work itself stands in the way — the one value that carries no prose, s
 | `assurance-lattice` | deriveAssurance/assuranceState/projectTier are how a verdict is COMPUTED. A surface letting a caller assemble a tuple directly would be the forgery oracle round 25 closed at the type level — the mechanism a surface here would break. |
 | `verified-handle` | the branded-handle machinery is what makes the lattice above unforgeable. Exposing the brand IS the vulnerability, so there is no condition under which this changes. |
 | `authority-bundle` | the #76/#77 authority-checkpoint family lands with the TOP work or not at all; a surface before that fixes shapes the TOP round has to choose. |
+| `checkpoint-chain` | the ceremony core is EXPORTED by `ust-cli` (`buildCeremony`) for callers that import the package, and no command answers a named request for it — so it is reachable by code, not by a person or an agent. A surface follows the ruling on whether the checkpoint family is operator-facing at all (#48). |
 | `recovery` | N-of-M genesis-authorized recovery is a ceremony today. Whether it is operator-facing or support-only is a maintainer ruling that has not been made, and the surface follows the ruling. |
 | `epoch-transition` | same family as authority-bundle: it lands with TOP or not at all. |
 | `uniqueness-attest` | no tool consumes it yet, and inventing a surface before a consumer exists is how unused surface becomes a permanent obligation. |
 | `verifiable-map` | the anchored name-map is the independent path to authoritative and has no operator today because no map substrate is registered. The surface follows the substrate, never precedes it. |
 | `absence-transcript` | reachable through `build-transcript`: `buildAbsence` calls `buildState` with `kind:'absence'`, so an absence is produced on the ordinary observation path and a surface of its own would be a second way to do one thing |
 | `absence-backing` | `unbuilt` |
-
-## Ordering
-
-One capability is on another surface and not on `mcp`: `checkpoint-chain` (key). A capability arriving on any surface is expected on `mcp` not later, and `npm run test:parity` fails otherwise.
