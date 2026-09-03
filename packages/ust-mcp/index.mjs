@@ -403,6 +403,32 @@ export const tools = [
     handler: ({ declared = [], observed = {} }) => P.anchorRollup({ declared, observed }),
   },
   {
+    name: 'ust_evidence_kind',
+    description: 'What can a KIND of proof establish? A closed vocabulary: `transparency-log` gives inclusion, consistency and order; `authenticated-map` gives membership and non-membership; `rfc3161-tsa` gives time; `pow-header-chain` gives order and time; `content-addressed` gives content-equality and availability. An unrecognised kind is `opaque` with NO capabilities — fail-closed, and that is usually the answer worth having. Call it with no `proof_kind` to get the whole universe of capability names.',
+    inputSchema: { type: 'object', properties: { proof_kind: { type: 'string', description: 'the kind to look up; omit for the universe only' } } },
+    handler: ({ proof_kind }) => proof_kind === undefined
+      ? { universe: [...P.EVIDENCE_CAPS_UNIVERSE] }
+      : { proof_kind, class: P.evidenceClass(proof_kind), caps: [...P.evidenceCaps(proof_kind)], universe: [...P.EVIDENCE_CAPS_UNIVERSE] },
+  },
+  {
+    name: 'ust_evidence_record',
+    description: 'Shape a raw verified-facts record from what a connector OBSERVED. IT GRANTS NOTHING: its output is not branded VerifiedEvidence and NO strong rung accepts it — provenance-bearing evidence is a SIGNED connector receipt, verified against connectors the CONSUMER admits. Use this to carry facts in the shape the core reads, never as a way to make evidence count. What it enforces is the point: a connector may not self-declare `assurance`, `strength`, `trust_domain` or `independent` — those are DERIVED, and a producer stating its own class is the forge this rule closes.',
+    inputSchema: { type: 'object', required: ['proof_kind', 'subject', 'source_id'], properties: {
+      proof_kind: { type: 'string' }, subject: { type: 'string' }, source_id: { type: 'string' },
+      facts: { type: 'object', description: 'what was OBSERVED — never a class, a strength, a trust domain or an independence claim' },
+      verifier_id: { type: 'string' }, verifier_version: { type: 'string' },
+    } },
+    // The arguments are forwarded WHOLE. Round 273 shipped a first draft that destructured them and so dropped the
+    // very fields the core exists to refuse — a surface more permissive than the core it wraps. Not twice.
+    handler: (args) => P.verifiedEvidence(args),
+  },
+  {
+    name: 'ust_evidence_order',
+    description: 'Do two pieces of evidence establish an ORDER between their subjects? This is a proof relation, not a comparison of timestamp fields: two records order only when their facts prove it in the same namespace. Anything unreadable — a missing fact, an unknown kind, a hostile object — answers `unproven`, which is a real answer and never an error.',
+    inputSchema: { type: 'object', required: ['a', 'b'], properties: { a: { type: 'object' }, b: { type: 'object' } } },
+    handler: ({ a, b }) => ({ order: P.compareEvidenceOrder(a, b) }),
+  },
+  {
     name: 'ust_canon',
     description: 'Canonicalize a JSON value (JCS tightened): the exact bytes UST hashes/signs. Utility for building your own signer.',
     inputSchema: { type: 'object', required: ['value'], properties: { value: {} } },

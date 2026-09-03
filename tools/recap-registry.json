@@ -844,6 +844,10 @@
     {
       "round": 274,
       "no_recap": "Round 274 corrects what #178's counter measures and closes no issue. The owner's ruling on the classification vocabulary itself is deliberately not anticipated here — this round changes a DOMAIN, not the words."
+    },
+    {
+      "round": 275,
+      "no_recap": "Round 275 clears the ordering axis and does not close #178 — closing is the owner's call, and the classification vocabulary he deferred is still open."
     }
   ]
 }

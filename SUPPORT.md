@@ -28,7 +28,7 @@ This page is rendered from those declarations, so it cannot drift from what the 
 | `commitment-windows` | ✅ | · | · | · | · | · | · | · |
 | `ladder-report` | ✅ | ✅ | ✅ | · | · | · | · | · |
 | `stream-verify` | ✅ | ✅ | ✅ | · | · | · | · | · |
-| `typed-evidence` | ✅ | · | · | · | · | ✅ | ✅ | · |
+| `typed-evidence` | ✅ | ✅ | · | · | · | ✅ | ✅ | · |
 | `evidence-receipt` | ✅ | · | · | · | · | · | · | · |
 | `assurance-lattice` | ✅ | · | · | · | · | · | · | · |
 | `verified-handle` | ✅ | · | · | · | · | · | · | · |
@@ -107,10 +107,10 @@ key material, the gate refuses the classification.
 
 - `checkpoint-chain`
 
-**Lagging — debt** (1). Our own unfinished work, sitting where the principal audience reaches for it. These
-carry no justification, because none exists — the gate refuses one written under them. The count is pinned and
-may only shrink.
+**Lagging — debt** (0). Nothing is unfinished here. This category takes no justification by design — a reason written under debt is
+absence wearing the vocabulary of intent — so an empty list is the only honest form of it, and the pin now holds
+at zero: an entry may still appear, but only by being built somewhere else first.
 
-- `typed-evidence` — reachable on ots-verify, rekor-verify
 
-Each is already reachable somewhere else — `ots-verify`, `rekor-verify` — and nowhere by an agent. That is the inversion the rule exists to close, and it is the whole of what this axis measures: a capability no surface exposes is not owed here, it is answered by its stance.
+
+Nothing is owed on this axis: every capability another surface exposes is on the agent surface too. The rule still binds — whichever surface receives the next one first, the agent surface may not be later.

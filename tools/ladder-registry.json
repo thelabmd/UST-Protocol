@@ -2492,6 +2492,20 @@
         "excluded": "A vector is a fixed input and a declared result a second implementation reproduces. These registers describe this repository's own surfaces; a port has none of them."
       },
       "test": "tools/capability-parity.mjs :: both cross-register legs proven against real mutated input — a disposition re-added for a capability STANCE answers must fail, and a stance removed from a zero-surface capability must fail. tools/gen-support-matrix.mjs :: both arms of the closing sentence rendered, including the empty-debt arm that the old parse guard made unreachable."
+    },
+    {
+      "round": 275,
+      "math": {
+        "excluded": "The evidence algebra (F.5 / M3) already fixes what a proof kind establishes and that a connector may not self-declare its own class. Nothing about the relation moved; what moved is which of our surfaces can ask."
+      },
+      "spec": {
+        "excluded": "The standard defines the evidence seam and its facts-only rule, never which of an implementation's tools exposes them. A conforming port may ship no agent surface."
+      },
+      "code": "packages/ust-mcp/index.mjs :: `ust_evidence_kind` (the closed vocabulary, with an unknown kind answering opaque/[] rather than throwing), `ust_evidence_record` (arguments forwarded whole so the facts-only refusal reaches the caller, and a description that says plainly it grants nothing), `ust_evidence_order` (a proof relation, `unproven` as a real answer); tools/capability-parity.mjs :: typed-evidence gains three mcp tokens, PINNED_LAGGING ratchets 1 → 0, and the empty-domain leg distinguishes a paid axis from a broken surface parse. tools/gen-support-matrix.mjs :: the debt paragraph gains its empty-state form.",
+      "vector": {
+        "excluded": "A vector is a fixed input and a declared result a second implementation reproduces. The evidence functions are already pinned in the core suite; which of OUR surfaces calls them is not something a port could reproduce."
+      },
+      "test": "packages/ust-mcp/live-test.mjs :: eight checks over the real stdio transport — the closed vocabulary and the opaque fail-closed answer, the universe, the shaped record, ALL FOUR self-declaration refusals, and `unproven` as an answer rather than an error. Both branches of the empty-domain leg and both branches of the page's debt paragraph rendered."
     }
   ],
   "first_accounted_round": 76,

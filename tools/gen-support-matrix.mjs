@@ -175,9 +175,13 @@ key material, the gate refuses the classification.
 
 ${keyBound.map((d) => '- \`' + d.cap + '\`').join('\n')}
 
-**Lagging — debt** (${lagging.length}). Our own unfinished work, sitting where the principal audience reaches for it. These
+**Lagging — debt** (${lagging.length}). ${lagging.length
+  ? `Our own unfinished work, sitting where the principal audience reaches for it. These
 carry no justification, because none exists — the gate refuses one written under them. The count is pinned and
-may only shrink.
+may only shrink.`
+  : `Nothing is unfinished here. This category takes no justification by design — a reason written under debt is
+absence wearing the vocabulary of intent — so an empty list is the only honest form of it, and the pin now holds
+at zero: an entry may still appear, but only by being built somewhere else first.`}
 
 ${lagging.map((d) => '- \`' + d.cap + '\`' + (holders(d.cap).length ? ' — reachable on ' + holders(d.cap).join(', ') : '')).join('\n')}
 

@@ -64,6 +64,9 @@ Or in any MCP client config:
 
 | Tool | Does |
 |------|------|
+| `ust_evidence_kind` | What can a KIND of proof establish? A closed vocabulary — `transparency-log` → inclusion/consistency/order, `authenticated-map` → membership/non-membership, `rfc3161-tsa` → time. An unrecognised kind is `opaque` with **no** capabilities: fail-closed, and usually the answer worth having. |
+| `ust_evidence_record` | Shape a raw verified-facts record from what a connector observed. **It grants nothing** — the output is not branded `VerifiedEvidence` and no strong rung accepts it; provenance is a *signed* connector receipt. What it enforces is the point: a connector may not self-declare `assurance`, `strength`, `trust_domain` or `independent`. |
+| `ust_evidence_order` | Do two pieces of evidence establish an ORDER between their subjects? A proof relation, not a comparison of timestamp fields — anything unreadable answers `unproven`, which is a real answer and never an error. |
 | `ust_profile_declares` | **§20.1 / F.5p.1** — what does a publisher's operator profile BIND? The CLOSED half only: `{serves, substrates, copies, commitment_rhythm}`. Prose is dropped by POSITION, never by a naming convention, so an added line of operator text can never start binding. A malformed declaration is an **error**, not a weaker profile. |
 | `ust_replication_agreement` | **§20.1 / F.5o** — do the copies a publisher NAMED agree byte for byte? `attested` only when there was something to compare *and* nothing disagreed. What it **refuses** is the point: `independent`, `trust_domain`, `vendor`, `assurance`, `strength` are rejected — independence is not decidable from bytes and may not ride in on a locator list. |
 | `ust_serving_verdict` | **§20.1** — the 2×2 for one served surface: declared-and-absent is a promise **not kept**; undeclared-and-absent is `not-offered`; observing a surface attests it whether or not it was declared. |

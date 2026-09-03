@@ -24,7 +24,7 @@ const client = new Client({ name: 'ust-live-test', version: '1' }, { capabilitie
 await client.connect(transport);
 
 const tools = await client.listTools();
-check('live:tools/list = 26', tools.tools.length === 26, 'got ' + tools.tools.length);
+check('live:tools/list = 29', tools.tools.length === 29, 'got ' + tools.tools.length);
 check('live:key_id over the wire', (await call(client, 'ust_key_id', { pub: A.pubB64 })).key_id === A.key_id);
 
 // THE agent flow, entirely over MCP: build → sign with own key → verify
@@ -306,6 +306,35 @@ check('live:fork_choice same ust_id, no substrate → INDETERMINATE', (await cal
   check('live:#178 ust_anchor_rollup — printing, partial, dark and unknown are four different answers',
     partial.status === 'partial' && dark.status === 'dark' && unknown.status === 'unknown' && JSON.stringify(partial.silent) === '["rekor"]',
     JSON.stringify([partial.status, dark.status, unknown.status]));
+}
+
+// #178 — the LAST entry on the ordering axis. It sits next to two capabilities whose stance says a surface WOULD
+// BE the vulnerability, so the first question was whether this one is too. The core answers in its own words:
+// `verifiedEvidence` builds the RAW facts shape, its output is NOT branded VerifiedEvidence, and no strong rung
+// accepts it — provenance is a SIGNED connector receipt. It grants nothing. What travels with it is the refusal.
+{
+  const known = await call(client, 'ust_evidence_kind', { proof_kind: 'transparency-log' });
+  const unknown = await call(client, 'ust_evidence_kind', { proof_kind: 'no-such-kind' });
+  check('live:#178 ust_evidence_kind reads the closed vocabulary, and an unknown kind is OPAQUE with no caps',
+    JSON.stringify(known.caps) === '["inclusion","consistency","order"]' && unknown.class === 'opaque' && unknown.caps.length === 0,
+    JSON.stringify([known.class, unknown.class]));
+  check('live:#178 …and the universe of capability names is the same set the core derives it from',
+    known.universe.length === 8 && known.universe.includes('non-membership'), JSON.stringify(known.universe));
+
+  const rec = await call(client, 'ust_evidence_record', { proof_kind: 'rfc3161-tsa', subject: 'sha256:' + 'aa'.repeat(32), source_id: 'tsa-1', facts: { time: '2026-09-03T00:00:00Z' } });
+  check('live:#178 ust_evidence_record shapes the raw facts a connector observed',
+    rec.proof_kind === 'rfc3161-tsa' && rec.facts.time === '2026-09-03T00:00:00Z' && !('assurance' in rec), JSON.stringify(rec).slice(0, 110));
+  // THE REFUSAL IS WHY THIS TOOL EXISTS AT ALL. A producer stating its own class is the forge the rule closes, and
+  // an agent hand-writing the same JSON gets no guard — so the guard must reach the wire, every field of it.
+  for (const k of ['assurance', 'strength', 'trust_domain', 'independent']) {
+    const r = await rawCall(client, 'ust_evidence_record', { proof_kind: 'x', subject: 's', source_id: 'i', facts: { [k]: 'v' } });
+    check('live:#178 …and a self-declared `' + k + '` is REFUSED — the core derives it, a connector may not state it',
+      r.isError === true && /E-EVIDENCE/.test(JSON.stringify(r.body)), JSON.stringify(r.body).slice(0, 80));
+  }
+
+  const ord = await call(client, 'ust_evidence_order', { a: {}, b: {} });
+  check('live:#178 ust_evidence_order answers `unproven` for what it cannot read — a real answer, never an error',
+    ord.order === 'unproven', JSON.stringify(ord));
 }
 
 await client.close();
