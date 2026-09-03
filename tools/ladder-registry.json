@@ -2478,6 +2478,20 @@
         "excluded": "A vector is a fixed input and a declared result a second implementation reproduces. All four functions are already pinned in the core suite; which of OUR surfaces calls them is not something a port could reproduce."
       },
       "test": "packages/ust-mcp/live-test.mjs :: eleven checks over the real stdio transport — the closed half with prose dropped, a malformed rhythm arriving as isError rather than a skippable field, attestation and the empty-list non-attestation, ALL FIVE F.5o fields refused, the promise-not-kept vs promise-never-made distinction, and printing/partial/dark/unknown as four different answers."
+    },
+    {
+      "round": 274,
+      "math": {
+        "excluded": "Which of our surfaces exposes which capability, and which register answers which question about it, are inventory facts about one tree. The ordering rule is the owner's operating rule for this repository, not a relation over documents that a theorem could range over."
+      },
+      "spec": {
+        "excluded": "The standard says nothing about how an implementation records the reasons its own tools lack things. A conforming port ships whatever surfaces it likes and keeps no such register."
+      },
+      "code": "tools/capability-parity.mjs :: the ORDERING axis's domain narrows to the ASYMMETRY (a capability some non-core, non-tautology surface exposes while the agent does not); the two registers are gated as disjoint in both directions; ten entries leave MCP_DISPOSITION with their answers intact in STANCE and ACKNOWLEDGED_MIXED; PINNED_LAGGING 7 → 1. tools/gen-support-matrix.mjs :: the page states the narrowed domain, names WHICH surfaces hold a lagging capability instead of assuming a terminal, and its parse guard stops demanding a non-empty debt.",
+      "vector": {
+        "excluded": "A vector is a fixed input and a declared result a second implementation reproduces. These registers describe this repository's own surfaces; a port has none of them."
+      },
+      "test": "tools/capability-parity.mjs :: both cross-register legs proven against real mutated input — a disposition re-added for a capability STANCE answers must fail, and a stance removed from a zero-surface capability must fail. tools/gen-support-matrix.mjs :: both arms of the closing sentence rendered, including the empty-debt arm that the old parse guard made unreachable."
     }
   ],
   "first_accounted_round": 76,

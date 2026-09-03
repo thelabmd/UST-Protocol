@@ -86,8 +86,11 @@ is an inconvenience on one surface and a wall on the other.
 
 > **Any capability the protocol gives a publisher appears on the agent surface not later than on the human one.**
 
-Every absence from `mcp` is classified, by one question — *would this still need a human if we trusted the agent
-completely?*
+This axis is about an ASYMMETRY, so its domain is exactly that: a capability some other surface exposes while the
+agent surface does not. A capability **no** surface exposes has no ordering to be judged by — the rule has no
+second term for it — and it is answered in `tools/capability-parity.mjs` by its stance, which says why it is on
+no surface at all. Each entry below is classified by one question: *would this still need a human if we trusted
+the agent completely?*
 
 **Ceremony — the act is a human decision, and stays one** (0). No amount of trust in an agent removes the
 person, so this classification is permanent.
@@ -97,28 +100,17 @@ compute artifacts that are inert until someone signs them. `buildAuthorityCheckp
 person is deciding to stand behind the result. The category is real and permanent; it does not apply at this
 granularity, and an entry appearing here would mean the map had grown to cover workflows.
 
-**Key-bound — the key does not cross into an agent's context** (5). The function holding key material stays
+**Key-bound — the key does not cross into an agent's context** (1). The function holding key material stays
 outside; this is not a wall, because the agent produces what is signed and assembles what comes back, and every
 key-free half is on its surface. A claim here is refutable by measurement: if no function of the capability takes
 key material, the gate refuses the classification.
 
 - `checkpoint-chain`
-- `recovery`
-- `epoch-transition`
-- `uniqueness-attest`
-- `verifiable-map`
 
-**Lagging — debt** (7). Our own unfinished work, sitting where the principal audience reaches for it. These
+**Lagging — debt** (1). Our own unfinished work, sitting where the principal audience reaches for it. These
 carry no justification, because none exists — the gate refuses one written under them. The count is pinned and
 may only shrink.
 
-- `negative-observation`
-- `commitment-windows`
-- `typed-evidence`
-- `evidence-receipt`
-- `assurance-lattice`
-- `verified-handle`
-- `authority-bundle`
+- `typed-evidence` — reachable on ots-verify, rekor-verify
 
-None of these is on the human surface either, so the debt is uniform: nobody can reach them. The rule still binds — whichever surface receives one first, the agent surface may not receive it later.
-
+Each is already reachable somewhere else — `ots-verify`, `rekor-verify` — and nowhere by an agent. That is the inversion the rule exists to close, and it is the whole of what this axis measures: a capability no surface exposes is not owed here, it is answered by its stance.

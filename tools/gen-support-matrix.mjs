@@ -59,7 +59,11 @@ const disp = [...src.matchAll(/^ {2}'([a-z0-9-]+)':\s*\['(ceremony|key-bound|lag
 const ceremony = disp.filter((d) => d.kind === 'ceremony');
 const keyBound = disp.filter((d) => d.kind === 'key-bound');
 const lagging = disp.filter((d) => d.kind === 'lagging');
-if (!keyBound.length || !lagging.length) {
+// The guard asserts the PARSE, not a category. It used to demand `lagging` be non-empty, which was right while the
+// axis counted every absence — a zero there could only mean the shape had moved. Once the domain became the
+// asymmetry (round 274) an empty `lagging` means THE DEBT IS PAID, which is the goal, and the page would have
+// refused to render on the day it succeeded — the same shape as the control that named its own subject.
+if (!disp.length) {
   console.error('  ✗ parsed no agent-surface dispositions from the gate — the shape moved, and a page claiming "0 deferred" would read as an answer');
   process.exit(1);
 }
@@ -86,6 +90,10 @@ const tokensFor = (cap, surface) => {
   return [].concat(raw ?? []).map((t) => t.replace(/^cmd:/, 'ust ').replace(/^tool:/, '').replace(/^flag:/, '--').replace(/^api:/, '').replace(/^arg:/, ''));
 };
 const cliHas = (cap) => !!cli && (cli.full === 'ALL' || cli.full.includes(cap) || cli.subset.includes(cap));
+// WHICH surface has it, once the domain is the ASYMMETRY (round 274). `cliHas` answered only about the CLI, so a
+// capability living on a connector rendered as "nobody has it" — the sentence that had to be replaced below.
+const holders = (cap) => surfaces.filter((sf) => sf.id !== 'ust-mcp' && sf.id !== 'ust-protocol'
+  && (sf.full === 'ALL' || sf.full.includes(cap) || sf.subset.includes(cap))).map((sf) => sf.id.replace('ust-', ''));
 const rows = capIds.map((c) => `| \`${c}\` | ` + surfaces.map((s) => stance(s, c)).join(' | ') + ' |').join('\n');
 
 const page = `# What UST supports, per surface
@@ -144,8 +152,11 @@ is an inconvenience on one surface and a wall on the other.
 
 > **Any capability the protocol gives a publisher appears on the agent surface not later than on the human one.**
 
-Every absence from \`mcp\` is classified, by one question — *would this still need a human if we trusted the agent
-completely?*
+This axis is about an ASYMMETRY, so its domain is exactly that: a capability some other surface exposes while the
+agent surface does not. A capability **no** surface exposes has no ordering to be judged by — the rule has no
+second term for it — and it is answered in \`tools/capability-parity.mjs\` by its stance, which says why it is on
+no surface at all. Each entry below is classified by one question: *would this still need a human if we trusted
+the agent completely?*
 
 **Ceremony — the act is a human decision, and stays one** (${ceremony.length}). No amount of trust in an agent removes the
 person, so this classification is permanent.
@@ -168,13 +179,18 @@ ${keyBound.map((d) => '- \`' + d.cap + '\`').join('\n')}
 carry no justification, because none exists — the gate refuses one written under them. The count is pinned and
 may only shrink.
 
-${lagging.map((d) => '- \`' + d.cap + '\`' + (cliHas(d.cap) ? ' — also on the CLI' : '')).join('\n')}
+${lagging.map((d) => '- \`' + d.cap + '\`' + (holders(d.cap).length ? ' — reachable on ' + holders(d.cap).join(', ') : '')).join('\n')}
 
-${(() => { const n = lagging.filter((d) => cliHas(d.cap)).length;
-  return n === 0
-    ? 'None of these is on the human surface either, so the debt is uniform: nobody can reach them. The rule still binds — whichever surface receives one first, the agent surface may not receive it later.'
-    : `${n} of the ${lagging.length} ${n === 1 ? 'is' : 'are'} on the human surface already, and ${n === 1 ? 'that one is' : 'those are'} the inversion the rule exists to close: reachable by a person with a terminal and by nobody with a tool.`; })()}
-
+${(() => {
+  // EVERY entry in this domain has a holder — that is what puts it here — so the old empty-domain branch, written
+  // when the axis counted capabilities nobody exposed, can no longer be reached and is gone rather than kept as a
+  // sentence waiting to be wrong. What varies is WHICH surfaces hold them, and a terminal is not the only one:
+  // `typed-evidence` lives on connector packages, so "reachable by a person with a terminal" was already false the
+  // day the domain narrowed.
+  if (!lagging.length) return 'Nothing is owed on this axis: every capability another surface exposes is on the agent surface too. The rule still binds — whichever surface receives the next one first, the agent surface may not be later.';
+  const all = [...new Set(lagging.flatMap((d) => holders(d.cap)))];
+  return `Each is already reachable somewhere else — ${all.map((h) => '\`' + h + '\`').join(', ')} — and nowhere by an agent. That is the inversion the rule exists to close, and it is the whole of what this axis measures: a capability no surface exposes is not owed here, it is answered by its stance.`;
+})()}
 `;
 
 const path = ROOT + 'SUPPORT.md';
