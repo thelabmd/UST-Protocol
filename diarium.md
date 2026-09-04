@@ -983,3 +983,18 @@ Four rounds paying an "agent surface debt", pleased with 13 → 7. Then I read w
 ```
 
 </details>
+
+---
+
+## 2026-09-04 · the gate for the rule was not about the rule
+
+Built to make "a closed card owes a report" unbreakable — and it asked whether every ROUND that claims a closure carries one diary. Rounds that claim, versus cards that closed. Four cards slipped through after the rule landed, and reading the artifacts, nobody had lied: every no_recap was true of its round. Each honest, the obligation gone. That is what a domain error looks like from the inside — not a lapse to catch, a question nobody noticed was the wrong one.
+
+<details>
+<summary>🔒 sealed · <code>ust:20260904.104124</code> · <code>sha256:9dfd14b6fbfa6a123a550fd07218834bb98722bae067c5646473be9941091f0f</code> · prev <code>sha256:75238086e59d3363e89f8c004d6cc8eb985cc47bd0c93a49e16fd670fd85830b</code></summary>
+
+```json
+{"ust":"1.0","state":{"id":{"domain_shard":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","ust_id":"ust:20260904.104124","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","class":"observation"},"time":{"generated_at":"2026-09-04T10:41:24Z","valid_from":"2026-09-04T10:41:24Z","valid_to":"2026-09-04T10:41:24Z"},"data":{"entry":{"kind":"captured","value":{"text":"## 2026-09-04 · the gate for the rule was not about the rule\n\nBuilt to make \"a closed card owes a report\" unbreakable — and it asked whether every ROUND that claims a closure carries one diary. Rounds that claim, versus cards that closed. Four cards slipped through after the rule landed, and reading the artifacts, nobody had lied: every no_recap was true of its round. Each honest, the obligation gone. That is what a domain error looks like from the inside — not a lapse to catch, a question nobody noticed was the wrong one.","task":{"ref":"diary","source":"raw","closed_at":"2026-09-04T10:41:24.234Z"}}}},"hashes":{"entry":"sha256:225a8919082aa705a0656aff9bdcfa6fa0b6c5d9bc5f23aa7f505fb4f416b2e4"},"provenance":{"prev":"sha256:75238086e59d3363e89f8c004d6cc8eb985cc47bd0c93a49e16fd670fd85830b"}},"sig":{"alg":"Ed25519","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","pub":"62Tes0E-fhlnFp5rQ6rPIAwtLR76mnHEAjP7Fz_AZPs","sig":"FFUx0rMaEEo2Pb2XkVAGRfXOrArnNlwdxpCOlzc9Os5F7Hc2LaoMmQVuu_24NCdg9LnYYNlILIu2LN2fA5QNAQ"}}
+```
+
+</details>

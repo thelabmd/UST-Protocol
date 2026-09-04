@@ -886,7 +886,8 @@
     },
     {
       "round": 279,
-      "no_recap": "Round 279 builds the leg #174 asks for and does not close it — the card stays open until the owner calls it, and its diary belongs to the closing, not to the round that made the closing checkable."
+      "issue": 174,
+      "content_hash": "sha256:9dfd14b6fbfa6a123a550fd07218834bb98722bae067c5646473be9941091f0f"
     },
     {
       "round": 280,
