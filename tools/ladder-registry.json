@@ -2562,6 +2562,20 @@
         "excluded": "A vector is a fixed input and a declared result a second implementation reproduces. This gate reads this repository's own tracker; a port has no such state."
       },
       "test": "tools/recap-per-issue-gate.mjs :: proven both ways against real mutated input — removing a closed issue's record reddens the leg by name, and truncating the snapshot below the floor triggers the empty-domain refusal rather than a green over nothing. The no-record control runs on a SYNTHETIC domain after the live-mutation version was measured reporting one defect twice."
+    },
+    {
+      "round": 280,
+      "math": {
+        "excluded": "Whether our dependency tree carries an advisory is a fact about a public database and this repository's lockfile. No relation over documents is involved and no port shares our dependencies."
+      },
+      "spec": {
+        "excluded": "The standard says nothing about how an implementation audits its own dependencies, and must not: a conforming port may have none."
+      },
+      "code": "tools/dependency-audit-gate.mjs :: three verdicts where npm gives one exit code — clean passes, advisories fail naming the counts, an UNREAD database fails saying so; retried first, never passing on an unread answer. package.json :: `test:audit` runs the gate and its selftest.",
+      "vector": {
+        "excluded": "A vector is a fixed input and a declared result a second implementation reproduces. A port audits its own dependencies, not ours."
+      },
+      "test": "tools/dependency-audit-gate.mjs :: `--selftest` drives five payloads through one pure decision function, since two of the three branches cannot be reached on demand — an outage belongs to the registry and a critical advisory is not something to introduce in order to test the check that would find it. The negative control is the discrimination itself (clean must not equal unread), proven by mutation; the outage branch was also exercised live against an unreachable registry."
     }
   ],
   "first_accounted_round": 76,

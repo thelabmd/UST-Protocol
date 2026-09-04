@@ -42,7 +42,7 @@
     "test:connectors": "node --test packages/ust-ots-verify/*.test.mjs packages/ust-rekor-verify/*.test.mjs",
     "test:web-signer": "node packages/ust-web-signer/test.mjs",
     "test:mcp-live": "node packages/ust-mcp/live-test.mjs",
-    "test:audit": "npm audit --omit=dev --omit=optional --audit-level=critical",
+    "test:audit": "node tools/dependency-audit-gate.mjs && node tools/dependency-audit-gate.mjs --selftest",
     "test:changelog": "node tools/changelog-rev-gate.mjs",
     "test:ladder": "node tools/ladder-completeness-gate.mjs",
     "test:ceremony": "node tools/ceremony-selfcheck-gate.mjs",

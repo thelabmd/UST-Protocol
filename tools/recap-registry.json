@@ -887,6 +887,10 @@
     {
       "round": 279,
       "no_recap": "Round 279 builds the leg #174 asks for and does not close it — the card stays open until the owner calls it, and its diary belongs to the closing, not to the round that made the closing checkable."
+    },
+    {
+      "round": 280,
+      "no_recap": "Round 280 fixes a CI step that misnamed its own failure and closes no issue; the defect surfaced while pushing round 279 and belongs to no card of its own."
     }
   ]
 }
