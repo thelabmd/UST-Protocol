@@ -253,7 +253,9 @@ for (const g of GRANDFATHERED) {
 // answer, the ordinary run reads the committed file. A gate in this repository can know an issue's state offline,
 // deterministically, from a file a human refreshed — so "the gate cannot see GitHub" was never the objection.
 const CLOSED_PATH = join(ROOT, 'tools/closed-issues.json');
-const ISSUE_FLOOR = 175;   // #174 is the card that built this leg; the four it measured are dispositioned below, and everything from #175 was closed under the rule
+const ISSUE_FLOOR = 174;   // the card that BUILT this leg is inside the domain it created, not exempted from it — a floor set one above it would leave the exemplar
+                          // unchecked, which is the shape this repository keeps finding: a fix that removes its own subject from the detector. Everything from #174
+                          // was closed under the rule; the four cards it measured are older and are dispositioned by issue-keyed records instead.
 
 if (process.argv.includes('--write')) {
   const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;

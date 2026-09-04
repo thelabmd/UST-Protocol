@@ -2576,6 +2576,20 @@
         "excluded": "A vector is a fixed input and a declared result a second implementation reproduces. A port audits its own dependencies, not ours."
       },
       "test": "tools/dependency-audit-gate.mjs :: `--selftest` drives five payloads through one pure decision function, since two of the three branches cannot be reached on demand — an outage belongs to the registry and a critical advisory is not something to introduce in order to test the check that would find it. The negative control is the discrimination itself (clean must not equal unread), proven by mutation; the outage branch was also exercised live against an unreachable registry."
+    },
+    {
+      "round": 281,
+      "math": {
+        "excluded": "Which of our closed cards a process gate examines is bookkeeping about this repository. No relation over documents is involved and no port shares it."
+      },
+      "spec": {
+        "excluded": "The standard says nothing about how an implementation records its own work; a conforming port keeps no recap registry."
+      },
+      "code": "tools/recap-per-issue-gate.mjs :: the closed-issue floor moves from #175 to #174, so the card that built this leg is inside the domain it created rather than one above it.",
+      "vector": {
+        "excluded": "A vector is a fixed input and a declared result a second implementation reproduces; this gate reads this repository's own tracker."
+      },
+      "test": "tools/recap-per-issue-gate.mjs :: removing #174's own record reddens the leg BY NAME with 7 in scope — the exemplar is now checked by the check it created, and the old floor would have passed that mutation silently."
     }
   ],
   "first_accounted_round": 76,
