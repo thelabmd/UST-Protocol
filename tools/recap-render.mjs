@@ -70,7 +70,18 @@ const unquote = (q) => q.split('\n').map((l) => (l === '>' ? '' : l.replace(/^> 
 
 const recaps = new Map();
 for (const rec of REG.records) {
-  check(Number.isInteger(rec.round), `a recap record is keyed by no integer round: ${JSON.stringify(rec)}`);
+  // A record is keyed by a ROUND or by an ISSUE, and both are legitimate — they answer different questions. A
+  // round-keyed record says what that round's work concluded; an ISSUE-keyed one with no round is the retro
+  // disposition #174 asked for, where a card closed and the report was never written, so no round can honestly
+  // claim it. Demanding a round of every record would force a false one onto exactly the cards whose defect is
+  // that no round answered for them. What may NEVER be absent is both keys at once.
+  check(Number.isInteger(rec.round) || Number.isInteger(rec.issue),
+    `a recap record is keyed by neither a round nor an issue: ${JSON.stringify(rec)}`);
+  if (!Number.isInteger(rec.round)) {
+    check(String(rec.no_recap ?? '').trim().length >= MIN_REASON,
+      `issue #${rec.issue}: an issue-keyed record must state why it carries no diary, in ${MIN_REASON}+ chars`);
+    continue;
+  }
   if (rec.no_recap) {
     check(String(rec.no_recap).trim().length >= MIN_REASON,
       `round ${rec.round}: no_recap is ${String(rec.no_recap).trim().length} chars — under ${MIN_REASON} is a placeholder, not a decision`);

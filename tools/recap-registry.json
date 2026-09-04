@@ -863,6 +863,30 @@
       "round": 278,
       "no_recap": "Closed 2026-09-03 on the owner's call. The closing report is on the issue; the diary belongs to the #178 arc, whose registers this card's vocabulary replaced.",
       "issue": 180
+    },
+    {
+      "issue": 144,
+      "no_recap": "Closed 2026-08-15 with no report, and this record is written on 2026-09-04 rather than a report — a diary composed three weeks after the fact is a retelling, not a conclusion, and the rule's value is that the entry is the residue of work still warm. Two rounds (225, 230) name this card in their subjects and both declared `no_recap` truthfully for the round; what neither answered was the CARD, which is the domain error #174 measured and the leg added in round 279 now covers going forward.",
+      "_note": "retro disposition (#174) — recorded 2026-09-04, below the gate's #175 floor"
+    },
+    {
+      "issue": 86,
+      "no_recap": "Closed 2026-08-14 with no report; retro-recorded 2026-09-04. The card is a standing lockstep tracker rather than a defect — surfaces shipped and kept in step — so its closure marks an inventory reaching a state, not a round reaching a conclusion. A diary written now would narrate a month of unrelated rounds.",
+      "_note": "retro disposition (#174) — recorded 2026-09-04, below the gate's #175 floor"
+    },
+    {
+      "issue": 157,
+      "no_recap": "Closed 2026-08-13 with no report; retro-recorded 2026-09-04. Its successor #158 carries the live obligation and is still open, so the closing that mattered is recorded there. A retro diary here would seal a conclusion that the open card has not reached.",
+      "_note": "retro disposition (#174) — recorded 2026-09-04, below the gate's #175 floor"
+    },
+    {
+      "issue": 152,
+      "no_recap": "Closed 2026-08-12 with no report; retro-recorded 2026-09-04. The fix shipped and is covered by the connector-delivery gate; what is missing is the contemporaneous entry, and it cannot be recovered — an entry written from git rather than from the work is a reconstruction wearing the diary's form.",
+      "_note": "retro disposition (#174) — recorded 2026-09-04, below the gate's #175 floor"
+    },
+    {
+      "round": 279,
+      "no_recap": "Round 279 builds the leg #174 asks for and does not close it — the card stays open until the owner calls it, and its diary belongs to the closing, not to the round that made the closing checkable."
     }
   ]
 }

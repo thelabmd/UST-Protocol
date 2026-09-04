@@ -2548,6 +2548,20 @@
         "excluded": "A vector is a fixed input and a declared result a second implementation reproduces. This is our own surface reporting; a port has none of it."
       },
       "test": "tools/gen-support-matrix.mjs :: both guards proven against real mutated input — stripping `ust-rfc6962-verify`'s reason refuses to render, and giving `ust-light` a probe kind the page has no wording for refuses to render. The second control had to be run twice: the first mutation silently did not apply, and a control that did not mutate anything passes for free."
+    },
+    {
+      "round": 279,
+      "math": {
+        "excluded": "This is a repository process gate — which of our cards owes a written report — not a relation over documents. No theorem could range over it and no port shares it."
+      },
+      "spec": {
+        "excluded": "The standard says nothing about how an implementation records its own work. A conforming port keeps no recap registry."
+      },
+      "code": "tools/recap-per-issue-gate.mjs :: the CLOSED-ISSUE domain, taken from a committed snapshot that `--write` fetches and refuses to write on an unreadable answer; per-issue `no_recap` with a stated reason as the only alternative to a record; the empty-domain refusal on the new domain; and the round-side channel narrowed to records that name a round. tools/recap-render.mjs :: a record is keyed by a round OR an issue, since a retro disposition can honestly name neither a round nor a diary.",
+      "vector": {
+        "excluded": "A vector is a fixed input and a declared result a second implementation reproduces. This gate reads this repository's own tracker; a port has no such state."
+      },
+      "test": "tools/recap-per-issue-gate.mjs :: proven both ways against real mutated input — removing a closed issue's record reddens the leg by name, and truncating the snapshot below the floor triggers the empty-domain refusal rather than a green over nothing. The no-record control runs on a SYNTHETIC domain after the live-mutation version was measured reporting one defect twice."
     }
   ],
   "first_accounted_round": 76,
