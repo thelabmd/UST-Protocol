@@ -91,6 +91,10 @@ If you are asked to verify a UST and you **cannot run a verifier**, the correct 
   in it, and two conforming verifiers agree because the verdict is a total deterministic function of the §14a
   obligations table. If you reason about UST beyond running the verifier, reason from there — not from analogy
   to JWT, JWS, or blockchain receipts.
+- What you can reach from your own surface is a rendered report, not a promise: [`SUPPORT.md`](SUPPORT.md) lists
+  every capability with its **delivery** (`shipped` · `via` another capability · `core-only`) and its **custody**
+  (`open` · `key` · `operator` · `manual` · `sealed`), and CI fails if a line of it disagrees with what the tools
+  actually expose. Anything the protocol gives a publisher reaches the agent surface not later than the human one.
 
 ## ●  What this is
 
@@ -196,6 +200,17 @@ of every layer are publicly provable while each layer's content is disclosed onl
   <source media="(prefers-color-scheme: light)" srcset=".github/ust-chain-light.svg">
   <img alt="One state, graduated visibility — a single connected state can be a hash-linked chain of independently signed layers. L1 is a public observation anyone verifies. L2 is a blinded commitment: the value is fixed but hidden until reveal, while its existence is public. L3 is an encrypted shard: AEAD ciphertext plus a commitment, so only key holders read and verify it. L4 is a partner’s derived shard under another publisher’s own key — cross-party, provable lineage. Each layer links to the prior by based_on = sha256(content) plus a recomputed seed, so order and lineage are publicly provable. Every layer verifies on its own; trust composes but is never inherited; payloads stay deletable while “existed, in this order” remains provable." src=".github/ust-chain-light.svg">
 </picture>
+
+Every partition declares **what it claims** and **who can read it** — two independent axes, both shipped.
+
+*What it claims* (`kind`): **`captured`** — witnessed, the bytes a source returned · **`computed`** — derived from
+other values · **`absence`** — a negative observation, *"source S was unreachable"*, *"no alert fired"*, *"the value
+did not change"*. An absence carries a `reason`, and it makes a negative machine-distinguishable from a `captured`
+partition that came back empty and from the transcript never being published at all — three different facts that a
+plain `null` collapses into one. Every partition hashes identically whatever its kind: `absence` is a semantic
+label, never a different preimage.
+
+*Who can read it* (`privacy`), and the two are orthogonal — a computed value can be blinded, an absence encrypted:
 
 - **Blinded** (`privacy: "blinded"`): the value is replaced by a frame-bound commitment
   (`H(domain_shard, ust_id, nonce, name, value)`). Publish now, reveal later — and the revealed `{nonce, value}`
@@ -379,6 +394,7 @@ purpose is your policy, not the protocol's coercion. Spec [§19](spec/UST-1.0.md
 | `packages/diarium/` | agent memory as a verifiable stream — a task closes, the agent writes what it learned, sealed and `prev`-chained ([npm](https://www.npmjs.com/package/diarium)) |
 | `extension/` | "Make it UST" — a demo Chrome extension: sign by selection, verify by selection (LIGHT) |
 | `docs/` | the [web verifier](https://verify.ustprotocol.com/) (client-side, GitHub Pages) + `ust-verify.mjs`, a zero-dependency verifier + `llms.txt` |
+| `SUPPORT.md` | what every surface actually supports — generated from the declarations the parity gate verifies against live probes, never hand-kept |
 | `examples/` | sample documents (valid + tampered) and verification recipes |
 
 ## ●  License
