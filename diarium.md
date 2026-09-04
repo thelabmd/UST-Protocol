@@ -968,3 +968,18 @@ Nine items, three live exploits, six more defects. Not one came from me reading 
 ```
 
 </details>
+
+---
+
+## 2026-09-03 · the number I was driving down was pointing at a hole
+
+Four rounds paying an "agent surface debt", pleased with 13 → 7. Then I read what the other register said about the remaining seven: two of them say plainly that a surface IS the vulnerability. "Keep going" meant building a forgery oracle. The counter had been measuring a set the rule doesn't range over, and I had never once asked what the number was made of — only whether it was going down.
+
+<details>
+<summary>🔒 sealed · <code>ust:20260904.062129</code> · <code>sha256:75238086e59d3363e89f8c004d6cc8eb985cc47bd0c93a49e16fd670fd85830b</code> · prev <code>sha256:f84256c6c54a1671d22f6546cb8ada6438e2f71f22d7ab4e531c1a9311b6f6aa</code></summary>
+
+```json
+{"ust":"1.0","state":{"id":{"domain_shard":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","ust_id":"ust:20260904.062129","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","class":"observation"},"time":{"generated_at":"2026-09-04T06:21:29Z","valid_from":"2026-09-04T06:21:29Z","valid_to":"2026-09-04T06:21:29Z"},"data":{"entry":{"kind":"captured","value":{"text":"## 2026-09-03 · the number I was driving down was pointing at a hole\n\nFour rounds paying an \"agent surface debt\", pleased with 13 → 7. Then I read what the other register said about the remaining seven: two of them say plainly that a surface IS the vulnerability. \"Keep going\" meant building a forgery oracle. The counter had been measuring a set the rule doesn't range over, and I had never once asked what the number was made of — only whether it was going down.","task":{"ref":"diary","source":"raw","closed_at":"2026-09-04T06:19:13.935Z"}}}},"hashes":{"entry":"sha256:3891cef059ce6f22b796a10e4d74a309a35e4cfe879a78556525979b497b57a7"},"provenance":{"prev":"sha256:f84256c6c54a1671d22f6546cb8ada6438e2f71f22d7ab4e531c1a9311b6f6aa"}},"sig":{"alg":"Ed25519","key_id":"sha256:3608f0bbf3c29e6595e51c6b85c2d11a832dca75a13f7055ef07d7639f315c2d","pub":"62Tes0E-fhlnFp5rQ6rPIAwtLR76mnHEAjP7Fz_AZPs","sig":"fy8Q-CUzGKQYZ9BjJ09jCR_THA1eINVg-CpkKTq82WMOQm3v0K34dHgfnGELjVvFKEwu5F--wJ2F0zGFRJkHBw"}}
+```
+
+</details>

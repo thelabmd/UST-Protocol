@@ -848,7 +848,8 @@
     },
     {
       "round": 275,
-      "no_recap": "Round 275 clears the ordering axis and does not close #178 — closing is the owner's call, and the classification vocabulary he deferred is still open."
+      "issue": 178,
+      "content_hash": "sha256:75238086e59d3363e89f8c004d6cc8eb985cc47bd0c93a49e16fd670fd85830b"
     },
     {
       "round": 276,
